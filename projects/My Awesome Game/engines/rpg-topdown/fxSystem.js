@@ -303,6 +303,28 @@ window.FXSystem = class FXSystem {
         p.init(x, y, z, config, sprite);
     }
 
+    spawnParticles(x, y, effectName, count = 10) {
+        const config = this.effects[effectName];
+        if (!config) {
+            // Fallback for common effects like smoke
+            const defaultConfig = {
+                life: { min: 0.5, max: 1.0 },
+                speed: { min: 20, max: 50 },
+                size: { start: 4, end: 0 },
+                color: { start: '#888', end: '#444' },
+                physics: { gravity: -0.1, drag: 0.9, spread: 360 }
+            };
+            for(let i=0; i<count; i++) {
+                this.spawnParticle(x + (Math.random()-0.5)*10, y + (Math.random()-0.5)*10, 0, defaultConfig);
+            }
+            return;
+        }
+        
+        for(let i=0; i<count; i++) {
+            this.spawnParticle(x + (Math.random()-0.5)*10, y + (Math.random()-0.5)*10, 0, config);
+        }
+    }
+
     popText(x, y, text, color = "#fff") {
         // Ring Buffer Strategy
         const p = this.textPool[this.textPoolIndex];

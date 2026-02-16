@@ -4,6 +4,7 @@ class PlatformerGame {
         this.renderer = new PlatformerRenderer(this.canvas);
         
         this.physics = new PhysicsSystem();
+        this.combat = new PlatformerCombatSystem(this);
         this.player = new Player(50, 50);
         
         this.map = null;
@@ -43,6 +44,18 @@ class PlatformerGame {
             this.player.isWorm = !this.player.isWorm;
             console.log(`[PlatformerEngine] Player Mode: ${this.player.isWorm ? 'WORM' : 'SPRITE'}`);
         }
+
+        // Regenerate Level
+        if(e.code === 'KeyG' && window.SmartGenerator) {
+            console.log('[PlatformerEngine] Regenerating level...');
+            const newLevel = window.SmartGenerator.generate({
+                width: 100,
+                height: 20,
+                theme: 'flow',
+                difficulty: 5
+            });
+            this.loadLevelFromData(newLevel);
+        }
     }
 
     handleKeyUp(e) {
@@ -66,7 +79,12 @@ class PlatformerGame {
     async init() {
         console.log("[PlatformerEngine] Initializing...");
         
-        // Load caterpillar sprites (matching RPG core)
+        // 1. Pre-load assets
+        if (window.PlatformerAssetManager) {
+            await window.PlatformerAssetManager.load();
+        }
+
+        // 2. Load caterpillar sprites (matching RPG core)
         if (window.createPixelImage) {
             this.playerHead = window.createPixelImage('caterpillar_head');
             this.playerBody = window.createPixelImage('caterpillar_body');
@@ -74,7 +92,8 @@ class PlatformerGame {
         }
 
         if (typeof window.FXSystem !== 'undefined') {
-            this.fx = new window.FXSystem(this.canvas.getContext('2d'), this.canvas.width, this.canvas.height);
+            const ctx = this.canvas.getContext('2d');
+            this.fx = new window.FXSystem(ctx, this.canvas.width, this.canvas.height);
             // Ensure popText exists or add a dummy to prevent crashes
             if (!this.fx.popText) {
                 this.fx.popText = (x, y, text, color) => console.log(`[FX Pop] ${text} at ${x},${y}`);
@@ -85,9 +104,9 @@ class PlatformerGame {
             this.campaignSystem = new window.CampaignSystem(this);
         }
         
-        // Force worm mode for the IRAB aesthetic
-        if (this.player) {
-            this.player.isWorm = true;
+        // Force worm mode for the IRAB aesthetic if config says so
+        if (this.player && window.PlatformerConfig) {
+            this.player.isWorm = window.PlatformerConfig.DEFAULT_PLAYER_MODE === 'WORM';
         }
 
         const loading = document.getElementById('loading-screen');
@@ -134,6 +153,15 @@ class PlatformerGame {
         this.collectibles = [];
         this.checkpoints = [];
         
+        // Reset Parallax
+        this.renderer.parallax.clear();
+        if (window.PlatformerAssetManager) {
+            const bgForest = window.PlatformerAssetManager.get('bg_forest');
+            if (bgForest) {
+                this.renderer.addParallaxLayer(bgForest, 0.2, 0.1, 1.0);
+            }
+        }
+
         // Default tileset for platformer if not specified
         const tilesetPath = this.map.tilesetPath || 'WORLD_PIXEL_ART';
         await this.renderer.loadTileset(tilesetPath);
@@ -195,7 +223,51 @@ class PlatformerGame {
     }
 
     _addEntity(e) {
-        this.entities.push({ ...e, x: e.x * 32, y: e.y * 32, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || (e.type === 'enemy' ? 'patrol' : 'static') });
+        if (e.type === 'enemy') {
+            const enemy = new Enemy(e.x, e.y, e.sprite || 'slime');
+            if (e.behavior) enemy.behavior = e.behavior;
+            this.entities.push(enemy);
+        } else if (e.type === 'enemy_flying') {
+            const enemy = new FlyingEnemy(e.x, e.y, e.sprite || 'bat');
+            if (e.behavior) enemy.behavior = e.behavior;
+            this.entities.push(enemy);
+        } else if (e.type === 'enemy_shooter') {
+            const enemy = new ShooterEnemy(e.x, e.y, e.sprite || 'goblin');
+            this.entities.push(enemy);
+        } else if (e.type === 'pushable') {
+            this.entities.push(new PushableBlock(e.x, e.y, e.w || 32, e.h || 32));
+        } else {
+            this.entities.push({ ...e, x: e.x * 32, y: e.y * 32, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' });
+        }
+    }
+
+    _handlePushing() {
+        this.entities.forEach(ent => {
+            if (ent instanceof PushableBlock) {
+                // Horizontal push
+                const footY = this.player.y + this.player.h;
+                const headY = this.player.y;
+                const blockFootY = ent.y + ent.h;
+                const blockHeadY = ent.y;
+
+                // Vertical overlap
+                if (footY > blockHeadY + 4 && headY < blockFootY - 4) {
+                    const dist = Math.abs((this.player.x + this.player.w/2) - (ent.x + ent.w/2));
+                    const minDist = (this.player.w + ent.w) / 2;
+
+                    if (dist < minDist + 2) {
+                        const dir = Math.sign((ent.x + ent.w/2) - (this.player.x + this.player.w/2));
+                        const playerPushing = (dir > 0 && (this.keys['ArrowRight'] || this.keys['KeyD'])) ||
+                                              (dir < 0 && (this.keys['ArrowLeft'] || this.keys['KeyA']));
+                        
+                        if (playerPushing) {
+                            ent.vx = this.player.vx * 0.8;
+                            this.player.vx *= 0.5;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     update() {
@@ -210,6 +282,7 @@ class PlatformerGame {
         this.player.handleInput(this.keys);
         this.player.update(dt, this.map);
         this.physics.apply(this.player, this.map, this.platforms);
+        this._handlePushing();
         
         // 3. Environment & Effects
         if (this.fx) {
@@ -223,6 +296,7 @@ class PlatformerGame {
             this.renderer.updateCamera(this.player, this.map.width, this.map.height);
         }
         
+        this.combat.update(dt);
         this._updateEntities();
         this._checkCollectibles();
         this._checkCheckpoints();
@@ -232,7 +306,9 @@ class PlatformerGame {
 
     _updateEntities() {
         this.entities.forEach(ent => {
-            if(ent.behavior === 'patrol') {
+            if (ent.update) {
+                ent.update(1/60, this.map);
+            } else if(ent.behavior === 'patrol') {
                 if(!ent.patrolDir) ent.patrolDir = 1;
                 ent.vx = ent.patrolDir * 0.5;
                 const nextX = ent.x + ent.vx * 5;
@@ -242,6 +318,9 @@ class PlatformerGame {
             }
             this.physics.apply(ent, this.map, this.platforms);
         });
+        
+        // Remove dead entities
+        this.entities = this.entities.filter(ent => !ent.isDead);
     }
 
     _checkCollectibles() {
@@ -303,6 +382,7 @@ class PlatformerGame {
 
     draw() {
         this.renderer.render(this.map, this.player, [...this.entities, ...this.platforms], this.collectibles, this.checkpoints);
+        this.combat.draw(this.renderer);
     }
 
     loop() {

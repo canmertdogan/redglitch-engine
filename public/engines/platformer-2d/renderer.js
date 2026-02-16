@@ -4,20 +4,40 @@ class PlatformerRenderer {
         this.ctx = canvas.getContext('2d', { alpha: false });
         this.ctx.imageSmoothingEnabled = false;
         
+        const config = window.PlatformerConfig || { TILE_SIZE: 32, CHUNK_SIZE: 16 };
         this.camera = { x: 0, y: 0 };
         this.tileset = new Image();
         this.tileset.src = '/engines/rpg-topdown/assets/world_tileset.png'; 
         
-        this.tileSize = 32;
+        this.tileSize = config.TILE_SIZE;
         this.viewW = canvas.width;
         this.viewH = canvas.height;
 
         // Chunking
-        this.CHUNK_SIZE = 16;
+        this.CHUNK_SIZE = config.CHUNK_SIZE;
         this.chunks = {}; 
 
         // Sprite Caching
         this.spriteCache = {}; // name_state_frame -> Canvas
+
+        // Parallax
+        this.parallax = new window.ParallaxSystem(this);
+
+        // Shake
+        this.shakeAmount = 0;
+        this.shakeTimer = 0;
+
+        // Editor / Zoom
+        this.zoom = 1.0;
+    }
+
+    setZoom(value) {
+        this.zoom = value;
+    }
+
+    shake(amount = 5, duration = 0.2) {
+        this.shakeAmount = amount;
+        this.shakeTimer = duration;
     }
 
     resize(w, h) {
@@ -26,6 +46,13 @@ class PlatformerRenderer {
         this.viewW = w;
         this.viewH = h;
         this.ctx.imageSmoothingEnabled = false;
+        
+        // Invalidate cache on resize to ensure full coverage if needed
+        this.invalidateCache();
+    }
+
+    addParallaxLayer(image, sx, sy, op) {
+        this.parallax.addLayer(image, sx, sy, op);
     }
 
     updateCamera(player, mapWidth, mapHeight) {
@@ -37,8 +64,8 @@ class PlatformerRenderer {
         const maxW = (mapWidth || 20) * this.tileSize;
         const maxH = (mapHeight || 15) * this.tileSize;
 
-        targetX = Math.max(0, Math.min(targetX, maxW - this.viewW));
-        targetY = Math.max(0, Math.min(targetY, maxH - this.viewH));
+        targetX = Math.max(0, Math.min(targetX, Math.max(0, maxW - this.viewW)));
+        targetY = Math.max(0, Math.min(targetY, Math.max(0, maxH - this.viewH)));
 
         if (isNaN(this.camera.x)) this.camera.x = targetX;
         if (isNaN(this.camera.y)) this.camera.y = targetY;
@@ -48,12 +75,32 @@ class PlatformerRenderer {
         
         this.camera.x = Math.floor(this.camera.x) || 0;
         this.camera.y = Math.floor(this.camera.y) || 0;
+
+        // Apply Shake
+        if (this.shakeTimer > 0) {
+            const dt = 1/60;
+            this.shakeTimer -= dt;
+            this.camera.x += (Math.random() - 0.5) * 2 * this.shakeAmount;
+            this.camera.y += (Math.random() - 0.5) * 2 * this.shakeAmount;
+        }
     }
 
     async loadTileset(path) {
         if (this.currentTilesetPath === path && this.tilesetReady) return;
         this.currentTilesetPath = path;
         this.tilesetReady = false;
+
+        // Try pre-loaded asset first if path matches WORLD_PIXEL_ART
+        if (path === 'WORLD_PIXEL_ART' && window.PlatformerAssetManager) {
+            const preloaded = window.PlatformerAssetManager.get('tileset');
+            if (preloaded) {
+                console.log('[PlatformerRenderer] Using pre-loaded tileset.');
+                this.tileset = preloaded;
+                this.tilesetReady = true;
+                this.invalidateCache();
+                return;
+            }
+        }
 
         return new Promise(async (resolve) => {
             if (path === 'WORLD_PIXEL_ART') {
@@ -117,6 +164,33 @@ class PlatformerRenderer {
         await Promise.all(promises);
         console.log('[PlatformerRenderer] Tileset combined.');
         window._cachedCombinedTileset = canvas;
+
+        // ---- START MODIFICATION: SAVE SPRITESHEET ----
+        try {
+            const dataUrl = canvas.toDataURL('image/png');
+            fetch('/api/save-spritesheet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ image: dataUrl }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('[PlatformerRenderer] Successfully saved spritesheet to server.');
+                } else {
+                    console.error('[PlatformerRenderer] Failed to save spritesheet:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('[PlatformerRenderer] Error saving spritesheet:', error);
+            });
+        } catch (e) {
+            console.error('[PlatformerRenderer] Could not send spritesheet to server.', e);
+        }
+        // ---- END MODIFICATION ----
+
         return canvas;
     }
 
@@ -124,19 +198,40 @@ class PlatformerRenderer {
         this.chunks = {};
     }
 
+    isSolid(map, x, y) {
+        if(!map) return false;
+        if(y < 0 || y >= map.height) return false;
+        if(x < 0 || x >= map.width) return false;
+        const tile = map.collision[y * map.width + x];
+        return tile === 1;
+    }
+
+    calculateBitmask(map, x, y) {
+        let mask = 0;
+        if (this.isSolid(map, x, y - 1)) mask += 1; // Top
+        if (this.isSolid(map, x + 1, y)) mask += 2; // Right
+        if (this.isSolid(map, x, y + 1)) mask += 4; // Bottom
+        if (this.isSolid(map, x - 1, y)) mask += 8; // Left
+        return mask;
+    }
+
     render(map, player, entities = [], collectibles = [], checkpoints = []) {
         if (!map) return;
 
-        // 1. Background Fill
+        // 1. Background Fill & Parallax
         if (map.background && map.background.startsWith('#')) {
             this.ctx.fillStyle = map.background;
             this.ctx.fillRect(0, 0, this.viewW, this.viewH);
         } else {
-            this.ctx.fillStyle = '#87CEEB';
+            this.ctx.fillStyle = window.PlatformerConfig?.DEFAULT_BG || '#87CEEB';
             this.ctx.fillRect(0, 0, this.viewW, this.viewH);
         }
 
+        // Draw Parallax
+        this.parallax.render(this.camera.x, this.camera.y);
+
         this.ctx.save();
+        this.ctx.scale(this.zoom, this.zoom);
         this.ctx.translate(-this.camera.x, -this.camera.y);
 
         if (this.currentMap !== map) {
@@ -205,14 +300,42 @@ class PlatformerRenderer {
         // 9. Foreground Layers
         fgLayers.forEach(l => this.drawLayerChunked(l.data, map.width, l.index));
 
-        // 10. FX / Particles
+        // 10. FX / Particles (World Space)
         if (window.game && window.game.fx) {
             window.game.fx.render(this.camera.x, this.camera.y);
         }
 
         this.ctx.restore();
         
-        // 11. HUD
+        // 11. Soft Lighting Pass (Screen Space)
+        if (window.game && window.game.fx) {
+            const lights = [];
+            // Collect lights from entities
+            entities.forEach(ent => {
+                if (ent.light) lights.push({ 
+                    x: ent.x + ent.w/2, 
+                    y: ent.y + ent.h/2, 
+                    radius: ent.light.radius || 150, 
+                    color: ent.light.color || 'rgba(255, 200, 100, 0.2)',
+                    intensity: ent.light.intensity || 0.6
+                });
+            });
+            
+            // Player light
+            if (player) {
+                lights.push({
+                    x: player.x + player.w/2,
+                    y: player.y + player.h/2,
+                    radius: player.isWorm ? 150 : 200,
+                    color: player.isWorm ? 'rgba(231, 76, 60, 0.4)' : 'rgba(255, 255, 200, 0.3)',
+                    intensity: 0.8
+                });
+            }
+
+            window.game.fx.renderSoftLighting(this.camera.x, this.camera.y, lights);
+        }
+
+        // 12. HUD
         this.drawHUD(player);
     }
 
@@ -294,8 +417,16 @@ class PlatformerRenderer {
                         ctx.strokeRect(drawX, drawY, this.tileSize, this.tileSize);
                     } else if (this.tileset && (this.tileset.width > 0) && this.tilesetReady) {
                         const ts = 16;
-                        // Subtract 1 because tileId is 1-indexed in our combined atlas
-                        const tid = tileId - 1;
+                        let tid = tileId - 1;
+
+                        // Auto-tiling logic for solid blocks (ID 1)
+                        if (tileId === 1 && this.currentMap?.autoTiling) {
+                            const mask = this.calculateBitmask(this.currentMap, tileX, tileY);
+                            // We assume the auto-tile set for ID 1 starts at a certain offset
+                            // For now, let's just use the mask as an offset from the base tile
+                            tid += mask;
+                        }
+
                         if (tid >= 0) {
                             const sx = (tid % totalCols) * ts;
                             const sy = Math.floor(tid / totalCols) * ts;
@@ -405,6 +536,30 @@ class PlatformerRenderer {
     drawEntity(ent) {
         this.ctx.fillStyle = ent.color || '#f0f';
         this.ctx.fillRect(Math.floor(ent.x), Math.floor(ent.y), ent.w, ent.h);
+    }
+
+    drawGhost(ghost) {
+        this.ctx.save();
+        this.ctx.globalAlpha = ghost.alpha;
+        
+        if (ghost.isWorm) {
+            this.ctx.shadowColor = '#e74c3c';
+            this.ctx.shadowBlur = 10;
+            this.ctx.fillStyle = '#e74c3c';
+            this.ctx.beginPath();
+            this.ctx.arc(ghost.x + 12, ghost.y + 16, 10, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else {
+            const name = ghost.sprite || 'player';
+            const frame = ghost.frame || 0;
+            const img = this.generateSpriteFrame(name, frame, 24, 32);
+            if (img) {
+                this.ctx.translate(Math.floor(ghost.x + 12), Math.floor(ghost.y + 16));
+                this.ctx.scale(ghost.facingRight ? 1 : -1, 1);
+                this.ctx.drawImage(img, -12, -16, 24, 32);
+            }
+        }
+        this.ctx.restore();
     }
 
     drawWorm(player) {

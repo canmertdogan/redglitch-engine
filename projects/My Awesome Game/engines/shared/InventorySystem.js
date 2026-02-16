@@ -249,13 +249,21 @@ window.InventorySystem = class InventorySystem {
     /**
      * Deserialize inventory from save
      * @param {Array} savedItems - Saved item data
-     * @param {Object} itemDefinitions - Full item definitions
+     * @param {Object} itemDefinitions - Full item definitions (optional if window.ItemDefinitions available)
      */
     deserialize(savedItems, itemDefinitions) {
         this.items = [];
+        if (!savedItems) return;
         
         for (const savedItem of savedItems) {
-            const itemDef = itemDefinitions[savedItem.id];
+            let itemDef = null;
+            
+            if (itemDefinitions && itemDefinitions[savedItem.id]) {
+                itemDef = itemDefinitions[savedItem.id];
+            } else if (window.ItemDefinitions && window.ItemDefinitions.hasItem(savedItem.id)) {
+                itemDef = window.ItemDefinitions.getItem(savedItem.id);
+            }
+
             if (itemDef) {
                 this.addItem({
                     ...itemDef,

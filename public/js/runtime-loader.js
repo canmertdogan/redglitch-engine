@@ -184,11 +184,22 @@
         ],
         'platformer-2d': [
             'engines/rpg-topdown/main.js', // For AtmosphereSystem
+            'engines/platformer-2d/PlatformerConfig.js',
+            'engines/platformer-2d/PlatformerAssetManager.js',
+            'engines/platformer-2d/ParallaxSystem.js',
+            'engines/platformer-2d/Animator.js',
+            'engines/platformer-2d/CombatSystem.js',
             'engines/platformer-2d/entities/Entity.js',
             'engines/platformer-2d/entities/Player.js',
+            'engines/platformer-2d/entities/Enemy.js',
+            'engines/platformer-2d/entities/FlyingEnemy.js',
+            'engines/platformer-2d/entities/ShooterEnemy.js',
+            'engines/platformer-2d/entities/Projectile.js',
+            'engines/platformer-2d/entities/PushableBlock.js',
             'engines/platformer-2d/entities/MovingPlatform.js',
             'engines/platformer-2d/PhysicsSystem.js',
             'engines/platformer-2d/renderer.js',
+            'engines/platformer-2d/generator/SmartGenerator.js',
             'engines/platformer-2d/main.js'
         ]
     };

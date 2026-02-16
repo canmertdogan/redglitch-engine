@@ -18,9 +18,11 @@ export class ReflectionSystem {
         ]);
 
         // 2. Player API
-        this.reflectClass("Player", this.game.player, [
-            "hp", "maxHp", "mana", "speed"
-        ]);
+        if (this.game.player) {
+            this.reflectClass("Player", this.game.player, [
+                "hp", "maxHp", "mana", "speed"
+            ]);
+        }
 
         // 3. Audio API
         if (this.game.audio) {

@@ -144,6 +144,44 @@ app.use('/api', cutscenesRouter);
 app.use('/api', campaignsRouter);
 app.use('/api', assetsRouter);
 
+app.post('/api/save-spritesheet', async (req, res) => {
+    try {
+        const dataUrl = req.body.image;
+        if (!dataUrl) {
+            return res.status(400).send('No image data provided.');
+        }
+
+        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+        const spritesheetPath = path.join(__dirname, 'public', 'sprite-art', 'platformer_spritesheet.png');
+        
+        await fs.writeFile(spritesheetPath, base64Data, 'base64');
+        
+        console.log('[SERVER] Spritesheet saved to:', spritesheetPath);
+
+        // Now, generate the atlas
+        const atlas = {};
+        const tSize = 16;
+        const cols = 16;
+        const totalTiles = 600;
+
+        for (let i = 0; i < totalTiles; i++) {
+            const x = (i % cols) * tSize;
+            const y = Math.floor(i / cols) * tSize;
+            atlas[i + 1] = { x, y, w: tSize, h: tSize };
+        }
+
+        const atlasPath = path.join(__dirname, 'public', 'sprite-art', 'platformer_atlas.json');
+        await fs.writeFile(atlasPath, JSON.stringify(atlas, null, 2));
+
+        console.log('[SERVER] Atlas saved to:', atlasPath);
+
+        res.json({ success: true, message: 'Spritesheet and atlas saved.' });
+    } catch (error) {
+        console.error('[SERVER] Error saving spritesheet:', error);
+        res.status(500).json({ success: false, message: 'Failed to save spritesheet.' });
+    }
+});
+
 // Root redirect to dashboard
 app.get('/', (req, res) => {
     res.redirect('/dashboard.html');

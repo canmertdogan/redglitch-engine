@@ -11,30 +11,25 @@ class Entity {
         this.isDead = false;
         this.facingRight = true;
         
-        // Animation State
+        // Animation 
         this.spriteName = null; 
-        this.animState = 'idle';
-        this.animFrame = 0;
-        this.animTimer = 0;
-        this.animSpeed = 0.1;
+        this.animator = new Animator(this);
+        this.animator.add('idle', 1, 0.2);
+
+        // Visual Effects
+        this.light = null; // { radius, color, intensity }
     }
 
     update(dt, map) {
-        // Animation tick
-        this.animTimer += dt;
-        if (this.animTimer >= this.animSpeed) {
-            this.animTimer = 0;
-            this.animFrame++;
-        }
+        this.animator.update(dt);
     }
 
     setAnimation(state, speed = 0.1) {
-        if (this.animState !== state) {
-            this.animState = state;
-            this.animFrame = 0;
-            this.animTimer = 0;
-            this.animSpeed = speed;
+        // If state doesn't exist, we might need to add a dummy one or handle it
+        if (!this.animator.animations[state]) {
+            this.animator.add(state, 1, speed);
         }
+        this.animator.play(state);
     }
 
     draw(renderer) {
