@@ -1,0 +1,193 @@
+{
+  "name": "Branching Paths",
+  "description": "A choice-driven campaign where player decisions affect the story and ending",
+  "version": "1.0.0",
+  "author": "Campaign Studio",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "type": "start",
+      "x": 100,
+      "y": 400,
+      "next": "intro_dialogue"
+    },
+    "intro_dialogue": {
+      "id": "intro_dialogue",
+      "type": "dialogue",
+      "x": 250,
+      "y": 400,
+      "speaker": "Mysterious Stranger",
+      "text": "The kingdom faces two threats: bandits in the west and monsters in the east. Which will you face first?",
+      "choices": [
+        { "text": "Deal with the bandits (RPG)", "next": "west_path_start" },
+        { "text": "Fight the monsters (ISO)", "next": "east_path_start" }
+      ]
+    },
+    "west_path_start": {
+      "id": "west_path_start",
+      "type": "level",
+      "x": 400,
+      "y": 200,
+      "engineType": "rpg-topdown",
+      "world": "bandit_camp",
+      "spawnPoint": { "x": 100, "y": 100 },
+      "objectives": ["Infiltrate bandit camp", "Defeat bandit leader"],
+      "next": "west_complete"
+    },
+    "west_complete": {
+      "id": "west_complete",
+      "type": "reward",
+      "x": 550,
+      "y": 200,
+      "rewards": {
+        "items": [{ "id": "bandit_key", "quantity": 1 }],
+        "achievements": ["bandit_slayer"],
+        "flags": { "west_complete": true }
+      },
+      "next": "path_check"
+    },
+    "east_path_start": {
+      "id": "east_path_start",
+      "type": "level",
+      "x": 400,
+      "y": 600,
+      "engineType": "iso-pixel",
+      "world": "monster_den",
+      "spawnPoint": { "x": 50, "y": 50, "z": 0 },
+      "objectives": ["Navigate the den", "Slay the alpha beast"],
+      "next": "east_complete"
+    },
+    "east_complete": {
+      "id": "east_complete",
+      "type": "reward",
+      "x": 550,
+      "y": 600,
+      "rewards": {
+        "items": [{ "id": "monster_fang", "quantity": 1 }],
+        "achievements": ["beast_hunter"],
+        "flags": { "east_complete": true }
+      },
+      "next": "path_check"
+    },
+    "path_check": {
+      "id": "path_check",
+      "type": "branch",
+      "x": 700,
+      "y": 400,
+      "condition": "flag:west_complete",
+      "trueNext": "second_choice_west",
+      "falseNext": "second_choice_east"
+    },
+    "second_choice_west": {
+      "id": "second_choice_west",
+      "type": "dialogue",
+      "x": 850,
+      "y": 200,
+      "speaker": "Guard Captain",
+      "text": "The bandits are dealt with. Now, will you help with the monsters?",
+      "choices": [
+        { "text": "Yes, I'll help", "next": "east_path_second" },
+        { "text": "No, I must move on", "next": "solo_west_ending" }
+      ]
+    },
+    "second_choice_east": {
+      "id": "second_choice_east",
+      "type": "dialogue",
+      "x": 850,
+      "y": 600,
+      "speaker": "Village Elder",
+      "text": "The monsters are defeated. Will you now deal with the bandits?",
+      "choices": [
+        { "text": "Yes, I'll help", "next": "west_path_second" },
+        { "text": "No, I must move on", "next": "solo_east_ending" }
+      ]
+    },
+    "east_path_second": {
+      "id": "east_path_second",
+      "type": "level",
+      "x": 1000,
+      "y": 300,
+      "engineType": "iso-pixel",
+      "world": "monster_den",
+      "spawnPoint": { "x": 50, "y": 50, "z": 0 },
+      "objectives": ["Clear remaining monsters"],
+      "next": "both_complete"
+    },
+    "west_path_second": {
+      "id": "west_path_second",
+      "type": "level",
+      "x": 1000,
+      "y": 500,
+      "engineType": "rpg-topdown",
+      "world": "bandit_camp",
+      "spawnPoint": { "x": 100, "y": 100 },
+      "objectives": ["Clear remaining bandits"],
+      "next": "both_complete"
+    },
+    "both_complete": {
+      "id": "both_complete",
+      "type": "reward",
+      "x": 1150,
+      "y": 400,
+      "rewards": {
+        "achievements": ["hero_of_the_realm"],
+        "flags": { "both_threats_cleared": true }
+      },
+      "next": "final_challenge"
+    },
+    "solo_west_ending": {
+      "id": "solo_west_ending",
+      "type": "cutscene",
+      "x": 1150,
+      "y": 150,
+      "cutsceneName": "west_ending",
+      "skippable": true,
+      "next": "completion"
+    },
+    "solo_east_ending": {
+      "id": "solo_east_ending",
+      "type": "cutscene",
+      "x": 1150,
+      "y": 650,
+      "cutsceneName": "east_ending",
+      "skippable": true,
+      "next": "completion"
+    },
+    "final_challenge": {
+      "id": "final_challenge",
+      "type": "level",
+      "x": 1300,
+      "y": 400,
+      "engineType": "platformer-2d",
+      "world": "dark_tower",
+      "spawnPoint": { "x": 50, "y": 450 },
+      "objectives": ["Climb the tower", "Face the true threat"],
+      "next": "true_ending"
+    },
+    "true_ending": {
+      "id": "true_ending",
+      "type": "cutscene",
+      "x": 1450,
+      "y": 400,
+      "cutsceneName": "true_ending",
+      "skippable": false,
+      "next": "completion"
+    },
+    "completion": {
+      "id": "completion",
+      "type": "dialogue",
+      "x": 1600,
+      "y": 400,
+      "speaker": "Narrator",
+      "text": "Your journey has ended. The choices you made shaped the fate of the kingdom.",
+      "next": null
+    }
+  },
+  "metadata": {
+    "pattern": "branching",
+    "difficulty": "normal",
+    "endings": 3,
+    "estimatedPlaytime": "40-60 minutes"
+  }
+}

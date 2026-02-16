@@ -1,0 +1,209 @@
+{
+  "name": "Advanced Campaign Demo",
+  "description": "Demonstrates all advanced node types: mini-games, hubs, challenges, boss rush, and exploration",
+  "version": "1.0.0",
+  "author": "Ketebe Team",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "next": "intro_dialogue"
+    },
+    {
+      "id": "intro_dialogue",
+      "type": "dialogue",
+      "text": "Welcome, brave adventurer! Your journey begins at the Central Hub.",
+      "next": "hub_central"
+    },
+    {
+      "id": "hub_central",
+      "type": "hub",
+      "name": "Central Hub",
+      "description": "Main town - shops, inn, quest board",
+      "engineType": "rpg-topdown",
+      "levelId": "hub_town",
+      "levelPath": "dunyalar/hub_town.json",
+      "hasShop": true,
+      "hasInn": true,
+      "hasQuestBoard": true,
+      "healPlayer": true,
+      "exits": [
+        {"id": "to_forest", "name": "Forest Path", "next": "forest_exploration"},
+        {"id": "to_minigame", "name": "Training Grounds", "next": "minigame_reflex"},
+        {"id": "to_challenge", "name": "Arena", "next": "challenge_time_trial"}
+      ],
+      "next": "forest_exploration"
+    },
+    {
+      "id": "forest_exploration",
+      "type": "exploration",
+      "name": "Ancient Forest",
+      "description": "Explore the mysterious forest and discover its secrets",
+      "engineType": "rpg-topdown",
+      "levelId": "forest_exploration",
+      "levelPath": "dunyalar/forest_exploration.json",
+      "objectives": [
+        "Find 3 Ancient Ruins",
+        "Collect 5 Herbs",
+        "Discover the Hidden Shrine"
+      ],
+      "secrets": ["secret_cave", "elder_tree", "fairy_spring"],
+      "allowEarlyExit": true,
+      "next": "forest_complete_dlg"
+    },
+    {
+      "id": "forest_complete_dlg",
+      "type": "dialogue",
+      "text": "You've explored the forest and uncovered its mysteries!",
+      "next": "unlock_minigame"
+    },
+    {
+      "id": "unlock_minigame",
+      "type": "variable",
+      "flag": "forest_explored",
+      "value": true,
+      "next": "minigame_reflex"
+    },
+    {
+      "id": "minigame_reflex",
+      "type": "mini-game",
+      "name": "Reflex Training",
+      "description": "Test your reflexes in this quick challenge!",
+      "gameType": "reflex",
+      "engineType": "platformer-2d",
+      "levelId": "reflex_test",
+      "levelPath": "dunyalar/reflex_test.json",
+      "timeLimit": 60,
+      "scoreTarget": 100,
+      "restoreStateAfter": false,
+      "next": "minigame_complete"
+    },
+    {
+      "id": "minigame_complete",
+      "type": "dialogue",
+      "text": "Excellent reflexes! You've earned a reward.",
+      "next": "minigame_reward"
+    },
+    {
+      "id": "minigame_reward",
+      "type": "reward",
+      "itemId": "speed_boost",
+      "itemName": "Speed Boost Potion",
+      "quantity": 3,
+      "next": "challenge_intro"
+    },
+    {
+      "id": "challenge_intro",
+      "type": "dialogue",
+      "text": "Time for a real challenge! Can you complete this level under strict conditions?",
+      "next": "challenge_time_trial"
+    },
+    {
+      "id": "challenge_time_trial",
+      "type": "challenge-mode",
+      "name": "Mountain Peak Time Trial",
+      "description": "Reach the summit before time runs out!",
+      "challengeType": "time_trial",
+      "engineType": "iso-pixel",
+      "levelId": "mountain_peak",
+      "levelPath": "dunyalar/mountain_peak.json",
+      "timeLimit": 120,
+      "scoreTarget": 500,
+      "restrictions": ["low_health"],
+      "challengeRewards": [
+        {
+          "type": "reward",
+          "itemId": "mountain_trophy",
+          "itemName": "Mountain Conqueror Trophy"
+        }
+      ],
+      "next": "challenge_complete"
+    },
+    {
+      "id": "challenge_complete",
+      "type": "dialogue",
+      "text": "Incredible! You conquered the mountain peak challenge!",
+      "next": "set_challenge_flag"
+    },
+    {
+      "id": "set_challenge_flag",
+      "type": "variable",
+      "flag": "challenge_complete",
+      "value": true,
+      "next": "check_ready_for_bosses"
+    },
+    {
+      "id": "check_ready_for_bosses",
+      "type": "branch",
+      "condition": "forest_explored",
+      "nextTrue": "boss_rush_intro",
+      "nextFalse": "hub_central"
+    },
+    {
+      "id": "boss_rush_intro",
+      "type": "dialogue",
+      "text": "You've proven yourself worthy. Now face the ultimate test: The Guardian Gauntlet!",
+      "next": "boss_rush_gauntlet"
+    },
+    {
+      "id": "boss_rush_gauntlet",
+      "type": "boss-rush",
+      "name": "Guardian Gauntlet",
+      "description": "Defeat all three guardians in succession!",
+      "engineType": "rpg-topdown",
+      "restoreHealthBetweenBosses": true,
+      "bossLevels": [
+        {
+          "levelId": "boss_forest_guardian",
+          "levelPath": "dunyalar/boss_forest.json",
+          "name": "Forest Guardian",
+          "engineType": "rpg-topdown"
+        },
+        {
+          "levelId": "boss_mountain_titan",
+          "levelPath": "dunyalar/boss_mountain.json",
+          "name": "Mountain Titan",
+          "engineType": "iso-pixel"
+        },
+        {
+          "levelId": "boss_sky_dragon",
+          "levelPath": "dunyalar/boss_sky.json",
+          "name": "Sky Dragon",
+          "engineType": "platformer-2d"
+        }
+      ],
+      "rushRewards": [
+        {
+          "type": "reward",
+          "itemId": "guardian_blade",
+          "itemName": "Legendary Guardian Blade"
+        },
+        {
+          "type": "reward",
+          "gold": 1000
+        }
+      ],
+      "next": "final_dialogue"
+    },
+    {
+      "id": "final_dialogue",
+      "type": "dialogue",
+      "text": "Congratulations! You've defeated all three guardians and proven yourself a true hero!",
+      "next": "final_reward"
+    },
+    {
+      "id": "final_reward",
+      "type": "reward",
+      "itemId": "hero_medal",
+      "itemName": "Medal of Heroism",
+      "gold": 5000,
+      "next": "return_to_hub"
+    },
+    {
+      "id": "return_to_hub",
+      "type": "dialogue",
+      "text": "Return to the hub to rest and prepare for new adventures!",
+      "next": "hub_central"
+    }
+  ]
+}

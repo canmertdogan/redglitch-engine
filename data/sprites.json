@@ -1,0 +1,58 @@
+{
+    "player": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "W": "#ffffff", "T": "#40e0d0", "S": "#f5d6a7", "B": "#2c3e50", "K": "#000000", "G": "#f1c40f" },
+        "data": [ "      TTTT      ", "    TTTTTTTT    ", "   TTTTTTTTTT   ", "   SSSWWWSSSS   ", "   SSSSSSSSSS   ", "   SSKSSSSKSS   ", "    SSSSSSSS    ", "    WWWWWWWW    ", "   WWWWWWWWWW   ", "   WWWGGGGWWW   ", "   WWWGGGGWWW   ", "    BBBBBBBB    ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "   KKKK  KKKK   " ]
+    },
+    "monster": {
+        "width": 32, "height": 16,
+        "palette": { " ": null, "A": "#2c3e50", "B": "#fdf2e9", "C": "#e74c3c", "D": "#95a5a6", "E": "#ffffff", "F": "#222034" },
+        "data": [ "    AAAAAAAA        AAAAAAAA    ", "   AABBBBBBAA      AABBBBBBAA   ", "  AABBBBBBBBAA    AABBBBBBBBAA  ", "  ABBCBBBBBCBA    ABBCBBBBBCBA  ", "  ABBBBBBBBBBA    ABBBBBBBBBBA  ", "  ABBBBBBBBBBA    ABBBBBBBBBBA  ", "  ADDDDDDDDDDA    ADDDDDDDDDDA  ", "   ADDDDDDDDA      ADDDDDDDDA   ", "    EEEEEEEE        EEEEEEEE    ", "   A   EE   A      A   EE   A   ", "  A    EE    A    A    EE    A  ", "  A    EE    A    A    EE    A  ", "   A   EE   A      A   EE   A   ", "    A  EE  A      F          F  ", "     A EE A      F            F ", "      EEEE      F              F" ]
+    },
+    "irab_fathah": {
+        "width": 8, "height": 8,
+        "palette": { " ": null, "R": "#e74c3c", "O": "#f39c12", "Y": "#f1c40f" },
+        "data": [ "      YY", "     YY ", "    OO  ", "   OO   ", "  RR    ", " RR     ", "        ", "        " ]
+    },
+    "caterpillar_head": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "D": "#1a1a1a", "M": "#2d2d2d", "L": "#e74c3c", "O": "#f39c12", "K": "#000000", "W": "#ffffff" },
+        "data": [ "      DDDD      ", "    DDMMMMDD    ", "   DMMLLLLMMD   ", "  DMMMMMMMMMMD  ", " DMMOOWWWWOOMMD ", " DMMOOWWWWOOMMD ", " DMMMMWWWWMMMMD ", " DMMLLLLLLLLMMD ", "  DMMLLLLLLMMD  ", "   DMLMMMM LMD  ", "    DL D  DL D  ", "    OL O  OL O  ", "    OO    OO    ", "    RR    RR    ", "   DD      DD   ", "   DD      DD   " ]
+    },
+    "caterpillar_body": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "D": "#1a1a1a", "M": "#2d2d2d", "L": "#e74c3c", "O": "#f39c12" },
+        "data": [ "                ", "      DDDD      ", "    DDMMMMDD    ", "   DMMLLLLMMD   ", "  DMMLLOOLLMMD  ", "  DMLLOOOOLLMD  ", "  DMLLOOOOLLMD  ", "  DMMLLOOLLMMD  ", "   DMMLLLLMMD   ", "    DDMMMMDD    ", "      DDDD      ", "     DD  DD     ", "     DD  DD     ", "                ", "                ", "                " ]
+    },
+    "target": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "R": "#e74c3c", "O": "#f39c12", "Y": "#f1c40f", "W": "#ffffff" },
+        "data": [ "      RRRR      ", "    RR    RR    ", "   R   YY   R   ", "  R    YY    R  ", "  R    YY    R  ", " R     YY     R ", "RRRRRRRYYRRRRRRR", "RRRRRRRYYRRRRRRR", " R     YY     R ", "  R    YY    R  ", "  R    YY    R  ", "   R   YY   R   ", "    RR    RR    ", "      RRRR      ", "                ", "                " ]
+    },
+    "skill_holy": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "W": "#ffffff", "G": "#f1c40f", "Y": "#fff176" },
+        "data": [ "      WWWW      ", "    WWYYYYWW    ", "   WYYYYYYYYW   ", "  WYYYYYYYYYYW  ", "  WYYYYGGYYYYW  ", " WYYYYGGGGYYYYW ", " WYYYGGGGGGYYYW ", " WYYYGGGGGGYYYW ", " WYYYYGGGGYYYYW ", "  WYYYYGGYYYYW  ", "  WYYYYYYYYYYW  ", "   WYYYYYYYYW   ", "    WWYYYYWW    ", "      WWWW      ", "                ", "                " ]
+    },
+    "skill_hellfire": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "R": "#e74c3c", "O": "#f39c12", "K": "#000000" },
+        "data": [ "      RRRR      ", "    RRORRRRR    ", "   RORRRRORRR   ", "  RORRRRRRORR   ", "  RRRRKRRRRRR   ", " RRRRKKKRRRRRR  ", " RRRKKKKKRRRRR  ", " RRRRKKKRRRRRR  ", " RRRRRKRRRRRRR  ", "  RRRRRRRORRR   ", "  RRRORRRRRRR   ", "   RRRRRORRR    ", "    RRRRRRRR    ", "      RRRR      ", "                ", "                " ]
+    },
+    "skill_glitch": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "T": "#40e0d0", "P": "#8e44ad", "K": "#000000" },
+        "data": [ "TTTTTTTTTTTTTTTT", "TPPPPPPPPPPPPPPT", "TPKKTKKKKTKKKPT", "TPKKTKKKKTKKKPT", "TPKKTTTTTTKKKPT", "TPKKKKKKKKKKKPT", "TPTTTTTTTTTTTPT", "TPKKKKKKKKKKKPT", "TPKKTTTTTTKKKPT", "TPKKTKKKKTKKKPT", "TPKKTKKKKTKKKPT", "TPPPPPPPPPPPPPPT", "TTTTTTTTTTTTTTTT", "                ", "                ", "                " ]
+    },
+    "npc_blacksmith": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "B": "#4b3621", "G": "#7f8c8d", "A": "#333333", "W": "#ffffff" }, "data": [ "      BBBB      ", "     BBBBBB     ", "    BBSSBSSB    ", "    BSSSSSSS    ", "    SSSSSSSS    ", "     SSKKSS     ", "    AAAAAAAA    ", "   AGGGGGGGA    ", "   AGGGGGGGA    ", "   AGGGGGGGA    ", "   AGGGGGGGA    ", "    KK    KK    ", "    KK    KK    ", "    KK    KK    ", "    KK    KK    ", "   KKKK  KKKK   " ] },
+    "npc_farmer": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "H": "#f1c40f", "G": "#27ae60", "B": "#8b4513", "K": "#000000" }, "data": [ "     HHHHHH     ", "   HHHHHHHHHH   ", "    SSHHHHSS    ", "    SSSSSSSS    ", "    SSSSSSSS    ", "     SSKKSS     ", "    GGGGGGGG    ", "   GGGGGGGGGG   ", "   GGGGGGGGGG   ", "   GGGGGGGGGG   ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "   KKKK  KKKK   " ] },
+    "npc_knight": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "M": "#bdc3c7", "D": "#7f8c8d", "R": "#e74c3c", "G": "#f1c40f" }, "data": [ "      MMMM      ", "     MMGGMM     ", "    MMMMMMMM    ", "    MKKMMKKM    ", "    MMMMMMMM    ", "     MMMMMM     ", "    RRRRRRRR    ", "   RRMMMMMMRR   ", "   RRMMMMMMRR   ", "   RRMMMMMMRR   ", "    MMMMMMMM    ", "    DD    DD    ", "    DD    DD    ", "    DD    DD    ", "    DD    DD    ", "   KKKK  KKKK   " ] },
+    "npc_merchant": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "B": "#3498db", "R": "#e74c3c", "G": "#f1c40f", "W": "#ffffff" }, "data": [ "      KKKK      ", "     KKKKKK     ", "    KKSSSSKK    ", "    SSSSSSSS    ", "    SSSSSSSS    ", "     SSKKSS     ", "    BBBBBBBB    ", "   BBBRRBBBBB   ", "   BBBRRBBBBB   ", "   BBBGGGBBBB   ", "   BBBBBBBBBB   ", "    RR    RR    ", "    RR    RR    ", "    RR    RR    ", "    RR    RR    ", "   KKKK  KKKK   " ] },
+    "npc_guard": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "M": "#bdc3c7", "D": "#7f8c8d", "R": "#c0392b" }, "data": [ "      MMMM      ", "     MMMMMM     ", "    MMSSSSMM    ", "    MSSSSSSS    ", "    MMSSSSMM    ", "     MMKKMM     ", "    MMMMMMMM    ", "   MMMMDRMMMM   ", "   MMMMDRMMMM   ", "   MMMMDRMMMM   ", "   MMMMMMMMMM   ", "    DD    DD    ", "    DD    DD    ", "    DD    DD    ", "    DD    DD    ", "   KKKK  KKKK   " ] },
+    "npc_innkeeper": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "B": "#4b3621", "W": "#ffffff", "V": "#7f8c8d" }, "data": [ "      BBBB      ", "     BBBBBB     ", "    BBSSSSBB    ", "    SSSSSSSS    ", "    SSSSSSSS    ", "     SSKKSS     ", "    WWWWWWWW    ", "   WWWVVVWWWW   ", "   WWWVVVWWWW   ", "   WWWVVVWWWW   ", "   WWWWWWWWWW   ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "   KKKK  KKKK   " ] },
+    "npc_alchemist": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "P": "#8e44ad", "G": "#f1c40f", "W": "#ffffff" }, "data": [ "      PPPP      ", "     PPPPPP     ", "    PPSSSSPP    ", "    SSSSSSSS    ", "    SSSSSSSS    ", "     SSKKSS     ", "    PPPPPPPP    ", "   PPPPGPPPPP   ", "   PPPPGPPPPP   ", "   PPPPGPPPPP   ", "   PPPPPPPPPP   ", "    PP    PP    ", "    PP    PP    ", "    PP    PP    ", "    PP    PP    ", "   KKKK  KKKK   " ] },
+    "npc_villager_woman": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "H": "#4b3621", "D": "#2ecc71", "W": "#ffffff" }, "data": [ "     HHHHHH     ", "    HHHHHHHH    ", "    HHSSHHHH    ", "    SSSSSSSS    ", "    SSSSSSSS    ", "     SSKKSS     ", "    DDDDDDDD    ", "   DDDDDDDDDD   ", "   DDDDWWDDDD   ", "   DDDDWWDDDD   ", "   DDDDDDDDDD   ", "    DD    DD    ", "    DD    DD    ", "    DD    DD    ", "    DD    DD    ", "   KKKK  KKKK   " ] },
+    "npc_old_man": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "G": "#bdc3c7", "B": "#8b4513", "W": "#d3d3d3" }, "data": [ "      WWWW      ", "     WWWWWW     ", "    WWSSSSWW    ", "    WSSSSSSW    ", "    WWSSSSWW    ", "     SSKKSS     ", "    BBBBBBBB    ", "   BBBBBBBBBB   ", "   BBBBGBBBBB   ", "   BBBBGBBBBB   ", "   BBBBBBBBBB   ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "   KKKK  KKKK   " ] },
+    "npc_baker": { "width": 16, "height": 16, "palette": { " ": null, "S": "#f5d6a7", "K": "#000000", "H": "#f1c40f", "W": "#ffffff", "B": "#8b4513" }, "data": [ "      HHHH      ", "     HHHHHH     ", "    HHSSSSHH    ", "    SSSSSSSS    ", "    SSSSSSSS    ", "     SSKKSS     ", "    WWWWWWWW    ", "   WWWWWWWWWW   ", "   WWWWWWWWWW   ", "   WWWWWWWWWW   ", "   WWWWWWWWWW   ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "    BB    BB    ", "   KKKK  KKKK   " ] },
+    "fire_1_large": { "width": 16, "height": 16, "palette": { " ": null, "R": "#e74c3c", "O": "#f39c12", "Y": "#f1c40f" }, "data": ["                ", "      YYYY      ", "     YYYYYY     ", "    YYYOOYYY    ", "   YYOOOOOYYY   ", "   YOOOOOOOYY   ", "  YOOOOOOOOOY   ", "  YORRRRRRROY   ", "  YORRRRRRROY   ", "  RRRRRRRRRRR   ", "  RRRRRRRRRRR   ", "   RRRRRRRRR    ", "    RRRRRRR     ", "     RRRRR      ", "      RRR       ", "                "] }
+}

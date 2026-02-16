@@ -1,0 +1,104 @@
+{
+  "name": "Branching Story Template",
+  "description": "Choice-driven narrative with two paths - customize to create interactive stories",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "type": "start",
+      "x": 100,
+      "y": 400,
+      "next": "intro_choice"
+    },
+    "intro_choice": {
+      "id": "intro_choice",
+      "type": "dialogue",
+      "x": 250,
+      "y": 400,
+      "speaker": "Narrator",
+      "text": "Your adventure begins. Which path will you choose?",
+      "choices": [
+        { "text": "Take the high road", "next": "path_a_level" },
+        { "text": "Take the low road", "next": "path_b_level" }
+      ]
+    },
+    "path_a_level": {
+      "id": "path_a_level",
+      "type": "level",
+      "x": 400,
+      "y": 200,
+      "engineType": "rpg-topdown",
+      "world": "path_a_world",
+      "spawnPoint": { "x": 100, "y": 100 },
+      "objectives": ["Complete Path A"],
+      "next": "path_a_reward"
+    },
+    "path_a_reward": {
+      "id": "path_a_reward",
+      "type": "reward",
+      "x": 550,
+      "y": 200,
+      "rewards": {
+        "flags": { "path_a_complete": true }
+      },
+      "next": "merge_point"
+    },
+    "path_b_level": {
+      "id": "path_b_level",
+      "type": "level",
+      "x": 400,
+      "y": 600,
+      "engineType": "iso-pixel",
+      "world": "path_b_world",
+      "spawnPoint": { "x": 50, "y": 50, "z": 0 },
+      "objectives": ["Complete Path B"],
+      "next": "path_b_reward"
+    },
+    "path_b_reward": {
+      "id": "path_b_reward",
+      "type": "reward",
+      "x": 550,
+      "y": 600,
+      "rewards": {
+        "flags": { "path_b_complete": true }
+      },
+      "next": "merge_point"
+    },
+    "merge_point": {
+      "id": "merge_point",
+      "type": "if-statement",
+      "x": 700,
+      "y": 400,
+      "conditions": [
+        { "flag": "path_a_complete", "next": "ending_a" },
+        { "flag": "path_b_complete", "next": "ending_b" }
+      ],
+      "defaultNext": "ending_a"
+    },
+    "ending_a": {
+      "id": "ending_a",
+      "type": "dialogue",
+      "x": 850,
+      "y": 200,
+      "speaker": "Narrator",
+      "text": "You took the high road and found glory!",
+      "next": null
+    },
+    "ending_b": {
+      "id": "ending_b",
+      "type": "dialogue",
+      "x": 850,
+      "y": 600,
+      "speaker": "Narrator",
+      "text": "You took the low road and discovered secrets!",
+      "next": null
+    }
+  },
+  "metadata": {
+    "template": true,
+    "category": "branching",
+    "endings": 2
+  }
+}

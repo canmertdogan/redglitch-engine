@@ -1,0 +1,14 @@
+{
+    "components":  [
+                       {
+                           "type":  "Stats",
+                           "hp":  500
+                       },
+                       {
+                           "scriptId":  "npc_shop",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Merchant",
+    "sprite":  "Knight/Knight/Knight-Idle.png"
+}

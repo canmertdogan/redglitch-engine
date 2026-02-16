@@ -1,0 +1,7 @@
+{
+    "name": "Platformer Project",
+    "author": "Ketebe Studio",
+    "version": "0.1.0",
+    "template": "platformer-starter",
+    "engineType": "platformer-2d"
+}

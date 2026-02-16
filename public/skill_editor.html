@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK SKILL STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f; /* Gold/Yellow for Skills */
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-size: 1.1rem; border-bottom: 1px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover { background: var(--accent); color: #000; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        input, select, textarea {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none; width: 100%;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- PANELS --- */
+        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border); }
+        .panel-header {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+        }
+        .panel-content { padding: 15px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 15px; }
+
+        /* --- SIDEBAR --- */
+        #sidebar { width: 260px; border-right: 1px solid var(--border); }
+        
+        .list-item {
+            padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #1a1a1a;
+            color: #888; display: flex; justify-content: space-between; align-items: center;
+        }
+        .list-item:hover { background: #111; color: #fff; }
+        .list-item.active { background: #1a1a1a; color: var(--accent); border-left: 3px solid var(--accent); }
+
+        /* --- CENTER (EDITOR) --- */
+        #center-panel { flex-grow: 1; background: var(--bg-canvas); }
+        
+        .form-section { background: #111; border: 1px solid #333; padding: 15px; position: relative; margin-bottom: 10px; }
+        .section-title {
+            position: absolute; top: -10px; left: 10px; background: #111; padding: 0 5px;
+            color: #888; font-size: 0.9rem; text-transform: uppercase;
+        }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .form-full { margin-bottom: 10px; }
+        label { display: block; color: #666; font-size: 0.8rem; margin-bottom: 4px; text-transform: uppercase; }
+
+        /* --- RIGHT (PREVIEW) --- */
+        #preview-panel { width: 300px; border-left: 1px solid var(--border); border-right: none; }
+        
+        #preview-box {
+            width: 100%; aspect-ratio: 1; background: #000; border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 10px 10px; cursor: pointer;
+        }
+        #preview-box:hover { border-color: var(--accent); }
+        #previewCanvas { width: 128px; height: 128px; image-rendering: pixelated; }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <div id="menubar">
+        <div style="color:var(--accent); font-weight:bold; margin-right:20px; letter-spacing:2px;">
+            <i class="fas fa-magic"></i> SKILL STUDIO
+        </div>
+        <div class="menu-item" onclick="saveToServer()">File</div>
+        <div class="menu-item">View</div>
+    </div>
+
+    <div id="toolbar">
+        <button class="tool-btn" onclick="saveToServer()" title="Save"><i class="fas fa-save"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="addNewSkill()" title="New Skill"><i class="fas fa-plus"></i></button>
+        <button class="tool-btn" style="color:#e74c3c;" title="Delete"><i class="fas fa-trash"></i></button>
+    </div>
+
+    <div id="layout">
+        
+        <!-- LEFT: LIST -->
+        <div id="sidebar" class="panel">
+            <div class="panel-header">SPELLBOOK</div>
+            <div class="panel-content" id="skill-list" style="padding:0;"></div>
+        </div>
+
+        <!-- CENTER: FORM -->
+        <div id="center-panel" class="panel">
+            <div class="panel-header">PROPERTIES</div>
+            <div class="panel-content">
+                
+                <div class="form-section">
+                    <div class="section-title">Identity</div>
+                    <div class="form-row">
+                        <div><label>ID</label><input type="text" id="skill-id"></div>
+                        <div><label>Name</label><input type="text" id="skill-name"></div>
+                    </div>
+                    <div class="form-full">
+                        <label>Description</label>
+                        <textarea id="skill-desc" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">Mechanics</div>
+                    <div class="form-full">
+                        <label>Type</label>
+                        <select id="skill-type">
+                            <option value="projectile">Projectile</option>
+                            <option value="burst">Burst</option>
+                            <option value="aoe">Area of Effect</option>
+                            <option value="heal">Heal/Buff</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div><label>Mana Cost</label><input type="number" id="skill-mana"></div>
+                        <div><label>Cooldown</label><input type="number" id="skill-cooldown" step="0.1"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- RIGHT: PREVIEW -->
+        <div id="preview-panel" class="panel">
+            <div class="panel-header">VISUALS</div>
+            <div class="panel-content">
+                <div id="preview-box" id="sprite-preview">
+                    <canvas id="previewCanvas"></canvas>
+                </div>
+                <div style="text-align:center; color:#666; font-size:0.8rem; margin-bottom:10px;">CLICK BOX TO EDIT SPRITE</div>
+                
+                <div class="form-full">
+                    <label>Icon / Projectile Sprite</label>
+                    <select id="skill-sprite"></select>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="base_game/sprites.js"></script>
+    
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <script src="skill_editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "metadata": {
+    "name": "Main Campaign",
+    "description": "",
+    "author": "",
+    "version": "1.0.0"
+  },
+  "nodes": [
+    {
+      "id": "start_node",
+      "type": "start",
+      "x": 100,
+      "y": 300,
+      "name": "START",
+      "next": "level_1294"
+    },
+    {
+      "id": "group_logic",
+      "type": "group",
+      "x": 350,
+      "y": 150,
+      "w": 700,
+      "h": 400,
+      "name": "LOGIC TEST AREA"
+    },
+    {
+      "id": "level_1294",
+      "type": "level",
+      "x": 340,
+      "y": 300,
+      "name": "LEVEL",
+      "levelId": "level1",
+      "engineType": "rpg-topdown",
+      "next": "level_6044"
+    },
+    {
+      "id": "level_6044",
+      "type": "level",
+      "x": 560,
+      "y": 300,
+      "name": "LEVEL",
+      "levelId": "level2",
+      "engineType": "rpg-topdown"
+    }
+  ]
+}

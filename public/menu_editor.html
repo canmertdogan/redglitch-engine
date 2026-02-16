@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KETEBE UI STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            --highlight: rgba(241, 196, 15, 0.1);
+            --danger: #c0392b;
+            --success: #2ecc71;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 16px;
+            image-rendering: pixelated;
+        }
+
+        /* ═══════════════════════════════════════════
+           MENUBAR — Algorithm Studio Pattern
+           ═══════════════════════════════════════════ */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 8px;
+            font-size: 0.95rem; border-bottom: 1px solid var(--border);
+            z-index: 6000; position: relative; flex-shrink: 0;
+        }
+        .app-brand {
+            color: var(--accent); font-weight: bold; padding: 0 15px; border-right: 2px solid var(--border);
+            margin-right: 10px; font-size: 1.3rem; letter-spacing: 2px; display: flex; align-items: center; gap: 10px;
+        }
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; cursor: pointer; }
+        .menu-item {
+            padding: 0 12px; color: #888; text-transform: uppercase; height: 100%;
+            display: flex; align-items: center; transition: background 0.1s; font-size: 0.9rem;
+        }
+        .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111; border: 1px solid var(--accent);
+            display: none; flex-direction: column; min-width: 200px; box-shadow: 6px 6px 0 rgba(0,0,0,0.8);
+            z-index: 6100; animation: slideDown 0.2s ease-out;
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .drop-opt {
+            padding: 8px 12px; cursor: pointer; color: #ccc; font-size: 0.9rem;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222;
+        }
+        .drop-opt:last-child { border-bottom: none; }
+        .drop-opt:hover { background: #222; color: #fff; border-left: 3px solid var(--accent); padding-left: 9px; }
+        .drop-sep { height: 1px; background: #333; margin: 2px 0; }
+        .shortcut { font-size: 0.75rem; color: #666; margin-left: 15px; }
+
+        /* ═══════════════════════════════════════════
+           TOOLBAR
+           ═══════════════════════════════════════════ */
+        #toolbar {
+            height: 40px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 8px; gap: 8px; flex-shrink: 0;
+        }
+        .toolbar-section { display: flex; align-items: center; gap: 6px; }
+        .toolbar-label { color: #666; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .toolbar-value {
+            color: var(--accent); font-size: 0.95rem; padding: 4px 8px;
+            background: #111; border: 1px solid #333; min-width: 60px; text-align: center;
+        }
+        .toolbar-value.clickable { cursor: pointer; transition: all 0.1s; }
+        .toolbar-value.clickable:hover { border-color: var(--accent); background: #1a1a1a; }
+        .toolbar-select {
+            background: #111; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 0.9rem; cursor: pointer; transition: all 0.1s;
+        }
+        .toolbar-select:hover { border-color: var(--accent); background: #1a1a1a; }
+        .toolbar-select:focus { outline: none; border-color: var(--accent); }
+
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+            font-family: inherit;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); transform: translateY(-1px); box-shadow: 0 1px 0 #000; }
+        .tool-btn:active { transform: translateY(0); box-shadow: none; }
+        .tool-btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+        .tool-btn-wide {
+            background: #111; border: 1px solid #444; color: #aaa; height: 32px;
+            padding: 0 10px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+            font-family: inherit; font-size: 0.9rem; text-transform: uppercase;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tool-btn-wide:hover { background: #222; border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+        .tool-btn-wide:active { transform: translateY(0); }
+        .tool-btn-wide.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+        .tool-btn-sm {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 24px; height: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 0.8rem; transition: all 0.1s;
+        }
+        .tool-btn-sm:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 4px; }
+
+        input[type="text"], input[type="number"] {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 0.95rem;
+        }
+        input:focus { border-color: var(--accent); }
+
+        /* ═══════════════════════════════════════════
+           MAIN LAYOUT
+           ═══════════════════════════════════════════ */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* ═══════════════════════════════════════════
+           TOOL RAIL
+           ═══════════════════════════════════════════ */
+        #tool-rail {
+            width: 44px; background: #000; border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 8px 0; gap: 6px; flex-shrink: 0; z-index: 100;
+        }
+        .rail-btn {
+            width: 36px; height: 36px; background: transparent; border: 1px solid transparent;
+            color: #666; cursor: pointer; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; border-radius: 3px;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+        }
+        .rail-btn i { font-size: 1.1rem; }
+        .rail-btn:hover { color: #fff; background: #111; border-color: #333; }
+        .rail-btn.active { color: var(--accent); background: #1a1a1a; border-color: var(--accent); }
+        .rail-sep { width: 26px; height: 1px; background: #333; margin: 3px 0; }
+
+        /* Canvas cursor styles */
+        #canvas-area.tool-pointer { cursor: default; }
+        #canvas-area.tool-move { cursor: move; }
+        #canvas-area.tool-resize { cursor: nwse-resize; }
+        #canvas-area.tool-pan { cursor: grab; }
+        #canvas-area.tool-pan:active { cursor: grabbing; }
+
+        /* ═══════════════════════════════════════════
+           PANELS (Collapsible)
+           ═══════════════════════════════════════════ */
+        .panel {
+            display: flex; flex-direction: column; background: var(--bg-panel);
+            border-right: 1px solid var(--border); overflow: hidden;
+            transition: width 0.25s ease;
+        }
+        .panel-header {
+            height: 30px; background: #000; display: flex; align-items: center; padding: 0 8px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border);
+            text-transform: uppercase; font-size: 0.95rem; justify-content: space-between;
+            letter-spacing: 0.5px; flex-shrink: 0;
+        }
+        .panel-header i { margin-right: 6px; }
+        .panel-content {
+            flex-grow: 1; overflow: auto; padding: 0; position: relative;
+            min-width: 0; opacity: 1; transition: opacity 0.15s ease;
+        }
+
+        /* Collapsed state */
+        .panel.collapsed { width: 40px !important; min-width: 40px !important; max-width: 40px !important; }
+        .panel.collapsed .panel-content { opacity: 0; pointer-events: none; position: absolute; visibility: hidden; }
+        .panel.collapsed .panel-header {
+            writing-mode: vertical-rl; text-orientation: mixed; justify-content: center;
+            padding: 10px 0; letter-spacing: 2px; height: 100%; border-bottom: none;
+        }
+        .panel.collapsed .panel-header span { white-space: nowrap; }
+        .panel.collapsed .panel-header .collapse-btn {
+            writing-mode: horizontal-tb; transform: rotate(180deg); margin-top: auto;
+        }
+
+        .collapse-btn {
+            background: transparent; border: 1px solid #444; color: #666;
+            width: 22px; height: 22px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; font-size: 0.75rem;
+            transition: all 0.1s; border-radius: 2px;
+        }
+        .collapse-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+
+        /* ═══════════════════════════════════════════
+           LEFT PANEL — Components & Hierarchy
+           ═══════════════════════════════════════════ */
+        #left-panel { width: 260px; min-width: 220px; }
+
+        .comp-section-title {
+            padding: 8px 12px; color: var(--text-muted); font-size: 0.85rem;
+            text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #222;
+        }
+        .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; }
+        .comp-card {
+            background: #111; border: 1px solid #333; padding: 10px 5px; text-align: center;
+            cursor: grab; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; font-size: 0.9rem; color: #ccc;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .comp-card:hover { border-color: var(--accent); background: #1a1a2a; color: #fff; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(241, 196, 15, 0.2); }
+        .comp-card:active { transform: translateY(0); }
+        .comp-card i { font-size: 1.3rem; margin-bottom: 4px; color: var(--accent); }
+
+        /* Hierarchy tree */
+        .tree-node {
+            padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #1a1a1a;
+            display: flex; align-items: center; gap: 8px; font-size: 0.95rem; color: #888;
+            transition: all 0.1s;
+        }
+        .tree-node:hover { background: #1a1a2a; color: #fff; }
+        .tree-node.selected { background: var(--highlight); border-left: 3px solid var(--accent); color: var(--accent); }
+        .tree-node i { width: 14px; text-align: center; font-size: 0.85rem; }
+        .tree-node .tree-type { font-size: 0.75rem; color: #555; margin-left: auto; text-transform: uppercase; }
+
+        /* ═══════════════════════════════════════════
+           CENTER — Canvas Area
+           ═══════════════════════════════════════════ */
+        #center-panel { flex-grow: 1; position: relative; display: flex; flex-direction: column; }
+
+        #canvas-area {
+            flex-grow: 1; overflow: hidden; display: flex; align-items: center; justify-content: center;
+            background: var(--bg-canvas); position: relative;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        #artboard {
+            width: 800px; height: 450px; background: #000;
+            border: 2px solid #333; position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); flex-shrink: 0;
+            transform-origin: center center;
+        }
+
+        /* Resolution label */
+        .artboard-label {
+            position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%);
+            font-size: 0.8rem; color: #555; white-space: nowrap; pointer-events: none;
+        }
+
+        /* UI Element Wrapper */
+        .ui-el {
+            position: absolute; cursor: pointer; box-sizing: border-box;
+            transition: outline-color 0.1s;
+        }
+        .ui-el:hover { outline: 1px dashed rgba(241,196,15,0.4); }
+        .ui-el.selected { outline: 2px solid var(--accent); z-index: 1000; }
+        .ui-el.multi-selected { outline: 2px solid #3498db; z-index: 999; }
+
+        /* 8 Resize handles */
+        .resize-handle {
+            position: absolute; width: 8px; height: 8px; background: var(--accent);
+            border: 1px solid #000; display: none; z-index: 1001;
+        }
+        .ui-el.selected .resize-handle { display: block; }
+        .rh-tl { top: -4px; left: -4px; cursor: nw-resize; }
+        .rh-tc { top: -4px; left: 50%; margin-left: -4px; cursor: n-resize; }
+        .rh-tr { top: -4px; right: -4px; cursor: ne-resize; }
+        .rh-ml { top: 50%; margin-top: -4px; left: -4px; cursor: w-resize; }
+        .rh-mr { top: 50%; margin-top: -4px; right: -4px; cursor: e-resize; }
+        .rh-bl { bottom: -4px; left: -4px; cursor: sw-resize; }
+        .rh-bc { bottom: -4px; left: 50%; margin-left: -4px; cursor: s-resize; }
+        .rh-br { bottom: -4px; right: -4px; cursor: se-resize; }
+
+        /* Snap guides */
+        .snap-guide {
+            position: absolute; background: var(--accent); opacity: 0.5; z-index: 2000; pointer-events: none;
+        }
+        .snap-guide-h { height: 1px; left: 0; right: 0; }
+        .snap-guide-v { width: 1px; top: 0; bottom: 0; }
+
+        /* Marquee selection box */
+        .marquee {
+            position: absolute; border: 1px dashed var(--accent); background: rgba(241,196,15,0.05);
+            pointer-events: none; z-index: 3000;
+        }
+
+        /* Component Previews (on artboard) */
+        .preview-btn {
+            width: 100%; height: 100%; background: #333; border: 2px solid #fff; color: #fff;
+            display: flex; align-items: center; justify-content: center; font-family: 'VT323', monospace;
+            font-size: inherit; pointer-events: none;
+        }
+        .preview-label {
+            width: 100%; height: 100%; color: #fff; display: flex; align-items: center;
+            font-family: 'VT323', monospace; font-size: inherit; pointer-events: none;
+        }
+        .preview-panel {
+            width: 100%; height: 100%; background: rgba(10,10,20,0.9); border: 2px solid #444;
+            pointer-events: none;
+        }
+        .preview-image {
+            width: 100%; height: 100%; background-size: contain; background-repeat: no-repeat;
+            background-position: center; border: 1px dashed #555; pointer-events: none;
+        }
+        .preview-image.empty::after {
+            content: '\\f03e'; font-family: 'Font Awesome 5 Free'; font-weight: 400;
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 100%; color: #444; font-size: 2rem;
+        }
+        .preview-bar {
+            width: 100%; height: 100%; background: #000; border: 2px solid #fff;
+            position: relative; pointer-events: none;
+        }
+        .preview-bar-fill { height: 100%; background: #e74c3c; }
+        .preview-bar-label {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; text-shadow: 1px 1px 0 #000; font-family: 'VT323', monospace;
+        }
+
+        /* ═══════════════════════════════════════════
+           RIGHT PANEL — Inspector
+           ═══════════════════════════════════════════ */
+        #right-panel { width: 300px; min-width: 220px; border-left: 1px solid var(--border); border-right: none; }
+
+        /* Inspector tabs */
+        .inspector-tabs {
+            display: flex; border-bottom: 1px solid #333; flex-shrink: 0;
+        }
+        .inspector-tab {
+            flex: 1; text-align: center; padding: 8px; cursor: pointer;
+            background: transparent; color: #888; font-weight: bold;
+            font-family: inherit; font-size: 0.9rem; border: none;
+            border-bottom: 2px solid transparent; transition: all 0.1s;
+        }
+        .inspector-tab:hover { color: #fff; background: #111; }
+        .inspector-tab.active { background: var(--accent); color: #000; border-bottom-color: var(--accent); }
+
+        .prop-group { border-bottom: 1px solid #222; padding: 12px; }
+        .prop-group-title {
+            font-weight: bold; color: var(--accent); margin-bottom: 10px;
+            font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .prop-row { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+        .prop-label { font-size: 0.85rem; color: #666; text-transform: uppercase; min-width: 70px; }
+        .prop-input {
+            background: #000; border: 1px solid #444; color: #fff;
+            padding: 5px 6px; font-family: inherit; font-size: 0.95rem; width: 60%;
+        }
+        .prop-input:focus { border-color: var(--accent); }
+
+        .color-row { display: flex; gap: 5px; width: 60%; }
+        .color-swatch {
+            width: 30px; height: 28px; border: 1px solid #444; padding: 0; cursor: pointer;
+            background: transparent;
+        }
+        .color-text { flex: 1; }
+
+        .align-btns { display: flex; gap: 4px; width: 60%; }
+        .align-btn {
+            flex: 1; background: #222; border: 1px solid #444; color: #ccc;
+            cursor: pointer; height: 28px; display: flex; align-items: center; justify-content: center;
+            transition: all 0.1s; font-size: 0.9rem;
+        }
+        .align-btn:hover { border-color: var(--accent); color: #fff; }
+        .align-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+        .editor-btn {
+            width: 100%; padding: 8px; background: #222; border: 1px solid #444; color: #ccc;
+            cursor: pointer; font-family: inherit; font-size: 1rem; text-transform: uppercase;
+            margin-top: 5px; transition: all 0.1s;
+        }
+        .editor-btn:hover { border-color: var(--accent); color: #fff; background: #333; }
+        .editor-btn.danger { border-color: var(--danger); color: var(--danger); }
+        .editor-btn.danger:hover { background: var(--danger); color: #fff; }
+
+        /* Empty inspector state */
+        .inspector-empty {
+            padding: 40px 20px; text-align: center; color: #555;
+        }
+        .inspector-empty i { font-size: 3rem; margin-bottom: 15px; display: block; opacity: 0.3; }
+
+        /* ═══════════════════════════════════════════
+           STATUS BAR
+           ═══════════════════════════════════════════ */
+        #statusbar {
+            height: 24px; background: var(--border); color: #888; display: flex; align-items: center;
+            padding: 0 10px; font-size: 0.85rem; gap: 10px; border-top: 1px solid #000; flex-shrink: 0;
+        }
+        .status-sep { color: #444; }
+
+        /* ═══════════════════════════════════════════
+           QUICK SEARCH OVERLAY (Ctrl+K)
+           ═══════════════════════════════════════════ */
+        #quick-search-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); z-index: 10000;
+            display: flex; align-items: flex-start; justify-content: center;
+            padding-top: 100px; backdrop-filter: blur(2px);
+            animation: overlayFadeIn 0.2s ease-out;
+        }
+        #quick-search-modal {
+            width: 500px; max-height: 400px; background: #000;
+            border: 2px solid var(--accent); box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.8);
+            display: flex; flex-direction: column;
+            animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .search-header {
+            display: flex; align-items: center; gap: 10px; padding: 12px;
+            background: var(--bg-header); border-bottom: 1px solid var(--border);
+        }
+        .search-header i.fa-search { color: var(--accent); font-size: 1.2rem; }
+        #search-input {
+            flex: 1; background: var(--bg-input); border: 1px solid var(--border);
+            color: var(--text-main); padding: 8px 12px; font-family: 'VT323', monospace; font-size: 1.1rem;
+        }
+        #search-input:focus { border-color: var(--accent); }
+        .close-search {
+            background: transparent; border: none; color: #888; cursor: pointer;
+            font-size: 1.3rem; padding: 4px 8px; transition: color 0.1s;
+        }
+        .close-search:hover { color: var(--accent); }
+        .search-results { flex: 1; overflow-y: auto; max-height: 300px; }
+        .search-item {
+            padding: 10px 12px; display: flex; align-items: center; gap: 12px;
+            cursor: pointer; border-bottom: 1px solid #111; transition: all 0.1s;
+        }
+        .search-item:hover { background: #111; }
+        .search-item.selected { background: var(--accent); color: #000; }
+        .search-item-icon {
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--border); background: var(--bg-input); flex-shrink: 0;
+        }
+        .search-item.selected .search-item-icon { border-color: #000; background: #000; color: var(--accent); }
+        .search-item-name { font-size: 1rem; color: var(--text-main); }
+        .search-item.selected .search-item-name { color: #000; }
+        .search-item-type { font-size: 0.8rem; color: #666; margin-left: auto; }
+        .search-item.selected .search-item-type { color: rgba(0,0,0,0.6); }
+        .search-footer {
+            padding: 8px 12px; background: var(--bg-header); border-top: 1px solid var(--border);
+            font-size: 0.85rem; color: #666;
+        }
+        .search-footer i { color: var(--accent); margin: 0 3px; }
+        .search-empty { padding: 40px; text-align: center; color: #666; }
+        .search-empty i { font-size: 3rem; margin-bottom: 15px; opacity: 0.3; display: block; }
+
+        /* ═══════════════════════════════════════════
+           RESOLUTION PRESET MENU
+           ═══════════════════════════════════════════ */
+        .preset-menu {
+            position: absolute; background: #000; border: 1px solid var(--accent);
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5); z-index: 5000;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .preset-menu-header {
+            padding: 8px 12px; background: var(--accent); color: #000;
+            font-weight: bold; font-size: 0.95rem; letter-spacing: 1px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .preset-menu-content { padding: 6px; }
+        .preset-item {
+            width: 100%; background: transparent; border: 1px solid #333; color: #ccc;
+            padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+            font-family: inherit; font-size: 0.95rem; margin-bottom: 4px; transition: all 0.1s;
+        }
+        .preset-item i { width: 16px; text-align: center; color: var(--accent); }
+        .preset-item:hover { background: #222; border-color: var(--accent); color: #fff; transform: translateX(2px); }
+
+        /* ═══════════════════════════════════════════
+           SAVE INDICATOR
+           ═══════════════════════════════════════════ */
+        .save-indicator {
+            position: fixed; top: 40px; right: 20px;
+            background: var(--accent); color: #000; padding: 10px 20px;
+            border-radius: 2px; font-weight: bold;
+            box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5); z-index: 9000;
+            animation: slideInRight 0.3s ease-out, slideOutRight 0.3s ease-in 2s forwards;
+        }
+
+        /* ═══════════════════════════════════════════
+           ANIMATIONS
+           ═══════════════════════════════════════════ */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes overlayFadeIn {
+            from { opacity: 0; backdrop-filter: blur(0); }
+            to { opacity: 1; backdrop-filter: blur(2px); }
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideOutRight {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100px); }
+        }
+        @keyframes elementSpawn {
+            0% { opacity: 0; transform: scale(0.8); }
+            60% { transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .ui-el.spawning { animation: elementSpawn 0.3s ease-out; }
+
+        /* ═══════════════════════════════════════════
+           FOCUS & ACCESSIBILITY
+           ═══════════════════════════════════════════ */
+        *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        button:focus-visible, input:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+        /* ═══════════════════════════════════════════
+           NAVIGATE BADGE (on canvas buttons)
+           ═══════════════════════════════════════════ */
+        .navigate-badge {
+            position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+            background: rgba(52, 152, 219, 0.85); color: #fff; font-size: 10px; padding: 1px 6px;
+            border-radius: 3px; white-space: nowrap; pointer-events: none; z-index: 100;
+            font-family: VT323, monospace; display: flex; align-items: center; gap: 3px;
+        }
+        .navigate-badge i { font-size: 8px; }
+
+        /* ═══════════════════════════════════════════
+           SCREEN MAP OVERLAY
+           ═══════════════════════════════════════════ */
+        #screen-map-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
+            background: rgba(0,0,0,0.92); display: flex; flex-direction: column;
+            animation: fadeIn 0.2s;
+        }
+        .screen-map-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px; background: var(--bg-header); border-bottom: 2px solid var(--border);
+            color: var(--accent); font-size: 1.1rem; font-family: VT323, monospace;
+        }
+        .screen-map-viewport {
+            flex: 1; overflow: auto; position: relative; padding: 20px;
+        }
+        .screen-map-card {
+            position: absolute; background: var(--bg-panel); border: 2px solid var(--border);
+            cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+            display: flex; flex-direction: column;
+        }
+        .screen-map-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .screen-map-card.active { border-color: var(--accent); box-shadow: 0 0 12px rgba(241,196,15,0.25); }
+        .smc-header {
+            padding: 8px 12px; background: var(--bg-header); color: var(--accent);
+            font-family: VT323, monospace; font-size: 1rem;
+            border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px;
+        }
+        .smc-body { flex: 1; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+        .smc-stat { font-size: 0.82rem; color: var(--text-muted); font-family: VT323, monospace; display: flex; align-items: center; gap: 6px; }
+        .smc-stat i { width: 14px; text-align: center; color: var(--text-main); }
+        .smc-footer {
+            padding: 6px 12px; font-size: 0.75rem; color: #555;
+            border-top: 1px solid var(--border); text-align: center;
+            font-family: VT323, monospace;
+        }
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════
+         MENUBAR
+         ═══════════════════════════════════════════ -->
+    <div id="menubar">
+        <div class="app-brand"><i class="fas fa-layer-group"></i> UI STUDIO</div>
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.save()">Save <span class="shortcut">Ctrl+S</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.reloadFromDisk()">Reload from Disk</div>
+                <div class="drop-opt" onclick="studio.exportJSON()">Export JSON</div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="window.close()">Exit</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.undo()">Undo <span class="shortcut">Ctrl+Z</span></div>
+                <div class="drop-opt" onclick="studio.redo()">Redo <span class="shortcut">Ctrl+Y</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.duplicateSelected()">Duplicate <span class="shortcut">Ctrl+D</span></div>
+                <div class="drop-opt" onclick="studio.deleteSelected()">Delete <span class="shortcut">Del</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.selectAll()">Select All <span class="shortcut">Ctrl+A</span></div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.togglePanel('left')">Toggle Components <span class="shortcut">Ctrl+1</span></div>
+                <div class="drop-opt" onclick="studio.togglePanel('right')">Toggle Inspector <span class="shortcut">Ctrl+2</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.resetView()">Reset View <span class="shortcut">0</span></div>
+                <div class="drop-opt" onclick="studio.toggleGrid()">Toggle Grid <span class="shortcut">G</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.zoomIn()">Zoom In <span class="shortcut">+</span></div>
+                <div class="drop-opt" onclick="studio.zoomOut()">Zoom Out <span class="shortcut">-</span></div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Screen</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.addScreen()">New Screen <span class="shortcut">Ctrl+N</span></div>
+                <div class="drop-opt" onclick="studio.duplicateScreen()">Duplicate Screen</div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.toggleScreenMap()">Screen Map <span class="shortcut">Ctrl+M</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.deleteScreen()">Delete Screen</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         TOOLBAR
+         ═══════════════════════════════════════════ -->
+    <div id="toolbar">
+        <!-- Screen Section -->
+        <div class="toolbar-section">
+            <label class="toolbar-label">SCREEN:</label>
+            <select id="screen-selector" class="toolbar-select" onchange="studio.switchScreen(this.value)" style="width: 180px;"></select>
+            <button class="tool-btn" title="New Screen (Ctrl+N)" onclick="studio.addScreen()"><i class="fas fa-plus"></i></button>
+            <button class="tool-btn" title="Screen Map (Ctrl+M)" onclick="studio.toggleScreenMap()"><i class="fas fa-project-diagram"></i></button>
+        </div>
+
+        <div class="tool-sep"></div>
+
+        <!-- Zoom Section -->
+        <div class="toolbar-section">
+            <label class="toolbar-label">ZOOM:</label>
+            <button class="tool-btn-sm" title="Zoom Out" onclick="studio.zoomOut()"><i class="fas fa-minus"></i></button>
+            <span id="zoom-indicator" class="toolbar-value clickable" onclick="studio.showZoomPresets()" title="Click for zoom presets">100%</span>
+            <button class="tool-btn-sm" title="Zoom In" onclick="studio.zoomIn()"><i class="fas fa-plus"></i></button>
+        </div>
+
+        <div class="tool-sep"></div>
+
+        <!-- Snap & Grid -->
+        <div class="toolbar-section">
+            <button class="tool-btn-wide active" id="btn-snap" onclick="studio.toggleSnapping()" title="Toggle Snap">
+                <i class="fas fa-magnet"></i> SNAP
+            </button>
+            <button class="tool-btn-wide" id="btn-grid" onclick="studio.toggleGrid()" title="Toggle Grid (G)">
+                <i class="fas fa-th"></i> GRID
+            </button>
+            <select id="grid-size" class="toolbar-select" title="Grid Size" onchange="studio.setSnapSize(parseInt(this.value))">
+                <option value="5">5px</option>
+                <option value="10" selected>10px</option>
+                <option value="20">20px</option>
+                <option value="50">50px</option>
+            </select>
+        </div>
+
+        <div class="tool-sep"></div>
+
+        <!-- Alignment -->
+        <div class="toolbar-section">
+            <button class="tool-btn" title="Align Left" onclick="studio.alignElements('left')"><i class="fas fa-align-left"></i></button>
+            <button class="tool-btn" title="Align Center H" onclick="studio.alignElements('center-h')"><i class="fas fa-align-center"></i></button>
+            <button class="tool-btn" title="Align Right" onclick="studio.alignElements('right')"><i class="fas fa-align-right"></i></button>
+            <button class="tool-btn" title="Align Top" onclick="studio.alignElements('top')"><i class="fas fa-arrow-up"></i></button>
+            <button class="tool-btn" title="Align Middle V" onclick="studio.alignElements('center-v')"><i class="fas fa-arrows-alt-v"></i></button>
+            <button class="tool-btn" title="Align Bottom" onclick="studio.alignElements('bottom')"><i class="fas fa-arrow-down"></i></button>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+
+        <!-- Resolution -->
+        <div class="toolbar-section">
+            <label class="toolbar-label">RES:</label>
+            <select id="resolution-selector" class="toolbar-select" onchange="studio.setResolution(this.value)">
+                <option value="800x450">800×450</option>
+                <option value="1280x720">1280×720</option>
+                <option value="1920x1080">1920×1080</option>
+            </select>
+        </div>
+
+        <div class="tool-sep"></div>
+
+        <!-- Actions -->
+        <div class="toolbar-section">
+            <button class="tool-btn" title="Preview Mode" onclick="studio.togglePreview()"><i class="fas fa-play"></i></button>
+            <button class="tool-btn primary" title="Save (Ctrl+S)" onclick="studio.save()"><i class="fas fa-save"></i></button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         MAIN LAYOUT
+         ═══════════════════════════════════════════ -->
+    <div id="layout">
+
+        <!-- TOOL RAIL -->
+        <div id="tool-rail">
+            <button class="rail-btn active" data-tool="pointer" onclick="studio.setTool('pointer')" title="Pointer (V)">
+                <i class="fas fa-mouse-pointer"></i>
+            </button>
+            <button class="rail-btn" data-tool="pan" onclick="studio.setTool('pan')" title="Pan (H)">
+                <i class="fas fa-hand-paper"></i>
+            </button>
+
+            <div class="rail-sep"></div>
+
+            <button class="rail-btn" data-tool="add-panel" onclick="studio.quickAdd('panel')" title="Add Panel">
+                <i class="far fa-square"></i>
+            </button>
+            <button class="rail-btn" data-tool="add-label" onclick="studio.quickAdd('label')" title="Add Label">
+                <i class="fas fa-font"></i>
+            </button>
+            <button class="rail-btn" data-tool="add-button" onclick="studio.quickAdd('button')" title="Add Button">
+                <i class="fas fa-mouse-pointer"></i>
+            </button>
+            <button class="rail-btn" data-tool="add-image" onclick="studio.quickAdd('image')" title="Add Image">
+                <i class="far fa-image"></i>
+            </button>
+            <button class="rail-btn" data-tool="add-bar" onclick="studio.quickAdd('bar')" title="Add Bar">
+                <i class="fas fa-battery-half"></i>
+            </button>
+
+            <div class="rail-sep"></div>
+
+            <button class="rail-btn" onclick="studio.bringToFront()" title="Bring to Front">
+                <i class="fas fa-layer-group"></i>
+            </button>
+            <button class="rail-btn" onclick="studio.sendToBack()" title="Send to Back">
+                <i class="fas fa-level-down-alt"></i>
+            </button>
+
+            <div class="rail-sep" style="margin-top: auto;"></div>
+
+            <button class="rail-btn" onclick="studio.showQuickSearch()" title="Search Elements (Ctrl+K)">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+
+        <!-- LEFT PANEL: Components & Hierarchy -->
+        <div id="left-panel" class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-puzzle-piece"></i> COMPONENTS</span>
+                <button class="collapse-btn" onclick="studio.togglePanel('left')" title="Collapse (Ctrl+1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            <div class="panel-content">
+                <div class="comp-section-title">WIDGETS</div>
+                <div class="comp-grid">
+                    <div class="comp-card" draggable="true" data-type="panel"><i class="far fa-square"></i> PANEL</div>
+                    <div class="comp-card" draggable="true" data-type="label"><i class="fas fa-font"></i> LABEL</div>
+                    <div class="comp-card" draggable="true" data-type="button"><i class="fas fa-mouse-pointer"></i> BUTTON</div>
+                    <div class="comp-card" draggable="true" data-type="image"><i class="far fa-image"></i> IMAGE</div>
+                    <div class="comp-card" draggable="true" data-type="bar"><i class="fas fa-battery-half"></i> BAR</div>
+                </div>
+
+                <div class="panel-header" style="margin-top: 5px; border-top: 2px solid var(--border);">
+                    <span><i class="fas fa-sitemap"></i> HIERARCHY</span>
+                </div>
+                <div id="hierarchy-list" style="padding: 0;"></div>
+            </div>
+        </div>
+
+        <!-- CENTER: Canvas -->
+        <div id="center-panel">
+            <div id="canvas-area" class="tool-pointer">
+                <div id="artboard">
+                    <div class="artboard-label" id="artboard-label">800 × 450</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Inspector -->
+        <div id="right-panel" class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-sliders-h"></i> INSPECTOR</span>
+                <button class="collapse-btn" onclick="studio.togglePanel('right')" title="Collapse (Ctrl+2)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="inspector-tabs" id="inspector-tabs">
+                <button class="inspector-tab active" data-tab="props" onclick="studio.setInspectorTab('props')">PROPERTIES</button>
+                <button class="inspector-tab" data-tab="style" onclick="studio.setInspectorTab('style')">STYLE</button>
+                <button class="inspector-tab" data-tab="events" onclick="studio.setInspectorTab('events')">EVENTS</button>
+            </div>
+            <div id="inspector" class="panel-content">
+                <div class="inspector-empty">
+                    <i class="fas fa-hand-pointer"></i>
+                    <div>SELECT AN ELEMENT</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         STATUS BAR
+         ═══════════════════════════════════════════ -->
+    <div id="statusbar">
+        <span id="status-tool"><i class="fas fa-mouse-pointer"></i> Pointer</span>
+        <span class="status-sep">|</span>
+        <span id="status-screen">No Screen</span>
+        <span class="status-sep">|</span>
+        <span id="status-elements">0 elements</span>
+        <span class="status-sep">|</span>
+        <span id="status-selection">No selection</span>
+        <span style="flex-grow: 1;"></span>
+        <span id="status-cursor">X: 0, Y: 0</span>
+        <span class="status-sep">|</span>
+        <span id="status-zoom">Zoom: 100%</span>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         QUICK SEARCH OVERLAY (Ctrl+K)
+         ═══════════════════════════════════════════ -->
+    <div id="quick-search-overlay" style="display: none;">
+        <div id="quick-search-modal">
+            <div class="search-header">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Search elements or components..." autocomplete="off">
+                <button class="close-search" onclick="studio.closeQuickSearch()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="search-results" id="search-results"></div>
+            <div class="search-footer">
+                <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i> Navigate
+                &nbsp;&nbsp;
+                <i class="fas fa-level-down-alt" style="transform: rotate(90deg);"></i> Select
+                &nbsp;&nbsp;
+                <i>Esc</i> Close
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ZOOM PRESETS MENU
+         ═══════════════════════════════════════════ -->
+    <div id="zoom-menu" class="preset-menu" style="display: none; position: fixed;">
+        <div class="preset-menu-header"><i class="fas fa-search"></i> ZOOM</div>
+        <div class="preset-menu-content">
+            <button class="preset-item" onclick="studio.setZoom(0.25)"><span>25%</span></button>
+            <button class="preset-item" onclick="studio.setZoom(0.5)"><span>50%</span></button>
+            <button class="preset-item" onclick="studio.setZoom(0.75)"><span>75%</span></button>
+            <button class="preset-item" onclick="studio.setZoom(1.0)"><span>100%</span></button>
+            <button class="preset-item" onclick="studio.setZoom(1.5)"><span>150%</span></button>
+            <button class="preset-item" onclick="studio.setZoom(2.0)"><span>200%</span></button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SCREEN MAP OVERLAY
+         ═══════════════════════════════════════════ -->
+    <div id="screen-map-overlay" style="display: none;">
+        <div class="screen-map-header">
+            <span><i class="fas fa-project-diagram"></i> SCREEN NAVIGATION MAP</span>
+            <button class="close-search" onclick="studio.toggleScreenMap()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="screen-map-viewport">
+            <svg id="screen-map-svg" style="position:absolute;top:0;left:0;pointer-events:none;"></svg>
+            <div id="screen-map-cards"></div>
+        </div>
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+
+    <script src="base_game/ui/uiRenderer.js"></script>
+    <script src="menu_editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "Traveler",
+  "hp": 100,
+  "stamina": 100,
+  "mana": 50,
+  "speed": 250,
+  "spriteSrc": "base_game/assets/player_sheet.png",
+  "frameWidth": 16,
+  "frameHeight": 16
+}

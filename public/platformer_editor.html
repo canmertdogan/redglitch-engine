@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK PLATFORMER STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #1f2b42;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- TABS SYSTEM --- */
+        .sidebar-tabs {
+            display: flex;
+            background: #000;
+            border-bottom: 2px solid var(--border);
+            height: 36px;
+            flex-shrink: 0;
+        }
+        .s-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #555;
+            border-right: 1px solid #111;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            transition: all 0.1s;
+        }
+        .s-tab:hover { background: #111; color: #aaa; }
+        .s-tab.active { background: var(--bg-panel); color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+        .tab-content { display: none; flex-direction: column; height: 100%; overflow-y: auto; }
+        .tab-content.active { display: flex; }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0;
+            font-size: 1.1rem; border-bottom: 2px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menubar-title {
+            color: var(--accent); font-weight: bold; padding: 0 15px; 
+            border-right: 2px solid var(--border); margin-right: 10px; 
+            font-size: 1.2rem; letter-spacing: 2px; height: 100%;
+            display: flex; align-items: center; gap: 10px;
+        }
+        
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover, .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111; border: 2px solid var(--border);
+            display: none; flex-direction: column; min-width: 200px; box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .dropdown-item {
+            padding: 10px 15px; color: #aaa; cursor: pointer; border-bottom: 1px solid #222;
+        }
+        .dropdown-item:hover { background: var(--accent); color: #000; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        input[type="text"], input[type="number"], select {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none;
+        }
+        input:focus, select:focus { border-color: var(--accent); }
+        label { color: #888; margin-right: 5px; }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- PANELS --- */
+        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-bottom: 1px solid var(--border); }
+        .panel-header {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid #111; 
+            text-transform: uppercase; font-size: 0.9rem; justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+            cursor: pointer;
+        }
+        .panel-header:after { content: '\f0d7'; font-family: "Font Awesome 5 Free"; font-weight: 900; transition: transform 0.2s; }
+        .panel.collapsed .panel-header:after { transform: rotate(-90deg); }
+        .panel.collapsed .panel-content { display: none; }
+        .panel-content { padding: 10px; overflow-y: auto; }
+
+        /* --- SIDEBARS --- */
+        .sidebar-handle {
+            width: 16px; background: #000; border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--accent); font-size: 12px;
+            flex-shrink: 0; z-index: 100; transition: background 0.2s;
+            height: 100%; user-select: none;
+        }
+        .sidebar-handle:hover { background: #111; color: #fff; }
+
+        #sidebar-container { 
+            width: 300px; flex-shrink: 0; height: 100%; overflow: hidden; 
+            transition: width 0.2s ease; background: var(--bg-panel);
+            border-right: 2px solid var(--border);
+            display: flex; flex-direction: column;
+        }
+        #sidebar-container.collapsed { width: 0 !important; border-right: none; }
+
+        #sidebar { width: 300px; border: none; height: 100%; display: flex; flex-direction: column; }
+
+        #properties-container { 
+            width: 300px; flex-shrink: 0; height: 100%; overflow: hidden; 
+            transition: width 0.2s ease; background: var(--bg-panel);
+            border-left: 2px solid var(--border);
+        }
+        #properties-container.collapsed { width: 0 !important; border-left: none; }
+
+        #properties { width: 300px; border: none; height: 100%; overflow-y: auto; }
+
+        /* --- CENTER (CANVAS) --- */
+        #center-panel { 
+            flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas);
+            position: relative; overflow: hidden; cursor: crosshair; min-width: 0;
+        }
+        
+        #canvas-container {
+            width: 100%; height: 100%; position: relative; overflow: hidden;
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 32px 32px;
+        }
+        
+        #level-canvas {
+            position: absolute; top: 0; left: 0;
+            image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;
+        }
+
+        /* --- TOOLS --- */
+        .tile-tool {
+            width: 40px; height: 40px; margin: 2px;
+            background: #111; border: 2px solid #333; cursor: pointer;
+            display: inline-block; position: relative;
+            image-rendering: pixelated;
+        }
+        .tile-tool:hover { border-color: var(--accent); }
+        .tile-tool.active { border-color: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        
+        .entity-tool {
+            padding: 8px; margin: 4px 0;
+            background: #111; border: 1px solid #333; cursor: pointer;
+            display: flex; align-items: center; gap: 10px;
+            color: #888; font-size: 0.9rem; transition: all 0.1s;
+        }
+        .entity-tool:hover { border-color: var(--accent); color: #fff; background: #1a1a1a; }
+        .entity-tool.active { border-color: var(--accent); color: var(--accent); background: #1a1a1a; }
+
+        .prop-group {
+            margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #222;
+        }
+        .prop-label {
+            color: #888; font-size: 0.8rem; margin-bottom: 4px; text-transform: uppercase;
+        }
+        .prop-input {
+            width: 100%; background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 6px; font-family: inherit; font-size: 1rem;
+        }
+        .prop-input:focus { border-color: var(--accent); }
+        
+        .btn {
+            background: #111; border: 1px solid var(--accent); color: var(--accent);
+            padding: 8px 16px; cursor: pointer; font-family: inherit; font-size: 1rem;
+            text-transform: uppercase; transition: all 0.1s; width: 100%; margin-top: 5px;
+        }
+        .btn:hover { background: var(--accent); color: #000; }
+        .btn:active { transform: scale(0.98); }
+
+        .btn-full { width: 100%; padding: 8px; background: #111; border: 1px solid #333; color: #aaa; cursor: pointer; font-family: inherit; font-size: 0.9rem; transition: all 0.1s; }
+        .btn-full:hover { border-color: var(--accent); color: #fff; background: #222; }
+
+        /* --- STATUS BAR --- */
+        #status-bar {
+            height: 28px; background: #000; border-top: 2px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; font-size: 0.9rem;
+            color: #666; justify-content: space-between; flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Menubar -->
+    <div id="menubar">
+        <div class="menubar-title">
+            <i class="fas fa-running"></i> PLATFORMER STUDIO
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="dropdown-item" onclick="editor.newLevel()">New Level</div>
+                <div class="dropdown-item" onclick="editor.loadLevel()">Open Level...</div>
+                <div class="dropdown-item" onclick="editor.saveLevel()">Save Level</div>
+                <div class="dropdown-item" onclick="editor.saveLevelAs()">Save Level As...</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+            <div class="dropdown">
+                <div class="dropdown-item" onclick="editor.clearLevel()">Clear All</div>
+                <div class="dropdown-item" onclick="editor.fillGround()">Fill Ground</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+            <div class="dropdown">
+                <div class="dropdown-item" onclick="editor.toggleGrid()">Toggle Grid</div>
+                <div class="dropdown-item" onclick="editor.resetZoom()">Reset Zoom</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Test</div>
+            <div class="dropdown">
+                <div class="dropdown-item" onclick="editor.testLevel()">Test Level</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <div class="tool-btn active" data-tool="paint" title="Paint Tile"><i class="fas fa-paint-brush"></i></div>
+        <div class="tool-btn" data-tool="erase" title="Erase"><i class="fas fa-eraser"></i></div>
+        <div class="tool-btn" data-tool="fill" title="Fill"><i class="fas fa-fill-drip"></i></div>
+        <div class="tool-sep"></div>
+        <div class="tool-btn" onclick="editor.undo()" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></div>
+        <div class="tool-btn" onclick="editor.redo()" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></div>
+        <div class="tool-sep"></div>
+        <div class="tool-btn" data-tool="entity" title="Place Entity"><i class="fas fa-cube"></i></div>
+        <div class="tool-sep"></div>
+        <div class="tool-btn" id="toggle-collision-btn" onclick="editor.showCollision=!editor.showCollision; this.classList.toggle('active', editor.showCollision); editor.render();" title="Toggle Collision View"><i class="fas fa-eye"></i></div>
+        <div class="tool-sep"></div>
+        <label>Width:</label>
+        <input type="number" id="level-width" value="40" min="10" max="200" style="width: 60px;">
+        <label>Height:</label>
+        <input type="number" id="level-height" value="20" min="10" max="100" style="width: 60px;">
+        <button class="tool-btn" onclick="editor.resizeLevel()" title="Resize"><i class="fas fa-expand"></i></button>
+        <div class="tool-sep"></div>
+        <label>Zoom:</label>
+        <input type="range" id="zoom-slider" min="0.25" max="3" step="0.25" value="1" style="width: 100px;">
+    </div>
+
+    <!-- Main Layout -->
+    <div id="layout">
+        <!-- Sidebar: Organize with Tabs -->
+        <div id="sidebar-container">
+            <div class="sidebar-tabs">
+                <div class="s-tab active" onclick="switchSidebarTab('world')"><i class="fas fa-globe"></i> World</div>
+                <div class="s-tab" onclick="switchSidebarTab('tiles')"><i class="fas fa-th"></i> Tiles</div>
+                <div class="s-tab" onclick="switchSidebarTab('entities')"><i class="fas fa-ghost"></i> Objects</div>
+            </div>
+
+            <div id="sidebar">
+                <!-- WORLD TAB -->
+                <div id="tab-world" class="tab-content active">
+                    <div class="panel">
+                        <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">Generator</div>
+                        <div class="panel-content">
+                            <div class="prop-group">
+                                <div class="prop-label">Concept</div>
+                                <select id="gen-theme" class="prop-input">
+                                    <option value="flow">The Flow (Speed)</option>
+                                    <option value="spire">The Spire (Vertical)</option>
+                                    <option value="abyss">The Abyss (Precision)</option>
+                                    <option value="gauntlet">The Gauntlet (Combat)</option>
+                                    <option value="clockwork">The Clockwork (Puzzle)</option>
+                                </select>
+                            </div>
+                            <div class="prop-group">
+                                <div class="prop-label">Complexity</div>
+                                <input type="range" id="gen-complexity" min="1" max="10" value="5" style="width: 100%;">
+                            </div>
+                            <button class="btn" onclick="editor.generateLevel()"><i class="fas fa-magic"></i> Generate</button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">Local Worlds</div>
+                        <div class="panel-content" id="worlds-list" style="max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- TILES TAB -->
+                <div id="tab-tiles" class="tab-content">
+                    <div class="panel">
+                        <div class="panel-header">Brush Mode</div>
+                        <div class="panel-content" style="display:flex; gap:5px;">
+                            <button class="btn" style="flex:1" onclick="editor.setMode('collision')">Collision</button>
+                            <button class="btn" style="flex:1" onclick="editor.setMode('decoration')">Visual</button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel" id="panel-collision-types">
+                        <div class="panel-header">Collision Brush</div>
+                        <div class="panel-content">
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                                <button id="collision-type-0" class="collision-type-btn btn small" onclick="editor.selectedCollisionType=0; editor.updateCollisionUI();">0-Air</button>
+                                <button id="collision-type-1" class="collision-type-btn btn small active" onclick="editor.selectedCollisionType=1; editor.updateCollisionUI();">1-Solid</button>
+                                <button id="collision-type-2" class="collision-type-btn btn small" onclick="editor.selectedCollisionType=2; editor.updateCollisionUI();">2-Plat</button>
+                                <button id="collision-type-3" class="collision-type-btn btn small" onclick="editor.selectedCollisionType=3; editor.updateCollisionUI();">3-Spike</button>
+                                <button id="collision-type-4" class="collision-type-btn btn small" onclick="editor.selectedCollisionType=4; editor.updateCollisionUI();">4-1Way↑</button>
+                                <button id="collision-type-8" class="collision-type-btn btn small" onclick="editor.selectedCollisionType=8; editor.updateCollisionUI();">8-Trig</button>
+                                <button id="collision-type-9" class="collision-type-btn btn small" onclick="editor.selectedCollisionType=9; editor.updateCollisionUI();">9-Slp◢</button>
+                                <button id="collision-type-10" class="collision-type-btn btn small" onclick="editor.selectedCollisionType=10; editor.updateCollisionUI();">10-Slp◣</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel" style="flex-grow:1; min-height:0;">
+                        <div class="panel-header">Tile Palette</div>
+                        <div class="panel-content" id="tile-palette" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:2px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- OBJECTS TAB -->
+                <div id="tab-entities" class="tab-content">
+                    <div class="panel">
+                        <div class="panel-header">Spawn Points</div>
+                        <div class="panel-content">
+                            <div class="entity-tool" data-entity="spawn"><i class="fas fa-door-open"></i> Player Spawn</div>
+                            <div class="entity-tool" data-entity="goal"><i class="fas fa-flag-checkered"></i> Level Goal</div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">Gameplay Entities</div>
+                        <div class="panel-content">
+                            <div class="entity-tool" data-entity="coin"><i class="fas fa-coins"></i> Gold Coin</div>
+                            <div class="entity-tool" data-entity="checkpoint"><i class="fas fa-save"></i> Checkpoint</div>
+                            <div class="entity-tool" data-entity="enemy"><i class="fas fa-skull"></i> Basic Enemy</div>
+                        </div>
+                    </div>
+                    <div class="panel" style="flex-grow:1; min-height:0;">
+                        <div class="panel-header">Prefabs</div>
+                        <div class="panel-content">
+                            <button onclick="editor.loadPrefabs()" class="btn-full" style="margin-bottom:8px;">🔄 Rescan Prefabs</button>
+                            <div id="prefab-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="left-handle" class="sidebar-handle" onclick="toggleSidebar('left')">⏴</div>
+
+        <!-- Center: Canvas -->
+        <div id="center-panel">
+            <div id="canvas-container">
+                <canvas id="level-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Properties Panel -->
+        <div id="right-handle" class="sidebar-handle" onclick="toggleSidebar('right')">⏵</div>
+        <div id="properties-container">
+            <div id="properties" class="panel" style="height:100%">
+                <div class="panel-header">Level Properties</div>
+                <div class="panel-content">
+                    <div class="prop-group">
+                        <div class="prop-label">Level Name</div>
+                        <input type="text" class="prop-input" id="prop-name" value="Untitled Level">
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-label">Level ID</div>
+                        <input type="text" class="prop-input" id="prop-id" value="level1" placeholder="level1">
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-label">Current Project</div>
+                        <select class="prop-input" id="prop-project">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-label">Spawn Point</div>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" class="prop-input" id="spawn-x" placeholder="X" value="2" style="width: 50%;">
+                            <input type="number" class="prop-input" id="spawn-y" placeholder="Y" value="12" style="width: 50%;">
+                        </div>
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-label">Goal Point</div>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="number" class="prop-input" id="goal-x" placeholder="X" value="35" style="width: 50%;">
+                            <input type="number" class="prop-input" id="goal-y" placeholder="Y" value="12" style="width: 50%;">
+                        </div>
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-label">Background (CSS/Image)</div>
+                        <input type="text" class="prop-input" id="prop-background" placeholder="#87CEEB or url(...)">
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-label">Environment</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                            <select class="prop-input" id="prop-weather">
+                                <option value="none">Weather</option>
+                                <option value="rain">Rain</option>
+                                <option value="snow">Snow</option>
+                                <option value="fog">Fog</option>
+                            </select>
+                            <select class="prop-input" id="prop-lighting">
+                                <option value="day">Lighting</option>
+                                <option value="night">Night</option>
+                                <option value="dusk">Dusk</option>
+                                <option value="dawn">Dawn</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="prop-group">
+                        <div class="prop-label">Shader</div>
+                        <select class="prop-input" id="prop-shader">
+                            <option value="default">Default</option>
+                            <option value="crt">CRT</option>
+                            <option value="pixelate">Pixelate</option>
+                            <option value="blur">Blur</option>
+                        </select>
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 5px; margin: 10px 0;">
+                        <input type="checkbox" id="show-collision" checked>
+                        <span style="font-size:0.8rem">Show Collision Overlay</span>
+                    </label>
+                    <button class="btn" onclick="editor.testLevel()"><i class="fas fa-play"></i> Test Level</button>
+                    <button class="btn" onclick="editor.saveLevel()" style="border-color:#2ecc71; color:#2ecc71"><i class="fas fa-save"></i> Save Level</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar">
+        <span id="status-text">Ready</span>
+        <span id="cursor-pos">X: 0, Y: 0</span>
+    </div>
+
+    <script src="engines/rpg-topdown/sprites.js"></script>
+    <script src="engines/platformer-2d/generator/SmartGenerator.js"></script>
+    <script>
+        function switchSidebarTab(tabId) {
+            document.querySelectorAll('.s-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            const btn = document.querySelector(`.s-tab[onclick*="${tabId}"]`);
+            if (btn) btn.classList.add('active');
+            
+            const content = document.getElementById(`tab-${tabId}`);
+            if (content) content.classList.add('active');
+        }
+
+        function toggleSidebar(side) {
+            const container = document.getElementById(side === 'left' ? 'sidebar-container' : 'properties-container');
+            const handle = document.getElementById(side === 'left' ? 'left-handle' : 'right-handle');
+            const isCollapsed = container.classList.toggle('collapsed');
+            
+            if (side === 'left') {
+                handle.innerText = isCollapsed ? '⏵' : '⏴';
+            } else {
+                handle.innerText = isCollapsed ? '⏴' : '⏵';
+            }
+            
+            // Continuous resize during transition
+            let startTime = Date.now();
+            const resizeInterval = setInterval(() => {
+                if (window.editor) {
+                    window.editor.setupCanvas();
+                    window.editor.render();
+                }
+                if (Date.now() - startTime > 250) clearInterval(resizeInterval);
+            }, 16);
+        }
+    </script>
+    <script src="platformer_editor.js"></script>
+</body>
+</html>

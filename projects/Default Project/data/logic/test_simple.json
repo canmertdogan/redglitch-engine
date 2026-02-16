@@ -1,0 +1,52 @@
+{
+  "nodes": [
+    {
+      "id": "node_1",
+      "type": "evt_start",
+      "x": 100,
+      "y": 200,
+      "data": {},
+      "selected": true
+    },
+    {
+      "id": "node_2",
+      "type": "eng_log",
+      "x": 350,
+      "y": 200,
+      "data": {
+        "msg": "Hello from Algorithm Studio!"
+      },
+      "selected": false
+    },
+    {
+      "id": "node_3",
+      "type": "eng_log",
+      "x": 600,
+      "y": 200,
+      "data": {
+        "msg": "Script execution complete!"
+      },
+      "selected": false
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_1",
+      "fromNode": "node_1",
+      "fromPort": "out",
+      "toNode": "node_2",
+      "toPort": "in",
+      "invalid": false
+    },
+    {
+      "id": "wire_2",
+      "fromNode": "node_2",
+      "fromPort": "out",
+      "toNode": "node_3",
+      "toPort": "in",
+      "invalid": false
+    }
+  ],
+  "variables": [],
+  "name": "test_simple"
+}

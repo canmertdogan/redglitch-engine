@@ -1,0 +1,12 @@
+{
+    "MoveUp": ["KeyW", "ArrowUp"],
+    "MoveDown": ["KeyS", "ArrowDown"],
+    "MoveLeft": ["KeyA", "ArrowLeft"],
+    "MoveRight": ["KeyD", "ArrowRight"],
+    "Action": ["Space", "Enter"],
+    "Shift": ["ShiftLeft", "ShiftRight"],
+    "z": ["KeyZ"],
+    "x": ["KeyX"],
+    "c": ["KeyC"],
+    "v": ["KeyV"]
+}

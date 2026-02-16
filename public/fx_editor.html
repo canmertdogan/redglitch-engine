@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK PARTICLE MASTER PRO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <style>
+        :root {
+            --bg: #05080f;
+            --panel: #101726;
+            --accent: #f1c40f;
+            --text: #cfd8dc;
+            --border: #1f2b42;
+        }
+        body {
+            margin: 0; background: var(--bg); color: var(--text);
+            font-family: 'VT323', monospace; display: flex; height: 100vh; overflow: hidden;
+            font-size: 18px; image-rendering: pixelated;
+        }
+        
+        /* SIDEBAR */
+        #sidebar {
+            width: 320px; background: var(--panel); border-right: 2px solid var(--border);
+            display: flex; flex-direction: column; padding: 15px; gap: 15px; overflow-y: auto; flex-shrink: 0;
+        }
+        
+        /* VIEWPORT */
+        #viewport {
+            flex-grow: 1; position: relative; background: #000;
+            display: flex; align-items: center; justify-content: center;
+            background-image: 
+                linear-gradient(#111 1px, transparent 1px),
+                linear-gradient(90deg, #111 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        canvas { border: 1px solid var(--border); box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        
+        /* CONTROLS */
+        .group { border: 1px solid var(--border); padding: 10px; background: rgba(0,0,0,0.2); }
+        .group-title { color: var(--accent); margin-bottom: 10px; font-weight: bold; border-bottom: 1px solid var(--border); }
+        
+        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .row label { font-size: 0.9rem; color: #888; }
+        
+        input[type="range"] { width: 100px; }
+        input[type="color"] { background: none; border: none; width: 30px; height: 30px; cursor: pointer; }
+        input[type="text"], input[type="number"], select {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px; font-family: inherit; font-size: 1rem; width: 120px;
+        }
+        
+        .btn {
+            background: var(--bg); border: 1px solid var(--accent); color: var(--accent);
+            padding: 8px; cursor: pointer; text-align: center; width: 100%; font-family: inherit; font-size: 1.1rem;
+        }
+        .btn:hover { background: var(--accent); color: #000; }
+        
+        h2 { margin: 0 0 10px 0; color: var(--accent); text-shadow: 2px 2px 0 #000; text-align: center; }
+        
+        /* PREVIEW CONTROLS overlay */
+        #preview-controls {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>FX MASTER PRO</h2>
+        
+        <div class="group">
+            <div class="group-title">EMITTER SETTINGS</div>
+            <div class="row">
+                <label>Mode</label>
+                <select id="p-mode" onchange="updateUIState()">
+                    <option value="continuous">Continuous</option>
+                    <option value="burst">Burst (Explosion)</option>
+                </select>
+            </div>
+            <div class="row">
+                <label>Count/Rate</label>
+                <input type="number" id="p-count" value="50">
+            </div>
+            <div class="row">
+                <label>Duration (s)</label>
+                <input type="number" id="p-duration" value="2.0" step="0.1">
+            </div>
+        </div>
+
+        <div class="group">
+            <div class="group-title">APPEARANCE</div>
+            <div class="row">
+                <label>Sprite</label>
+                <select id="p-sprite"><option value="">(None - Rect)</option></select>
+            </div>
+            <div class="row">
+                <label>Blend Mode</label>
+                <select id="p-blend">
+                    <option value="source-over">Normal</option>
+                    <option value="lighter">Additive (Glow)</option>
+                    <option value="multiply">Multiply (Dark)</option>
+                </select>
+            </div>
+            <div class="row"><label>Start Color</label> <input type="color" id="p-color-start" value="#f1c40f"></div>
+            <div class="row"><label>End Color</label> <input type="color" id="p-color-end" value="#e74c3c"></div>
+            <div class="row"><label>Start Size</label> <input type="range" id="p-size-start" min="1" max="50" value="4"></div>
+            <div class="row"><label>End Size</label> <input type="range" id="p-size-end" min="0" max="50" value="0"></div>
+        </div>
+
+        <div class="group">
+            <div class="group-title">PHYSICS</div>
+            <div class="row"><label>Speed</label> <input type="range" id="p-speed" min="10" max="500" value="100"></div>
+            <div class="row"><label>Spread (°)</label> <input type="range" id="p-spread" min="0" max="360" value="360"></div>
+            <div class="row"><label>Gravity</label> <input type="range" id="p-gravity" min="-500" max="500" value="0"></div>
+            <div class="row"><label>Drag</label> <input type="range" id="p-drag" min="0" max="100" value="5"></div>
+            <div class="row"><label>Life (s)</label> <input type="number" id="p-life" value="1.0" step="0.1"></div>
+        </div>
+
+        <div class="group">
+            <div class="group-title">FILE</div>
+            <select id="fx-list" style="width:100%; margin-bottom:5px;"></select>
+            <div style="display:flex; gap:5px;">
+                <button class="btn" onclick="loadEffect()">LOAD</button>
+                <button class="btn" onclick="saveEffect()">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="viewport">
+        <canvas id="fx-canvas" width="800" height="600"></canvas>
+        <div id="preview-controls">
+            <button class="btn" onclick="triggerBurst()">▶ TRIGGER BURST</button>
+            <button class="btn" onclick="clearParticles()">✕ CLEAR</button>
+        </div>
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <script src="fx_editor.js"></script>
+</body>
+</html>

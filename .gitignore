@@ -1,0 +1,107 @@
+# OS & IDE
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm/
+package-lock.json
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Python (Backend/AI)
+backend/venv/
+backend/.venv/
+backend/__pycache__/
+backend/logs/
+backend/data/
+backend/chroma_db/
+backend/chroma_db_backup/
+backend/models/
+*.gguf
+*.bin
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.model
+*.weights
+*.pb
+*.tflite
+*.mlmodel
+*.joblib
+*.pkl
+*.py[cod]
+*$py.class
+
+# Mobile (Capacitor/Android/iOS)
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/
+android/.kotlin/
+android/.navigation/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+ios/App/build/
+ios/App/Pods/
+ios/App/Podfile.lock
+ios/App/public/
+ios/capacitor-cordova-ios-plugins/
+*.xcworkspace
+*.xcodeproj
+
+# Logs & Temporary
+*.log
+logs/
+tmp/
+temp/
+.cache/
+.npm/
+.eslintcache
+.stylelintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+
+# Electron
+dist/
+release/
+*.asar
+
+# Project Specific & Temporary
+builds/
+saves/
+.gemini/tmp/
+public/ai/docs/corpus.json
+
+# Project Data (Ignore all except specific demos)
+projects/*/
+!projects/Default Project/
+!projects/Iso Pixel Demo/
+!projects/My Awesome Game/
+!projects/Platformer Demo/

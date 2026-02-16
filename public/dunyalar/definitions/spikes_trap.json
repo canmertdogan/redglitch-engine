@@ -1,0 +1,14 @@
+{
+    "components":  [
+                       {
+                           "type":  "Stats",
+                           "damage":  25
+                       },
+                       {
+                           "scriptId":  "trap_damage",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Spikes",
+    "sprite":  "RF_Catacombs_v1.0/mainlevbuild.png"
+}

@@ -1,0 +1,4 @@
+[
+    {"id":"event_start_1","type":"event_start","x":100,"y":100,"data":{},"links":{"out":{"targetNodeId":"engine_action_1","targetPinId":"in"}}},
+    {"id":"engine_action_1","type":"engine_action","x":350,"y":100,"data":{"action":"open_engine"},"links":{}}
+]

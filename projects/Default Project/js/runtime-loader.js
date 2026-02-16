@@ -1,0 +1,147 @@
+(async function() {
+    // --- SPLASH SCREEN LOGIC ---
+    const SPLASH_SCREEN = document.getElementById('splash-screen');
+    if (SPLASH_SCREEN) {
+        // Wait 2 seconds, then fade out
+        setTimeout(() => {
+            SPLASH_SCREEN.classList.add('fade-out');
+            // Remove from DOM or hide completely after animation (1s)
+            setTimeout(() => {
+                SPLASH_SCREEN.style.display = 'none';
+            }, 1000);
+        }, 2000);
+    }
+
+    const LOADING_SCREEN = document.getElementById('loading-screen');
+    const LOADING_BAR = document.getElementById('game-loading-bar');
+    const LOADING_TEXT = document.getElementById('game-loading-text');
+
+    function setProgress(p, text) {
+        if(LOADING_BAR) LOADING_BAR.style.width = p + '%';
+        if(LOADING_TEXT) LOADING_TEXT.innerText = text;
+    }
+
+    setProgress(10, "Initializing Core...");
+
+    // 1. Determine Engine Type
+    let engineType = 'rpg-topdown'; // Default
+
+    // Check URL Params first (for testing)
+    const urlParams = new URLSearchParams(window.location.search);
+    const forcedEngine = urlParams.get('engine');
+    
+    if (forcedEngine && ['rpg-topdown', 'iso-pixel', 'platformer-2d'].includes(forcedEngine)) {
+        engineType = forcedEngine;
+        console.log(`[Runtime] Engine Override via URL: ${engineType}`);
+    } else {
+        try {
+            // We try to fetch the project config. 
+            // In a built game, this file should exist at root or via API.
+            // In dev mode, we might hit the API.
+            let res = await fetch('/api/projects/current');
+            if(!res.ok) res = await fetch('ketebe.json'); // Fallback for static build
+            
+            if (res.ok) {
+                const config = await res.json();
+                
+                // --- Apply Project Branding ---
+                if (config.name) {
+                    document.title = config.name;
+                    const terminalHeader = document.querySelector('.terminal-window h1');
+                    if (terminalHeader) terminalHeader.innerText = config.name.toUpperCase();
+                }
+
+                if (config.engineType) {
+                    engineType = config.engineType;
+                } else if (config.template) {
+                    // Map templates to engines (Simple mapping for now)
+                    if (config.template.includes('iso')) engineType = 'iso-pixel';
+                    else if (config.template.includes('platformer')) engineType = 'platformer-2d';
+                    else engineType = 'rpg-topdown';
+                }
+            }
+        } catch(e) {
+            console.warn("Could not load project config, defaulting to RPG engine.");
+        }
+    }
+
+    console.log(`[Runtime] Booting Engine: ${engineType}`);
+    setProgress(20, `Loading ${engineType}...`);
+
+    // 2. Adjust UI for Engine Type
+    if (engineType !== 'rpg-topdown') {
+        const statusBars = document.getElementById('status-bars');
+        const skillBar = document.getElementById('skill-bar');
+        const inventoryBar = document.getElementById('inventory-bar');
+        const clock = document.getElementById('game-clock');
+        
+        if (statusBars) statusBars.style.display = 'none';
+        if (skillBar) skillBar.style.display = 'none';
+        if (inventoryBar) inventoryBar.style.display = 'none';
+        if (clock) clock.style.display = 'none';
+    } else {
+        // Ensure they are visible for RPG mode
+        const statusBars = document.getElementById('status-bars');
+        if (statusBars) statusBars.style.display = 'flex';
+    }
+
+    // 3. Define Manifests
+    // Ideally these would be in a json file per engine, but we define here for Phase 1.
+    const manifests = {
+        'rpg-topdown': [
+            'engines/rpg-topdown/localization.js',
+            'engines/rpg-topdown/sprites.js', // This might need server.js tweak
+            'engines/rpg-topdown/input.js',
+            'engines/rpg-topdown/saveSystem.js',
+            'engines/rpg-topdown/mapSystem.js',
+            'engines/rpg-topdown/dialogueSystem.js',
+            'engines/rpg-topdown/achievementSystem.js',
+            'engines/rpg-topdown/fxSystem.js',
+            'engines/rpg-topdown/audioSystem.js',
+            'engines/rpg-topdown/console.js',
+            'engines/rpg-topdown/campaignSystem.js',
+            'engines/rpg-topdown/spatialHash.js',
+            'engines/rpg-topdown/stateMachine.js',
+            'engines/rpg-topdown/ui/uiRenderer.js',
+            'engines/rpg-topdown/BrainRuntime.js', // Brain system
+            'engines/rpg-topdown/NPC.js', // Enhanced NPC class
+            'engines/rpg-topdown/main.js'
+        ],
+        'iso-pixel': [
+            'engines/rpg-topdown/main.js', // For AtmosphereSystem and shared logic
+            'engines/iso-pixel/renderer.js',
+            'engines/iso-pixel/main.js'
+        ],
+        'platformer-2d': [
+            'engines/rpg-topdown/main.js', // For AtmosphereSystem
+            'engines/platformer-2d/physics.js',
+            'engines/platformer-2d/main.js'
+        ]
+    };
+
+    const scripts = manifests[engineType] || manifests['rpg-topdown'];
+
+    // 3. Load Scripts Sequentially
+    let loaded = 0;
+    for (const src of scripts) {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            // Handle special case for sprites.js which server.js might intercept
+            // If server.js serves /base_game/sprites.js, we might need to adjust or update server.js
+            // For now, we request the new path.
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = () => {
+                console.error(`Failed to load ${src}`);
+                // Continue anyway? Or halt?
+                resolve(); 
+            };
+            document.body.appendChild(script);
+        });
+        loaded++;
+        setProgress(20 + (loaded / scripts.length) * 80, "Loading Assets...");
+    }
+
+    console.log("[Runtime] Engine Loaded.");
+    // The main.js of the engine usually handles hiding the loading screen
+})();

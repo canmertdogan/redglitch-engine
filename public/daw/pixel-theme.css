@@ -1,0 +1,725 @@
+/* ===================================
+   KETEBE AUDIO STUDIO - STUDIO THEME
+   Unified Design Language (Algorithm Studio Aesthetic)
+   =================================== */
+
+:root {
+    /* Studio Palette */
+    --bg-root: #050505;
+    --bg-panel: #0a0a0f;
+    --bg-header: #000000;
+    --bg-canvas: #080808;
+    --bg-input: #000000;
+    --border: #333;
+    --accent: #f1c40f; /* Retro Gold */
+    --accent-dim: rgba(241, 196, 15, 0.2);
+    --text-main: #e0e0e0;
+    --text-muted: #888;
+    --grid-line: #1a1a1a;
+    
+    /* Function Colors */
+    --col-record: #e74c3c;
+    --col-play: #2ecc71;
+    --col-select: #3498db;
+    
+    /* Legacy Pixel Mappings (for JS compatibility) */
+    --px-blue: #2980b9;
+    --px-green: #27ae60;
+    --px-yellow: #f1c40f;
+    --px-red: #c0392b;
+    --px-cyan: #3498db;
+    --px-highlight: #f1c40f;
+    --px-bg-darkest: var(--bg-root);
+    --px-bg-dark: var(--bg-panel);
+    --px-bg-mid: #141414;
+    --px-bg-light: #1f1f1f;
+    --px-border: var(--border);
+    --px-border-bright: #444;
+    --px-text-bright: var(--text-main);
+    --px-text-dim: var(--text-muted);
+    
+    --header-height: 36px;
+    --sidebar-width: 250px;
+    --track-height: 48px;
+}
+
+* { box-sizing: border-box; outline: none; }
+
+body {
+    margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+    font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+    overflow: hidden; user-select: none; font-size: 18px;
+}
+
+/* --- STRUCTURE --- */
+
+/* Menubar & Toolbar (Matches Algorithm Studio) */
+#menubar {
+    height: 36px; background: #000; display: flex; align-items: center; padding: 0 10px;
+    font-size: 1.1rem; border-bottom: 2px solid var(--border);
+    z-index: 6000; position: relative;
+}
+.menu-item-root { position: relative; height: 100%; display: flex; align-items: center; cursor: pointer; }
+.menu-item { padding: 0 15px; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; transition: background 0.1s; }
+.menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+
+#toolbar {
+    height: 48px; background: #000; border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; padding: 0 10px; gap: 10px;
+}
+.tool-btn, .pixel-btn {
+    background: #111; border: 2px solid #444; color: #aaa;
+    width: 36px; height: 36px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+    font-size: 1.2rem; transition: transform 0.1s;
+    font-family: 'VT323', monospace;
+    padding: 0; /* Reset pixel-btn padding */
+}
+.tool-btn:hover, .pixel-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+.tool-btn.primary, .pixel-btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+.tool-btn.active, .pixel-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+.tool-sep { width: 2px; height: 24px; background: #333; margin: 0 5px; }
+
+/* Main Layout */
+#layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+.panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 2px solid var(--border); }
+.panel-header {
+    height: 36px; background: #000; display: flex; align-items: center; padding: 0 10px;
+    font-weight: bold; color: var(--accent); border-bottom: 2px solid var(--border); text-transform: uppercase;
+    font-size: 1.2rem; justify-content: space-between; letter-spacing: 1px;
+}
+.panel-content { flex-grow: 1; overflow: auto; padding: 0; position: relative; }
+
+/* Panels */
+#left-panel { width: 260px; min-width: 180px; max-width: 400px; }
+#center-panel { flex-grow: 1; display: flex; flex-direction: column; min-width: 400px; }
+#right-panel { width: 280px; min-width: 180px; max-width: 400px; border-left: 2px solid var(--border); border-right: none; }
+#bottom-panel { height: 320px; min-height: 200px; max-height: 600px; border-top: 2px solid var(--border); display: flex; flex-direction: column; background: var(--bg-panel); }
+
+/* Arrangement Area */
+#arrangement-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 150px;
+}
+
+/* --- COMPONENT STYLING (Replacing Pixel Theme) --- */
+
+/* Input/LCDs */
+.lcd-screen {
+    background: #000; border: 2px solid #333; color: var(--accent);
+    padding: 0 10px; height: 36px; display: flex; align-items: center;
+    font-family: 'VT323', monospace; font-size: 1.2rem; cursor: ns-resize;
+}
+.lcd-screen:hover { border-color: var(--accent); }
+
+/* Track Headers */
+.pixel-track-header {
+    height: 48px; background: var(--bg-panel); border-bottom: 1px solid #222;
+    padding: 0 10px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; transition: background 0.1s;
+}
+.pixel-track-header:hover { background: #1a1a1a; }
+.pixel-track-header.active { background: #222; border-left: 4px solid var(--accent); padding-left: 6px; }
+
+.pixel-track-icon {
+    width: 32px; height: 32px; background: #000; border: 1px solid #333;
+    display: flex; align-items: center; justify-content: center; color: #666;
+}
+.pixel-track-header.active .pixel-track-icon { color: var(--accent); border-color: var(--accent); }
+
+.pixel-track-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.pixel-track-name { font-size: 1.1rem; color: #ccc; }
+.pixel-track-controls { display: flex; gap: 2px; }
+
+.pixel-toggle {
+    width: 20px; height: 20px; background: #000; border: 1px solid #333; color: #555;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem; cursor: pointer;
+}
+.pixel-toggle:hover { color: #aaa; border-color: #555; }
+.pixel-toggle.active { background: var(--accent); color: #000; border-color: var(--accent); }
+.pixel-toggle.solo.active { background: var(--px-green); }
+.pixel-toggle.mute.active { background: var(--px-red); }
+
+/* Health Meter for Track Headers */
+.health-meter-bg {
+    height: 4px;
+    background: #1a1a1a;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.health-meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--px-green) 0%, var(--px-yellow) 70%, var(--px-red) 100%);
+    transition: width 0.1s ease-out;
+}
+
+/* --- BOTTOM DOCK (Piano/Mixer) --- */
+.dock-tabs {
+    height: 32px; background: #000; display: flex; padding-left: 10px; border-bottom: 2px solid var(--border);
+}
+.dock-tab {
+    padding: 0 15px; display: flex; align-items: center; color: #666; cursor: pointer;
+    border-right: 1px solid #222; font-size: 1rem;
+}
+.dock-tab:hover { color: #aaa; background: #111; }
+.dock-tab.active { background: var(--bg-panel); color: var(--accent); border-top: 2px solid var(--accent); }
+
+/* Piano Roll Container */
+#piano-roll { display: flex; flex-direction: column; height: 100%; flex: 1; }
+#pr-main { flex: 1; display: flex; overflow: hidden; }
+
+/* Browser / Lib Items */
+.lib-item, .browser-item {
+    padding: 6px 10px; cursor: pointer; color: #aaa; border-bottom: 1px solid #1a1a1a;
+    display: flex; align-items: center; gap: 8px; font-size: 1rem;
+}
+.lib-item:hover, .browser-item:hover { background: #222; color: #fff; border-left: 2px solid var(--accent); padding-left: 8px; }
+.browser-section-title { padding: 8px; background: #111; color: var(--accent); font-weight: bold; font-size: 0.9rem; text-transform: uppercase; border-bottom: 1px solid #333; }
+
+/* Modal */
+#add-track-modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); z-index: 9000; display: none;
+    align-items: center; justify-content: center;
+}
+#add-track-modal.active { display: flex; }
+
+.modal-content {
+    background: #111; border: 2px solid var(--accent); padding: 20px; width: 500px;
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+}
+.modal-title { color: var(--accent); font-size: 1.5rem; border-bottom: 1px solid #333; margin-bottom: 15px; padding-bottom: 5px; }
+
+.preset-btn {
+    display: flex; flex-direction: column; width: 100%; background: #1a1a1a;
+    border: 1px solid #333; padding: 10px; margin-bottom: 5px; cursor: pointer;
+    text-align: left;
+}
+.preset-btn:hover { background: #222; border-color: var(--accent); }
+.preset-btn-category { font-size: 0.7rem; color: #666; }
+.preset-btn-name { font-size: 1.1rem; color: #eee; font-weight: bold; }
+
+/* --- DEVICE PANEL / INSPECTOR STYLES --- */
+
+/* Header for devices (usually inside the panel) */
+.device-header {
+    background: #111; color: var(--accent); font-weight: bold; padding: 8px;
+    text-transform: uppercase; border-bottom: 2px solid var(--border); margin-bottom: 10px;
+}
+
+/* Individual Device Card */
+.device {
+    background: #151515; border: 1px solid #333; margin-bottom: 15px; padding: 5px;
+}
+.device-title {
+    background: #222; color: #ccc; padding: 4px 8px; font-size: 0.9rem;
+    border-bottom: 1px solid #333; text-transform: uppercase;
+    display: flex; justify-content: space-between;
+}
+.device-body {
+    padding: 10px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: space-around;
+}
+
+/* Controls */
+.param-control {
+    display: flex; flex-direction: column; align-items: center; width: 50px;
+}
+.knob {
+    width: 40px; height: 40px; background: #000; border: 2px solid #444; border-radius: 50%;
+    position: relative; margin-bottom: 5px; cursor: ns-resize;
+}
+.knob:hover { border-color: var(--accent); }
+.knob::after {
+    content: ''; position: absolute; width: 2px; height: 40%; background: #666;
+    top: 50%; left: 50%; transform-origin: top center; transform: translate(-50%, 0) rotate(var(--rot, 0deg));
+    /* Requires JS to set --rot variable on inline style */
+}
+.param-label { font-size: 0.7rem; color: #888; text-transform: uppercase; text-align: center; }
+
+/* Select boxes in devices */
+.instrument-select {
+    width: 100%; background: #000; color: #ccc; border: 1px solid #444;
+    padding: 4px; margin-bottom: 5px; font-family: inherit; font-size: 0.9rem;
+}
+
+/* Drum Machine specific styles */
+.drum-machine-ui { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+.pad-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+}
+.pixel-pad {
+    aspect-ratio: 1; background: #222; border: 1px solid #444; color: #666;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.8rem;
+}
+.pixel-pad:hover { background: #333; color: #fff; border-color: #666; }
+.pixel-pad.triggered { background: var(--accent); color: #000; }
+
+/* Utilities */
+.hidden { display: none !important; }
+
+/* --- RESIZE SPLITTERS --- */
+.resize-handle {
+    background: var(--border);
+    transition: background 0.2s;
+    z-index: 100;
+}
+.resize-handle:hover, .resize-handle.active {
+    background: var(--accent);
+}
+.resize-handle-v {
+    width: 4px;
+    cursor: col-resize;
+    height: 100%;
+}
+.resize-handle-h {
+    height: 4px;
+    cursor: row-resize;
+    width: 100%;
+}
+
+/* --- COLLAPSE BUTTONS --- */
+.collapse-btn {
+    width: 20px; height: 20px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: color 0.2s;
+}
+.collapse-btn:hover { color: var(--accent); }
+.panel.collapsed { width: 0 !important; min-width: 0 !important; overflow: hidden; }
+.panel.collapsed .panel-content { display: none; }
+
+/* --- PIANO ROLL UNIFIED STYLES --- */
+#pr-keys {
+    width: 60px;
+    background: #0a0a0a;
+    border-right: 2px solid var(--border);
+    overflow-y: hidden;
+    flex-shrink: 0;
+}
+
+.pr-key {
+    height: 16px;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex;
+    align-items: center;
+    padding-left: 4px;
+    font-size: 9px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.pr-key.white { background: #1a1a1a; color: #666; }
+.pr-key.black { background: #0a0a0a; color: #444; }
+.pr-key.c-note { 
+    color: var(--accent); 
+    border-top: 1px solid var(--accent);
+    font-weight: bold;
+}
+.pr-key:hover { background: #2a2a2a; }
+.pr-key.playing { background: var(--accent); color: #000; }
+
+#pr-grid {
+    flex: 1;
+    background: var(--bg-canvas);
+    overflow: auto;
+    position: relative;
+}
+
+#pr-grid-inner {
+    position: relative;
+    /* Grid pattern: rows every 16px, beat lines every 64px, bar lines every 256px */
+    background:
+        repeating-linear-gradient(
+            180deg,
+            transparent 0px,
+            transparent 15px,
+            #1a1a1a 15px,
+            #1a1a1a 16px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            #1a1a1a 0px,
+            #1a1a1a 1px,
+            transparent 1px,
+            transparent 16px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            #252525 0px,
+            #252525 1px,
+            transparent 1px,
+            transparent 64px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            #333 0px,
+            #333 2px,
+            transparent 2px,
+            transparent 256px
+        );
+    background-color: #0d0d0d;
+}
+
+/* Black key row highlighting */
+.pr-grid-row-black {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 16px;
+    background: rgba(0,0,0,0.3);
+    pointer-events: none;
+}
+
+/* --- NOTES --- */
+.note {
+    position: absolute;
+    height: 14px;
+    background: linear-gradient(180deg, #4a9eff 0%, #2980b9 100%);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 2px;
+    cursor: grab;
+    box-sizing: border-box;
+    min-width: 8px;
+    z-index: 5;
+}
+.note:hover {
+    border-color: #fff;
+    box-shadow: 0 0 6px rgba(74, 158, 255, 0.5);
+}
+.note.selected {
+    background: linear-gradient(180deg, #f1c40f 0%, #d4a80a 100%);
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.6);
+    z-index: 10;
+}
+.note:active { cursor: grabbing; }
+
+.note-velocity {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.5);
+}
+
+.note-resize {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
+    background: transparent;
+}
+.note-resize:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* --- SELECTION BOX --- */
+.selection-box {
+    position: absolute;
+    background: rgba(241, 196, 15, 0.15);
+    border: 1px dashed var(--accent);
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* --- VELOCITY LANE --- */
+#pr-velocity {
+    height: 60px;
+    background: #0a0a0a;
+    border-top: 2px solid var(--border);
+    position: relative;
+    overflow: hidden;
+}
+
+.velocity-bar {
+    position: absolute;
+    bottom: 0;
+    width: 12px;
+    background: linear-gradient(180deg, var(--accent) 0%, #d4a80a 100%);
+    border-radius: 2px 2px 0 0;
+    cursor: ns-resize;
+    min-height: 4px;
+}
+.velocity-bar:hover {
+    background: linear-gradient(180deg, #fff 0%, var(--accent) 100%);
+}
+
+/* --- TIMELINE RULER --- */
+#timeline-ruler {
+    height: 24px;
+    background: #111;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    color: #666;
+    font-size: 11px;
+    overflow: hidden;
+    position: relative;
+    margin-left: 260px; /* Match track-headers width */
+    cursor: pointer;
+}
+
+.ruler-bar {
+    width: 256px; /* 4 beats * 64px */
+    min-width: 256px;
+    border-left: 2px solid #444;
+    padding-left: 6px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+/* Beat markers within ruler */
+.ruler-beat {
+    flex: 1;
+    border-left: 1px solid #2a2a2a;
+    height: 50%;
+}
+.ruler-beat:first-child { border-left: none; }
+
+/* --- PLAYHEAD --- */
+#playhead {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--col-record);
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
+}
+
+#pr-playhead {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--col-record);
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
+}
+
+/* --- TRACK LANES --- */
+#track-lanes {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    background: var(--bg-canvas);
+}
+
+#lanes {
+    position: relative;
+    min-width: 100%;
+}
+
+.pixel-track-lane {
+    height: 48px;
+    border-bottom: 1px solid #222;
+    position: relative;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            #1a1a1a 0px,
+            #1a1a1a 1px,
+            transparent 1px,
+            transparent 64px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            #252525 0px,
+            #252525 2px,
+            transparent 2px,
+            transparent 256px
+        );
+}
+
+/* --- CLIPS --- */
+.pixel-clip {
+    position: absolute;
+    top: 2px;
+    height: 44px;
+    background: rgba(41, 128, 185, 0.25);
+    border: 2px solid var(--px-blue);
+    border-radius: 3px;
+    cursor: grab;
+    overflow: hidden;
+    transition: border-color 0.1s, box-shadow 0.1s;
+}
+.pixel-clip:hover {
+    border-color: #5dade2;
+    box-shadow: 0 0 10px rgba(41, 128, 185, 0.4);
+}
+.pixel-clip.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(241, 196, 15, 0.5);
+}
+.pixel-clip-header {
+    background: var(--px-blue);
+    color: #fff;
+    padding: 0 6px;
+    font-size: 10px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pixel-clip-content {
+    position: relative;
+    width: 100%;
+    height: calc(100% - 14px);
+    overflow: hidden;
+}
+.pixel-clip-note {
+    position: absolute;
+    height: 2px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 1px;
+}
+
+/* --- MIXER IMPROVEMENTS --- */
+#mixer {
+    display: flex;
+    gap: 4px;
+    padding: 10px;
+    overflow-x: auto;
+    align-items: stretch;
+    height: 100%;
+}
+
+.pixel-mixer-channel {
+    width: 70px;
+    min-width: 70px;
+    background: #111;
+    border: 1px solid #333;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    border-radius: 3px;
+}
+.pixel-mixer-channel.active {
+    border-color: var(--accent);
+    background: #151515;
+}
+.pixel-mixer-channel.master {
+    border-color: var(--px-red);
+    background: #1a1010;
+}
+
+.pixel-mixer-name {
+    font-size: 10px;
+    text-align: center;
+    color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.pixel-fader {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 120px;
+    background: transparent;
+    cursor: pointer;
+    writing-mode: bt-lr;
+    -webkit-appearance: slider-vertical;
+}
+
+.pixel-meter-strip {
+    width: 8px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1px;
+    background: #000;
+    padding: 2px;
+    border-radius: 2px;
+}
+
+.pixel-meter-seg {
+    width: 100%;
+    height: 6px;
+    background: #222;
+    border-radius: 1px;
+    transition: background 0.05s;
+}
+.pixel-meter-seg.on {
+    background: var(--px-green);
+}
+.pixel-meter-seg.warn.on {
+    background: var(--px-yellow);
+}
+.pixel-meter-seg.clip.on {
+    background: var(--px-red);
+}
+
+/* --- PIANO ROLL TOOLBAR --- */
+#pr-toolbar {
+    display: flex;
+    gap: 4px;
+    margin-right: 10px;
+    align-items: center;
+}
+
+#pr-toolbar .tool-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+}
+
+#pr-toolbar .tool-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+}
+
+/* Snap selector */
+#snap-select {
+    background: #111;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 4px 8px;
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+#snap-select:hover {
+    border-color: var(--accent);
+}
+
+/* --- SCROLLBAR SYNC --- */
+#track-headers {
+    width: 260px;
+    border-right: 2px solid var(--border);
+    background: var(--bg-panel);
+    overflow-y: hidden;
+    flex-shrink: 0;
+}
+
+/* Sync scroll between track lanes and headers */
+#tracks-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    background: var(--bg-canvas);
+}

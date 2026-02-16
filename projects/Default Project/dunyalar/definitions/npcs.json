@@ -1,0 +1,352 @@
+[
+  {
+    "id": "npc_blacksmith",
+    "name": "Grumble the Blacksmith",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_blacksmith",
+        "up": "npc_blacksmith",
+        "side": "npc_blacksmith",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_blacksmith",
+        "up": "npc_blacksmith",
+        "side": "npc_blacksmith",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_blacksmith",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_farmer",
+    "name": "Old Tom",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_farmer",
+        "up": "npc_farmer",
+        "side": "npc_farmer",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_farmer",
+        "up": "npc_farmer",
+        "side": "npc_farmer",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_farmer",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_knight",
+    "name": "Sir Alistair",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_knight",
+        "up": "npc_knight",
+        "side": "npc_knight",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_knight",
+        "up": "npc_knight",
+        "side": "npc_knight",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_knight",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_merchant",
+    "name": "Silas the Merchant",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_merchant",
+        "up": "npc_merchant",
+        "side": "npc_merchant",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_merchant",
+        "up": "npc_merchant",
+        "side": "npc_merchant",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_merchant",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_guard",
+    "name": "Captain of the Guard",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_guard",
+        "up": "npc_guard",
+        "side": "npc_guard",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_guard",
+        "up": "npc_guard",
+        "side": "npc_guard",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_guard",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_innkeeper",
+    "name": "Martha the Innkeeper",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_innkeeper",
+        "up": "npc_innkeeper",
+        "side": "npc_innkeeper",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_innkeeper",
+        "up": "npc_innkeeper",
+        "side": "npc_innkeeper",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_innkeeper",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_alchemist",
+    "name": "Elara the Alchemist",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_alchemist",
+        "up": "npc_alchemist",
+        "side": "npc_alchemist",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_alchemist",
+        "up": "npc_alchemist",
+        "side": "npc_alchemist",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_alchemist",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_villager_woman",
+    "name": "Villager Rose",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_villager_woman",
+        "up": "npc_villager_woman",
+        "side": "npc_villager_woman",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_villager_woman",
+        "up": "npc_villager_woman",
+        "side": "npc_villager_woman",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_villager_woman",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_old_man",
+    "name": "Elder Barnaby",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_old_man",
+        "up": "npc_old_man",
+        "side": "npc_old_man",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_old_man",
+        "up": "npc_old_man",
+        "side": "npc_old_man",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_old_man",
+        "speed": 0.2
+      }
+    }
+  },
+  {
+    "id": "npc_baker",
+    "name": "Burt the Baker",
+    "type": "npc",
+    "stats": {
+      "speed": 50
+    },
+    "interaction": {
+      "dialogue": "demo",
+      "range": 60
+    },
+    "behavior": {
+      "type": "wander",
+      "range": 100,
+      "idleTime": 3
+    },
+    "animations": {
+      "idle": {
+        "down": "npc_baker",
+        "up": "npc_baker",
+        "side": "npc_baker",
+        "speed": 0.2
+      },
+      "walk": {
+        "down": "npc_baker",
+        "up": "npc_baker",
+        "side": "npc_baker",
+        "speed": 0.15
+      },
+      "talk": {
+        "base": "npc_baker",
+        "speed": 0.2
+      }
+    }
+  }
+]

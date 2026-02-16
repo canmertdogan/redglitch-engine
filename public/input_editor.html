@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>INPUT MANAGER</title>
+    <!-- <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"> -->
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        body {
+            background: #111; color: #eee; font-family: 'JetBrains Mono', monospace;
+            margin: 0; display: flex; flex-direction: column; height: 100vh;
+        }
+        
+        #toolbar {
+            height: 48px; background: #000; border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 10px;
+        }
+        
+        h1 { margin: 0; color: #f1c40f; font-size: 1.2rem; margin-right: 20px; }
+        
+        button {
+            background: #333; color: #fff; border: 1px solid #444; padding: 8px 15px; cursor: pointer; font-family: inherit;
+        }
+        button:hover { background: #444; border-color: #f1c40f; }
+        button.primary { background: #f1c40f; color: #000; border-color: #f1c40f; font-weight: bold; }
+
+        #content {
+            flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+            max-width: 800px; margin: 0 auto; width: 100%;
+        }
+
+        .action-card {
+            background: #1e1e1e; border: 1px solid #333; padding: 15px; border-radius: 4px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        
+        .action-header {
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px;
+        }
+        .action-name { font-weight: bold; color: #4ec9b0; font-size: 1.1rem; }
+        
+        .binding-list { display: flex; flex-wrap: wrap; gap: 10px; }
+        .binding-chip {
+            background: #252526; border: 1px solid #444; padding: 5px 10px; border-radius: 3px;
+            display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+        }
+        .binding-chip:hover { border-color: #f1c40f; }
+        .binding-remove { color: #e74c3c; cursor: pointer; font-weight: bold; }
+
+        .add-binding {
+            border: 1px dashed #555; color: #555; cursor: pointer; padding: 5px 10px; border-radius: 3px;
+        }
+        .add-binding:hover { border-color: #aaa; color: #aaa; }
+
+        /* Modal */
+        #modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-box {
+            background: #222; border: 2px solid #f1c40f; padding: 30px; text-align: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        .key-display {
+            font-size: 2rem; color: #f1c40f; margin: 20px 0; border: 2px solid #fff; padding: 10px; display: inline-block; min-width: 100px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="toolbar">
+        <h1>INPUT MANAGER</h1>
+        <button onclick="addAction()">+ NEW ACTION</button>
+        <div style="flex-grow:1"></div>
+        <button class="primary" onclick="save()">SAVE CONFIG</button>
+    </div>
+
+    <div id="content">
+        <!-- Actions List -->
+    </div>
+
+    <div id="modal">
+        <div class="modal-box">
+            <h2>PRESS ANY KEY</h2>
+            <div class="key-display" id="detect-key">...</div>
+            <p style="color:#888;">Press ESC to cancel</p>
+        </div>
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+
+    <script src="input_editor.js"></script>
+</body>
+</html>

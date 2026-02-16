@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK BRAIN ARCHITECT</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            
+            /* Node Categories */
+            --cat-sensor: #9b59b6;
+            --cat-task: #3498db;
+            --cat-express: #e74c3c;
+            --cat-logic: #2ecc71;
+            --cat-subgraph: #f39c12;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-size: 1.1rem; border-bottom: 1px solid var(--border);
+            z-index: 3000; flex-shrink: 0; position: relative;
+        }
+        .menu-item { 
+            padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; 
+            height: 100%; display: flex; align-items: center; position: relative;
+        }
+        .menu-item:hover { background: var(--accent); color: #000; }
+        .menu-item.active { background: var(--accent); color: #000; }
+        
+        /* Dropdown Menus */
+        .menu-dropdown {
+            position: absolute; top: 100%; left: 0; background: #111;
+            border: 1px solid var(--accent); min-width: 220px;
+            display: none; z-index: 3100; box-shadow: 4px 4px 0 rgba(0,0,0,0.8);
+        }
+        .menu-dropdown.visible { display: block; }
+        .menu-dropdown-item {
+            padding: 8px 15px; color: #ccc; cursor: pointer;
+            border-bottom: 1px solid #222; display: flex;
+            justify-content: space-between; align-items: center;
+        }
+        .menu-dropdown-item:hover { background: #222; color: var(--accent); }
+        .menu-dropdown-item.disabled { color: #444; cursor: not-allowed; }
+        .menu-dropdown-item.disabled:hover { background: transparent; color: #444; }
+        .menu-shortcut { color: #666; font-size: 0.9em; margin-left: 20px; }
+        .menu-separator { height: 1px; background: #333; margin: 4px 0; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        input[type="text"], select {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none; flex-grow: 1;
+        }
+        input:focus { border-color: var(--accent); }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- PANELS --- */
+        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border); }
+        .panel-header {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+        }
+        .panel-content { flex-grow: 1; overflow-y: auto; padding: 10px; }
+
+        /* --- SIDEBAR (LIBRARY) --- */
+        #sidebar { width: 260px; border-right: 1px solid var(--border); transition: margin-left 0.3s; position: relative; }
+        #sidebar.collapsed { margin-left: -260px; }
+        
+        #inspector-panel { width: 280px; border-left: 1px solid var(--border); transition: margin-right 0.3s; position: relative; }
+        #inspector-panel.collapsed { margin-right: -280px; }
+        
+        .sidebar-toggle {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: var(--accent); color: #000; border: none;
+            width: 24px; height: 48px; cursor: pointer; z-index: 100;
+            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+        }
+        #sidebar .sidebar-toggle { right: -24px; }
+        #inspector-panel .sidebar-toggle { left: -24px; }
+        .sidebar-toggle:hover { background: #ffd700; }
+        
+        /* --- BREADCRUMB BAR --- */
+        #breadcrumb-bar {
+            height: 36px;
+            background: #0a0a0f;
+            border-bottom: 2px solid var(--cat-subgraph);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+        
+        #breadcrumb-content {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #888;
+        }
+        
+        .breadcrumb-item {
+            cursor: pointer;
+            color: #888;
+            transition: color 0.2s;
+        }
+        
+        .breadcrumb-item:hover {
+            color: var(--accent);
+        }
+        
+        .breadcrumb-item.active {
+            color: var(--accent);
+            font-weight: bold;
+        }
+        
+        .breadcrumb-separator {
+            color: #444;
+            user-select: none;
+        }
+        
+        .cat-title {
+            color: #666; font-size: 0.9rem; font-weight: bold; margin: 10px 0 5px 0; border-bottom: 1px solid #222;
+        }
+        .node-item {
+            padding: 6px 10px; background: #111; border: 1px solid #333; margin-bottom: 4px;
+            cursor: grab; display: flex; align-items: center; gap: 8px; font-size: 1rem;
+            border-left: 3px solid #555; transition: all 0.1s;
+        }
+        .node-item:hover { background: #222; color: #fff; transform: translateX(2px); }
+        .node-item.hidden { display: none; }
+        
+        /* Category System */
+        .node-category {
+            margin-bottom: 2px;
+        }
+        
+        .category-header {
+            padding: 8px 10px;
+            background: #111;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .category-header:hover {
+            background: #1a1a1a;
+            color: var(--accent);
+        }
+        
+        .expand-icon {
+            display: inline-block;
+            width: 20px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .node-count {
+            color: #555;
+            font-size: 0.8rem;
+        }
+        
+        .category-body {
+            display: none;
+            background: #0a0a0a;
+        }
+        
+        .category-body.expanded {
+            display: block;
+        }
+        
+        .node-item[data-cat="sensor"] { border-left-color: var(--cat-sensor); }
+        .node-item[data-cat="task"] { border-left-color: var(--cat-task); }
+        .node-item[data-cat="express"] { border-left-color: var(--cat-express); }
+        .node-item[data-cat="logic"] { border-left-color: var(--cat-logic); }
+        
+        /* Template Items */
+        .template-item {
+            padding: 10px; background: #0a0a0a; border: 1px solid #333;
+            margin-bottom: 6px; cursor: grab; display: flex; align-items: center;
+            gap: 10px; border-left: 3px solid var(--accent);
+            transition: all 0.1s;
+        }
+        .template-item:hover { background: #1a1a1a; border-left-color: #ffd700; transform: translateX(2px); }
+        .template-item i { font-size: 1.5rem; color: var(--accent); }
+        .template-info { flex: 1; }
+        .template-name { font-weight: bold; color: var(--accent); font-size: 1rem; }
+        .template-desc { font-size: 0.85rem; color: #888; }
+
+        /* --- CENTER (CANVAS) --- */
+        #center-panel { 
+            flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas);
+            position: relative; overflow: hidden;
+        }
+        #viewport {
+            width: 100%; height: 100%; position: relative; cursor: grab;
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;
+        }
+        #viewport.grid-hidden {
+            background-image: none;
+        }
+        #graph { position: absolute; top: 0; left: 0; transform-origin: 0 0; width: 100%; height: 100%; }
+        #wire-layer { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: visible; 
+            pointer-events: none;
+            z-index: 1;
+        }
+        #node-layer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+        
+        /* --- RIGHT (INSPECTOR) --- */
+        #inspector-panel { width: 280px; border-left: 1px solid var(--border); border-right: none; }
+        
+        .prop-row { margin-bottom: 10px; }
+        .prop-label { display: block; color: #888; font-size: 0.9rem; margin-bottom: 4px; }
+        .prop-input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 5px; }
+
+        /* --- NODES --- */
+        .node {
+            position: absolute; min-width: 180px; background: #111;
+            border: 1px solid #444; box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; z-index: 10;
+        }
+        .node.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 4px 4px 15px rgba(0,0,0,0.8); z-index: 20; }
+        .node.multi-selected { border-color: #4a9eff; box-shadow: 0 0 0 2px #4a9eff, 4px 4px 15px rgba(0,0,0,0.8); z-index: 15; }
+        .node.multi-selected { border-color: #4a9eff; box-shadow: 0 0 0 2px #4a9eff, 4px 4px 15px rgba(0,0,0,0.8); z-index: 15; }
+        
+        .node-header {
+            padding: 6px 10px; font-weight: bold; color: #fff; font-size: 1rem;
+            display: flex; align-items: center; justify-content: space-between;
+            background: #333; border-bottom: 1px solid #000; cursor: grab;
+        }
+        .node[data-cat="sensor"] .node-header { background: var(--cat-sensor); }
+        .node[data-cat="task"] .node-header { background: var(--cat-task); }
+        .node[data-cat="express"] .node-header { background: var(--cat-express); }
+        .node[data-cat="logic"] .node-header { background: var(--cat-logic); }
+        .node[data-cat="subgraph"] .node-header { background: var(--cat-subgraph); }
+        
+        /* Subgraph node special styling */
+        .node[data-cat="subgraph"] {
+            border: 2px solid var(--cat-subgraph);
+            min-width: 200px;
+        }
+        
+        .node[data-cat="subgraph"] .node-body {
+            background: rgba(243, 156, 18, 0.05);
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
+        }
+
+        .node-body { padding: 10px 0; position: relative; }
+        
+        /* --- COMMENTS --- */
+        .comment {
+            position: absolute; min-width: 150px; min-height: 80px;
+            background: #fffacd; border: 2px solid #f0e68c;
+            padding: 8px; font-size: 14px; color: #000;
+            resize: both; overflow: auto; z-index: 5;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
+            cursor: move;
+        }
+        .comment.warning { background: #ffcccc; border-color: #ff6666; }
+        .comment.todo { background: #ccffcc; border-color: #66ff66; }
+        .comment.info { background: #cce5ff; border-color: #66b3ff; }
+        
+        .comment-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid rgba(0,0,0,0.2);
+        }
+        .comment-type { font-weight: bold; font-size: 12px; text-transform: uppercase; }
+        .comment-close {
+            cursor: pointer; color: #666; font-weight: bold;
+            width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+        }
+        .comment-close:hover { color: #000; }
+        .comment-text {
+            font-family: 'VT323', monospace; font-size: 16px;
+            border: none; background: transparent; width: 100%;
+            min-height: 40px; resize: none; color: #000;
+        }
+        .comment-text:focus { outline: 1px solid rgba(0,0,0,0.3); }
+        
+        /* --- INSPECTOR TAB CONTENT --- */
+        .inspector-content-tab {
+            display: none;
+        }
+        .inspector-content-tab.active {
+            display: block;
+        }
+        
+        /* --- VARIABLES PANEL --- */
+        .variable-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .variable-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .variable-name {
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 13px;
+        }
+        
+        .variable-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .variable-actions button {
+            background: #222;
+            border: 1px solid #444;
+            color: #888;
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .variable-actions button:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        .variable-field {
+            margin-bottom: 5px;
+        }
+        
+        .variable-field label {
+            display: block;
+            color: #888;
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        
+        .variable-field input,
+        .variable-field select {
+            width: 100%;
+            background: #000;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 4px;
+            font-size: 11px;
+            font-family: 'VT323', monospace;
+        }
+        
+        .variable-field input:focus,
+        .variable-field select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .variable-exposed {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #888;
+            font-size: 10px;
+            margin-top: 5px;
+        }
+        
+        .variable-exposed input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .variable-usage {
+            color: #666;
+            font-size: 10px;
+            margin-top: 3px;
+        }
+        
+        .port {
+            width: 14px; height: 14px; background: #444; border: 2px solid #222;
+            border-radius: 50%; position: absolute; cursor: crosshair; z-index: 30;
+            transition: all 0.1s;
+        }
+        .port:hover { 
+            background: var(--accent); 
+            transform: scale(1.4); 
+            border-color: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+        
+        /* Subgraph ports */
+        .port.subgraph-port {
+            background: var(--cat-subgraph);
+            border-color: #b8860b;
+            width: 12px;
+            height: 12px;
+        }
+        .port.subgraph-port:hover {
+            background: #fff;
+            border-color: var(--cat-subgraph);
+            box-shadow: 0 0 10px var(--cat-subgraph);
+        }
+        
+        /* Standard Layout: In Left, Out Right */
+        .port.in { left: -7px; top: 15px; }
+        .port.out { right: -7px; top: 15px; }
+        
+        /* Logic Branch Layout */
+        .port.true { right: -7px; top: 15px; background: #2ecc71; border-color: #1a8754; }
+        .port.false { right: -7px; top: 40px; background: #e74c3c; border-color: #a93226; }
+        
+        /* Label for ports */
+        .port-label { 
+            position: absolute; font-size: 0.8rem; color: #aaa; pointer-events: none;
+        }
+        .port.true + .port-label { right: 10px; top: 12px; color: #2ecc71; }
+        .port.false + .port-label { right: 10px; top: 37px; color: #e74c3c; }
+        
+        /* Port labels for subgraphs */
+        .port-label-in,
+        .port-label-out {
+            font-size: 10px;
+            color: #999;
+            padding: 0 5px;
+        }
+        .port-label-in {
+            text-align: left;
+        }
+        .port-label-out {
+            text-align: right;
+        }
+
+        /* Wires */
+        path.wire { 
+            fill: none; 
+            stroke: #888; 
+            stroke-width: 4px; 
+            stroke-linecap: round; 
+            pointer-events: auto; 
+            transition: stroke 0.1s, stroke-width 0.1s; 
+        }
+        path.wire:hover { 
+            stroke: var(--accent); 
+            stroke-width: 6px; 
+        }
+        
+        path.wire.temp {
+            stroke: #666;
+            stroke-dasharray: 8, 4;
+        }
+
+        .btn-full { width: 100%; padding: 8px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; text-transform: uppercase; margin-top: 10px; font-family: 'VT323', monospace; }
+        .btn-full:hover { background: #333; color: #fff; border-color: #666; }
+        .btn-full.danger { border-color: #e74c3c; color: #e74c3c; }
+        .btn-full.danger:hover { background: #e74c3c; color: #000; }
+        
+        /* Pixel Button (for variables panel) */
+        .pixel-btn {
+            background: #222;
+            border: 1px solid #444;
+            color: #ccc;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+        }
+        .pixel-btn:hover {
+            background: #333;
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        /* Inspector Tabs */
+        .inspector-tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background: #0a0a0a;
+            color: #666;
+            cursor: pointer;
+            border-right: 1px solid #333;
+            font-size: 0.9rem;
+            transition: all 0.1s;
+        }
+        
+        .inspector-tab:last-child {
+            border-right: none;
+        }
+        
+        .inspector-tab:hover {
+            background: #111;
+            color: #888;
+        }
+        
+        .inspector-tab.active {
+            background: #111;
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
+        
+        /* Context Menu */
+        #context-menu {
+            position: fixed;
+            background: #000;
+            border: 2px solid #333;
+            z-index: 9999;
+            min-width: 180px;
+            display: none;
+        }
+        
+        #context-menu.visible {
+            display: block;
+        }
+        
+        .ctx-item {
+            padding: 8px 12px;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #111;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ctx-item:hover {
+            background: #111;
+            color: var(--accent);
+        }
+        
+        .ctx-item i {
+            width: 16px;
+        }
+        
+        .ctx-separator {
+            height: 1px;
+            background: #333;
+            margin: 4px 0;
+        }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <div id="menubar">
+        <div style="color:var(--accent); font-weight:bold; margin-right:20px; letter-spacing:2px;">
+            <i class="fas fa-brain"></i> BRAIN ARCHITECT
+        </div>
+        <div class="menu-item" data-menu="file">
+            File
+            <div class="menu-dropdown" id="menu-file">
+                <div class="menu-dropdown-item" onclick="editor.newBrain()">
+                    <span><i class="fas fa-file"></i> New Brain</span>
+                    <span class="menu-shortcut">Ctrl+N</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.load()">
+                    <span><i class="fas fa-folder-open"></i> Open...</span>
+                    <span class="menu-shortcut">Ctrl+O</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.save()">
+                    <span><i class="fas fa-save"></i> Save</span>
+                    <span class="menu-shortcut">Ctrl+S</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.saveAs()">
+                    <span><i class="fas fa-save"></i> Save As...</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="editor.exportJSON()">
+                    <span><i class="fas fa-file-export"></i> Export JSON</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.importJSON()">
+                    <span><i class="fas fa-file-import"></i> Import JSON</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="window.location.href='/'">
+                    <span><i class="fas fa-times"></i> Close</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item" data-menu="edit">
+            Edit
+            <div class="menu-dropdown" id="menu-edit">
+                <div class="menu-dropdown-item" onclick="editor.undo()">
+                    <span><i class="fas fa-undo"></i> Undo</span>
+                    <span class="menu-shortcut">Ctrl+Z</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.redo()">
+                    <span><i class="fas fa-redo"></i> Redo</span>
+                    <span class="menu-shortcut">Ctrl+Y</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="editor.copyNode()">
+                    <span><i class="fas fa-copy"></i> Copy</span>
+                    <span class="menu-shortcut">Ctrl+C</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.pasteNode()">
+                    <span><i class="fas fa-paste"></i> Paste</span>
+                    <span class="menu-shortcut">Ctrl+V</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.deleteSelected()">
+                    <span><i class="fas fa-trash"></i> Delete</span>
+                    <span class="menu-shortcut">Del</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="editor.selectAll()">
+                    <span><i class="fas fa-check-square"></i> Select All</span>
+                    <span class="menu-shortcut">Ctrl+A</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item" data-menu="view">
+            View
+            <div class="menu-dropdown" id="menu-view">
+                <div class="menu-dropdown-item" onclick="editor.toggleSidebar('left')">
+                    <span><i class="fas fa-bars"></i> Toggle Library</span>
+                    <span class="menu-shortcut">F1</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.toggleSidebar('right')">
+                    <span><i class="fas fa-info-circle"></i> Toggle Inspector</span>
+                    <span class="menu-shortcut">F2</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="editor.toggleGrid()">
+                    <span><i class="fas fa-border-all"></i> Toggle Grid</span>
+                    <span class="menu-shortcut">G</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.toggleSnap()">
+                    <span><i class="fas fa-magnet"></i> Snap to Grid</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="editor.resetZoom()">
+                    <span><i class="fas fa-compress"></i> Reset Zoom</span>
+                    <span class="menu-shortcut">0</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.zoom(0.2)">
+                    <span><i class="fas fa-search-plus"></i> Zoom In</span>
+                    <span class="menu-shortcut">+</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.zoom(-0.2)">
+                    <span><i class="fas fa-search-minus"></i> Zoom Out</span>
+                    <span class="menu-shortcut">-</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item" data-menu="tools">
+            Tools
+            <div class="menu-dropdown" id="menu-tools">
+                <div class="menu-dropdown-item" onclick="editor.viewCode()">
+                    <span><i class="fas fa-code"></i> View Code</span>
+                    <span class="menu-shortcut">F3</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.validateBrain()">
+                    <span><i class="fas fa-check-circle"></i> Validate Brain</span>
+                </div>
+                <div class="menu-dropdown-item disabled">
+                    <span><i class="fas fa-play"></i> Test Brain</span>
+                    <span class="menu-shortcut">Coming Soon</span>
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="editor.cleanupOrphans()">
+                    <span><i class="fas fa-broom"></i> Cleanup Orphaned Nodes</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.autoLayout()">
+                    <span><i class="fas fa-sitemap"></i> Auto Layout</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item" data-menu="help">
+            Help
+            <div class="menu-dropdown" id="menu-help">
+                <div class="menu-dropdown-item" onclick="editor.showKeyboardShortcuts()">
+                    <span><i class="fas fa-keyboard"></i> Keyboard Shortcuts</span>
+                    <span class="menu-shortcut">F1</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="editor.showAbout()">
+                    <span><i class="fas fa-info-circle"></i> About</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toolbar">
+        <!-- History -->
+        <button class="tool-btn" onclick="editor.undo()" title="UNDO (CTRL+Z)" id="btn-undo">
+            <i class="fas fa-undo"></i>
+        </button>
+        <button class="tool-btn" onclick="editor.redo()" title="REDO (CTRL+Y)" id="btn-redo">
+            <i class="fas fa-redo"></i>
+        </button>
+        
+        <div class="tool-sep"></div>
+        
+        <!-- Brain Selection -->
+        <select id="brain-selector" style="max-width: 180px; text-transform: uppercase;" onchange="editor.load()">
+            <option value="">-- NEW BRAIN --</option>
+        </select>
+        <input type="text" id="script-name" value="NPC_NEW_BRAIN" style="max-width: 160px; text-transform: uppercase;">
+        
+        <div style="flex-grow:1"></div>
+        
+        <!-- View Controls -->
+        <button class="tool-btn" id="grid-toggle" onclick="editor.toggleGrid()" title="TOGGLE GRID">
+            <i class="fas fa-border-all"></i>
+        </button>
+        <button class="tool-btn active" id="snap-toggle" onclick="editor.toggleSnap()" title="SNAP TO GRID">
+            <i class="fas fa-magnet"></i>
+        </button>
+        
+        <div class="tool-sep"></div>
+        
+        <span style="color: #666; font-size: 0.9rem; padding: 0 10px;">ZOOM: <span id="zoom-level">100%</span></span>
+        
+        <button class="tool-btn" onclick="editor.resetZoom()" title="RESET ZOOM">
+            <i class="fas fa-compress"></i>
+        </button>
+        
+        <div class="tool-sep"></div>
+        
+        <!-- Comments Toggle -->
+        <button class="tool-btn active" id="comments-toggle" onclick="editor.toggleComments()" title="TOGGLE COMMENTS">
+            <i class="fas fa-sticky-note"></i>
+        </button>
+        
+        <div class="tool-sep"></div>
+        
+        <!-- Actions -->
+        <button class="tool-btn" onclick="editor.viewCode()" title="VIEW CODE" style="width: auto; padding: 0 12px;">
+            <i class="fas fa-code"></i> CODE
+        </button>
+        <button class="tool-btn" onclick="editor.save()" title="SAVE (CTRL+S)" style="background: var(--accent); color: #000; width: auto; padding: 0 12px; font-weight: bold;">
+            <i class="fas fa-save"></i> SAVE
+        </button>
+    </div>
+
+    <!-- Breadcrumb Navigation Bar -->
+    <div id="breadcrumb-bar" style="display: none;">
+        <div id="breadcrumb-content">
+            <!-- Populated dynamically -->
+        </div>
+        <button class="tool-btn" onclick="editor.exitSubgraph()" title="Go Up (ESC)">
+            <i class="fas fa-level-up-alt"></i> EXIT
+        </button>
+    </div>
+
+    <div id="layout">
+        
+        <!-- LEFT: LIBRARY -->
+        <div id="sidebar" class="panel">
+            <button class="sidebar-toggle" onclick="editor.toggleSidebar('left')" title="Toggle Library (F1)">
+                <i class="fas fa-angle-left" id="sidebar-icon-left"></i>
+            </button>
+            
+            <div class="panel-header">NODE LIBRARY <i class="fas fa-book"></i></div>
+            
+            <!-- Search Bar -->
+            <div style="padding: 10px; border-bottom: 1px solid #333;">
+                <input type="text" id="node-search" placeholder="SEARCH NODES..." 
+                       style="width: 100%; text-transform: uppercase;" 
+                       oninput="editor.filterNodes(this.value)">
+            </div>
+            
+            <div class="panel-content" id="node-library-content">
+                
+                <!-- TEMPLATES SECTION -->
+                <div class="node-category" id="cat-templates">
+                    <div class="category-header" onclick="editor.toggleCategory('templates')">
+                        <span><span class="expand-icon">[-]</span> TEMPLATES</span>
+                        <span class="node-count">(14)</span>
+                    </div>
+                    <div class="category-body expanded" id="cat-templates-body">
+                        <div class="template-item" data-template="patrol" draggable="true">
+                            <i class="fas fa-route"></i>
+                            <div class="template-info">
+                                <div class="template-name">Patrol Route</div>
+                                <div class="template-desc">Walk between waypoints</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="chase" draggable="true">
+                            <i class="fas fa-running"></i>
+                            <div class="template-info">
+                                <div class="template-name">Chase Player</div>
+                                <div class="template-desc">Pursue when detected</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="flee" draggable="true">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div class="template-info">
+                                <div class="template-name">Flee from Danger</div>
+                                <div class="template-desc">Run when threatened</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="guard" draggable="true">
+                            <i class="fas fa-shield-alt"></i>
+                            <div class="template-info">
+                                <div class="template-name">Guard Post</div>
+                                <div class="template-desc">Stand watch</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="conversational" draggable="true">
+                            <i class="fas fa-comments"></i>
+                            <div class="template-info">
+                                <div class="template-name">Conversational</div>
+                                <div class="template-desc">Friendly greeter</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="idle" draggable="true">
+                            <i class="fas fa-user"></i>
+                            <div class="template-info">
+                                <div class="template-name">Random Idle</div>
+                                <div class="template-desc">Ambient behavior</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin: 10px 0; padding: 5px; background: #0a0a0a; border-left: 3px solid #f1c40f; color: #f1c40f; font-size: 0.9rem;">
+                            ⚡ ADVANCED TEMPLATES
+                        </div>
+                        
+                        <div class="template-item" data-template="merchant" draggable="true">
+                            <i class="fas fa-store"></i>
+                            <div class="template-info">
+                                <div class="template-name">Merchant/Shopkeeper</div>
+                                <div class="template-desc">Stationary vendor</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="quest_giver" draggable="true">
+                            <i class="fas fa-scroll"></i>
+                            <div class="template-info">
+                                <div class="template-name">Quest Giver</div>
+                                <div class="template-desc">Quest status checks</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="aggressive" draggable="true">
+                            <i class="fas fa-skull-crossbones"></i>
+                            <div class="template-info">
+                                <div class="template-name">Aggressive Enemy</div>
+                                <div class="template-desc">Attacks on sight</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="curious" draggable="true">
+                            <i class="fas fa-search"></i>
+                            <div class="template-info">
+                                <div class="template-name">Curious Investigator</div>
+                                <div class="template-desc">Investigates sounds</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="follower" draggable="true">
+                            <i class="fas fa-user-friends"></i>
+                            <div class="template-info">
+                                <div class="template-name">Follower/Companion</div>
+                                <div class="template-desc">Stays near player</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="boss_phases" draggable="true">
+                            <i class="fas fa-dragon"></i>
+                            <div class="template-info">
+                                <div class="template-name">Boss Multi-Phase</div>
+                                <div class="template-desc">Health-based phases</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="coward_advanced" draggable="true">
+                            <i class="fas fa-running"></i>
+                            <div class="template-info">
+                                <div class="template-name">Coward (Advanced)</div>
+                                <div class="template-desc">Flee, hide & peek</div>
+                            </div>
+                        </div>
+                        <div class="template-item" data-template="patrol_alert" draggable="true">
+                            <i class="fas fa-bell"></i>
+                            <div class="template-info">
+                                <div class="template-name">Patrol & Alert</div>
+                                <div class="template-desc">Alert allies on detect</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recently Used -->
+                <div class="node-category" id="cat-recent" style="display: none;">
+                    <div class="category-header" onclick="editor.toggleCategory('recent')">
+                        <span><span class="expand-icon">[-]</span> RECENT</span>
+                        <span class="node-count">(0)</span>
+                    </div>
+                    <div class="category-body expanded" id="recent-nodes">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+                
+                <!-- Sensors Category -->
+                <div class="node-category">
+                    <div class="category-header" onclick="editor.toggleCategory('sensors')">
+                        <span><span class="expand-icon">[-]</span> SENSORS</span>
+                        <span class="node-count">(4)</span>
+                    </div>
+                    <div class="category-body expanded" id="cat-sensors-body">
+                        <div class="node-item" draggable="true" data-type="sensor_spawn" data-cat="sensor"><i class="fas fa-play-circle"></i> START</div>
+                        <div class="node-item" draggable="true" data-type="sensor_see_player" data-cat="sensor"><i class="fas fa-eye"></i> SEE PLAYER</div>
+                        <div class="node-item" draggable="true" data-type="sensor_near_player" data-cat="sensor"><i class="fas fa-ruler-combined"></i> NEAR PLAYER</div>
+                        <div class="node-item" draggable="true" data-type="sensor_damaged" data-cat="sensor"><i class="fas fa-heart-broken"></i> ON DAMAGE</div>
+                    </div>
+                </div>
+
+                <!-- Tasks Category -->
+                <div class="node-category">
+                    <div class="category-header" onclick="editor.toggleCategory('tasks')">
+                        <span><span class="expand-icon">[-]</span> TASKS</span>
+                        <span class="node-count">(5)</span>
+                    </div>
+                    <div class="category-body expanded" id="cat-tasks-body">
+                        <div class="node-item" draggable="true" data-type="task_wander" data-cat="task"><i class="fas fa-walking"></i> WANDER</div>
+                        <div class="node-item" draggable="true" data-type="task_patrol" data-cat="task"><i class="fas fa-route"></i> PATROL</div>
+                        <div class="node-item" draggable="true" data-type="task_follow" data-cat="task"><i class="fas fa-magnet"></i> FOLLOW</div>
+                        <div class="node-item" draggable="true" data-type="task_flee" data-cat="task"><i class="fas fa-running"></i> FLEE</div>
+                        <div class="node-item" draggable="true" data-type="task_goto" data-cat="task"><i class="fas fa-map-marker-alt"></i> GO TO POS</div>
+                    </div>
+                </div>
+
+                <!-- Expression Category -->
+                <div class="node-category">
+                    <div class="category-header" onclick="editor.toggleCategory('expression')">
+                        <span><span class="expand-icon">[-]</span> EXPRESSION</span>
+                        <span class="node-count">(3)</span>
+                    </div>
+                    <div class="category-body expanded" id="cat-expression-body">
+                        <div class="node-item" draggable="true" data-type="expr_say" data-cat="express"><i class="fas fa-comment"></i> SPEAK</div>
+                        <div class="node-item" draggable="true" data-type="expr_emotion" data-cat="express"><i class="fas fa-smile"></i> EMOTION</div>
+                        <div class="node-item" draggable="true" data-type="expr_emote" data-cat="express"><i class="fas fa-exclamation"></i> EMOTE BUBBLE</div>
+                    </div>
+                </div>
+
+                <!-- Logic Category -->
+                <div class="node-category">
+                    <div class="category-header" onclick="editor.toggleCategory('logic')">
+                        <span><span class="expand-icon">[-]</span> LOGIC</span>
+                        <span class="node-count">(4)</span>
+                    </div>
+                    <div class="category-body expanded" id="cat-logic-body">
+                        <div class="node-item" draggable="true" data-type="logic_check" data-cat="logic"><i class="fas fa-code-branch"></i> CHECK FLAG</div>
+                        <div class="node-item" draggable="true" data-type="logic_var_set" data-cat="logic"><i class="fas fa-pen"></i> SET VAR</div>
+                        <div class="node-item" draggable="true" data-type="logic_var_check" data-cat="logic"><i class="fas fa-question"></i> CHECK VAR</div>
+                        <div class="node-item" draggable="true" data-type="logic_wait" data-cat="logic"><i class="fas fa-clock"></i> WAIT</div>
+                    </div>
+                </div>
+
+                <!-- Subgraph Category -->
+                <div class="node-category">
+                    <div class="category-header" onclick="editor.toggleCategory('subgraph')">
+                        <span><span class="expand-icon">[-]</span> SUBGRAPHS</span>
+                        <span class="node-count">(3)</span>
+                    </div>
+                    <div class="category-body expanded" id="cat-subgraph-body">
+                        <div class="node-item" draggable="true" data-type="subgraph" data-cat="subgraph"><i class="fas fa-box"></i> SUBGRAPH</div>
+                        <div class="node-item" draggable="true" data-type="subgraph_input" data-cat="subgraph"><i class="fas fa-arrow-down"></i> INPUT</div>
+                        <div class="node-item" draggable="true" data-type="subgraph_output" data-cat="subgraph"><i class="fas fa-arrow-up"></i> OUTPUT</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CENTER: CANVAS -->
+        <div id="center-panel">
+            <div id="viewport">
+                <div id="graph">
+                    <svg id="wire-layer" style="position: absolute; top: 0; left: 0; width: 4000px; height: 4000px; pointer-events: none;"></svg>
+                    <div id="node-layer"></div>
+                </div>
+            </div>
+            <div style="position:absolute; bottom:10px; left:10px; color:#666; font-size:0.8rem;">
+                [RIGHT-CLICK] PAN | [SCROLL] ZOOM | [G] GRID
+            </div>
+        </div>
+
+        <!-- RIGHT: INSPECTOR -->
+        <div id="inspector-panel" class="panel">
+            <button class="sidebar-toggle" onclick="editor.toggleSidebar('right')" title="Toggle Inspector (F2)">
+                <i class="fas fa-angle-right" id="sidebar-icon-right"></i>
+            </button>
+            
+            <div class="panel-header">PROPERTIES <i class="fas fa-sliders-h"></i></div>
+            
+            <!-- Tabs -->
+            <div style="display: flex; border-bottom: 2px solid #333; background: #0a0a0a;">
+                <div class="inspector-tab active" data-tab="properties" onclick="editor.switchInspectorTab('properties')">
+                    [PROPS]
+                </div>
+                <div class="inspector-tab" data-tab="info" onclick="editor.switchInspectorTab('info')">
+                    [INFO]
+                </div>
+                <div class="inspector-tab" data-tab="variables" onclick="editor.switchInspectorTab('variables')">
+                    [VARS]
+                </div>
+                <div class="inspector-tab" data-tab="code" onclick="editor.switchInspectorTab('code')">
+                    [CODE]
+                </div>
+            </div>
+            
+            <div class="panel-content" id="inspector">
+                <!-- Properties Tab Content -->
+                <div id="inspector-content-properties" class="inspector-content-tab active">
+                    <div style="text-align:center; color:#555; margin-top:50px;">NO NODE SELECTED</div>
+                </div>
+                
+                <!-- Info Tab Content -->
+                <div id="inspector-content-info" class="inspector-content-tab">
+                    <div style="padding: 10px; color: #888; font-size: 11px;">
+                        <p>Select a node to view info.</p>
+                    </div>
+                </div>
+                
+                <!-- Variables Tab Content -->
+                <div id="inspector-content-variables" class="inspector-content-tab">
+                    <div style="padding: 10px;">
+                        <div style="margin-bottom: 10px;">
+                            <button onclick="editor.detectVariables()" class="pixel-btn" style="width: 100%; margin-bottom: 5px; font-size: 11px; padding: 5px;">
+                                <i class="fas fa-search"></i> DETECT VARS
+                            </button>
+                            <button onclick="editor.addManualVariable()" class="pixel-btn" style="width: 100%; font-size: 11px; padding: 5px;">
+                                <i class="fas fa-plus"></i> ADD VAR
+                            </button>
+                        </div>
+                        <div id="variables-list" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Variables populated here -->
+                            <div style="color: #888; font-size: 11px; padding: 10px;">
+                                No variables detected. Click DETECT VARS or add manually.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Code Tab Content -->
+                <div id="inspector-content-code" class="inspector-content-tab">
+                    <div style="padding: 10px; color: #888; font-size: 11px;">
+                        <p>Select a node to view generated code.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu">
+        <div class="ctx-item" onclick="editor.contextMenuAction('copy')">
+            <i class="fas fa-copy"></i> COPY NODE
+        </div>
+        <div class="ctx-item" onclick="editor.contextMenuAction('paste')">
+            <i class="fas fa-paste"></i> PASTE NODE
+        </div>
+        <div class="ctx-separator"></div>
+        <div class="ctx-item" onclick="editor.contextMenuAction('duplicate')">
+            <i class="fas fa-clone"></i> DUPLICATE
+        </div>
+        <div class="ctx-separator"></div>
+        <div class="ctx-item" onclick="editor.contextMenuAction('delete')">
+            <i class="fas fa-trash"></i> DELETE NODE
+        </div>
+        <div class="ctx-separator"></div>
+        <div class="ctx-item" onclick="editor.addComment()">
+            <i class="fas fa-sticky-note"></i> ADD COMMENT
+        </div>
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+
+    <script src="behavior_editor.js"></script>
+</body>
+</html>

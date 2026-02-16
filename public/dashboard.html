@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KETEBE GAME STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <style>
+        :root {
+            --bg-deep: #050508;
+            --bg-main: #080c18;
+            --bg-ui: #121a2b;
+            --accent: #f1c40f;
+            --text: #cfd8dc;
+            --border: 1px solid #1f2b42;
+            --font-pixel: 'VT323', monospace;
+            --danger: #e74c3c;
+        }
+
+        * { box-sizing: border-box; user-select: none; cursor: default; }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-deep);
+            color: var(--text);
+            font-family: var(--font-pixel);
+            font-size: 20px;
+            height: 100vh;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            grid-template-rows: 40px 1fr;
+            grid-template-areas: 
+                "header header"
+                "sidebar content";
+        }
+
+        /* --- BACKGROUND & CRT --- */
+        #wallpaper-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: #000;
+            overflow: hidden;
+        }
+        #blackhole-canvas-dash, #mesh-canvas-dash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        #ui-overlay-tint-dash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.95) 100%);
+            backdrop-filter: blur(8px);
+            z-index: 3;
+        }
+
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 2px;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* --- HEADER --- */
+        .top-bar {
+            grid-area: header;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 1px solid #1f2b42;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 0 0 15px;
+            z-index: 10;
+            -webkit-app-region: drag;
+        }
+        .brand { font-size: 18px; color: var(--accent); letter-spacing: 2px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .brand-text { border-right: 1px solid var(--accent); white-space: nowrap; overflow: hidden; padding-right: 5px; }
+        .brand span { font-size: 14px; color: #555; margin-left: 5px; font-weight: normal; }
+        
+        .sys-stats { 
+            display: flex; align-items: center; gap: 15px; font-size: 16px; color: #666; 
+            -webkit-app-region: no-drag;
+            height: 100%;
+        }
+
+        .window-controls { display: flex; height: 100%; -webkit-app-region: no-drag; }
+        .win-btn { width: 40px; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #444; transition: all 0.1s; }
+        .win-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .win-btn.close:hover { background: var(--danger); color: #fff; }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            grid-area: sidebar;
+            background: rgba(8, 12, 24, 0.8);
+            border-right: 1px solid #1f2b42;
+            display: flex; flex-direction: column;
+            padding: 10px 0;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+        
+        .nav-group-label { padding: 8px 15px; font-size: 12px; color: #444; text-transform: uppercase; letter-spacing: 1px; }
+
+        .nav-btn {
+            padding: 8px 15px; cursor: pointer; display: flex; align-items: center; gap: 12px;
+            font-size: 18px; color: #888; transition: all 0.1s; border-left: 2px solid transparent;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.02); color: #fff; }
+        .nav-btn.active {
+            background: rgba(241, 196, 15, 0.05); color: var(--accent); border-left-color: var(--accent);
+        }
+        .nav-btn i { width: 20px; text-align: center; font-size: 14px; }
+        
+        .nav-btn.coming-soon { color: #444; pointer-events: none; cursor: default; opacity: 0.5; }
+        .sidebar-footer { margin-top: auto; padding: 15px; font-size: 11px; color: #333; text-align: center; border-top: 1px solid #111; }
+
+        /* --- CONTENT AREA --- */
+        .main-content { grid-area: content; padding: 20px; overflow-y: auto; position: relative; background: rgba(5, 5, 8, 0.4); }
+
+        .view-section { display: none; animation: fadeIn 0.1s ease-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        h1 { margin-top: 0; border-bottom: 1px solid #1f2b42; padding-bottom: 8px; color: #fff; font-weight: normal; font-size: 24px; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-pixel); }
+        
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
+        
+        .project-card {
+            background: rgba(10, 14, 20, 0.8);
+            border: 1px solid #1f2b42;
+            padding: 15px;
+            display: flex; flex-direction: column;
+            gap: 8px; cursor: pointer; transition: all 0.1s; position: relative;
+            backdrop-filter: blur(5px);
+        }
+        .project-card:hover { border-color: var(--accent); background: rgba(14, 20, 32, 0.9); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .project-card:active { transform: translateY(1px); }
+        
+        .p-icon { font-size: 28px; color: #333; margin-bottom: 5px; }
+        .project-card:hover .p-icon { color: var(--accent); }
+        
+        .p-title { font-size: 20px; color: #fff; font-weight: bold; }
+        .p-path { font-size: 13px; color: #555; word-break: break-all; font-family: monospace; }
+        .p-meta { margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; font-size: 13px; color: #444; border-top: 1px solid #111; }
+
+        .btn-action {
+            background: transparent; color: var(--accent);
+            border: 1px solid var(--accent); padding: 5px 12px; font-family: inherit; font-size: 16px;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.1s;
+        }
+        .btn-action:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+
+        /* --- LOG MODAL --- */
+        #log-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 99999;
+            display: none; align-items: center; justify-content: center;
+        }
+        #log-modal.active { display: flex; animation: fadeIn 0.2s; }
+        .log-box { width: 800px; height: 500px; background: #111; border: 2px solid var(--border); display: flex; flex-direction: column; box-shadow: 0 0 30px #000; }
+        .log-header { padding: 15px; border-bottom: 2px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #111; }
+        .log-content { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: 'Consolas', monospace; font-size: 16px; background: #000; }
+        .log-entry { padding: 4px 8px; border-bottom: 1px solid #222; display: flex; gap: 10px; }
+        
+        #status-indicator { cursor: pointer; display: none; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-weight: bold; pointer-events: auto !important; z-index: 100000; }
+        #status-indicator.error { display: flex; color: #e74c3c; background: rgba(231, 76, 60, 0.1); border: 1px solid #e74c3c; }
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: #111; border: 2px solid var(--accent); padding: 15px 20px; color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease-out; display: flex; align-items: center; gap: 10px; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* --- PROJECT WIZARD --- */
+        .wizard-container { max-width: 700px; margin: 20px auto; background: rgba(10, 14, 20, 0.9); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px); }
+        .wizard-steps { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
+        .wizard-steps::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: #1f2b42; z-index: 0; }
+        .wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; z-index: 1; }
+        .wizard-step-circle { width: 30px; height: 30px; border-radius: 50%; background: #1f2b42; color: #666; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+        .wizard-step.active .wizard-step-circle { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(241, 196, 15, 0.5); }
+        .wizard-step.completed .wizard-step-circle { background: #2ecc71; color: #fff; }
+        .wizard-step-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .wizard-step.active .wizard-step-label { color: var(--accent); }
+        
+        .wizard-content { min-height: 300px; margin-bottom: 30px; }
+        .wizard-content > div { display: none; }
+        .wizard-content > div.active { display: block; animation: fadeIn 0.3s; }
+        
+        .engine-selection { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .engine-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .engine-card:hover { border-color: var(--accent); background: rgba(241, 196, 15, 0.05); }
+        .engine-card.selected { border-color: var(--accent); background: rgba(241, 196, 15, 0.1); box-shadow: 0 0 20px rgba(241, 196, 15, 0.3); }
+        .engine-card i { font-size: 48px; color: #666; margin-bottom: 15px; display: block; }
+        .engine-card.selected i { color: var(--accent); }
+        .engine-card-title { font-size: 20px; color: #fff; margin-bottom: 8px; }
+        .engine-card-desc { font-size: 14px; color: #888; line-height: 1.4; }
+        
+        .template-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .template-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; }
+        .template-card:hover { border-color: var(--accent); }
+        .template-card.selected { border-color: var(--accent); background: rgba(241, 196, 15, 0.1); }
+        
+        .wizard-actions { display: flex; justify-content: space-between; align-items: center; }
+        
+        /* --- PROJECT CARD ACTIONS --- */
+        .project-actions { position: absolute; top: 10px; right: 10px; display: none; gap: 5px; }
+        .project-card:hover .project-actions { display: flex; }
+        .project-action-btn { width: 30px; height: 30px; background: rgba(0,0,0,0.8); border: 1px solid #333; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.1s; }
+        .project-action-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+        .project-action-btn.danger:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+        
+        /* --- CONFIRMATION MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.2s; }
+        .modal-box { background: #0a0e14; border: 2px solid #1f2b42; padding: 30px; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .modal-title { font-size: 24px; color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .modal-content { color: #ccc; line-height: 1.6; margin-bottom: 25px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    </style>
+</head>
+<body>
+
+    <div id="wallpaper-container">
+        <div id="blackhole-container-dash"></div>
+        <canvas id="mesh-canvas-dash"></canvas>
+        <div id="ui-overlay-tint-dash"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="top-bar">
+        <div class="brand">
+            <img src="/favicon.ico" style="width:24px; height:24px; image-rendering: pixelated;"> 
+            <div class="brand-text" id="typing-brand"></div>
+            <span>v7.0</span>
+        </div>
+        <div class="sys-stats">
+            <div class="stat-item" id="status-indicator" onclick="LogManager.show()">
+                <i class="fas fa-exclamation-circle"></i> <span id="status-text">0</span>
+            </div>
+            <div class="stat-item" style="color:var(--accent)" id="clock">00:00</div>
+            
+            <div class="window-controls">
+                <div class="win-btn" onclick="if(window.electronAPI) window.electronAPI.minimize()"><i class="fas fa-minus"></i></div>
+                <div class="win-btn close" onclick="if(window.electronAPI) window.electronAPI.close()"><i class="fas fa-times"></i></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <nav>
+            <div class="nav-group-label">Workspace</div>
+            <div class="nav-btn active" onclick="View.show('projects')">
+                <i class="fas fa-th-large"></i> My Projects
+            </div>
+            <div class="nav-btn" onclick="View.show('create')">
+                <i class="fas fa-plus-square"></i> New Project
+            </div>
+            <div class="nav-btn" onclick="View.show('templates')">
+                <i class="fas fa-layer-group"></i> Templates
+            </div>
+
+            <div class="nav-group-label">Studio</div>
+            <div class="nav-btn" id="btn-launch-studio" onclick="window.location.href='tools.html'" style="color:var(--accent); background:rgba(241, 196, 15, 0.05); border-left: 4px solid var(--accent);">
+                <i class="fas fa-rocket"></i> Open Studio
+            </div>
+            <div class="nav-btn" onclick="View.show('assets')">
+                <i class="fas fa-images"></i> Asset Library
+            </div>
+            <div class="nav-btn" onclick="View.show('marketplace')">
+                <i class="fas fa-store"></i> Marketplace
+            </div>
+
+            <div class="nav-group-label">Resources</div>
+            <div class="nav-btn" onclick="View.show('docs')">
+                <i class="fas fa-book"></i> Documentation
+            </div>
+            <div class="nav-btn" onclick="View.show('tutorials')">
+                <i class="fas fa-graduation-cap"></i> Tutorials
+            </div>
+            <div class="nav-btn" onclick="View.show('community')">
+                <i class="fas fa-users"></i> Community
+            </div>
+
+            <div class="nav-group-label">System</div>
+            <div class="nav-btn" onclick="View.show('terminal')">
+                <i class="fas fa-terminal"></i> Terminal
+            </div>
+            <div class="nav-btn" onclick="View.show('updates')">
+                <i class="fas fa-download"></i> Updates
+            </div>
+            <div class="nav-btn" onclick="View.show('settings')">
+                <i class="fas fa-cogs"></i> Settings
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            &copy; 2026 Ketebe Corp.<br>
+            STABLE_BUILD v7.0.1
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content"> 
+        <div id="view-projects" class="view-section active">
+            <h1>
+                My Projects
+                <button class="btn-action" onclick="View.show('create')"><i class="fas fa-plus"></i> NEW</button>
+            </h1>
+            <div id="project-list" class="projects-grid">
+                <div style="padding:20px; color:#666;">Loading projects...</div>
+            </div>
+        </div>
+
+        <div id="view-create" class="view-section">
+            <h1>Create New Project</h1>
+            <div class="wizard-container">
+                <!-- Wizard Steps -->
+                <div class="wizard-steps">
+                    <div class="wizard-step active" data-step="1">
+                        <div class="wizard-step-circle">1</div>
+                        <div class="wizard-step-label">Name</div>
+                    </div>
+                    <div class="wizard-step" data-step="2">
+                        <div class="wizard-step-circle">2</div>
+                        <div class="wizard-step-label">Engine</div>
+                    </div>
+                    <div class="wizard-step" data-step="3">
+                        <div class="wizard-step-circle">3</div>
+                        <div class="wizard-step-label">Template</div>
+                    </div>
+                    <div class="wizard-step" data-step="4">
+                        <div class="wizard-step-circle">4</div>
+                        <div class="wizard-step-label">Create</div>
+                    </div>
+                </div>
+
+                <!-- Wizard Content -->
+                <div class="wizard-content">
+                    <!-- Step 1: Project Name -->
+                    <div class="wizard-page active" data-page="1">
+                        <h2 style="color:var(--accent); margin-top:0;">Name Your Project</h2>
+                        <p style="color:#888; margin-bottom: 20px;">Choose a unique name for your game project.</p>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; color: var(--accent); margin-bottom: 8px;">Project Name *</label>
+                            <input type="text" id="wizard-proj-name" style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 12px; outline: none;" placeholder="My Awesome Game">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; color: var(--accent); margin-bottom: 8px;">Author Name</label>
+                            <input type="text" id="wizard-author" style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 12px; outline: none;" placeholder="Your Name">
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Engine Type -->
+                    <div class="wizard-page" data-page="2">
+                        <h2 style="color:var(--accent); margin-top:0;">Select Engine Type</h2>
+                        <p style="color:#888; margin-bottom: 20px;">Choose the type of game you want to create.</p>
+                        <div class="engine-selection">
+                            <div class="engine-card" onclick="Wizard.selectEngine('rpg-topdown')">
+                                <i class="fas fa-map"></i>
+                                <div class="engine-card-title">RPG Top-Down</div>
+                                <div class="engine-card-desc">Classic 2D RPG with exploration, quests, and dialogue</div>
+                            </div>
+                            <div class="engine-card" onclick="Wizard.selectEngine('platformer-2d')">
+                                <i class="fas fa-running"></i>
+                                <div class="engine-card-title">Platformer 2D</div>
+                                <div class="engine-card-desc">Side-scrolling action with physics and jumping</div>
+                            </div>
+                            <div class="engine-card" onclick="Wizard.selectEngine('iso-pixel')">
+                                <i class="fas fa-cubes"></i>
+                                <div class="engine-card-title">Isometric</div>
+                                <div class="engine-card-desc">3D-style isometric world with pixel art</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Template -->
+                    <div class="wizard-page" data-page="3">
+                        <h2 style="color:var(--accent); margin-top:0;">Choose Template</h2>
+                        <p style="color:#888; margin-bottom: 20px;">Start with a template or create from scratch.</p>
+                        <div class="template-selection">
+                            <div class="template-card selected" onclick="Wizard.selectTemplate('blank')">
+                                <h3 style="color:#fff; margin-top:0;">⚡ Blank Project</h3>
+                                <p style="color:#888; font-size:14px; line-height:1.4;">Start from scratch with an empty project structure</p>
+                            </div>
+                            <div class="template-card" onclick="Wizard.selectTemplate('demo')">
+                                <h3 style="color:#fff; margin-top:0;">🎮 Demo Project</h3>
+                                <p style="color:#888; font-size:14px; line-height:1.4;">Pre-configured demo with sample assets and logic</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Confirmation -->
+                    <div class="wizard-page" data-page="4">
+                        <h2 style="color:var(--accent); margin-top:0;">Ready to Create</h2>
+                        <div style="background:rgba(0,0,0,0.5); border:1px solid #1f2b42; padding:20px; margin:20px 0;">
+                            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                                <span style="color:#888;">Project Name:</span>
+                                <span style="color:#fff; font-weight:bold;" id="confirm-name">-</span>
+                            </div>
+                            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                                <span style="color:#888;">Author:</span>
+                                <span style="color:#fff;" id="confirm-author">-</span>
+                            </div>
+                            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                                <span style="color:#888;">Engine Type:</span>
+                                <span style="color:var(--accent); font-weight:bold;" id="confirm-engine">-</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between;">
+                                <span style="color:#888;">Template:</span>
+                                <span style="color:#fff;" id="confirm-template">-</span>
+                            </div>
+                        </div>
+                        <p style="color:#888; font-size:14px; text-align:center; margin-top:20px;">
+                            <i class="fas fa-info-circle"></i> Click "Create Project" to finalize
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Wizard Actions -->
+                <div class="wizard-actions">
+                    <button class="btn-action" onclick="Wizard.prev()" id="wizard-prev-btn" style="display:none;">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn-action" onclick="Wizard.next()" id="wizard-next-btn">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="btn-action" onclick="Wizard.create()" id="wizard-create-btn" style="display:none;">
+                        <i class="fas fa-rocket"></i> Create Project
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-terminal" class="view-section">
+            <h1>Terminal</h1>
+            <div style="background: #000; border: 1px solid #1f2b42; height: 60vh; padding: 12px; font-family: monospace; display: flex; flex-direction: column; color: #2ecc71; font-size: 14px;">
+                <div id="term-out" style="flex-grow: 1; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap;">Ketebe Terminal v1.0 ready</div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span style="color:var(--accent)">></span>
+                    <input type="text" id="term-in" style="background: transparent; border: none; color: #fff; font-family: inherit; font-size: 16px; width: 100%; outline: none;">
+                </div>
+            </div>
+        </div>
+
+        <div id="view-docs" class="view-section">
+            <h1>Documentation</h1>
+            <div style="max-width: 800px; margin: 20px auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px);">
+                <h2 style="color:var(--accent); margin-top:0;">Welcome to Ketebe Engine</h2>
+                <p style="line-height:1.8; color:#ccc;">A powerful multi-platform game development studio supporting RPG, platformer, and isometric games.</p>
+                <h3 style="color:var(--accent); margin-top:25px;">Quick Start</h3>
+                <ol style="line-height:1.8; color:#ccc;">
+                    <li>Create a new project from the dashboard</li>
+                    <li>Open Studio to access all game editors</li>
+                    <li>Build your game with visual tools</li>
+                    <li>Export to Desktop, Web, or Android</li>
+                </ol>
+            </div>
+        </div>
+
+        <div id="view-updates" class="view-section">
+            <h1><i class="fas fa-download"></i> Updates</h1>
+            <div style="max-width: 800px; margin: 20px auto;">
+                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid var(--accent); padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                    <h3 style="color:var(--accent); margin:0 0 10px 0;">v7.0.1 - Latest</h3>
+                    <ul style="color:#ccc; line-height:1.8;">
+                        <li>✨ 4-Step Project Wizard with engine selection</li>
+                        <li>🗑️ Project management (delete/reveal in finder)</li>
+                        <li>🎨 Enhanced dashboard with black hole background</li>
+                        <li>🎮 Improved project manager with engine type icons</li>
+                        <li>🔧 Enhanced stability and performance</li>
+                    </ul>
+                </div>
+                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                    <h3 style="color:#888; margin:0 0 10px 0;">v7.0.0</h3>
+                    <ul style="color:#666; line-height:1.8;">
+                        <li>🚀 Multi-platform support (Desktop, Web, Android)</li>
+                        <li>🎮 Three engine types (RPG, Platformer, Isometric)</li>
+                        <li>🛠️ Comprehensive game development studio</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-templates" class="view-section">
+            <h1><i class="fas fa-layer-group"></i> Project Templates</h1>
+            <div style="max-width: 900px; margin: 20px auto;">
+                <div class="projects-grid">
+                    <div class="project-card" onclick="View.show('create')">
+                        <div class="p-icon" style="color:var(--accent);"><i class="fas fa-map"></i></div>
+                        <div class="p-title">RPG Adventure</div>
+                        <div class="p-path" style="color:#888;">Top-down RPG with quest system</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-gamepad"></i> RPG</span>
+                            <span style="color:var(--accent);"><i class="fas fa-star"></i> Popular</span>
+                        </div>
+                    </div>
+                    <div class="project-card" onclick="View.show('create')">
+                        <div class="p-icon" style="color:#2ecc71;"><i class="fas fa-running"></i></div>
+                        <div class="p-title">Platformer Base</div>
+                        <div class="p-path" style="color:#888;">2D platformer with physics</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-gamepad"></i> Platformer</span>
+                            <span style="color:#2ecc71;"><i class="fas fa-bolt"></i> Quick Start</span>
+                        </div>
+                    </div>
+                    <div class="project-card" onclick="View.show('create')">
+                        <div class="p-icon" style="color:#3498db;"><i class="fas fa-cubes"></i></div>
+                        <div class="p-title">Isometric World</div>
+                        <div class="p-path" style="color:#888;">3D isometric pixel art game</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-gamepad"></i> Isometric</span>
+                            <span style="color:#3498db;"><i class="fas fa-cube"></i> 3D Feel</span>
+                        </div>
+                    </div>
+                    <div class="project-card" onclick="showToast('⚙️ Coming soon!', 'info')">
+                        <div class="p-icon" style="color:#666;"><i class="fas fa-file"></i></div>
+                        <div class="p-title">Blank Project</div>
+                        <div class="p-path" style="color:#666;">Start from scratch</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-code"></i> Empty</span>
+                            <span style="color:#666;"><i class="fas fa-plus"></i> Custom</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-assets" class="view-section">
+            <h1><i class="fas fa-images"></i> Asset Library</h1>
+            <div style="max-width: 900px; margin: 20px auto;">
+                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; text-align: center; backdrop-filter: blur(10px);">
+                    <i class="fas fa-palette" style="font-size:64px; color:#333; margin-bottom:20px;"></i>
+                    <h2 style="color:var(--accent); margin-bottom:15px;">Asset Library</h2>
+                    <p style="color:#888; line-height:1.8; margin-bottom:25px;">
+                        Browse and manage your game assets including sprites, backgrounds, audio, and more.
+                    </p>
+                    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px; margin-top:30px;">
+                        <div style="background:rgba(0,0,0,0.5); border:1px solid #1f2b42; padding:20px;">
+                            <i class="fas fa-image" style="font-size:32px; color:var(--accent); margin-bottom:10px;"></i>
+                            <div style="color:#fff; margin-bottom:5px;">Sprites</div>
+                            <div style="color:#666; font-size:14px;">Character & Object Art</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.5); border:1px solid #1f2b42; padding:20px;">
+                            <i class="fas fa-music" style="font-size:32px; color:#2ecc71; margin-bottom:10px;"></i>
+                            <div style="color:#fff; margin-bottom:5px;">Audio</div>
+                            <div style="color:#666; font-size:14px;">Music & Sound Effects</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.5); border:1px solid #1f2b42; padding:20px;">
+                            <i class="fas fa-mountain" style="font-size:32px; color:#3498db; margin-bottom:10px;"></i>
+                            <div style="color:#fff; margin-bottom:5px;">Backgrounds</div>
+                            <div style="color:#666; font-size:14px;">Scenes & Environments</div>
+                        </div>
+                    </div>
+                    <button class="btn-action" style="margin-top:30px;" onclick="window.location.href='tools.html'">
+                        <i class="fas fa-folder-open"></i> Open Asset Manager
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-marketplace" class="view-section">
+            <h1><i class="fas fa-store"></i> Marketplace</h1>
+            <div style="max-width: 900px; margin: 20px auto;">
+                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 40px; text-align: center; backdrop-filter: blur(10px);">
+                    <i class="fas fa-shopping-bag" style="font-size:64px; color:var(--accent); margin-bottom:20px;"></i>
+                    <h2 style="color:var(--accent); margin-bottom:15px;">Asset Marketplace</h2>
+                    <p style="color:#888; line-height:1.8; max-width:600px; margin:0 auto 25px;">
+                        Discover premium assets, plugins, and templates created by the Ketebe community. Expand your game with ready-to-use content.
+                    </p>
+                    <div style="color:#666; font-size:14px; margin-top:30px; padding:20px; background:rgba(0,0,0,0.3); border:1px solid #1f2b42;">
+                        <i class="fas fa-rocket"></i> Marketplace coming soon in v7.1
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-tutorials" class="view-section">
+            <h1><i class="fas fa-graduation-cap"></i> Tutorials</h1>
+            <div style="max-width: 900px; margin: 20px auto;">
+                <div class="projects-grid" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="project-card" onclick="showToast('📺 Opening tutorial...', 'info')">
+                        <div class="p-icon" style="color:var(--accent);"><i class="fas fa-play-circle"></i></div>
+                        <div class="p-title">Getting Started</div>
+                        <div class="p-path" style="color:#888;">Create your first game in 10 minutes</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-clock"></i> 10 min</span>
+                            <span style="color:var(--accent);"><i class="fas fa-star"></i> Beginner</span>
+                        </div>
+                    </div>
+                    <div class="project-card" onclick="showToast('📺 Opening tutorial...', 'info')">
+                        <div class="p-icon" style="color:#2ecc71;"><i class="fas fa-play-circle"></i></div>
+                        <div class="p-title">Quest System</div>
+                        <div class="p-path" style="color:#888;">Build engaging quests for your RPG</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-clock"></i> 15 min</span>
+                            <span style="color:#2ecc71;"><i class="fas fa-star"></i> Intermediate</span>
+                        </div>
+                    </div>
+                    <div class="project-card" onclick="showToast('📺 Opening tutorial...', 'info')">
+                        <div class="p-icon" style="color:#3498db;"><i class="fas fa-play-circle"></i></div>
+                        <div class="p-title">Dialogue Editor</div>
+                        <div class="p-path" style="color:#888;">Create branching conversations</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-clock"></i> 12 min</span>
+                            <span style="color:#3498db;"><i class="fas fa-star"></i> Beginner</span>
+                        </div>
+                    </div>
+                    <div class="project-card" onclick="showToast('📺 Opening tutorial...', 'info')">
+                        <div class="p-icon" style="color:#e74c3c;"><i class="fas fa-play-circle"></i></div>
+                        <div class="p-title">Publishing Guide</div>
+                        <div class="p-path" style="color:#888;">Export and distribute your game</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-clock"></i> 20 min</span>
+                            <span style="color:#e74c3c;"><i class="fas fa-star"></i> Advanced</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-community" class="view-section">
+            <h1><i class="fas fa-users"></i> Community</h1>
+            <div style="max-width: 800px; margin: 20px auto;">
+                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px); margin-bottom:20px;">
+                    <h2 style="color:var(--accent); margin-top:0;">Join the Ketebe Community</h2>
+                    <p style="color:#888; line-height:1.8; margin-bottom:25px;">
+                        Connect with other game developers, share your projects, get help, and collaborate.
+                    </p>
+                    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:15px;">
+                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening Discord...', 'info')">
+                            <i class="fab fa-discord"></i> Discord Server
+                        </button>
+                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening forum...', 'info')">
+                            <i class="fas fa-comments"></i> Community Forum
+                        </button>
+                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening GitHub...', 'info')">
+                            <i class="fab fa-github"></i> GitHub Repository
+                        </button>
+                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening website...', 'info')">
+                            <i class="fas fa-globe"></i> Official Website
+                        </button>
+                    </div>
+                </div>
+                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
+                    <h3 style="color:var(--accent); margin-top:0;">Latest Community Projects</h3>
+                    <div style="color:#666; text-align:center; padding:30px;">
+                        <i class="fas fa-gamepad" style="font-size:48px; opacity:0.3; margin-bottom:15px;"></i><br>
+                        Community showcase coming soon
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-settings" class="view-section">
+            <h1>Settings</h1>
+            <div style="max-width: 600px; margin: 0 auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; color: var(--accent); margin-bottom: 8px;">Developer Name</label>
+                    <input type="text" id="dev-name-input" style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 8px; outline: none;" placeholder="Your Name">
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button class="btn-action" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="log-modal">
+        <div class="log-box">
+            <div class="log-header">
+                <div style="font-size: 20px; font-weight: bold; color: #fff;"><i class="fas fa-clipboard-list"></i> SYSTEM LOGS</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-action" onclick="LogManager.clear()">CLEAR</button>
+                    <button class="btn-action" style="background:#e74c3c;" onclick="LogManager.hide()">CLOSE</button>
+                </div>
+            </div>
+            <div class="log-content" id="log-list"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">
+                <i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i>
+                <span id="confirm-modal-title">Confirm Action</span>
+            </div>
+            <div class="modal-content" id="confirm-modal-content">
+                Are you sure you want to proceed?
+            </div>
+            <div class="modal-actions">
+                <button class="btn-action" onclick="ConfirmModal.hide()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-action" style="background:var(--danger); border-color:var(--danger);" onclick="ConfirmModal.confirm()" id="confirm-modal-btn">
+                    <i class="fas fa-check"></i> Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/three.min.js"></script>
+    <script>
+        // --- BLACKHOLE SHADER ---
+        (function() {
+            const container = document.getElementById('blackhole-container-dash');
+            const scene = new THREE.Scene();
+            const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            const uniforms = {
+                iTime: { value: 0 },
+                iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+            };
+
+            const fragmentShader = `
+                uniform float iTime;
+                uniform vec2 iResolution;
+                float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123); }
+                float noise(vec2 p) {
+                    vec2 i = floor(p); vec2 f = fract(p);
+                    f = f*f*(3.0-2.0*f);
+                    return mix(mix(hash(i + vec2(0,0)), hash(i + vec2(1,0)), f.x),
+                               mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y);
+                }
+                void main() {
+                    vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
+                    float d = length(uv);
+                    float shadow = smoothstep(0.08, 0.085, d);
+                    float photon = exp(-pow(d - 0.09, 2.0) * 5000.0) * 1.2;
+                    float angle = atan(uv.y, uv.x);
+                    float disk_h = exp(-pow(uv.y, 2.0) * 200.0) * smoothstep(0.1, 0.5, d) * exp(-d * 1.5);
+                    float lens_r = abs(d - 0.22);
+                    float disk_v = exp(-pow(lens_r, 2.0) * 1000.0) * 0.4;
+                    float n = noise(vec2(angle * 5.0 - iTime * 1.0, d * 20.0));
+                    float final_disk = (disk_h + disk_v) * (0.7 + 0.3 * n);
+                    float glow = exp(-d * 6.0) * 0.1;
+                    vec3 col = vec3(0.0);
+                    vec2 star_uv = uv * (1.0 + 0.03 / (d + 0.01));
+                    float stars = pow(noise(star_uv * 100.0), 40.0);
+                    col += vec3(stars) * 0.3 * shadow;
+                    vec3 gold = vec3(1.0, 0.7, 0.2);
+                    col += gold * final_disk * 1.5 + vec3(1.0) * photon + gold * glow;
+                    col *= shadow;
+                    col = pow(col, vec3(1.1));
+                    gl_FragColor = vec4(col, 1.0);
+                }
+            `;
+
+            const material = new THREE.ShaderMaterial({ uniforms, fragmentShader });
+            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
+
+            function animate(time) {
+                requestAnimationFrame(animate);
+                uniforms.iTime.value = time * 0.001;
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Mesh Graph
+            const meshCanvas = document.getElementById('mesh-canvas-dash');
+            const mctx = meshCanvas.getContext('2d');
+            let mw, mh, particles = [];
+            function mresize() { mw = meshCanvas.width = window.innerWidth; mh = meshCanvas.height = window.innerHeight; }
+            window.addEventListener('resize', () => {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                uniforms.iResolution.value.set(window.innerWidth, window.innerHeight);
+                mresize();
+            });
+            mresize();
+            class P { constructor(){this.x=Math.random()*mw;this.y=Math.random()*mh;this.vx=(Math.random()-0.5)*0.3;this.vy=(Math.random()-0.5)*0.3;} update(){this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>mw)this.vx*=-1;if(this.y<0||this.y>mh)this.vy*=-1;}}
+            for(let i=0;i<40;i++) particles.push(new P());
+            function mdraw(){
+                mctx.clearRect(0,0,mw,mh); mctx.strokeStyle='rgba(64, 224, 208, 0.08)'; mctx.lineWidth=0.5;
+                for(let i=0;i<particles.length;i++){
+                    particles[i].update();
+                    for(let j=i+1;j<particles.length;j++){
+                        let dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y, dist=Math.sqrt(dx*dx+dy*dy);
+                        if(dist<180){mctx.beginPath();mctx.moveTo(particles[i].x,particles[i].y);mctx.lineTo(particles[j].x,particles[j].y);mctx.stroke();}
+                    }
+                }
+                requestAnimationFrame(mdraw);
+            }
+            mdraw();
+        })();
+
+        // --- SYSTEM LOGIC ---
+        const LogManager = {
+            logs: [],
+            init: () => {
+                const originalError = console.error;
+                console.error = (...args) => { originalError.apply(console, args); LogManager.add('error', args.join(' ')); };
+            },
+            add: (type, msg) => {
+                const entry = { time: new Date().toLocaleTimeString(), type, msg };
+                LogManager.logs.push(entry);
+                const ind = document.getElementById('status-indicator');
+                if (ind && type === 'error') { ind.style.display = 'flex'; document.getElementById('status-text').innerText = 'ERR'; }
+            },
+            show: () => { document.getElementById('log-modal').classList.add('active'); LogManager.renderAll(); },
+            hide: () => { document.getElementById('log-modal').classList.remove('active'); },
+            renderAll: () => {
+                const list = document.getElementById('log-list');
+                list.innerHTML = LogManager.logs.map(l => `<div class="log-entry ${l.type}"><span style="color:#666">[${l.time}]</span> ${l.msg}</div>`).join('');
+            }
+        };
+        LogManager.init();
+
+        const View = {
+            show: (id) => {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                const target = document.getElementById(`view-${id}`);
+                if (target) {
+                    target.classList.add('active');
+                    // Update sidebar active state
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                        const btnView = btn.getAttribute('onclick');
+                        if (btnView && btnView.includes(`'${id}'`)) {
+                            btn.classList.add('active');
+                        }
+                    });
+                    // Load specific content
+                    if (id === 'projects') loadProjects();
+                    if (id === 'create') Wizard.reset();
+                    if (id === 'settings') {
+                        const savedName = localStorage.getItem('ketebe_username') || '';
+                        document.getElementById('dev-name-input').value = savedName;
+                    }
+                }
+            }
+        };
+
+        async function loadProjects() {
+            const list = document.getElementById('project-list');
+            try {
+                const res = await fetch('/api/projects');
+                const projects = await res.json();
+                if (!projects || projects.length === 0) {
+                    list.innerHTML = '<div style="padding:30px; color:#666; text-align:center; grid-column:1/-1;"><i class="fas fa-folder-open" style="font-size:48px; opacity:0.3; margin-bottom:10px;"></i><br>No projects found. Create your first game!</div>';
+                    return;
+                }
+                
+                // Clear the list first
+                list.innerHTML = '';
+                
+                // Create project cards using DOM instead of innerHTML
+                projects.forEach(p => {
+                    const engineIcon = getEngineIcon(p.engineType || 'rpg-topdown');
+                    const lastModified = p.lastModified ? new Date(p.lastModified).toLocaleDateString() : 'Unknown';
+                    
+                    const card = document.createElement('div');
+                    card.className = 'project-card';
+                    card.onclick = () => launchProject(p.name);
+                    
+                    card.innerHTML = `
+                        <div class="project-actions" onclick="event.stopPropagation()">
+                            <div class="project-action-btn" title="Reveal in Finder">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <div class="project-action-btn danger" title="Delete Project">
+                                <i class="fas fa-trash"></i>
+                            </div>
+                        </div>
+                        <div class="p-icon"><i class="${engineIcon}"></i></div>
+                        <div class="p-title">${escapeHtml(p.name)}</div>
+                        <div class="p-path">${escapeHtml(p.path || p.name)}</div>
+                        <div class="p-meta">
+                            <span><i class="fas fa-gamepad"></i> ${escapeHtml(p.engineType || 'RPG')}</span>
+                            <span><i class="far fa-clock"></i> ${lastModified}</span>
+                        </div>
+                    `;
+                    
+                    // Add event listeners to action buttons
+                    const actionBtns = card.querySelectorAll('.project-action-btn');
+                    actionBtns[0].onclick = (e) => { e.stopPropagation(); revealProject(p.name); };
+                    actionBtns[1].onclick = (e) => { e.stopPropagation(); deleteProject(p.name); };
+                    
+                    list.appendChild(card);
+                });
+            } catch(e) { 
+                console.error('Failed to load projects:', e);
+                list.innerHTML = '<div style="padding:20px; color:#e74c3c;">⚠️ Error loading projects. Check server connection.</div>'; 
+            }
+        }
+
+        function getEngineIcon(engineType) {
+            const icons = {
+                'rpg-topdown': 'fas fa-map',
+                'platformer-2d': 'fas fa-running',
+                'iso-pixel': 'fas fa-cubes'
+            };
+            return icons[engineType] || 'fas fa-gamepad';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function launchProject(name) {
+            await fetch('/api/projects/switch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name }) });
+            window.location.href = 'tools.html';
+        }
+
+        async function createProject() {
+            const name = document.getElementById('new-proj-name').value.trim();
+            if (!name) {
+                showToast('⚠️ Please enter a project name', 'warning');
+                return;
+            }
+            try {
+                const res = await fetch('/api/projects/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, engineType: 'rpg-topdown' })
+                });
+                if (res.ok) {
+                    showToast('✅ Project created successfully!', 'success');
+                    View.show('projects');
+                    document.getElementById('new-proj-name').value = '';
+                } else {
+                    showToast('❌ Failed to create project', 'error');
+                }
+            } catch(e) {
+                console.error('Create project error:', e);
+                showToast('❌ Error creating project', 'error');
+            }
+        }
+
+        // --- PROJECT WIZARD ---
+        const Wizard = {
+            currentStep: 1,
+            data: {
+                name: '',
+                author: '',
+                engineType: 'rpg-topdown',
+                template: 'blank'
+            },
+            
+            init() {
+                const savedAuthor = localStorage.getItem('ketebe_username') || '';
+                document.getElementById('wizard-author').value = savedAuthor;
+            },
+            
+            selectEngine(type) {
+                this.data.engineType = type;
+                document.querySelectorAll('.engine-card').forEach(el => el.classList.remove('selected'));
+                event.target.closest('.engine-card').classList.add('selected');
+            },
+            
+            selectTemplate(type) {
+                this.data.template = type;
+                document.querySelectorAll('.template-card').forEach(el => el.classList.remove('selected'));
+                event.target.closest('.template-card').classList.add('selected');
+            },
+            
+            next() {
+                // Validate current step
+                if (this.currentStep === 1) {
+                    const name = document.getElementById('wizard-proj-name').value.trim();
+                    if (!name) {
+                        showToast('⚠️ Please enter a project name', 'warning');
+                        return;
+                    }
+                    this.data.name = name;
+                    this.data.author = document.getElementById('wizard-author').value.trim();
+                }
+                
+                if (this.currentStep < 4) {
+                    this.currentStep++;
+                    this.updateUI();
+                }
+            },
+            
+            prev() {
+                if (this.currentStep > 1) {
+                    this.currentStep--;
+                    this.updateUI();
+                }
+            },
+            
+            updateUI() {
+                // Update steps
+                document.querySelectorAll('.wizard-step').forEach(step => {
+                    const stepNum = parseInt(step.dataset.step);
+                    step.classList.remove('active', 'completed');
+                    if (stepNum === this.currentStep) step.classList.add('active');
+                    if (stepNum < this.currentStep) step.classList.add('completed');
+                });
+                
+                // Update pages
+                document.querySelectorAll('.wizard-page').forEach(page => {
+                    page.classList.remove('active');
+                    if (parseInt(page.dataset.page) === this.currentStep) {
+                        page.classList.add('active');
+                    }
+                });
+                
+                // Update buttons
+                document.getElementById('wizard-prev-btn').style.display = this.currentStep > 1 ? 'block' : 'none';
+                document.getElementById('wizard-next-btn').style.display = this.currentStep < 4 ? 'block' : 'none';
+                document.getElementById('wizard-create-btn').style.display = this.currentStep === 4 ? 'block' : 'none';
+                
+                // Update confirmation
+                if (this.currentStep === 4) {
+                    document.getElementById('confirm-name').textContent = this.data.name;
+                    document.getElementById('confirm-author').textContent = this.data.author || 'Anonymous';
+                    document.getElementById('confirm-engine').textContent = this.data.engineType.replace('-', ' ').toUpperCase();
+                    document.getElementById('confirm-template').textContent = this.data.template === 'blank' ? 'Blank Project' : 'Demo Project';
+                }
+            },
+            
+            async create() {
+                try {
+                    const res = await fetch('/api/projects/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.data)
+                    });
+                    
+                    if (res.ok) {
+                        showToast('✅ Project created successfully!', 'success');
+                        this.reset();
+                        View.show('projects');
+                    } else {
+                        const error = await res.text();
+                        showToast(`❌ Failed: ${error}`, 'error');
+                    }
+                } catch(e) {
+                    console.error('Create project error:', e);
+                    showToast('❌ Error creating project', 'error');
+                }
+            },
+            
+            reset() {
+                this.currentStep = 1;
+                this.data = { name: '', author: '', engineType: 'rpg-topdown', template: 'blank' };
+                document.getElementById('wizard-proj-name').value = '';
+                document.querySelectorAll('.engine-card').forEach(el => el.classList.remove('selected'));
+                document.querySelectorAll('.template-card').forEach((el, i) => {
+                    el.classList.remove('selected');
+                    if (i === 0) el.classList.add('selected');
+                });
+                this.updateUI();
+            }
+        };
+
+        // --- PROJECT MANAGEMENT ---
+        async function deleteProject(name) {
+            ConfirmModal.show(
+                'Delete Project',
+                `Are you sure you want to delete "<strong>${escapeHtml(name)}</strong>"?<br><br>
+                <span style="color:var(--danger);">⚠️ This action cannot be undone!</span>`,
+                async () => {
+                    try {
+                        const res = await fetch(`/api/projects/${encodeURIComponent(name)}`, {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            showToast('✅ Project deleted successfully', 'success');
+                            loadProjects();
+                        } else {
+                            const error = await res.text();
+                            showToast(`❌ Failed to delete: ${error}`, 'error');
+                        }
+                    } catch(e) {
+                        console.error('Delete error:', e);
+                        showToast('❌ Error deleting project', 'error');
+                    }
+                }
+            );
+        }
+
+        async function revealProject(name) {
+            try {
+                const res = await fetch('/api/projects/reveal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                if (!res.ok) {
+                    const error = await res.text();
+                    showToast(`❌ Failed to reveal: ${error}`, 'error');
+                }
+            } catch(e) {
+                console.error('Reveal error:', e);
+                showToast('❌ Error revealing project', 'error');
+            }
+        }
+
+        // --- CONFIRMATION MODAL ---
+        const ConfirmModal = {
+            callback: null,
+            show(title, content, onConfirm) {
+                document.getElementById('confirm-modal-title').textContent = title;
+                document.getElementById('confirm-modal-content').innerHTML = content;
+                this.callback = onConfirm;
+                document.getElementById('confirm-modal').classList.add('active');
+            },
+            hide() {
+                document.getElementById('confirm-modal').classList.remove('active');
+                this.callback = null;
+            },
+            confirm() {
+                if (this.callback) this.callback();
+                this.hide();
+            }
+        };
+
+        function saveSettings() {
+            const devName = document.getElementById('dev-name-input').value.trim();
+            if (devName) {
+                localStorage.setItem('ketebe_username', devName);
+                showToast('✅ Settings saved!', 'success');
+                location.reload();
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function updateClock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+        loadProjects();
+        Wizard.init();
+
+        // Typing brand animation
+        const savedName = localStorage.getItem('ketebe_username') || 'Architect';
+        const brandText = `KETEBE STUDIO - ${savedName}`;
+        let charIndex = 0;
+        const brandEl = document.getElementById('typing-brand');
+        
+        function typeChar() {
+            if (charIndex < brandText.length) {
+                brandEl.textContent += brandText.charAt(charIndex);
+                charIndex++;
+                setTimeout(typeChar, 80);
+            }
+        }
+        typeChar();
+    </script>
+</body>
+</html>

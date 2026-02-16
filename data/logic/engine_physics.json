@@ -1,0 +1,64 @@
+{
+  "nodes": [
+    { "id": "n_tick", "type": "evt_tick", "x": 50, "y": 100, "data": {} },
+    { "id": "n_intro", "type": "eng_log", "x": 50, "y": 250, "data": { "msg": "Physics Engine: AABB Slide Logic" } },
+    
+    { "id": "n_player_ref", "type": "data_player", "x": 150, "y": 350, "data": {} },
+
+    { "id": "n_step1", "type": "eng_log", "x": 350, "y": 100, "data": { "msg": "1. Integrate Velocity X" } },
+    { "id": "n_get_x", "type": "data_pos", "x": 350, "y": 350, "data": {} },
+    { "id": "n_calc_next_x", "type": "math_add", "x": 350, "y": 500, "data": {} },
+    
+    { "id": "n_step2", "type": "eng_log", "x": 600, "y": 100, "data": { "msg": "2. Grid Lookup (Is Solid?)" } },
+    { "id": "n_to_grid_x", "type": "math_div", "x": 600, "y": 350, "data": { "b": 48 } },
+    { "id": "n_check_solid_x", "type": "flow_branch", "x": 600, "y": 500, "data": { "cond": "true" } },
+    
+    { "id": "n_col_x_hit", "type": "eng_log", "x": 850, "y": 650, "data": { "msg": "Collision! VX = 0" } },
+    { "id": "n_col_x_miss", "type": "eng_log", "x": 850, "y": 350, "data": { "msg": "Path Clear -> Update X" } },
+    
+    { "id": "n_step3", "type": "eng_log", "x": 1100, "y": 100, "data": { "msg": "3. Integrate Velocity Y" } },
+    { "id": "n_get_y", "type": "data_pos", "x": 1100, "y": 350, "data": {} },
+    { "id": "n_calc_next_y", "type": "math_add", "x": 1100, "y": 500, "data": {} },
+
+    { "id": "n_step4", "type": "eng_log", "x": 1350, "y": 100, "data": { "msg": "4. Grid Lookup (Is Solid?)" } },
+    { "id": "n_to_grid_y", "type": "math_div", "x": 1350, "y": 350, "data": { "b": 48 } },
+    { "id": "n_check_solid_y", "type": "flow_branch", "x": 1350, "y": 500, "data": { "cond": "true" } },
+
+    { "id": "n_col_y_hit", "type": "eng_log", "x": 1600, "y": 650, "data": { "msg": "Collision! VY = 0" } },
+    { "id": "n_col_y_miss", "type": "eng_log", "x": 1600, "y": 350, "data": { "msg": "Path Clear -> Update Y" } },
+
+    { "id": "n_step5", "type": "eng_log", "x": 1850, "y": 100, "data": { "msg": "5. Resolve & Render" } }
+  ],
+  "wires": [
+    { "id": "w_0", "fromNode": "n_tick", "fromPort": "out", "toNode": "n_step1", "toPort": "in" },
+    { "id": "w_0a", "fromNode": "n_tick", "fromPort": "out", "toNode": "n_intro", "toPort": "in" },
+    
+    { "id": "w_p1", "fromNode": "n_player_ref", "fromPort": "val", "toNode": "n_get_x", "toPort": "target" },
+    { "id": "w_p2", "fromNode": "n_player_ref", "fromPort": "val", "toNode": "n_get_y", "toPort": "target" },
+
+    { "id": "w_1", "fromNode": "n_step1", "fromPort": "out", "toNode": "n_step2", "toPort": "in" },
+    { "id": "w_1a", "fromNode": "n_get_x", "fromPort": "x", "toNode": "n_calc_next_x", "toPort": "a" },
+    
+    { "id": "w_2", "fromNode": "n_step2", "fromPort": "out", "toNode": "n_check_solid_x", "toPort": "in" },
+    { "id": "w_2a", "fromNode": "n_calc_next_x", "fromPort": "res", "toNode": "n_to_grid_x", "toPort": "a" },
+    
+    { "id": "w_3", "fromNode": "n_check_solid_x", "fromPort": "true", "toNode": "n_col_x_hit", "toPort": "in" },
+    { "id": "w_4", "fromNode": "n_check_solid_x", "fromPort": "false", "toNode": "n_col_x_miss", "toPort": "in" },
+
+    { "id": "w_5", "fromNode": "n_col_x_miss", "fromPort": "out", "toNode": "n_step3", "toPort": "in" },
+    { "id": "w_5a", "fromNode": "n_col_x_hit", "fromPort": "out", "toNode": "n_step3", "toPort": "in" },
+
+    { "id": "w_6", "fromNode": "n_step3", "fromPort": "out", "toNode": "n_step4", "toPort": "in" },
+    { "id": "w_6a", "fromNode": "n_get_y", "fromPort": "y", "toNode": "n_calc_next_y", "toPort": "a" },
+
+    { "id": "w_7", "fromNode": "n_step4", "fromPort": "out", "toNode": "n_check_solid_y", "toPort": "in" },
+    { "id": "w_7a", "fromNode": "n_calc_next_y", "fromPort": "res", "toNode": "n_to_grid_y", "toPort": "a" },
+
+    { "id": "w_8", "fromNode": "n_check_solid_y", "fromPort": "true", "toNode": "n_col_y_hit", "toPort": "in" },
+    { "id": "w_9", "fromNode": "n_check_solid_y", "fromPort": "false", "toNode": "n_col_y_miss", "toPort": "in" },
+
+    { "id": "w_10", "fromNode": "n_col_y_miss", "fromPort": "out", "toNode": "n_step5", "toPort": "in" },
+    { "id": "w_11", "fromNode": "n_col_y_hit", "fromPort": "out", "toNode": "n_step5", "toPort": "in" }
+  ],
+  "vars": []
+}

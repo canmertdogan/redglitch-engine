@@ -1,0 +1,11 @@
+{
+    "components":  [
+                       {
+                           "height":  24,
+                           "width":  24,
+                           "type":  "Collider"
+                       }
+                   ],
+    "name":  "Decorative Pot",
+    "sprite":  "Pixel_Mart/cabbage.png"
+}

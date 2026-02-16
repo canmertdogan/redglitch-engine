@@ -1,0 +1,107 @@
+[
+  {
+    "id": "what-is-ketebe",
+    "question": "What is Ongonluk Game Studio?",
+    "answer": "Ongonluk Game Studio is a multi-platform game development environment for creating RPGs, platformers, and isometric pixel art games. It includes an Electron-based launcher, web editors, and three specialized game engines. You can build games for Windows (Electron), Web, and Android.",
+    "category": "general",
+    "tags": ["basics", "overview"]
+  },
+  {
+    "id": "how-to-start",
+    "question": "How do I start making a game?",
+    "answer": "Start by creating a new project from the launcher, choose your engine type (rpg-topdown, platformer-2d, or iso-pixel), then use the editors to create NPCs, quests, dialogues, and other game content. Save your work and test frequently!",
+    "category": "getting-started",
+    "tags": ["basics", "project"]
+  },
+  {
+    "id": "engine-types",
+    "question": "What engine types are available?",
+    "answer": "Ongonluk offers three engine types: 1) rpg-topdown for classic 2D RPGs with top-down view, 2) platformer-2d for side-scrolling games with physics, and 3) iso-pixel for isometric pixel art games. Choose based on your game's perspective and genre.",
+    "category": "engines",
+    "tags": ["engines", "technical"]
+  },
+  {
+    "id": "save-files",
+    "question": "Where are my save files stored?",
+    "answer": "Save files are stored in the saves/ directory for web mode, or in Electron's userData directory for desktop apps. Each save is named {username}_{slot}.json and contains game state, player data, and quest progress.",
+    "category": "technical",
+    "tags": ["saves", "files"]
+  },
+  {
+    "id": "build-platforms",
+    "question": "What platforms can I build for?",
+    "answer": "You can build for Windows (Electron .exe), Web (static HTML/JS), and Android (via Capacitor). Use 'npm run build:game \"ProjectName\" [platform]' or the build button in the launcher.",
+    "category": "building",
+    "tags": ["build", "export", "platforms"]
+  },
+  {
+    "id": "npc-dialogue",
+    "question": "How do I make NPCs talk?",
+    "answer": "Create an NPC in the NPC Editor, then create a dialogue tree in the Dialogue Editor. Link the dialogue to your NPC using the dialogue field in the NPC Editor. When players interact with the NPC in-game, the dialogue will appear.",
+    "category": "content-creation",
+    "tags": ["npc", "dialogue"]
+  },
+  {
+    "id": "quest-system",
+    "question": "How does the quest system work?",
+    "answer": "Quests have objectives, rewards, and quest givers. Create quests in the Quest Editor, define objectives (kill enemies, collect items, reach location), set rewards, and link to an NPC. The quest system tracks progress automatically.",
+    "category": "content-creation",
+    "tags": ["quest", "gameplay"]
+  },
+  {
+    "id": "custom-logic",
+    "question": "Can I write custom game logic?",
+    "answer": "Yes! Use the Script Editor to write JavaScript logic, or the Logic Editor for visual scripting. Scripts have access to the game engine API and can manipulate game state, trigger events, and create custom behaviors.",
+    "category": "advanced",
+    "tags": ["scripting", "logic", "code"]
+  },
+  {
+    "id": "ai-safety",
+    "question": "Can the AI assistant break my game?",
+    "answer": "No! The AI has strict safety guards. It CANNOT modify engine core files, state management systems, or critical build scripts. All write/delete operations require your explicit approval, and actions are logged for transparency.",
+    "category": "ai",
+    "tags": ["ai", "safety"]
+  },
+  {
+    "id": "ai-permissions",
+    "question": "What can the AI assistant do?",
+    "answer": "The AI can: answer questions about studio features, provide step-by-step tutorials, open editors, create assets (NPCs, quests, items) with your approval, trigger builds, and help with common tasks. It always asks permission before making changes.",
+    "category": "ai",
+    "tags": ["ai", "features"]
+  },
+  {
+    "id": "multiplayer",
+    "question": "Does Ongonluk support multiplayer?",
+    "answer": "Not natively. Ongonluk engines are designed for single-player experiences. However, advanced users can implement networking using custom scripts and external libraries.",
+    "category": "features",
+    "tags": ["multiplayer", "networking"]
+  },
+  {
+    "id": "performance",
+    "question": "How do I optimize game performance?",
+    "answer": "Optimize by: 1) Limiting active NPCs on screen, 2) Using sprite atlases, 3) Reducing particle effects, 4) Optimizing logic scripts, 5) Testing on target device. Check the FX Editor and Shader Editor for performance profiling tools.",
+    "category": "optimization",
+    "tags": ["performance", "optimization"]
+  },
+  {
+    "id": "assets-import",
+    "question": "How do I import custom sprites/assets?",
+    "answer": "Place sprite images in your project's sprites.js or use the Pixel Editor. Audio files go in muzikler/ directory. The engine auto-loads assets from these standard locations.",
+    "category": "content-creation",
+    "tags": ["assets", "sprites", "import"]
+  },
+  {
+    "id": "debug-game",
+    "question": "How do I debug my game?",
+    "answer": "Launch your game from the editor (View → Toggle DevTools). Console logs from the game appear in DevTools automatically via the logger hook. Use browser debugging tools to inspect state and errors.",
+    "category": "debugging",
+    "tags": ["debug", "troubleshooting"]
+  },
+  {
+    "id": "project-structure",
+    "question": "What's the project folder structure?",
+    "answer": "Projects contain: dunyalar/ (worlds/maps), muzikler/ (audio), data/ (logic/config), sprites.js (custom sprites), and ketebe.json (metadata). This structure is standard across all engine types.",
+    "category": "technical",
+    "tags": ["project", "structure", "files"]
+  }
+]

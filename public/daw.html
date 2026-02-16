@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KETEBE AUDIO STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="daw/pixel-theme.css">
+    <style>
+        /* Local Overrides */
+        #daw-logo {
+            color: var(--accent); font-weight: bold; padding: 0 15px; 
+            border-right: 2px solid var(--border); margin-right: 10px; 
+            font-size: 1.3rem; letter-spacing: 2px; display: flex; align-items: center; gap: 10px;
+        }
+        
+        /* Ensure Split View for Center Panel */
+        #center-panel { display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Transport Controls in Toolbar */
+        .transport-group { display: flex; gap: 5px; align-items: center; }
+        
+        #timeline-ruler { flex-shrink: 0; }
+        
+        /* Custom Scrollbar for Tracks */
+        #track-headers::-webkit-scrollbar { width: 0; } /* Hide scrollbar for headers, sync with lanes via JS */
+    </style>
+</head>
+<body>
+
+    <!-- MENUBAR -->
+    <div id="menubar">
+        <div id="daw-logo">
+            <i class="fas fa-music"></i> KETEBE AUDIO
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <!-- Dropdown placeholder (JS would populate this in full studio, but keeping it simple for now) -->
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Help</div>
+        </div>
+        <div style="flex:1"></div>
+        <div style="font-size:0.9rem; color:#666;">AUDIO ENGINE: READY</div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div id="toolbar">
+        <button class="tool-btn" title="Save Project" onclick="daw.saveProject()"><i class="fas fa-save"></i></button>
+        <button class="tool-btn" title="Add Track" onclick="daw.openAddTrackModal()"><i class="fas fa-plus"></i></button>
+        <div class="tool-sep"></div>
+        
+        <div class="transport-group">
+            <button class="tool-btn" id="btn-play" onclick="daw.togglePlay()" title="Play [Space]"><i class="fas fa-play"></i></button>
+            <button class="tool-btn" id="btn-stop" onclick="daw.stop()" ondblclick="daw.resetPlayhead()" title="Stop [Esc] / Double-click to reset"><i class="fas fa-stop"></i></button>
+            <button class="tool-btn" id="btn-record" onclick="daw.toggleRecord()" title="Record"><i class="fas fa-circle"></i></button>
+            <button class="tool-btn" id="btn-loop" onclick="daw.toggleLoop()" title="Loop [L]"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        
+        <div class="tool-sep"></div>
+        
+        <!-- LCD Displays -->
+        <div class="lcd-screen" id="lcd-bpm" onclick="daw.setBPM()" title="Click to set BPM" style="width: 80px; justify-content: center;">120</div>
+        <div class="lcd-screen" id="lcd-time" style="width: 100px; justify-content: center;">01.01.00</div>
+        
+        <div class="tool-sep"></div>
+        <div id="active-track-label" style="color:var(--accent); font-weight:bold; padding:0 10px;">NO TRACK SELECTED</div>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div id="layout">
+        
+        <!-- LEFT PANEL: BROWSER -->
+        <div id="left-panel" class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-folder"></i> BROWSER</span>
+                <button class="collapse-btn" onclick="daw.togglePanel('left')" title="Collapse"><i class="fas fa-chevron-left"></i></button>
+            </div>
+            <div class="panel-content" id="browser-panel">
+                <div class="browser-section">
+                    <div class="browser-section-title">INSTRUMENTS</div>
+                    <div id="browser-presets">
+                        <!-- Filled by JS -->
+                        <div class="browser-item" onclick="daw.openAddTrackModal()"><i class="fas fa-wave-square"></i> 8-BIT SYNTH</div>
+                        <div class="browser-item" onclick="daw.openAddTrackModal()"><i class="fas fa-keyboard"></i> 32-BIT SYNTH</div>
+                        <div class="browser-item" onclick="daw.openAddTrackModal()"><i class="fas fa-drum"></i> DRUM MACHINE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LEFT RESIZE HANDLE -->
+        <div class="resize-handle resize-handle-v" id="resize-left" data-panel="left"></div>
+
+        <!-- CENTER PANEL: TRACKS & PIANO ROLL -->
+        <div id="center-panel">
+            
+            <!-- TOP: TIMELINE & TRACKS -->
+            <div id="arrangement-area">
+                <div id="timeline-ruler">
+                    <!-- JS fills this -->
+                </div>
+                
+                <div id="tracks-area">
+                    <div id="track-headers">
+                        <div id="track-list"></div>
+                    </div>
+                    <div id="track-lanes">
+                        <div id="playhead"></div>
+                        <div id="lanes"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- HORIZONTAL RESIZE HANDLE -->
+            <div class="resize-handle resize-handle-h" id="resize-bottom" data-panel="bottom"></div>
+
+            <!-- BOTTOM: PIANO ROLL / MIXER -->
+            <div id="bottom-panel" class="panel">
+                <div class="dock-tabs">
+                    <div class="dock-tab active" id="tab-piano" onclick="daw.switchTab('piano')">PIANO ROLL</div>
+                    <div class="dock-tab" id="tab-mixer" onclick="daw.switchTab('mixer')">MIXER</div>
+                    <div class="dock-tab" id="tab-device" onclick="daw.switchTab('device')">DEVICES</div>
+                    <div style="flex:1"></div>
+                    <!-- Tools for Piano Roll -->
+                    <div id="pr-toolbar">
+                        <button class="tool-btn" data-tool="pencil" onclick="daw.setTool('pencil')" title="Draw (D)"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="tool-btn" data-tool="erase" onclick="daw.setTool('erase')" title="Erase (E)"><i class="fas fa-eraser"></i></button>
+                        <button class="tool-btn" data-tool="select" onclick="daw.setTool('select')" title="Select (S)"><i class="fas fa-mouse-pointer"></i></button>
+                        <div class="tool-sep" style="height:20px; margin:0 8px;"></div>
+                        <select id="snap-select" onchange="daw.setSnap(this.value)" title="Snap Grid">
+                            <option value="1">1 Bar</option>
+                            <option value="0.5">1/2</option>
+                            <option value="0.25" selected>1/4 (Beat)</option>
+                            <option value="0.125">1/8</option>
+                            <option value="0.0625">1/16</option>
+                            <option value="0.03125">1/32</option>
+                            <option value="0">Off</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="panel-content" style="background: var(--bg-canvas); display: flex; flex-direction: column;">
+                    <!-- Piano Roll -->
+                    <div id="piano-roll" class="tab-content active" style="display: flex; flex-direction: column; flex: 1;">
+                        <div id="pr-main">
+                            <div id="pr-keys"></div>
+                            <div id="pr-grid">
+                                <div id="pr-grid-inner"></div>
+                                <div id="pr-playhead"></div>
+                            </div>
+                        </div>
+                        <div id="pr-velocity"></div>
+                    </div>
+
+                    <!-- Mixer -->
+                    <div id="mixer" class="tab-content" style="display: none;"></div>
+                    
+                    <!-- Device Panel (Mobile/Small Screen fallback or specific view) -->
+                    <div id="device-panel-tab" class="tab-content" style="display: none; padding:10px;">
+                        <div style="color:#666;">Select a track to view devices.</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- RIGHT RESIZE HANDLE -->
+        <div class="resize-handle resize-handle-v" id="resize-right" data-panel="right"></div>
+
+        <!-- RIGHT PANEL: INSPECTOR / DEVICES -->
+        <div id="right-panel" class="panel">
+            <div class="panel-header">
+                <span><i class="fas fa-sliders-h"></i> DEVICES</span>
+                <button class="collapse-btn" onclick="daw.togglePanel('right')" title="Collapse"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div class="panel-content" id="device-panel">
+                <!-- Device controls will be injected here by daw.js -->
+                <div style="padding:20px; text-align:center; color:#555;">[NO TRACK SELECTED]</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- STATUS BAR -->
+    <div style="height:24px; background:#000; border-top:1px solid #333; display:flex; align-items:center; padding:0 10px; color:#555; font-size:0.9rem; justify-content:space-between;">
+        <span>READY</span>
+        <span>44.1kHz | 16-bit</span>
+    </div>
+
+    <!-- MODALS -->
+    <div id="add-track-modal" class="hidden">
+        <div class="modal-content">
+            <div class="modal-title">ADD TRACK</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('synth', null, '8bit'); daw.closeAddTrackModal();">
+                    <i class="fas fa-wave-square" style="font-size:24px;"></i>
+                    <span>8-BIT SYNTH</span>
+                </button>
+                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('synth', null, '32bit'); daw.closeAddTrackModal();">
+                    <i class="fas fa-keyboard" style="font-size:24px;"></i>
+                    <span>ANALOG SYNTH</span>
+                </button>
+                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('drum'); daw.closeAddTrackModal();">
+                    <i class="fas fa-drum" style="font-size:24px;"></i>
+                    <span>DRUM MACHINE</span>
+                </button>
+                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('sampler'); daw.closeAddTrackModal();">
+                    <i class="fas fa-microphone" style="font-size:24px;"></i>
+                    <span>SAMPLER</span>
+                </button>
+            </div>
+            <button class="tool-btn" style="width:100%; margin-top:15px;" onclick="daw.closeAddTrackModal()">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="daw/audioEngine.js"></script>
+    <script src="daw/AudioRecorder.js"></script>
+    <script src="daw/plugins/AudioPlugin.js"></script>
+    <script src="daw/plugins/KDelay.js"></script>
+    <script src="daw/plugins/KVerb.js"></script>
+    <script src="daw/plugins/KComp.js"></script>
+    <script src="daw/plugins/KDrive.js"></script>
+    <script src="daw/plugins/KEQ3.js"></script>
+    <script src="daw/MixerChannel.js"></script>
+    <script src="daw/Track.js"></script>
+    <script src="daw/PianoRollController.js"></script>
+    <script src="daw/Synthesizer.js"></script>
+    <script src="daw/Synth8Bit.js"></script>
+    <script src="daw/Synth32Bit.js"></script>
+    <script src="daw/SynthWavetable.js"></script>
+    <script src="daw/DrumMachine.js"></script>
+    <script src="daw/Sampler.js"></script>
+    <script src="daw/InstrumentPresets.js"></script>
+    <script src="daw/ProjectManager.js"></script>
+    
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <script src="daw.js"></script>
+
+    <script>
+        // Monkey-patch or helper for switching tabs since we changed ID structure slightly
+        // or ensure daw.js uses classes that we implemented.
+        
+        // Ensure browser panel is visible (JS might look for specific browser structure)
+        // daw.js populates 'browser-presets' ID if it exists.
+    </script>
+</body>
+</html>

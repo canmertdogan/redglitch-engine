@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Cutscene Studio - Ketebe</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f; /* Retro Gold */
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            --grid-line: #1a1a1a;
+            
+            /* Timeline Colors */
+            --track-actor: #2980b9;
+            --track-interaction: #e74c3c;
+            --track-audio: #27ae60;
+            --track-branch: #8e44ad;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            outline: none; 
+            user-select: none; 
+            cursor: default;
+        }
+        
+        body {
+            margin: 0; 
+            padding: 0; 
+            background-color: var(--bg-root); 
+            color: var(--text-main);
+            font-family: 'VT323', monospace; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden; 
+            font-size: 14px;
+            image-rendering: pixelated;
+        }
+
+        /* Menu Bar */
+        #menubar {
+            height: 28px; 
+            background: #000; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 8px;
+            font-size: 0.9rem; 
+            border-bottom: 2px solid var(--border);
+            z-index: 6000; 
+            position: relative;
+        }
+
+        .brand {
+            color: var(--accent); 
+            font-weight: bold; 
+            padding: 0 10px; 
+            border-right: 2px solid var(--border); 
+            margin-right: 8px; 
+            font-size: 1.1rem; 
+            letter-spacing: 1px; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px;
+        }
+
+        .menu-item-root { 
+            position: relative; 
+            height: 100%; 
+            display: flex; 
+            align-items: center; 
+            cursor: pointer; 
+        }
+
+        .menu-item { 
+            padding: 0 10px; 
+            color: #888; 
+            text-transform: uppercase; 
+            height: 100%; 
+            display: flex; 
+            align-items: center; 
+            transition: background 0.1s;
+            font-size: 0.85rem;
+        }
+
+        .menu-item-root:hover .menu-item { 
+            background: var(--accent); 
+            color: #000; 
+        }
+
+        .dropdown {
+            position: absolute; 
+            top: 100%; 
+            left: 0; 
+            background: #111; 
+            border: 2px solid var(--accent);
+            display: none; 
+            flex-direction: column; 
+            min-width: 160px; 
+            box-shadow: 6px 6px 0 rgba(0,0,0,0.8);
+            z-index: 6100;
+        }
+
+        .menu-item-root:hover .dropdown { 
+            display: flex; 
+        }
+
+        .drop-opt {
+            padding: 6px 10px; 
+            cursor: pointer; 
+            color: #ccc; 
+            font-size: 0.8rem;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid #222;
+        }
+
+        .drop-opt:last-child { 
+            border-bottom: none; 
+        }
+
+        .drop-opt:hover { 
+            background: #222; 
+            color: #fff; 
+            border-left: 3px solid var(--accent); 
+            padding-left: 7px; 
+        }
+
+        .shortcut { 
+            font-size: 0.7rem; 
+            color: #666; 
+            margin-left: 15px; 
+        }
+
+        .drop-sep { 
+            height: 1px; 
+            background: #333; 
+            margin: 2px 0; 
+        }
+
+        /* Toolbar */
+        #toolbar {
+            height: 36px; 
+            background: #000; 
+            border-bottom: 2px solid var(--border);
+            display: flex; 
+            align-items: center; 
+            padding: 0 8px; 
+            gap: 6px;
+        }
+
+        .tool-btn {
+            background: #111; 
+            border: 2px solid #444; 
+            color: #aaa;
+            width: 28px; 
+            height: 28px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            font-size: 0.9rem; 
+            transition: transform 0.1s;
+        }
+
+        .tool-btn:hover { 
+            background: #222; 
+            border-color: var(--accent); 
+            color: var(--accent); 
+            transform: translateY(-2px); 
+            box-shadow: 0 2px 0 #000; 
+        }
+
+        .tool-btn:active { 
+            transform: translateY(0); 
+            box-shadow: none; 
+        }
+
+        .tool-btn.primary { 
+            background: var(--accent); 
+            color: #000; 
+            border-color: var(--accent); 
+        }
+
+        .tool-btn.active {
+            background: #333;
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .tool-sep { 
+            width: 1px; 
+            height: 18px; 
+            background: #333; 
+            margin: 0 4px; 
+        }
+
+        .time-display {
+            background: #000; 
+            border: 2px solid #444; 
+            color: var(--accent);
+            padding: 3px 6px; 
+            font-family: inherit; 
+            font-size: 0.85rem;
+        }
+
+        /* Main Layout */
+        .main-container { 
+            flex-grow: 1; 
+            display: flex; 
+            overflow: hidden; 
+            position: relative; 
+        }
+
+        /* Panels */
+        .panel { 
+            display: flex; 
+            flex-direction: column; 
+            background: var(--bg-panel); 
+            border-right: 2px solid var(--border); 
+        }
+
+        .panel-header {
+            height: 28px; 
+            background: #000;
+            display: flex; 
+            align-items: center; 
+            padding: 0 8px;
+            font-weight: bold; 
+            color: var(--accent); 
+            border-bottom: 2px solid var(--border); 
+            text-transform: uppercase;
+            font-size: 0.9rem; 
+            justify-content: space-between; 
+            letter-spacing: 1px;
+        }
+
+        .add-asset-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.7rem;
+            transition: all 0.1s;
+            border-radius: 2px;
+        }
+
+        .add-asset-btn:hover {
+            background: #222;
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        .panel-content { 
+            flex-grow: 1; 
+            overflow: auto; 
+            padding: 0; 
+            position: relative; 
+        }
+
+        /* Left Panel */
+        .left-panel { 
+            width: 240px; 
+            min-width: 200px; 
+        }
+        
+        .panel-tabs {
+            display: flex;
+            background: #000;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 6px;
+            text-align: center;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: #888;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .panel-tab.active {
+            color: var(--accent);
+            background: var(--bg-panel);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .panel-tab:hover:not(.active) {
+            color: #ccc;
+            background: #111;
+        }
+
+        /* Center Panel - Timeline */
+        .center-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Preview Canvas */
+        .preview-area {
+            height: 450px;
+            background: var(--bg-canvas);
+            border-bottom: 2px solid var(--border);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.05) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+
+        .preview-area.timeline-collapsed {
+            height: calc(100vh - 120px);
+        }
+
+        #preview-canvas {
+            background: #000;
+            border: 2px solid var(--accent);
+            image-rendering: pixelated;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+            width: 720px;
+            height: 405px;
+        }
+
+        /* Timeline */
+        .timeline-header {
+            background: #000;
+            border-bottom: 2px solid var(--border);
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .timeline-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .timeline-tracks {
+            flex: 1;
+            display: flex;
+            overflow: auto;
+            transition: height 0.3s ease, opacity 0.3s ease;
+        }
+
+        .timeline-tracks.collapsed {
+            height: 0 !important;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        .track-headers {
+            width: 160px;
+            background: var(--bg-panel);
+            border-right: 2px solid var(--border);
+            overflow-y: auto;
+        }
+
+        .track-lanes {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            background: var(--bg-canvas);
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 15px 15px;
+        }
+
+        /* Track Headers */
+        .track-header {
+            padding: 8px; 
+            border-bottom: 2px solid var(--border);
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px;
+            transition: background 0.1s;
+            font-size: 0.8rem;
+            height: 50px;
+        }
+
+        .track-header:hover {
+            background: #222;
+        }
+
+        .track-header.selected {
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* Track Lanes */
+        .track-lane {
+            height: 50px; 
+            border-bottom: 2px solid var(--border);
+            position: relative;
+        }
+
+        .keyframe {
+            position: absolute; 
+            top: 12px; 
+            width: 8px; 
+            height: 26px;
+            border-radius: 2px; 
+            cursor: pointer;
+            border: 2px solid #000;
+            transition: transform 0.1s;
+        }
+
+        .keyframe:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .keyframe.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .keyframe[data-type="actor"] { background: var(--track-actor); }
+        .keyframe[data-type="interaction"] { background: var(--track-interaction); }
+        .keyframe[data-type="audio"] { background: var(--track-audio); }
+
+        /* Right Panel - Inspector */
+        .right-panel {
+            width: 260px;
+            min-width: 200px;
+            border-left: 2px solid var(--border);
+            border-right: none;
+        }
+
+        .inspector-content {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        /* Form Elements */
+        .form-group {
+            border-bottom: 1px solid #222;
+            padding: 8px 0;
+        }
+
+        .demo-info {
+            background: #111;
+            border: 2px solid var(--accent);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+
+        .demo-info h5 {
+            color: var(--accent);
+            margin: 0 0 5px 0;
+            font-size: 0.9rem;
+        }
+
+        .demo-info p {
+            color: #ccc;
+            margin: 5px 0;
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+
+        .demo-stats {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .demo-stats span {
+            font-size: 0.7rem;
+            color: #888;
+            border: 1px solid #333;
+            padding: 2px 6px;
+            border-radius: 2px;
+        }
+
+        .character-info {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+
+        .character-info h5 {
+            color: var(--accent);
+            margin: 0 0 3px 0;
+            font-size: 0.9rem;
+        }
+
+        .character-info p {
+            color: #888;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+
+        .form-btn {
+            width: 100%;
+            background: #111;
+            border: 2px solid #444;
+            color: var(--accent);
+            padding: 6px 12px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .form-btn:hover {
+            background: #222;
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .movement-presets {
+            margin-top: 15px;
+        }
+
+        .movement-presets h5 {
+            color: #888;
+            font-size: 0.8rem;
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+        }
+
+        .preset-btn {
+            background: #000;
+            border: 1px solid #444;
+            color: #ccc;
+            padding: 4px 8px;
+            font-family: inherit;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin: 0 2px 4px 0;
+            transition: all 0.1s;
+        }
+
+        .preset-btn:hover {
+            background: #222;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Asset Display */
+        .asset-item-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .asset-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .asset-thumbnail {
+            width: 20px;
+            height: 20px;
+            object-fit: cover;
+            border: 1px solid #444;
+            border-radius: 2px;
+            image-rendering: pixelated;
+        }
+
+        .remove-asset-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #666;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.6rem;
+            transition: all 0.1s;
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+
+        .remove-asset-btn:hover {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            color: #fff;
+            opacity: 1;
+        }
+
+        .list-item:hover .remove-asset-btn {
+            opacity: 1;
+        }
+
+        .form-label {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #000;
+            border: 2px solid #444;
+            color: var(--accent);
+            padding: 3px 6px;
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+        }
+
+        .form-select {
+            width: 100%;
+            background: #000;
+            border: 2px solid #444;
+            color: var(--accent);
+            padding: 4px 8px;
+            font-family: inherit;
+            font-size: 1.1rem;
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* Lists */
+        .list-item {
+            padding: 6px 8px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid #222;
+            color: #aaa;
+            font-size: 0.8rem;
+        }
+
+        .list-item:hover {
+            background: #222;
+            color: #fff;
+            border-left: 3px solid var(--accent);
+        }
+
+        .list-item.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .list-icon {
+            width: 8px;
+            height: 8px;
+            border: 1px solid #000;
+        }
+
+        /* Buttons */
+        button.btn {
+            background: #222;
+            border: 2px solid #444;
+            color: #ccc;
+            padding: 6px;
+            width: 100%;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+
+        button.btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 24px;
+            background: var(--border);
+            color: #888;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 0.8rem;
+            justify-content: space-between;
+            border-top: 2px solid #000;
+        }
+
+        /* Playhead */
+        #playhead {
+            position: absolute;
+            width: 2px;
+            background: var(--accent);
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            box-shadow: 0 0 4px var(--accent);
+        }
+
+        /* Hide/Show panels */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 0;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        /* Zoom slider */
+        input[type="range"] {
+            background: #000;
+            border: 2px solid #444;
+            height: 20px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            background: var(--accent);
+            border: 2px solid #000;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Bar -->
+    <div id="menubar">
+        <div class="brand">
+            <i class="fas fa-theater-masks"></i> INTERACTIVE CUTSCENE STUDIO
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="newCutscene()">New <span class="shortcut">Ctrl+N</span></div>
+                <div class="drop-opt" onclick="openCutscene()">Open <span class="shortcut">Ctrl+O</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="saveCutscene()">Save <span class="shortcut">Ctrl+S</span></div>
+                <div class="drop-opt" onclick="exportCutscene()">Export</div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="window.close()">Exit</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="undo()">Undo <span class="shortcut">Ctrl+Z</span></div>
+                <div class="drop-opt" onclick="redo()">Redo <span class="shortcut">Ctrl+Y</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="deleteSelected()">Delete <span class="shortcut">Del</span></div>
+                <div class="drop-opt" onclick="clearTimeline()">Clear Timeline</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Timeline</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="addTrack('actor')">Add Actor Track</div>
+                <div class="drop-opt" onclick="addTrack('interaction')">Add Interaction Track</div>
+                <div class="drop-opt" onclick="addTrack('audio')">Add Audio Track</div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="addKeyframe()">Add Keyframe <span class="shortcut">K</span></div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="resetView()">Reset View <span class="shortcut">0</span></div>
+                <div class="drop-opt" onclick="toggleGrid()">Toggle Grid <span class="shortcut">G</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="zoomIn()">Zoom In <span class="shortcut">+</span></div>
+                <div class="drop-opt" onclick="zoomOut()">Zoom Out <span class="shortcut">-</span></div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Debug</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="testCutscene()">Test Run <span class="shortcut">F5</span></div>
+                <div class="drop-opt" onclick="validateData()">Validate Data</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Help</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="showDocs()">Documentation</div>
+                <div class="drop-opt" onclick="showAbout()">About</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <div class="tool-btn primary" id="btn-play" onclick="togglePlayback()" title="Play/Pause (Space)">
+            <i class="fas fa-play" id="play-icon"></i>
+        </div>
+        <div class="tool-btn" onclick="stopPlayback()" title="Stop">
+            <i class="fas fa-stop"></i>
+        </div>
+        <div class="tool-sep"></div>
+        
+        <div class="time-display" id="time-display">00:00.0 / 00:00.0</div>
+        
+        <div class="tool-sep"></div>
+        <div class="tool-btn" onclick="addTrack('actor')" title="Add Actor Track">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="tool-btn" onclick="addTrack('interaction')" title="Add Interaction Track">
+            <i class="fas fa-comments"></i>
+        </div>
+        <div class="tool-btn" onclick="addTrack('audio')" title="Add Audio Track">
+            <i class="fas fa-music"></i>
+        </div>
+        <div class="tool-sep"></div>
+        <div class="tool-btn" onclick="addKeyframe()" title="Add Keyframe (K)">
+            <i class="fas fa-key"></i>
+        </div>
+        <div class="tool-btn" onclick="addDialogue()" title="Add Dialogue (D)">
+            <i class="fas fa-comment-dots"></i>
+        </div>
+        <div class="tool-btn" onclick="addChoice()" title="Add Choice Branch (B)">
+            <i class="fas fa-code-branch"></i>
+        </div>
+        <div class="tool-sep"></div>
+        <div class="tool-btn" onclick="moveKeyframe()" title="Move Tool (M)">
+            <i class="fas fa-arrows-alt"></i>
+        </div>
+        <div class="tool-btn" onclick="selectTool()" title="Select Tool (V)">
+            <i class="fas fa-mouse-pointer"></i>
+        </div>
+        <div class="tool-sep"></div>
+        <div class="tool-btn" onclick="deleteSelected()" title="Delete Selected (Del)">
+            <i class="fas fa-trash"></i>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Panel -->
+        <div class="left-panel panel">
+            <div class="panel-tabs">
+                <button class="panel-tab active" onclick="switchTab(0)">ASSETS</button>
+                <button class="panel-tab" onclick="switchTab(1)">BRANCHES</button>
+            </div>
+            
+            <div class="panel-content" id="assets-panel">
+                <!-- Import Project Assets Button -->
+                <div style="padding: 8px; border-bottom: 2px solid var(--border);">
+                    <button class="form-btn" onclick="importProjectAssets()" style="font-size: 0.7rem;">
+                        <i class="fas fa-download"></i> IMPORT PROJECT ASSETS
+                    </button>
+                </div>
+                
+                <div class="panel-header">
+                    <i class="fas fa-images"></i> SPRITES
+                    <button class="add-asset-btn" onclick="addSprite()" title="Add Sprite">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div id="sprites-list"></div>
+                
+                <div class="panel-header" style="border-top: 2px solid var(--border);">
+                    <i class="fas fa-music"></i> AUDIO
+                    <button class="add-asset-btn" onclick="addAudio()" title="Add Audio">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div id="audio-list"></div>
+                
+                <div class="panel-header" style="border-top: 2px solid var(--border);">
+                    <i class="fas fa-users"></i> CHARACTERS
+                    <button class="add-asset-btn" onclick="addCharacter()" title="Add Character">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div id="characters-list"></div>
+            </div>
+            
+            <div class="panel-content hidden" id="branches-panel">
+                <div class="panel-header">
+                    <i class="fas fa-code-branch"></i> TIMELINE BRANCHES
+                </div>
+                <div id="branches-list"></div>
+                
+                <button class="btn" onclick="addBranch()" style="margin: 15px;">
+                    <i class="fas fa-plus"></i> NEW BRANCH
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Panel -->
+        <div class="center-panel">
+            <!-- Preview Area -->
+            <div class="preview-area">
+                <canvas id="preview-canvas" width="720" height="405"></canvas>
+            </div>
+
+            <!-- Timeline Header -->
+            <div class="timeline-header">
+                <div class="timeline-controls">
+                    <div class="tool-btn" onclick="toggleTimeline()" title="Collapse/Expand Timeline (T)" id="timeline-toggle">
+                        <i class="fas fa-chevron-down" id="timeline-toggle-icon"></i>
+                    </div>
+                    <label style="color: #888; text-transform: uppercase;">TIMELINE</label>
+                </div>
+                
+                <div class="timeline-controls">
+                    <label style="color: #888; text-transform: uppercase;">ZOOM:</label>
+                    <input type="range" min="10" max="100" value="50" id="zoom-slider" 
+                           onchange="updateZoom(this.value)" style="width: 100px;">
+                    <span id="zoom-display" style="color: var(--accent);">50px/s</span>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <div class="tool-btn" onclick="addKeyframe()">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <div class="tool-btn" onclick="deleteSelected()">
+                        <i class="fas fa-trash"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline Tracks -->
+            <div class="timeline-tracks" id="timeline-content">
+                <div class="track-headers" id="track-headers">
+                    <!-- Track headers will be populated by JS -->
+                </div>
+                <div class="track-lanes" id="track-lanes">
+                    <!-- Timeline lanes will be populated by JS -->
+                    <div id="playhead"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel panel">
+            <div class="panel-header">
+                <i class="fas fa-cog"></i> INSPECTOR
+            </div>
+            <div class="inspector-content" id="inspector-content">
+                <div style="color: #666; text-align: center; margin-top: 50px; text-transform: uppercase;">
+                    SELECT TRACK OR KEYFRAME<br>
+                    TO EDIT PROPERTIES
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden File Inputs for Asset Upload -->
+    <input type="file" id="sprite-upload" accept="image/*" multiple style="display: none;" onchange="handleSpriteUpload(event)">
+    <input type="file" id="audio-upload" accept="audio/*" multiple style="display: none;" onchange="handleAudioUpload(event)">
+    <input type="file" id="character-upload" accept="image/*" multiple style="display: none;" onchange="handleCharacterUpload(event)">
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div>
+            <span style="color: var(--accent);">READY</span> | 
+            <span id="status-info">NO CUTSCENE LOADED</span>
+        </div>
+        <div>
+            <span>INTERACTIVE CUTSCENE STUDIO v1.0</span>
+        </div>
+    </div>
+
+    <!-- Load the editor script -->
+    <!-- Load Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <!-- Main Script -->
+    <script src="interactive_cutscene_editor.js?v=202602051438"></script>
+</body>
+</html>

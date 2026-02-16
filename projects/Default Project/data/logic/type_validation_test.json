@@ -1,0 +1,42 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "evt_start",
+      "x": 100,
+      "y": 100,
+      "data": {}
+    },
+    {
+      "id": "n2",
+      "type": "math_add",
+      "x": 400,
+      "y": 100,
+      "data": {
+        "a": 5,
+        "b": 3
+      }
+    },
+    {
+      "id": "n3",
+      "type": "entity_spawn",
+      "x": 400,
+      "y": 250,
+      "data": {
+        "entity_type": "npc",
+        "x": 100,
+        "y": 100
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "w_invalid",
+      "fromNode": "n2",
+      "fromPort": "result",
+      "toNode": "n1",
+      "toPort": "exec_out"
+    }
+  ],
+  "vars": []
+}

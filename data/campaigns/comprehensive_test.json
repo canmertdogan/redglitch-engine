@@ -1,0 +1,263 @@
+{
+  "name": "Comprehensive Test Campaign",
+  "description": "Full test suite for all Campaign Studio features across all three engines",
+  "version": "1.0.0",
+  "author": "Campaign Studio",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "type": "start",
+      "x": 100,
+      "y": 300,
+      "next": "intro_dialogue"
+    },
+    "intro_dialogue": {
+      "id": "intro_dialogue",
+      "type": "dialogue",
+      "x": 250,
+      "y": 300,
+      "speaker": "Campaign Guide",
+      "text": "Welcome to the Comprehensive Test Campaign! This will test all Campaign Studio features across all three engines. Are you ready?",
+      "choices": [
+        { "text": "Yes, let's begin!", "next": "rpg_level_1" },
+        { "text": "Tell me more first", "next": "explanation_dialogue" }
+      ]
+    },
+    "explanation_dialogue": {
+      "id": "explanation_dialogue",
+      "type": "dialogue",
+      "x": 250,
+      "y": 450,
+      "speaker": "Campaign Guide",
+      "text": "This campaign will take you through RPG-TopDown, ISO-Pixel, and Platformer-2D engines. Your inventory, quests, and achievements will persist across all transitions. Good luck!",
+      "next": "rpg_level_1"
+    },
+    "rpg_level_1": {
+      "id": "rpg_level_1",
+      "type": "level",
+      "x": 400,
+      "y": 300,
+      "engineType": "rpg-topdown",
+      "world": "test_world_1",
+      "spawnPoint": { "x": 100, "y": 100 },
+      "objectives": ["Collect 3 items", "Talk to NPC"],
+      "next": "branch_test"
+    },
+    "branch_test": {
+      "id": "branch_test",
+      "type": "branch",
+      "x": 550,
+      "y": 300,
+      "condition": "flag:items_collected >= 3",
+      "trueNext": "iso_level_1",
+      "falseNext": "retry_dialogue"
+    },
+    "retry_dialogue": {
+      "id": "retry_dialogue",
+      "type": "dialogue",
+      "x": 550,
+      "y": 450,
+      "speaker": "Campaign Guide",
+      "text": "You need to collect at least 3 items before proceeding. Try again!",
+      "next": "rpg_level_1"
+    },
+    "iso_level_1": {
+      "id": "iso_level_1",
+      "type": "level",
+      "x": 700,
+      "y": 300,
+      "engineType": "iso-pixel",
+      "world": "iso_test_world",
+      "spawnPoint": { "x": 50, "y": 50, "z": 0 },
+      "objectives": ["Navigate the isometric terrain", "Find the exit"],
+      "next": "reward_1"
+    },
+    "reward_1": {
+      "id": "reward_1",
+      "type": "reward",
+      "x": 850,
+      "y": 300,
+      "rewards": {
+        "items": [
+          { "id": "health_potion", "quantity": 2 },
+          { "id": "gold", "quantity": 100 }
+        ],
+        "achievements": ["engine_hopper"],
+        "flags": { "first_transition_complete": true }
+      },
+      "next": "mini_game_test"
+    },
+    "mini_game_test": {
+      "id": "mini_game_test",
+      "type": "mini-game",
+      "x": 1000,
+      "y": 300,
+      "engineType": "platformer-2d",
+      "world": "mini_game_level",
+      "spawnPoint": { "x": 50, "y": 400 },
+      "gameType": "challenge",
+      "timeLimit": 60,
+      "scoreTarget": 1000,
+      "restoreStateOnFail": true,
+      "rewards": {
+        "items": [{ "id": "mini_game_trophy", "quantity": 1 }]
+      },
+      "next": "hub_test"
+    },
+    "hub_test": {
+      "id": "hub_test",
+      "type": "hub",
+      "x": 1150,
+      "y": 300,
+      "engineType": "rpg-topdown",
+      "world": "hub_world",
+      "spawnPoint": { "x": 200, "y": 200 },
+      "shopAvailable": true,
+      "innAvailable": true,
+      "questBoardAvailable": true,
+      "healPlayer": true,
+      "npcs": ["shop_keeper", "inn_keeper", "quest_master"],
+      "exits": [
+        { "name": "Challenge Path", "next": "challenge_mode_test" },
+        { "name": "Boss Rush Path", "next": "boss_rush_test" },
+        { "name": "Exploration Path", "next": "exploration_test" }
+      ]
+    },
+    "challenge_mode_test": {
+      "id": "challenge_mode_test",
+      "type": "challenge-mode",
+      "x": 1300,
+      "y": 150,
+      "engineType": "platformer-2d",
+      "world": "challenge_level",
+      "spawnPoint": { "x": 50, "y": 400 },
+      "challengeType": "time_trial",
+      "timeLimit": 120,
+      "restrictions": ["no_items"],
+      "rewards": {
+        "items": [{ "id": "speed_boots", "quantity": 1 }],
+        "achievements": ["speedrunner"]
+      },
+      "next": "final_branch"
+    },
+    "boss_rush_test": {
+      "id": "boss_rush_test",
+      "type": "boss-rush",
+      "x": 1300,
+      "y": 300,
+      "engineType": "rpg-topdown",
+      "bosses": [
+        {
+          "world": "boss_1_arena",
+          "spawnPoint": { "x": 300, "y": 300 },
+          "bossName": "Fire Golem",
+          "engineType": "rpg-topdown"
+        },
+        {
+          "world": "boss_2_arena",
+          "spawnPoint": { "x": 150, "y": 150, "z": 0 },
+          "bossName": "Ice Dragon",
+          "engineType": "iso-pixel"
+        },
+        {
+          "world": "boss_3_arena",
+          "spawnPoint": { "x": 100, "y": 350 },
+          "bossName": "Shadow Beast",
+          "engineType": "platformer-2d"
+        }
+      ],
+      "restoreHealthBetween": true,
+      "rewards": {
+        "items": [{ "id": "boss_slayer_medal", "quantity": 1 }],
+        "achievements": ["boss_rush_champion"]
+      },
+      "next": "final_branch"
+    },
+    "exploration_test": {
+      "id": "exploration_test",
+      "type": "exploration",
+      "x": 1300,
+      "y": 450,
+      "engineType": "iso-pixel",
+      "world": "open_world_area",
+      "spawnPoint": { "x": 100, "y": 100, "z": 0 },
+      "objectives": ["Find 5 hidden treasures", "Discover 3 secret areas"],
+      "allowEarlyExit": true,
+      "rewards": {
+        "items": [{ "id": "explorer_compass", "quantity": 1 }],
+        "achievements": ["master_explorer"]
+      },
+      "next": "final_branch"
+    },
+    "final_branch": {
+      "id": "final_branch",
+      "type": "if-statement",
+      "x": 1500,
+      "y": 300,
+      "conditions": [
+        {
+          "flag": "achievement:boss_rush_champion",
+          "next": "true_ending"
+        },
+        {
+          "flag": "achievement:master_explorer",
+          "next": "explorer_ending"
+        }
+      ],
+      "defaultNext": "standard_ending"
+    },
+    "true_ending": {
+      "id": "true_ending",
+      "type": "cutscene",
+      "x": 1700,
+      "y": 150,
+      "cutsceneName": "true_ending_scene",
+      "skippable": true,
+      "next": "completion"
+    },
+    "explorer_ending": {
+      "id": "explorer_ending",
+      "type": "cutscene",
+      "x": 1700,
+      "y": 300,
+      "cutsceneName": "explorer_ending_scene",
+      "skippable": true,
+      "next": "completion"
+    },
+    "standard_ending": {
+      "id": "standard_ending",
+      "type": "cutscene",
+      "x": 1700,
+      "y": 450,
+      "cutsceneName": "standard_ending_scene",
+      "skippable": true,
+      "next": "completion"
+    },
+    "completion": {
+      "id": "completion",
+      "type": "dialogue",
+      "x": 1900,
+      "y": 300,
+      "speaker": "Campaign Guide",
+      "text": "Congratulations! You've completed the Comprehensive Test Campaign. All features have been tested successfully!",
+      "next": null
+    }
+  },
+  "metadata": {
+    "testingVersion": "1.0.0",
+    "features_tested": [
+      "Multi-engine transitions (RPG → ISO → Platformer)",
+      "State persistence across engines",
+      "Conditional branching with flags",
+      "Reward system",
+      "Mini-game nodes",
+      "Hub nodes with multiple exits",
+      "Challenge mode nodes",
+      "Boss rush with mixed engines",
+      "Exploration nodes",
+      "If-statement multi-condition branching",
+      "Multiple endings based on achievements"
+    ]
+  }
+}

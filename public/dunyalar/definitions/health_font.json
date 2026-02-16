@@ -1,0 +1,14 @@
+{
+    "components":  [
+                       {
+                           "type":  "Light",
+                           "color":  "#3498db"
+                       },
+                       {
+                           "scriptId":  "utility_heal",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Heal Fountain",
+    "sprite":  "PixelFantasy_Caves_1.0/mainlev_build.png"
+}

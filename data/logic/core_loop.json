@@ -1,0 +1,79 @@
+{
+  "nodes": [
+    { "id": "n_start", "type": "evt_tick", "x": 50, "y": 100, "data": {} },
+    
+    { "id": "n_check_pause", "type": "flow_branch", "x": 300, "y": 100, "data": {} },
+    { "id": "n_get_paused", "type": "var_get", "x": 300, "y": 250, "data": { "name": "is_paused" } },
+    { "id": "n_paused_log", "type": "eng_log", "x": 300, "y": -50, "data": { "msg": "Game Paused - Skipping Update" } },
+
+    { "id": "n_step1", "type": "eng_log", "x": 550, "y": 100, "data": { "msg": "1. Update GameTime & FX" } },
+    { "id": "n_get_time", "type": "env_time", "x": 550, "y": 250, "data": {} },
+
+    { "id": "n_check_dialogue", "type": "flow_branch", "x": 800, "y": 100, "data": {} },
+    { "id": "n_get_dialogue", "type": "var_get", "x": 800, "y": 250, "data": { "name": "dialogue_active" } },
+    { "id": "n_dialogue_log", "type": "eng_log", "x": 800, "y": -50, "data": { "msg": "Dialogue Open - Freezing Gameplay" } },
+
+    { "id": "n_step2", "type": "eng_log", "x": 1050, "y": 100, "data": { "msg": "2. Input & Movement" } },
+    { "id": "n_check_moving", "type": "flow_branch", "x": 1050, "y": 250, "data": {} },
+    { "id": "n_get_moving", "type": "var_get", "x": 950, "y": 350, "data": { "name": "is_moving" } },
+    { "id": "n_move_log", "type": "eng_log", "x": 1200, "y": 350, "data": { "msg": "Update History & Animation (Run)" } },
+    { "id": "n_idle_log", "type": "eng_log", "x": 1200, "y": 250, "data": { "msg": "Set Animation (Idle)" } },
+
+    { "id": "n_step3", "type": "eng_log", "x": 1400, "y": 100, "data": { "msg": "3. Skills & Combat" } },
+    { "id": "n_check_mana", "type": "flow_branch", "x": 1400, "y": 250, "data": {} },
+    { "id": "n_get_mana", "type": "var_get", "x": 1300, "y": 350, "data": { "name": "player_mana" } },
+    { "id": "n_fire_log", "type": "eng_log", "x": 1550, "y": 350, "data": { "msg": "Spawn Fireball Projectile" } },
+    { "id": "n_regen_log", "type": "eng_log", "x": 1550, "y": 250, "data": { "msg": "Regen Mana" } },
+
+    { "id": "n_step4", "type": "eng_log", "x": 1750, "y": 100, "data": { "msg": "4. Update Enemies" } },
+    { "id": "n_loop_enemies", "type": "flow_for", "x": 1750, "y": 250, "data": {} }, 
+    { "id": "n_enemy_ai", "type": "eng_log", "x": 1950, "y": 250, "data": { "msg": "Run Enemy AI (Patrol/Chase)" } },
+
+    { "id": "n_step5", "type": "eng_log", "x": 2100, "y": 100, "data": { "msg": "5. Physics & Collisions" } },
+    
+    { "id": "n_step6", "type": "eng_log", "x": 2350, "y": 100, "data": { "msg": "6. Update HUD" } },
+    
+    { "id": "n_draw", "type": "eng_log", "x": 2600, "y": 100, "data": { "msg": "7. RENDER FRAME" } }
+  ],
+  "wires": [
+    { "id": "w_1", "fromNode": "n_start", "fromPort": "out", "toNode": "n_check_pause", "toPort": "in" },
+    { "id": "w_2", "fromNode": "n_get_paused", "fromPort": "val", "toNode": "n_check_pause", "toPort": "cond" },
+    
+    { "id": "w_3", "fromNode": "n_check_pause", "fromPort": "true", "toNode": "n_paused_log", "toPort": "in" },
+    { "id": "w_4", "fromNode": "n_check_pause", "fromPort": "false", "toNode": "n_step1", "toPort": "in" },
+
+    { "id": "w_5", "fromNode": "n_step1", "fromPort": "out", "toNode": "n_check_dialogue", "toPort": "in" },
+    { "id": "w_6", "fromNode": "n_get_dialogue", "fromPort": "val", "toNode": "n_check_dialogue", "toPort": "cond" },
+    
+    { "id": "w_7", "fromNode": "n_check_dialogue", "fromPort": "true", "toNode": "n_dialogue_log", "toPort": "in" },
+    { "id": "w_8", "fromNode": "n_check_dialogue", "fromPort": "false", "toNode": "n_step2", "toPort": "in" },
+
+    { "id": "w_9", "fromNode": "n_step2", "fromPort": "out", "toNode": "n_check_moving", "toPort": "in" },
+    { "id": "w_9a", "fromNode": "n_get_moving", "fromPort": "val", "toNode": "n_check_moving", "toPort": "cond" },
+    { "id": "w_9b", "fromNode": "n_check_moving", "fromPort": "true", "toNode": "n_move_log", "toPort": "in" },
+    { "id": "w_9c", "fromNode": "n_check_moving", "fromPort": "false", "toNode": "n_idle_log", "toPort": "in" },
+
+    { "id": "w_10", "fromNode": "n_step2", "fromPort": "out", "toNode": "n_step3", "toPort": "in" }, 
+    
+    { "id": "w_11", "fromNode": "n_step3", "fromPort": "out", "toNode": "n_check_mana", "toPort": "in" },
+    { "id": "w_11a", "fromNode": "n_get_mana", "fromPort": "val", "toNode": "n_check_mana", "toPort": "cond" },
+    { "id": "w_11b", "fromNode": "n_check_mana", "fromPort": "true", "toNode": "n_fire_log", "toPort": "in" },
+    { "id": "w_11c", "fromNode": "n_check_mana", "fromPort": "false", "toNode": "n_regen_log", "toPort": "in" },
+
+    { "id": "w_12", "fromNode": "n_step3", "fromPort": "out", "toNode": "n_step4", "toPort": "in" },
+    
+    { "id": "w_13", "fromNode": "n_step4", "fromPort": "out", "toNode": "n_loop_enemies", "toPort": "in" },
+    { "id": "w_13a", "fromNode": "n_loop_enemies", "fromPort": "loop", "toNode": "n_enemy_ai", "toPort": "in" },
+
+    { "id": "w_14", "fromNode": "n_loop_enemies", "fromPort": "out", "toNode": "n_step5", "toPort": "in" },
+    
+    { "id": "w_15", "fromNode": "n_step5", "fromPort": "out", "toNode": "n_step6", "toPort": "in" },
+    { "id": "w_16", "fromNode": "n_step6", "fromPort": "out", "toNode": "n_draw", "toPort": "in" }
+  ],
+  "vars": [
+    { "name": "is_paused", "type": "bool", "value": 0 },
+    { "name": "dialogue_active", "type": "bool", "value": 0 },
+    { "name": "is_moving", "type": "bool", "value": 0 },
+    { "name": "player_mana", "type": "num", "value": 100 }
+  ]
+}

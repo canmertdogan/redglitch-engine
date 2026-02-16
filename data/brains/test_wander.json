@@ -1,0 +1,63 @@
+{
+  "nodes": [
+    {
+      "id": "sensor_spawn_1_ABC",
+      "type": "sensor_spawn",
+      "cat": "sensor",
+      "x": 100,
+      "y": 100,
+      "data": {}
+    },
+    {
+      "id": "expr_say_2_DEF",
+      "type": "expr_say",
+      "cat": "express",
+      "x": 300,
+      "y": 100,
+      "data": {
+        "text": "Greetings, traveler!"
+      }
+    },
+    {
+      "id": "task_wander_3_GHI",
+      "type": "task_wander",
+      "cat": "task",
+      "x": 500,
+      "y": 100,
+      "data": {
+        "range": 150,
+        "duration": 3
+      }
+    },
+    {
+      "id": "logic_wait_4_JKL",
+      "type": "logic_wait",
+      "cat": "logic",
+      "x": 700,
+      "y": 100,
+      "data": {
+        "time": 2
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "w_1",
+      "from": "sensor_spawn_1_ABC",
+      "port": "out",
+      "to": "expr_say_2_DEF"
+    },
+    {
+      "id": "w_2",
+      "from": "expr_say_2_DEF",
+      "port": "out",
+      "to": "task_wander_3_GHI"
+    },
+    {
+      "id": "w_3",
+      "from": "task_wander_3_GHI",
+      "port": "out",
+      "to": "logic_wait_4_JKL"
+    }
+  ]
+}

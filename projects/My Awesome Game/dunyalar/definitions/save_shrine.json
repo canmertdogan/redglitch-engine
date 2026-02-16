@@ -1,0 +1,14 @@
+{
+    "components":  [
+                       {
+                           "type":  "Light",
+                           "color":  "#f1c40f"
+                       },
+                       {
+                           "scriptId":  "utility_save",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Save Shrine",
+    "sprite":  "PixelFantasy_Caves_1.0/mainlev_build.png"
+}

@@ -1,0 +1,20 @@
+{
+    "components":  [
+                       {
+                           "speed":  300,
+                           "type":  "Stats",
+                           "hp":  40
+                       },
+                       {
+                           "height":  24,
+                           "width":  24,
+                           "type":  "Collider"
+                       },
+                       {
+                           "scriptId":  "enemy_chase",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Goblin",
+    "sprite":  "Enemy_Animations_Set/Enemy_Animations_Set/Goblin/Idle.png"
+}

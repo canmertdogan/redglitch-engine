@@ -1,0 +1,10 @@
+{
+    "components":  [
+                       {
+                           "scriptId":  "interact_switch",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Lever",
+    "sprite":  "RF_Catacombs_v1.0/mainlevbuild.png"
+}

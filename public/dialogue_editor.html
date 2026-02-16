@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KETEBE DIALOGUE STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-size: 1.1rem; border-bottom: 1px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover { background: var(--accent); color: #000; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        input[type="text"], textarea, select {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none;
+        }
+        input:focus, textarea:focus { border-color: var(--accent); }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- PANELS --- */
+        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border); }
+        .panel-header {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+        }
+        .panel-content { padding: 0; overflow-y: auto; flex-grow: 1; }
+
+        /* --- SIDEBARS --- */
+        #sidebar-left { width: 240px; }
+        #inspector { width: 280px; border-left: 1px solid var(--border); border-right: none; }
+
+        /* --- LISTS --- */
+        .list-item {
+            padding: 8px 15px; cursor: pointer; border-bottom: 1px solid #1a1a1a;
+            color: #888; font-size: 1rem; display: flex; align-items: center; gap: 10px;
+        }
+        .list-item:hover { background: #111; color: #fff; }
+        .list-item.active { background: #1a1a1a; color: var(--accent); border-left: 3px solid var(--accent); }
+
+        /* --- CENTER CANVAS --- */
+        #center-panel { 
+            flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas);
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;
+        }
+        #nodes-container { padding: 20px; overflow-y: auto; flex-grow: 1; }
+
+        /* --- DIALOGUE NODES --- */
+        .dialogue-line {
+            background: #111; border: 1px solid #444; margin-bottom: 15px;
+            display: flex; flex-direction: column; box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+        }
+        .line-header {
+            padding: 5px 10px; background: #000; border-bottom: 1px solid #222;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .line-body { padding: 10px; display: flex; gap: 15px; }
+        .line-portrait {
+            width: 48px; height: 48px; background: #000; border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+            color: var(--accent); flex-shrink: 0;
+        }
+        .line-main { flex-grow: 1; display: flex; flex-direction: column; gap: 8px; }
+        
+        textarea { width: 100%; resize: vertical; min-height: 60px; background: #050505; }
+
+        .choice-row {
+            display: flex; gap: 5px; margin-top: 4px; padding: 4px;
+            background: #0a0a0a; border: 1px solid #222;
+        }
+
+        .btn-mini { 
+            background: #222; border: 1px solid #444; color: #aaa; cursor: pointer; padding: 2px 8px; font-family: inherit; font-size: 0.8rem;
+        }
+        .btn-mini:hover { border-color: var(--accent); color: #fff; }
+        .btn-mini.danger { color: #e74c3c; }
+        .btn-mini.danger:hover { border-color: #e74c3c; background: #e74c3c; color: #fff; }
+
+        .btn-full { width: 100%; padding: 8px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; text-transform: uppercase; }
+        .btn-full:hover { border-color: var(--accent); color: #fff; }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <div id="menubar">
+        <div style="color:var(--accent); font-weight:bold; margin-right:20px; letter-spacing:2px;">
+            <i class="fas fa-comments"></i> DIALOGUE STUDIO
+        </div>
+        <div class="menu-item" onclick="saveToServer()">File</div>
+        <div class="menu-item">View</div>
+        <div class="menu-item">Help</div>
+    </div>
+
+    <div id="toolbar">
+        <button class="tool-btn" onclick="saveToServer()" title="Save All"><i class="fas fa-save"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="addConversation()" title="New Script"><i class="fas fa-plus-square"></i></button>
+        <button class="tool-btn" onclick="addNode()" title="Add Dialogue Line"><i class="fas fa-plus"></i></button>
+        <div class="tool-sep"></div>
+        <input type="text" id="conv-id" placeholder="SCRIPT_ID" style="max-width: 200px;">
+        <div style="flex-grow:1"></div>
+        <button class="tool-btn" onclick="syncNPCs()" title="Sync Actors"><i class="fas fa-sync"></i></button>
+    </div>
+
+    <div id="layout">
+        
+        <!-- LEFT: ACTORS & SCRIPTS -->
+        <div id="sidebar-left" class="panel">
+            <div class="panel-header">SCRIPTS <i class="fas fa-scroll"></i></div>
+            <div class="panel-content" id="conversation-list"></div>
+            
+            <div class="panel-header" style="border-top:1px solid var(--border);">ACTORS <i class="fas fa-users"></i></div>
+            <div class="panel-content" style="max-height: 200px; border-bottom: 1px solid var(--border);">
+                <div style="padding:10px; border-bottom:1px solid #1a1a1a;">
+                    <button class="btn-full" onclick="addCharacter()">+ NEW ACTOR</button>
+                </div>
+                <div id="character-list"></div>
+            </div>
+        </div>
+
+        <!-- CENTER: DIALOGUE CONTENT -->
+        <div id="center-panel">
+            <div id="nodes-container">
+                <!-- Dialogue items -->
+            </div>
+        </div>
+
+        <!-- RIGHT: INSPECTOR -->
+        <div id="inspector" class="panel">
+            <div class="panel-header">DETAILS <i class="fas fa-info-circle"></i></div>
+            <div class="panel-content" style="padding:15px;">
+                <div style="text-align:center; color:#555; margin-top:50px;">
+                    CONVERSATION<br>PROPERTIES
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="base_game/sprites.js"></script>
+    
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <script src="dialogue_editor.js"></script>
+    <!-- IRAB AI Assistant -->
+    <script src="ai/bridge.js"></script>
+    <script src="assistant.js"></script>
+</body>
+</html>

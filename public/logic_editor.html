@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK LOGIC STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <script src="lib/blockly.min.js"></script>
+    <style>
+        :root {
+            --bg-darker: #05050a;
+            --bg-panel: #111;
+            --accent: #f1c40f;
+            --text: #40e0d0;
+            --gold: #f1c40f;
+        }
+        body {
+            background-color: var(--bg-darker);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            margin: 0; display: flex; height: 100vh; overflow: hidden;
+            font-size: 18px;
+        }
+        
+        #sidebar {
+            width: 280px; background: #111;
+            border-right: 3px solid var(--gold);
+            display: flex; flex-direction: column;
+            z-index: 100;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.8);
+        }
+        #sidebar-header { 
+            padding: 20px; background: #000; border-bottom: 3px solid var(--gold); 
+            color: var(--gold); font-size: 2rem; text-align: center;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        #blockly-container { flex-grow: 1; position: relative; background: #000; }
+        #blockly-div { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        .control-group { padding: 15px; border-bottom: 1px solid #333; }
+        
+        button {
+            width: 100%; padding: 12px; margin-bottom: 10px;
+            background: #222; color: var(--text); border: 2px solid #444;
+            cursor: pointer; font-family: 'VT323', monospace; font-size: 1.3rem;
+            text-transform: uppercase;
+            box-shadow: 0 4px 0 #000;
+        }
+        button:hover { background: var(--gold); color: #000; border-color: #fff; }
+        button:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+
+        input {
+            width: 100%; background: #000; border: 2px solid #444; color: var(--gold);
+            padding: 8px; font-family: inherit; font-size: 1.1rem; outline: none;
+            box-sizing: border-box; margin-top: 5px;
+        }
+        input:focus { border-color: var(--gold); }
+
+        /* --- BLOCKLY THEME OVERRIDES --- */
+        .blocklyTreeLabel { 
+            font-family: 'VT323', monospace !important; 
+            font-size: 20px !important; 
+            color: #888 !important;
+            text-transform: uppercase;
+        }
+        .blocklyTreeRow.blocklyTreeSelected .blocklyTreeLabel {
+            color: var(--gold) !important;
+        }
+        .blocklyTreeRow:not(.blocklyTreeSelected):hover {
+            background-color: #222 !important;
+        }
+        .blocklyTreeRow {
+            padding: 8px 10px !important;
+            margin-bottom: 2px !important;
+            border: none !important;
+        }
+        .blocklyToolboxDiv {
+            background-color: #111 !important;
+            border-right: 1px solid #333 !important;
+            width: 140px !important;
+        }
+        .blocklyFlyoutBackground {
+            fill: #0a0a0a !important;
+            fill-opacity: 0.95 !important;
+        }
+        .blocklyMainBackground {
+            stroke: #222 !important;
+            stroke-width: 1 !important;
+        }
+        .blocklyScrollbarHandle {
+            fill: #333 !important;
+        }
+        .blocklyText {
+            font-family: 'VT323', monospace !important;
+            font-size: 16px !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div id="sidebar-header">LOGIC STUDIO</div>
+        <div class="control-group">
+            <label style="font-size:0.9rem; color:#888;">LOGIC FILENAME</label>
+            <input type="text" id="logic-name" value="global_logic">
+        </div>
+        <div class="control-group">
+            <button onclick="saveLogic()" style="background:var(--gold); color:#000; border-color:#fff;">💾 SAVE LOGIC</button>
+            <button onclick="generateJS()">🔍 VIEW CODE</button>
+            <button onclick="clearWorkspace()" style="border-color:#e74c3c; color:#e74c3c;">🗑 CLEAR ALL</button>
+        </div>
+        <div style="flex-grow:1; padding:20px; font-size:1.1rem; color:#555; line-height:1.2;">
+            DRAG BLOCKS TO DEFINE GAME BEHAVIOR.<br><br>
+            THESE SCRIPTS ARE COMPILED INTO REAL-TIME ENGINE COMMANDS.
+        </div>
+    </div>
+
+    <div id="blockly-container">
+        <div id="blockly-div"></div>
+    </div>
+
+    <!-- TOOLBOX DEFINITION -->
+    <xml id="toolbox" style="display: none">
+        <category name="⚡ EVENTS" colour="#e74c3c">
+            <label text="Root blocks - only one per script"></label>
+            <block type="event_on_start"></block>
+            <block type="event_on_update"></block>
+            <block type="event_on_interact"></block>
+        </category>
+        
+        <sep></sep>
+        
+        <category name="🔍 ENTITIES" colour="#9b59b6">
+            <label text="Query and manipulate entities"></label>
+            <block type="entity_get_nearby">
+                <value name="RANGE">
+                    <shadow type="math_number"><field name="NUM">200</field></shadow>
+                </value>
+            </block>
+            <block type="entity_get_by_name"></block>
+            <block type="entity_get_closest_enemy"></block>
+            <block type="entity_get_all_enemies"></block>
+            <block type="entity_count_type"></block>
+            <block type="entity_exists"></block>
+            <block type="entity_get_property"></block>
+            <block type="entity_spawn">
+                <value name="X">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="Y">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+            </block>
+            <block type="entity_destroy"></block>
+            <block type="entity_move_to">
+                <value name="X">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="Y">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="SPEED">
+                    <shadow type="math_number"><field name="NUM">100</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="👤 PLAYER" colour="#3498db">
+            <label text="Player stats and position"></label>
+            <block type="player_get_position"></block>
+            <block type="player_get_stat"></block>
+            <block type="player_set_stat">
+                <value name="VALUE">
+                    <shadow type="math_number"><field name="NUM">100</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="🎒 INVENTORY" colour="#3498db">
+            <label text="Items and equipment"></label>
+            <block type="inventory_has_item"></block>
+            <block type="inventory_get_count"></block>
+            <block type="inventory_add_item">
+                <value name="COUNT">
+                    <shadow type="math_number"><field name="NUM">1</field></shadow>
+                </value>
+            </block>
+            <block type="inventory_remove_item">
+                <value name="COUNT">
+                    <shadow type="math_number"><field name="NUM">1</field></shadow>
+                </value>
+            </block>
+            <block type="inventory_equip">
+                <value name="SLOT">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="🚩 FLAGS" colour="#e67e22">
+            <label text="Game state and flags"></label>
+            <block type="flag_get"></block>
+            <block type="flag_set"></block>
+            <block type="flag_increment"></block>
+            <block type="flag_check_all"></block>
+            <block type="data_save"></block>
+            <block type="data_load"></block>
+        </category>
+        
+        <category name="📜 QUESTS" colour="#e67e22">
+            <label text="Quest management"></label>
+            <block type="quest_start"></block>
+            <block type="quest_complete"></block>
+            <block type="quest_fail"></block>
+            <block type="quest_get_status"></block>
+        </category>
+        
+        <category name="🌍 WORLD" colour="#27ae60">
+            <label text="Tiles and level"></label>
+            <block type="world_get_tile">
+                <value name="X">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="Y">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+            </block>
+            <block type="world_set_tile">
+                <value name="X">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="Y">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="TILE">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="📷 CAMERA" colour="#16a085">
+            <label text="Camera control"></label>
+            <block type="camera_target"></block>
+            <block type="camera_shake">
+                <value name="INTENSITY">
+                    <shadow type="math_number"><field name="NUM">10</field></shadow>
+                </value>
+                <value name="DURATION">
+                    <shadow type="math_number"><field name="NUM">0.5</field></shadow>
+                </value>
+            </block>
+            <block type="camera_zoom">
+                <value name="SCALE">
+                    <shadow type="math_number"><field name="NUM">1.0</field></shadow>
+                </value>
+                <value name="DURATION">
+                    <shadow type="math_number"><field name="NUM">1.0</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="✨ EFFECTS" colour="#16a085">
+            <label text="Visual effects"></label>
+            <block type="screen_flash">
+                <value name="COLOR">
+                    <shadow type="text"><field name="TEXT">#ffffff</field></shadow>
+                </value>
+                <value name="DURATION">
+                    <shadow type="math_number"><field name="NUM">0.2</field></shadow>
+                </value>
+            </block>
+            <block type="screen_fade">
+                <value name="COLOR">
+                    <shadow type="text"><field name="TEXT">#000000</field></shadow>
+                </value>
+                <value name="DURATION">
+                    <shadow type="math_number"><field name="NUM">1.0</field></shadow>
+                </value>
+            </block>
+            <block type="fx_spawn">
+                <value name="X">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="Y">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="🔊 AUDIO" colour="#f1c40f">
+            <label text="Sound and music"></label>
+            <block type="audio_play_sound">
+                <value name="VOLUME">
+                    <shadow type="math_number"><field name="NUM">1.0</field></shadow>
+                </value>
+            </block>
+            <block type="audio_stop_sound"></block>
+            <block type="audio_fade_music">
+                <value name="VOLUME">
+                    <shadow type="math_number"><field name="NUM">0.5</field></shadow>
+                </value>
+                <value name="DURATION">
+                    <shadow type="math_number"><field name="NUM">2.0</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="💬 DIALOGUE" colour="#95a5a6">
+            <label text="Dialogue and UI"></label>
+            <block type="dialogue_show">
+                <value name="TEXT">
+                    <shadow type="text"><field name="TEXT">Hello!</field></shadow>
+                </value>
+            </block>
+            <block type="dialogue_show_choices">
+                <value name="TEXT">
+                    <shadow type="text"><field name="TEXT">What do you want?</field></shadow>
+                </value>
+            </block>
+            <block type="dialogue_wait_choice"></block>
+            <block type="ui_notification">
+                <value name="TEXT">
+                    <shadow type="text"><field name="TEXT">Quest Complete!</field></shadow>
+                </value>
+                <value name="DURATION">
+                    <shadow type="math_number"><field name="NUM">3</field></shadow>
+                </value>
+            </block>
+        </category>
+        
+        <category name="⏱ TIME" colour="#34495e">
+            <label text="Timing and delays"></label>
+            <block type="time_wait">
+                <value name="SECONDS">
+                    <shadow type="math_number"><field name="NUM">1</field></shadow>
+                </value>
+            </block>
+            <block type="time_get_game_time"></block>
+        </category>
+        
+        <sep></sep>
+        
+        <category name="🔀 LOGIC" colour="#5b67a5">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+            <block type="logic_operation"></block>
+            <block type="logic_negate"></block>
+            <block type="logic_boolean"></block>
+        </category>
+        
+        <category name="🔁 LOOPS" colour="#5ba55b">
+            <block type="controls_repeat_ext">
+                <value name="TIMES">
+                    <shadow type="math_number">
+                        <field name="NUM">10</field>
+                    </shadow>
+                </value>
+            </block>
+            <block type="controls_whileUntil"></block>
+            <block type="controls_forEach"></block>
+        </category>
+        
+        <category name="🔢 MATH" colour="#5b67a5">
+            <block type="math_number"></block>
+            <block type="math_arithmetic"></block>
+            <block type="math_single"></block>
+            <block type="math_round"></block>
+        </category>
+        
+        <category name="📝 TEXT" colour="#5ba58c">
+            <block type="text"></block>
+            <block type="text_join"></block>
+        </category>
+        
+        <category name="📋 LISTS" colour="#745ba5">
+            <block type="lists_create_with"></block>
+            <block type="lists_length"></block>
+            <block type="lists_getIndex"></block>
+        </category>
+        
+        <category name="💾 VARIABLES" colour="#a55b80" custom="VARIABLE"></category>
+    </xml>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+
+    <script src="logic_editor.js"></script>
+</body>
+</html>

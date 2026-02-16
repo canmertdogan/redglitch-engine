@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK NPC STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0;
+            font-size: 1.1rem; border-bottom: 2px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menubar-title {
+            color: var(--accent); font-weight: bold; padding: 0 15px; 
+            border-right: 2px solid var(--border); margin-right: 10px; 
+            font-size: 1.2rem; letter-spacing: 2px; height: 100%;
+            display: flex; align-items: center; gap: 10px;
+        }
+        
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover, .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111; border: 2px solid var(--border);
+            display: none; flex-direction: column; min-width: 200px; box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+            z-index: 4000;
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .drop-opt {
+            padding: 8px 15px; cursor: pointer; color: #aaa; font-size: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .drop-opt:hover { background: #222; color: #fff; border-left: 4px solid var(--accent); }
+        .drop-sep { height: 1px; background: #333; margin: 4px 0; }
+        .shortcut { font-size: 0.8rem; color: #555; margin-left: 20px; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px; transition: all 0.1s;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; min-height: 0; }
+
+        /* --- PANELS --- */
+        .panel { 
+            display: flex; flex-direction: column; 
+            background: var(--bg-panel); border-right: 1px solid var(--border); 
+            height: 100%; overflow: hidden;
+        }
+        .panel-header {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; justify-content: space-between; 
+            letter-spacing: 1px; flex-shrink: 0;
+        }
+        .panel-content { 
+            padding: 15px; overflow-y: auto; flex-grow: 1; display: flex; 
+            flex-direction: column; gap: 15px; min-height: 0;
+        }
+
+        /* --- SIDEBAR --- */
+        #sidebar { width: 280px; flex-shrink: 0; }
+        .search-box {
+            width: 100%; padding: 8px; margin-bottom: 10px;
+            background: #000; border: 1px solid #444; color: var(--accent);
+            font-family: inherit; font-size: 1rem;
+        }
+        .search-box:focus { border-color: var(--accent); }
+        
+        .list-item {
+            padding: 10px; cursor: pointer; border-bottom: 1px solid #1a1a1a;
+            color: #888; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.1s;
+        }
+        .list-item:hover { background: #111; color: #fff; }
+        .list-item.active { background: #1a1a1a; color: var(--accent); border-left: 3px solid var(--accent); }
+
+        /* --- CENTER (EDITOR) --- */
+        #center-panel { flex-grow: 1; background: var(--bg-canvas); min-width: 0; }
+        
+        .form-section { 
+            background: #111; border: 1px solid #333; padding: 15px; position: relative; 
+            margin-bottom: 15px; border-radius: 4px;
+        }
+        .section-title {
+            position: absolute; top: -10px; left: 10px; background: #111; padding: 0 8px;
+            color: #888; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;
+        }
+        
+        .form-row { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; 
+        }
+        .form-full { margin-bottom: 12px; }
+        label { 
+            display: block; color: #666; font-size: 0.85rem; margin-bottom: 4px; 
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        input, select {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 6px 8px; font-family: inherit; font-size: 1rem; outline: none; width: 100%;
+            transition: all 0.1s;
+        }
+        input:focus, select:focus { border-color: var(--accent); }
+
+        .btn-group {
+            display: flex; gap: 5px; margin-bottom: 10px;
+        }
+        .btn-full {
+            flex: 1; padding: 8px; background: #111; border: 1px solid #444; color: #aaa;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+            font-family: inherit; font-size: 1rem; border-radius: 3px; transition: all 0.1s;
+        }
+        .btn-full:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+
+        .anim-row { display: flex; gap: 5px; align-items: center; margin-bottom: 6px; }
+        .anim-label { width: 50px; font-size: 0.85rem; color: #666; text-transform: uppercase; }
+        .anim-input { flex: 1; }
+
+        /* --- RIGHT (PREVIEW) --- */
+        #preview-panel { width: 320px; border-left: 1px solid var(--border); border-right: none; flex-shrink: 0; }
+        
+        #preview-box {
+            width: 100%; aspect-ratio: 1; background: #000; border: 1px solid #333;
+            display: flex; align-items: center; justify-content: center; margin-bottom: 10px;
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 10px 10px;
+            border-radius: 4px;
+        }
+        #previewCanvas { width: 128px; height: 128px; image-rendering: pixelated; }
+
+        #sprite-info {
+            font-size: 0.85rem; color: #666; text-align: center; margin-bottom: 10px;
+            padding: 8px; background: #000; border: 1px solid #333; border-radius: 3px;
+        }
+
+        /* --- MODALS --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); z-index: 9999; display: none;
+        }
+        .modal-overlay.active { display: block; }
+
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #0a0a0f; border: 2px solid var(--accent);
+            padding: 20px; z-index: 10000; display: none;
+            min-width: 400px; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 0 60px rgba(0,0,0,0.9);
+            border-radius: 4px;
+        }
+        .modal.active { display: block; }
+
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        .modal-title {
+            color: var(--accent); font-size: 1.3rem; font-weight: bold; 
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        .template-item, .sprite-item, .loot-item {
+            padding: 12px; margin: 8px 0; background: #111; border: 1px solid #333;
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.1s; border-radius: 3px;
+        }
+        .template-item:hover, .sprite-item:hover, .loot-item:hover { 
+            background: #1a1a1a; border-color: var(--accent); 
+        }
+
+        .template-name, .sprite-name { font-weight: bold; color: var(--accent); }
+        .template-desc { font-size: 0.9rem; color: #888; margin-top: 4px; }
+
+        .sprite-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 10px; margin-top: 15px;
+        }
+        .sprite-item { 
+            flex-direction: column; text-align: center; padding: 8px;
+        }
+        .sprite-item canvas {
+            width: 56px; height: 56px; image-rendering: pixelated; margin-bottom: 5px;
+        }
+        .sprite-name { font-size: 0.75rem; word-break: break-all; }
+
+        .bulk-checkbox {
+            width: 18px; height: 18px; margin-right: 10px; cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        /* Tooltip hints */
+        .hint {
+            color: #666; font-size: 0.7rem; margin-left: 5px; cursor: help;
+        }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <div id="menubar">
+        <div class="menubar-title">
+            <i class="fas fa-user-friends"></i> NPC STUDIO
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="saveToServer()">
+                    <span>Save</span><span class="shortcut">Ctrl+S</span>
+                </div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="exportNPC()">
+                    <span>Export</span><span class="shortcut">Ctrl+E</span>
+                </div>
+                <div class="drop-opt" onclick="importNPC()">
+                    <span>Import</span><span class="shortcut">Ctrl+I</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="addNewNPC()">
+                    <span>New NPC</span><span class="shortcut">Ctrl+N</span>
+                </div>
+                <div class="drop-opt" onclick="duplicateNPC()">
+                    <span>Duplicate</span><span class="shortcut">Ctrl+D</span>
+                </div>
+                <div class="drop-opt" onclick="deleteNPC()">
+                    <span>Delete</span><span class="shortcut">Del</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="togglePreviewPlay()">
+                    <span>Play/Pause Preview</span><span class="shortcut">Space</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toolbar">
+        <button class="tool-btn" onclick="saveToServer()" title="Save (Ctrl+S)"><i class="fas fa-save"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="showTemplateMenu()" title="New from Template"><i class="fas fa-plus-circle"></i></button>
+        <button class="tool-btn" onclick="addNewNPC()" title="New NPC (Ctrl+N)"><i class="fas fa-plus"></i></button>
+        <button class="tool-btn" onclick="duplicateNPC()" title="Duplicate (Ctrl+D)"><i class="fas fa-copy"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="exportNPC()" title="Export"><i class="fas fa-download"></i></button>
+        <button class="tool-btn" onclick="importNPC()" title="Import"><i class="fas fa-upload"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="toggleBulkMode()" title="Bulk Select" id="bulk-btn"><i class="fas fa-check-square"></i></button>
+        <button class="tool-btn" style="color:#e74c3c;" onclick="deleteNPC()" title="Delete (Del)"><i class="fas fa-trash"></i></button>
+    </div>
+
+    <div id="layout">
+        
+        <!-- LEFT: LIST -->
+        <div id="sidebar" class="panel">
+            <div class="panel-header">
+                CHARACTERS
+                <input type="text" id="search-filter" class="search-box" placeholder="Search..." 
+                       style="width:120px; height:24px; padding:2px 8px; font-size:0.9rem; margin-left:auto;"
+                       oninput="filterList()">
+            </div>
+            <div class="panel-content" id="npc-list" style="padding:0; gap:0;"></div>
+        </div>
+
+        <!-- CENTER: FORM -->
+        <div id="center-panel" class="panel">
+            <div class="panel-header">PROPERTIES</div>
+            <div class="panel-content">
+                
+                <div class="form-section">
+                    <div class="section-title">Identity</div>
+                    <div class="form-row">
+                        <div>
+                            <label>ID <span class="hint" title="3-32 characters, letters, numbers, underscore">(?)</span></label>
+                            <input type="text" id="npc-id">
+                        </div>
+                        <div>
+                            <label>Name <span class="hint" title="Display name (max 64 chars)">(?)</span></label>
+                            <input type="text" id="npc-name">
+                        </div>
+                    </div>
+                    <div class="form-full">
+                        <label>Dialogue Script <span class="hint" title="ID of dialogue file">(?)</span></label>
+                        <div style="display:flex; gap:5px;">
+                            <input type="text" id="npc-dialogue" style="flex:1;">
+                            <button class="tool-btn" onclick="openDialogueEditor()" title="Edit Dialogue">
+                                <i class="fas fa-comments"></i>
+                            </button>
+                            <button class="tool-btn" onclick="createNewDialogue()" title="Create New">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">Stats & AI</div>
+                    <div class="form-row">
+                        <div>
+                            <label>Speed <span class="hint" title="1-500">(? )</span></label>
+                            <input type="number" id="npc-speed">
+                        </div>
+                        <div>
+                            <label>Range <span class="hint" title="Interaction range in pixels">(?)</span></label>
+                            <input type="number" id="npc-range">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label>Behavior</label>
+                            <select id="npc-ai-type">
+                                <option value="static">Static</option>
+                                <option value="wander">Wander</option>
+                                <option value="patrol">Patrol</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Brain <span class="hint" title="AI behavior script">(?)</span></label>
+                            <div style="display:flex; gap:5px;">
+                                <select id="npc-brain" style="flex:1;"></select>
+                                <button class="tool-btn" onclick="editBrain()" title="Edit">
+                                    <i class="fas fa-brain"></i>
+                                </button>
+                                <button class="tool-btn" onclick="newBrain()" title="New">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label>Wander Radius</label>
+                            <input type="number" id="npc-wander-radius">
+                        </div>
+                        <div>
+                            <label>Idle Time (seconds)</label>
+                            <input type="number" id="npc-idle-time" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">Visuals</div>
+                    <div class="btn-group">
+                        <button class="btn-full" onclick="openSpriteLibrary()">
+                            <i class="fas fa-images"></i> Sprite Library
+                        </button>
+                        <button class="btn-full" onclick="createNewSprite()">
+                            <i class="fas fa-plus"></i> New Sprite
+                        </button>
+                    </div>
+                    <label>Idle Sprites</label>
+                    <div class="anim-row">
+                        <span class="anim-label">Down</span>
+                        <input type="text" id="anim-idle-down" class="anim-input" data-state="idle" data-dir="down">
+                        <button class="tool-btn" onclick="openPixelEditor('anim-idle-down')"><i class="fas fa-edit"></i></button>
+                    </div>
+                    <div class="anim-row">
+                        <span class="anim-label">Up</span>
+                        <input type="text" id="anim-idle-up" class="anim-input" data-state="idle" data-dir="up">
+                        <button class="tool-btn" onclick="openPixelEditor('anim-idle-up')"><i class="fas fa-edit"></i></button>
+                    </div>
+                    <div class="anim-row">
+                        <span class="anim-label">Side</span>
+                        <input type="text" id="anim-idle-side" class="anim-input" data-state="idle" data-dir="side">
+                        <button class="tool-btn" onclick="openPixelEditor('anim-idle-side')"><i class="fas fa-edit"></i></button>
+                    </div>
+                    
+                    <label style="margin-top:10px;">Walk Sprites</label>
+                    <div class="anim-row">
+                        <span class="anim-label">Down</span>
+                        <input type="text" id="anim-walk-down" class="anim-input" data-state="walk" data-dir="down">
+                        <button class="tool-btn" onclick="openPixelEditor('anim-walk-down')"><i class="fas fa-edit"></i></button>
+                    </div>
+                    <div class="anim-row">
+                        <span class="anim-label">Up</span>
+                        <input type="text" id="anim-walk-up" class="anim-input" data-state="walk" data-dir="up">
+                        <button class="tool-btn" onclick="openPixelEditor('anim-walk-up')"><i class="fas fa-edit"></i></button>
+                    </div>
+                    <div class="anim-row">
+                        <span class="anim-label">Side</span>
+                        <input type="text" id="anim-walk-side" class="anim-input" data-state="walk" data-dir="side">
+                        <button class="tool-btn" onclick="openPixelEditor('anim-walk-side')"><i class="fas fa-edit"></i></button>
+                    </div>
+
+                    <label style="margin-top:10px;">Talk Sprites</label>
+                    <div class="anim-row">
+                        <span class="anim-label">Base</span>
+                        <input type="text" id="anim-talk-base" class="anim-input" data-state="talk" data-dir="base">
+                        <button class="tool-btn" onclick="openPixelEditor('anim-talk-base')"><i class="fas fa-edit"></i></button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- RIGHT: PREVIEW -->
+        <div id="preview-panel" class="panel">
+            <div class="panel-header">
+                PREVIEW
+                <div style="display:flex; gap:5px;">
+                    <button class="tool-btn" id="preview-play" onclick="togglePreviewPlay()" title="Play/Pause">
+                        <i class="fas fa-pause"></i>
+                    </button>
+                    <button class="tool-btn" onclick="zoomPreview(-0.25)" title="Zoom Out">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="tool-btn" onclick="zoomPreview(0.25)" title="Zoom In">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="preview-box">
+                    <canvas id="previewCanvas" width="256" height="256"></canvas>
+                </div>
+                <div id="sprite-info">
+                    <span id="sprite-dims">-</span> | Frame <span id="sprite-frame">0</span>
+                </div>
+                <div class="form-row">
+                    <div>
+                        <label>State</label>
+                        <select id="preview-state" onchange="updatePreviewAnimation()">
+                            <option value="idle">Idle</option>
+                            <option value="walk">Walk</option>
+                            <option value="talk">Talk</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Direction</label>
+                        <select id="preview-dir" onchange="updatePreviewAnimation()">
+                            <option value="down">Front</option>
+                            <option value="up">Back</option>
+                            <option value="side">Side</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-full">
+                    <label>Animation Speed</label>
+                    <input type="number" id="anim-speed" step="0.05">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeAllModals()"></div>
+    
+    <div id="template-menu" class="modal">
+        <div class="modal-header">
+            <span class="modal-title">Select Template</span>
+            <button class="tool-btn" onclick="hideTemplateMenu()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="template-list"></div>
+    </div>
+    
+    <div id="sprite-library" class="modal" style="width:700px;">
+        <div class="modal-header">
+            <span class="modal-title">Sprite Library</span>
+            <button class="tool-btn" onclick="closeSpriteLibrary()"><i class="fas fa-times"></i></button>
+        </div>
+        <input type="text" id="sprite-search" class="search-box" placeholder="Search sprites..." oninput="filterSprites()">
+        <div id="sprite-grid" class="sprite-grid"></div>
+    </div>
+
+    <script src="engines/rpg-topdown/sprites.js"></script>
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    <script src="npc_editor.js"></script>
+    <!-- IRAB AI Assistant -->
+    <script src="ai/bridge.js"></script>
+    <script src="assistant.js"></script>
+</body>
+</html>

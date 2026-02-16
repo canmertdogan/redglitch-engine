@@ -1,0 +1,479 @@
+{
+  "id": "undertale_style_intro",
+  "name": "Undertale Style Introduction",
+  "description": "An interactive introduction cutscene with player choices that affect the story, inspired by Undertale's narrative style",
+  "version": "1.0",
+  "metadata": {
+    "created": "2026-02-05",
+    "author": "Ketebe Studio",
+    "tags": ["template", "undertale", "interactive", "introduction"]
+  },
+  "timeline": {
+    "duration": 60.0,
+    "fps": 60,
+    "tracks": [
+      {
+        "id": "bg_track",
+        "name": "Background",
+        "type": "actor",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 0,
+            "properties": {
+              "sprite": "black_screen",
+              "x": 0,
+              "y": 0,
+              "scale": 1.0,
+              "opacity": 1.0
+            }
+          },
+          {
+            "time": 5,
+            "properties": {
+              "sprite": "forest_background",
+              "opacity": 1.0
+            },
+            "easing": "fade"
+          }
+        ]
+      },
+      {
+        "id": "protagonist_track",
+        "name": "Main Character",
+        "type": "actor",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 8,
+            "properties": {
+              "sprite": "protagonist_idle",
+              "x": 200,
+              "y": 300,
+              "scale": 2.0,
+              "opacity": 0.0
+            }
+          },
+          {
+            "time": 12,
+            "properties": {
+              "opacity": 1.0
+            },
+            "easing": "fade-in"
+          },
+          {
+            "time": 25,
+            "properties": {
+              "x": 400,
+              "sprite": "protagonist_walk"
+            },
+            "easing": "ease-in-out"
+          }
+        ]
+      },
+      {
+        "id": "mysterious_figure_track",
+        "name": "Mysterious Figure",
+        "type": "actor",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 30,
+            "properties": {
+              "sprite": "shadow_figure",
+              "x": 600,
+              "y": 250,
+              "scale": 1.5,
+              "opacity": 0.0
+            }
+          },
+          {
+            "time": 32,
+            "properties": {
+              "opacity": 0.8
+            },
+            "easing": "fade-in"
+          }
+        ]
+      },
+      {
+        "id": "intro_music",
+        "name": "Atmospheric Music",
+        "type": "audio",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 0,
+            "properties": {
+              "file": "intro_ambient.ogg",
+              "volume": 0.0,
+              "loop": true
+            }
+          },
+          {
+            "time": 3,
+            "properties": {
+              "volume": 0.6
+            }
+          },
+          {
+            "time": 35,
+            "properties": {
+              "file": "mysterious_theme.ogg",
+              "volume": 0.4
+            }
+          }
+        ]
+      },
+      {
+        "id": "narrative_interactions",
+        "name": "Story Interactions",
+        "type": "interaction",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 15,
+            "type": "dialogue",
+            "data": {
+              "speaker": "narrator",
+              "text": "You find yourself alone in an unfamiliar forest...",
+              "textSpeed": 40,
+              "autoAdvance": true,
+              "delay": 4.0,
+              "style": {
+                "color": "#ffffff",
+                "background": "rgba(0,0,0,0.8)",
+                "font": "undertale"
+              }
+            }
+          },
+          {
+            "time": 20,
+            "type": "dialogue", 
+            "data": {
+              "speaker": "protagonist",
+              "text": "How did I get here? Everything feels so... strange.",
+              "portrait": "protagonist_confused",
+              "textSpeed": 35,
+              "autoAdvance": false,
+              "choices": [
+                {
+                  "text": "* Look around carefully",
+                  "action": "set_variable",
+                  "variable": "player_cautious",
+                  "value": true,
+                  "then": "dialogue_continue",
+                  "target": "cautious_path"
+                },
+                {
+                  "text": "* Call out for help",
+                  "action": "set_variable", 
+                  "variable": "player_bold",
+                  "value": true,
+                  "then": "dialogue_continue",
+                  "target": "bold_path"
+                },
+                {
+                  "text": "* Stay perfectly still",
+                  "action": "set_variable",
+                  "variable": "player_fearful", 
+                  "value": true,
+                  "then": "dialogue_continue",
+                  "target": "fearful_path"
+                }
+              ]
+            }
+          },
+          {
+            "time": 35,
+            "type": "dialogue",
+            "data": {
+              "speaker": "mysterious_figure",
+              "text": "...",
+              "portrait": "shadow_silhouette", 
+              "textSpeed": 20,
+              "autoAdvance": true,
+              "delay": 2.0,
+              "style": {
+                "color": "#9f4fbf",
+                "textShadow": "2px 2px 4px rgba(0,0,0,0.8)"
+              }
+            }
+          },
+          {
+            "time": 38,
+            "type": "dialogue",
+            "data": {
+              "speaker": "mysterious_figure",
+              "text": "Greetings, young traveler. You seem... lost.",
+              "portrait": "shadow_silhouette",
+              "textSpeed": 30,
+              "autoAdvance": false,
+              "choices": [
+                {
+                  "text": "* Who are you?",
+                  "action": "branch_timeline",
+                  "target": "question_branch",
+                  "condition": null
+                },
+                {
+                  "text": "* Can you help me?",
+                  "action": "branch_timeline", 
+                  "target": "help_branch",
+                  "condition": null
+                },
+                {
+                  "text": "* Back away slowly",
+                  "action": "branch_timeline",
+                  "target": "retreat_branch",
+                  "condition": "player_cautious == true || player_fearful == true"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "branches": {
+    "question_branch": {
+      "duration": 20.0,
+      "tracks": [
+        {
+          "id": "question_dialogue",
+          "name": "Question Response",
+          "type": "interaction",
+          "keyframes": [
+            {
+              "time": 2,
+              "type": "dialogue",
+              "data": {
+                "speaker": "mysterious_figure",
+                "text": "Names have power, little one. But you may call me... Guide.",
+                "autoAdvance": true,
+                "delay": 4.0
+              }
+            },
+            {
+              "time": 8,
+              "type": "dialogue",
+              "data": {
+                "speaker": "mysterious_figure", 
+                "text": "You have many paths ahead of you. Choose wisely.",
+                "choices": [
+                  {
+                    "text": "* What kind of paths?",
+                    "action": "resume_timeline"
+                  },
+                  {
+                    "text": "* I don't understand",
+                    "action": "set_variable",
+                    "variable": "player_confused", 
+                    "value": true,
+                    "then": "resume_timeline"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "help_branch": {
+      "duration": 15.0,
+      "tracks": [
+        {
+          "id": "help_dialogue",
+          "name": "Help Response", 
+          "type": "interaction",
+          "keyframes": [
+            {
+              "time": 1,
+              "type": "dialogue",
+              "data": {
+                "speaker": "mysterious_figure",
+                "text": "Help? That depends entirely on you, young one.",
+                "autoAdvance": true,
+                "delay": 3.0
+              }
+            },
+            {
+              "time": 6,
+              "type": "dialogue",
+              "data": {
+                "speaker": "mysterious_figure",
+                "text": "The forest will test your resolve. Are you ready?",
+                "choices": [
+                  {
+                    "text": "* I'm ready for anything!",
+                    "action": "set_variable",
+                    "variable": "player_determined",
+                    "value": true,
+                    "then": "resume_timeline"
+                  },
+                  {
+                    "text": "* I'm not sure...",
+                    "action": "set_variable", 
+                    "variable": "player_uncertain",
+                    "value": true,
+                    "then": "resume_timeline"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "retreat_branch": {
+      "duration": 12.0,
+      "tracks": [
+        {
+          "id": "retreat_action",
+          "name": "Player Retreats",
+          "type": "actor",
+          "keyframes": [
+            {
+              "time": 0,
+              "properties": {
+                "sprite": "protagonist_walk",
+                "x": 400,
+                "y": 300
+              }
+            },
+            {
+              "time": 5,
+              "properties": {
+                "x": 100,
+                "scale": 1.5
+              },
+              "easing": "ease-out"
+            }
+          ]
+        },
+        {
+          "id": "retreat_dialogue",
+          "name": "Retreat Response",
+          "type": "interaction", 
+          "keyframes": [
+            {
+              "time": 3,
+              "type": "dialogue",
+              "data": {
+                "speaker": "mysterious_figure",
+                "text": "Wise, perhaps... or simply afraid. Time will tell.",
+                "autoAdvance": true,
+                "delay": 3.0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "dialogues": {
+    "cautious_path": {
+      "nodes": [
+        {
+          "speaker": "protagonist", 
+          "text": "I notice every shadow, every sound... Something's watching me.",
+          "choices": [
+            {
+              "text": "Continue observing",
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    },
+    "bold_path": {
+      "nodes": [
+        {
+          "speaker": "protagonist",
+          "text": "HELLO? IS ANYONE THERE? I NEED HELP!",
+          "choices": [
+            {
+              "text": "Wait for a response", 
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    },
+    "fearful_path": {
+      "nodes": [
+        {
+          "speaker": "narrator",
+          "text": "You remain motionless, barely breathing, hoping whatever is out there doesn't notice you.",
+          "choices": [
+            {
+              "text": "Keep hiding",
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "variables": [
+    {
+      "name": "player_cautious",
+      "type": "boolean",
+      "default": false,
+      "description": "Player chose to be careful and observant"
+    },
+    {
+      "name": "player_bold", 
+      "type": "boolean",
+      "default": false,
+      "description": "Player chose to be assertive and call for help"
+    },
+    {
+      "name": "player_fearful",
+      "type": "boolean", 
+      "default": false,
+      "description": "Player chose to hide and stay still"
+    },
+    {
+      "name": "player_confused",
+      "type": "boolean",
+      "default": false,
+      "description": "Player expressed confusion during dialogue"
+    },
+    {
+      "name": "player_determined",
+      "type": "boolean",
+      "default": false,
+      "description": "Player showed determination when offered help"
+    },
+    {
+      "name": "player_uncertain",
+      "type": "boolean",
+      "default": false,
+      "description": "Player expressed uncertainty about being ready"
+    }
+  ],
+  "settings": {
+    "pauseOnChoices": true,
+    "allowSkipping": false,
+    "allowRollback": true,
+    "autosaveProgress": true,
+    "exportCampaignEvents": true,
+    "undertaleStyleText": true,
+    "pixelPerfectRendering": true
+  },
+  "integrations": {
+    "algorithmStudio": {
+      "enabled": true,
+      "aiDialogueGeneration": false,
+      "adaptiveChoices": true,
+      "dynamicNarration": false
+    },
+    "campaignEditor": {
+      "enabled": true,
+      "exportVariables": ["player_cautious", "player_bold", "player_fearful", "player_determined"],
+      "triggerQuests": ["forest_exploration", "mysterious_guide_encounter"],
+      "unlockNodes": ["forest_deeper", "guide_friendship", "retreat_path"]
+    }
+  }
+}

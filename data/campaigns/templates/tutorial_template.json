@@ -1,0 +1,60 @@
+{
+  "name": "Tutorial Template",
+  "description": "Simple linear tutorial structure - perfect for learning",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "type": "start",
+      "x": 100,
+      "y": 300,
+      "next": "tutorial_intro"
+    },
+    "tutorial_intro": {
+      "id": "tutorial_intro",
+      "type": "dialogue",
+      "x": 250,
+      "y": 300,
+      "speaker": "Tutorial Guide",
+      "text": "Welcome! This is your first level. Follow the instructions and have fun!",
+      "next": "level_1"
+    },
+    "level_1": {
+      "id": "level_1",
+      "type": "level",
+      "x": 400,
+      "y": 300,
+      "engineType": "rpg-topdown",
+      "world": "tutorial_level_1",
+      "spawnPoint": { "x": 100, "y": 100 },
+      "objectives": ["Complete the tutorial"],
+      "next": "level_1_complete"
+    },
+    "level_1_complete": {
+      "id": "level_1_complete",
+      "type": "reward",
+      "x": 550,
+      "y": 300,
+      "rewards": {
+        "achievements": ["tutorial_complete"]
+      },
+      "next": "completion"
+    },
+    "completion": {
+      "id": "completion",
+      "type": "dialogue",
+      "x": 700,
+      "y": 300,
+      "speaker": "Tutorial Guide",
+      "text": "Great job! You've completed the tutorial!",
+      "next": null
+    }
+  },
+  "metadata": {
+    "template": true,
+    "category": "tutorial",
+    "pattern": "linear"
+  }
+}

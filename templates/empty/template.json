@@ -1,0 +1,8 @@
+{
+    "id": "empty",
+    "name": "Empty Project",
+    "author": "Ketebe Game Studio",
+    "description": "A bare-bones directory structure with essential configuration files but no game assets or logic.",
+    "version": "1.0.0",
+    "category": "Basic"
+}

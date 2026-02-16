@@ -1,0 +1,15 @@
+{
+    "components":  [
+                       {
+                           "color":  "#e67e22",
+                           "range":  150,
+                           "type":  "Light"
+                       },
+                       {
+                           "scriptId":  "env_anim",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Campfire",
+    "sprite":  "RF_Catacombs_v1.0/mainlevbuild.png"
+}

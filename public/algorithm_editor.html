@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK ALGORITHM STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f; /* Retro Gold */
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            --grid-line: #1a1a1a;
+            
+            /* Syntax Colors - Bright Pixel Palette */
+            --col-event: #c0392b;
+            --col-flow: #7f8c8d;
+            --col-func: #2980b9;
+            --col-var: #8e44ad;
+            --col-math: #27ae60;
+            
+            /* Ports */
+            --port-exec: #ffffff;
+            --port-bool: #e74c3c;
+            --port-num: #2ecc71;
+            --port-string: #f1c40f;
+            --port-entity: #3498db;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 16px; /* SCALED: 20px → 16px */
+            image-rendering: pixelated;
+        }
+
+        /* --- TOP BAR --- */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 8px;
+            font-size: 0.95rem; border-bottom: 1px solid var(--border);
+            z-index: 6000; position: relative;
+        }
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; cursor: pointer; }
+        .menu-item { padding: 0 12px; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; transition: background 0.1s; font-size: 0.9rem; }
+        .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111; border: 1px solid var(--accent);
+            display: none; flex-direction: column; min-width: 180px; box-shadow: 6px 6px 0 rgba(0,0,0,0.8);
+            z-index: 6100;
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .drop-opt {
+            padding: 8px 12px; cursor: pointer; color: #ccc; font-size: 0.9rem;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222;
+        }
+        .drop-opt:last-child { border-bottom: none; }
+        .drop-opt:hover { background: #222; color: #fff; border-left: 3px solid var(--accent); padding-left: 9px; }
+        .drop-sep { height: 1px; background: #333; margin: 2px 0; }
+        .shortcut { font-size: 0.75rem; color: #666; margin-left: 15px; }
+
+        #toolbar {
+            height: 40px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 8px; gap: 8px;
+        }
+        
+        .toolbar-section {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .toolbar-label {
+            color: #666;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .toolbar-value {
+            color: var(--accent);
+            font-size: 0.95rem;
+            padding: 4px 8px;
+            background: #111;
+            border: 1px solid #333;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .toolbar-value.clickable {
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .toolbar-value.clickable:hover {
+            border-color: var(--accent);
+            background: #1a1a1a;
+        }
+        
+        .toolbar-select {
+            background: #111;
+            border: 1px solid #444;
+            color: var(--accent);
+            padding: 4px 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .toolbar-select:hover {
+            border-color: var(--accent);
+            background: #1a1a1a;
+        }
+        
+        .toolbar-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; transition: transform 0.1s; position: relative;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); transform: translateY(-1px); box-shadow: 0 1px 0 #000; }
+        .tool-btn:active { transform: translateY(0); box-shadow: none; }
+        .tool-btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+        
+        /* Grid toggle button with label */
+        #grid-toggle {
+            width: auto;
+            padding: 0 10px;
+        }
+        
+        .tool-btn-sm {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 24px; height: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 0.8rem; transition: all 0.1s;
+        }
+        .tool-btn-sm:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        
+        .btn-label {
+            font-size: 0.85rem;
+            margin-left: 6px;
+            white-space: nowrap;
+        }
+        
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 4px; }
+        
+        input[type="text"] {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 0.95rem;
+        }
+        input:focus { border-color: var(--accent); }
+
+        /* --- MAIN LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+        
+        /* PHASE 2: TOOL RAIL */
+        #tool-rail {
+            width: 44px;
+            background: #000;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+            gap: 6px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        
+        .rail-btn {
+            width: 36px;
+            height: 36px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            transition: all 0.1s;
+            position: relative;
+        }
+        
+        .rail-btn i {
+            font-size: 1.1rem;
+        }
+        
+        .rail-btn:hover {
+            color: #fff;
+            background: #111;
+            border-color: #333;
+        }
+        
+        .rail-btn.active {
+            color: var(--accent);
+            background: #1a1a1a;
+            border-color: var(--accent);
+        }
+        
+        .rail-sep {
+            width: 26px;
+            height: 1px;
+            background: #333;
+            margin: 3px 0;
+        }
+        
+        /* Tool cursor styles */
+        #canvas-viewport.tool-pointer { cursor: default; }
+        #canvas-viewport.tool-wire { cursor: crosshair; }
+        #canvas-viewport.tool-pan { cursor: grab; }
+        #canvas-viewport.tool-pan:active { cursor: grabbing; }
+        #canvas-viewport.tool-zoom-in { cursor: zoom-in; }
+        #canvas-viewport.tool-zoom-out { cursor: zoom-out; }
+
+        /* PHASE 3: PRESET MENU */
+        .preset-menu {
+            position: absolute;
+            left: 50px;
+            bottom: 20px;
+            width: 240px;
+            background: #000;
+            border: 1px solid var(--accent);
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+            z-index: 5000;
+        }
+        
+        .preset-menu-header {
+            padding: 8px 12px;
+            background: var(--accent);
+            color: #000;
+            font-weight: bold;
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .preset-menu-content {
+            padding: 6px;
+        }
+        
+        .preset-item {
+            width: 100%;
+            background: transparent;
+            border: 1px solid #333;
+            color: #ccc;
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+            transition: all 0.1s;
+        }
+        
+        .preset-item i {
+            width: 16px;
+            text-align: center;
+            color: var(--accent);
+        }
+        
+        .preset-item span:first-of-type {
+            flex-grow: 1;
+            text-align: left;
+        }
+        
+        .preset-shortcut {
+            color: #666;
+            font-size: 0.85rem;
+        }
+        
+        .preset-item:hover {
+            background: #222;
+            border-color: var(--accent);
+            color: #fff;
+            transform: translateX(2px);
+        }
+        
+        .preset-sep {
+            height: 1px;
+            background: #333;
+            margin: 6px 0;
+        }
+
+        /* PANELS */
+        .panel { 
+            display: flex; 
+            flex-direction: column; 
+            background: var(--bg-panel); 
+            border-right: 1px solid var(--border);
+            overflow: hidden; /* PHASE 1: Clip content during transitions */
+        }
+        .panel-header {
+            height: 30px; background: #000; display: flex; align-items: center; padding: 0 8px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); text-transform: uppercase;
+            font-size: 0.95rem; justify-content: space-between; letter-spacing: 0.5px;
+            flex-shrink: 0; /* PHASE 1: Prevent header from shrinking */
+        }
+        .panel-content { 
+            flex-grow: 1; 
+            overflow: auto; 
+            padding: 0; 
+            position: relative;
+            min-width: 0; /* PHASE 1: Allow content to shrink properly */
+            opacity: 1;
+            transition: opacity 0.15s ease; /* PHASE 1: Fade content */
+        }
+        
+        .lib-search {
+            opacity: 1;
+            transition: opacity 0.15s ease; /* PHASE 1: Fade search */
+        }
+
+        /* LEFT PANEL (Library) */
+        #left-panel { width: 280px; min-width: 220px; }
+        
+        .lib-search { padding: 8px; border-bottom: 1px solid var(--border); }
+        .lib-search input { width: 100%; }
+
+        .lib-item {
+            padding: 6px 12px; cursor: grab; display: flex; align-items: center; gap: 8px;
+            border-bottom: 1px solid #222; color: #aaa; font-size: 0.95rem;
+        }
+        .lib-item:hover { background: #222; color: #fff; border-left: 3px solid var(--accent); }
+        .lib-icon { width: 10px; height: 10px; border: 1px solid #000; }
+
+        /* CENTER (Canvas) */
+        #center-panel { flex-grow: 1; position: relative; display: flex; flex-direction: column; }
+        
+        #canvas-viewport {
+            flex-grow: 1; background-color: var(--bg-canvas); position: relative; overflow: hidden;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.05) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 2px, transparent 2px);
+            background-size: 40px 40px;
+        }
+        #graph-layer { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        
+        /* Bottom Console */
+        #bottom-panel {
+            height: 160px; background: #050505; border-top: 2px solid var(--border);
+            display: flex; flex-direction: column;
+        }
+        #console-log {
+            flex-grow: 1; padding: 8px; font-family: 'VT323', monospace; font-size: 0.95rem; color: #aaa; overflow-y: auto;
+        }
+        .log-msg { border-bottom: 1px solid #222; padding: 1px 0; font-size: 0.9rem; }
+        .log-info { color: #aaa; }
+        .log-warn { color: var(--accent); }
+        .log-err { color: #e74c3c; }
+
+        /* RIGHT PANEL (Inspector) */
+        #right-panel { width: 300px; min-width: 220px; border-left: 1px solid var(--border); border-right: none; }
+        
+        /* PHASE 1: COLLAPSIBLE PANEL SYSTEM */
+        .panel {
+            transition: width 0.25s ease, height 0.25s ease;
+            position: relative;
+        }
+        
+        /* Left Panel Collapsed State */
+        .panel.collapsed {
+            width: 40px !important;
+            min-width: 40px !important;
+            max-width: 40px !important;
+        }
+        
+        .panel.collapsed .panel-content {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            visibility: hidden;
+        }
+        
+        .panel.collapsed .lib-search {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            visibility: hidden;
+        }
+        
+        .panel.collapsed .panel-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            justify-content: center;
+            padding: 10px 0;
+            letter-spacing: 2px;
+            height: 100%;
+            border-bottom: none;
+        }
+        
+        .panel.collapsed .panel-header span {
+            white-space: nowrap;
+        }
+        
+        .panel.collapsed .panel-header .collapse-btn {
+            writing-mode: horizontal-tb;
+            transform: rotate(180deg);
+            margin-top: auto;
+        }
+        
+        /* Bottom Panel States */
+        #bottom-panel.hidden {
+            height: 0px !important;
+            border-top: none;
+            overflow: hidden;
+        }
+        
+        #bottom-panel.minimized {
+            height: 30px !important;
+        }
+        
+        #bottom-panel.minimized #console-log {
+            display: none;
+        }
+        
+        #bottom-panel.expanded {
+            height: 160px;
+        }
+        
+        /* Collapse Button */
+        .collapse-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #666;
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            transition: all 0.1s;
+            border-radius: 2px;
+        }
+        
+        .collapse-btn:hover {
+            background: #222;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* Console Badge (error/warning count when minimized) */
+        .console-badge {
+            margin-left: 8px;
+            padding: 1px 6px;
+            background: #e74c3c;
+            color: #fff;
+            font-size: 0.75rem;
+            border-radius: 2px;
+        }
+        
+        .console-badge.warnings {
+            background: var(--accent);
+            color: #000;
+        }
+        
+        .prop-group { border-bottom: 1px solid #222; padding: 12px; }
+        .prop-label { color: #888; font-size: 0.85rem; margin-bottom: 4px; text-transform: uppercase; }
+        .prop-input { width: 100%; font-size: 0.95rem; }
+        
+        button.btn {
+            background: #222; border: 1px solid #444; color: #ccc; padding: 6px;
+            width: 100%; cursor: pointer; font-family: inherit; font-size: 1rem;
+            text-transform: uppercase; margin-top: 8px;
+        }
+        button.btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* STATUS BAR */
+        #statusbar {
+            height: 24px; background: var(--border); color: #888; display: flex; align-items: center;
+            padding: 0 10px; font-size: 0.9rem; gap: 10px; border-top: 1px solid #000;
+        }
+        
+        .status-sep {
+            color: #444;
+        }
+        
+        #status-validation {
+            color: #2ecc71;
+        }
+        
+        #status-validation.has-errors {
+            color: #e74c3c;
+        }
+        
+        #status-validation.has-warnings {
+            color: var(--accent);
+        }
+
+        /* --- GRAPH NODES --- */
+        svg { position: absolute; top: 0; left: 0; overflow: visible; pointer-events: none; }
+        path.wire { fill: none; stroke: #666; stroke-width: 3px; stroke-linecap: round; pointer-events: visibleStroke; cursor: pointer; transition: stroke 0.2s; }
+        path.wire:hover { stroke: #fff; stroke-width: 5px; }
+        path.wire.exec { stroke: var(--port-exec); stroke-width: 4px; }
+        path.wire.bool { stroke: var(--port-bool); }
+        path.wire.num { stroke: var(--port-num); }
+        path.wire.string { stroke: var(--port-string); }
+        path.wire.entity { stroke: var(--port-entity); }
+        
+        .node {
+            position: absolute; width: 200px; background: #1a1a1a;
+            border: 1px solid #000; box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; border-radius: 3px;
+            transition: box-shadow 0.1s, transform 0.1s;
+        }
+        .node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 6px 6px 0 rgba(0,0,0,0.7); z-index: 100; }
+        .node:hover { box-shadow: 6px 6px 0 rgba(0,0,0,0.7); transform: translateY(-1px); }
+        
+        /* PHASE 7: Reroute Node Style */
+        .node.reroute-node {
+            background: #fff;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            z-index: 50;
+            overflow: visible;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .node.reroute-node:hover { transform: scale(1.5); }
+        
+        /* PHASE 7: Comment Box Style */
+        .node.comment-node {
+            border: 2px solid #3498db;
+            border-radius: 4px;
+            box-shadow: none;
+            overflow: visible;
+        }
+        .comment-header {
+            padding: 4px 8px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: grab;
+            border-radius: 2px 2px 0 0;
+            user-select: none;
+        }
+        .comment-resizer {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 16px;
+            height: 16px;
+            cursor: nwse-resize;
+            background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.3) 50%);
+        }
+        
+        /* PHASE 5: Live Debug Pulse */
+        .node.executing {
+            border-color: #fff !important;
+            box-shadow: 0 0 15px #fff, 6px 6px 0 rgba(0,0,0,0.7) !important;
+            transform: scale(1.05);
+            z-index: 5000;
+        }
+        
+        .node-header {
+            padding: 5px 8px; color: #fff; font-weight: bold; font-size: 0.9rem;
+            background: #444; display: flex; align-items: center; cursor: grab;
+            border-bottom: 1px solid #000; border-radius: 2px 2px 0 0;
+            justify-content: space-between;
+        }
+        .node-info-icon { opacity: 0.5; font-size: 0.75em; cursor: help; }
+        .node-info-icon:hover { opacity: 1; color: var(--accent); }
+
+        /* Specific Colors */
+        .node[data-cat="Event"] .node-header { background: linear-gradient(90deg, #c0392b, #8e2116); }
+        .node[data-cat="Flow"] .node-header { background: linear-gradient(90deg, #7f8c8d, #555); }
+        .node[data-cat="Math"] .node-header { background: linear-gradient(90deg, #27ae60, #1e8449); }
+        .node[data-cat="Engine"] .node-header { background: linear-gradient(90deg, #2980b9, #1c5980); }
+        .node[data-cat="Var"] .node-header { background: linear-gradient(90deg, #8e44ad, #6c3483); }
+        .node[data-cat="Entity"] .node-header { background: linear-gradient(90deg, #9b59b6, #7d3c98); }
+        .node[data-cat="Player"] .node-header { background: linear-gradient(90deg, #e67e22, #d35400); }
+        .node[data-cat="Inventory"] .node-header { background: linear-gradient(90deg, #16a085, #1abc9c); }
+        .node[data-cat="GameState"] .node-header { background: linear-gradient(90deg, #f39c12, #e67e22); }
+        .node[data-cat="World"] .node-header { background: linear-gradient(90deg, #34495e, #2c3e50); }
+        .node[data-cat="Camera"] .node-header { background: linear-gradient(90deg, #3498db, #2980b9); }
+        .node[data-cat="FX"] .node-header { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .node[data-cat="Audio"] .node-header { background: linear-gradient(90deg, #9b59b6, #8e44ad); }
+        .node[data-cat="Dialogue"] .node-header { background: linear-gradient(90deg, #1abc9c, #16a085); }
+        .node[data-cat="Time"] .node-header { background: linear-gradient(90deg, #95a5a6, #7f8c8d); }
+
+        .node-body { padding: 6px 0; background: #151515; border-radius: 0 0 3px 3px; }
+        
+        .port-row { display: flex; justify-content: space-between; align-items: center; min-height: 20px; padding: 2px 0; position: relative; }
+        .port-label { font-size: 0.85rem; color: #bbb; pointer-events: none; padding: 0 8px; }
+        
+        .port-container {
+            position: relative; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+        }
+        
+        .port-dot { 
+            width: 10px; height: 10px; background: #555; border: 1px solid #000; 
+            cursor: crosshair; transition: transform 0.1s; z-index: 10;
+        }
+        .port-dot:hover { background: #fff; transform: scale(1.4); border-color: var(--accent); }
+        
+        /* Port Types - Distinct Shapes/Colors */
+        .port-dot.exec { width: 12px; height: 12px; background: var(--port-exec); border-radius: 3px; clip-path: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%); }
+        .port-dot.num { background: var(--port-num); border-radius: 50%; }
+        .port-dot.bool { background: var(--port-bool); border-radius: 2px; }
+        .port-dot.string { background: var(--port-string); border-radius: 0; }
+        .port-dot.entity { background: var(--port-entity); border-radius: 3px; border: 1px double #fff; }
+
+        /* Tooltip */
+        .node-tooltip {
+            position: absolute; background: #222; border: 1px solid var(--accent); color: #fff;
+            padding: 4px 6px; font-size: 0.75rem; z-index: 5000; pointer-events: none;
+            display: none; box-shadow: 3px 3px 0 rgba(0,0,0,0.5); max-width: 220px;
+        }
+
+        /* MINIMAP */
+        #minimap {
+            position: absolute; bottom: 16px; right: 16px; width: 180px; height: 135px;
+            background: #000; border: 2px solid var(--accent); pointer-events: none;
+            opacity: 0.8;
+        }
+
+        /* CONTEXT MENU */
+        #context-menu {
+            position: fixed; background: #111; border: 1px solid var(--accent);
+            display: none; flex-direction: column; z-index: 2000; min-width: 140px;
+            box-shadow: 4px 4px 0 #000;
+        }
+        .menu-opt {
+            padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #222;
+            font-size: 0.9rem; color: #ccc;
+        }
+        .menu-opt:hover { background: var(--accent); color: #000; }
+        
+        /* PHASE 6: QUICK SEARCH OVERLAY */
+        #quick-search-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 100px;
+            backdrop-filter: blur(2px);
+        }
+        
+        #quick-search-modal {
+            width: 600px;
+            max-height: 500px;
+            background: #000;
+            border: 2px solid var(--accent);
+            box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .search-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .search-header i.fa-search {
+            color: var(--accent);
+            font-size: 1.2rem;
+        }
+        
+        #search-input {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px 12px;
+            font-family: 'VT323', monospace;
+            font-size: 1.1rem;
+            outline: none;
+        }
+        
+        #search-input:focus {
+            border-color: var(--accent);
+        }
+        
+        .close-search {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 1.3rem;
+            padding: 4px 8px;
+            transition: color 0.1s;
+        }
+        
+        .close-search:hover {
+            color: var(--accent);
+        }
+        
+        .search-filters {
+            display: flex;
+            gap: 6px;
+            padding: 10px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 4px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: #888;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 0.95rem;
+            transition: all 0.1s;
+        }
+        
+        .filter-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-main);
+        }
+        
+        .filter-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            font-weight: bold;
+        }
+        
+        .search-results {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 350px;
+        }
+        
+        .search-section {
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .search-section-header {
+            padding: 8px 12px;
+            background: var(--bg-header);
+            color: #888;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .search-section-header i {
+            font-size: 0.9rem;
+        }
+        
+        .search-item {
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #111;
+            transition: all 0.1s;
+        }
+        
+        .search-item:hover {
+            background: #111;
+        }
+        
+        .search-item.selected {
+            background: var(--accent);
+            color: #000;
+        }
+        
+        .search-item.selected .search-item-name,
+        .search-item.selected .search-item-desc {
+            color: #000;
+        }
+        
+        .search-item-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            flex-shrink: 0;
+        }
+        
+        .search-item.selected .search-item-icon {
+            border-color: #000;
+            background: #000;
+            color: var(--accent);
+        }
+        
+        .search-item-icon i {
+            font-size: 1rem;
+        }
+        
+        .search-item-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .search-item-name {
+            font-size: 1rem;
+            color: var(--text-main);
+        }
+        
+        .search-item-name .match {
+            color: var(--accent);
+            font-weight: bold;
+        }
+        
+        .search-item.selected .search-item-name .match {
+            color: #000;
+            text-decoration: underline;
+        }
+        
+        .search-item-desc {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .search-item-category {
+            padding: 2px 8px;
+            background: var(--bg-header);
+            border: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: #888;
+            white-space: nowrap;
+        }
+        
+        .search-item.selected .search-item-category {
+            background: #000;
+            border-color: #000;
+            color: var(--accent);
+        }
+        
+        .search-footer {
+            padding: 10px 12px;
+            background: var(--bg-header);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .search-footer i {
+            color: var(--accent);
+            margin: 0 3px;
+        }
+        
+        .search-empty {
+            padding: 40px;
+            text-align: center;
+            color: #666;
+        }
+        
+        .search-empty i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+        
+        /* PHASE 7: POLISH & ANIMATIONS */
+        
+        /* Smooth button animations */
+        .tool-btn, .rail-btn, .filter-btn, .preset-item {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .tool-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(241, 196, 15, 0.3);
+        }
+        
+        .tool-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+            transition: all 0.05s;
+        }
+        
+        /* Menu animations */
+        .dropdown {
+            animation: slideDown 0.2s ease-out;
+            transform-origin: top;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .preset-menu {
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Node spawn animation */
+        @keyframes nodeSpawn {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(-10px);
+            }
+            60% {
+                transform: scale(1.05);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .node {
+            animation: nodeSpawn 0.3s ease-out;
+        }
+        
+        /* Node hover pulse */
+        .node:hover {
+            animation: nodePulse 0.3s ease-in-out;
+        }
+        
+        @keyframes nodePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        /* Wire connection animation */
+        @keyframes wireDraw {
+            from {
+                stroke-dashoffset: 1000;
+            }
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        
+        /* Search overlay animation */
+        #quick-search-overlay {
+            animation: overlayFadeIn 0.2s ease-out;
+        }
+        
+        @keyframes overlayFadeIn {
+            from {
+                opacity: 0;
+                backdrop-filter: blur(0);
+            }
+            to {
+                opacity: 1;
+                backdrop-filter: blur(2px);
+            }
+        }
+        
+        #quick-search-modal {
+            animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        /* Enhanced tooltips */
+        .tooltip {
+            position: absolute;
+            background: #000;
+            color: var(--text-main);
+            padding: 8px 12px;
+            border: 1px solid var(--accent);
+            border-radius: 2px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 10000;
+            white-space: nowrap;
+            box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        
+        .tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .tooltip .shortcut-hint {
+            display: block;
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid #333;
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #333;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Save indicator */
+        .save-indicator {
+            position: fixed;
+            top: 40px;
+            right: 20px;
+            background: var(--accent);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 2px;
+            font-weight: bold;
+            box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+            z-index: 9000;
+            animation: slideInRight 0.3s ease-out, slideOutRight 0.3s ease-in 2s forwards;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
+        
+        /* Empty canvas welcome message */
+        .welcome-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            opacity: 0.4;
+            transition: opacity 0.3s;
+        }
+        
+        .welcome-overlay.hidden {
+            opacity: 0;
+        }
+        
+        .welcome-overlay i {
+            font-size: 4rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .welcome-overlay h2 {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin: 0 0 10px 0;
+        }
+        
+        .welcome-overlay p {
+            font-size: 1rem;
+            color: #666;
+            margin: 5px 0;
+        }
+        
+        /* Port hover effects */
+        .port {
+            transition: all 0.15s ease;
+        }
+        
+        .port:hover {
+            transform: scale(1.3);
+            filter: brightness(1.5);
+        }
+        
+        /* Status bar pulse for errors */
+        .status-error {
+            animation: statusPulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Smooth scrollbars (already have pixel_scrollbars.css but adding extra polish) */
+        .panel-content::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+        
+        /* Focus ring for accessibility */
+        *:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        
+        button:focus-visible,
+        input:focus-visible {
+            outline: 1px solid var(--accent);
+            outline-offset: 1px;
+        }
+        
+        /* PHASE B: TEST PANEL */
+        #test-panel-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 44px;
+            right: 0;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.95);
+            border-top: 2px solid var(--accent);
+            z-index: 4000;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+        
+        .test-panel-header {
+            height: 36px;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+            font-weight: bold;
+            color: var(--accent);
+        }
+        
+        .close-test {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: color 0.15s;
+        }
+        
+        .close-test:hover {
+            color: var(--accent);
+        }
+        
+        .test-panel-controls {
+            padding: 10px 15px;
+            background: #111;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-panel-controls label {
+            color: #888;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .test-event-btn {
+            padding: 6px 12px;
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .test-event-btn:hover {
+            background: #333;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .test-event-btn:active {
+            background: var(--accent);
+            color: #000;
+        }
+        
+        .test-event-btn i {
+            margin-right: 5px;
+        }
+        
+        .test-panel-console {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #ccc;
+            background: #0a0a0a;
+        }
+        
+        .test-console-log {
+            padding: 4px 0;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        
+        .test-console-error {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            padding: 6px;
+            margin: 4px 0;
+            border-left: 3px solid #ff4444;
+        }
+        
+        .test-console-warn {
+            color: #ffa500;
+            background: rgba(255, 165, 0, 0.1);
+            padding: 6px;
+            margin: 4px 0;
+            border-left: 3px solid #ffa500;
+        }
+        
+        .test-console-success {
+            color: #4caf50;
+            padding: 4px 0;
+        }
+        
+        .test-console-timestamp {
+            color: #666;
+            font-size: 0.75rem;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="context-menu"></div>
+
+    <div id="menubar">
+        <div style="color:var(--accent); font-weight:bold; padding:0 15px; border-right:2px solid var(--border); margin-right:10px; font-size:1.3rem; letter-spacing:2px; display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-microchip"></i> ONGONLUK DATA-DRIVEN IDE
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.createNew()">New <span class="shortcut">Ctrl+N</span></div>
+                <div class="drop-opt" onclick="studio.showLoadDialog()">Open <span class="shortcut">Ctrl+O</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.save()">Save <span class="shortcut">Ctrl+S</span></div>
+                <div class="drop-opt" onclick="studio.exportJS()">Export JS</div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="window.close()">Exit</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.undo()">Undo <span class="shortcut">Ctrl+Z</span></div>
+                <div class="drop-opt" onclick="studio.redo()">Redo <span class="shortcut">Ctrl+Y</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.deleteSelected()">Delete <span class="shortcut">Del</span></div>
+                <div class="drop-opt" onclick="studio.clearGraph()">Clear All</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.togglePanel('left')">Toggle Left Panel <span class="shortcut">Ctrl+1</span></div>
+                <div class="drop-opt" onclick="studio.togglePanel('right')">Toggle Right Panel <span class="shortcut">Ctrl+2</span></div>
+                <div class="drop-opt" onclick="studio.cycleConsoleState()">Toggle Console <span class="shortcut">Ctrl+3</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.resetView()">Reset View <span class="shortcut">0</span></div>
+                <div class="drop-opt" onclick="studio.toggleGrid()">Toggle Grid <span class="shortcut">G</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="studio.zoomIn()">Zoom In <span class="shortcut">+</span></div>
+                <div class="drop-opt" onclick="studio.zoomOut()">Zoom Out <span class="shortcut">-</span></div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Debug</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.testRun()">Run Test <span class="shortcut">F5</span></div>
+                <div class="drop-opt" onclick="studio.compile()">Show Compiled Code</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Help</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="studio.showDocs()">Documentation</div>
+                <div class="drop-opt" onclick="studio.showAbout()">About</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toolbar">
+        <!-- Script Section -->
+        <div class="toolbar-section">
+            <label class="toolbar-label">SCRIPT:</label>
+            <input type="text" id="script-name" value="main_logic" style="width: 180px;">
+            <button class="tool-btn" title="Save (Ctrl+S)" onclick="studio.save()"><i class="fas fa-save"></i></button>
+            <button class="tool-btn" title="Open (Ctrl+O)" onclick="studio.showLoadDialog()"><i class="fas fa-folder-open"></i></button>
+            <button class="tool-btn" title="Test Script (F5)" onclick="studio.testScript()" style="background: var(--accent); color: #000;"><i class="fas fa-play"></i> Test</button>
+        </div>
+        
+        <div class="tool-sep"></div>
+        
+        <!-- Layout Section -->
+        <div class="toolbar-section">
+            <label class="toolbar-label">LAYOUT:</label>
+            <span id="preset-indicator" class="toolbar-value" title="Current Preset">Default</span>
+        </div>
+        
+        <div class="tool-sep"></div>
+        
+        <!-- View Controls -->
+        <div class="toolbar-section">
+            <label class="toolbar-label">ZOOM:</label>
+            <button class="tool-btn-sm" title="Zoom Out" onclick="studio.zoomOut()"><i class="fas fa-minus"></i></button>
+            <span id="zoom-indicator" class="toolbar-value clickable" onclick="studio.showZoomPresets()" title="Click for zoom presets">100%</span>
+            <button class="tool-btn-sm" title="Zoom In" onclick="studio.zoomIn()"><i class="fas fa-plus"></i></button>
+        </div>
+        
+        <div class="tool-sep"></div>
+        
+        <!-- Grid Controls -->
+        <div class="toolbar-section">
+            <button class="tool-btn" id="grid-toggle" title="Toggle Grid" onclick="studio.toggleGrid()">
+                <i class="fas fa-th"></i>
+                <span class="btn-label">GRID: <span id="grid-state">ON</span></span>
+            </button>
+            <select id="grid-size" class="toolbar-select" title="Grid Size" onchange="studio.changeGridSize(this.value)">
+                <option value="8">8px</option>
+                <option value="16">16px</option>
+                <option value="32" selected>32px</option>
+                <option value="64">64px</option>
+            </select>
+        </div>
+        
+        <div style="flex-grow: 1;"></div>
+        
+        <!-- Actions -->
+        <div class="toolbar-section">
+            <button class="tool-btn" title="Toggle Minimap" onclick="studio.toggleMinimap()"><i class="fas fa-map"></i></button>
+            <button class="tool-btn" title="Focus Start Node" onclick="studio.focusStart()"><i class="fas fa-crosshairs"></i></button>
+            <button class="tool-btn" id="btn-view-toggle" title="Toggle Code View" onclick="studio.toggleViewMode()">
+                <i class="fas fa-code"></i>
+            </button>
+            <button class="tool-btn primary" title="Test Run (F5)" onclick="studio.testRun()"><i class="fas fa-play"></i></button>
+        </div>
+    </div>
+
+    <div id="layout">
+        
+        <!-- PHASE 2: TOOL RAIL -->
+        <div id="tool-rail">
+            <button class="rail-btn active" data-tool="pointer" onclick="studio.setTool('pointer')" title="Pointer Tool (V)">
+                <i class="fas fa-mouse-pointer"></i>
+            </button>
+            <button class="rail-btn" data-tool="wire" onclick="studio.setTool('wire')" title="Wire Tool (W)">
+                <i class="fas fa-bezier-curve"></i>
+            </button>
+            <button class="rail-btn" data-tool="pan" onclick="studio.setTool('pan')" title="Pan Tool (H)">
+                <i class="fas fa-hand-paper"></i>
+            </button>
+            <button class="rail-btn" data-tool="zoom-in" onclick="studio.setTool('zoom-in')" title="Zoom In (Z)">
+                <i class="fas fa-search-plus"></i>
+            </button>
+            <button class="rail-btn" data-tool="zoom-out" onclick="studio.setTool('zoom-out')" title="Zoom Out (X)">
+                <i class="fas fa-search-minus"></i>
+            </button>
+            
+            <div class="rail-sep"></div>
+            
+            <button class="rail-btn" data-tool="add-node" onclick="studio.showQuickAdd()" title="Add Node (Shift+A)">
+                <i class="fas fa-plus-circle"></i>
+            </button>
+            <button class="rail-btn" data-tool="comment" onclick="studio.setTool('comment')" title="Comment Box (C)">
+                <i class="fas fa-comment"></i>
+            </button>
+            
+            <div class="rail-sep"></div>
+            
+            <button class="rail-btn" data-tool="play" onclick="studio.testRun()" title="Play (F5)">
+                <i class="fas fa-play"></i>
+            </button>
+            <button class="rail-btn" data-tool="debug" onclick="studio.toggleDebugMode()" title="Debug Mode (F9)">
+                <i class="fas fa-bug"></i>
+            </button>
+            
+            <div class="rail-sep" style="margin-top: auto;"></div>
+            
+            <button class="rail-btn" data-tool="settings" onclick="studio.showPresetMenu()" title="Layout Presets (F1-F4, F11)">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+        
+        <!-- PRESET MENU DROPDOWN -->
+        <div id="preset-menu" class="preset-menu" style="display: none;">
+            <div class="preset-menu-header">
+                <i class="fas fa-th"></i> LAYOUT PRESETS
+            </div>
+            <div class="preset-menu-content">
+                <button class="preset-item" onclick="studio.applyPreset('default'); studio.showPresetMenu();">
+                    <i class="fas fa-th"></i>
+                    <span>Default</span>
+                    <span class="preset-shortcut">F1</span>
+                </button>
+                <button class="preset-item" onclick="studio.applyPreset('fullCanvas'); studio.showPresetMenu();">
+                    <i class="fas fa-expand"></i>
+                    <span>Full Canvas</span>
+                    <span class="preset-shortcut">F2</span>
+                </button>
+                <button class="preset-item" onclick="studio.applyPreset('debug'); studio.showPresetMenu();">
+                    <i class="fas fa-bug"></i>
+                    <span>Debug Mode</span>
+                    <span class="preset-shortcut">F3</span>
+                </button>
+                <button class="preset-item" onclick="studio.applyPreset('library'); studio.showPresetMenu();">
+                    <i class="fas fa-books"></i>
+                    <span>Library Focus</span>
+                    <span class="preset-shortcut">F4</span>
+                </button>
+                <button class="preset-item" onclick="studio.applyPreset('code'); studio.showPresetMenu();">
+                    <i class="fas fa-code"></i>
+                    <span>Code View</span>
+                    <span class="preset-shortcut">F11</span>
+                </button>
+                <div class="preset-sep"></div>
+                <button class="preset-item" onclick="studio.showSavePresetDialog();">
+                    <i class="fas fa-save"></i>
+                    <span>Save Current Layout...</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- ZOOM PRESET MENU -->
+        <div id="zoom-menu" class="preset-menu" style="display: none; bottom: auto; top: 42px; left: auto; right: 400px;">
+            <div class="preset-menu-header">
+                <i class="fas fa-search"></i> ZOOM PRESETS
+            </div>
+            <div class="preset-menu-content">
+                <button class="preset-item" onclick="studio.setZoom(0.25); studio.showZoomPresets();">
+                    <span>25%</span>
+                </button>
+                <button class="preset-item" onclick="studio.setZoom(0.5); studio.showZoomPresets();">
+                    <span>50%</span>
+                </button>
+                <button class="preset-item" onclick="studio.setZoom(0.75); studio.showZoomPresets();">
+                    <span>75%</span>
+                </button>
+                <button class="preset-item" onclick="studio.setZoom(1.0); studio.showZoomPresets();">
+                    <span>100%</span>
+                </button>
+                <button class="preset-item" onclick="studio.setZoom(1.25); studio.showZoomPresets();">
+                    <span>125%</span>
+                </button>
+                <button class="preset-item" onclick="studio.setZoom(1.5); studio.showZoomPresets();">
+                    <span>150%</span>
+                </button>
+                <button class="preset-item" onclick="studio.setZoom(2.0); studio.showZoomPresets();">
+                    <span>200%</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- LEFT: LIBRARY -->
+        <div id="left-panel" class="panel">
+            
+            <!-- SCRIPTS EXPLORER -->
+            <div class="panel-header">
+                <span>SCRIPTS EXPLORER <i class="fas fa-folder"></i></span>
+                <button class="collapse-btn" onclick="studio.togglePanel('left')" title="Collapse Panel (Ctrl+1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            <div class="lib-search">
+                <input type="text" placeholder="FILTER SCRIPTS..." oninput="studio.filterScripts(this.value)">
+            </div>
+            <div class="panel-content" id="script-list" style="height: 200px; min-height: 150px; border-bottom: 4px solid var(--border);">
+                <!-- Scripts injected here -->
+            </div>
+
+            <!-- NODE LIBRARY -->
+            <div class="panel-header">NODE LIBRARY <i class="fas fa-book"></i></div>
+            <div class="lib-search">
+                <input type="text" placeholder="SEARCH NODES..." oninput="studio.filterLib(this.value)">
+            </div>
+            <div class="panel-content" id="lib-content">
+                <!-- Injected via JS -->
+            </div>
+            
+            <div class="panel-header" style="border-top:2px solid var(--border); margin-top:10px;">INSTANCE VARS <i class="fas fa-database"></i></div>
+            <div class="panel-content" id="var-content" style="height:150px; min-height:100px;">
+                <button class="btn" style="width:90%; margin:5px 5%;" onclick="studio.addVariable()">+ NEW VARIABLE</button>
+                <div id="var-list"></div>
+            </div>
+        </div>
+
+        <!-- CENTER: GRAPH / CODE -->
+        <div id="center-panel">
+            <!-- GRAPH VIEW -->
+            <div id="canvas-viewport">
+                <div id="graph-layer">
+                    <svg id="wire-layer"></svg>
+                    <div id="node-layer"></div>
+                </div>
+                <div id="minimap"></div>
+            </div>
+
+            <!-- CODE VIEW (Hidden by default) -->
+            <div id="code-viewport" style="display:none; flex-grow:1; background:#1e1e1e; position:relative; overflow:hidden;">
+                <textarea id="code-editor" spellcheck="false" style="
+                    width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; 
+                    border: none; resize: none; padding: 20px; font-family: 'Consolas', 'Monaco', monospace; 
+                    font-size: 14px; line-height: 1.5; outline: none;"></textarea>
+                <div style="position:absolute; bottom:10px; right:20px; color:#666; font-size:12px; pointer-events:none;">
+                    JS / ES6 MODULE
+                </div>
+            </div>
+            
+            <div id="bottom-panel">
+                <div class="panel-header">
+                    <span>
+                        CONSOLE OUTPUT
+                        <span id="console-badge" class="console-badge" style="display:none;">0</span>
+                    </span>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="collapse-btn" onclick="studio.cycleConsoleState()" title="Toggle Console (Ctrl+3)">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <button class="tool-btn" style="height:24px; width:24px; font-size:1rem;" onclick="document.getElementById('console-log').innerHTML=''; studio.updateConsoleBadge()">×</button>
+                    </div>
+                </div>
+                <div id="console-log"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT: INSPECTOR -->
+        <div id="right-panel" class="panel">
+            <div class="panel-header">
+                <span>DETAILS <i class="fas fa-info-circle"></i></span>
+                <button class="collapse-btn" onclick="studio.togglePanel('right')" title="Collapse Panel (Ctrl+2)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="panel-content" id="inspector-content">
+                <div style="padding:20px; text-align:center; color:#555;">[NO SELECTION]</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="statusbar">
+        <span id="status-tool"><i class="fas fa-mouse-pointer"></i> Pointer</span>
+        <span class="status-sep">|</span>
+        <span id="status-nodes">0 nodes</span>
+        <span class="status-sep">|</span>
+        <span id="status-wires">0 wires</span>
+        <span class="status-sep">|</span>
+        <span id="status-validation">✓ No errors</span>
+        <span style="flex-grow: 1;"></span>
+        <span id="status-transform">X: 0, Y: 0, Zoom: 100%</span>
+    </div>
+
+    <!-- LOAD DIALOG -->
+    <div id="file-browser" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:5000; display:none; align-items:center; justify-content:center;">
+        <div style="width:500px; height:400px; background:#111; border:3px solid var(--accent); display:flex; flex-direction:column;">
+            <div class="panel-header">
+                <span>SELECT SCRIPT</span>
+                <button class="tool-btn" style="height:24px; width:24px;" onclick="studio.hideLoadDialog()">×</button>
+            </div>
+            <div class="panel-content" id="modal-file-list" style="padding:10px;">
+                <!-- Files -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE 6: QUICK SEARCH OVERLAY -->
+    <div id="quick-search-overlay" style="display: none;">
+        <div id="quick-search-modal">
+            <div class="search-header">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Search nodes... (type to filter)" autocomplete="off">
+                <button class="close-search" onclick="studio.closeQuickSearch()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="search-filters" style="flex-wrap: wrap; gap: 5px;">
+                <button class="filter-btn active" data-category="all" onclick="studio.filterByCategory('all')">All</button>
+                <button class="filter-btn" data-category="Event" onclick="studio.filterByCategory('Event')">Event</button>
+                <button class="filter-btn" data-category="Flow" onclick="studio.filterByCategory('Flow')">Flow</button>
+                <button class="filter-btn" data-category="Var" onclick="studio.filterByCategory('Var')">Var</button>
+                <button class="filter-btn" data-category="Math" onclick="studio.filterByCategory('Math')">Math</button>
+                <button class="filter-btn" data-category="Logic" onclick="studio.filterByCategory('Logic')">Logic</button>
+                <button class="filter-btn" data-category="Entity" onclick="studio.filterByCategory('Entity')">Entity</button>
+                <button class="filter-btn" data-category="Player" onclick="studio.filterByCategory('Player')">Player</button>
+                <button class="filter-btn" data-category="Inventory" onclick="studio.filterByCategory('Inventory')">Inventory</button>
+                <button class="filter-btn" data-category="GameState" onclick="studio.filterByCategory('GameState')">GameState</button>
+                <button class="filter-btn" data-category="World" onclick="studio.filterByCategory('World')">World</button>
+                <button class="filter-btn" data-category="Camera" onclick="studio.filterByCategory('Camera')">Camera</button>
+                <button class="filter-btn" data-category="FX" onclick="studio.filterByCategory('FX')">FX</button>
+                <button class="filter-btn" data-category="Audio" onclick="studio.filterByCategory('Audio')">Audio</button>
+                <button class="filter-btn" data-category="Dialogue" onclick="studio.filterByCategory('Dialogue')">Dialogue</button>
+                <button class="filter-btn" data-category="Time" onclick="studio.filterByCategory('Time')">Time</button>
+                <button class="filter-btn" data-category="Engine" onclick="studio.filterByCategory('Engine')">Engine</button>
+            </div>
+            
+            <div id="search-results" class="search-results">
+                <!-- Results populated by JS -->
+            </div>
+            
+            <div class="search-footer">
+                <span><i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i> Navigate</span>
+                <span><i class="fas fa-level-down-alt"></i> Select</span>
+                <span>ESC Close</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE B: TEST PANEL -->
+    <div id="test-panel-overlay" style="display: none;">
+        <div id="test-panel-modal">
+            <div class="test-panel-header">
+                <i class="fas fa-flask"></i>
+                <span>SCRIPT TESTING</span>
+                <button class="close-test" onclick="studio.closeTestPanel()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="test-panel-controls">
+                <label>Event:</label>
+                <button class="test-event-btn" onclick="studio.triggerTestEvent('start')">
+                    <i class="fas fa-bolt"></i> Start
+                </button>
+                <button class="test-event-btn" onclick="studio.triggerTestEvent('update')">
+                    <i class="fas fa-sync"></i> Update
+                </button>
+                <button class="test-event-btn" onclick="studio.triggerTestEvent('interact')">
+                    <i class="fas fa-hand-pointer"></i> Interact
+                </button>
+                <button class="test-event-btn" onclick="studio.triggerTestEvent('collide')">
+                    <i class="fas fa-compress-arrows-alt"></i> Collide
+                </button>
+                <button class="tool-btn" onclick="studio.clearTestConsole()" title="Clear Console">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            
+            <div class="test-panel-console" id="test-console">
+                <div style="padding: 10px; color: #666; font-style: italic;">Ready to test. Click an event button to run the script.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+
+    <!-- PHASE B: Runtime for in-editor testing -->
+    <script src="/engines/rpg-topdown/logicRuntime.js"></script>
+    <script src="/engines/rpg-topdown/AlgorithmRuntime.js"></script>
+
+    <script src="algorithm_editor.js"></script>
+</body>
+</html>

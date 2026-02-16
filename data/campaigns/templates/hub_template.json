@@ -1,0 +1,147 @@
+{
+  "name": "Hub World Template",
+  "description": "Central hub with 3 missions - perfect for open-ended adventures",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "type": "start",
+      "x": 600,
+      "y": 50,
+      "next": "hub"
+    },
+    "hub": {
+      "id": "hub",
+      "type": "hub",
+      "x": 600,
+      "y": 200,
+      "engineType": "rpg-topdown",
+      "world": "central_hub",
+      "spawnPoint": { "x": 200, "y": 200 },
+      "shopAvailable": true,
+      "innAvailable": true,
+      "healPlayer": true,
+      "npcs": ["shop_keeper", "inn_keeper"],
+      "exits": [
+        { "name": "Mission 1", "next": "mission_1_check" },
+        { "name": "Mission 2", "next": "mission_2_check" },
+        { "name": "Mission 3", "next": "mission_3_check" }
+      ]
+    },
+    "mission_1_check": {
+      "id": "mission_1_check",
+      "type": "branch",
+      "x": 200,
+      "y": 400,
+      "condition": "!flag:mission_1_complete",
+      "trueNext": "mission_1",
+      "falseNext": "already_done"
+    },
+    "mission_1": {
+      "id": "mission_1",
+      "type": "level",
+      "x": 200,
+      "y": 550,
+      "engineType": "rpg-topdown",
+      "world": "mission_1_world",
+      "spawnPoint": { "x": 100, "y": 100 },
+      "objectives": ["Complete Mission 1"],
+      "next": "mission_1_reward"
+    },
+    "mission_1_reward": {
+      "id": "mission_1_reward",
+      "type": "reward",
+      "x": 200,
+      "y": 700,
+      "rewards": {
+        "flags": { "mission_1_complete": true }
+      },
+      "next": "return_to_hub"
+    },
+    "mission_2_check": {
+      "id": "mission_2_check",
+      "type": "branch",
+      "x": 600,
+      "y": 400,
+      "condition": "!flag:mission_2_complete",
+      "trueNext": "mission_2",
+      "falseNext": "already_done"
+    },
+    "mission_2": {
+      "id": "mission_2",
+      "type": "level",
+      "x": 600,
+      "y": 550,
+      "engineType": "iso-pixel",
+      "world": "mission_2_world",
+      "spawnPoint": { "x": 50, "y": 50, "z": 0 },
+      "objectives": ["Complete Mission 2"],
+      "next": "mission_2_reward"
+    },
+    "mission_2_reward": {
+      "id": "mission_2_reward",
+      "type": "reward",
+      "x": 600,
+      "y": 700,
+      "rewards": {
+        "flags": { "mission_2_complete": true }
+      },
+      "next": "return_to_hub"
+    },
+    "mission_3_check": {
+      "id": "mission_3_check",
+      "type": "branch",
+      "x": 1000,
+      "y": 400,
+      "condition": "!flag:mission_3_complete",
+      "trueNext": "mission_3",
+      "falseNext": "already_done"
+    },
+    "mission_3": {
+      "id": "mission_3",
+      "type": "level",
+      "x": 1000,
+      "y": 550,
+      "engineType": "platformer-2d",
+      "world": "mission_3_world",
+      "spawnPoint": { "x": 50, "y": 400 },
+      "objectives": ["Complete Mission 3"],
+      "next": "mission_3_reward"
+    },
+    "mission_3_reward": {
+      "id": "mission_3_reward",
+      "type": "reward",
+      "x": 1000,
+      "y": 700,
+      "rewards": {
+        "flags": { "mission_3_complete": true }
+      },
+      "next": "return_to_hub"
+    },
+    "already_done": {
+      "id": "already_done",
+      "type": "dialogue",
+      "x": 1200,
+      "y": 400,
+      "speaker": "NPC",
+      "text": "You've already completed this mission!",
+      "next": "return_to_hub"
+    },
+    "return_to_hub": {
+      "id": "return_to_hub",
+      "type": "dialogue",
+      "x": 600,
+      "y": 850,
+      "speaker": "System",
+      "text": "Returning to hub...",
+      "next": "hub"
+    }
+  },
+  "metadata": {
+    "template": true,
+    "category": "hub-based",
+    "missions": 3
+  }
+}

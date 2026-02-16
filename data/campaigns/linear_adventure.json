@@ -1,0 +1,136 @@
+{
+  "name": "Linear Adventure",
+  "description": "A straightforward story-driven campaign with sequential levels across all three engines",
+  "version": "1.0.0",
+  "author": "Campaign Studio",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "type": "start",
+      "x": 100,
+      "y": 300,
+      "next": "intro_cutscene"
+    },
+    "intro_cutscene": {
+      "id": "intro_cutscene",
+      "type": "cutscene",
+      "x": 250,
+      "y": 300,
+      "cutsceneName": "intro",
+      "skippable": true,
+      "next": "chapter1_rpg"
+    },
+    "chapter1_rpg": {
+      "id": "chapter1_rpg",
+      "type": "level",
+      "x": 400,
+      "y": 300,
+      "engineType": "rpg-topdown",
+      "world": "village_start",
+      "spawnPoint": { "x": 100, "y": 100 },
+      "objectives": ["Talk to Elder", "Collect starter weapon"],
+      "next": "chapter1_reward"
+    },
+    "chapter1_reward": {
+      "id": "chapter1_reward",
+      "type": "reward",
+      "x": 550,
+      "y": 300,
+      "rewards": {
+        "items": [{ "id": "wooden_sword", "quantity": 1 }],
+        "achievements": ["journey_begins"]
+      },
+      "next": "chapter2_iso"
+    },
+    "chapter2_iso": {
+      "id": "chapter2_iso",
+      "type": "level",
+      "x": 700,
+      "y": 300,
+      "engineType": "iso-pixel",
+      "world": "mountain_path",
+      "spawnPoint": { "x": 50, "y": 50, "z": 0 },
+      "objectives": ["Cross the mountain", "Find the cave"],
+      "next": "chapter2_reward"
+    },
+    "chapter2_reward": {
+      "id": "chapter2_reward",
+      "type": "reward",
+      "x": 850,
+      "y": 300,
+      "rewards": {
+        "items": [
+          { "id": "health_potion", "quantity": 3 },
+          { "id": "gold", "quantity": 50 }
+        ]
+      },
+      "next": "chapter3_platformer"
+    },
+    "chapter3_platformer": {
+      "id": "chapter3_platformer",
+      "type": "level",
+      "x": 1000,
+      "y": 300,
+      "engineType": "platformer-2d",
+      "world": "cave_depths",
+      "spawnPoint": { "x": 50, "y": 400 },
+      "objectives": ["Navigate the cave", "Reach the exit"],
+      "next": "midpoint_cutscene"
+    },
+    "midpoint_cutscene": {
+      "id": "midpoint_cutscene",
+      "type": "cutscene",
+      "x": 1150,
+      "y": 300,
+      "cutsceneName": "revelation",
+      "skippable": false,
+      "next": "chapter4_rpg"
+    },
+    "chapter4_rpg": {
+      "id": "chapter4_rpg",
+      "type": "level",
+      "x": 1300,
+      "y": 300,
+      "engineType": "rpg-topdown",
+      "world": "ancient_ruins",
+      "spawnPoint": { "x": 200, "y": 200 },
+      "objectives": ["Find the artifact", "Defeat guardians"],
+      "next": "final_boss"
+    },
+    "final_boss": {
+      "id": "final_boss",
+      "type": "level",
+      "x": 1450,
+      "y": 300,
+      "engineType": "rpg-topdown",
+      "world": "boss_arena",
+      "spawnPoint": { "x": 300, "y": 300 },
+      "objectives": ["Defeat the Dark Lord"],
+      "next": "ending_cutscene"
+    },
+    "ending_cutscene": {
+      "id": "ending_cutscene",
+      "type": "cutscene",
+      "x": 1600,
+      "y": 300,
+      "cutsceneName": "victory",
+      "skippable": false,
+      "next": "completion"
+    },
+    "completion": {
+      "id": "completion",
+      "type": "dialogue",
+      "x": 1750,
+      "y": 300,
+      "speaker": "Narrator",
+      "text": "The adventure is complete. Peace has been restored to the land.",
+      "next": null
+    }
+  },
+  "metadata": {
+    "pattern": "linear",
+    "difficulty": "normal",
+    "estimatedPlaytime": "30-45 minutes"
+  }
+}

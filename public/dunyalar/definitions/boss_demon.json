@@ -1,0 +1,20 @@
+{
+    "components":  [
+                       {
+                           "speed":  120,
+                           "type":  "Stats",
+                           "hp":  1000
+                       },
+                       {
+                           "height":  64,
+                           "width":  64,
+                           "type":  "Collider"
+                       },
+                       {
+                           "scriptId":  "boss_ai",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Demon Lord",
+    "sprite":  "Enemy_Animations_Set/Enemy_Animations_Set/Demon/Idle.png"
+}

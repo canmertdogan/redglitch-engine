@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Runtime - Ongonluk Engine</title>
+    <link rel="stylesheet" href="base_game/style.css">
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0e27;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            color: #fff;
+            overflow: hidden;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        #loading-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle, #fff 1px, transparent 1px),
+                radial-gradient(circle, #fff 1px, transparent 1px),
+                radial-gradient(circle, #fff 1px, transparent 1px);
+            background-size: 50px 50px, 80px 80px, 100px 100px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            opacity: 0.3;
+            animation: twinkle 4s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        #loading-screen.hidden {
+            display: none;
+        }
+
+        .loading-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .loading-logo {
+            font-family: 'VT323', monospace;
+            font-size: 72px;
+            color: #ffd700;
+            text-shadow: 4px 4px 0 #000;
+            letter-spacing: 8px;
+            image-rendering: pixelated;
+        }
+
+        .loading-spinner {
+            width: 64px;
+            height: 64px;
+            border: 8px solid #1a1a2e;
+            border-top: 8px solid #ffd700;
+            border-right: 8px solid #ffd700;
+            background: #000;
+            animation: spin 0.8s steps(4) infinite;
+            box-shadow: 0 0 0 4px #ffd700;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-family: 'VT323', monospace;
+            font-size: 32px;
+            color: #ffd700;
+            text-align: center;
+            letter-spacing: 4px;
+            text-shadow: 3px 3px 0 #000;
+        }
+
+        .loading-bar-container {
+            width: 480px;
+            height: 48px;
+            background: #1a1a2e;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            position: relative;
+            image-rendering: pixelated;
+        }
+
+        .loading-bar {
+            height: 100%;
+            background: #ffd700;
+            width: 0%;
+            transition: width 0.2s steps(20);
+            position: relative;
+            box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .loading-logo {
+                font-size: 48px;
+            }
+            .loading-bar-container {
+                width: 90%;
+            }
+        }
+
+        /* Game Container */
+        #game-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: none;
+        }
+
+        #game-container.active {
+            display: block;
+        }
+
+        #engine-root {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #gameCanvas, #atmosphere-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #atmosphere-canvas {
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* HUD - Campaign Info (Top Left) */
+        #campaign-hud {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #1a1a2e;
+            padding: 20px 24px;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            z-index: 9000;
+            min-width: 320px;
+            image-rendering: pixelated;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .hud-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .hud-label {
+            color: #ffd700;
+            margin-right: 16px;
+            font-weight: normal;
+        }
+
+        .hud-value {
+            color: #fff;
+        }
+
+        /* Save Menu (Top Right) */
+        #save-menu {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9000;
+            display: flex;
+            gap: 12px;
+        }
+
+        .save-btn {
+            background: #1a1a2e;
+            color: #ffd700;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            padding: 16px 24px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 24px;
+            transition: all 0.1s steps(2);
+            text-shadow: 2px 2px 0 #000;
+            image-rendering: pixelated;
+        }
+
+        .save-btn:hover {
+            background: #2a2a3e;
+            box-shadow: 0 0 0 2px #000, 0 0 0 4px #ffd700;
+        }
+
+        .save-btn:active {
+            transform: scale(0.95);
+        }
+
+        .save-btn.exit {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .save-btn.exit:hover {
+            box-shadow: 0 0 0 2px #000, 0 0 0 4px #e74c3c;
+        }
+
+        .save-btn i {
+            margin-right: 8px;
+        }
+
+        /* Notification System */
+        #notification-container {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            z-index: 9500;
+            max-width: 400px;
+        }
+
+        .notification {
+            background: #1a1a2e;
+            border: 3px solid #3498db;
+            box-shadow: 0 0 0 2px #000;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            text-shadow: 2px 2px 0 #000;
+            animation: slideIn 0.2s steps(4), slideOut 0.2s 2.8s steps(4);
+            image-rendering: pixelated;
+        }
+
+        .notification.success {
+            border-color: #2ecc71;
+        }
+
+        .notification.error {
+            border-color: #e74c3c;
+        }
+
+        .notification.warning {
+            border-color: #f39c12;
+        }
+
+        .notification.info {
+            border-color: #ffd700;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* Engine Transition Screen */
+        #engine-transition-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0e27;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            image-rendering: pixelated;
+        }
+
+        #engine-transition-screen.hidden {
+            display: none;
+        }
+
+        #engine-transition-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle, #fff 1px, transparent 1px),
+                radial-gradient(circle, #fff 1px, transparent 1px),
+                radial-gradient(circle, #fff 1px, transparent 1px);
+            background-size: 50px 50px, 80px 80px, 100px 100px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            opacity: 0.3;
+            animation: twinkle 4s infinite;
+        }
+
+        .transition-title {
+            position: relative;
+            z-index: 1;
+            font-size: 32px;
+            color: #ffd700;
+            text-shadow: 3px 3px 0 #000;
+            margin-bottom: 20px;
+        }
+
+        #transition-target-engine {
+            position: relative;
+            z-index: 1;
+            font-size: 48px;
+            color: #fff;
+            text-shadow: 3px 3px 0 #000;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+
+        .transition-progress {
+            position: relative;
+            z-index: 1;
+            width: 400px;
+            height: 40px;
+            background: #000;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #transition-progress-bar {
+            height: 100%;
+            background: #ffd700;
+            width: 0%;
+            transition: width 0.3s steps(10);
+            image-rendering: pixelated;
+        }
+
+        #transition-status-text {
+            position: relative;
+            z-index: 1;
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* Player Stats HUD */
+        #player-stats-hud {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #1a1a2e;
+            padding: 16px;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            z-index: 9000;
+            font-family: 'VT323', monospace;
+            min-width: 280px;
+            image-rendering: pixelated;
+        }
+
+        .stat-bar-container {
+            margin-bottom: 16px;
+        }
+
+        .stat-bar-container:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-label {
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .stat-value {
+            color: #ffd700;
+        }
+
+        .stat-bar-bg {
+            width: 100%;
+            height: 32px;
+            background: #000;
+            border: 3px solid #333;
+            overflow: hidden;
+            position: relative;
+            image-rendering: pixelated;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            transition: width 0.2s steps(10);
+            position: relative;
+            image-rendering: pixelated;
+            box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-bar-fill.hp {
+            background: #e74c3c;
+        }
+
+        .stat-bar-fill.stamina {
+            background: #f39c12;
+        }
+
+        .stat-bar-fill.mana {
+            background: #3498db;
+        }
+
+        /* Hotbar Quick-Slots */
+        #hotbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9000;
+            display: flex;
+            gap: 8px;
+        }
+
+        .hotbar-slot {
+            width: 64px;
+            height: 64px;
+            background: #1a1a2e;
+            border: 3px solid #333;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.1s steps(2);
+            image-rendering: pixelated;
+        }
+
+        .hotbar-slot:hover {
+            border-color: #666;
+        }
+
+        .hotbar-slot.active {
+            border-color: #ffd700;
+            box-shadow: 0 0 0 2px #000;
+        }
+
+        .hotbar-slot.has-item {
+            border-color: #ffd700;
+        }
+
+        .hotbar-slot.empty {
+            border-color: #333;
+            cursor: default;
+        }
+
+        .hotbar-icon {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .hotbar-key {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            background: #000;
+            border: 2px solid #ffd700;
+            padding: 2px 6px;
+            font-size: 14px;
+            color: #ffd700;
+            font-family: 'VT323', monospace;
+        }
+
+        .hotbar-quantity {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background: #000;
+            border: 2px solid #ffd700;
+            padding: 2px 6px;
+            font-size: 14px;
+            color: #ffd700;
+        }
+
+        /* Search Bar */
+        .inventory-search {
+            padding: 12px 24px;
+            background: #0a0a1a;
+            border-bottom: 3px solid #333;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #1a1a2e;
+            border: 3px solid #333;
+            color: #fff;
+            font-size: 24px;
+            font-family: 'VT323', monospace;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #ffd700;
+        }
+
+        .search-input::placeholder {
+            color: #666;
+        }
+
+        /* Sort Dropdown */
+        .inventory-sort {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            background: #0a0a1a;
+            border-bottom: 3px solid #333;
+        }
+
+        .sort-label {
+            color: #ffd700;
+            font-size: 24px;
+        }
+
+        .sort-select {
+            flex: 1;
+            padding: 12px 16px;
+            background: #1a1a2e;
+            border: 3px solid #333;
+            color: #fff;
+            font-size: 24px;
+            font-family: 'VT323', monospace;
+            cursor: pointer;
+        }
+
+        .sort-select:hover {
+            border-color: #666;
+        }
+
+        .sort-select:focus {
+            border-color: #ffd700;
+            outline: none;
+        }
+
+        /* Fullscreen & Controls Buttons */
+        #game-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9000;
+            display: flex;
+            gap: 12px;
+        }
+
+        .control-btn {
+            width: 56px;
+            height: 56px;
+            background: #1a1a2e;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            color: #ffd700;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s steps(2);
+            image-rendering: pixelated;
+        }
+
+        .control-btn:hover {
+            background: #2a2a3e;
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 0 0 2px #000;
+        }
+
+        /* Mobile Touch Controls */
+        #mobile-controls {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9000;
+            display: none;
+            gap: 60px;
+        }
+
+        @media (max-width: 768px), (pointer: coarse) {
+            #mobile-controls {
+                display: flex;
+            }
+        }
+
+        .dpad-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+        }
+
+        .dpad-btn {
+            position: absolute;
+            width: 52px;
+            height: 52px;
+            background: #1a1a2e;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            color: #ffd700;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+            image-rendering: pixelated;
+        }
+
+        .dpad-btn:active {
+            background: #2a2a3e;
+            transform: scale(0.95);
+        }
+
+        .dpad-btn.up { top: 0; left: 54px; }
+        .dpad-btn.down { bottom: 0; left: 54px; }
+        .dpad-btn.left { top: 54px; left: 0; }
+        .dpad-btn.right { top: 54px; right: 0; }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .action-btn {
+            width: 64px;
+            height: 64px;
+            background: #1a1a2e;
+            border: 4px solid #e74c3c;
+            box-shadow: 0 0 0 2px #000;
+            color: #e74c3c;
+            font-size: 28px;
+            font-family: 'VT323', monospace;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+            image-rendering: pixelated;
+        }
+
+        .action-btn:active {
+            background: #2a2a3e;
+            transform: scale(0.95);
+        }
+
+        .action-btn.primary {
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        /* Inventory Modal */
+        #inventory-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #inventory-modal.active {
+            display: flex;
+        }
+
+        .inventory-container {
+            width: 90%;
+            max-width: 1200px;
+            height: 80%;
+            background: #1a1a2e;
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 0 2px #000;
+            display: flex;
+            flex-direction: column;
+            font-family: 'VT323', monospace;
+            image-rendering: pixelated;
+        }
+
+        .inventory-header {
+            background: #0a0a1a;
+            padding: 16px 24px;
+            border-bottom: 4px solid #ffd700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .inventory-title {
+            font-size: 36px;
+            color: #ffd700;
+            text-shadow: 3px 3px 0 #000;
+        }
+
+        .inventory-close {
+            width: 48px;
+            height: 48px;
+            background: #1a1a2e;
+            border: 3px solid #e74c3c;
+            color: #e74c3c;
+            font-size: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s steps(2);
+        }
+
+        .inventory-close:hover {
+            background: #2a2a3e;
+        }
+
+        .inventory-tabs {
+            background: #0a0a1a;
+            padding: 12px 24px;
+            border-bottom: 3px solid #333;
+            display: flex;
+            gap: 8px;
+        }
+
+        .inventory-tab {
+            padding: 12px 24px;
+            background: #1a1a2e;
+            border: 3px solid #333;
+            color: #666;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.1s steps(2);
+        }
+
+        .inventory-tab:hover {
+            background: #2a2a3e;
+            color: #999;
+        }
+
+        .inventory-tab.active {
+            border-color: #ffd700;
+            color: #ffd700;
+            background: #2a2a3e;
+        }
+
+        .inventory-content {
+            flex: 1;
+            display: flex;
+            padding: 24px;
+            gap: 24px;
+            overflow: hidden;
+        }
+
+        .inventory-grid-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 72px);
+            gap: 8px;
+        }
+
+        .inventory-slot {
+            width: 72px;
+            height: 72px;
+            background: #0a0a1a;
+            border: 3px solid #333;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.1s steps(2);
+            image-rendering: pixelated;
+        }
+
+        .inventory-slot:hover {
+            border-color: #666;
+            background: #1a1a2e;
+        }
+
+        .inventory-slot.selected {
+            border-color: #ffd700;
+            background: #2a2a3e;
+        }
+
+        .inventory-slot.empty {
+            cursor: default;
+        }
+
+        .inventory-slot.empty:hover {
+            border-color: #333;
+            background: #0a0a1a;
+        }
+
+        .inventory-slot.has-item {
+            background: #2a2a3e;
+            cursor: grab;
+        }
+
+        .inventory-slot.has-item:active {
+            cursor: grabbing;
+        }
+
+        .inventory-slot.drag-over {
+            background: #3a3a4e;
+            box-shadow: 0 0 0 3px #ffd700;
+        }
+
+        .inventory-slot.dragging {
+            opacity: 0.5;
+            transform: scale(0.9);
+        }
+
+        .item-icon {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            image-rendering: pixelated;
+        }
+
+        .item-quantity {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: #000;
+            border: 2px solid #ffd700;
+            padding: 2px 6px;
+            font-size: 16px;
+            color: #ffd700;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .item-new-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #e74c3c;
+            border: 2px solid #fff;
+            width: 12px;
+            height: 12px;
+        }
+
+        .inventory-info-panel {
+            width: 320px;
+            background: #0a0a1a;
+            border: 3px solid #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .item-info-empty {
+            color: #666;
+            font-size: 24px;
+            text-align: center;
+            margin-top: 100px;
+        }
+
+        .item-info-name {
+            font-size: 28px;
+            color: #ffd700;
+            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 8px;
+        }
+
+        .item-info-type {
+            font-size: 20px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .item-info-description {
+            font-size: 20px;
+            color: #fff;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .item-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .item-action-btn {
+            padding: 16px;
+            background: #1a1a2e;
+            border: 3px solid #ffd700;
+            color: #ffd700;
+            font-size: 24px;
+            font-family: 'VT323', monospace;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.1s steps(2);
+        }
+
+        .item-action-btn:hover {
+            background: #2a2a3e;
+        }
+
+        .item-action-btn.danger {
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        .inventory-footer {
+            background: #0a0a1a;
+            padding: 16px 24px;
+            border-top: 3px solid #333;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            color: #fff;
+        }
+
+        .inventory-stat {
+            color: #666;
+        }
+
+        .inventory-stat span {
+            color: #ffd700;
+        }
+
+        @media (max-width: 1024px) {
+            .inventory-grid {
+                grid-template-columns: repeat(6, 72px);
+            }
+            .inventory-info-panel {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .inventory-container {
+                width: 100%;
+                height: 100%;
+            }
+            .inventory-content {
+                flex-direction: column;
+            }
+            .inventory-info-panel {
+                width: 100%;
+            }
+            .inventory-grid {
+                grid-template-columns: repeat(4, 72px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">ONGONLUK ENGINE</div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading Campaign...</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar" id="loading-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- Campaign HUD -->
+        <div id="campaign-hud">
+            <div class="hud-row">
+                <span class="hud-label">SLOT:</span>
+                <span class="hud-value" id="hud-slot">-</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">CAMPAIGN:</span>
+                <span class="hud-value" id="hud-campaign">-</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">NODE:</span>
+                <span class="hud-value" id="hud-node">-</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">PROGRESS:</span>
+                <span class="hud-value" id="hud-progress">0%</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">PLAY TIME:</span>
+                <span class="hud-value" id="hud-playtime">0:00</span>
+            </div>
+        </div>
+
+        <!-- Save Menu -->
+        <div id="save-menu">
+            <button class="save-btn" onclick="manualSave()">
+                <i class="fas fa-save"></i>SAVE
+            </button>
+            <button class="save-btn exit" onclick="returnToSlots()">
+                <i class="fas fa-door-open"></i>EXIT
+            </button>
+        </div>
+
+        <!-- Notification Container -->
+        <div id="notification-container"></div>
+
+        <!-- Player Stats HUD -->
+        <div id="player-stats-hud">
+            <div class="stat-bar-container">
+                <div class="stat-label">
+                    <span>HP</span>
+                    <span class="stat-value"><span id="hp-current">100</span>/<span id="hp-max">100</span></span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div class="stat-bar-fill hp" id="hp-bar" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div class="stat-bar-container">
+                <div class="stat-label">
+                    <span>STAMINA</span>
+                    <span class="stat-value"><span id="stamina-current">100</span>/<span id="stamina-max">100</span></span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div class="stat-bar-fill stamina" id="stamina-bar" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div class="stat-bar-container">
+                <div class="stat-label">
+                    <span>MANA</span>
+                    <span class="stat-value"><span id="mana-current">50</span>/<span id="mana-max">50</span></span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div class="stat-bar-fill mana" id="mana-bar" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hotbar Quick-Slots -->
+        <div id="hotbar">
+            <div class="hotbar-slot empty" data-hotbar-slot="0">
+                <div class="hotbar-key">1</div>
+                <div class="hotbar-icon"></div>
+            </div>
+            <div class="hotbar-slot empty" data-hotbar-slot="1">
+                <div class="hotbar-key">2</div>
+                <div class="hotbar-icon"></div>
+            </div>
+            <div class="hotbar-slot empty" data-hotbar-slot="2">
+                <div class="hotbar-key">3</div>
+                <div class="hotbar-icon"></div>
+            </div>
+            <div class="hotbar-slot empty" data-hotbar-slot="3">
+                <div class="hotbar-key">4</div>
+                <div class="hotbar-icon"></div>
+            </div>
+        </div>
+
+        <!-- Game Controls (Fullscreen, etc) -->
+        <div id="game-controls">
+            <button class="control-btn" id="fullscreen-btn" title="Toggle Fullscreen">
+                <i class="fas fa-expand"></i>
+            </button>
+            <button class="control-btn" id="inventory-btn" title="Inventory [E]">
+                <i class="fas fa-box"></i>
+            </button>
+            <button class="control-btn" id="powers-btn" title="Special Powers [P]">
+                <i class="fas fa-fire"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div id="mobile-controls">
+            <!-- D-Pad -->
+            <div class="dpad-container">
+                <div class="dpad-btn up" data-key="ArrowUp">
+                    <i class="fas fa-chevron-up"></i>
+                </div>
+                <div class="dpad-btn down" data-key="ArrowDown">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="dpad-btn left" data-key="ArrowLeft">
+                    <i class="fas fa-chevron-left"></i>
+                </div>
+                <div class="dpad-btn right" data-key="ArrowRight">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <div class="action-btn" data-key="x">X</div>
+                <div class="action-btn primary" data-key=" ">A</div>
+            </div>
+        </div>
+
+        <!-- Engine canvas will be injected here -->
+        <div id="engine-root">
+            <canvas id="gameCanvas" width="960" height="640"></canvas>
+            <canvas id="atmosphere-canvas" width="960" height="640"></canvas>
+        </div>
+    </div>
+
+    <!-- Engine Transition Screen -->
+    <div id="engine-transition-screen" class="hidden">
+        <div class="transition-title">SWITCHING ENGINE...</div>
+        <div id="transition-target-engine">RPG TOP-DOWN</div>
+        <div class="transition-progress">
+            <div id="transition-progress-bar"></div>
+        </div>
+        <div id="transition-status-text">Preparing transition...</div>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div id="inventory-modal">
+        <div class="inventory-container">
+            <!-- Header -->
+            <div class="inventory-header">
+                <div class="inventory-title">INVENTORY</div>
+                <button class="inventory-close" onclick="closeInventory()">×</button>
+            </div>
+
+            <!-- Category Tabs -->
+            <div class="inventory-tabs">
+                <div class="inventory-tab active" data-filter="all">ALL</div>
+                <div class="inventory-tab" data-filter="equipment">EQUIP</div>
+                <div class="inventory-tab" data-filter="consumable">CONS</div>
+                <div class="inventory-tab" data-filter="key">KEY</div>
+                <div class="inventory-tab" data-filter="quest">QUEST</div>
+                <div class="inventory-tab" data-filter="misc">MISC</div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="inventory-search">
+                <input type="text" id="inventory-search-input" class="search-input" 
+                       placeholder="SEARCH ITEMS..." />
+            </div>
+
+            <!-- Sort Options -->
+            <div class="inventory-sort">
+                <span class="sort-label">SORT:</span>
+                <select id="inventory-sort-select" class="sort-select">
+                    <option value="type">BY TYPE</option>
+                    <option value="name">BY NAME</option>
+                    <option value="rarity">BY RARITY</option>
+                    <option value="quantity">BY QUANTITY</option>
+                </select>
+            </div>
+
+            <!-- Content Area -->
+            <div class="inventory-content">
+                <!-- Item Grid -->
+                <div class="inventory-grid-container">
+                    <div class="inventory-grid" id="inventory-grid">
+                        <!-- Slots will be generated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Info Panel -->
+                <div class="inventory-info-panel" id="inventory-info">
+                    <div class="item-info-empty">SELECT AN ITEM</div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="inventory-footer">
+                <div class="inventory-stat">SLOTS: <span id="inventory-slot-count">0/48</span></div>
+                <div class="inventory-stat">ITEMS: <span id="inventory-item-count">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Set campaign runtime mode flag -->
+    <script>
+        window.CAMPAIGN_RUNTIME_MODE = true;
+    </script>
+    
+    <!-- Load Dependencies -->
+    <script src="js/CampaignSlot.js?v=1770485563"></script>
+    <script src="js/SlotManager.js?v=1770485563"></script>
+    <script src="engines/shared/CrossEngineSerializer.js?v=1770485563"></script>
+    <script src="engines/shared/InventorySystem.js?v=1770485563"></script>
+    <script src="engines/shared/ItemDefinitions.js?v=1770485563"></script>
+    <script src="engines/shared/AbilityDefinitions.js?v=1770485563"></script>
+    <script src="engines/shared/PowerSelector.js?v=1770485563"></script>
+    <script src="engines/shared/ConditionEvaluator.js?v=1770485563"></script>
+    <script src="engines/shared/EngineAdapter.js?v=1770485563"></script>
+    <script src="engines/shared/CampaignController.js?v=1770485563"></script>
+    
+    <!-- Load Engine Strategies -->
+    <script src="strategies/TopDownStrategy.js?v=1770485563"></script>
+    <script src="strategies/IsoStrategy.js?v=1770485563"></script>
+    <script src="strategies/PlatformerStrategy.js?v=1770485563"></script>
+    
+    <!-- Load RPG-Topdown Engine -->
+    <script src="base_game/sprites.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/sprites.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/input.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/spatialHash.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/console.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/localization.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/audioSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/fxSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/postProcess.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/dialogueSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/questSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/achievementSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/saveSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/mapSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/stateMachine.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/logicRuntime.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/BrainRuntime.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/AlgorithmRuntime.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/NPC.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/InteractiveCutsceneEngine.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/campaignSystem.js?v=1770485563"></script>
+    <script src="engines/rpg-topdown/main.js?v=1770485563"></script>
+    
+    <!-- Load ISO-Pixel Engine -->
+    <script src="engines/iso-pixel/renderer.js?v=1770485563"></script>
+    <script src="engines/iso-pixel/fxSystem.js?v=1770485563"></script>
+    <script src="engines/iso-pixel/hudSystem.js?v=1770485563"></script>
+    <script src="engines/iso-pixel/shaderSystem.js?v=1770485563"></script>
+    <script src="engines/iso-pixel/IsoCombatSystem.js?v=1770485563"></script>
+    <script src="engines/iso-pixel/IsoEntity.js?v=1770485563"></script>
+    <script src="engines/iso-pixel/main.js?v=1770485563"></script>
+    
+    <!-- Load Platformer-2D Engine -->
+    <script src="engines/platformer-2d/entities/Entity.js?v=1770485563"></script>
+    <script src="engines/platformer-2d/entities/Player.js?v=1770485563"></script>
+    <script src="engines/platformer-2d/entities/MovingPlatform.js?v=1770485563"></script>
+    <script src="engines/platformer-2d/PhysicsSystem.js?v=1770485563"></script>
+    <script src="engines/platformer-2d/renderer.js?v=1770485563"></script>
+    <script src="engines/platformer-2d/main.js?v=1770485563"></script>
+    
+    <!-- Load Engine Adapters -->
+    <script src="engines/shared/TopDownAdapter.js?v=1770485563"></script>
+    <script src="engines/shared/IsoPixelAdapter.js?v=1770485563"></script>
+    <script src="engines/shared/PlatformerAdapter.js?v=1770485563"></script>
+
+    <script>
+        // Global variables
+        let campaignController = null;
+        let powerSelector = null;
+        let slotId = null;
+        let autoSaveInterval = null;
+
+        /**
+         * Initialize runtime
+         */
+        async function init() {
+            console.log('[Runtime] Initializing campaign runtime...');
+
+            // Load item definitions FIRST
+            console.log('[Runtime] Loading item definitions...');
+            await window.ItemDefinitions.load();
+            console.log(`[Runtime] Loaded ${window.ItemDefinitions.getCount()} items`);
+
+            // Get slot ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            slotId = parseInt(urlParams.get('slot'));
+
+            if (!slotId || slotId < 1 || slotId > 5) {
+                showError('Invalid slot ID');
+                setTimeout(() => {
+                    window.location.href = 'slot_selection.html';
+                }, 2000);
+                return;
+            }
+
+            updateLoadingBar(20, 'Loading slot data...');
+
+            try {
+                // Load slot
+                const slot = await SlotManager.getSlot(slotId);
+
+                if (slot.isEmpty) {
+                    showError('Slot is empty');
+                    setTimeout(() => {
+                        window.location.href = 'slot_selection.html';
+                    }, 2000);
+                    return;
+                }
+
+                updateLoadingBar(40, 'Initializing campaign controller...');
+
+                // Initialize campaign controller
+                campaignController = new CampaignController();
+                await campaignController.initialize(slot.player.name, slotId);
+
+                updateLoadingBar(60, `Loading campaign: ${slot.campaign.name}...`);
+
+                // Load campaign
+                await campaignController.loadCampaign(slot.campaign.file);
+
+                updateLoadingBar(80, 'Starting campaign...');
+
+                // Update HUD
+                updateHUD();
+
+                // Start campaign
+                await campaignController.start();
+
+                updateLoadingBar(100, 'Ready!');
+
+                // Show game container
+                setTimeout(() => {
+                    document.getElementById('loading-screen').classList.add('hidden');
+                    document.getElementById('game-container').classList.add('active');
+                    
+                    // Start auto-save (every 2 minutes)
+                    startAutoSave();
+                    
+                    // Start HUD update interval
+                    startHUDUpdate();
+                    
+                    // Start player stats HUD updates
+                    startPlayerStatsUpdate();
+                    
+                    // Setup controls
+                    setupFullscreenButton();
+                    setupMobileControls();
+                    setupInventoryButton();
+                    setupPowersButton();
+                    setupInventoryTabs();
+                    setupKeyboardShortcuts();
+                    setupSearch();
+                    setupSort();
+                    
+                    // Initialize PowerSelector
+                    powerSelector = new PowerSelector(campaignController);
+                    
+                    // Start hotbar updates
+                    setInterval(updateHotbar, 500);
+                    updateHotbar();
+                    
+                    // Add test items from ItemDefinitions (temporary for demo)
+                    console.log('[Runtime] Adding demo items from definitions...');
+                    
+                    // Try to give health potions
+                    campaignController.giveItem('health_potion', 5);
+                    
+                    // Try to give iron sword
+                    campaignController.giveItem('iron_sword', 1);
+                    
+                    // Try to give mana potions
+                    campaignController.giveItem('mana_potion', 3);
+                    
+                    // Update UI to show new items
+                    if (document.getElementById('inventory-modal').classList.contains('active')) {
+                        refreshInventoryUI();
+                    }
+                }, 500);
+
+            } catch (error) {
+                console.error('[Runtime] Failed to initialize:', error);
+                showError('Failed to load campaign: ' + error.message);
+                setTimeout(() => {
+                    window.location.href = 'slot_selection.html';
+                }, 3000);
+            }
+        }
+
+        /**
+         * Update loading bar
+         */
+        function updateLoadingBar(percent, text) {
+            const bar = document.getElementById('loading-bar');
+            const textEl = document.querySelector('.loading-text');
+            
+            if (bar) bar.style.width = percent + '%';
+            if (textEl) textEl.textContent = text;
+        }
+
+        /**
+         * Update HUD
+         */
+        function updateHUD() {
+            if (!campaignController) return;
+
+            document.getElementById('hud-slot').textContent = `#${slotId}`;
+            document.getElementById('hud-campaign').textContent = 
+                campaignController.campaignMetadata?.name || campaignController.campaignId;
+            document.getElementById('hud-node').textContent = 
+                campaignController.currentNodeId || 'N/A';
+            
+            const progress = campaignController.getProgress();
+            document.getElementById('hud-progress').textContent = 
+                `${progress.percentComplete}%`;
+            
+            document.getElementById('hud-playtime').textContent = 
+                campaignController.getPlayTimeFormatted();
+        }
+
+        /**
+         * Start HUD update interval
+         */
+        function startHUDUpdate() {
+            setInterval(updateHUD, 1000); // Update every second
+        }
+
+        /**
+         * Start auto-save
+         */
+        function startAutoSave() {
+            autoSaveInterval = setInterval(async () => {
+                if (campaignController) {
+                    await campaignController.autoSave();
+                    console.log('[Runtime] Auto-save completed');
+                }
+            }, 120000); // Every 2 minutes
+        }
+
+        /**
+         * Manual save
+         */
+        async function manualSave() {
+            if (!campaignController) return;
+            
+            showNotification('Saving...', 'warning');
+            
+            try {
+                await campaignController.manualSave();
+                showNotification('Game Saved!', 'success');
+            } catch (error) {
+                console.error('[Runtime] Manual save failed:', error);
+                showNotification('Save Failed!', 'error');
+            }
+        }
+
+        /**
+         * Return to slot selection
+         */
+        async function returnToSlots() {
+            if (campaignController) {
+                // Save before exit
+                await campaignController.manualSave();
+                
+                // Clean up
+                campaignController.destroy();
+                
+                // Stop auto-save
+                if (autoSaveInterval) {
+                    clearInterval(autoSaveInterval);
+                }
+            }
+
+            window.location.href = 'slot_selection.html';
+        }
+
+        /**
+         * Show notification
+         */
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        /**
+         * Update Player Stats HUD
+         */
+        function updatePlayerStatsHUD() {
+            if (!campaignController || !campaignController.currentAdapter) return;
+            
+            try {
+                const playerData = campaignController.currentAdapter.getPlayerData();
+                if (!playerData) return;
+
+                // Update HP
+                const hp = playerData.hp || 100;
+                const maxHp = playerData.maxHp || 100;
+                const hpPercent = (hp / maxHp) * 100;
+                document.getElementById('hp-current').textContent = Math.floor(hp);
+                document.getElementById('hp-max').textContent = Math.floor(maxHp);
+                document.getElementById('hp-bar').style.width = `${hpPercent}%`;
+
+                // Update Stamina
+                const stamina = playerData.stamina || 100;
+                const maxStamina = playerData.maxStamina || 100;
+                const staminaPercent = (stamina / maxStamina) * 100;
+                document.getElementById('stamina-current').textContent = Math.floor(stamina);
+                document.getElementById('stamina-max').textContent = Math.floor(maxStamina);
+                document.getElementById('stamina-bar').style.width = `${staminaPercent}%`;
+
+                // Update Mana
+                const mana = playerData.mana || 50;
+                const maxMana = playerData.maxMana || 50;
+                const manaPercent = (mana / maxMana) * 100;
+                document.getElementById('mana-current').textContent = Math.floor(mana);
+                document.getElementById('mana-max').textContent = Math.floor(maxMana);
+                document.getElementById('mana-bar').style.width = `${manaPercent}%`;
+            } catch (error) {
+                console.warn('[HUD] Failed to update player stats:', error);
+            }
+        }
+
+        /**
+         * Start player stats HUD update loop
+         */
+        function startPlayerStatsUpdate() {
+            // Update at 10 FPS (smoother than 1 second intervals)
+            setInterval(updatePlayerStatsHUD, 100);
+        }
+
+        /**
+         * Setup fullscreen button
+         */
+        function setupFullscreenButton() {
+            const btn = document.getElementById('fullscreen-btn');
+            const icon = btn.querySelector('i');
+            
+            btn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.error('Failed to enter fullscreen:', err);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+
+            // Update icon on fullscreen change
+            document.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement) {
+                    icon.className = 'fas fa-compress';
+                } else {
+                    icon.className = 'fas fa-expand';
+                }
+            });
+        }
+
+        /**
+         * Setup mobile touch controls
+         */
+        function setupMobileControls() {
+            const dpadButtons = document.querySelectorAll('.dpad-btn');
+            const actionButtons = document.querySelectorAll('.action-btn');
+
+            // Helper to simulate keyboard event
+            const simulateKey = (key, type) => {
+                const event = new KeyboardEvent(type, {
+                    key: key,
+                    code: key.length === 1 ? `Key${key.toUpperCase()}` : key,
+                    bubbles: true,
+                    cancelable: true
+                });
+                document.dispatchEvent(event);
+            };
+
+            // D-Pad controls
+            dpadButtons.forEach(btn => {
+                const key = btn.getAttribute('data-key');
+                
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    simulateKey(key, 'keydown');
+                });
+
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    simulateKey(key, 'keyup');
+                });
+            });
+
+            // Action buttons
+            actionButtons.forEach(btn => {
+                const key = btn.getAttribute('data-key');
+                
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    simulateKey(key, 'keydown');
+                });
+
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    simulateKey(key, 'keyup');
+                });
+            });
+        }
+
+        /**
+         * Setup inventory button
+         */
+        function setupInventoryButton() {
+            const btn = document.getElementById('inventory-btn');
+            
+            btn.addEventListener('click', () => {
+                openInventory();
+            });
+        }
+        
+        /**
+         * Setup powers button
+         */
+        function setupPowersButton() {
+            const btn = document.getElementById('powers-btn');
+            
+            btn.addEventListener('click', () => {
+                openPowers();
+            });
+        }
+        
+        /**
+         * Open power selector
+         */
+        function openPowers() {
+            if (powerSelector) {
+                powerSelector.show();
+            }
+        }
+
+        /**
+         * Open inventory modal
+         */
+        function openInventory() {
+            if (!campaignController) return;
+            
+            document.getElementById('inventory-modal').classList.add('active');
+            refreshInventoryUI();
+        }
+
+        /**
+         * Close inventory modal
+         */
+        function closeInventory() {
+            document.getElementById('inventory-modal').classList.remove('active');
+            // Clear new flags when closing
+            if (campaignController) {
+                campaignController.inventorySystem.clearNewFlags();
+            }
+        }
+
+        /**
+         * Refresh inventory UI
+         */
+        function refreshInventoryUI() {
+            if (!campaignController) return;
+            
+            const inventory = campaignController.inventorySystem;
+            const currentFilter = document.querySelector('.inventory-tab.active').dataset.filter;
+            const items = inventory.getItems(currentFilter);
+            
+            // Update grid
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            
+            // Fill slots (48 total)
+            for (let i = 0; i < inventory.maxSlots; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'inventory-slot';
+                
+                if (items[i]) {
+                    const item = items[i];
+                    slot.classList.add('has-item');
+                    slot.dataset.itemId = item.id;
+                    
+                    // Icon (using emoji as placeholder)
+                    const icon = document.createElement('div');
+                    icon.className = 'item-icon';
+                    icon.textContent = getItemEmoji(item.type);
+                    icon.style.color = window.InventorySystem.getRarityColor(item.rarity);
+                    slot.appendChild(icon);
+                    
+                    // Quantity
+                    if (item.stackable && item.quantity > 1) {
+                        const quantity = document.createElement('div');
+                        quantity.className = 'item-quantity';
+                        quantity.textContent = item.quantity;
+                        slot.appendChild(quantity);
+                    }
+                    
+                    // New badge
+                    if (item.metadata && item.metadata.isNew) {
+                        const badge = document.createElement('div');
+                        badge.className = 'item-new-badge';
+                        slot.appendChild(badge);
+                    }
+                    
+                    // Click handler
+                    slot.addEventListener('click', () => selectInventoryItem(item.id));
+                } else {
+                    slot.classList.add('empty');
+                }
+                
+                grid.appendChild(slot);
+            }
+            
+            // Update stats
+            document.getElementById('inventory-slot-count').textContent = 
+                `${inventory.getItemCount()}/${inventory.maxSlots}`;
+            document.getElementById('inventory-item-count').textContent = 
+                inventory.getTotalQuantity();
+        }
+
+        /**
+         * Select inventory item
+         */
+        function selectInventoryItem(itemId) {
+            if (!campaignController) return;
+            
+            const item = campaignController.inventorySystem.getItem(itemId);
+            if (!item) return;
+            
+            // Update selection
+            document.querySelectorAll('.inventory-slot').forEach(slot => {
+                if (slot.dataset.itemId === itemId) {
+                    slot.classList.add('selected');
+                } else {
+                    slot.classList.remove('selected');
+                }
+            });
+            
+            // Update info panel
+            const panel = document.getElementById('inventory-info');
+            panel.innerHTML = `
+                <div class="item-info-name" style="color: ${window.InventorySystem.getRarityColor(item.rarity)}">
+                    ${item.name}
+                </div>
+                <div class="item-info-type">${item.type}</div>
+                <div class="item-info-description">${item.description}</div>
+                ${item.quantity > 1 ? `<div style="color: #ffd700; font-size: 20px;">Quantity: ${item.quantity}</div>` : ''}
+                <div class="item-actions">
+                    ${item.type === 'consumable' ? 
+                        `<div class="item-action-btn" onclick="useItem('${item.id}')">USE</div>` : ''}
+                    ${item.type !== 'key' && item.type !== 'quest' ? 
+                        `<div class="item-action-btn danger" onclick="dropItem('${item.id}')">DROP</div>` : ''}
+                    <div class="item-action-btn" onclick="inspectItem('${item.id}')">INSPECT</div>
+                </div>
+            `;
+        }
+
+        /**
+         * Use item
+         */
+        function useItem(itemId) {
+            if (!campaignController) return;
+            
+            const success = campaignController.useInventoryItem(itemId);
+            if (success) {
+                showNotification('Item used!', 'success');
+                refreshInventoryUI();
+            }
+        }
+
+        /**
+         * Drop item
+         */
+        function dropItem(itemId) {
+            if (!campaignController) return;
+            
+            if (confirm('Drop this item?')) {
+                const success = campaignController.dropInventoryItem(itemId);
+                if (success) {
+                    showNotification('Item dropped', 'info');
+                    refreshInventoryUI();
+                    document.getElementById('inventory-info').innerHTML = 
+                        '<div class="item-info-empty">SELECT AN ITEM</div>';
+                }
+            }
+        }
+
+        /**
+         * Inspect item
+         */
+        function inspectItem(itemId) {
+            if (!campaignController) return;
+            
+            const item = campaignController.inventorySystem.getItem(itemId);
+            if (item) {
+                showNotification(`${item.name}: ${item.description}`, 'info');
+            }
+        }
+
+        /**
+         * Get emoji for item type
+         */
+        function getItemEmoji(type) {
+            const emojis = {
+                consumable: '🧪',
+                equipment: '⚔️',
+                key: '🔑',
+                quest: '📜',
+                material: '💎',
+                misc: '📦'
+            };
+            return emojis[type] || '❓';
+        }
+
+        /**
+         * Setup inventory tabs
+         */
+        function setupInventoryTabs() {
+            const tabs = document.querySelectorAll('.inventory-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Refresh UI with filter
+                    refreshInventoryUI();
+                    
+                    // Clear selection
+                    document.getElementById('inventory-info').innerHTML = 
+                        '<div class="item-info-empty">SELECT AN ITEM</div>';
+                });
+            });
+        }
+
+        /**
+         * Setup keyboard shortcuts
+         */
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // E or Tab to open inventory
+                if ((e.key === 'e' || e.key === 'E' || e.key === 'Tab') && 
+                    !document.getElementById('inventory-modal').classList.contains('active') &&
+                    !document.getElementById('power-selector-modal').style.display.includes('flex')) {
+                    e.preventDefault();
+                    openInventory();
+                }
+                
+                // P to open power selector
+                if ((e.key === 'p' || e.key === 'P') && 
+                    !document.getElementById('inventory-modal').classList.contains('active') &&
+                    !document.getElementById('power-selector-modal').style.display.includes('flex')) {
+                    e.preventDefault();
+                    openPowers();
+                }
+                
+                // ESC to close inventory
+                if (e.key === 'Escape' && 
+                    document.getElementById('inventory-modal').classList.contains('active')) {
+                    closeInventory();
+                }
+
+                // Hotbar keys (1-4)
+                if (e.key >= '1' && e.key <= '4') {
+                    const slotIndex = parseInt(e.key) - 1;
+                    useHotbarSlot(slotIndex);
+                }
+                
+                // Ability keys (Q, W, E, R) - Changed from 1-4 to Q-R for abilities
+                // Since inventory uses E, we'll use Q, F, R, T for abilities
+                const abilityKeys = { 'q': 0, 'Q': 0, 'f': 1, 'F': 1, 'r': 2, 'R': 2, 't': 3, 'T': 3 };
+                if (abilityKeys[e.key] !== undefined) {
+                    const slotIndex = abilityKeys[e.key];
+                    useAbilitySlot(slotIndex);
+                }
+            });
+            
+            // Mouse click for primary ability
+            const canvas = document.getElementById('gameCanvas');
+            if (canvas) {
+                canvas.addEventListener('click', (e) => {
+                    handleAbilityClick(e);
+                });
+            }
+        }
+        
+        /**
+         * Handle mouse click to cast ability
+         */
+        function handleAbilityClick(event) {
+            if (!campaignController || !campaignController.currentAdapter) return;
+            
+            // Get mouse position relative to canvas
+            const canvas = document.getElementById('gameCanvas');
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            // Get canvas center (player position in screen space)
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            // Calculate screen-space direction vector from center to mouse
+            const screenDX = mouseX - centerX;
+            const screenDY = mouseY - centerY;
+            const length = Math.sqrt(screenDX * screenDX + screenDY * screenDY);
+            
+            if (length > 0) {
+                let dirX, dirY;
+                
+                // Convert screen direction to world direction for iso-pixel engine
+                if (campaignController.currentEngineType === 'iso-pixel') {
+                    // Isometric screen-to-world: rotate 45 degrees back
+                    dirX = (screenDX + screenDY * 2) / length;
+                    dirY = (-screenDX + screenDY * 2) / length;
+                    // Re-normalize
+                    const wLen = Math.sqrt(dirX * dirX + dirY * dirY);
+                    if (wLen > 0) { dirX /= wLen; dirY /= wLen; }
+                } else {
+                    dirX = screenDX / length;
+                    dirY = screenDY / length;
+                }
+                
+                // Use primary equipped ability (slot 0)
+                const abilityId = campaignController.equippedAbilities[0];
+                if (abilityId) {
+                    const success = campaignController.currentAdapter.useAbility(abilityId, dirX, dirY);
+                    if (success) {
+                        console.log('[Campaign] Used ability:', abilityId);
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Use ability from slot (Q, F, R, T keys)
+         */
+        function useAbilitySlot(slotIndex) {
+            if (!campaignController || !campaignController.currentAdapter) return;
+            
+            const abilityId = campaignController.equippedAbilities[slotIndex];
+            if (!abilityId) {
+                console.log('[Campaign] No ability in slot', slotIndex);
+                return;
+            }
+            
+            // For keyboard-triggered abilities, use player's last direction or default
+            // In a real implementation, you'd track the last movement direction
+            // For now, just shoot right
+            const dirX = 1;
+            const dirY = 0;
+            
+            const success = campaignController.currentAdapter.useAbility(abilityId, dirX, dirY);
+            if (success) {
+                console.log('[Campaign] Used ability:', abilityId, 'from slot', slotIndex);
+            }
+        }
+
+        /**
+         * Hotbar Functions
+         */
+
+        /**
+         * Update hotbar display
+         */
+        function updateHotbar() {
+            if (!campaignController) return;
+
+            for (let i = 0; i < 4; i++) {
+                const slot = document.querySelector(`.hotbar-slot[data-hotbar-slot="${i}"]`);
+                const item = campaignController.inventorySystem.getHotbarItem(i);
+
+                if (item) {
+                    slot.classList.remove('empty');
+                    slot.classList.add('has-item');
+                    
+                    const icon = slot.querySelector('.hotbar-icon');
+                    icon.textContent = getItemEmoji(item.type);
+                    icon.style.color = window.InventorySystem.getRarityColor(item.rarity);
+
+                    // Update/add quantity
+                    let quantityEl = slot.querySelector('.hotbar-quantity');
+                    if (!quantityEl) {
+                        quantityEl = document.createElement('div');
+                        quantityEl.className = 'hotbar-quantity';
+                        slot.appendChild(quantityEl);
+                    }
+                    quantityEl.textContent = item.quantity;
+                } else {
+                    slot.classList.add('empty');
+                    slot.classList.remove('has-item');
+                    const icon = slot.querySelector('.hotbar-icon');
+                    icon.textContent = '';
+                    const quantityEl = slot.querySelector('.hotbar-quantity');
+                    if (quantityEl) quantityEl.remove();
+                }
+            }
+        }
+
+        /**
+         * Use hotbar slot
+         */
+        function useHotbarSlot(slotIndex) {
+            if (!campaignController) return;
+
+            const success = campaignController.inventorySystem.useHotbarItem(slotIndex, (item) => {
+                // Apply item effect
+                if (campaignController.currentAdapter && campaignController.currentAdapter.applyItemEffect) {
+                    campaignController.currentAdapter.applyItemEffect(item);
+                }
+                showNotification(`Used ${item.name}`, 'success');
+            });
+
+            if (success) {
+                updateHotbar();
+                // Update inventory if open
+                if (document.getElementById('inventory-modal').classList.contains('active')) {
+                    refreshInventoryUI();
+                }
+            }
+        }
+
+        /**
+         * Assign item to hotbar (right-click in inventory)
+         */
+        function assignToHotbar(itemId) {
+            if (!campaignController) return;
+
+            const item = campaignController.inventorySystem.getItem(itemId);
+            if (!item || item.type !== 'consumable') {
+                showNotification('Only consumables can be added to hotbar', 'warning');
+                return;
+            }
+
+            // Find first empty slot
+            for (let i = 0; i < 4; i++) {
+                if (!campaignController.inventorySystem.getHotbarItem(i)) {
+                    campaignController.inventorySystem.assignToHotbar(i, itemId);
+                    showNotification(`Assigned to hotbar slot ${i + 1}`, 'success');
+                    updateHotbar();
+                    return;
+                }
+            }
+
+            showNotification('Hotbar is full', 'warning');
+        }
+
+        /**
+         * Setup search functionality
+         */
+        function setupSearch() {
+            const searchInput = document.getElementById('inventory-search-input');
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', (e) => {
+                if (!campaignController) return;
+                campaignController.inventorySystem.searchQuery = e.target.value;
+                refreshInventoryUI();
+            });
+        }
+
+        /**
+         * Setup sort functionality
+         */
+        function setupSort() {
+            const sortSelect = document.getElementById('inventory-sort-select');
+            if (!sortSelect) return;
+
+            sortSelect.addEventListener('change', (e) => {
+                if (!campaignController) return;
+                campaignController.inventorySystem.sortInventory(e.target.value);
+                refreshInventoryUI();
+            });
+        }
+
+        /**
+         * Enhanced refresh inventory UI (with search and drag-drop)
+         */
+        function refreshInventoryUI() {
+            if (!campaignController) return;
+            
+            const inventory = campaignController.inventorySystem;
+            const searchQuery = document.getElementById('inventory-search-input')?.value || '';
+            const items = searchQuery ? 
+                inventory.searchItems(searchQuery) : 
+                inventory.getItems(inventory.currentFilter);
+            
+            // Update grid
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            
+            // Fill slots (48 total)
+            for (let i = 0; i < inventory.maxSlots; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'inventory-slot';
+                slot.dataset.slotIndex = i;
+                
+                if (items[i]) {
+                    const item = items[i];
+                    slot.classList.add('has-item');
+                    slot.dataset.itemId = item.id;
+                    slot.setAttribute('draggable', 'true');
+                    
+                    // Icon
+                    const icon = document.createElement('div');
+                    icon.className = 'item-icon';
+                    icon.textContent = getItemEmoji(item.type);
+                    icon.style.color = window.InventorySystem.getRarityColor(item.rarity);
+                    slot.appendChild(icon);
+                    
+                    // Quantity
+                    if (item.stackable && item.quantity > 1) {
+                        const quantity = document.createElement('div');
+                        quantity.className = 'item-quantity';
+                        quantity.textContent = item.quantity;
+                        slot.appendChild(quantity);
+                    }
+                    
+                    // New badge
+                    if (item.metadata && item.metadata.isNew) {
+                        const badge = document.createElement('div');
+                        badge.className = 'item-new-badge';
+                        slot.appendChild(badge);
+                    }
+                    
+                    // Click handlers
+                    slot.addEventListener('click', () => selectInventoryItem(item.id));
+                    slot.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        if (item.type === 'consumable') {
+                            assignToHotbar(item.id);
+                        }
+                    });
+
+                    // Drag handlers
+                    slot.addEventListener('dragstart', handleDragStart);
+                    slot.addEventListener('dragend', handleDragEnd);
+                } else {
+                    slot.classList.add('empty');
+                }
+
+                // Drop handlers (all slots can receive)
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragleave', handleDragLeave);
+                slot.addEventListener('drop', handleDrop);
+                
+                grid.appendChild(slot);
+            }
+            
+            // Update stats
+            document.getElementById('inventory-slot-count').textContent = 
+                `${inventory.getItemCount()}/${inventory.maxSlots}`;
+            document.getElementById('inventory-item-count').textContent = 
+                inventory.getTotalQuantity();
+        }
+
+        /**
+         * Drag and Drop Handlers
+         */
+        let draggedItem = null;
+        let draggedFromSlot = null;
+
+        function handleDragStart(e) {
+            const slot = e.currentTarget;
+            draggedItem = slot.dataset.itemId;
+            draggedFromSlot = parseInt(slot.dataset.slotIndex);
+            slot.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedItem);
+        }
+
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const dropSlot = e.currentTarget;
+            const dropIndex = parseInt(dropSlot.dataset.slotIndex);
+            
+            if (dropIndex === draggedFromSlot) return; // Same slot
+            
+            if (!campaignController || !draggedItem) return;
+            
+            const inventory = campaignController.inventorySystem;
+            const items = inventory.getItems(inventory.currentFilter);
+            
+            // Get items at both positions
+            const draggedItemObj = items[draggedFromSlot];
+            const targetItemObj = items[dropIndex];
+            
+            if (!draggedItemObj) return;
+            
+            // Remove both items
+            inventory.removeItem(draggedItemObj.id, draggedItemObj.quantity);
+            if (targetItemObj) {
+                inventory.removeItem(targetItemObj.id, targetItemObj.quantity);
+            }
+            
+            // Re-add in swapped positions (this is a simplified approach)
+            // In a real implementation, you'd directly manipulate the items array
+            const allItems = inventory.items.slice();
+            
+            // Swap
+            const temp = allItems[draggedFromSlot];
+            allItems[draggedFromSlot] = allItems[dropIndex];
+            allItems[dropIndex] = temp;
+            
+            inventory.items = allItems;
+            
+            refreshInventoryUI();
+            draggedItem = null;
+            draggedFromSlot = null;
+        }
+
+        /**
+         * Show error
+         */
+        function showError(message) {
+            showNotification(message, 'error');
+        }
+
+        // Initialize on load
+        window.addEventListener('load', init);
+
+        // Save on unload
+        window.addEventListener('beforeunload', async (e) => {
+            if (campaignController) {
+                await campaignController.autoSave();
+            }
+        });
+
+        // Handle visibility change (auto-save when tab becomes hidden)
+        document.addEventListener('visibilitychange', async () => {
+            if (document.hidden && campaignController) {
+                await campaignController.autoSave();
+            }
+        });
+    </script>
+</body>
+</html>

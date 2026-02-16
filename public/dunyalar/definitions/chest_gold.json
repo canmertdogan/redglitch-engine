@@ -1,0 +1,15 @@
+{
+    "components":  [
+                       {
+                           "table":  "rare",
+                           "type":  "Loot"
+                       },
+                       {
+                           "height":  32,
+                           "width":  32,
+                           "type":  "Collider"
+                       }
+                   ],
+    "name":  "Golden Chest",
+    "sprite":  "Pixel_Mart/basket_yellow.png"
+}

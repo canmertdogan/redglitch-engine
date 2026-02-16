@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK QUEST STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-size: 1.1rem; border-bottom: 1px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover { background: var(--accent); color: #000; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- PANELS --- */
+        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border); }
+        .panel-header {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+        }
+        .panel-content { padding: 10px; overflow-y: auto; flex-grow: 1; }
+
+        /* --- LEFT (LIST) --- */
+        #sidebar { width: 260px; border-right: 1px solid var(--border); }
+        
+        .list-item {
+            padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #1a1a1a;
+            color: #888; display: flex; align-items: center; gap: 8px;
+        }
+        .list-item:hover { background: #111; color: #fff; }
+        .list-item.active { background: #1a1a1a; color: var(--accent); border-left: 3px solid var(--accent); }
+
+        /* --- CENTER (EDITOR) --- */
+        #center-panel { 
+            flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas);
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;
+        }
+        #editor-view { padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; color: #666; margin-bottom: 5px; font-size: 0.9rem; text-transform: uppercase; }
+        
+        input, textarea, select {
+            width: 100%; background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 8px; font-family: inherit; font-size: 1.1rem; outline: none;
+        }
+        input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 80px; }
+
+        .tag-container { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px; background: #000; border: 1px solid #333; min-height: 38px; }
+        .tag { background: #222; border: 1px solid #444; padding: 2px 8px; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
+        .tag span { cursor: pointer; color: #e74c3c; }
+
+        /* --- RIGHT (STAGES) --- */
+        #inspector { width: 320px; border-left: 1px solid var(--border); border-right: none; }
+        
+        .stage-card {
+            background: #111; border: 1px solid #333; padding: 10px; margin-bottom: 10px;
+            position: relative;
+        }
+        .stage-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px; color: #888; font-size: 0.8rem;
+        }
+        .stage-row { display: flex; gap: 5px; margin-top: 5px; }
+
+        .btn-mini { 
+            background: #222; border: 1px solid #444; color: #aaa; cursor: pointer; padding: 2px 6px; font-family: inherit; font-size: 0.8rem;
+        }
+        .btn-mini:hover { border-color: var(--accent); color: #fff; }
+        .btn-mini.danger { color: #e74c3c; }
+        .btn-mini.danger:hover { background: #e74c3c; color: #000; }
+
+        .btn-full { width: 100%; padding: 8px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; text-transform: uppercase; }
+        .btn-full:hover { border-color: var(--accent); color: #fff; }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <div id="menubar">
+        <div style="color:var(--accent); font-weight:bold; margin-right:20px; letter-spacing:2px;">
+            <i class="fas fa-scroll"></i> QUEST STUDIO
+        </div>
+        <div class="menu-item" onclick="saveAll()">File</div>
+        <div class="menu-item">View</div>
+        <div class="menu-item">Help</div>
+    </div>
+
+    <div id="toolbar">
+        <button class="tool-btn" onclick="editor.saveAll()" title="Save All"><i class="fas fa-save"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="editor.newQuest()" title="New Quest"><i class="fas fa-plus-circle"></i></button>
+        <button class="tool-btn" onclick="editor.deleteQuest()" title="Delete Quest"><i class="fas fa-trash"></i></button>
+    </div>
+
+    <div id="layout">
+        
+        <!-- LEFT: LIST -->
+        <div id="sidebar" class="panel">
+            <div class="panel-header">QUEST LOG <i class="fas fa-list"></i></div>
+            <div class="panel-content" id="quest-list"></div>
+        </div>
+
+        <!-- CENTER: EDITOR -->
+        <div id="center-panel">
+            <div id="empty-view" style="display:flex; height:100%; align-items:center; justify-content:center; color:#444;">
+                SELECT A QUEST TO EDIT
+            </div>
+            
+            <div id="editor-view" class="panel-content" style="display:none;">
+                
+                <div class="form-group">
+                    <label class="form-label">Quest ID</label>
+                    <input type="text" id="q-id" onchange="editor.update('id', this.value)">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" id="q-title" onchange="editor.update('title', this.value)">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="q-desc" onchange="editor.update('description', this.value)"></textarea>
+                </div>
+
+                <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label class="form-label">Quest Giver</label>
+                        <select id="q-giver" onchange="editor.update('giverId', this.value)"></select>
+                    </div>
+                    <div>
+                        <label class="form-label">Auto Complete</label>
+                        <select id="q-auto" onchange="editor.update('autoComplete', this.value === 'true')">
+                            <option value="false">No (Return to NPC)</option>
+                            <option value="true">Yes (Instant)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Prerequisites</label>
+                    <div id="prereq-list" class="tag-container"></div>
+                    <div style="display:flex; gap:5px; margin-top:5px;">
+                        <select id="prereq-select"></select>
+                        <button class="btn-mini" onclick="editor.addPrereq()" style="height:auto;">ADD</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Rewards</label>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <div style="flex:1">
+                            <label class="form-label" style="font-size:0.8rem;">XP</label>
+                            <input type="number" id="rew-xp" onchange="editor.updateReward('xp', this.value)">
+                        </div>
+                        <div style="flex:1">
+                            <label class="form-label" style="font-size:0.8rem;">GOLD</label>
+                            <input type="number" id="rew-gold" onchange="editor.updateReward('gold', this.value)">
+                        </div>
+                    </div>
+                    <div id="rew-items" class="tag-container"></div>
+                    <div style="display:flex; gap:5px; margin-top:5px;">
+                        <select id="item-select"></select>
+                        <button class="btn-mini" onclick="editor.addItemReward()" style="height:auto;">ADD ITEM</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- RIGHT: STAGES -->
+        <div id="inspector" class="panel">
+            <div class="panel-header">OBJECTIVES <i class="fas fa-tasks"></i></div>
+            <div class="panel-content">
+                <button class="btn-full" onclick="editor.addStage()" style="margin-bottom:10px;">+ ADD OBJECTIVE</button>
+                <div id="stages-container"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <script src="quest_editor.js"></script>
+    <!-- IRAB AI Assistant -->
+    <script src="ai/bridge.js"></script>
+    <script src="assistant.js"></script>
+</body>
+</html>

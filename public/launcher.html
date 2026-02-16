@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ongonluk Engine Launcher</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="transitions.css">
+    <style>
+        :root {
+            --accent: #f1c40f;
+            --bg: #0a0a0f;
+            --text: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #atmosphere-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .terminal-window {
+            background: rgba(10, 10, 15, 0.95);
+            border: 3px solid var(--accent);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.3);
+            min-width: 400px;
+        }
+
+        .terminal-window h1 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 2.5rem;
+        }
+
+        .terminal-window p {
+            color: #888;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #333;
+            color: var(--accent);
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .retro-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(241, 196, 15, 0.1);
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .retro-btn:hover {
+            background: rgba(241, 196, 15, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .retro-btn:active {
+            transform: translateY(0);
+        }
+
+        .menu-container {
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .menu-title {
+            font-size: 3.5rem;
+            color: var(--accent);
+            text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .menu-subtitle {
+            font-size: 1.2rem;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .user-display {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: #555;
+            font-size: 1.2rem;
+        }
+
+        .user-display span {
+            color: var(--accent);
+        }
+
+        .exit-btn {
+            border-color: #555 !important;
+            color: #888 !important;
+        }
+
+        .exit-btn:hover {
+            border-color: #777 !important;
+            color: #aaa !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <canvas id="atmosphere-canvas"></canvas>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="screen active">
+        <div class="terminal-window">
+            <h1>KETEBE TERMINAL</h1>
+            <p id="login-prompt">Identify yourself, Traveler.</p>
+            <input type="text" id="username-input" placeholder="ENTER NAME..." maxlength="12" autocomplete="off">
+            <button class="retro-btn" onclick="attemptLogin()">
+                <i class="fas fa-sign-in-alt"></i> CONNECT
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN MENU SCREEN -->
+    <div id="main-menu" class="screen">
+        <div class="menu-container">
+            <h1 class="menu-title">ONGONLUK ENGINE</h1>
+            <p class="menu-subtitle">Multi-Engine Game Platform</p>
+
+            <div class="menu-buttons">
+                <button class="retro-btn" onclick="smoothNavigate('slot_selection.html')">
+                    <i class="fas fa-gamepad"></i> CAMPAIGN MODE
+                </button>
+                <button class="retro-btn" onclick="smoothNavigate('campaign_editor.html')">
+                    <i class="fas fa-edit"></i> CAMPAIGN EDITOR
+                </button>
+                <button class="retro-btn" onclick="smoothNavigate('tools.html')">
+                    <i class="fas fa-tools"></i> TOOLS
+                </button>
+                <button class="retro-btn exit-btn" onclick="quitGame()">
+                    <i class="fas fa-power-off"></i> EXIT
+                </button>
+            </div>
+
+            <div class="user-display">
+                USER: <span id="current-user-display">GUEST</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/smooth-nav.js"></script>
+    <script>
+        // Atmosphere canvas animation
+        const canvas = document.getElementById('atmosphere-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Simple star field
+        const stars = [];
+        for (let i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2,
+                speed: Math.random() * 0.5 + 0.1
+            });
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(241, 196, 15, 0.8)';
+
+            stars.forEach(star => {
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+                star.y += star.speed;
+
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+            });
+
+            requestAnimationFrame(animateStars);
+        }
+
+        animateStars();
+
+        // Login functionality
+        function attemptLogin() {
+            const username = document.getElementById('username-input').value.trim();
+            if (!username) {
+                if (window.showError) {
+                    window.showError('Please enter a username');
+                } else {
+                    alert('Please enter a username');
+                }
+                return;
+            }
+
+            // Store username
+            localStorage.setItem('ketebe_username', username);
+            document.getElementById('current-user-display').textContent = username;
+
+            // Hide login, show main menu
+            document.getElementById('login-screen').classList.remove('active');
+            document.getElementById('main-menu').classList.add('active');
+        }
+
+        // Auto-login if username exists
+        window.addEventListener('load', () => {
+            const savedUsername = localStorage.getItem('ketebe_username');
+            if (savedUsername) {
+                document.getElementById('username-input').value = savedUsername;
+                document.getElementById('current-user-display').textContent = savedUsername;
+            }
+
+            // Allow Enter key on username input
+            document.getElementById('username-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    attemptLogin();
+                }
+            });
+        });
+
+        // Quit game function
+        function quitGame() {
+            if (typeof window !== 'undefined' && window.process && window.process.type) {
+                // Electron environment
+                const { ipcRenderer } = require('electron');
+                ipcRenderer.send('window-close');
+            } else {
+                // Web environment - go back or close
+                if (window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    window.close();
+                }
+            }
+        }
+
+        // Smooth navigate helper
+        function smoothNavigate(url) {
+            // Check if smooth-nav.js is loaded (it sets window.smoothNavigate initially)
+            // But since we're defining it here, we need to check differently
+            // Just use direct navigation - smooth-nav.js will intercept if loaded
+            document.body.classList.add('page-exit');
+            setTimeout(() => {
+                window.location.href = url;
+            }, 300);
+        }
+    </script>
+</body>
+</html>

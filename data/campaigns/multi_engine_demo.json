@@ -1,0 +1,155 @@
+{
+  "name": "Multi-Engine Demo Campaign",
+  "description": "Demonstrates transitions between all three engine types",
+  "version": "1.0.0",
+  "author": "Ketebe Team",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "next": "intro_dialogue"
+    },
+    {
+      "id": "intro_dialogue",
+      "type": "dialogue",
+      "text": "Welcome to the Multi-Engine Campaign! You'll experience all three game styles.",
+      "next": "topdown_level"
+    },
+    {
+      "id": "topdown_level",
+      "type": "level",
+      "engineType": "rpg-topdown",
+      "levelId": "level1",
+      "levelPath": "dunyalar/level1.json",
+      "metadata": {
+        "name": "Forest Village",
+        "description": "Start in the RPG-style top-down world"
+      },
+      "next": "topdown_complete"
+    },
+    {
+      "id": "topdown_complete",
+      "type": "dialogue",
+      "text": "Great job! You completed the top-down level.",
+      "next": "set_topdown_flag"
+    },
+    {
+      "id": "set_topdown_flag",
+      "type": "variable",
+      "flag": "topdown_complete",
+      "value": true,
+      "next": "reward_coin"
+    },
+    {
+      "id": "reward_coin",
+      "type": "reward",
+      "itemId": "gold_coin",
+      "itemName": "Gold Coin",
+      "gold": 100,
+      "next": "iso_intro"
+    },
+    {
+      "id": "iso_intro",
+      "type": "dialogue",
+      "text": "Now entering the Isometric Pixel world...",
+      "next": "iso_level"
+    },
+    {
+      "id": "iso_level",
+      "type": "level",
+      "engineType": "iso-pixel",
+      "levelId": "iso_demo",
+      "levelPath": "dunyalar/iso_demo.json",
+      "metadata": {
+        "name": "Isometric City",
+        "description": "Explore the 3D isometric environment"
+      },
+      "next": "iso_complete"
+    },
+    {
+      "id": "iso_complete",
+      "type": "dialogue",
+      "text": "Excellent! The isometric world has been conquered.",
+      "next": "set_iso_flag"
+    },
+    {
+      "id": "set_iso_flag",
+      "type": "variable",
+      "flag": "iso_complete",
+      "value": true,
+      "next": "check_both_complete"
+    },
+    {
+      "id": "check_both_complete",
+      "type": "branch",
+      "condition": "topdown_complete",
+      "nextTrue": "platformer_intro",
+      "nextFalse": "error_node"
+    },
+    {
+      "id": "platformer_intro",
+      "type": "dialogue",
+      "text": "Final challenge: The Platformer Zone!",
+      "next": "platformer_level"
+    },
+    {
+      "id": "platformer_level",
+      "type": "level",
+      "engineType": "platformer-2d",
+      "levelId": "platform_demo",
+      "levelPath": "dunyalar/platform_demo.json",
+      "metadata": {
+        "name": "Sky Platforms",
+        "description": "Jump and run through the platformer level"
+      },
+      "next": "platformer_complete"
+    },
+    {
+      "id": "platformer_complete",
+      "type": "dialogue",
+      "text": "Amazing! You've mastered all three game styles!",
+      "next": "set_platformer_flag"
+    },
+    {
+      "id": "set_platformer_flag",
+      "type": "variable",
+      "flag": "platformer_complete",
+      "value": true,
+      "next": "final_reward"
+    },
+    {
+      "id": "final_reward",
+      "type": "reward",
+      "itemId": "master_trophy",
+      "itemName": "Master Trophy",
+      "gold": 500,
+      "next": "random_bonus"
+    },
+    {
+      "id": "random_bonus",
+      "type": "random",
+      "chance": 50,
+      "nextTrue": "bonus_reward",
+      "nextFalse": "end_dialogue"
+    },
+    {
+      "id": "bonus_reward",
+      "type": "reward",
+      "itemId": "lucky_charm",
+      "itemName": "Lucky Charm",
+      "next": "end_dialogue"
+    },
+    {
+      "id": "end_dialogue",
+      "type": "dialogue",
+      "text": "Congratulations on completing the Multi-Engine Campaign!",
+      "next": null
+    },
+    {
+      "id": "error_node",
+      "type": "note",
+      "text": "Error: This shouldn't happen!",
+      "next": null
+    }
+  ]
+}

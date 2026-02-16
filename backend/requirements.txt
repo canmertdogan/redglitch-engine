@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+websockets
+llama-cpp-python
+watchdog
+python-multipart
+pydantic
+requests
+chromadb
+sentence-transformers
+urllib3
+psutil

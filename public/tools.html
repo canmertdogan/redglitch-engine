@@ -1,0 +1,2720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ketebe Game Studio</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-deep: #050508;
+            --bg-main: #080c18;
+            --bg-ui: #121a2b;
+            --accent: #f1c40f;
+            --text: #cfd8dc;
+            --header-h: 40px;
+            --sidebar-w: 220px;
+            --border: 2px solid #020408;
+        }
+
+        /* ... (Keep existing body/titlebar styles until Quick Access Toolbar) ... */
+        
+            /* --- QUICK ACCESS TOOLBAR (MINIMALIST PIXEL) --- */
+            #quick-toolbar {
+                height: 38px;
+                background: #000;
+                border-bottom: 1px solid #1f2b42;
+                display: flex;
+                align-items: center;
+                padding: 0 8px;
+                gap: 2px;
+                flex-shrink: 0;
+                z-index: 100;
+                overflow-x: auto;
+            }
+            
+            .toolbar-group {
+                display: flex;
+                align-items: center;
+                gap: 2px;
+                padding: 0 4px;
+                border-right: 1px solid #222;
+                margin-right: 2px;
+            }
+            .toolbar-group:last-child { border-right: none; }
+        
+            .tool-btn {
+                background: transparent;
+                border: 1px solid transparent;
+                color: #7a8b99;
+                width: 30px; height: 28px;
+                cursor: pointer;
+                display: flex; justify-content: center; align-items: center;
+                font-size: 14px;
+                border-radius: 2px;
+                transition: all 0.1s;
+            }
+            
+            .tool-btn:hover {
+                background: #111;
+                color: #fff;
+                border-color: #333;
+            }
+        
+            .tool-btn:active, .tool-btn.active {
+                background: #222;
+                color: var(--accent);
+                border-color: var(--accent);
+                transform: translateY(1px);
+            }
+            
+            .tool-btn.primary {
+                color: var(--accent);
+            }
+            .tool-btn.primary:hover {
+                background: rgba(241, 196, 15, 0.1);
+                border-color: var(--accent);
+                color: #fff;
+            }
+        
+            .tool-btn.danger {
+                color: #e74c3c;
+                background: transparent;
+                border-color: transparent;
+            }
+            .tool-btn.danger:hover {
+                color: #e74c3c;
+                background: rgba(231, 76, 60, 0.1);
+                border-color: #e74c3c;
+            }
+            
+            /* --- RUNNING STATE OVERRIDES --- */        .running-text { 
+            color: #2ecc71 !important; 
+            text-shadow: 0 0 10px #27ae60 !important; 
+            filter: drop-shadow(0 0 2px #2ecc71) !important; 
+            animation: green-glow 1.5s ease-in-out infinite alternate !important; 
+        }
+        @keyframes green-glow {
+            from { text-shadow: 0 0 5px #2ecc71, 0 0 10px #2ecc71; transform: scale(1); }
+            to { text-shadow: 0 0 10px #2ecc71, 0 0 20px #2ecc71, 0 0 30px #2ecc71; transform: scale(1.1); }
+        }
+        .running-btn { color: #2ecc71 !important; border-left-color: #2ecc71 !important; background: rgba(46, 204, 113, 0.1) !important; }
+
+        /* --- RIGHT SIDEBAR: DEV OPS --- */
+        #right-sidebar {
+            width: var(--sidebar-w);
+            background: #0a0f1a;
+            border-left: var(--border);
+            display: flex; flex-direction: column;
+            padding: 0;
+        }
+        
+        .dev-panel {
+            padding: 10px 15px; background: #121a2b; 
+            border-bottom: 1px solid #2c3e50;
+            margin-bottom: 2px;
+        }
+        .dev-select {
+            width: 100%; background: #000; color: #fff; border: 1px solid #444;
+            padding: 6px; font-family: inherit; font-size: 14px; margin-bottom: 8px;
+            outline: none;
+        }
+        .dev-select:focus { border-color: var(--accent); }
+        
+        .dev-btn {
+            flex: 1; background: #222; border: 1px solid #444; color: #888;
+            padding: 6px; cursor: pointer; font-family: inherit; font-size: 12px;
+            text-transform: uppercase; transition: all 0.1s;
+        }
+        .dev-btn:hover { background: #333; color: #fff; border-color: #666; }
+        .dev-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+        .dev-btn.small { padding: 4px 8px; font-size: 11px; }
+
+        .dev-toggle {
+            display: flex; align-items: center; gap: 10px; color: #8fa0bc;
+            margin-bottom: 6px; cursor: pointer; font-size: 13px; user-select: none;
+        }
+        .dev-toggle:last-child { margin-bottom: 0; }
+        .dev-toggle:hover { color: #fff; }
+        .dev-toggle input { accent-color: var(--accent); }
+
+        /* --- MAIN LAYOUT --- */
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-deep);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            height: 100vh;
+            width: 100vw;
+            min-width: 800px;
+            min-height: 450px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            image-rendering: pixelated;
+        }
+
+        /* --- PROFESSIONAL TITLE BAR --- */
+        #titlebar {
+            height: var(--header-h);
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0;
+            border-bottom: 1px solid #1f2b42;
+            user-select: none;
+            -webkit-app-region: drag;
+            position: relative; /* For absolute centering */
+            z-index: 1000000; /* Extremely high to beat windows and sidebars */
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        .app-icon {
+            width: 40px; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; background: #020408; color: var(--accent);
+            border-right: 1px solid #1f2b42;
+        }
+
+        .menubar {
+            display: flex;
+            -webkit-app-region: no-drag;
+            height: 100%;
+        }
+
+        /* Dropdown Menu Styles */
+        .dropdown {
+            position: relative;
+            height: 100%;
+            -webkit-app-region: no-drag;
+        }
+        
+        .menu-btn {
+            padding: 0 12px;
+            height: 100%;
+            display: flex; align-items: center;
+            color: #8fa0bc;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.1s, color 0.1s;
+            user-select: none;
+        }
+        .menu-btn:hover, .dropdown.active .menu-btn { background: #1f2b42; color: #fff; }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #101726;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            z-index: 2000000;
+            border: 1px solid #1f2b42;
+            border-top: none;
+        }
+        
+        .dropdown.active .dropdown-content { display: block; }
+
+        .dropdown-item {
+            padding: 10px 15px;
+            color: #8fa0bc;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dropdown-item:hover { background: #1f2b42; color: var(--accent); }
+        .dropdown-item span { width: 18px; text-align: center; }
+        .dropdown-divider { height: 1px; background: #1f2b42; margin: 5px 0; }
+
+        .app-caption {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            letter-spacing: 1px;
+            font-weight: bold;
+            display: flex; align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            pointer-events: none; /* Allow dragging through text */
+            z-index: 1;
+        }
+        .brand-gold {
+            color: #f1c40f;
+            letter-spacing: 2px;
+        }
+        .separator-plus {
+            color: #f1c40f;
+            margin: 0 12px;
+            font-size: 1.1rem;
+            font-weight: 100;
+            display: inline-block;
+        }
+        .brand-blue {
+            color: #f1c40f;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .win-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+            z-index: 2;
+        }
+        .control-btn {
+            width: 45px;
+            display: flex; align-items: center; justify-content: center;
+            color: #8fa0bc;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .control-btn:hover { background: #2c3e50; }
+        .control-btn.close:hover { background: #e81123; color: #fff; }
+
+        /* --- MAIN LAYOUT --- */
+        #studio-layout {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+            z-index: 10; /* Lower than titlebar */
+        }
+
+        /* --- SIDEBARS --- */
+        #sidebar-container, #right-sidebar-container {
+            display: flex;
+            position: relative;
+            z-index: 1000;
+        }
+        #sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg-main);
+            border-right: var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.2s;
+            overflow: hidden;
+        }
+        #sidebar.collapsed { width: 0; border-right: none; }
+        
+        #right-sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg-main);
+            border-left: var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.2s;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        #right-sidebar.collapsed { width: 0; border-left: none; }
+
+        .sidebar-header {
+            padding: 10px;
+            color: var(--accent);
+            border-bottom: 1px solid #2c3e50;
+            text-transform: lowercase;
+            white-space: nowrap;
+        }
+        .sidebar-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .module-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            color: #8fa0bc;
+        }
+        .module-btn:hover { background: #182236; color: #fff; }
+        .module-btn.active { background: #1f2b42; color: var(--accent); }
+        .module-btn.opened::after {
+            content: ""; width: 6px; height: 6px;
+            background: var(--accent); box-shadow: 0 0 5px var(--accent);
+        }
+        
+        .handle-btn {
+            width: 12px; height: 100%; background: var(--bg-ui); border: var(--border);
+            align-self: center; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: var(--accent);
+        }
+        #sidebar-handle { border-left: none; }
+        #right-sidebar-handle { border-right: none; }
+
+        .action-btn {
+            padding: 10px 15px; cursor: pointer; color: #8fa0bc;
+            display: flex; align-items: center; gap: 10px; transition: all 0.1s;
+            border-left: 3px solid transparent;
+            font-size: 16px;
+        }
+        .action-btn:hover { background: #182236; color: #fff; border-left-color: var(--accent); }
+        
+        .action-btn.critical { color: #e74c3c; }
+        .action-btn.critical:hover { border-left-color: #e74c3c; background: #2a1a1a; }
+        .action-icon { width: 20px; text-align: center; font-size: 1.1em; }
+
+        /* --- QUICK ACCESS TOOLBAR --- */
+        #quick-toolbar {
+            height: 32px;
+            background: #000;
+            border-bottom: 1px solid #1f2b42;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 5px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .q-btn {
+            height: 24px;
+            padding: 0 10px;
+            background: #1f2b42;
+            border: 1px solid #2c3e50;
+            color: #8fa0bc;
+            font-size: 13px;
+            display: flex; align-items: center; gap: 6px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.1s;
+        }
+        .q-btn:hover { background: #2c3e50; color: #fff; border-color: #5d6d7e; }
+        .q-btn:active { background: var(--accent); color: #000; border-color: var(--accent); }
+        
+        .q-separator {
+            width: 1px; height: 16px; background: #2c3e50; margin: 0 5px;
+        }
+
+        /* --- PROJECT EXPLORER (Right Sidebar) --- */
+        .file-tree {
+            padding: 5px;
+            font-size: 14px;
+            color: #8fa0bc;
+        }
+        .tree-item {
+            padding: 4px 8px;
+            display: flex; align-items: center; gap: 6px;
+            cursor: pointer;
+            border-radius: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .tree-item:hover { background: #182236; color: #fff; }
+        .tree-item.folder { font-weight: bold; color: #aab7c4; }
+        .tree-indent { margin-left: 15px; border-left: 1px solid #2c3e50; }
+        .tree-icon { width: 16px; text-align: center; font-size: 12px; }
+
+        /* --- PRO SIDEBAR --- */
+        .sidebar-section {
+            padding: 15px 15px 5px 15px;
+            font-size: 12px;
+            color: #5d6d7e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            border-bottom: 1px solid #182236;
+            margin-bottom: 5px;
+            margin-top: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 10px 15px;
+        }
+        
+        .action-card {
+            background: #121a2b;
+            border: 1px solid #2c3e50;
+            padding: 10px;
+            cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: all 0.1s;
+            text-align: center;
+            height: 80px;
+            border-radius: 4px;
+        }
+        .action-card:hover {
+            background: #1f2b42;
+            border-color: var(--accent);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .action-card .card-icon { font-size: 24px; margin-bottom: 8px; color: var(--accent); }
+        .action-card span { font-size: 14px; line-height: 1; }
+
+        .sys-widget {
+            background: #080c14;
+            border: 1px solid #1f2b42;
+            padding: 12px;
+            margin: 10px 15px;
+            border-radius: 6px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .meter-row { margin-bottom: 8px; }
+        .meter-row:last-child { margin-bottom: 0; }
+        .meter-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; color: #8fa0bc; }
+        .meter-track { height: 6px; background: #000; border-radius: 3px; overflow: hidden; border: 1px solid #2c3e50; }
+        .meter-fill { height: 100%; transition: width 0.5s ease-out; }
+
+        /* --- WORKSPACE --- */
+        #workspace {
+            flex-grow: 1;
+            background: var(--bg-deep);
+            position: relative;
+            overflow: hidden;
+            background-image: radial-gradient(#182236 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #tab-bar {
+            height: 32px;
+            background: #0a0f1a;
+            border-bottom: 1px solid #1f2b42;
+            display: flex;
+            align-items: flex-end;
+            padding: 0 5px;
+            gap: 2px;
+            z-index: 5;
+        }
+
+        .tab {
+            padding: 0 15px;
+            height: 26px;
+            background: #162133;
+            border: 1px solid #1f2b42;
+            border-bottom: none;
+            color: #8fa0bc;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tab:hover { background: #1f2b42; color: #fff; }
+        .tab.active { background: #2c3e50; color: var(--accent); border-color: var(--accent); height: 28px; z-index: 2; }
+        .tab-close { font-size: 14px; color: #e74c3c; opacity: 0.5; }
+        .tab-close:hover { opacity: 1; }
+
+        /* --- INTERNAL WINDOWS --- */
+        .window {
+            position: absolute;
+            background: var(--bg-main);
+            border: 2px solid #34495e;
+            box-shadow: 4px 4px 0 #020408;
+            display: flex;
+            flex-direction: column;
+            min-width: 200px; min-height: 150px; z-index: 10;
+        }
+        .window.maximized {
+            top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important;
+            border: none; box-shadow: none;
+        }
+        .window.focused { z-index: 100; }
+        .window-title {
+            height: 28px; background: #000; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 8px; cursor: default; user-select: none; font-size: 16px; border-bottom: 1px solid #020408;
+        }
+        .window.focused .window-title { background: #000; color: var(--accent); }
+        .window-controls { display: flex; gap: 4px; }
+        .window-btn {
+            width: 20px; height: 20px; border: 1px solid #5d6d7e; background: #182236; color: #fff;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px;
+        }
+        .window-btn:hover { background: #34495e; }
+        .window-btn.close:hover { background: #c0392b; }
+        .window-content { flex-grow: 1; background: #020408; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .window.dragging iframe { pointer-events: none; }
+
+        /* --- PROJECT MODAL REDESIGN (PHASE 2) --- */
+        #project-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2,4,8,0.95); z-index: 9999;
+            backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-box {
+            width: 900px; height: 700px;
+            background: #0b111e;
+            border: 1px solid #34495e;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.9);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        
+        /* Header */
+        .modal-header {
+            height: 60px; background: #020408;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 25px; border-bottom: 1px solid #1f2b42;
+        }
+        .modal-title { 
+            font-size: 1.2rem; color: #fff; letter-spacing: 2px; font-weight: bold; 
+            display: flex; align-items: center; gap: 15px; text-transform: uppercase;
+        }
+        .modal-title span { color: var(--accent); }
+        .modal-close { font-size: 1.5rem; color: #5d6d7e; cursor: pointer; transition: color 0.2s; }
+        .modal-close:hover { color: #e74c3c; }
+
+        /* Modal Layout */
+        .modal-body {
+            flex-grow: 1; display: flex; overflow: hidden;
+        }
+        
+        /* Left: Template Gallery */
+        .template-gallery {
+            flex: 2;
+            background: #0e1525;
+            border-right: 1px solid #1f2b42;
+            display: flex; flex-direction: column;
+        }
+        .gallery-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #1f2b42;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .gallery-title { color: #8fa0bc; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; }
+        
+        .gallery-grid {
+            padding: 20px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        
+        .template-card {
+            background: #162133;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .template-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); border-color: #34495e; }
+        .template-card.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2); }
+        
+        .template-thumb {
+            height: 100px; background: #000;
+            display: flex; align-items: center; justify-content: center;
+            color: #34495e; font-size: 2rem;
+            border-bottom: 1px solid #1f2b42;
+        }
+        .template-info { padding: 12px; }
+        .template-name { color: #fff; font-weight: bold; font-size: 0.95rem; margin-bottom: 4px; }
+        .template-cat { color: var(--accent); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Right: Config Panel */
+        .config-panel {
+            flex: 1;
+            background: #0b111e;
+            display: flex; flex-direction: column;
+            min-width: 300px;
+        }
+        
+        .config-header {
+            padding: 20px;
+            background: #080c14;
+            border-bottom: 1px solid #1f2b42;
+            text-align: center;
+        }
+        .selected-preview { 
+            width: 80px; height: 80px; background: #162133; border-radius: 50%; 
+            margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center;
+            border: 2px solid var(--accent); color: var(--accent); font-size: 2rem;
+        }
+        .selected-name { color: #fff; font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
+        .selected-desc { color: #8fa0bc; font-size: 0.85rem; line-height: 1.4; }
+
+        .config-form { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; gap: 20px; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-label { color: #5d6d7e; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .form-input { 
+            background: #020408; border: 1px solid #2c3e50; color: #fff; 
+            padding: 12px; font-family: inherit; font-size: 1rem; outline: none; 
+            border-radius: 2px; transition: border 0.2s;
+        }
+        .form-input:focus { border-color: var(--accent); }
+
+        .modal-footer {
+            padding: 20px; border-top: 1px solid #1f2b42;
+            display: flex; justify-content: flex-end; gap: 15px;
+            background: #080c14;
+        }
+        
+        .btn-cancel { background: transparent; border: 1px solid #34495e; color: #8fa0bc; padding: 10px 20px; cursor: pointer; font-family: inherit; font-weight: bold; }
+        .btn-cancel:hover { color: #fff; border-color: #fff; }
+        
+        .btn-create { 
+            background: var(--accent); color: #000; border: none; padding: 10px 25px; 
+            cursor: pointer; font-family: inherit; font-weight: bold; letter-spacing: 1px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-create:hover { background: #fff; }
+        .btn-create:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* --- STATUS BAR --- */
+        #status-bar {
+            height: 22px; background: #020408; border-top: 1px solid #182236;
+            display: flex; align-items: center; padding: 0 10px; font-size: 13px; color: #5d6d7e;
+            justify-content: space-between;
+        }
+        .status-accent { color: #8fa0bc; margin-right: 15px; }
+        #clock { color: var(--accent); padding-left: 15px; }
+
+        /* --- ENHANCED STATUS BAR --- */
+    #status-bar {
+        height: 22px; background: #000; border-top: 1px solid #1f2b42;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 8px; font-size: 12px; color: #fff;
+        user-select: none;
+    }
+    
+    .sb-section {
+        display: flex; align-items: center; height: 100%; gap: 0;
+    }
+
+    .sb-item {
+        display: flex; align-items: center; gap: 6px;
+        padding: 0 8px; height: 100%;
+        cursor: pointer;
+        transition: background 0.1s;
+    }
+    .sb-item:hover { background: rgba(255,255,255,0.2); }
+    
+    .sb-icon { font-size: 12px; }
+    
+    /* Specific Colors */
+    .sb-error { color: #ff9999; }
+    .sb-warn { color: #ffcc66; }
+    
+    #sb-project-name {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Animation for busy states */
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .sb-busy .sb-icon { animation: spin 1s linear infinite; }
+
+    /* Snap Ghost (Keep existing) */
+    #snap-ghost {
+        position: absolute; background: rgba(241, 196, 15, 0.15);
+        border: 2px dashed var(--accent); display: none; z-index: 5; pointer-events: none;
+    }
+
+    /* --- RETRO SIDEBAR DESIGN --- */
+    :root {
+        --gold: #f1c40f;
+        --gold-dim: #b7950b;
+        --cyan: #40e0d0;
+        --cyan-dim: #16a085;
+        --magenta: #e056fd;
+        --green: #2ecc71;
+        --red: #e74c3c;
+    }
+
+    .tool-category {
+        display: flex; flex-direction: column; gap: 2px; margin-bottom: 15px;
+    }
+    .cat-title {
+        color: #666; font-size: 11px; padding-left: 5px; margin-bottom: 4px;
+        border-bottom: 1px solid #222; font-weight: bold; letter-spacing: 1px;
+    }
+
+    .tool-btn-sidebar {
+        background: #151515;
+        color: #aaa;
+        padding: 6px 10px;
+        border: 1px solid #333;
+        cursor: pointer;
+        display: flex; align-items: center; gap: 10px;
+        transition: all 0.1s;
+        font-size: 1rem;
+        position: relative;
+        margin-bottom: 2px;
+    }
+    .tool-btn-sidebar:hover {
+        background: #222; color: #fff;
+        border-color: #666;
+        transform: translateX(2px);
+    }
+    .tool-btn-sidebar.active, .tool-btn-sidebar.opened { 
+        background: #1f2b42; border-color: var(--gold); color: var(--gold); 
+    }
+    .tool-btn-sidebar i { width: 20px; text-align: center; color: var(--gold); }
+    .tool-btn-sidebar::before {
+        content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        background: transparent; transition: background 0.2s;
+    }
+    .tool-btn-sidebar:hover::before { background: var(--gold); }
+    /* --- DEV OPS CONSOLE (RIGHT SIDEBAR) --- */
+    .dev-ops-panel {
+        padding: 10px; margin-bottom: 5px;
+        border-bottom: 1px solid #1f2b42;
+    }
+    
+    .dev-ops-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+        margin-top: 5px;
+    }
+
+    .ops-btn {
+        background: #111; border: 1px solid #333; color: #8fa0bc;
+        padding: 8px; cursor: pointer; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; gap: 4px;
+        font-size: 0.8rem; transition: all 0.1s;
+    }
+    .ops-btn:hover { background: #1f2b42; color: #fff; border-color: #555; }
+    .ops-btn:active { background: var(--accent); color: #000; border-color: var(--accent); }
+    .ops-btn i { font-size: 1.2rem; margin-bottom: 2px; }
+
+    .ops-btn-row {
+        display: flex; gap: 2px; margin-top: 5px;
+    }
+    .ops-btn-row .ops-btn { flex: 1; flex-direction: row; font-size: 0.9rem; padding: 6px; }
+
+    .retro-toggle {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 5px 0; color: #aaa; font-size: 0.9rem; cursor: pointer;
+    }
+    .retro-toggle:hover { color: #fff; }
+    .retro-toggle input { accent-color: var(--accent); }
+
+    .build-selector {
+        background: #000; border: 1px solid #333; color: #fff;
+        width: 100%; padding: 5px; font-family: inherit; font-size: 0.9rem;
+        margin-bottom: 5px; outline: none;
+    }
+    .build-selector:focus { border-color: var(--accent); }
+
+    .git-status-line {
+        display: flex; justify-content: space-between; 
+        font-size: 0.8rem; color: #666; margin-bottom: 5px;
+    }
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <div id="snap-ghost"></div>
+
+    <!-- PROFESSIONAL TITLE BAR -->
+    <div id="titlebar">
+        <div class="title-group">
+            <div class="app-icon"><i class="fas fa-atom fa-spin"></i></div>
+            <div class="menubar">
+                <div class="dropdown" id="file-dropdown">
+                    <div class="menu-btn" onclick="toggleDropdown(event, 'file-dropdown')">File</div>
+                    <div class="dropdown-content">
+                        <div class="dropdown-item" onclick="openProjectManager(); closeAllDropdowns();"><span>📂</span> Load Project</div>
+                        <div class="dropdown-item" onclick="document.getElementById('project-modal').style.display='flex'; document.getElementById('new-proj-name').focus(); closeAllDropdowns();"><span>➕</span> New Project</div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" onclick="saveGlobalProject(); closeAllDropdowns();"><span>💾</span> Save Project</div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" onclick="confirmClose(); closeAllDropdowns();"><span>❌</span> Exit</div>
+                    </div>
+                </div>
+                <div class="dropdown" id="build-dropdown">
+                    <div class="menu-btn" onclick="toggleDropdown(event, 'build-dropdown')">Build</div>
+                    <div class="dropdown-content">
+                        <div class="dropdown-item" onclick="buildGame(); closeAllDropdowns();"><span>🔨</span> Build Project</div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item" onclick="setBuildTarget('win')"><span>🪟</span> Platform: Windows (EXE)</div>
+                        <div class="dropdown-item" onclick="setBuildTarget('android')"><span>🤖</span> Platform: Android (APK)</div>
+                        <div class="dropdown-item" onclick="setBuildTarget('web')"><span>🕸️</span> Platform: Web (HTML5)</div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item"><span>⚙️</span> Build Options...</div>
+                        <div class="dropdown-item" onclick="alert('Build folder cleaned.'); closeAllDropdowns();"><span>🧹</span> Clean Build Folder</div>
+                    </div>
+                </div>
+                <div class="menu-btn" onclick="playGame()">Run</div>
+                <div class="menu-btn" onclick="window.open('http://localhost:3000/launcher.html', '_blank')">Browser</div>
+                <div class="menu-btn" onclick="openWindow({id:'settings', title:'Preferences', icon:'⚙️', src:'preferences.html'})">Preferences</div>
+                <div class="dropdown" id="help-dropdown">
+                    <div class="menu-btn" onclick="toggleDropdown(event, 'help-dropdown')">Help</div>
+                    <div class="dropdown-content">
+                        <div class="dropdown-item" onclick="openWindow({id:'docs', title:'User\'s Manual', icon:'📘', src:'docs.html', w:900, h:700}); closeAllDropdowns();"><span>📘</span> User's Manual</div>
+                        <div class="dropdown-item" onclick="window.open('credits.html', '_blank'); closeAllDropdowns();"><span>📜</span> Credits</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="app-caption">
+            <span class="brand-gold">KETEBE GAME STUDIO</span>
+        </div>
+
+        <div class="win-controls">
+            <div class="control-btn" onclick="if(window.electronAPI) window.electronAPI.minimize()">─</div>
+            <div class="control-btn" onclick="if(window.electronAPI) window.electronAPI.maximize()">◻</div>
+            <div class="control-btn close" onclick="confirmClose()">✕</div>
+        </div>
+    </div>
+
+    <!-- QUICK ACCESS TOOLBAR (Power User) -->
+    <div id="quick-toolbar">
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Open Project List (Ctrl+O)" onclick="openProjectManager()"><i class="fas fa-folder-open"></i></button>
+            <button class="tool-btn" title="Open Explorer" onclick="openExplorer(document.getElementById('sb-project-name').innerText.toLowerCase())"><i class="fas fa-folder"></i></button>
+            <button class="tool-btn" title="Save All (Ctrl+S)" onclick="saveGlobalProject()"><i class="fas fa-save"></i></button>
+            <button class="tool-btn" title="Project Settings" onclick="alert('Project Settings: Coming Soon')"><i class="fas fa-cog"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Undo" onclick="dispatchGlobalCommand('undo')"><i class="fas fa-undo"></i></button>
+            <button class="tool-btn" title="Redo" onclick="dispatchGlobalCommand('redo')"><i class="fas fa-redo"></i></button>
+            <button class="tool-btn" title="Cut" onclick="dispatchGlobalCommand('cut')"><i class="fas fa-cut"></i></button>
+            <button class="tool-btn" title="Copy" onclick="dispatchGlobalCommand('copy')"><i class="fas fa-copy"></i></button>
+            <button class="tool-btn" title="Paste" onclick="dispatchGlobalCommand('paste')"><i class="fas fa-paste"></i></button>
+        </div>
+        
+        <div class="toolbar-group">
+            <button class="tool-btn primary" title="Run Game (F5)" onclick="playGame()"><i class="fas fa-play"></i></button>
+            <button class="tool-btn" title="Pause" onclick="alert('Pause functionality pending runtime link')"><i class="fas fa-pause"></i></button>
+            <button class="tool-btn" title="Stop" onclick="alert('Stop functionality pending runtime link')"><i class="fas fa-stop"></i></button>
+            <button class="tool-btn" title="Build Project" onclick="buildGame()"><i class="fas fa-hammer"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Git Pull" onclick="alert('Git Pull: Simulating...')"><i class="fas fa-arrow-down"></i></button>
+            <button class="tool-btn" title="Git Push" onclick="alert('Git Push: Simulating...')"><i class="fas fa-arrow-up"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Toggle Left Sidebar" onclick="toggleSidebar()"><i class="fas fa-columns"></i></button>
+            <button class="tool-btn" title="Toggle Right Sidebar" onclick="toggleRightSidebar()"><i class="fas fa-columns fa-flip-horizontal"></i></button>
+            <button class="tool-btn" title="Fullscreen" onclick="toggleFullscreen()"><i class="fas fa-expand"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Map Editor" onclick="openWindow(tools.find(t=>t.id==='editor'))"><i class="fas fa-map"></i></button>
+            <button class="tool-btn" title="Script Editor" onclick="openWindow(tools.find(t=>t.id==='script'))"><i class="fas fa-code"></i></button>
+            <button class="tool-btn" title="Pixel Art" onclick="openWindow(tools.find(t=>t.id==='pixel'))"><i class="fas fa-paint-brush"></i></button>
+        </div>
+    </div>
+
+    <!-- MAIN STUDIO LAYOUT -->
+    <div id="studio-layout">
+        <!-- LEFT SIDEBAR -->
+        <div id="sidebar-container">
+            <aside id="sidebar">
+                <div class="sidebar-header">TOOLS</div>
+                <div class="sidebar-list" id="module-list">
+                    <!-- JS Injected -->
+                </div>
+            </aside>
+            <div id="sidebar-handle" class="handle-btn" onclick="toggleSidebar()">⏴</div>
+        </div>
+
+        <!-- WORKSPACE -->
+        <main id="workspace">
+            <div id="tab-bar">
+                <!-- Dynamic Tabs -->
+            </div>
+            <div id="window-container" style="position:relative; flex-grow:1; overflow:hidden;">
+                <!-- Windows -->
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: DEV OPS TOOLKIT -->
+        <div id="right-sidebar-container">
+            <div id="right-sidebar-handle" class="handle-btn" onclick="toggleRightSidebar()">⏵</div>
+            <aside id="right-sidebar">
+                <div class="sidebar-header">DEV OPS CONSOLE</div>
+                
+                <div class="sidebar-list">
+                    
+                    <!-- QUICK LAUNCH -->
+                    <div class="dev-ops-panel">
+                        <div class="cat-title">RUNTIME CONTROL</div>
+                        <div class="dev-ops-grid">
+                            <div class="ops-btn" onclick="playGame()"><i class="fas fa-play" style="color:var(--green)"></i> PLAY</div>
+                            <div class="ops-btn" onclick="alert('Pause')"><i class="fas fa-pause" style="color:var(--accent)"></i> PAUSE</div>
+                            <div class="ops-btn" onclick="location.reload()"><i class="fas fa-redo"></i> RESTART</div>
+                            <div class="ops-btn" onclick="toggleConsole()"><i class="fas fa-terminal"></i> LOGS</div>
+                        </div>
+                    </div>
+
+                    <!-- BUILD MATRIX -->
+                    <div class="dev-ops-panel">
+                        <div class="cat-title">BUILD PIPELINE</div>
+                        <select class="build-selector" id="build-target" onchange="setBuildTarget(this.value)">
+                            <option value="win">WINDOWS (EXE)</option>
+                            <option value="android">ANDROID (APK)</option>
+                            <option value="web">WEB (HTML5)</option>
+                            <option value="all">ALL TARGETS (CI)</option>
+                        </select>
+                        <div class="ops-btn-row">
+                            <div class="ops-btn active" onclick="buildGame()"><i class="fas fa-hammer"></i> BUILD</div>
+                            <div class="ops-btn" onclick="cleanBuilds()"><i class="fas fa-broom"></i> CLEAN</div>
+                        </div>
+                    </div>
+
+                    <!-- ASSET OPS -->
+                    <div class="dev-ops-panel">
+                        <div class="cat-title">ASSET PIPELINE</div>
+                        <div class="dev-ops-grid">
+                            <div class="ops-btn" onclick="scanAssets()"><i class="fas fa-sync"></i> INDEX</div>
+                            <div class="ops-btn" onclick="alert('Optimizing...')"><i class="fas fa-compress"></i> CRUNCH</div>
+                            <div class="ops-btn" onclick="alert('Probing...')"><i class="fas fa-search"></i> PROBE</div>
+                            <div class="ops-btn" onclick="openTool('asset_manager.html')"><i class="fas fa-folder-open"></i> VIEW</div>
+                        </div>
+                    </div>
+
+                    <!-- GIT CONTROL -->
+                    <div class="dev-ops-panel">
+                        <div class="cat-title">VERSION CONTROL</div>
+                        <div class="git-status-line">
+                            <span>BRANCH: <span style="color:var(--accent)">main</span></span>
+                            <span><span style="color:var(--green)">2+</span> <span style="color:var(--red)">0-</span></span>
+                        </div>
+                        <div class="ops-btn-row">
+                            <div class="ops-btn" onclick="alert('Pulling...')"><i class="fas fa-arrow-down"></i> PULL</div>
+                            <div class="ops-btn" onclick="alert('Committing...')"><i class="fas fa-check"></i> COMMIT</div>
+                            <div class="ops-btn" onclick="alert('Pushing...')"><i class="fas fa-arrow-up"></i> PUSH</div>
+                        </div>
+                    </div>
+
+                    <!-- DEBUG FLAGS -->
+                    <div class="dev-ops-panel">
+                        <div class="cat-title">ENGINE FLAGS</div>
+                        <label class="retro-toggle"><span style="color:#aaa;">GOD MODE</span> <input type="checkbox"></label>
+                        <label class="retro-toggle"><span style="color:#aaa;">COLLIDERS</span> <input type="checkbox"></label>
+                        <label class="retro-toggle"><span style="color:#aaa;">AI BRAINS</span> <input type="checkbox" checked></label>
+                        <label class="retro-toggle"><span style="color:#aaa;">VERBOSE LOG</span> <input type="checkbox" checked></label>
+                    </div>
+
+                    <!-- DATA OPS -->
+                    <div class="dev-ops-panel">
+                        <div class="cat-title">DATA MANAGEMENT</div>
+                        <div class="ops-btn-row">
+                            <div class="ops-btn" style="color:var(--red); border-color:#522;" onclick="if(confirm('Wipe saves?')) alert('Deleted.')"><i class="fas fa-trash"></i> WIPE SAVE</div>
+                            <div class="ops-btn" onclick="alert('Exporting DB...')"><i class="fas fa-database"></i> DUMP DB</div>
+                        </div>
+                    </div>
+
+                </div>
+            </aside>
+        </div>
+
+    </div>
+
+    <!-- PROJECT MODAL REDESIGN (PHASE 2) -->
+    <div id="project-modal" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title"><span>🚀</span> Architect's Forge</div>
+                <div class="modal-close" onclick="closeProjectModal()">×</div>
+            </div>
+            
+            <div class="modal-body">
+                <!-- LEFT: TEMPLATES -->
+                <div class="template-gallery">
+                    <div class="gallery-header">
+                        <div class="gallery-title">Choose a Template</div>
+                        <div style="color:#555; font-size:0.8rem;">V0.2.0</div>
+                    </div>
+                    <div class="gallery-grid" id="template-list">
+                        <!-- JS Injected Cards -->
+                    </div>
+                </div>
+                
+                <!-- RIGHT: CONFIG -->
+                <div class="config-panel">
+                    <div class="config-header">
+                        <div class="selected-preview" id="sel-icon">?</div>
+                        <div class="selected-name" id="sel-name">Select Template</div>
+                        <div class="selected-desc" id="sel-desc">Choose a starting point from the gallery on the left.</div>
+                    </div>
+                    
+                    <div class="config-form">
+                        <div class="form-group">
+                            <label class="form-label">Project Name</label>
+                            <input type="text" id="new-proj-name" class="form-input" placeholder="My New Game">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Author</label>
+                            <input type="text" id="new-proj-author" class="form-input" value="Ketebe User">
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn-cancel" onclick="closeProjectModal()">CANCEL</button>
+                        <button class="btn-create" onclick="createNewProject()" id="btn-create-proj" disabled>
+                            <span>+</span> CREATE PROJECT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENHANCED STATUS BAR -->
+    <div id="status-bar">
+        <div class="sb-section">
+            <div class="sb-item" onclick="openProjectManager()">
+                <span class="sb-icon">📂</span> <span id="sb-project-name">LOADING...</span>
+            </div>
+            <div class="sb-item" onclick="toggleRightSidebar()">
+                <span class="sb-icon">🎋</span> <span id="sb-git-branch">main*</span> <span class="sb-icon" style="font-size:10px;">↻</span>
+            </div>
+            <div class="sb-item" onclick="toggleConsole()">
+                <span class="sb-icon sb-error">ⓧ</span> <span id="sb-errors">0</span>&nbsp;
+                <span class="sb-icon sb-warn">⚠</span> <span id="sb-warnings">0</span>
+            </div>
+        </div>
+
+        <div class="sb-section" style="flex-grow:1; justify-content:center;">
+            <div id="sb-message" style="opacity:0.8;">ONGONLUK ENGINE AND V8 CORE READY</div>
+        </div>
+
+        <div class="sb-section">
+            <div class="sb-item" id="sb-cursor-pos">Ln 1, Col 1</div>
+            <div class="sb-item" id="sb-build-target" onclick="toggleRightSidebar()">Windows (EXE)</div>
+            <div class="sb-item" title="CPU Usage">
+                <span class="sb-icon">💻</span> <span id="sb-cpu">0%</span>
+            </div>
+            <div class="sb-item" title="Memory Usage">
+                <span class="sb-icon">🧠</span> <span id="sb-mem">0M</span>
+            </div>
+            <div class="sb-item" onclick="if(window.electronAPI) window.electronAPI.openDevTools()" title="Open Developer Tools">
+                <span class="sb-icon">🛠️</span> DEVTOOLS
+            </div>
+            <div class="sb-item" id="sb-clock">
+                12:00 PM
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tools = [
+            // SYSTEM
+            { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', icon: 'fa-rocket', src: 'dashboard.html', w: 900, h: 700 },
+            { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', icon: 'fa-tachometer-alt', src: 'project_dashboard.html', w: 1000, h: 600 },
+            { id: 'menu', category: 'SYSTEM', title: 'Interface (UI)', icon: 'fa-window-restore', src: 'menu_editor.html', w: 900, h: 600 },
+            { id: 'loc', category: 'SYSTEM', title: 'Localization', icon: 'fa-globe', src: 'localization_editor.html', w: 900, h: 600 },
+            { id: 'input', category: 'SYSTEM', title: 'Input Map', icon: 'fa-gamepad', src: 'input_editor.html', w: 600, h: 600 },
+            { id: 'console', category: 'SYSTEM', title: 'System Logs', icon: 'fa-terminal', src: 'console.html', w: 800, h: 500 },
+            
+            // WORLD ARCHITECT
+            { id: 'editor', category: 'WORLD ARCHITECT', title: 'Level Editor', icon: 'fa-map', src: 'editor.html', w: 1000, h: 700 },
+            { id: 'iso_studio', category: 'WORLD ARCHITECT', title: 'IsoPixel Studio', icon: 'fa-cubes', src: 'iso_editor.html', w: 1000, h: 700 },
+            { id: 'platformer_studio', category: 'WORLD ARCHITECT', title: 'Platformer Studio', icon: 'fa-running', src: 'platformer_editor.html', w: 1200, h: 800 },
+            { id: 'background', category: 'WORLD ARCHITECT', title: 'Backgrounds', icon: 'fa-image', src: 'background_editor.html', w: 900, h: 600 },
+            { id: 'campaign', category: 'WORLD ARCHITECT', title: 'Campaign Flow', icon: 'fa-flag', src: 'campaign_editor.html', w: 800, h: 500 },
+            
+            // ENTITIES
+            { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', icon: 'fa-cubes', src: 'prefab_editor.html', w: 800, h: 600 },
+            { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', icon: 'fa-user-friends', src: 'npc_editor.html', w: 700, h: 500 },
+            { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', icon: 'fa-skull', src: 'enemy_editor.html', w: 700, h: 500 },
+            { id: 'item', category: 'ENTITIES', title: 'Item Database', icon: 'fa-scroll', src: 'item_editor.html', w: 700, h: 500 },
+            { id: 'character', category: 'ENTITIES', title: 'Player Profiles', icon: 'fa-user-ninja', src: 'character_editor.html', w: 700, h: 500 },
+            { id: 'skill', category: 'ENTITIES', title: 'Skills', icon: 'fa-bolt', src: 'skill_editor.html', w: 700, h: 500 },
+            { id: 'achievements', category: 'ENTITIES', title: 'Trophies', icon: 'fa-trophy', src: 'achievements_editor.html', w: 700, h: 500 },
+            
+            // LOGIC & AI
+            { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', icon: 'fa-code', src: 'script_editor.html', w: 1000, h: 700 },
+            { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', icon: 'fa-project-diagram', src: 'algorithm_editor.html', w: 1000, h: 700 },
+            { id: 'behavior', category: 'LOGIC & AI', title: 'AI Brains', icon: 'fa-brain', src: 'behavior_editor.html', w: 900, h: 600 },
+            { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'quest_editor.html', w: 900, h: 600 },
+            { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', icon: 'fa-comments', src: 'dialogue_editor.html', w: 800, h: 500 },
+            { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'interactive_cutscene_editor.html', w: 1200, h: 800 },
+            
+            // ASSETS
+            { id: 'daw', category: 'ASSETS', title: 'Audio Studio', icon: 'fa-music', src: 'daw.html', w: 800, h: 500 },
+            { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', icon: 'fa-paint-brush', src: 'pixel_editor.html', w: 900, h: 650 },
+            { id: 'fxpro', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'fx_editor.html', w: 900, h: 650 },
+            { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'shader_editor.html', w: 1000, h: 700 },
+            { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'asset_manager.html', w: 900, h: 600 }
+        ];
+
+        let zIndexCounter = 100;
+        let snapMode = null;
+        let diagnostics = { errors: 0, warnings: 0 };
+
+        function formatProjectName(name) {
+            if (!name) return "";
+            let display = name.toUpperCase();
+            if (display.length > 15) {
+                display = display.substring(0, 15) + "...";
+            }
+            return display;
+        }
+
+        async function init() {
+            // Populate Sidebar with Categories
+            const list = document.getElementById('module-list');
+            list.innerHTML = '';
+            
+            const categories = ['WORLD ARCHITECT', 'ENTITIES', 'LOGIC & AI', 'ASSETS', 'SYSTEM'];
+            const grouped = {};
+            
+            tools.forEach(t => {
+                if(!grouped[t.category]) grouped[t.category] = [];
+                grouped[t.category].push(t);
+            });
+            
+            categories.forEach(cat => {
+                if(grouped[cat]) {
+                    const catDiv = document.createElement('div');
+                    catDiv.className = 'tool-category';
+                    catDiv.innerHTML = `<div class="cat-title">${cat}</div>`;
+                    
+                    grouped[cat].forEach(tool => {
+                        const btn = document.createElement('div');
+                        btn.className = 'tool-btn-sidebar';
+                        btn.id = 'btn-' + tool.id;
+                        btn.innerHTML = `<div><i class="fas ${tool.icon}"></i> ${tool.title.toLowerCase()}</div>`;
+                        btn.onclick = () => {
+                            openWindow(tool);
+                            // Proactive IRAB Tip
+                            if (window.IRAB && window.IRAB.showBalloon) {
+                                const tips = {
+                                    'platformer_studio': "GRRR... TRY GENERATING A LEVEL AUTOMATICALLY!",
+                                    'script': "CODE IS POETRY. NEED A SNIPPET?",
+                                    'pixel': "PIXELS ARE SMALL BUT MIGHTY.",
+                                    'npc': "NPCs NEED BRAINS TOO. CHECK BEHAVIORS!",
+                                    'daw': "SOUNDS LIKE PROGRESS TO ME!"
+                                };
+                                if (tips[tool.id]) window.IRAB.showBalloon(tips[tool.id]);
+                            }
+                        };
+                        catDiv.appendChild(btn);
+                    });
+                    list.appendChild(catDiv);
+                }
+            });
+
+            // Clock
+            updateClock();
+            setInterval(updateClock, 60000);
+
+            // Check Project & Determine Startup Window
+            await determineStartupWindow();
+
+            // System Meter update
+            setInterval(updateSystemMeter, 3000);
+            updateSystemMeter();
+            
+            // Console Hooks
+            hookConsole();
+            
+            // Setup PostMessage listener for child windows
+            window.addEventListener('message', handleChildMessage);
+        }
+
+        async function determineStartupWindow() {
+            console.log("[Studio] Determining startup window...");
+            try {
+                const res = await fetch('/api/projects/current');
+                if (!res.ok) throw new Error("API not ready");
+                const data = await res.json();
+                const projName = data.name;
+                console.log("[Studio] Active Project:", projName);
+                
+                // Update Status Bar
+                document.getElementById('sb-project-name').innerText = formatProjectName(projName);
+
+                // If no specific project is active (ROOT), go back to Launcher
+                if (data.isRoot) {
+                    console.log("[Studio] No project active (Root), redirecting to Launcher...");
+                    window.location.href = 'dashboard.html';
+                } else {
+                    console.log("[Studio] Project active, maximizing and opening Command Center...");
+                    // Maximize window if in Electron — only once per session to avoid reload toggles
+                    if (window.electronAPI) {
+                        try {
+                            if (!sessionStorage.getItem('ketebe_studio_auto_maximized')) {
+                                window.electronAPI.maximize();
+                                sessionStorage.setItem('ketebe_studio_auto_maximized', '1');
+                            } else {
+                                console.log('[Studio] Auto-maximize skipped (already applied this session)');
+                            }
+                        } catch (err) {
+                            // If sessionStorage unavailable, still attempt maximize but avoid crashing
+                            window.electronAPI.maximize();
+                        }
+                    }
+                    // Specific project active, show Command Center
+                    openWindow(tools.find(t => t.id === 'project_dashboard'));
+                }
+
+            } catch(e) {
+                console.error("[Studio] Startup error:", e);
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        // Called by Launcher when a project is selected
+        window.onProjectLoaded = function(name) {
+            // Close Launcher
+            const launcherId = 'win-dashboard';
+            const launcherWin = document.getElementById(launcherId);
+            if(launcherWin) closeWindow(launcherId);
+
+            // Update Status Bar
+            document.getElementById('sb-project-name').innerText = formatProjectName(name);
+
+            // Open Command Center
+            const cmdCenter = tools.find(t => t.id === 'project_dashboard');
+            if(cmdCenter) openWindow(cmdCenter);
+        };
+        
+        let logBuffer = [];
+        
+        function hookConsole() {
+            const originalError = console.error;
+            const originalWarn = console.warn;
+            const originalLog = console.log;
+            
+            function capture(msg, level, source='IDE') {
+                const entry = { message: msg, level: level, source: source, timestamp: Date.now() };
+                logBuffer.push(entry);
+                if (logBuffer.length > 500) logBuffer.shift(); // Keep last 500
+                
+                // If console window is open, send immediately
+                const consoleFrame = document.getElementById('frame-console');
+                if (consoleFrame && consoleFrame.contentWindow) {
+                    consoleFrame.contentWindow.postMessage({ type: 'log', ...entry }, '*');
+                }
+            }
+            
+            console.error = function(...args) {
+                diagnostics.errors++;
+                updateDiagnosticsUI();
+                capture(args.map(a => String(a)).join(' '), 'error');
+                originalError.apply(console, args);
+            };
+            
+            console.warn = function(...args) {
+                diagnostics.warnings++;
+                updateDiagnosticsUI();
+                capture(args.map(a => String(a)).join(' '), 'warning');
+                originalWarn.apply(console, args);
+            };
+            
+            console.log = function(...args) {
+                capture(args.map(a => String(a)).join(' '), 'info');
+                originalLog.apply(console, args);
+            };
+        }
+        
+        function updateDiagnosticsUI() {
+            document.getElementById('sb-errors').innerText = diagnostics.errors;
+            document.getElementById('sb-warnings').innerText = diagnostics.warnings;
+        }
+        
+        function handleChildMessage(event) {
+            const data = event.data;
+            if (!data) return;
+            
+            if (data.type === 'cursor-update') {
+                document.getElementById('sb-cursor-pos').innerText = `Ln ${data.line}, Col ${data.col}`;
+            } else if (data.type === 'status-message') {
+                showStatusMessage(data.message);
+            } else if (data.type === 'log') {
+                // Log from child window (game)
+                if (data.level === 'error') {
+                    diagnostics.errors++;
+                    updateDiagnosticsUI();
+                } else if (data.level === 'warning') {
+                    diagnostics.warnings++;
+                    updateDiagnosticsUI();
+                }
+                
+                // Add to buffer and forward to console window
+                const entry = { message: data.message, level: data.level, source: 'GAME', timestamp: Date.now() };
+                logBuffer.push(entry);
+                if (logBuffer.length > 500) logBuffer.shift();
+
+                const consoleFrame = document.getElementById('frame-console');
+                if (consoleFrame && consoleFrame.contentWindow) {
+                    consoleFrame.contentWindow.postMessage({ type: 'log', ...entry }, '*');
+                }
+            }
+        }
+        
+        // When console is opened, flush buffer
+        const originalOpenWindow = openWindow;
+        openWindow = function(tool) {
+            originalOpenWindow(tool);
+            if (tool.id === 'console') {
+                setTimeout(() => {
+                    const consoleFrame = document.getElementById('frame-console');
+                    if (consoleFrame && consoleFrame.contentWindow) {
+                        logBuffer.forEach(entry => {
+                            consoleFrame.contentWindow.postMessage({ type: 'log', ...entry }, '*');
+                        });
+                    }
+                }, 500); // Wait for load
+            }
+        };
+        
+        function showStatusMessage(msg) {
+            const el = document.getElementById('sb-message');
+            el.innerText = msg;
+            el.style.opacity = '1';
+            setTimeout(() => {
+                el.innerText = 'ONGONLUK STUDIO READY';
+                el.style.opacity = '0.8';
+            }, 3000);
+        }
+
+        async function updateSystemMeter() {
+            try {
+                const res = await fetch('/api/system/stats');
+                const stats = await res.json();
+                
+                // Update Status Bar
+                const cpu = stats.cpu || 0;
+                const mem = stats.mem || 0;
+                document.getElementById('sb-cpu').innerText = Math.round(cpu) + '%';
+                document.getElementById('sb-mem').innerText = mem + 'M';
+                
+            } catch(e) {
+                console.warn('System meter update failed:', e);
+            }
+        }
+
+        async function checkActiveProject() {
+            try {
+                const res = await fetch('/api/projects/current');
+                if (!res.ok) throw new Error("API not ready");
+                const data = await res.json();
+                const projName = data.name;
+                // Update Status Bar Project Name
+                document.getElementById('sb-project-name').innerText = formatProjectName(projName);
+            } catch(e) {
+                document.getElementById('sb-project-name').innerText = "DEFAULT";
+            }
+        }
+        
+        let currentBuildTarget = 'win';
+        function setBuildTarget(target) {
+            currentBuildTarget = target;
+            const map = {
+                'win': 'Windows (EXE)',
+                'android': 'Android (APK)',
+                'web': 'Web (HTML5)',
+                'all': 'CI (All Targets)'
+            };
+            const label = map[target] || 'Unknown';
+            document.getElementById('sb-build-target').innerText = label;
+            document.getElementById('build-target').value = target; // Sync with sidebar dropdown
+            showStatusMessage(`Build Target Set: ${label}`);
+        }
+
+        // --- DROPDOWN MANAGEMENT ---
+        function toggleDropdown(e, id) {
+            e.stopPropagation();
+            const el = document.getElementById(id);
+            const isActive = el.classList.contains('active');
+            closeAllDropdowns();
+            if (!isActive) el.classList.add('active');
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
+        }
+
+        window.addEventListener('click', () => {
+            closeAllDropdowns();
+        });
+
+        // --- PROJECTS & WIZARD ---
+        let selectedTemplateId = null;
+
+        async function openProjectManager() {
+            document.getElementById('project-modal').style.display = 'flex';
+            
+            // Restore Author
+            const savedAuthor = localStorage.getItem('ketebe_author');
+            if(savedAuthor) document.getElementById('new-proj-author').value = savedAuthor;
+
+            const container = document.getElementById('template-list');
+            container.innerHTML = '<div style="color:#555; padding:20px;">Loading templates...</div>';
+            
+            try {
+                // 1. Fetch Templates
+                const tRes = await fetch('/api/templates');
+                const templates = await tRes.json();
+                
+                renderTemplates(templates);
+                
+            } catch(e) {
+                container.innerHTML = '<div style="color:#e74c3c;">Failed to load templates.</div>';
+            }
+        }
+
+        function renderTemplates(list) {
+            const container = document.getElementById('template-list');
+            container.innerHTML = '';
+            
+            if (list.length === 0) {
+                container.innerHTML = '<div style="color:#8fa0bc; padding:20px;">No templates found in archives.</div>';
+                return;
+            }
+            
+            list.forEach(t => {
+                const card = document.createElement('div');
+                card.className = 'template-card';
+                card.onclick = () => selectTemplate(t, card);
+                
+                // Icon based on category
+                let icon = '📦';
+                if(t.category === 'RPG') icon = '⚔️';
+                if(t.category === 'Platformer') icon = '🏃';
+                if(t.category === 'Basic') icon = '📄';
+
+                card.innerHTML = `
+                    <div class="template-thumb">${icon}</div>
+                    <div class="template-info">
+                        <div class="template-name">${t.name}</div>
+                        <div class="template-cat">${t.category}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            
+            // Auto-select first
+            if(list.length > 0) {
+                // Find base-rpg or first
+                const def = list.find(t => t.id === 'base-rpg') || list[0];
+                // Simulate click
+                const cards = container.children;
+                // Find index
+                const index = list.indexOf(def);
+                if(index >= 0) selectTemplate(def, cards[index]);
+            }
+        }
+
+        function selectTemplate(t, cardEl) {
+            selectedTemplateId = t.id;
+            
+            // UI Highlight
+            document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+            cardEl.classList.add('active');
+            
+            // Update Info Panel
+            document.getElementById('sel-name').innerText = t.name;
+            document.getElementById('sel-desc').innerText = t.description;
+            
+            let icon = '📦';
+            if(t.category === 'RPG') icon = '⚔️';
+            if(t.category === 'Platformer') icon = '🏃';
+            if(t.category === 'Basic') icon = '📄';
+            document.getElementById('sel-icon').innerText = icon;
+            
+            // Enable Create Button
+            document.getElementById('btn-create-proj').disabled = false;
+        }
+
+        function closeProjectModal() {
+            document.getElementById('project-modal').style.display = 'none';
+        }
+
+        async function createNewProject() {
+            const nameInput = document.getElementById('new-proj-name');
+            const name = nameInput.value.trim();
+            const author = document.getElementById('new-proj-author').value.trim();
+            
+            if(!name) return alert("Project name is required.");
+            
+            // Validation
+            const nameRegex = /^[a-zA-Z0-9 \-_]+$/;
+            if(!nameRegex.test(name)) return alert("Invalid name. Use letters, numbers, spaces, hyphens, or underscores.");
+
+            if(!selectedTemplateId) return alert("Please select a template.");
+            
+            // Persist Author
+            localStorage.setItem('ketebe_author', author);
+            
+            const btn = document.getElementById('btn-create-proj');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span>⏳</span> FORGING...';
+            btn.disabled = true;
+
+            try {
+                // 1. Create Project
+                const res = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        name, 
+                        template: selectedTemplateId,
+                        metadata: { author } 
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error || "Unknown error");
+                
+                // 2. Switch Context (Use the sanitized name returned by server)
+                await fetch('/api/projects/switch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name: data.name })
+                });
+                
+                closeProjectModal();
+                location.reload();
+                
+            } catch (e) {
+                alert("Creation failed: " + e.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // --- BUILD ---
+        async function buildGame() {
+            if(!confirm(`Start Build Process for ${currentBuildTarget.toUpperCase()}? This may take a moment.`)) return;
+            
+            const status = document.getElementById('sb-project-name');
+            const originalStatus = status.innerText;
+
+            status.innerText = "BUILDING...";
+            status.style.color = "var(--accent)";
+            showStatusMessage(`BUILDING [${currentBuildTarget.toUpperCase()}]...`);
+
+            try {
+                const res = await fetch('/api/build', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: currentBuildTarget })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    setTimeout(() => alert(`Build Complete!\nLocation: ${data.path}`), 200);
+                    showStatusMessage("BUILD COMPLETE");
+                } else {
+                    alert("Build Failed. Check console.");
+                    showStatusMessage("BUILD FAILED");
+                }
+            } catch(e) {
+                alert("Build Error: " + e);
+                showStatusMessage("BUILD ERROR");
+            } finally {
+                setTimeout(() => {
+                    status.innerText = originalStatus;
+                    status.style.color = "#fff";
+                }, 3000);
+            }
+        }
+
+        async function cleanBuilds() {
+            if(!confirm("Wipe all previous builds from the 'builds' folder?")) return;
+            try {
+                const res = await fetch('/api/build/clean', { method: 'POST' });
+                const data = await res.json();
+                if(data.success) showStatusMessage("BUILDS FOLDER CLEANED");
+            } catch(e) { console.error(e); }
+        }
+
+        async function scanAssets() {
+            showStatusMessage("INDEXING ASSETS...");
+            try {
+                const res = await fetch('/api/assets/scan', { method: 'POST' });
+                const data = await res.json();
+                if(data.success) showStatusMessage(`INDEXED ${data.count || ''} ASSETS`);
+            } catch(e) { showStatusMessage("INDEX FAILED"); }
+        }
+
+        function exportProject() {
+            alert("Export functionality coming in v0.2. Check 'builds' folder for manual zip.");
+        }
+
+        // --- LAYOUT ---
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const handle = document.getElementById('sidebar-handle');
+            sb.classList.toggle('collapsed');
+            handle.innerText = sb.classList.contains('collapsed') ? '⏵' : '⏴';
+        }
+
+        function toggleRightSidebar() {
+            const sb = document.getElementById('right-sidebar');
+            const handle = document.getElementById('right-sidebar-handle');
+            sb.classList.toggle('collapsed');
+            handle.innerText = sb.classList.contains('collapsed') ? '⏴' : '⏵';
+        }
+
+        function openWindow(tool) {
+            const winId = 'win-' + tool.id;
+            let win = document.getElementById(winId);
+
+            if (!win) {
+                win = document.createElement('div');
+                win.id = winId;
+                win.className = 'window maximized';
+                
+                win.innerHTML = `
+                    <div class="window-title" 
+                         onmousedown="startDrag(event, '${winId}')"
+                         ondblclick="toggleMaximize('${winId}')">
+                        <div><i class="fas ${tool.icon}"></i> ${tool.title.toLowerCase()}</div>
+                        <div class="window-controls">
+                            <div class="window-btn" onclick="minimizeWindow('${winId}')">_</div>
+                            <div class="window-btn" onclick="toggleMaximize('${winId}')">□</div>
+                            <div class="window-btn close" onclick="closeWindow('${winId}')">×</div>
+                        </div>
+                    </div>
+                    <div class="window-content">
+                        <iframe id="frame-${tool.id}" src="${tool.src}"></iframe>
+                    </div>
+                `;
+                win.onmousedown = () => focusWindow(winId);
+                document.getElementById('workspace').appendChild(win);
+                const btn = document.getElementById('btn-' + tool.id);
+                if (btn) btn.classList.add('opened');
+            } else {
+                win.style.display = 'flex';
+            }
+            
+            // Log activity
+            if (window.KetebeProjectState) {
+                window.KetebeProjectState.logActivity('tool', tool.title, { id: tool.id });
+            }
+            
+            focusWindow(winId);
+        }
+
+        function closeWindow(id) {
+            document.getElementById(id).remove();
+            const toolId = id.replace('win-', '');
+            const btn = document.getElementById('btn-' + toolId);
+            if (btn) {
+                btn.classList.remove('opened');
+                btn.classList.remove('active');
+            }
+        }
+
+        function minimizeWindow(id) {
+            document.getElementById(id).style.display = 'none';
+            const btn = document.getElementById('btn-' + id.replace('win-',''));
+            if (btn) btn.classList.remove('active');
+        }
+
+        function toggleMaximize(id) {
+            const win = document.getElementById(id);
+            win.classList.toggle('maximized');
+            if (!win.classList.contains('maximized')) {
+                win.style.width = '800px';
+                win.style.height = '600px';
+                win.style.top = '50px';
+                win.style.left = '50px';
+            }
+        }
+
+        function focusWindow(id) {
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('focused'));
+            document.querySelectorAll('.module-btn').forEach(b => b.classList.remove('active'));
+            
+            const win = document.getElementById(id);
+            if(win) {
+                win.style.display = 'flex';
+                win.classList.add('focused');
+                zIndexCounter++;
+                win.style.zIndex = zIndexCounter;
+                const toolId = id.replace('win-', '');
+                const btn = document.getElementById('btn-' + toolId);
+                if (btn) btn.classList.add('active');
+            }
+        }
+
+        // --- Dragging & Snapping ---
+        let dragTarget = null;
+        let offX, offY;
+
+        function startDrag(e, id) {
+            const win = document.getElementById(id);
+            if (e.target.classList.contains('window-btn')) return;
+
+            // If dragging a maximized window, restore it first
+            if (win.classList.contains('maximized')) {
+                toggleMaximize(id);
+                // Adjust offX/offY so the window doesn't jump
+                offX = 400; // Half of 800px default
+                offY = 15;  // Half of title bar
+            } else {
+                const rect = win.getBoundingClientRect();
+                offX = e.clientX - rect.left;
+                offY = e.clientY - rect.top;
+            }
+
+            dragTarget = win;
+            dragTarget.classList.add('dragging');
+            focusWindow(id);
+        }
+
+        window.onmousemove = (e) => {
+            if (!dragTarget) return;
+
+            const workspace = document.getElementById('workspace');
+            const wsRect = workspace.getBoundingClientRect();
+            const ghost = document.getElementById('snap-ghost');
+            
+            let x = e.clientX - offX - wsRect.left;
+            let y = e.clientY - offY - wsRect.top;
+
+            // --- STICKY / SNAPPING LOGIC ---
+            const stickDist = 20;
+            snapMode = null;
+            ghost.style.display = 'none';
+
+            // 1. Screen Edge Snapping (Ghost Preview)
+            if (e.clientY < 40) {
+                snapMode = 'top';
+                ghost.style.display = 'block';
+                ghost.style.top = '0'; ghost.style.left = wsRect.left + 'px';
+                ghost.style.width = wsRect.width + 'px'; ghost.style.height = wsRect.height + 'px';
+            } else if (e.clientX < wsRect.left + 20) {
+                snapMode = 'left';
+                ghost.style.display = 'block';
+                ghost.style.top = wsRect.top + 'px'; ghost.style.left = wsRect.left + 'px';
+                ghost.style.width = (wsRect.width / 2) + 'px'; ghost.style.height = wsRect.height + 'px';
+            } else if (e.clientX > wsRect.right - 20) {
+                snapMode = 'right';
+                ghost.style.display = 'block';
+                ghost.style.top = wsRect.top + 'px'; ghost.style.left = (wsRect.left + wsRect.width / 2) + 'px';
+                ghost.style.width = (wsRect.width / 2) + 'px'; ghost.style.height = wsRect.height + 'px';
+            } 
+
+            // 2. Window-to-Window Sticking (Direct X/Y manipulation)
+            if (!snapMode) {
+                const others = Array.from(document.querySelectorAll('.window')).filter(w => w !== dragTarget && w.style.display !== 'none');
+                
+                others.forEach(other => {
+                    const r = other.getBoundingClientRect();
+                    const orX = r.left - wsRect.left;
+                    const orY = r.top - wsRect.top;
+                    const orW = r.width;
+                    const orH = r.height;
+
+                    // Stick to Left/Right of others
+                    if (Math.abs(x + dragTarget.offsetWidth - orX) < stickDist) x = orX - dragTarget.offsetWidth;
+                    if (Math.abs(x - (orX + orW)) < stickDist) x = orX + orW;
+                    
+                    // Stick to Top/Bottom of others
+                    if (Math.abs(y + dragTarget.offsetHeight - orY) < stickDist) y = orY - dragTarget.offsetHeight;
+                    if (Math.abs(y - (orY + orH)) < stickDist) y = orY + orH;
+                });
+
+                // Workspace Edge Sticking (Soft snap)
+                if (Math.abs(x) < stickDist) x = 0;
+                if (Math.abs(y) < stickDist) y = 0;
+                if (Math.abs(x + dragTarget.offsetWidth - wsRect.width) < stickDist) x = wsRect.width - dragTarget.offsetWidth;
+                if (Math.abs(y + dragTarget.offsetHeight - wsRect.height) < stickDist) y = wsRect.height - dragTarget.offsetHeight;
+            }
+
+            dragTarget.style.left = x + 'px';
+            dragTarget.style.top = y + 'px';
+        };
+
+        window.onmouseup = () => {
+            if (dragTarget) {
+                dragTarget.classList.remove('dragging');
+                if (snapMode) {
+                    if (snapMode === 'top') {
+                        toggleMaximize(dragTarget.id);
+                    } else if (snapMode === 'left') {
+                        dragTarget.classList.remove('maximized');
+                        dragTarget.style.top = '0'; dragTarget.style.left = '0';
+                        dragTarget.style.width = '50%'; dragTarget.style.height = '100%';
+                    } else if (snapMode === 'right') {
+                        dragTarget.classList.remove('maximized');
+                        dragTarget.style.top = '0'; dragTarget.style.left = '50%';
+                        dragTarget.style.width = '50%'; dragTarget.style.height = '100%';
+                    }
+                }
+            }
+            dragTarget = null;
+            snapMode = null;
+            document.getElementById('snap-ghost').style.display = 'none';
+        };
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('sb-clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function saveGlobalProject() {
+            // In this engine, most things save instantly, but we provide a visual feedback
+            const status = document.getElementById('active-project-name');
+            const original = status.innerText;
+            status.innerText = "SAVING PROJECT...";
+            status.style.color = "var(--accent)";
+            showStatusMessage("SAVING PROJECT...");
+            
+            setTimeout(() => {
+                status.innerText = original;
+                status.style.color = "#fff";
+                showStatusMessage("PROJECT SAVED");
+            }, 1000);
+        }
+
+        function confirmClose() {
+            if (confirm("Are you sure you want to leave ONGONLUK STUDIO? Unsaved changes in specific tools might be lost.")) {
+                if(window.electronAPI) window.electronAPI.close();
+            }
+        }
+
+        function playGame() { 
+            // Visuals ON
+            setRunningState(true);
+            showStatusMessage("GAME RUNNING");
+
+            const gameWin = window.open('launcher.html', '_blank');
+
+            if (gameWin) {
+                const timer = setInterval(() => {
+                    if (gameWin.closed) {
+                        clearInterval(timer);
+                        // Visuals OFF
+                        setRunningState(false);
+                        showStatusMessage("GAME STOPPED");
+                    }
+                }, 1000);
+            } else {
+                 // Blocked or failed
+                 setRunningState(false);
+                 showStatusMessage("GAME LAUNCH FAILED");
+            }
+        }
+
+        function setRunningState(isRunning) {
+            const captionElements = document.querySelectorAll('.app-caption span, .app-caption i, .app-icon i');
+            const sidebarBtn = document.getElementById('sidebar-launch-btn');
+
+            if (isRunning) {
+                captionElements.forEach(el => el.classList.add('running-text'));
+                if(sidebarBtn) {
+                    sidebarBtn.innerHTML = '<span class="action-icon">⏳</span> RUNNING...';
+                    sidebarBtn.classList.add('running-btn');
+                }
+            } else {
+                captionElements.forEach(el => el.classList.remove('running-text'));
+                if(sidebarBtn) {
+                    sidebarBtn.innerHTML = '<span class="action-icon">▶</span> LAUNCH GAME';
+                    sidebarBtn.classList.remove('running-btn');
+                }
+            }
+        }
+
+        function toggleConsole() {
+            const consoleTool = tools.find(t => t.id === 'console');
+            if (consoleTool) openWindow(consoleTool);
+        }
+
+        function editSpriteInStudio(key) {
+            const pixelTool = tools.find(t => t.id === 'pixel');
+            openWindow(pixelTool);
+            setTimeout(() => {
+                const frame = document.getElementById('frame-pixel');
+                if (frame && frame.contentWindow.loadSprite) frame.contentWindow.loadSprite(key);
+            }, 200);
+        }
+
+        // --- NEW TOOLBAR FUNCTIONS ---
+        function dispatchGlobalCommand(cmd) {
+            // Find focused window iframe
+            const focusedWin = document.querySelector('.window.focused iframe');
+            if (focusedWin) {
+                // Post message to the iframe to handle the command
+                focusedWin.contentWindow.postMessage({ type: 'execCommand', command: cmd }, '*');
+                console.log(`Dispatched ${cmd} to focused window.`);
+            } else {
+                // Fallback for main window focus if applicable, or generic alert
+                document.execCommand(cmd); 
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Expose tools for dashboard iframe access
+        window.tools = tools;
+
+    </script>
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    <script>
+        // --- Activity Logging Hook ---
+        const _originalOpenWindow = openWindow;
+        openWindow = function(tool) {
+            _originalOpenWindow(tool);
+            if (window.KetebeProjectState) {
+                window.KetebeProjectState.logActivity('tool', tool.title, { id: tool.id });
+            }
+        };
+
+        init();
+    </script>
+    <!-- ====== MSN MESSENGER IRAB UI ====== -->
+    <style>
+        #irab-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            font-family: Tahoma, "Microsoft Sans Serif", Arial, sans-serif;
+            font-size: 11px;
+        }
+        #irab-avatar {
+            width: 64px;
+            height: 64px;
+            background: url('/sprite-art/helper.png') center/contain no-repeat;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.4));
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        #irab-avatar:hover { transform: translateY(-3px) scale(1.05); }
+
+        /* XP Balloon - Pixelated with Rounded Corners */
+        #irab-balloon {
+            position: absolute;
+            bottom: 75px;
+            right: 0;
+            width: 260px;
+            background: #FFFFE1;
+            border: 2px solid #000;
+            border-radius: 12px; /* Rounded but will be pixelated */
+            padding: 10px 12px;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.8); /* Hard pixelated shadow */
+            display: none;
+            animation: irabBalloonIn 0.25s ease-out;
+            font-family: Tahoma, sans-serif;
+            font-size: 11px;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            filter: contrast(1.15) brightness(1.05);
+            -webkit-font-smoothing: none;
+            font-smooth: never;
+        }
+        #irab-balloon.show { display: block; }
+        @keyframes irabBalloonIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        #irab-balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -12px; right: 22px;
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 12px solid #000;
+        }
+        #irab-balloon::before {
+            content: '';
+            position: absolute;
+            bottom: -9px; right: 24px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid #FFFFE1;
+            z-index: 1;
+        }
+        #irab-balloon-title { 
+            font-weight: bold; 
+            color: #003399; 
+            margin-bottom: 5px;
+            font-family: Tahoma, sans-serif;
+            text-shadow: 1px 1px 0px rgba(0,0,0,0.2);
+        }
+        #irab-balloon-text { 
+            color: #000; 
+            line-height: 1.5;
+            margin-bottom: 8px;
+            font-family: Tahoma, sans-serif;
+        }
+        #irab-balloon-actions { display: flex; gap: 5px; justify-content: flex-end; }
+
+        .xp-btn {
+            background: linear-gradient(180deg, #EAF3FF 0%, #D9E9FC 45%, #BED6F5 50%, #A7C9F1 100%);
+            border: 2px solid #003C74;
+            border-radius: 4px; /* Rounded but pixelated */
+            padding: 4px 12px;
+            font-family: Tahoma, sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+            color: #000;
+            cursor: pointer;
+            min-width: 60px;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+            text-shadow: 0.5px 0.5px 0px rgba(255,255,255,0.8);
+            filter: contrast(1.1);
+            -webkit-font-smoothing: none;
+        }
+        .xp-btn:hover { 
+            background: linear-gradient(180deg, #F5F9FF 0%, #BCD9FF 100%);
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+        }
+        .xp-btn.secondary { 
+            background: linear-gradient(180deg, #F5F5F5 0%, #C5C5C5 100%); 
+            border-color: #707070;
+        }
+
+        /* XP Chat Window - Pixelated with Rounded Corners */
+        #irab-chat {
+            position: fixed;
+            bottom: 100px; right: 20px;
+            width: 660px; height: 520px;
+            background: #ECE9D8;
+            border: 3px solid;
+            border-color: #0054E3 #003C74 #003C74 #0054E3;
+            border-radius: 10px 10px 0 0; /* Rounded top corners, pixelated */
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.6);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            font-family: Tahoma, sans-serif;
+            font-size: 11px;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            filter: contrast(1.12);
+            -webkit-font-smoothing: none;
+        }
+        #irab-chat.show { display: flex; }
+        #irab-chat-header {
+            background: linear-gradient(180deg, #3F8CF3 0%, #2862D9 50%, #1A4AAE 100%);
+            padding: 5px 7px;
+            border-radius: 8px 8px 0 0; /* Rounded top */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #irab-chat-header span {
+            color: #FFF; 
+            font-weight: bold; 
+            font-size: 11px;
+            font-family: Tahoma, sans-serif;
+            text-shadow: 1px 1px 0px #000;
+            display: flex; align-items: center; gap: 6px;
+        }
+        #irab-chat-header span::before {
+            content: ''; width: 16px; height: 16px;
+            background: url('/sprite-art/helper.png') center/contain no-repeat;
+            image-rendering: pixelated;
+        }
+        .xp-window-controls {
+            display: flex;
+            gap: 2px;
+        }
+        .xp-control-btn {
+            width: 22px; height: 22px;
+            background: linear-gradient(180deg, #4A9EFD 0%, #2B7FE5 50%, #1A5FC7 100%);
+            border: 2px solid #003C74; 
+            border-radius: 3px; /* Small rounded corners, pixelated */
+            color: #FFF; cursor: pointer; font-weight: bold; font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            text-shadow: 1px 1px 0px #000;
+            font-family: Tahoma, sans-serif;
+            image-rendering: pixelated;
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+            filter: contrast(1.1);
+        }
+        .xp-control-btn:hover { 
+            background: linear-gradient(180deg, #5AAEFF 0%, #3B8FFF 50%, #2670D9 100%);
+            transform: translate(1px, 1px);
+            box-shadow: 0px 0px 0px rgba(0,0,0,0.5);
+        }
+        .xp-control-btn.settings { font-size: 15px; }
+        .xp-close-btn {
+            width: 22px; height: 22px;
+            background: linear-gradient(180deg, #E04848 0%, #C83030 100%);
+            border: 2px solid #993333; 
+            border-radius: 3px; /* Small rounded corners, pixelated */
+            color: #FFF; cursor: pointer; font-weight: bold; font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            text-shadow: 1px 1px 0px #000;
+            font-family: Tahoma, sans-serif;
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+            filter: contrast(1.1);
+        }
+        .xp-close-btn:hover { 
+            background: linear-gradient(180deg, #FF6060 0%, #E04848 100%);
+            transform: translate(1px, 1px);
+            box-shadow: 0px 0px 0px rgba(0,0,0,0.5);
+        }
+
+        /* Settings Panel */
+        #irab-settings {
+            position: absolute;
+            top: 30px; right: 0;
+            width: 300px;
+            background: #ECE9D8;
+            border: 2px solid;
+            border-color: #808080 #D4D0C8 #D4D0C8 #808080;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
+            display: none;
+            z-index: 10000;
+        }
+        #irab-settings.show { display: block; animation: irabSettingsIn 0.2s ease; }
+        @keyframes irabSettingsIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        .irab-settings-header {
+            background: linear-gradient(180deg, #3F8CF3 0%, #2862D9 50%, #1A4AAE 100%);
+            color: #FFF;
+            padding: 4px 6px;
+            font-weight: bold;
+            font-size: 11px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .irab-settings-content {
+            padding: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .irab-setting-group {
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #D4D0C8;
+        }
+        .irab-setting-group:last-child { border-bottom: none; }
+        .irab-setting-label {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 6px;
+            color: #000080;
+        }
+        .irab-setting-control {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+        .irab-setting-control input[type="checkbox"] {
+            width: 13px;
+            height: 13px;
+        }
+        .irab-setting-control select,
+        .irab-setting-control input[type="text"] {
+            flex: 1;
+            padding: 3px 4px;
+            border: 1px solid #A0A0A0;
+            border-left-color: #D4D0C8;
+            border-top-color: #D4D0C8;
+            background: #FFF;
+            font-size: 11px;
+            font-family: Tahoma, sans-serif;
+        }
+        .irab-setting-desc {
+            font-size: 10px;
+            color: #808080;
+            margin-left: 19px;
+            line-height: 1.3;
+        }
+        .irab-settings-buttons {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid #FFF;
+        }
+
+        #irab-chat-messages {
+            flex: 1; background: #FFF;
+            border: 1px solid #A0A0A0;
+            margin: 4px; padding: 8px;
+            overflow-y: auto;
+        }
+        #irab-chat-messages::-webkit-scrollbar { width: 16px; }
+        #irab-chat-messages::-webkit-scrollbar-track { background: #ECE9D8; border-left: 1px solid #A0A0A0; }
+        #irab-chat-messages::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #F5F5F5 0%, #D4D0C8 50%, #C0BDB3 100%);
+            border: 1px solid #808080;
+        }
+
+        .irab-msg { 
+            margin-bottom: 12px; 
+            display: flex; 
+            gap: 8px; 
+            animation: irabMsgIn 0.2s ease;
+            image-rendering: pixelated;
+        }
+        @keyframes irabMsgIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .irab-msg-avatar { 
+            width: 32px; 
+            height: 32px; 
+            border: 2px solid #000; 
+            border-radius: 4px; /* Small rounded corners, pixelated */
+            flex-shrink: 0; 
+            image-rendering: pixelated; 
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+        }
+        .irab-msg-body { flex: 1; }
+        .irab-msg-name { 
+            font-weight: bold; 
+            font-size: 11px;
+            font-family: Tahoma, sans-serif;
+            text-shadow: 0.5px 0.5px 0px rgba(0,0,0,0.2);
+        }
+        .irab-msg-name.user { color: #000080; }
+        .irab-msg-name.bot { color: #800080; }
+        .irab-msg-time { 
+            font-size: 9px; 
+            color: #808080; 
+            margin-left: 4px;
+            font-family: Tahoma, sans-serif;
+        }
+        .irab-msg-bubble { 
+            padding: 6px 10px; 
+            border-radius: 8px; /* Rounded corners, pixelated */
+            border: 2px solid #808080;
+            font-size: 11px; 
+            line-height: 1.5; 
+            color: #000; 
+            word-wrap: break-word; 
+            margin-top: 2px; 
+            white-space: pre-wrap;
+            font-family: Tahoma, sans-serif;
+            background: #FFF;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            image-rendering: pixelated;
+            filter: contrast(1.08);
+            -webkit-font-smoothing: none;
+        }
+        .irab-msg.user .irab-msg-bubble { background: #E8F4FF; border: 1px solid #5B9BD5; }
+        .irab-msg.bot .irab-msg-bubble { background: #FFF4E8; border: 1px solid #FFB366; }
+        .irab-msg.system .irab-msg-bubble { background: #FFFACD; border: 1px solid #FFD700; font-style: italic; }
+        .irab-msg.error .irab-msg-bubble { background: #FFE8E8; border: 1px solid #FF6B6B; }
+        
+        /* Progress bar for AI loading */
+        .irab-progress-bar {
+            width: 100%;
+            height: 18px;
+            background: #FFF;
+            border: 1px solid #808080;
+            box-shadow: inset -1px -1px 0 #F0F0F0, inset 1px 1px 0 #404040;
+            margin: 8px 0 4px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .irab-progress-fill {
+            height: 100%;
+            background: linear-gradient(180deg, #6699FF 0%, #3366FF 50%, #0033CC 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+        }
+        .irab-progress-text {
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            margin-top: 2px;
+        }
+        
+        /* Message type classes */
+        .irab-message {
+            margin-bottom: 10px;
+            animation: irabMsgIn 0.2s ease;
+        }
+        .irab-message-content {
+            padding: 6px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .user-message .irab-message-content { background: #E8F4FF; border: 1px solid #5B9BD5; }
+        .assistant-message .irab-message-content { background: #FFF4E8; border: 1px solid #FFB366; }
+        .system-message .irab-message-content { background: #FFFACD; border: 1px solid #FFD700; font-style: italic; }
+        .error-message .irab-message-content { background: #FFE8E8; border: 1px solid #FF6B6B; }
+
+        #irab-chat-input-area { background: #ECE9D8; padding: 4px; border-top: 1px solid #FFF; }
+        
+        /* MSN-like Toolbar under input */
+        .irab-toolbar {
+            display: flex;
+            gap: 2px;
+            padding: 3px 4px;
+            background: #D4D0C8;
+            border-top: 1px solid #FFF;
+            border-bottom: 1px solid #808080;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .irab-toolbar-btn {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(180deg, #F5F5F5 0%, #D4D0C8 100%);
+            border: 1px solid #808080;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #000;
+            filter: grayscale(0.2);
+            image-rendering: pixelated;
+            transition: all 0.1s;
+        }
+        .irab-toolbar-btn:hover {
+            background: linear-gradient(180deg, #FFF 0%, #E5E5E5 100%);
+            border-color: #0054E3;
+        }
+        .irab-toolbar-btn:active {
+            background: #C0C0C0;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .irab-toolbar-separator {
+            width: 1px;
+            height: 20px;
+            background: #808080;
+            margin: 0 2px;
+        }
+        
+        /* Chat body with sidebar layout */
+        #irab-chat-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        #irab-chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #A0A0A0;
+        }
+        #irab-chat-sidebar {
+            width: 140px;
+            background: #ECE9D8;
+            border-left: 1px solid #FFF;
+            display: flex;
+            flex-direction: column;
+            padding: 6px;
+            gap: 8px;
+        }
+        .irab-sidebar-section {
+            background: #FFF;
+            border: 1px solid #A0A0A0;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 10px;
+        }
+        .irab-sidebar-title {
+            font-weight: bold;
+            color: #003C74;
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+        .irab-sidebar-avatar {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 4px;
+            border: 2px solid #808080;
+            border-radius: 4px;
+            background: url('/sprite-art/helper.png') center/cover no-repeat;
+            image-rendering: pixelated;
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+        }
+        .irab-sidebar-status {
+            text-align: center;
+            color: #008000;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .irab-quick-action {
+            padding: 3px 6px;
+            margin: 2px 0;
+            background: #ECE9D8;
+            border: 1px solid #A0A0A0;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            text-align: center;
+            color: #000;
+        }
+        .irab-quick-action:hover {
+            background: #BCD9FF;
+            border-color: #0054E3;
+        }
+        
+        #irab-chat-input { 
+            width: 100%; 
+            max-width: 100%;
+            background: #FFF; 
+            border: 1px solid #7F9DB9; 
+            color: #000; 
+            padding: 4px 6px; 
+            font-size: 11px; 
+            font-family: Tahoma, sans-serif; 
+            resize: none; 
+            height: 46px;
+            box-sizing: border-box;
+            overflow: auto;
+            margin: 0;
+        }
+        #irab-chat-input:focus { outline: none; border-color: #0054E3; }
+        #irab-chat-input:disabled { background: #f0f0f0; color: #888; cursor: not-allowed; }
+        .irab-input-bar { display: flex; justify-content: flex-end; margin-top: 4px; }
+        #irab-send-btn {
+            background: linear-gradient(180deg, #EAF3FF 0%, #A7C9F1 100%);
+            border: 1px solid #003C74; border-radius: 3px;
+            padding: 4px 16px; font-family: Tahoma, sans-serif;
+            font-size: 11px; font-weight: bold; color: #000; cursor: pointer;
+        }
+        #irab-send-btn:hover { background: linear-gradient(180deg, #F5F9FF 0%, #BCD9FF 100%); }
+
+        .irab-status-bar { background: #ECE9D8; border-top: 1px solid #FFF; padding: 2px 6px; display: flex; justify-content: space-between; font-size: 10px; color: #000; }
+        .irab-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #00CC00; border: 1px solid #008800; margin-right: 4px; vertical-align: middle; }
+        .irab-status-dot.thinking { background: #FFB300; border-color: #CC8800; animation: irabPulse 1s infinite; }
+        @keyframes irabPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        .nudge-animation {
+            animation: irabNudge 0.5s;
+        }
+
+        /* MSN Nudge Animation */
+        @keyframes irabNudge {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-10px, -10px); }
+            20% { transform: translate(10px, 10px); }
+            30% { transform: translate(-10px, 10px); }
+            40% { transform: translate(10px, -10px); }
+            50% { transform: translate(-10px, -10px); }
+            60% { transform: translate(10px, 10px); }
+            70% { transform: translate(-10px, 10px); }
+            80% { transform: translate(10px, -10px); }
+            90% { transform: translate(-5px, 5px); }
+        }
+
+        /* Wink Overlay */
+        #irab-wink-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 1000000;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        #irab-wink-overlay.show { opacity: 1; }
+        .wink-image {
+            width: 300px; height: 300px;
+            image-rendering: pixelated;
+            animation: winkPop 2s ease-in-out forwards;
+        }
+        @keyframes winkPop {
+            0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+            20% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+            80% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(2) rotate(20deg); opacity: 0; }
+        }
+    </style>
+    <div id="irab-wink-overlay"></div>
+    <div id="irab-container">
+        <div id="irab-avatar" title="IRAB - Click to chat!"></div>
+        <div id="irab-balloon">
+            <div id="irab-balloon-title">💬 IRAB says...</div>
+            <div id="irab-balloon-text">GRRR... IRAB IS READY TO HELP!</div>
+            <div id="irab-balloon-actions">
+                <button class="xp-btn" onclick="IRAB.openChat()">Open Chat</button>
+                <button class="xp-btn secondary" onclick="IRAB.dismissBalloon()">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="irab-chat">
+        <div id="irab-chat-header">
+            <span>IRAB - Studio Assistant</span>
+            <div class="xp-window-controls">
+                <button class="xp-control-btn settings" onclick="IRAB.clearHistory()" title="Clear Chat">🗑</button>
+                <button class="xp-control-btn settings" onclick="IRAB.toggleSettings()" title="Settings">⚙</button>
+                <button class="xp-close-btn" onclick="IRAB.closeChat()">×</button>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="irab-settings">
+            <div class="irab-settings-header">
+                <span>⚙ Native Cortex Config</span>
+                <span style="cursor: pointer;" onclick="IRAB.toggleSettings()">×</span>
+            </div>
+            <div class="irab-settings-content">
+                <div class="irab-setting-group">
+                    <div class="irab-setting-label">Brain Parameters (DeepSeek 1.3B)</div>
+                    
+                    <div class="irab-setting-control" style="margin-top: 8px;">
+                        <label>Temperature: <span id="irab-setting-temperature-val">0.7</span></label>
+                        <input type="range" id="irab-setting-temperature" min="0.1" max="1.5" step="0.1" value="0.7" 
+                               oninput="document.getElementById('irab-setting-temperature-val').textContent = this.value"
+                               style="width: 100%;">
+                    </div>
+                    <div class="irab-setting-desc">Low = Focused, High = Creative</div>
+                    
+                    <div class="irab-setting-control" style="margin-top: 8px;">
+                        <label>Max Tokens:</label>
+                        <input type="number" id="irab-setting-max-tokens" min="64" max="2048" value="512" style="width: 100%;">
+                    </div>
+                    <div class="irab-setting-desc">Maximum length of response</div>
+
+                    <div class="irab-setting-control" style="margin-top: 8px;">
+                        <label>GPU Layers (Metal):</label>
+                        <input type="number" id="irab-setting-gpu-layers" min="0" max="99" value="4" style="width: 100%;">
+                    </div>
+                    <div class="irab-setting-desc">Requires restart to apply</div>
+                </div>
+
+                <div class="irab-setting-group">
+                    <div class="irab-setting-label">Interface Options</div>
+                    <div class="irab-setting-control" style="flex-direction: column; align-items: flex-start;">
+                        <label>Custom Personality / System Prompt:</label>
+                        <textarea id="irab-setting-personality-text" style="width: 100%; height: 60px; font-family: Tahoma; font-size: 10px; margin-top: 5px; resize: none;" placeholder="e.g. You are a helpful cat assistant who says Meow!"></textarea>
+                    </div>
+                    <div class="irab-setting-control" style="margin-top: 10px;">
+                        <input type="checkbox" id="irab-setting-personality" checked>
+                        <label for="irab-setting-personality">Enable Personality Quirks</label>
+                    </div>
+                    <div class="irab-setting-control">
+                        <input type="checkbox" id="irab-setting-audio" checked>
+                        <label for="irab-setting-audio">Enable Sound Effects</label>
+                    </div>
+                </div>
+
+                <div class="irab-settings-buttons">
+                    <button class="xp-btn" onclick="IRAB.saveSettings()">Apply</button>
+                    <button class="xp-btn secondary" onclick="IRAB.toggleSettings()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="irab-chat-body">
+            <div id="irab-chat-main">
+                <div id="irab-chat-messages"></div>
+                <div id="irab-chat-input-area">
+                    <div class="irab-toolbar">
+                        <button class="irab-toolbar-btn" title="Bold" onclick="IRAB.formatText('bold')">𝐁</button>
+                        <button class="irab-toolbar-btn" title="Italic" onclick="IRAB.formatText('italic')">𝘐</button>
+                        <div class="irab-toolbar-separator"></div>
+                        <button class="irab-toolbar-btn" title="Emoticons" onclick="IRAB.showEmoticons()">😊</button>
+                        <button class="irab-toolbar-btn" title="Winks" onclick="IRAB.showWinks()">✨</button>
+                        <button class="irab-toolbar-btn" title="Nudge" onclick="IRAB.nudge()">👋</button>
+                        <div class="irab-toolbar-separator"></div>
+                        <button class="irab-toolbar-btn" title="Capture Studio" onclick="IRAB.takeScreenshot()">📸</button>
+                        <button class="irab-toolbar-btn" title="Change Background" onclick="IRAB.changeBackground()">🖼️</button>
+                    </div>
+                    <textarea id="irab-chat-input" placeholder="Type a message..."></textarea>
+                    <div class="irab-input-bar">
+                        <button id="irab-send-btn" onclick="IRAB.send()">Send</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="irab-chat-sidebar">
+                <div class="irab-sidebar-section">
+                    <div class="irab-sidebar-avatar"></div>
+                    <div class="irab-sidebar-status">● Online</div>
+                    <div style="text-align:center; font-size:10px; color:#666; margin-top:2px;">
+                        IRAB v1.0
+                    </div>
+                </div>
+                
+                <div class="irab-sidebar-section">
+                    <div class="irab-sidebar-title">Dev Sessions</div>
+                    <div id="irab-session-list" style="max-height: 100px; overflow-y: auto; margin-bottom: 5px;">
+                        <!-- JS Injected -->
+                    </div>
+                    <div class="irab-quick-action" onclick="IRAB.newSession()" style="background:#E8F4FF; font-weight:bold;">+ New Session</div>
+                </div>
+                
+                <div class="irab-sidebar-section">
+                    <div class="irab-sidebar-title">Quick Actions</div>
+                    <div class="irab-quick-action" onclick="IRAB.quickHelp()">📚 Help Topics</div>
+                    <div class="irab-quick-action" onclick="IRAB.quickTutorial()">🎓 Tutorials</div>
+                    <div class="irab-quick-action" onclick="IRAB.quickTips()">💡 Random Tip</div>
+                </div>
+                
+                <div class="irab-sidebar-section">
+                    <div class="irab-sidebar-title">Fun Zone</div>
+                    <div class="irab-quick-action" onclick="IRAB.tellJoke()">😄 Tell Joke</div>
+                    <div class="irab-quick-action" onclick="IRAB.motivate()">💪 Motivate Me</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="irab-status-bar">
+            <span><span class="irab-status-dot" id="irab-status-dot"></span><span id="irab-status-text">Online</span></span>
+            <span id="irab-char-count">0/500</span>
+        </div>
+    </div>
+    <!-- IRAB Native Cortex Bridges -->
+    <script src="ai/bridge.js"></script>
+    <script src="assistant.js"></script>
+    
+    <script>
+        // Initialize AI Micro if needed for ghost-text etc, but keep UI to Native
+        // import { KetebeAI } from './ai/ketebe-ai.js';
+        // window.KetebeAI = new KetebeAI();
+    </script>
+</body>
+</html>

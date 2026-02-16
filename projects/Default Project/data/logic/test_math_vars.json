@@ -1,0 +1,86 @@
+{
+    "name": "test_math_vars",
+    "nodes": [
+        {
+            "id": "node_1",
+            "type": "evt_start",
+            "x": 100,
+            "y": 200,
+            "data": {}
+        },
+        {
+            "id": "node_2",
+            "type": "var_set",
+            "x": 300,
+            "y": 200,
+            "data": {
+                "name": "counter",
+                "value": 5
+            }
+        },
+        {
+            "id": "node_3",
+            "type": "var_inc",
+            "x": 500,
+            "y": 200,
+            "data": {
+                "name": "counter",
+                "amount": 3
+            }
+        },
+        {
+            "id": "node_4",
+            "type": "var_get",
+            "x": 650,
+            "y": 150,
+            "data": {
+                "varName": "counter"
+            }
+        },
+        {
+            "id": "node_5",
+            "type": "eng_log",
+            "x": 700,
+            "y": 200,
+            "data": {
+                "msg": "Counter value after increment"
+            }
+        }
+    ],
+    "wires": [
+        {
+            "id": "wire_1",
+            "fromNode": "node_1",
+            "fromPort": "out",
+            "toNode": "node_2",
+            "toPort": "in"
+        },
+        {
+            "id": "wire_2",
+            "fromNode": "node_2",
+            "fromPort": "out",
+            "toNode": "node_3",
+            "toPort": "in"
+        },
+        {
+            "id": "wire_3",
+            "fromNode": "node_3",
+            "fromPort": "out",
+            "toNode": "node_5",
+            "toPort": "in"
+        },
+        {
+            "id": "wire_4",
+            "fromNode": "node_4",
+            "fromPort": "value",
+            "toNode": "node_5",
+            "toPort": "msg"
+        }
+    ],
+    "variables": [
+        {
+            "name": "counter",
+            "value": 0
+        }
+    ]
+}

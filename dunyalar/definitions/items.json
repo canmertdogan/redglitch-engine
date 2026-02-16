@@ -1,0 +1,80 @@
+{
+  "health_potion": {
+    "id": "health_potion",
+    "name": "Health Potion",
+    "sprite": "potion_red",
+    "type": "consumable",
+    "value": 50,
+    "desc": "Restores 50 HP",
+    "icon": "🧪",
+    "rarity": "common",
+    "stackable": true,
+    "maxStack": 99,
+    "properties": {
+      "healAmount": 50
+    }
+  },
+  "mana_potion": {
+    "id": "mana_potion",
+    "name": "Mana Potion",
+    "sprite": "potion_blue",
+    "type": "consumable",
+    "value": 40,
+    "desc": "Restores 40 Mana",
+    "icon": "🔮",
+    "rarity": "common",
+    "stackable": true,
+    "maxStack": 99,
+    "properties": {
+      "manaAmount": 40
+    }
+  },
+  "iron_sword": {
+    "id": "iron_sword",
+    "name": "Iron Sword",
+    "sprite": "sword_iron",
+    "type": "equipment",
+    "value": 150,
+    "desc": "A basic iron sword",
+    "icon": "⚔️",
+    "rarity": "uncommon",
+    "stackable": false,
+    "maxStack": 1,
+    "properties": {
+      "damage": 15,
+      "attackSpeed": 1.0
+    }
+  },
+  "greater_health_potion": {
+    "id": "greater_health_potion",
+    "name": "Greater Health Potion",
+    "sprite": "potion_red_greater",
+    "type": "consumable",
+    "value": 200,
+    "desc": "Restores 100 HP",
+    "icon": "💊",
+    "rarity": "rare",
+    "stackable": true,
+    "maxStack": 50,
+    "properties": {
+      "healAmount": 100
+    }
+  },
+  "legendary_sword": {
+    "id": "legendary_sword",
+    "name": "Excalibur",
+    "sprite": "sword_legendary",
+    "type": "equipment",
+    "value": 9999,
+    "desc": "A legendary blade of immense power",
+    "icon": "🗡️",
+    "rarity": "legendary",
+    "stackable": false,
+    "maxStack": 1,
+    "properties": {
+      "damage": 100,
+      "attackSpeed": 2.0,
+      "special": "holy_damage"
+    }
+  }
+}

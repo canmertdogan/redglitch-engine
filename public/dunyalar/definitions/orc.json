@@ -1,0 +1,20 @@
+{
+    "components":  [
+                       {
+                           "speed":  150,
+                           "type":  "Stats",
+                           "hp":  150
+                       },
+                       {
+                           "height":  40,
+                           "width":  40,
+                           "type":  "Collider"
+                       },
+                       {
+                           "scriptId":  "enemy_heavy",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Orc",
+    "sprite":  "Enemy_Animations_Set/Enemy_Animations_Set/Orc/Idle.png"
+}

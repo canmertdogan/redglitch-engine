@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ketebe.ai.cluster;
+
+// The AI Cluster Service
+service AIClusterService {
+  // Bi-directional stream for real-time inference
+  rpc ChatStream(stream ChatRequest) returns (stream ChatResponse);
+  
+  // Single request/response for non-streaming tasks
+  rpc Chat(ChatRequest) returns (ChatResponse);
+  
+  // Health check and status
+  rpc GetStatus(StatusRequest) returns (StatusResponse);
+}
+
+// Core Chat Request
+message ChatRequest {
+  string session_id = 1;
+  repeated Message messages = 2;
+  Config config = 3;
+  bytes auth_token = 4; // Signed by WASM bridge
+}
+
+// Individual Message
+message Message {
+  enum Role {
+    SYSTEM = 0;
+    USER = 1;
+    ASSISTANT = 2;
+    TOOL = 3;
+  }
+  Role role = 1;
+  string content = 2;
+  string name = 3; // Optional name for tool calls
+}
+
+// Inference Configuration
+message Config {
+  string model = 1;
+  float temperature = 2;
+  int32 max_tokens = 3;
+  float top_p = 4;
+  repeated string stop_sequences = 5;
+}
+
+// Chat Response
+message ChatResponse {
+  string session_id = 1;
+  string delta = 2; // Current token (for streaming)
+  string full_text = 3; // Accumulated text (optional)
+  FinishReason finish_reason = 4;
+  Usage usage = 5;
+}
+
+enum FinishReason {
+  NULL = 0;
+  STOP = 1;
+  LENGTH = 2;
+  TOOL_CALLS = 3;
+  ERROR = 4;
+}
+
+message Usage {
+  int32 prompt_tokens = 1;
+  int32 completion_tokens = 2;
+  int32 total_tokens = 3;
+}
+
+// Status Request/Response
+message StatusRequest {}
+
+message StatusResponse {
+  bool online = 1;
+  string version = 2;
+  float load_average = 3;
+  int32 active_sessions = 4;
+  repeated string available_models = 5;
+}

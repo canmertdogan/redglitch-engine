@@ -1,0 +1,15 @@
+{
+    "components":  [
+                       {
+                           "table":  "common",
+                           "type":  "Loot"
+                       },
+                       {
+                           "height":  32,
+                           "width":  32,
+                           "type":  "Collider"
+                       }
+                   ],
+    "name":  "Wooden Chest",
+    "sprite":  "Pixel_Mart/basket_metal.png"
+}

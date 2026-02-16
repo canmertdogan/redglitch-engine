@@ -1,0 +1,20 @@
+{
+  "name": "Empty Campaign",
+  "description": "Blank template with just a start node - build from scratch",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "startNode": "start",
+  "nodes": {
+    "start": {
+      "id": "start",
+      "type": "start",
+      "x": 100,
+      "y": 300,
+      "next": null
+    }
+  },
+  "metadata": {
+    "template": true,
+    "category": "blank"
+  }
+}

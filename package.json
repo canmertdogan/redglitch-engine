@@ -1,0 +1,59 @@
+{
+  "name": "ongonluk-engine",
+  "productName": "Ketebe Game Studio",
+  "version": "1.0.0",
+  "description": "Ongonluk Engine Alpha - Professional Game Development Studio",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js",
+    "dist": "electron-builder",
+    "build:game": "node build-game.js",
+    "build:game:mac": "node build-game.js \"Default Project\" macos",
+    "build:game:ios": "node build-game.js \"Default Project\" ios",
+    "build:game:android": "node build-game.js \"Default Project\" android",
+    "build:game:win": "node build-game.js \"Default Project\" windows",
+    "build:ai-worker": "node public/ai/build-worker.js",
+    "build:corpus": "node public/ai/docs/build-corpus.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/cli": "^8.0.1",
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/filesystem": "^8.1.0",
+    "@capacitor/ios": "^8.0.2",
+    "@capacitor/preferences": "^8.0.0",
+    "@huggingface/transformers": "^3.0.0-alpha.19",
+    "@orama/orama": "^3.0.0",
+    "@xenova/transformers": "^2.17.2",
+    "chokidar": "^5.0.0",
+    "express": "^4.18.2",
+    "onnxruntime-web": "^1.19.2",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "electron": "^40.1.0",
+    "electron-builder": "^24.9.1",
+    "electron-packager": "^17.1.2",
+    "esbuild": "^0.27.2"
+  },
+  "build": {
+    "appId": "com.ketebe.engine",
+    "productName": "Ketebe Game Studio",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!builds/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icons/favicon-6-512.png"
+    },
+    "mac": {
+      "icon": "public/icons/favicon-6-512.png"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+    "components":  [
+                       {
+                           "speed":  80,
+                           "type":  "Stats",
+                           "hp":  50
+                       },
+                       {
+                           "height":  16,
+                           "width":  32,
+                           "type":  "Collider"
+                       },
+                       {
+                           "scriptId":  "enemy_bounce",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Slime",
+    "sprite":  "Enemy_Animations_Set/Enemy_Animations_Set/Slime/Idle.png"
+}

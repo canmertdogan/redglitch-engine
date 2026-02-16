@@ -1,0 +1,341 @@
+{
+  "editors": [
+    {
+      "name": "NPC Editor",
+      "id": "npc",
+      "description": "Create and manage Non-Player Characters for your game. NPCs can have dialogue, behaviors, sprites, and AI patterns.",
+      "features": [
+        "Character sprite assignment",
+        "Behavior tree configuration",
+        "Dialogue linkage",
+        "Position and patrol routes",
+        "Interaction triggers"
+      ],
+      "howToUse": "Open NPC Editor → Click 'New NPC' → Fill name, sprite, position → Assign behavior → Link dialogue → Save",
+      "keywords": ["npc", "character", "non-player", "person", "villager", "merchant"]
+    },
+    {
+      "name": "Quest Editor",
+      "id": "quest",
+      "description": "Design quest lines with objectives, rewards, and progression tracking.",
+      "features": [
+        "Multiple objectives per quest",
+        "Reward configuration (items, XP, gold)",
+        "Quest chains and prerequisites",
+        "Completion triggers",
+        "Quest markers and UI"
+      ],
+      "howToUse": "Open Quest Editor → New Quest → Set title and description → Add objectives → Configure rewards → Link to NPC or trigger",
+      "keywords": ["quest", "mission", "task", "objective", "goal"]
+    },
+    {
+      "name": "Dialogue Editor",
+      "id": "dialogue",
+      "description": "Create branching dialogue trees for NPC conversations.",
+      "features": [
+        "Node-based dialogue graph",
+        "Multiple choice responses",
+        "Conditional branches",
+        "Variable tracking",
+        "Voice/portrait integration"
+      ],
+      "howToUse": "Open Dialogue Editor → New Dialogue → Add nodes → Connect with arrows → Set conditions → Link to NPC",
+      "keywords": ["dialogue", "conversation", "talk", "chat", "speech"]
+    },
+    {
+      "name": "Script Editor",
+      "id": "script",
+      "description": "Write game logic and custom behaviors using JavaScript.",
+      "features": [
+        "Syntax highlighting",
+        "Code completion",
+        "Error checking",
+        "Live reload",
+        "Access to game engine API"
+      ],
+      "howToUse": "Open Script Editor → New Script → Write JavaScript code → Save → Script runs in game",
+      "keywords": ["script", "code", "logic", "javascript", "programming"]
+    },
+    {
+      "name": "Item Editor",
+      "id": "item",
+      "description": "Create items, equipment, consumables, and collectibles.",
+      "features": [
+        "Item stats and properties",
+        "Inventory icon",
+        "Equip slots",
+        "Use effects",
+        "Stackability settings"
+      ],
+      "howToUse": "Open Item Editor → New Item → Set name and type → Configure stats → Add icon → Define use effect",
+      "keywords": ["item", "equipment", "weapon", "armor", "potion", "consumable"]
+    },
+    {
+      "name": "Enemy Editor",
+      "id": "enemy",
+      "description": "Design enemy types with combat stats and AI behaviors.",
+      "features": [
+        "Combat stats (HP, ATK, DEF)",
+        "AI behavior patterns",
+        "Loot tables",
+        "Spawn rules",
+        "Special abilities"
+      ],
+      "howToUse": "Open Enemy Editor → New Enemy → Set stats → Choose AI behavior → Configure loot → Set spawn conditions",
+      "keywords": ["enemy", "monster", "foe", "combat", "battle"]
+    },
+    {
+      "name": "Character Editor",
+      "id": "character",
+      "description": "Define player characters and their progression systems.",
+      "features": [
+        "Base stats",
+        "Level-up curves",
+        "Skill trees",
+        "Starting equipment",
+        "Character classes"
+      ],
+      "howToUse": "Open Character Editor → New Character → Set base stats → Define level curve → Assign skills → Set starting gear",
+      "keywords": ["character", "player", "hero", "protagonist", "class"]
+    },
+    {
+      "name": "Skill Editor",
+      "id": "skill",
+      "description": "Create abilities, spells, and special moves.",
+      "features": [
+        "Skill effects and damage",
+        "Mana/resource cost",
+        "Cooldowns",
+        "Targeting system",
+        "Visual effects",
+        "Unlock requirements"
+      ],
+      "howToUse": "Open Skill Editor → New Skill → Set name and effect → Configure cost → Add animation → Set unlock conditions",
+      "keywords": ["skill", "ability", "spell", "magic", "power", "move"]
+    },
+    {
+      "name": "Achievement Editor",
+      "id": "achievement",
+      "description": "Set up achievements and progression tracking.",
+      "features": [
+        "Achievement icons",
+        "Unlock conditions",
+        "Progress tracking",
+        "Rewards",
+        "Hidden achievements"
+      ],
+      "howToUse": "Open Achievement Editor → New Achievement → Set title and icon → Define unlock condition → Add reward",
+      "keywords": ["achievement", "trophy", "badge", "unlock", "milestone"]
+    },
+    {
+      "name": "Interactive Cutscene Editor",
+      "id": "cutscene",
+      "description": "Create cinematic sequences with camera movements and events.",
+      "features": [
+        "Timeline-based editing",
+        "Camera control",
+        "Character animations",
+        "Dialogue integration",
+        "Trigger events"
+      ],
+      "howToUse": "Open Cutscene Editor → New Cutscene → Add timeline events → Position camera → Add dialogue → Set triggers",
+      "keywords": ["cutscene", "cinematic", "movie", "sequence", "event"]
+    },
+    {
+      "name": "Campaign Editor",
+      "id": "campaign",
+      "description": "Orchestrate game flow, levels, and story progression.",
+      "features": [
+        "Level sequencing",
+        "Story beats",
+        "Save points",
+        "Global events",
+        "Chapter management"
+      ],
+      "howToUse": "Open Campaign Editor → New Campaign → Define chapters → Link levels → Set story triggers → Configure save points",
+      "keywords": ["campaign", "story", "level", "chapter", "progression"]
+    },
+    {
+      "name": "Menu Editor",
+      "id": "menu",
+      "description": "Design custom game menus and UI screens.",
+      "features": [
+        "Visual menu designer",
+        "Button actions",
+        "Layout management",
+        "Navigation flow",
+        "Styling options"
+      ],
+      "howToUse": "Open Menu Editor → New Menu → Add UI elements → Configure actions → Style appearance → Set navigation",
+      "keywords": ["menu", "ui", "interface", "screen", "button"]
+    },
+    {
+      "name": "Logic Editor",
+      "id": "logic",
+      "description": "Create visual logic flows and game rules.",
+      "features": [
+        "Visual node graph",
+        "Condition checking",
+        "Variable manipulation",
+        "Event triggers",
+        "Flow control"
+      ],
+      "howToUse": "Open Logic Editor → New Logic → Add logic nodes → Connect flows → Set conditions → Link to game events",
+      "keywords": ["logic", "rules", "conditions", "flow", "visual scripting"]
+    },
+    {
+      "name": "Algorithm Editor",
+      "id": "algorithm",
+      "description": "Design complex algorithms and procedural systems.",
+      "features": [
+        "Algorithm templates",
+        "Procedural generation",
+        "Optimization tools",
+        "Testing sandbox",
+        "Performance metrics"
+      ],
+      "howToUse": "Open Algorithm Editor → Select template → Configure parameters → Test in sandbox → Apply to game",
+      "keywords": ["algorithm", "procedural", "generation", "random", "system"]
+    },
+    {
+      "name": "Behavior Editor",
+      "id": "behavior",
+      "description": "Create AI behavior trees for NPCs and enemies.",
+      "features": [
+        "Behavior tree nodes",
+        "State machines",
+        "Decision logic",
+        "Action priorities",
+        "Debug visualization"
+      ],
+      "howToUse": "Open Behavior Editor → New Behavior → Add behavior nodes → Configure priorities → Set transitions → Test AI",
+      "keywords": ["behavior", "ai", "artificial intelligence", "brain", "decision"]
+    },
+    {
+      "name": "Prefab Editor",
+      "id": "prefab",
+      "description": "Create reusable game object templates.",
+      "features": [
+        "Component assembly",
+        "Property inheritance",
+        "Instance overrides",
+        "Variant creation",
+        "Nested prefabs"
+      ],
+      "howToUse": "Open Prefab Editor → New Prefab → Add components → Set default values → Save for reuse",
+      "keywords": ["prefab", "template", "blueprint", "reusable", "object"]
+    },
+    {
+      "name": "Localization Editor",
+      "id": "localization",
+      "description": "Manage translations and multi-language support.",
+      "features": [
+        "Translation tables",
+        "Language selection",
+        "Text ID management",
+        "Export/import",
+        "Context notes"
+      ],
+      "howToUse": "Open Localization Editor → Add languages → Create text IDs → Provide translations → Export for use",
+      "keywords": ["localization", "translation", "language", "i18n", "text"]
+    },
+    {
+      "name": "ISO Editor",
+      "id": "iso",
+      "description": "Design isometric tile-based worlds.",
+      "features": [
+        "Isometric tile placement",
+        "Height mapping",
+        "Object layering",
+        "Collision setup",
+        "Lighting"
+      ],
+      "howToUse": "Open ISO Editor → Load tileset → Paint tiles → Set heights → Add objects → Configure collision",
+      "keywords": ["isometric", "iso", "tile", "map", "world"]
+    },
+    {
+      "name": "Pixel Editor",
+      "id": "pixel",
+      "description": "Create and edit pixel art assets.",
+      "features": [
+        "Pixel-perfect drawing",
+        "Animation frames",
+        "Palette management",
+        "Export options",
+        "Onion skinning"
+      ],
+      "howToUse": "Open Pixel Editor → New sprite → Draw with tools → Add animation frames → Export",
+      "keywords": ["pixel", "sprite", "art", "draw", "animation"]
+    },
+    {
+      "name": "FX Editor",
+      "id": "fx",
+      "description": "Design visual effects and particle systems.",
+      "features": [
+        "Particle emitters",
+        "Effect presets",
+        "Animation curves",
+        "Performance optimization",
+        "Preview system"
+      ],
+      "howToUse": "Open FX Editor → New Effect → Configure emitter → Adjust parameters → Preview → Save",
+      "keywords": ["fx", "effect", "particle", "visual", "animation"]
+    },
+    {
+      "name": "Background Editor",
+      "id": "background",
+      "description": "Create parallax backgrounds and skyboxes.",
+      "features": [
+        "Layer management",
+        "Parallax scrolling",
+        "Depth control",
+        "Animated backgrounds",
+        "Weather effects"
+      ],
+      "howToUse": "Open Background Editor → Add layers → Set parallax speed → Position elements → Add weather",
+      "keywords": ["background", "parallax", "skybox", "scenery", "environment"]
+    },
+    {
+      "name": "Shader Editor",
+      "id": "shader",
+      "description": "Create custom visual shaders and effects.",
+      "features": [
+        "Shader code editor",
+        "Live preview",
+        "Uniform parameters",
+        "Preset library",
+        "Performance profiling"
+      ],
+      "howToUse": "Open Shader Editor → New Shader → Write GLSL code → Set parameters → Preview → Apply to objects",
+      "keywords": ["shader", "glsl", "visual", "graphics", "rendering"]
+    },
+    {
+      "name": "Input Editor",
+      "id": "input",
+      "description": "Configure keyboard, mouse, and gamepad controls.",
+      "features": [
+        "Key binding",
+        "Gamepad mapping",
+        "Input actions",
+        "Dead zones",
+        "Sensitivity settings"
+      ],
+      "howToUse": "Open Input Editor → Define actions → Map keys → Configure gamepad → Test inputs → Save scheme",
+      "keywords": ["input", "controls", "keyboard", "gamepad", "keys"]
+    }
+  ],
+  "generalConcepts": {
+    "projectStructure": {
+      "description": "Projects are organized with dunyalar/ (worlds), muzikler/ (music), data/ (logic), and sprites.js",
+      "content": "Each project in Ongonluk has a standard structure:\n- dunyalar/ - World and map data\n- muzikler/ - Audio files\n- data/ - Game logic and configuration\n- sprites.js - Custom sprite definitions\n- ketebe.json - Project metadata"
+    },
+    "engineTypes": {
+      "description": "Ongonluk supports three engine types: rpg-topdown, platformer-2d, and iso-pixel",
+      "content": "Choose your engine type in ketebe.json:\n- rpg-topdown: Classic 2D RPG with top-down view\n- platformer-2d: Side-scrolling platformer with physics\n- iso-pixel: Isometric pixel art games"
+    },
+    "buildingGames": {
+      "description": "Build your game for multiple platforms",
+      "content": "Use 'npm run build:game \"ProjectName\" [platform]' where platform is:\n- electron: Desktop executable\n- android: Android APK\n- all: Build for all platforms"
+    }
+  }
+}

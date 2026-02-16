@@ -1,0 +1,285 @@
+[
+  {
+    "id": "create-npc-basic",
+    "title": "Create a Basic NPC",
+    "keywords": "npc character create new",
+    "difficulty": "beginner",
+    "estimatedTime": "5 minutes",
+    "steps": [
+      {
+        "number": 1,
+        "instruction": "Open the NPC Editor from the launcher",
+        "action": "openEditor",
+        "params": { "editor": "npc" },
+        "selector": "#npc-editor-btn"
+      },
+      {
+        "number": 2,
+        "instruction": "Click the 'New NPC' button",
+        "action": "clickButton",
+        "params": { "buttonId": "newNpcBtn" },
+        "selector": "#newNpcBtn"
+      },
+      {
+        "number": 3,
+        "instruction": "Enter a name for your NPC (e.g., 'Village Elder')",
+        "action": "fillField",
+        "params": { "fieldId": "npcName" },
+        "selector": "#npcName"
+      },
+      {
+        "number": 4,
+        "instruction": "Select a sprite from the dropdown",
+        "action": "fillField",
+        "params": { "fieldId": "npcSprite" },
+        "selector": "#npcSprite"
+      },
+      {
+        "number": 5,
+        "instruction": "Set the NPC's starting position on the map",
+        "action": "custom",
+        "instruction": "Click on the map to place your NPC",
+        "selector": "#mapCanvas"
+      },
+      {
+        "number": 6,
+        "instruction": "Click 'Save' to create your NPC",
+        "action": "clickButton",
+        "params": { "buttonId": "saveBtn" },
+        "selector": "#saveBtn"
+      }
+    ],
+    "tips": [
+      "NPCs need dialogue to be interactive - link a dialogue tree after creation",
+      "You can assign behaviors to make NPCs patrol or react to events",
+      "Use meaningful names to organize your NPCs"
+    ]
+  },
+  {
+    "id": "create-quest",
+    "title": "Create Your First Quest",
+    "keywords": "quest mission task objective",
+    "difficulty": "beginner",
+    "estimatedTime": "10 minutes",
+    "steps": [
+      {
+        "number": 1,
+        "instruction": "Open the Quest Editor",
+        "action": "openEditor",
+        "params": { "editor": "quest" }
+      },
+      {
+        "number": 2,
+        "instruction": "Click 'New Quest'",
+        "action": "clickButton",
+        "params": { "buttonId": "newQuestBtn" }
+      },
+      {
+        "number": 3,
+        "instruction": "Give your quest a title",
+        "action": "fillField",
+        "params": { "fieldId": "questTitle" }
+      },
+      {
+        "number": 4,
+        "instruction": "Write a description for the quest",
+        "action": "fillField",
+        "params": { "fieldId": "questDescription" }
+      },
+      {
+        "number": 5,
+        "instruction": "Click 'Add Objective' to create quest goals",
+        "action": "clickButton",
+        "params": { "buttonId": "addObjectiveBtn" }
+      },
+      {
+        "number": 6,
+        "instruction": "Configure rewards (gold, items, XP)",
+        "action": "custom",
+        "instruction": "Set rewards in the rewards panel"
+      },
+      {
+        "number": 7,
+        "instruction": "Link the quest to an NPC quest giver",
+        "action": "fillField",
+        "params": { "fieldId": "questGiver" }
+      },
+      {
+        "number": 8,
+        "instruction": "Save your quest",
+        "action": "saveEditor"
+      }
+    ],
+    "tips": [
+      "Start with simple objectives like 'Talk to X' or 'Go to location Y'",
+      "Chain quests together using prerequisites",
+      "Test your quest in-game to ensure objectives trigger correctly"
+    ]
+  },
+  {
+    "id": "create-dialogue",
+    "title": "Build a Dialogue Tree",
+    "keywords": "dialogue conversation talk npc",
+    "difficulty": "intermediate",
+    "estimatedTime": "15 minutes",
+    "steps": [
+      {
+        "number": 1,
+        "instruction": "Open the Dialogue Editor",
+        "action": "openEditor",
+        "params": { "editor": "dialogue" }
+      },
+      {
+        "number": 2,
+        "instruction": "Create a new dialogue",
+        "action": "clickButton",
+        "params": { "buttonId": "newDialogueBtn" }
+      },
+      {
+        "number": 3,
+        "instruction": "Add the first dialogue node (greeting)",
+        "action": "clickButton",
+        "params": { "buttonId": "addNodeBtn" }
+      },
+      {
+        "number": 4,
+        "instruction": "Type the NPC's greeting message",
+        "action": "fillField",
+        "params": { "fieldId": "nodeText" }
+      },
+      {
+        "number": 5,
+        "instruction": "Add player response options",
+        "action": "clickButton",
+        "params": { "buttonId": "addResponseBtn" }
+      },
+      {
+        "number": 6,
+        "instruction": "Connect responses to new dialogue nodes",
+        "action": "custom",
+        "instruction": "Drag arrows from responses to new nodes"
+      },
+      {
+        "number": 7,
+        "instruction": "Add conditions for branching (optional)",
+        "action": "custom",
+        "instruction": "Click node → Add Condition → Select variable"
+      },
+      {
+        "number": 8,
+        "instruction": "Save and link to NPC",
+        "action": "saveEditor"
+      }
+    ],
+    "tips": [
+      "Keep dialogue concise - players prefer shorter responses",
+      "Use conditions to create dynamic conversations based on game state",
+      "Test all branches to ensure there are no dead ends"
+    ]
+  },
+  {
+    "id": "build-game",
+    "title": "Build Your Game for Distribution",
+    "keywords": "build export package publish",
+    "difficulty": "beginner",
+    "estimatedTime": "5 minutes (build takes longer)",
+    "steps": [
+      {
+        "number": 1,
+        "instruction": "Save all your work in editors",
+        "action": "custom"
+      },
+      {
+        "number": 2,
+        "instruction": "Return to the launcher dashboard",
+        "action": "custom"
+      },
+      {
+        "number": 3,
+        "instruction": "Choose your target platform",
+        "action": "custom",
+        "instruction": "Select Electron (Windows), Android, or All"
+      },
+      {
+        "number": 4,
+        "instruction": "Click 'Build Game' button",
+        "action": "buildGame",
+        "params": { "platform": "all" }
+      },
+      {
+        "number": 5,
+        "instruction": "Wait for build to complete (2-3 minutes)",
+        "action": "custom"
+      },
+      {
+        "number": 6,
+        "instruction": "Find your executable in dist/game/release/",
+        "action": "custom"
+      }
+    ],
+    "tips": [
+      "Electron builds create Windows .exe files",
+      "Android builds open Android Studio for final compilation",
+      "Always test your build before distributing"
+    ]
+  },
+  {
+    "id": "create-item",
+    "title": "Create a Usable Item",
+    "keywords": "item potion weapon equipment",
+    "difficulty": "beginner",
+    "estimatedTime": "5 minutes",
+    "steps": [
+      {
+        "number": 1,
+        "instruction": "Open the Item Editor",
+        "action": "openEditor",
+        "params": { "editor": "item" }
+      },
+      {
+        "number": 2,
+        "instruction": "Click 'New Item'",
+        "action": "clickButton",
+        "params": { "buttonId": "newItemBtn" }
+      },
+      {
+        "number": 3,
+        "instruction": "Name your item (e.g., 'Health Potion')",
+        "action": "fillField",
+        "params": { "fieldId": "itemName" }
+      },
+      {
+        "number": 4,
+        "instruction": "Select item type (consumable, equipment, key item)",
+        "action": "fillField",
+        "params": { "fieldId": "itemType" }
+      },
+      {
+        "number": 5,
+        "instruction": "Set item properties (stackable, usable, etc.)",
+        "action": "custom"
+      },
+      {
+        "number": 6,
+        "instruction": "Add use effect (heal HP, restore mana, etc.)",
+        "action": "fillField",
+        "params": { "fieldId": "itemEffect" }
+      },
+      {
+        "number": 7,
+        "instruction": "Upload or select an icon",
+        "action": "custom"
+      },
+      {
+        "number": 8,
+        "instruction": "Save your item",
+        "action": "saveEditor"
+      }
+    ],
+    "tips": [
+      "Consumables should have clear effects (e.g., +50 HP)",
+      "Equipment items need stat bonuses defined",
+      "Test item effects in-game to ensure they work as expected"
+    ]
+  }
+]

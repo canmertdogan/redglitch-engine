@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK CAMPAIGN STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            
+            --node-bg: #111;
+            --node-border: #444;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-size: 1.1rem; border-bottom: 1px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover { background: var(--accent); color: #000; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        input[type="text"], select {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none; flex-grow: 1;
+        }
+        input:focus { border-color: var(--accent); }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- PANELS --- */
+        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border); }
+        .panel-header {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+        }
+        .panel-content { padding: 10px; overflow-y: auto; flex-grow: 1; }
+
+        /* --- SIDEBAR (PALETTE) --- */
+        #sidebar-container { width: 80px; transition: width 0.1s; overflow: hidden; display: flex; flex-shrink: 0; border-right: 1px solid var(--border); }
+        #sidebar { width: 100%; border: none; }
+        
+        .node-tool {
+            width: 50px; height: 50px; margin: 10px auto;
+            background: #111; border: 1px solid #333; cursor: grab;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #888; font-size: 0.8rem; border-radius: 4px; transition: transform 0.1s;
+        }
+        .node-tool i { font-size: 1.2rem; margin-bottom: 2px; }
+        .node-tool:hover { border-color: var(--accent); color: #fff; transform: scale(1.05); }
+        .node-tool:active { transform: scale(0.95); }
+
+        /* --- CENTER (CANVAS) --- */
+        #center-panel { 
+            flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas);
+            position: relative; overflow: hidden; cursor: grab; min-width: 0;
+        }
+        #center-panel:active { cursor: grabbing; }
+        
+        #workspace {
+            width: 100%; height: 100%; position: relative;
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 40px 40px;
+        }
+        #canvas-transform { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        #connections-layer { 
+            position: absolute; top: 0; left: 0; 
+            width: 5000px; height: 5000px; 
+            overflow: visible; pointer-events: none; 
+            z-index: 1;
+        }
+
+        /* --- NODES --- */
+        .node {
+            position: absolute; width: 200px; background: var(--node-bg);
+            border: 1px solid var(--node-border); box-shadow: 4px 4px 10px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; z-index: 10;
+        }
+        .node.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 4px 4px 15px rgba(0,0,0,0.8); z-index: 20; }
+        
+        .node-header {
+            padding: 5px 10px; font-weight: bold; color: #fff; font-size: 0.9rem;
+            display: flex; align-items: center; justify-content: space-between;
+            background: #222; border-bottom: 1px solid #000; cursor: move;
+        }
+        .node-body { padding: 8px; font-size: 0.9rem; color: #ccc; min-height: 40px; }
+        .node-preview { color: var(--accent); font-size: 0.8rem; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; }
+
+        /* PORTS */
+        .port {
+            width: 12px; height: 12px; background: #666; border: 1px solid #000;
+            position: absolute; cursor: crosshair; z-index: 30;
+        }
+        .port:hover { background: #fff; transform: scale(1.2); }
+        .port.input { top: -6px; left: 50%; transform: translateX(-50%); } /* Top Input */
+        .port.output { bottom: -6px; left: 50%; transform: translateX(-50%); } /* Bottom Output */
+        
+        /* Branch Ports */
+        .port.output.true { left: 20%; background: #2ecc71; }
+        .port.output.false { left: 80%; background: #e74c3c; }
+
+        /* WIRES */
+        path { fill: none; stroke: #666; stroke-width: 3px; stroke-linecap: round; }
+        path:hover { stroke: #fff; stroke-width: 5px; cursor: pointer; pointer-events: auto; }
+
+        /* --- INSPECTOR --- */
+        #inspector-container { width: 300px; transition: width 0.1s; overflow: hidden; display: flex; flex-shrink: 0; border-left: 1px solid var(--border); }
+        #inspector-panel { width: 100%; border: none; }
+        
+        .handle-btn {
+            width: 12px; height: 100%; background: #111; border: 1px solid var(--border);
+            align-self: center; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: var(--accent); flex-shrink: 0; position: relative; z-index: 20;
+        }
+        .handle-btn:hover { background: #222; color: #fff; }
+        
+        .prop-group { margin-bottom: 15px; }
+        .prop-label { display: block; color: #666; margin-bottom: 5px; font-size: 0.9rem; text-transform: uppercase; }
+        .prop-input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 5px; }
+
+        .btn-full { width: 100%; padding: 8px; background: #222; border: 1px solid #444; color: #ccc; cursor: pointer; text-transform: uppercase; }
+        .btn-full:hover { border-color: var(--accent); color: #fff; }
+
+        /* --- RESIZERS --- */
+        .resizer {
+            width: 5px; background: #000; cursor: col-resize; z-index: 100; flex-shrink: 0;
+            border-left: 1px solid #222; border-right: 1px solid #222;
+        }
+        .resizer:hover { background: var(--accent); }
+
+        /* MINIMAP */
+        #minimap {
+            position: absolute; bottom: 20px; right: 20px;
+            width: 200px; height: 150px;
+            background: #000; border: 2px solid var(--border);
+            opacity: 0.8; cursor: crosshair; z-index: 50;
+        }
+
+        /* CONTEXT MENU */
+        #context-menu {
+            position: absolute; display: none; flex-direction: column;
+            background: #111; border: 1px solid var(--accent);
+            min-width: 150px; z-index: 6000; box-shadow: 4px 4px 10px #000;
+        }
+        .context-item {
+            padding: 8px 12px; cursor: pointer; font-size: 0.9rem; color: #ccc;
+            border-bottom: 1px solid #222; display: flex; justify-content: space-between;
+        }
+        .context-item:hover { background: var(--accent); color: #000; }
+        .context-item i { margin-right: 8px; }
+
+        /* ADVANCED NODES */
+        .node.group {
+            background: rgba(255, 255, 255, 0.05); border: 2px dashed #444;
+            box-shadow: none; z-index: 5; pointer-events: none; /* Logic handles interaction */
+        }
+        .node.group .node-header { background: transparent; border: none; color: #666; }
+        
+        .node.comment {
+            background: #f1c40f; color: #000; border: 1px solid #000;
+            width: 150px; min-height: 100px; z-index: 8;
+        }
+        .node.comment .node-header { display: none; }
+        .node.comment .node-body { font-family: 'Courier New', serif; font-size: 1rem; color: #000; }
+
+        .node.random { border-color: #e67e22; }
+        .node.wait { border-color: #95a5a6; }
+        .node.cutscene { border-color: #1abc9c; }
+        .node.quest { border-color: #9b59b6; }
+        
+        /* --- ENGINE TYPE INDICATORS --- */
+        .node.level[data-engine="rpg-topdown"] { border-left: 4px solid #e74c3c; }
+        .node.level[data-engine="iso-pixel"] { border-left: 4px solid #3498db; }
+        .node.level[data-engine="platformer-2d"] { border-left: 4px solid #2ecc71; }
+        
+        .engine-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 5px;
+            text-transform: uppercase;
+        }
+        .engine-badge.rpg-topdown { background: #e74c3c; color: #fff; }
+        .engine-badge.iso-pixel { background: #3498db; color: #fff; }
+        .engine-badge.platformer-2d { background: #2ecc71; color: #fff; }
+        
+        /* --- VALIDATION STYLES --- */
+        .validation-error { border-color: #e74c3c !important; }
+        .validation-warning { border-color: #f39c12 !important; }
+        .validation-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e74c3c;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            z-index: 100;
+        }
+        .validation-badge.warning { background: #f39c12; }
+
+        /* FLOATING WINDOWS */
+        .floating-window {
+            position: fixed; background: #0a0a0f; border: 2px solid var(--accent);
+            min-width: 350px; z-index: 5000; box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+        .floating-window .window-header {
+            background: #000; padding: 10px 15px; font-weight: bold; color: var(--accent);
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border); cursor: move;
+        }
+        .floating-window .window-content {
+            padding: 15px; max-height: 400px; overflow-y: auto;
+        }
+        .floating-window .window-content input[type="text"] {
+            flex-grow: 1;
+        }
+
+        /* SELECTOR LIST */
+        .selector-list {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+        }
+        .selector-item {
+            padding: 10px; background: #111; border: 1px solid #333;
+            cursor: pointer; text-align: center; font-size: 0.9rem;
+        }
+        .selector-item:hover { border-color: var(--accent); color: #fff; }
+        .selector-item.selected { background: var(--accent); color: #000; border-color: var(--accent); }
+        .selector-item i { display: block; font-size: 1.5rem; margin-bottom: 5px; }
+
+        /* DROPDOWN MENUS */
+        .menu-item {
+            position: relative;
+        }
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #111;
+            border: 1px solid var(--accent);
+            min-width: 200px;
+            z-index: 4000;
+            box-shadow: 4px 4px 15px rgba(0,0,0,0.8);
+        }
+        .menu-item:hover .menu-dropdown,
+        .menu-item.open .menu-dropdown {
+            display: block;
+        }
+        .menu-dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #222;
+            color: #ccc;
+            font-size: 0.95rem;
+        }
+        .menu-dropdown-item:hover {
+            background: var(--accent);
+            color: #000;
+        }
+        .menu-dropdown-item i {
+            width: 20px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        .menu-dropdown-item .shortcut {
+            color: #666;
+            font-size: 0.8rem;
+        }
+        .menu-dropdown-item:hover .shortcut {
+            color: #333;
+        }
+        .menu-separator {
+            height: 1px;
+            background: #333;
+            margin: 5px 0;
+        }
+        .menu-dropdown-item.disabled {
+            color: #444;
+            cursor: not-allowed;
+        }
+        .menu-dropdown-item.disabled:hover {
+            background: transparent;
+            color: #444;
+        }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <!-- LOADING SCREEN -->
+    <div id="loading-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#050505; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="font-size:2rem; color:var(--accent); margin-bottom:10px; text-shadow:0 0 10px var(--accent); font-weight:bold; letter-spacing:2px;">
+            <i class="fas fa-project-diagram"></i> CAMPAIGN STUDIO
+        </div>
+        <div style="font-size:1.2rem; color:#888; margin-bottom:15px;" id="loading-text">INITIALIZING...</div>
+        
+        <div style="width:400px; height:20px; background:#111; border:2px solid #333; padding:2px;">
+            <div id="loading-bar" style="width:0%; height:100%; background:var(--accent); transition:width 0.2s; box-shadow:0 0 10px var(--accent);"></div>
+        </div>
+    </div>
+
+    <div id="menubar">
+        <div style="color:var(--accent); font-weight:bold; margin-right:20px; letter-spacing:2px;">
+            <i class="fas fa-project-diagram"></i> CAMPAIGN STUDIO
+        </div>
+        
+        <div class="menu-item">
+            File
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="newCampaign()"><i class="fas fa-file"></i> New Campaign <span class="shortcut">Ctrl+N</span></div>
+                <div class="menu-dropdown-item" onclick="loadCampaignFile()"><i class="fas fa-folder-open"></i> Open... <span class="shortcut">Ctrl+O</span></div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="saveToServer()"><i class="fas fa-save"></i> Save <span class="shortcut">Ctrl+S</span></div>
+                <div class="menu-dropdown-item" onclick="editCampaignMetadata()"><i class="fas fa-edit"></i> Edit Metadata...</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="exportCampaign()"><i class="fas fa-download"></i> Export JSON...</div>
+                <div class="menu-dropdown-item" onclick="importCampaign()"><i class="fas fa-upload"></i> Import JSON...</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="window.close()"><i class="fas fa-times"></i> Close</div>
+            </div>
+        </div>
+        
+        <div class="menu-item">
+            Edit
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="undo()"><i class="fas fa-undo"></i> Undo <span class="shortcut">Ctrl+Z</span></div>
+                <div class="menu-dropdown-item" onclick="redo()"><i class="fas fa-redo"></i> Redo <span class="shortcut">Ctrl+Y</span></div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="copyNode()"><i class="fas fa-copy"></i> Copy Node <span class="shortcut">Ctrl+C</span></div>
+                <div class="menu-dropdown-item" onclick="pasteNode()"><i class="fas fa-paste"></i> Paste Node <span class="shortcut">Ctrl+V</span></div>
+                <div class="menu-dropdown-item" onclick="duplicateNode()"><i class="fas fa-clone"></i> Duplicate <span class="shortcut">Ctrl+D</span></div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="deleteSelectedNode()"><i class="fas fa-trash"></i> Delete <span class="shortcut">Del</span></div>
+                <div class="menu-dropdown-item" onclick="selectAll()"><i class="fas fa-object-group"></i> Select All <span class="shortcut">Ctrl+A</span></div>
+            </div>
+        </div>
+        
+        <div class="menu-item">
+            View
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="adjustZoom(0.1)"><i class="fas fa-search-plus"></i> Zoom In <span class="shortcut">Ctrl++</span></div>
+                <div class="menu-dropdown-item" onclick="adjustZoom(-0.1)"><i class="fas fa-search-minus"></i> Zoom Out <span class="shortcut">Ctrl+-</span></div>
+                <div class="menu-dropdown-item" onclick="resetZoom()"><i class="fas fa-compress"></i> Reset Zoom <span class="shortcut">Ctrl+0</span></div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="fitToScreen()"><i class="fas fa-expand"></i> Fit to Screen</div>
+                <div class="menu-dropdown-item" onclick="centerOnStart()"><i class="fas fa-crosshairs"></i> Center on Start</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="toggleMapMode()"><i class="fas fa-map"></i> Toggle Background</div>
+                <div class="menu-dropdown-item" onclick="toggleMinimap()"><i class="fas fa-th"></i> Toggle Minimap</div>
+                <div class="menu-dropdown-item" onclick="toggleGrid()"><i class="fas fa-border-all"></i> Toggle Grid</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" style="pointer-events:none; opacity:0.6;"><i class="fas fa-arrows-alt"></i> Pan Canvas <span class="shortcut">Arrow Keys</span></div>
+                <div class="menu-dropdown-item" style="pointer-events:none; opacity:0.6;"><i class="fas fa-fast-forward"></i> Fast Pan <span class="shortcut">Shift+Arrows</span></div>
+            </div>
+        </div>
+        
+        <div class="menu-item">
+            Tools
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="autoArrange()"><i class="fas fa-magic"></i> Auto Arrange</div>
+                <div class="menu-dropdown-item" onclick="validateCampaign()"><i class="fas fa-check-circle"></i> Validate Campaign</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="toggleVarWindow()"><i class="fas fa-database"></i> Variable Manager</div>
+                <div class="menu-dropdown-item" onclick="showStatistics()"><i class="fas fa-chart-bar"></i> Statistics</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="runCampaign()"><i class="fas fa-play"></i> Test Run <span class="shortcut">F5</span></div>
+            </div>
+        </div>
+        
+        <div class="menu-item">
+            Help
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="showShortcuts()"><i class="fas fa-keyboard"></i> Keyboard Shortcuts</div>
+                <div class="menu-dropdown-item" onclick="showNodeHelp()"><i class="fas fa-question-circle"></i> Node Reference</div>
+                <div class="menu-separator"></div>
+                <div class="menu-dropdown-item" onclick="showAbout()"><i class="fas fa-info-circle"></i> About Campaign Studio</div>
+            </div>
+        </div>
+        
+        <div style="flex-grow:1"></div>
+        <div style="color:#666; font-size:0.9rem; padding-right:10px;">
+            <i class="fas fa-arrows-alt" style="color:#f1c40f;"></i> ARROW KEYS TO PAN
+        </div>
+    </div>
+
+    <div id="toolbar">
+        <button class="tool-btn" onclick="saveToServer()" title="Save campaign to server (Ctrl+S)"><i class="fas fa-save"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="undo()" title="Undo last action (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+        <button class="tool-btn" onclick="redo()" title="Redo action (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="copyNode()" title="Copy selected node (Ctrl+C)"><i class="fas fa-copy"></i></button>
+        <button class="tool-btn" onclick="pasteNode()" title="Paste node (Ctrl+V)"><i class="fas fa-paste"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="autoArrange()" title="Auto-arrange nodes in grid layout"><i class="fas fa-magic"></i></button>
+        <button class="tool-btn" onclick="toggleMapMode()" title="Toggle background map overlay"><i class="fas fa-map"></i></button>
+        <button class="tool-btn" onclick="validateCampaign()" title="Validate campaign structure and connections"><i class="fas fa-check-circle"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn primary" onclick="runCampaign()" title="Test campaign from start node"><i class="fas fa-play"></i></button>
+        
+        <div class="tool-sep"></div>
+        <i class="fas fa-search" style="color:#666; margin-left:5px;"></i>
+        <input type="text" id="node-search" placeholder="Search nodes..." onkeyup="searchNodes(this.value)" style="margin-left:5px; max-width:150px;" title="Search nodes by ID or type">
+
+        <div style="flex-grow:1"></div>
+        <button class="tool-btn" onclick="adjustZoom(-0.1)" title="Zoom out"><i class="fas fa-minus"></i></button>
+        <button class="tool-btn" onclick="resetZoom()" title="Reset zoom to 100%"><i class="fas fa-compress"></i></button>
+        <button class="tool-btn" onclick="adjustZoom(0.1)" title="Zoom in"><i class="fas fa-plus"></i></button>
+    </div>
+
+    <div id="validation-toast" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#e74c3c; color:#fff; padding:10px 20px; border:2px solid #c0392b; z-index:5000; display:none; font-weight:bold; box-shadow:0 0 10px #000;">
+        <span id="validation-msg">Error</span>
+        <i class="fas fa-times" style="margin-left:10px; cursor:pointer;" onclick="this.parentElement.style.display='none'"></i>
+    </div>
+
+    <div id="layout">
+        
+        <!-- LEFT: PALETTE -->
+        <div id="sidebar-container">
+            <div id="sidebar" class="panel">
+                <div class="panel-header" style="justify-content:center;"><i class="fas fa-box"></i></div>
+                <div class="panel-content" style="padding:0;">
+                    <div class="node-tool" onclick="addNode('start')" title="Campaign entry point - Required (1 per campaign)"><i class="fas fa-play"></i>START</div>
+                    <div class="node-tool" onclick="addNode('level')" title="Playable level in any engine (RPG/ISO/Platformer)"><i class="fas fa-dungeon"></i>LEVEL</div>
+                    <div class="node-tool" onclick="addNode('branch')" title="Simple if/else condition based on flags"><i class="fas fa-code-branch"></i>IF</div>
+                    <div class="node-tool" onclick="addNode('dialogue')" title="NPC conversation with optional choices"><i class="fas fa-comment-dots"></i>TALK</div>
+                    <div class="node-tool" onclick="addNode('cutscene')" title="Story scene (skippable or forced)"><i class="fas fa-film"></i>SCENE</div>
+                    <div class="node-tool" onclick="addNode('quest')" title="Quest objective node"><i class="fas fa-scroll"></i>QUEST</div>
+                    <div class="node-tool" onclick="addNode('battle')" title="Combat encounter"><i class="fas fa-skull"></i>FIGHT</div>
+                    <div class="node-tool" onclick="addNode('reward')" title="Give items, achievements, or set flags"><i class="fas fa-gift"></i>GIFT</div>
+                    <div class="node-tool" onclick="addNode('variable')" title="Set global variables/flags"><i class="fas fa-pen"></i>SET</div>
+                    <div class="tool-sep" style="height:1px; width:100%; margin:10px 0;"></div>
+                    <div class="node-tool" onclick="addNode('mini-game')" title="Mini-Game: Short challenge with time/score goals"><i class="fas fa-gamepad"></i>MINI</div>
+                    <div class="node-tool" onclick="addNode('hub')" title="Hub: Central area with shops, inns, multiple exits"><i class="fas fa-store"></i>HUB</div>
+                    <div class="node-tool" onclick="addNode('challenge-mode')" title="Challenge: Timed/scored level with restrictions"><i class="fas fa-trophy"></i>CHAL</div>
+                    <div class="node-tool" onclick="addNode('boss-rush')" title="Boss Rush: Sequential boss battles (mixed engines OK)"><i class="fas fa-fist-raised"></i>BOSS</div>
+                    <div class="node-tool" onclick="addNode('exploration')" title="Exploration: Open-world area with objectives"><i class="fas fa-compass"></i>EXPL</div>
+                    <div class="tool-sep" style="height:1px; width:100%; margin:10px 0;"></div>
+                    <div class="node-tool" onclick="addNode('comment')"><i class="fas fa-sticky-note"></i>NOTE</div>
+                    <div class="node-tool" onclick="addNode('group')"><i class="far fa-object-group"></i>GROUP</div>
+                    <div class="node-tool" onclick="addNode('random')"><i class="fas fa-dice"></i>RND</div>
+                    <div class="node-tool" onclick="addNode('wait')"><i class="fas fa-clock"></i>WAIT</div>
+                </div>
+            </div>
+            <div id="sidebar-handle" class="handle-btn" onclick="toggleSidebar()">⏴</div>
+        </div>
+
+        <div class="resizer" id="resizer-left"></div>
+
+        <!-- CENTER: WORKSPACE -->
+        <div id="center-panel">
+            <div id="workspace">
+                <div id="canvas-transform">
+                    <img id="map-background" src="base_game/assets/world_tileset.png" style="display:none; position:absolute; opacity:0.3;">
+                    <svg id="connections-layer"></svg>
+                    <div id="nodes-container"></div>
+                </div>
+            </div>
+            <canvas id="minimap" width="200" height="150"></canvas>
+        </div>
+
+        <div class="resizer" id="resizer-right"></div>
+
+        <!-- RIGHT: INSPECTOR -->
+        <div id="inspector-container">
+            <div id="inspector-handle" class="handle-btn" onclick="toggleInspector()">⏵</div>
+            <div id="inspector-panel" class="panel">
+                <div class="panel-header">PROPERTIES <i class="fas fa-sliders-h"></i></div>
+                <div id="inspector-content" class="panel-content">
+                    <div style="text-align:center; color:#555; margin-top:50px;">SELECT NODE</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="context-menu"></div>
+
+    <div id="level-window" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%);">
+        <div class="window-header">SELECT LEVEL <i class="fas fa-times" onclick="toggleLevelWindow()" style="cursor:pointer;"></i></div>
+        <div id="level-list" class="window-content selector-list"></div>
+    </div>
+
+    <div id="var-window" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%);">
+        <div class="window-header">GLOBAL VARIABLES <i class="fas fa-times" onclick="toggleVarWindow()" style="cursor:pointer;"></i></div>
+        <div class="window-content">
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <input type="text" id="new-var-name" placeholder="New Variable Name..." style="background:#222; border:1px solid #444; color:#fff;">
+                <button class="tool-btn" onclick="addVariable()"><i class="fas fa-plus"></i></button>
+            </div>
+            <div id="var-list" style="max-height:300px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <div id="cutscene-window" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%);">
+        <div class="window-header">SELECT CUTSCENE <i class="fas fa-times" onclick="toggleCutsceneWindow()" style="cursor:pointer;"></i></div>
+        <div id="cutscene-list" class="window-content selector-list"></div>
+    </div>
+
+    <div id="enemy-window" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%);">
+        <div class="window-header">SELECT ENEMIES <i class="fas fa-times" onclick="toggleEnemyWindow()" style="cursor:pointer;"></i></div>
+        <div class="window-content">
+            <div id="enemy-list" class="selector-list" style="margin-bottom:15px;"></div>
+            <div style="border-top:1px solid #333; padding-top:10px;">
+                <span class="prop-label">Selected Enemies:</span>
+                <div id="selected-enemies" style="color:#ccc; font-size:0.9rem; margin-top:5px;">None</div>
+            </div>
+            <button class="btn-full" style="margin-top:10px;" onclick="confirmEnemySelection()">CONFIRM</button>
+        </div>
+    </div>
+
+    <div id="quest-window" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%);">
+        <div class="window-header">SELECT QUEST <i class="fas fa-times" onclick="toggleQuestWindow()" style="cursor:pointer;"></i></div>
+        <div id="quest-list" class="window-content selector-list"></div>
+    </div>
+
+    <!-- CAMPAIGN METADATA EDITOR -->
+    <div id="metadata-window" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%); min-width:550px; z-index:6001;">
+        <div class="window-header">
+            CAMPAIGN METADATA
+            <i class="fas fa-times" onclick="toggleMetadataWindow()" style="cursor:pointer;"></i>
+        </div>
+        <div class="window-content" style="padding:20px;">
+            <div style="margin-bottom:15px;">
+                <label style="display:block; color:#aaa; margin-bottom:5px;">CAMPAIGN NAME (Internal ID)</label>
+                <input type="text" id="metadata-campaign-name" placeholder="my_campaign" 
+                       style="width:100%; padding:8px; background:#000; border:1px solid #444; color:#fff; font-family:'VT323',monospace; font-size:1rem;">
+                <div style="color:#666; font-size:0.85rem; margin-top:3px;">Used as filename. Use lowercase, underscores only.</div>
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block; color:#aaa; margin-bottom:5px;">DISPLAY NAME</label>
+                <input type="text" id="metadata-display-name" placeholder="My Campaign" 
+                       style="width:100%; padding:8px; background:#000; border:1px solid #444; color:#fff; font-family:'VT323',monospace; font-size:1rem;">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block; color:#aaa; margin-bottom:5px;">DESCRIPTION</label>
+                <textarea id="metadata-description" placeholder="Enter campaign description..." rows="3"
+                          style="width:100%; padding:8px; background:#000; border:1px solid #444; color:#fff; font-family:'VT323',monospace; font-size:1rem; resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex; gap:15px; margin-bottom:15px;">
+                <div style="flex:1;">
+                    <label style="display:block; color:#aaa; margin-bottom:5px;">AUTHOR</label>
+                    <input type="text" id="metadata-author" placeholder="Your Name" 
+                           style="width:100%; padding:8px; background:#000; border:1px solid #444; color:#fff; font-family:'VT323',monospace; font-size:1rem;">
+                </div>
+                <div style="width:150px;">
+                    <label style="display:block; color:#aaa; margin-bottom:5px;">VERSION</label>
+                    <input type="text" id="metadata-version" placeholder="1.0.0" 
+                           style="width:100%; padding:8px; background:#000; border:1px solid #444; color:#fff; font-family:'VT323',monospace; font-size:1rem;">
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button class="btn-full" onclick="toggleMetadataWindow()" style="background:#333;">
+                    <i class="fas fa-times"></i> CANCEL
+                </button>
+                <button class="btn-full" onclick="saveMetadata()" style="background:var(--accent); color:#000;">
+                    <i class="fas fa-check"></i> SAVE METADATA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAVE CAMPAIGN DIALOG -->
+    <div id="save-dialog" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%); min-width:500px; z-index:6001;">
+        <div class="window-header">
+            SAVE CAMPAIGN
+            <i class="fas fa-times" onclick="closeSaveDialog()" style="cursor:pointer;"></i>
+        </div>
+        <div class="window-content" style="padding:20px;">
+            <div style="margin-bottom:15px;">
+                <label style="display:block; color:#aaa; margin-bottom:5px;">CAMPAIGN NAME (Filename)</label>
+                <input type="text" id="save-campaign-name" placeholder="my_campaign" 
+                       style="width:100%; padding:8px; background:#000; border:1px solid #444; color:#fff; font-family:'VT323',monospace; font-size:1rem;">
+                <div style="color:#666; font-size:0.85rem; margin-top:3px;">Saved to: projects/[current]/campaigns/[name].json</div>
+            </div>
+            <div id="save-warning" style="display:none; background:#e74c3c; color:#fff; padding:10px; margin-bottom:15px; border:2px solid #c0392b;">
+                <i class="fas fa-exclamation-triangle"></i> This will overwrite existing campaign!
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button class="btn-full" onclick="closeSaveDialog()" style="background:#333;">
+                    <i class="fas fa-times"></i> CANCEL
+                </button>
+                <button class="btn-full" onclick="confirmSave()" style="background:var(--accent); color:#000;">
+                    <i class="fas fa-save"></i> SAVE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOAD CAMPAIGN DIALOG -->
+    <div id="load-dialog" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%); min-width:600px; max-width:800px; z-index:6001;">
+        <div class="window-header">
+            LOAD CAMPAIGN
+            <i class="fas fa-times" onclick="closeLoadDialog()" style="cursor:pointer;"></i>
+        </div>
+        <div class="window-content" style="padding:20px; max-height:500px; overflow-y:auto;">
+            <div id="campaigns-loading" style="text-align:center; padding:40px; color:#666;">
+                <i class="fas fa-spinner fa-spin" style="font-size:2rem; margin-bottom:10px;"></i>
+                <div>Loading campaigns...</div>
+            </div>
+            <div id="campaigns-list" style="display:none;"></div>
+            <div id="campaigns-empty" style="display:none; text-align:center; padding:40px; color:#666;">
+                <i class="fas fa-folder-open" style="font-size:2rem; margin-bottom:10px;"></i>
+                <div>No campaigns found</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DIALOGS -->
+    <div id="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:6000;" onclick="closeModal()"></div>
+    
+    <div id="modal-dialog" class="floating-window" style="display:none; left:50%; top:50%; transform:translate(-50%,-50%); min-width:500px; z-index:6001;">
+        <div class="window-header">
+            <span id="modal-title">Dialog</span>
+            <i class="fas fa-times" onclick="closeModal()" style="cursor:pointer;"></i>
+        </div>
+        <div id="modal-content" class="window-content" style="max-height:500px;"></div>
+    </div>
+
+    <!-- HIDDEN FILE INPUT FOR IMPORT -->
+    <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="handleImportFile(event)">
+
+    <script src="js/android-adapter.bundle.js"></script>
+    
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <!-- Multi-Engine Campaign System -->
+    <script src="engines/shared/CampaignValidator.js"></script>
+    <script src="engines/shared/CampaignController.js"></script>
+    <script src="engines/shared/EngineAdapter.js"></script>
+    <script src="engines/shared/TopDownAdapter.js"></script>
+    <script src="engines/shared/IsoPixelAdapter.js"></script>
+    <script src="engines/shared/PlatformerAdapter.js"></script>
+    
+    <script src="campaign_editor.js?v=multiengine1"></script>
+    <!-- IRAB AI Assistant -->
+    <script src="ai/bridge.js"></script>
+    <script src="assistant.js"></script>
+</body>
+</html>

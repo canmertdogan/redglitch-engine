@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK ISOPIXEL STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #1f2b42;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0;
+            font-size: 1.1rem; border-bottom: 2px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menubar-title {
+            color: var(--accent); font-weight: bold; padding: 0 15px; 
+            border-right: 2px solid var(--border); margin-right: 10px; 
+            font-size: 1.2rem; letter-spacing: 2px; height: 100%;
+            display: flex; align-items: center; gap: 10px;
+        }
+        
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover, .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111; border: 2px solid var(--border);
+            display: none; flex-direction: column; min-width: 200px; box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+            z-index: 4000;
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .drop-opt {
+            padding: 8px 15px; cursor: pointer; color: #aaa; font-size: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .drop-opt:hover { background: #222; color: #fff; border-left: 4px solid var(--accent); }
+        .drop-sep { height: 1px; background: #333; margin: 4px 0; }
+        .shortcut { font-size: 0.8rem; color: #555; margin-left: 20px; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #main-area { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+        /* --- TOOL RAIL (LEFTMOST) --- */
+        #tool-rail {
+            width: 50px; background: #000; border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 10px;
+            flex-shrink: 0; z-index: 20;
+        }
+        
+        .rail-btn {
+            width: 40px; height: 40px; background: transparent; border: 1px solid transparent;
+            color: #666; cursor: pointer; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; font-size: 0.8rem; border-radius: 4px;
+            transition: all 0.1s;
+        }
+        .rail-btn i { font-size: 1.2rem; margin-bottom: 2px; }
+        .rail-btn span { font-size: 0.6rem; text-transform: uppercase; }
+        .rail-btn:hover { color: #fff; background: #111; border-color: #333; }
+        .rail-btn.active { color: var(--accent); background: #1a1a1a; border-color: var(--accent); }
+        
+        .rail-sep { width: 30px; height: 1px; background: #333; margin: 5px 0; }
+
+        /* --- PANELS --- */
+        .panel { 
+            display: flex; flex-direction: column; 
+            background: var(--bg-panel); border-right: 1px solid var(--border); 
+            height: 100%; 
+            overflow-y: auto; /* The whole sidebar scrolls now */
+            overflow-x: hidden;
+        }
+        .panel-header {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            flex-shrink: 0; position: sticky; top: 0; z-index: 5; /* Keep headers visible while scrolling */
+        }
+        .panel-content { 
+            padding: 10px; 
+            flex: 0 0 auto; /* Take natural height */
+            min-height: 0;
+        }
+        
+        .panel-layout {
+            display: flex; flex-direction: column; 
+            width: 100%;
+        }
+
+        /* --- SIDEBAR TABS --- */
+        .tab-container {
+            display: flex; background: #000; border-bottom: 2px solid var(--border);
+        }
+        .tab-btn {
+            flex: 1; border: none; background: #0a0a0f; color: #666; 
+            font-family: 'VT323', monospace; font-size: 1.1rem; cursor: pointer;
+            padding: 8px 0; border-right: 1px solid #222; border-bottom: 2px solid transparent;
+            transition: all 0.1s; letter-spacing: 1px;
+        }
+        .tab-btn:hover { background: #151520; color: #fff; }
+        .tab-btn.active { 
+            background: #1a1a1a; color: var(--accent); 
+            border-bottom: 2px solid var(--accent);
+        }
+
+        /* --- SIDEBAR (LIBRARY) --- */
+        #sidebar-container { width: 260px; transition: width 0.1s; overflow: hidden; display: flex; flex-shrink: 0; }
+        #sidebar { width: 100%; }
+
+        /* --- RIGHT SIDEBAR (INSPECTOR) --- */
+        #inspector-container { width: 280px; transition: width 0.1s; overflow: hidden; display: flex; flex-shrink: 0; border-left: 1px solid var(--border); }
+        #inspector { width: 100%; border: none; }
+        
+        .handle-btn {
+            width: 12px; height: 100%; background: #111; border: 1px solid var(--border);
+            align-self: center; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: var(--accent); flex-shrink: 0; position: relative; z-index: 20;
+        }
+        .handle-btn:hover { background: #222; color: #fff; }
+
+        /* --- CENTER CANVAS --- */
+        #center-panel { flex: 1; position: relative; background: #050505; display: flex; flex-direction: column; min-width: 0; }
+        #canvas-wrapper {
+            flex: 1; overflow: hidden; display: flex; justify-content: center; align-items: center;
+            background-image: radial-gradient(#1a1a1a 1px, transparent 1px); background-size: 20px 20px;
+            position: relative;
+        }
+        #isoCanvas { display: block; } /* Removed border/shadow to fill space */
+
+        /* --- BOTTOM PALETTE --- */
+        #bottom-palette {
+            height: 180px; min-height: 100px; max-height: 350px;
+            background: var(--bg-panel); border-top: 2px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        #bottom-palette.collapsed { height: 32px; min-height: 32px; }
+        #bottom-palette.collapsed .palette-content { display: none; }
+        
+        .palette-header {
+            height: 32px; background: #000; display: flex; align-items: center;
+            border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .palette-tabs {
+            display: flex; height: 100%; flex: 1;
+        }
+        .palette-tab {
+            padding: 0 20px; border: none; background: transparent; color: #666;
+            font-family: 'VT323', monospace; font-size: 1rem; cursor: pointer;
+            border-right: 1px solid #222; height: 100%; display: flex; align-items: center;
+            gap: 6px; transition: all 0.1s; letter-spacing: 1px;
+        }
+        .palette-tab:hover { background: #151520; color: #fff; }
+        .palette-tab.active { background: #1a1a1a; color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -1px; }
+        .palette-tab i { font-size: 0.9rem; }
+        
+        .palette-toggle {
+            width: 32px; height: 100%; background: transparent; border: none;
+            color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .palette-toggle:hover { color: var(--accent); background: #111; }
+        
+        .palette-content {
+            flex: 1; display: flex; overflow: hidden;
+        }
+        .palette-panel {
+            display: none; flex: 1; padding: 10px; overflow-y: auto;
+        }
+        .palette-panel.active { display: flex; flex-direction: column; }
+        
+        /* Horizontal tile grid for bottom palette */
+        .palette-grid-horizontal {
+            display: flex; flex-wrap: wrap; gap: 2px;
+            background: #000; padding: 4px; border: 1px solid var(--border);
+            align-content: flex-start; overflow-y: auto; flex: 1;
+        }
+        .palette-grid-horizontal .palette-item {
+            width: 40px; height: 40px; flex-shrink: 0;
+        }
+        
+        /* Shapes grid for bottom palette */
+        .shapes-grid {
+            display: flex; gap: 5px; flex-wrap: wrap;
+        }
+        .shapes-grid .tool-btn { width: 50px; height: 50px; font-size: 1.5rem; }
+        
+        /* Lights controls in bottom palette */
+        .lights-row {
+            display: flex; gap: 15px; align-items: flex-start;
+        }
+        .lights-config { display: flex; flex-direction: column; gap: 8px; min-width: 200px; }
+        .lights-list-container { flex: 1; min-width: 200px; }
+        
+        /* --- ASSET GRID SYSTEM (Redesign) --- */
+        .asset-grid {
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
+            gap: 15px; 
+            padding: 10px;
+            align-content: start;
+        }
+
+        .asset-card {
+            background: #15151a; 
+            border: 1px solid #444; 
+            display: flex; flex-direction: column;
+            cursor: pointer; 
+            position: relative;
+            transition: all 0.15s ease;
+            font-family: 'VT323', monospace;
+        }
+
+        .asset-card:hover { 
+            border-color: var(--accent); 
+            background: #15151a; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+
+        .asset-card.active { 
+            border-color: var(--accent); 
+            box-shadow: 0 0 0 1px var(--accent), 0 0 15px rgba(241,196,15,0.2);
+            background: #1a1a1a;
+        }
+
+        .asset-thumb { 
+            height: 80px; 
+            background: #050505; 
+            border-bottom: 1px solid #222; 
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        
+        .asset-thumb i {
+            font-size: 2.5rem;
+            color: #333;
+            transition: color 0.2s;
+        }
+        
+        .asset-card:hover .asset-thumb i { color: #ccc; }
+        .asset-card.active .asset-thumb i { color: var(--accent); }
+
+        .asset-info { padding: 8px; }
+        
+        .asset-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding: 0 8px 8px;
+            gap: 5px;
+            margin-top: auto;
+        }
+
+        .action-btn {
+            background: transparent;
+            border: 1px solid #333;
+            color: #666;
+            cursor: pointer;
+            padding: 2px 6px;
+            font-size: 0.8rem;
+            transition: all 0.1s;
+            font-family: 'VT323', monospace;
+        }
+
+        .action-btn:hover {
+            color: #e74c3c;
+            border-color: #e74c3c;
+            background: rgba(231,76,60,0.1);
+        }
+        
+        .asset-name { 
+            color: #e0e0e0; 
+            font-size: 1.0rem; 
+            font-weight: bold;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            letter-spacing: 0.5px;
+        }
+        
+        .asset-meta { 
+            font-size: 0.75rem; 
+            color: #666; 
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Resizer for bottom palette */
+        .resizer-h {
+            height: 5px; background: #000; cursor: row-resize;
+            border-top: 1px solid #222; border-bottom: 1px solid #222;
+        }
+        .resizer-h:hover { background: var(--accent); }
+
+        /* --- WIDGETS --- */
+        input[type="text"], input[type="number"], select {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px; font-family: inherit; font-size: 1rem; outline: none;
+        }
+        input:focus, select:focus { border-color: var(--accent); }
+
+        .input-group { margin-bottom: 8px; }
+        .input-label { font-size: 0.8rem; color: #666; display: block; margin-bottom: 2px; }
+
+        /* --- PALETTE --- */
+        .palette-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+            border: 1px solid var(--border); background: #000; padding: 2px;
+            /* Scroll handled by parent .panel-content */
+        }
+        .palette-item {
+            aspect-ratio: 1; background: #111; border: 1px solid #222; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; position: relative;
+            overflow: hidden;
+        }
+        .palette-item canvas {
+            width: 100%; height: 100%;
+            image-rendering: pixelated;
+        }
+        .palette-item:hover { border-color: #fff; }
+        .palette-item.selected { border-color: var(--accent); background: #222; box-shadow: inset 0 0 0 1px var(--accent); }
+        .palette-item span { position: absolute; bottom: 1px; right: 2px; font-size: 10px; color: #fff; text-shadow: 1px 1px 0 #000; z-index: 2; pointer-events: none; }
+
+        /* --- LAYERS --- */
+        .layer-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px; background: #111; border: 1px solid #333; margin-bottom: 2px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+        }
+        .layer-item.active { border-left: 3px solid var(--accent); background: #1a1a1a; }
+        
+        /* --- RESIZERS --- */
+        .resizer {
+            width: 5px; background: #000; cursor: col-resize; z-index: 100; flex-shrink: 0;
+            border-left: 1px solid #222; border-right: 1px solid #222;
+        }
+        .resizer:hover { background: var(--accent); }
+
+        .control-group { margin-bottom: 15px; border-bottom: 1px solid #111; padding-bottom: 10px; }
+        .dev-toggle {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 5px 0; color: #888; font-size: 0.9rem; cursor: pointer;
+        }
+        .dev-toggle:hover { color: #fff; }
+        .dev-toggle input { accent-color: var(--accent); }
+
+        .window-header { 
+            background: #000; padding: 5px 10px; color: var(--accent); 
+            font-weight: bold; border-bottom: 1px solid #333; 
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+        .window-content { padding: 10px; max-height: 400px; overflow-y: auto; }
+
+        /* --- ISO INSPECTOR STYLES --- */
+        .control-group { margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 10px; }
+        .control-label { display: block; color: var(--accent); margin-bottom: 8px; font-size: 0.85rem; letter-spacing: 1px; }
+        
+        input[type=range] {
+            -webkit-appearance: none; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: var(--accent); cursor: pointer; margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
+        }
+        
+        .dev-toggle {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 5px 0; color: #888; font-size: 0.9rem; cursor: pointer;
+        }
+        .dev-toggle:hover { color: #fff; }
+        .dev-toggle input { accent-color: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+    <!-- LOADING SCREEN -->
+    <div id="loading-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#050505; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden;">
+        
+        <!-- SPINNING ATOM & SPITTING WORDS -->
+        <div id="atom-container" style="position:relative; width:120px; height:120px; margin-bottom:30px; perspective: 600px;">
+            <div class="atom-scene">
+                <div class="atom-ring ring-1"></div>
+                <div class="atom-ring ring-2"></div>
+                <div class="atom-ring ring-3"></div>
+                <div class="atom-nucleus"></div>
+            </div>
+            <div id="word-spitter" style="position:absolute; top:50%; left:50%; width:0; height:0; transform-style: preserve-3d;"></div>
+        </div>
+
+        <div style="font-size:2rem; color:#f1c40f; margin-bottom:10px; text-shadow:0 0 10px #f1c40f; font-weight:bold; letter-spacing:2px;">
+            <i class="fas fa-cubes"></i> ISOPIXEL STUDIO
+        </div>
+        <div style="font-size:1.2rem; color:#888; margin-bottom:15px;" id="loading-text">INITIALIZING...</div>
+        
+        <div style="width:400px; height:20px; background:#111; border:2px solid #333; padding:2px;">
+            <div id="loading-bar" style="width:0%; height:100%; background:#f1c40f; transition:width 0.2s; box-shadow:0 0 10px #f1c40f;"></div>
+        </div>
+        
+        <style>
+            .atom-scene {
+                width: 100%; height: 100%;
+                transform-style: preserve-3d;
+                animation: scene-rotate 10s linear infinite;
+            }
+
+            .atom-ring {
+                position: absolute; top: 0; left: 0;
+                width: 100%; height: 100%;
+                border: 2px solid rgba(241, 196, 15, 0.6);
+                border-radius: 50%;
+                box-shadow: 0 0 5px rgba(241, 196, 15, 0.2);
+            }
+
+            /* 3D Orbits */
+            .ring-1 { transform: rotateY(0deg) rotateX(65deg); animation: spin-ring-1 2s linear infinite; }
+            .ring-2 { transform: rotateY(60deg) rotateX(65deg); animation: spin-ring-2 2s linear infinite; }
+            .ring-3 { transform: rotateY(120deg) rotateX(65deg); animation: spin-ring-3 2s linear infinite; }
+
+            .atom-nucleus {
+                position: absolute; top: 50%; left: 50%;
+                width: 20px; height: 20px;
+                background: radial-gradient(circle at 30% 30%, #fff, #f1c40f);
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                box-shadow: 0 0 15px #f1c40f, 0 0 30px rgba(241, 196, 15, 0.5);
+                animation: pulse-nuc 2s ease-in-out infinite alternate;
+            }
+
+            @keyframes scene-rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+            
+            /* Complex spin to simulate electron orbit paths */
+            @keyframes spin-ring-1 { from { transform: rotateY(0deg) rotateX(65deg) rotateZ(0deg); } to { transform: rotateY(0deg) rotateX(65deg) rotateZ(360deg); } }
+            @keyframes spin-ring-2 { from { transform: rotateY(60deg) rotateX(65deg) rotateZ(0deg); } to { transform: rotateY(60deg) rotateX(65deg) rotateZ(360deg); } }
+            @keyframes spin-ring-3 { from { transform: rotateY(120deg) rotateX(65deg) rotateZ(0deg); } to { transform: rotateY(120deg) rotateX(65deg) rotateZ(360deg); } }
+            
+            @keyframes pulse-nuc { 
+                from { box-shadow: 0 0 15px #f1c40f; transform: translate(-50%, -50%) scale(0.9); } 
+                to { box-shadow: 0 0 25px #f1c40f, 0 0 5px #fff; transform: translate(-50%, -50%) scale(1.1); } 
+            }
+
+            .spit-word {
+                position: absolute; color: #f1c40f; font-weight: bold; font-size: 1.2rem;
+                pointer-events: none; white-space: nowrap;
+                text-shadow: 0 0 5px #000;
+            }
+        </style>
+        <script>
+            (function(){
+                const chars = ['أ','ب','ت','ج','د','ر','س','ص','ط','ع','ف','ق','ك','ل','م','ن','هـ','و','ي'];
+                const spitter = document.getElementById('word-spitter');
+                const overlay = document.getElementById('loading-overlay');
+                
+                const interval = setInterval(() => {
+                    if(overlay.style.display === 'none' || overlay.style.opacity === '0') {
+                        clearInterval(interval); return;
+                    }
+                    
+                    const el = document.createElement('div');
+                    el.className = 'spit-word';
+                    el.innerText = chars[Math.floor(Math.random() * chars.length)];
+                    
+                    // Random Direction
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 50 + Math.random() * 50;
+                    
+                    const tx = Math.cos(angle) * speed;
+                    const ty = Math.sin(angle) * speed;
+                    
+                    el.style.transform = `translate(-50%, -50%)`;
+                    spitter.appendChild(el);
+                    
+                    // Animate
+                    el.animate([
+                        { transform: `translate(-50%, -50%) scale(0.5)`, opacity: 1 },
+                        { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(1.5)`, opacity: 0 }
+                    ], {
+                        duration: 800, easing: 'ease-out'
+                    }).onfinish = () => el.remove();
+                    
+                }, 100);
+            })();
+        </script>
+    </div>
+
+    <!-- 1. MENUBAR -->
+    <div id="menubar">
+        <div class="menubar-title">
+            <i class="fas fa-cubes"></i> ISOPIXEL STUDIO
+        </div>
+        
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="newMap()">New World <span class="shortcut">Ctrl+N</span></div>
+                <div class="drop-opt" onclick="saveToServer()">Save to Server <span class="shortcut">Ctrl+S</span></div>
+                <div class="drop-opt" onclick="downloadJSON()">Download JSON</div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="window.location.href='dashboard.html'">Exit to Launcher</div>
+            </div>
+        </div>
+
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="centerView()">Center View</div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="changeZoom(0.2)">Zoom In</div>
+                <div class="drop-opt" onclick="changeZoom(-0.2)">Zoom Out</div>
+            </div>
+        </div>
+
+        <div style="flex-grow:1"></div>
+        <div style="font-size:0.9rem; color:#555; padding-right:15px;">KETEBE ISO CORE</div>
+    </div>
+
+    <!-- 2. TOOLBAR -->
+    <div id="toolbar">
+        <button class="tool-btn" title="Save" onclick="saveToServer()"><i class="fas fa-save"></i></button>
+        <div class="tool-sep"></div>
+        
+        <button class="tool-btn" title="Undo"><i class="fas fa-undo"></i></button>
+        <button class="tool-btn" title="Redo"><i class="fas fa-redo"></i></button>
+        <div class="tool-sep"></div>
+
+        <button class="tool-btn" title="Center" onclick="centerView()"><i class="fas fa-crosshairs"></i></button>
+        <div class="tool-sep"></div>
+
+        <span style="color:#666; font-size:0.9rem;">SIZE:</span>
+        <input type="number" id="map-w" value="30" style="width:40px; height:28px; text-align:center;">
+        <span style="color:#666; font-size:0.9rem;">x</span>
+        <input type="number" id="map-h" value="30" style="width:40px; height:28px; text-align:center;">
+        
+        <span style="color:#666; font-size:0.9rem; margin-left:10px;">ZOOM:</span>
+        <span id="zoom-level" style="min-width:40px; text-align:center; color:var(--accent);">100%</span>
+
+        <div style="flex-grow:1"></div>
+        <button class="tool-btn primary" onclick="playtest()" style="width:auto; padding:0 15px; font-weight:bold;">
+            <i class="fas fa-play"></i> TEST WORLD
+        </button>
+    </div>
+
+    <!-- 3. MAIN LAYOUT -->
+    <div id="layout">
+        <!-- Main editing area (horizontal flex) -->
+        <div id="main-area">
+            <div id="tool-rail">
+                <button id="tool-block" class="rail-btn active" title="Place Block" onclick="setTool('block')"><i class="fas fa-cube"></i></button>
+                <button id="tool-eraser" class="rail-btn" title="Eraser" onclick="setTool('eraser')"><i class="fas fa-eraser"></i></button>
+                <button id="tool-picker" class="rail-btn" title="Picker" onclick="setTool('picker')"><i class="fas fa-eye-dropper"></i></button>
+                <div class="rail-sep"></div>
+                <button id="mode-visual" class="rail-btn active" title="Visuals" onclick="setMode('visual')"><i class="fas fa-paint-brush"></i><span>VIS</span></button>
+                <button id="mode-geo" class="rail-btn" title="Geometry" onclick="setMode('geo')"><i class="fas fa-mountain"></i><span>GEO</span></button>
+                <button id="mode-props" class="rail-btn" title="Props" onclick="setMode('props')"><i class="fas fa-chair"></i><span>PRP</span></button>
+                <div class="rail-sep"></div>
+                <button id="tool-light" class="rail-btn" title="Place Light" onclick="setTool('light')"><i class="fas fa-lightbulb"></i><span>LGT</span></button>
+            </div>
+
+            <div id="center-panel">
+                <div id="canvas-wrapper">
+                    <canvas id="isoCanvas"></canvas>
+                </div>
+                <div style="height:24px; background:#000; border-top:1px solid var(--border); display:flex; align-items:center; padding:0 10px; font-size:0.8rem; color:#666;">
+                    <span id="coord-display">X: 0, Y: 0, Z: 0</span>
+                    <div style="flex-grow:1"></div>
+                    <span>WORLD: <input type="text" id="level-name" value="iso_world_1" style="background:transparent; border:none; color:var(--accent); width:120px; text-align:right;"></span>
+                </div>
+            </div>
+
+            <div class="resizer" id="resizer-right"></div>
+
+            <div id="inspector-container">
+                <div id="inspector-handle" class="handle-btn" onclick="toggleInspector()">⏵</div>
+                <aside id="inspector" class="panel">
+                    <div class="panel-header" onclick="toggleSection(this)" style="cursor:pointer; display:flex; justify-content:space-between;">
+                        <span>PROPERTIES</span> <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="panel-content">
+                        
+                        <!-- DEPTH CONTROL -->
+                        <div class="control-group">
+                            <span class="control-label">VERTICAL SLICE (Z)</span>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <input type="range" id="z-slider" min="-32" max="32" value="0" style="flex-grow:1;">
+                                <input type="number" id="z-input" value="0" style="width:50px; text-align:center;">
+                            </div>
+                        </div>
+                        
+                        <!-- COLLISION TYPES -->
+                        <div class="control-group">
+                            <span class="control-label">COLLISION TYPES</span>
+                            <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-bottom:5px;">
+                                <button class="tool-btn active" onclick="selectCollisionType(1)" style="width:auto; font-family:'VT323', monospace; font-size:1.1rem; background:rgba(231,76,60,0.3); border-color:#e74c3c;">SOLID</button>
+                                <button class="tool-btn" onclick="selectCollisionType(0)" style="width:auto; font-family:'VT323', monospace; font-size:1.1rem;">PASS</button>
+                                <button class="tool-btn" onclick="selectCollisionType(2)" style="width:auto; font-family:'VT323', monospace; font-size:1.1rem; background:rgba(52,152,219,0.3); border-color:#3498db;">WALL</button>
+                                <button class="tool-btn" onclick="selectCollisionType(3)" style="width:auto; font-family:'VT323', monospace; font-size:1.1rem; background:rgba(241,196,15,0.3); border-color:#f1c40f;">HALF</button>
+                                <button class="tool-btn" onclick="selectCollisionType(8)" style="width:auto; font-family:'VT323', monospace; font-size:1.1rem; background:rgba(155,89,182,0.3); border-color:#9b59b6;">ZONE</button>
+                                <button class="tool-btn" onclick="selectCollisionType(4)" style="width:auto; font-family:'VT323', monospace; font-size:1.1rem; background:rgba(46,204,113,0.3); border-color:#2ecc71;">ONEWAY</button>
+                            </div>
+                            <div style="font-size:10px; color:#666;">
+                                Current: <span id="collision-type-display" style="color:var(--accent);">Solid (1)</span>
+                            </div>
+                        </div>
+
+                        <!-- BLOCK DATA -->
+                        <div class="control-group">
+                            <span class="control-label">SELECTED BLOCK</span>
+                            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                <div id="selected-block-preview" style="width:32px; height:32px; border:1px solid #333; background:#000;"></div>
+                                <div style="font-size:12px; color:#666; display:flex; flex-direction:column; justify-content:center;">
+                                    <span id="block-id-display">ID: 1</span>
+                                    <span>SOLID</span>
+                                </div>
+                            </div>
+                            
+                            <label style="display:block; margin-bottom:5px;"><input type="checkbox" checked> Collision</label>
+                            <label style="display:block; margin-bottom:5px;"><input type="checkbox"> Cast Shadows</label>
+                        <input type="text" placeholder="Custom Tags..." style="width:100%; font-size:12px;">
+                    </div>
+
+                    <!-- SCENE PRESET (Quick FX Setup) -->
+                    <div class="control-group">
+                        <span class="control-label">🎨 SCENE PRESET</span>
+                        <select id="scene-preset" style="width:100%;" onchange="applyScenePreset(this.value)">
+                            <option value="day">☀️ Day (Bright Outdoor)</option>
+                            <option value="sunset">🌅 Sunset (Warm Dusk)</option>
+                            <option value="night">🌙 Night (Dark Outdoor)</option>
+                            <option value="dungeon">🏰 Dungeon (Torchlit)</option>
+                            <option value="cave">🕳️ Cave (Very Dark)</option>
+                            <option value="magical">✨ Magical (Ethereal)</option>
+                            <option value="horror">💀 Horror (Desaturated)</option>
+                            <option value="retro">👾 Retro (Nostalgic)</option>
+                            <option value="custom">⚙️ Custom...</option>
+                        </select>
+                        <div style="font-size:10px; color:#555; margin-top:4px;">
+                            Presets configure lighting + shaders together
+                        </div>
+                    </div>
+
+                    <!-- WEATHER -->
+                    <div class="control-group">
+                        <span class="control-label">🌧️ WEATHER</span>
+                        <select id="iso-weather" style="width:100%;" onchange="applyWeather(this.value)">
+                            <option value="none">CLEAR</option>
+                            <option value="rain">RAIN</option>
+                            <option value="snow">SNOW</option>
+                            <option value="fog">FOG</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- LIGHTING SECTION -->
+                <div class="panel-header" onclick="toggleSection(this)" style="cursor:pointer; display:flex; justify-content:space-between;">
+                    <span>💡 LIGHTING</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="panel-content">
+                    <!-- Lighting Preset -->
+                    <div class="control-group">
+                        <span class="control-label">PRESET</span>
+                        <select id="lighting-preset" style="width:100%;" onchange="setLightingPreset(this.value)">
+                            <option value="day">Day</option>
+                            <option value="dusk">Dusk</option>
+                            <option value="night">Night</option>
+                            <option value="dungeon">Dungeon</option>
+                            <option value="cave">Cave</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Time of Day -->
+                    <div class="control-group">
+                        <span class="control-label">TIME OF DAY</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="range" id="time-slider" min="0" max="24" step="0.5" value="12" style="flex:1;" oninput="setTimeOfDay(this.value)">
+                            <span id="time-display" style="width:50px; text-align:right; font-size:12px;">12:00</span>
+                            <span id="time-icon">☀️</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Ambient Light -->
+                    <div class="control-group">
+                        <span class="control-label">AMBIENT</span>
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                            <input type="color" id="ambient-color" value="#2a3a5a" style="width:40px; height:24px; border:1px solid #444; padding:0;" onchange="setAmbientColor(this.value)">
+                            <span style="font-size:11px; color:#666;">Color</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="range" id="ambient-intensity" min="0" max="1" step="0.05" value="0.8" style="flex:1;" oninput="setAmbientIntensity(this.value)">
+                            <span id="ambient-intensity-val" style="width:35px; text-align:right; font-size:11px;">0.8</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Player Light -->
+                    <div class="control-group" style="border-top:1px solid #333; padding-top:8px; margin-top:5px;">
+                        <label class="dev-toggle" style="margin-bottom:8px;">
+                            <input type="checkbox" id="player-light-enabled" onchange="togglePlayerLight(this.checked)"> 
+                            <span>PLAYER LIGHT</span>
+                        </label>
+                        
+                        <div id="player-light-controls" style="display:none;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                                <span style="font-size:10px; color:#666; width:50px;">Radius</span>
+                                <input type="range" id="player-light-radius" min="50" max="300" value="100" style="flex:1;" oninput="setPlayerLightRadius(this.value)">
+                                <span id="player-light-radius-val" style="width:30px; text-align:right; font-size:10px;">100</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                                <span style="font-size:10px; color:#666; width:50px;">Color</span>
+                                <input type="color" id="player-light-color" value="#ffffaa" style="width:40px; height:20px; border:1px solid #444;" onchange="setPlayerLightColor(this.value)">
+                                <span style="font-size:10px; color:#666; width:50px;">Intensity</span>
+                                <input type="range" id="player-light-intensity" min="0" max="1" step="0.1" value="0.6" style="flex:1;" oninput="setPlayerLightIntensity(this.value)">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:10px; color:#666; width:50px;">Falloff</span>
+                                <select id="player-light-falloff" style="flex:1; font-size:11px;" onchange="setPlayerLightFalloff(this.value)">
+                                    <option value="linear">Linear</option>
+                                    <option value="smooth" selected>Smooth</option>
+                                    <option value="sharp">Sharp</option>
+                                    <option value="soft">Soft</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- VIEW SETTINGS (moved to own section) -->
+                <div class="panel-header" onclick="toggleSection(this)" style="cursor:pointer; display:flex; justify-content:space-between;">
+                    <span>👁️ VIEWPORT</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="panel-content">
+                    <div class="control-group">
+                        <label class="dev-toggle"><input type="checkbox" id="show-grid" checked> <span>SHOW GRID</span></label>
+                        <label class="dev-toggle"><input type="checkbox" id="show-guides" checked> <span>3D GUIDES</span></label>
+                        <label class="dev-toggle"><input type="checkbox" id="show-sort" checked> <span>DEPTH SORT</span></label>
+                        <label class="dev-toggle"><input type="checkbox" id="preview-fx"> <span>PREVIEW FX</span></label>
+                    </div>
+                </div>
+                
+                <!-- SHADERS SECTION -->
+                <div class="panel-header" onclick="toggleSection(this)" style="cursor:pointer; display:flex; justify-content:space-between;">
+                    <span>✨ SHADERS</span> <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="panel-content">
+                    <!-- Shader Preset -->
+                    <div class="control-group">
+                        <span class="control-label">PRESET</span>
+                        <select id="shader-preset" style="width:100%;" onchange="setShaderPreset(this.value)">
+                            <option value="none">None</option>
+                            <option value="cinematic">Cinematic</option>
+                            <option value="retro">Retro</option>
+                            <option value="vibrant">Vibrant</option>
+                            <option value="dark">Dark</option>
+                            <option value="dreamy">Dreamy</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Bloom -->
+                    <div class="control-group" style="border-top:1px solid #333; padding-top:8px; margin-top:5px;">
+                        <label class="dev-toggle" style="margin-bottom:5px;">
+                            <input type="checkbox" id="bloom-enabled" onchange="setBloomEnabled(this.checked)"> 
+                            <span>BLOOM</span>
+                        </label>
+                        <div id="bloom-controls" style="display:none;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span style="font-size:10px; color:#666; width:55px;">Intensity</span>
+                                <input type="range" id="bloom-intensity" min="0" max="1" step="0.05" value="0.5" style="flex:1;" oninput="setBloomIntensity(this.value)">
+                                <span id="bloom-intensity-val" style="width:30px; text-align:right; font-size:10px;">0.5</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:10px; color:#666; width:55px;">Threshold</span>
+                                <input type="range" id="bloom-threshold" min="0" max="1" step="0.05" value="0.7" style="flex:1;" oninput="setBloomThreshold(this.value)">
+                                <span id="bloom-threshold-val" style="width:30px; text-align:right; font-size:10px;">0.7</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Color Grade -->
+                    <div class="control-group" style="border-top:1px solid #333; padding-top:8px; margin-top:5px;">
+                        <label class="dev-toggle" style="margin-bottom:5px;">
+                            <input type="checkbox" id="colorgrade-enabled" onchange="setColorGradeEnabled(this.checked)"> 
+                            <span>COLOR GRADE</span>
+                        </label>
+                        <div id="colorgrade-controls" style="display:none;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span style="font-size:10px; color:#666; width:55px;">Contrast</span>
+                                <input type="range" id="colorgrade-contrast" min="0.5" max="2" step="0.05" value="1.0" style="flex:1;" oninput="setColorGradeContrast(this.value)">
+                                <span id="colorgrade-contrast-val" style="width:30px; text-align:right; font-size:10px;">1.0</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span style="font-size:10px; color:#666; width:55px;">Saturation</span>
+                                <input type="range" id="colorgrade-saturation" min="0" max="2" step="0.05" value="1.0" style="flex:1;" oninput="setColorGradeSaturation(this.value)">
+                                <span id="colorgrade-saturation-val" style="width:30px; text-align:right; font-size:10px;">1.0</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:10px; color:#666; width:55px;">Brightness</span>
+                                <input type="range" id="colorgrade-brightness" min="0.5" max="1.5" step="0.05" value="1.0" style="flex:1;" oninput="setColorGradeBrightness(this.value)">
+                                <span id="colorgrade-brightness-val" style="width:30px; text-align:right; font-size:10px;">1.0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vignette -->
+                    <div class="control-group" style="border-top:1px solid #333; padding-top:8px; margin-top:5px;">
+                        <label class="dev-toggle" style="margin-bottom:5px;">
+                            <input type="checkbox" id="vignette-enabled" onchange="setVignetteEnabled(this.checked)"> 
+                            <span>VIGNETTE</span>
+                        </label>
+                        <div id="vignette-controls" style="display:none;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:10px; color:#666; width:55px;">Intensity</span>
+                                <input type="range" id="vignette-intensity" min="0" max="1" step="0.05" value="0.3" style="flex:1;" oninput="setVignetteIntensity(this.value)">
+                                <span id="vignette-intensity-val" style="width:30px; text-align:right; font-size:10px;">0.3</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Extra Effects -->
+                    <div class="control-group" style="border-top:1px solid #333; padding-top:8px; margin-top:5px;">
+                        <span class="control-label" style="margin-bottom:5px;">EXTRA EFFECTS</span>
+                        <label class="dev-toggle"><input type="checkbox" id="filmgrain-enabled" onchange="setFilmGrainEnabled(this.checked)"> <span>FILM GRAIN</span></label>
+                        <label class="dev-toggle"><input type="checkbox" id="chromatic-enabled" onchange="setChromaticEnabled(this.checked)"> <span>CHROMATIC ABERRATION</span></label>
+                    </div>
+                </div>
+
+                                <div class="panel-header" onclick="toggleSection(this)" style="cursor:pointer; display:flex; justify-content:space-between;">
+
+                                    <span>LAYERS</span> <i class="fas fa-chevron-down"></i>
+
+                                </div>
+
+                                <div class="panel-content">
+
+                                    <div id="layer-list" style="margin-bottom:10px;">
+
+                                        <!-- JS Injected -->
+
+                                        <div class="layer-item active">
+
+                                            <div style="width:10px; height:10px; background:var(--accent);"></div>
+
+                                            <span style="font-size:12px; color:#fff;">BASE LAYER</span>
+
+                                        </div>
+
+                                    </div>
+
+                                    <button class="tool-btn" style="width:100%;" onclick="addLayer()"><i class="fas fa-plus"></i> NEW LAYER</button>
+
+                                </div>
+
+                
+
+                                <div class="panel-header" onclick="toggleSection(this)" style="cursor:pointer; display:flex; justify-content:space-between;">
+
+                                    <span>GENERATOR</span> <i class="fas fa-chevron-down"></i>
+
+                                </div>
+
+                                <div class="panel-content">
+
+                                    <div class="control-group">
+
+                                        <span class="control-label">TERRAIN SETTINGS</span>
+                                        
+                                        <select id="gen-mode" style="width:100%; margin-bottom:5px;">
+                                            <option value="terrain">Standard Terrain</option>
+                                            <option value="flat">Flat World</option>
+                                            <option value="islands">Floating Islands</option>
+                                            <option value="maze">Stone Maze</option>
+                                        </select>
+
+                                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:5px;">
+
+                                            <span style="font-size:10px; color:#666;">SCALE</span>
+
+                                            <input type="number" id="gen-scale" value="0.1" step="0.01" style="width:100%;">
+
+                                            <span style="font-size:10px; color:#666;">AMPLITUDE</span>
+
+                                            <input type="number" id="gen-amp" value="8" style="width:100%;">
+
+                                            <span style="font-size:10px; color:#666;">SEA LEVEL</span>
+
+                                            <input type="number" id="gen-sea" value="-2" style="width:100%;">
+
+                                            <span style="font-size:10px; color:#666;">BASE HEIGHT</span>
+
+                                            <input type="number" id="gen-offset" value="0" style="width:100%;">
+
+                                            <span style="font-size:10px; color:#666;">FLOOR Z (DEPTH)</span>
+
+                                            <input type="number" id="gen-bottom" value="-32" style="width:100%;">
+
+                                        </div>
+                                        
+                                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:5px;">
+                                            <div>
+                                                <span style="font-size:10px; color:#666; display:block;">SEED</span>
+                                                <input type="text" id="gen-seed" placeholder="Random" style="width:100%;">
+                                            </div>
+                                            <div>
+                                                <span style="font-size:10px; color:#666; display:block;">DENSITY</span>
+                                                <input type="range" id="gen-density" min="1" max="10" value="5" style="width:100%;">
+                                            </div>
+                                        </div>
+
+                                        <button class="tool-btn" style="width:100%;" onclick="runGenerator()"><i class="fas fa-magic"></i> GENERATE CHUNK</button>
+
+                                        <div style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
+                                            <span class="control-label">VEGETATION</span>
+                                            <select id="veg-type" style="width:100%; margin-bottom:5px;">
+                                                <option value="forest">Forest</option>
+                                                <option value="jungle">Jungle</option>
+                                                <option value="plains">Plains</option>
+                                            </select>
+                                            <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                                                <span style="font-size:10px; color:#666;">DENSITY</span>
+                                                <input type="range" id="veg-density" min="0" max="1" step="0.1" value="0.5" style="flex:1;">
+                                            </div>
+                                            <button class="tool-btn" style="width:100%;" onclick="runVegetation()"><i class="fas fa-tree"></i> ADD VEGETATION</button>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+            </aside>
+            </div>
+        </div><!-- end main-area -->
+
+        <!-- BOTTOM PALETTE -->
+        <div class="resizer-h" id="resizer-bottom"></div>
+        <div id="bottom-palette">
+            <div class="palette-header">
+                <div class="palette-tabs">
+                    <button class="palette-tab active" data-panel="tiles" onclick="setPaletteTab('tiles')">
+                        <i class="fas fa-th"></i> TILES
+                    </button>
+                    <button class="palette-tab" data-panel="shapes" onclick="setPaletteTab('shapes')">
+                        <i class="fas fa-shapes"></i> SHAPES
+                    </button>
+                    <button class="palette-tab" data-panel="props" onclick="setPaletteTab('props')">
+                        <i class="fas fa-chair"></i> PROPS
+                    </button>
+                    <button class="palette-tab" data-panel="prefabs" onclick="setPaletteTab('prefabs')">
+                        <i class="fas fa-boxes"></i> PREFABS
+                    </button>
+                    <button class="palette-tab" data-panel="npcs" onclick="setPaletteTab('npcs')">
+                        <i class="fas fa-user-secret"></i> NPCs
+                    </button>
+                    <button class="palette-tab" data-panel="lights" onclick="setPaletteTab('lights')">
+                        <i class="fas fa-lightbulb"></i> LIGHTS
+                    </button>
+                    <button class="palette-tab" data-panel="worlds" onclick="setPaletteTab('worlds')">
+                        <i class="fas fa-globe"></i> WORLDS
+                    </button>
+                </div>
+                <button class="palette-toggle" onclick="toggleBottomPalette()" title="Collapse/Expand">
+                    <i class="fas fa-chevron-down" id="palette-toggle-icon"></i>
+                </button>
+            </div>
+            <div class="palette-content">
+                <!-- TILES PANEL -->
+                <div id="bp-tiles" class="palette-panel active">
+                    <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                        <select id="tileset-selector" style="width:200px;">
+                            <option value="WORLD_PIXEL_ART">World Pixel Art (600)</option>
+                            <option value="base_game/assets/world_tileset.png">Standard 2D Tiles</option>
+                        </select>
+                        <span style="color:#666; font-size:0.8rem;">Selected: <span id="selected-tile-id" style="color:var(--accent);">1</span></span>
+                    </div>
+                    <div id="palette" class="palette-grid-horizontal"></div>
+                </div>
+
+                <!-- SHAPES PANEL -->
+                <div id="bp-shapes" class="palette-panel">
+                    <div style="display:flex; gap:10px; align-items:flex-start;">
+                        <div>
+                            <span class="control-label" style="margin-bottom:8px; display:block;">BLOCK GEOMETRY</span>
+                            <div class="shapes-grid">
+                                <button class="tool-btn active" onclick="setShape(0, this)" title="Full Block">■</button>
+                                <button class="tool-btn" onclick="setShape(1, this)" title="Slab (Half)">▬</button>
+                                <button class="tool-btn" onclick="setShape(2, this)" title="Slope N">▲</button>
+                                <button class="tool-btn" onclick="setShape(3, this)" title="Slope E">▶</button>
+                                <button class="tool-btn" onclick="setShape(4, this)" title="Slope S">▼</button>
+                                <button class="tool-btn" onclick="setShape(5, this)" title="Slope W">◀</button>
+                            </div>
+                        </div>
+                        <div style="margin-left:20px; color:#666; font-size:0.85rem;">
+                            <p style="margin:0 0 5px 0;">Keyboard shortcuts:</p>
+                            <p style="margin:0; color:#888;">1-6 to select shapes</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROPS PANEL -->
+                <div id="bp-props" class="palette-panel">
+                    <div style="display:flex; gap:20px; height:100%;">
+                        <!-- Categories Column -->
+                        <div style="width:120px; border-right:1px solid #222; padding-right:10px; display:flex; flex-direction:column; gap:5px;">
+                            <button class="btn-full active" onclick="showPropCategory('nature')">Nature</button>
+                            <button class="btn-full" onclick="showPropCategory('furniture')">Furniture</button>
+                            <button class="btn-full" onclick="showPropCategory('lighting')">Lighting</button>
+                            <button class="btn-full" onclick="showPropCategory('containers')">Containers</button>
+                            <button class="btn-full" onclick="showPropCategory('interactive')">Interactive</button>
+                            <button class="btn-full" onclick="showPropCategory('system')">System</button>
+                        </div>
+                        
+                        <!-- Props Grid -->
+                        <div id="prop-grid-container" style="flex:1; overflow-y:auto;">
+                            <!-- Nature -->
+                            <div id="cat-nature" class="prop-category active">
+                                <div class="palette-grid-horizontal">
+                                    <button class="prop-btn" data-type="tree" onclick="selectProp('tree')">🌲 Tree</button>
+                                    <button class="prop-btn" data-type="bush" onclick="selectProp('bush')">🌳 Bush</button>
+                                    <button class="prop-btn" data-type="flower" onclick="selectProp('flower')">🌸 Flower</button>
+                                    <button class="prop-btn" data-type="rock" onclick="selectProp('rock')">🪨 Rock</button>
+                                    <button class="prop-btn" data-type="grass" onclick="selectProp('grass')">🌱 Grass</button>
+                                    <button class="prop-btn" data-type="mushroom" onclick="selectProp('mushroom')">🍄 Mushroom</button>
+                                </div>
+                            </div>
+                            <!-- Furniture -->
+                            <div id="cat-furniture" class="prop-category" style="display:none;">
+                                <div class="palette-grid-horizontal">
+                                    <button class="prop-btn" data-type="table" onclick="selectProp('table')">🪑 Table</button>
+                                    <button class="prop-btn" data-type="chair" onclick="selectProp('chair')">🪑 Chair</button>
+                                    <button class="prop-btn" data-type="bed" onclick="selectProp('bed')">🛏️ Bed</button>
+                                    <button class="prop-btn" data-type="bookshelf" onclick="selectProp('bookshelf')">📚 Shelf</button>
+                                </div>
+                            </div>
+                            <!-- Lighting -->
+                            <div id="cat-lighting" class="prop-category" style="display:none;">
+                                <div class="palette-grid-horizontal">
+                                    <button class="prop-btn" data-type="torch" onclick="selectProp('torch')">🔥 Torch</button>
+                                    <button class="prop-btn" data-type="candle" onclick="selectProp('candle')">🕯️ Candle</button>
+                                    <button class="prop-btn" data-type="lamp" onclick="selectProp('lamp')">🏮 Lamp</button>
+                                    <button class="prop-btn" data-type="brazier" onclick="selectProp('brazier')">🔥 Brazier</button>
+                                </div>
+                            </div>
+                            <!-- Containers -->
+                            <div id="cat-containers" class="prop-category" style="display:none;">
+                                <div class="palette-grid-horizontal">
+                                    <button class="prop-btn" data-type="chest" onclick="selectProp('chest')">📦 Chest</button>
+                                    <button class="prop-btn" data-type="barrel" onclick="selectProp('barrel')">🛢️ Barrel</button>
+                                    <button class="prop-btn" data-type="crate" onclick="selectProp('crate')">📦 Crate</button>
+                                    <button class="prop-btn" data-type="pot" onclick="selectProp('pot')">🏺 Pot</button>
+                                </div>
+                            </div>
+                            <!-- Interactive -->
+                            <div id="cat-interactive" class="prop-category" style="display:none;">
+                                <div class="palette-grid-horizontal">
+                                    <button class="prop-btn" data-type="sign" onclick="selectProp('sign')">🪧 Sign</button>
+                                    <button class="prop-btn" data-type="switch" onclick="selectProp('switch')">🔌 Switch</button>
+                                    <button class="prop-btn" data-type="lever" onclick="selectProp('lever')">🎚️ Lever</button>
+                                    <button class="prop-btn" data-type="button" onclick="selectProp('button')">🔘 Button</button>
+                                </div>
+                            </div>
+                            <!-- System -->
+                            <div id="cat-system" class="prop-category" style="display:none;">
+                                <div class="palette-grid-horizontal">
+                                    <button class="prop-btn" data-type="spawn" onclick="selectProp('spawn')">🏁 Start</button>
+                                    <button class="prop-btn" data-type="exit" onclick="selectProp('exit')">🚪 Exit</button>
+                                    <button class="prop-btn" data-type="checkpoint" onclick="selectProp('checkpoint')">💾 Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <style>
+                        .prop-btn {
+                            width: 80px; height: 60px; background: #111; border: 1px solid #333;
+                            color: #ccc; cursor: pointer; display: flex; flex-direction: column;
+                            align-items: center; justify-content: center; gap: 5px;
+                            font-family: 'VT323', monospace; font-size: 1rem;
+                            transition: all 0.1s;
+                        }
+                        .prop-btn:hover { background: #222; border-color: #fff; }
+                        .prop-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+                        .btn-full.active { background: #222; color: var(--accent); border-right: 3px solid var(--accent); }
+                    </style>
+                </div>
+
+                <!-- PREFABS PANEL -->
+                <div id="bp-prefabs" class="palette-panel">
+                    <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                        <button class="tool-btn" onclick="loadPrefabs()"><i class="fas fa-sync"></i></button>
+                        <button class="tool-btn" style="width:auto; padding:0 10px;" onclick="savePrefab()"><i class="fas fa-plus"></i> Save Selection as Prefab</button>
+                    </div>
+                    <div id="prefab-list" class="asset-grid"></div>
+                </div>
+
+                <!-- NPCS PANEL -->
+                <div id="bp-npcs" class="palette-panel">
+                    <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                        <button class="tool-btn" onclick="loadNPCs()"><i class="fas fa-sync"></i></button>
+                        <span class="control-label">SPAWN NPCs</span>
+                    </div>
+                    <div id="npc-list" class="asset-grid">
+                        <div style="color:#666; font-size:0.9rem;">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- LIGHTS PANEL -->
+                <div id="bp-lights" class="palette-panel">
+                    <div class="lights-row">
+                        <div class="lights-config">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <select id="light-type" style="width:120px;">
+                                    <option value="point">Point Light</option>
+                                    <option value="area">Area Light</option>
+                                </select>
+                                <input type="color" id="light-color" value="#ffaa44" style="width:40px; height:28px; border:1px solid #444;">
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <span style="font-size:10px; color:#666; width:50px;">Radius</span>
+                                <input type="range" id="light-radius" min="50" max="300" value="120" style="width:100px;" oninput="document.getElementById('light-radius-val').textContent=this.value">
+                                <span id="light-radius-val" style="width:30px; font-size:10px;">120</span>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <span style="font-size:10px; color:#666; width:50px;">Intensity</span>
+                                <input type="range" id="light-intensity" min="0" max="1" step="0.1" value="0.8" style="width:100px;" oninput="document.getElementById('light-intensity-val').textContent=this.value">
+                                <span id="light-intensity-val" style="width:30px; font-size:10px;">0.8</span>
+                            </div>
+                            <select id="light-falloff" style="width:100px;">
+                                <option value="linear">Linear</option>
+                                <option value="smooth" selected>Smooth</option>
+                                <option value="sharp">Sharp</option>
+                                <option value="soft">Soft</option>
+                            </select>
+                        </div>
+                        <div class="lights-list-container">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                <span class="control-label">PLACED LIGHTS (<span id="light-count">0</span>)</span>
+                                <button class="tool-btn" style="font-size:0.8rem; padding:2px 8px;" onclick="clearAllLights()">
+                                    <i class="fas fa-trash"></i> Clear
+                                </button>
+                            </div>
+                            <div id="lights-list" style="max-height:100px; overflow-y:auto; background:#000; border:1px solid #333; padding:5px;">
+                                <div style="font-size:11px; color:#555;">No lights placed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WORLDS PANEL -->
+                <div id="bp-worlds" class="palette-panel">
+                    <div style="display:flex; gap:10px; margin-bottom:8px; align-items:center;">
+                        <button class="tool-btn" onclick="refreshWorldsList()"><i class="fas fa-sync"></i></button>
+                        <button class="tool-btn" style="width:auto; padding:0 10px;" onclick="createNewWorld()"><i class="fas fa-plus"></i> New World</button>
+                        <button class="tool-btn" style="width:auto; padding:0 10px;" onclick="saveCurrentWorld()"><i class="fas fa-save"></i> Save</button>
+                        <button class="tool-btn" style="width:auto; padding:0 10px;" onclick="saveWorldAs()"><i class="fas fa-file-export"></i> Save As...</button>
+                    </div>
+                    <div id="worlds-list" class="asset-grid">
+                        <div style="color:#666; font-size:0.9rem; padding:10px;">Loading worlds...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/android-adapter.bundle.js"></script>
+    <script src="base_game/sprites.js"></script>
+    <script src="strategies/IsoStrategy.js"></script>
+    <script src="engines/iso-pixel/fxSystem.js"></script>
+    <script src="engines/iso-pixel/shaderSystem.js"></script>
+    <script src="iso_generator.js"></script>
+    
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+    
+    <script src="iso_editor.js?v=4"></script>
+    <script>
+        function toggleInspector(force) {
+            const el = document.getElementById('inspector-container');
+            const btn = document.getElementById('inspector-handle');
+            const isCollapsed = el.style.width === '12px'; 
+            
+            let shouldOpen = isCollapsed;
+            if (typeof force === 'boolean') shouldOpen = force;
+            
+            el.style.width = shouldOpen ? '280px' : '12px';
+            btn.innerText = shouldOpen ? '⏵' : '⏴';
+            
+            // Trigger canvas resize after CSS transition (100ms)
+            setTimeout(() => {
+                if (typeof resize === 'function') resize();
+            }, 120);
+        }
+
+        // Bottom Palette Tab Switching
+        function setPaletteTab(tabName) {
+            document.querySelectorAll('.palette-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.panel === tabName);
+            });
+            document.querySelectorAll('.palette-panel').forEach(panel => {
+                panel.classList.toggle('active', panel.id === 'bp-' + tabName);
+            });
+        }
+
+        // Toggle Bottom Palette collapse
+        function toggleBottomPalette() {
+            const palette = document.getElementById('bottom-palette');
+            const icon = document.getElementById('palette-toggle-icon');
+            palette.classList.toggle('collapsed');
+            icon.classList.toggle('fa-chevron-down', !palette.classList.contains('collapsed'));
+            icon.classList.toggle('fa-chevron-up', palette.classList.contains('collapsed'));
+            
+            setTimeout(() => {
+                if (typeof resize === 'function') resize();
+            }, 120);
+        }
+
+        // Resizer logic for horizontal (width)
+        const makeResizable = (resizerId, targetId, direction = 'right') => {
+            const resizer = document.getElementById(resizerId);
+            const target = document.getElementById(targetId);
+            if (!resizer || !target) return;
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = parseInt(document.defaultView.getComputedStyle(target).width, 10);
+                const doDrag = (e) => {
+                    if (direction === 'right') target.style.width = (startWidth + e.clientX - startX) + 'px';
+                    else target.style.width = (startWidth - e.clientX + startX) + 'px';
+                    if (typeof resize === 'function') resize();
+                };
+                const stopDrag = () => {
+                    window.removeEventListener('mousemove', doDrag);
+                    window.removeEventListener('mouseup', stopDrag);
+                };
+                window.addEventListener('mousemove', doDrag);
+                window.addEventListener('mouseup', stopDrag);
+            });
+        };
+
+        // Resizer logic for vertical (height) - bottom palette
+        const makeResizableV = (resizerId, targetId) => {
+            const resizer = document.getElementById(resizerId);
+            const target = document.getElementById(targetId);
+            if (!resizer || !target) return;
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const startY = e.clientY;
+                const startHeight = parseInt(document.defaultView.getComputedStyle(target).height, 10);
+                const doDrag = (e) => {
+                    const newHeight = startHeight - (e.clientY - startY);
+                    target.style.height = Math.max(100, Math.min(350, newHeight)) + 'px';
+                    if (typeof resize === 'function') resize();
+                };
+                const stopDrag = () => {
+                    window.removeEventListener('mousemove', doDrag);
+                    window.removeEventListener('mouseup', stopDrag);
+                };
+                window.addEventListener('mousemove', doDrag);
+                window.addEventListener('mouseup', stopDrag);
+            });
+        };
+
+        makeResizable('resizer-right', 'inspector-container', 'left');
+        makeResizableV('resizer-bottom', 'bottom-palette');
+    </script>
+</body>
+</html>

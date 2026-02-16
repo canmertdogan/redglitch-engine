@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KETEBE STUDIO</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <script src="lib/three.min.js"></script>
+    <style>
+        :root {
+            --bg: #050508;
+            --grid: #1a1a20;
+            --accent: #f1c40f;
+            --text: #cfd8dc;
+            --dim: #555;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+
+        /* --- BACKGROUND --- */
+        #bg-grid {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(var(--grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.3;
+            z-index: -1;
+        }
+        
+        #vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 40%, #000 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* --- CONTENT --- */
+        .container {
+            z-index: 10;
+            display: flex; flex-direction: column; align-items: center;
+            width: 80%; max-width: 800px;
+        }
+
+        .brand {
+            font-size: 2.5rem;
+            letter-spacing: 6px;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255,255,255,0.2);
+            margin-bottom: 2px;
+            display: flex; align-items: center; gap: 15px;
+        }
+        
+        .brand span { color: var(--accent); }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--dim);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        /* --- 3D VIEWPORT --- */
+        #canvas-wrapper {
+            width: 100%; height: 140px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        /* --- LOADING BAR --- */
+        .loader-box {
+            width: 100%;
+            display: flex; flex-direction: column; gap: 3px;
+        }
+
+        .bar-frame {
+            width: 100%; height: 3px;
+            background: #111;
+            border: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            position: absolute; left: 0; top: 0; bottom: 0;
+            background: var(--accent);
+            width: 0%;
+            box-shadow: 0 0 10px var(--accent);
+            transition: width 0.1s linear;
+        }
+
+        .status-row {
+            display: flex; justify-content: space-between;
+            font-size: 0.8rem; color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        /* --- TERMINAL LOG --- */
+        .terminal {
+            width: 100%; height: 60px;
+            margin-top: 15px;
+            color: #666; font-size: 0.75rem;
+            overflow: hidden;
+            display: flex; flex-direction: column-reverse;
+            border-top: 1px solid #222;
+            padding-top: 5px;
+        }
+        .log-entry { margin-bottom: 2px; }
+        .log-entry.active { color: #aaa; }
+
+        /* --- DECORATION --- */
+        .corner {
+            position: fixed; width: 40px; height: 40px;
+            border: 2px solid var(--dim);
+            pointer-events: none;
+        }
+        .tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+        .tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+        .bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+        .br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+    </style>
+</head>
+<body>
+
+    <div id="bg-grid"></div>
+    <div id="vignette"></div>
+
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <!-- CORNER BRANDING -->
+    <div style="position:fixed; top:35px; left:40px; z-index:100;">
+        <div class="brand" style="margin:0; font-size:2rem;">KETEBE <span>STUDIO</span></div>
+        <div class="subtitle" style="margin:0; letter-spacing:2px; opacity:0.6;">ONGONLUK ENGINE ALPHA</div>
+    </div>
+
+    <div style="position:fixed; top:35px; right:40px; z-index:100; text-align:right;">
+        <div style="color:var(--accent); font-size:1.2rem; letter-spacing:3px;">CORE V7</div>
+        <div style="color:#333; font-size:0.7rem; margin-top:5px;">BUILD: 2026.01.31_STABLE</div>
+    </div>
+
+    <!-- CENTER ANIMATION -->
+    <div id="canvas-wrapper" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:100%; height:200px; margin:0;"></div>
+
+    <!-- BOTTOM LOADING UI -->
+    <div class="container" style="position:fixed; bottom:40px; left:50%; transform:translateX(-50%); width:85%; max-width:none;">
+        <div class="loader-box">
+            <div class="status-row">
+                <span id="status-text">INITIALIZING...</span>
+                <span id="pct">0%</span>
+            </div>
+            <div class="bar-frame">
+                <div class="bar-fill" id="bar"></div>
+            </div>
+        </div>
+
+        <div class="terminal" id="terminal"></div>
+    </div>
+
+    <script>
+        // --- 3D VISUALIZATION ---
+        const container = document.getElementById('canvas-wrapper');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        // Geometries
+        const nucleus = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(1.2, 1),
+            new THREE.MeshBasicMaterial({ color: 0xf1c40f, wireframe: true })
+        );
+        scene.add(nucleus);
+
+        const rings = [];
+        for(let i=0; i<3; i++) {
+            const ring = new THREE.Mesh(
+                new THREE.TorusGeometry(3 + i*0.5, 0.02, 16, 100),
+                new THREE.MeshBasicMaterial({ color: 0x444444 })
+            );
+            ring.rotation.x = Math.random() * Math.PI;
+            ring.rotation.y = Math.random() * Math.PI;
+            scene.add(ring);
+            rings.push({ mesh: ring, speed: 0.02 + Math.random() * 0.02, axis: new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize() });
+        }
+
+        camera.position.z = 10;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            nucleus.rotation.y += 0.01;
+            nucleus.rotation.x += 0.005;
+            
+            rings.forEach(r => {
+                r.mesh.rotateOnAxis(r.axis, r.speed);
+            });
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- LOADING LOGIC ---
+        const logs = [
+            "Mounting Vfs...",
+            "Loading Core Modules...",
+            "Initializing Physics Engine...",
+            "Compiling Shaders...",
+            "Checking License...",
+            "Connecting to Localhost...",
+            "Starting Daemon...",
+            "Welcome, User."
+        ];
+        
+        let progress = 0;
+        const bar = document.getElementById('bar');
+        const pct = document.getElementById('pct');
+        const status = document.getElementById('status-text');
+        const term = document.getElementById('terminal');
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.className = 'log-entry active';
+            div.innerText = `> ${msg}`;
+            term.prepend(div);
+            status.innerText = msg.toUpperCase();
+        }
+
+        function update() {
+            if (progress < 100) {
+                // Non-linear speed
+                let step = Math.random() * 1.5;
+                if (progress > 80) step = 0.2; // Slow down at end
+                progress += step;
+                if (progress > 100) progress = 100;
+
+                bar.style.width = progress + '%';
+                pct.innerText = Math.floor(progress) + '%';
+
+                // Trigger logs based on progress thresholds
+                const logIndex = Math.floor((progress / 100) * logs.length);
+                if (term.children.length < logIndex + 1 && logs[logIndex]) {
+                    log(logs[logIndex]);
+                }
+
+                if (progress >= 100) {
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 500);
+                    return;
+                }
+
+                setTimeout(update, 30);
+            }
+        }
+        update();
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>

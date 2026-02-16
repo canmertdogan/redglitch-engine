@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    { "id": "n_start", "type": "evt_start", "x": 100, "y": 100, "data": {} },
+    
+    { "id": "n_step1", "type": "eng_log", "x": 350, "y": 100, "data": { "msg": "1. Set Locale (EN/TR)" } },
+    { "id": "n_step2", "type": "eng_log", "x": 600, "y": 100, "data": { "msg": "2. Load Music Config" } },
+    { "id": "n_step3", "type": "eng_log", "x": 850, "y": 100, "data": { "msg": "3. Init Core Game Engine" } },
+    { "id": "n_step4", "type": "eng_log", "x": 1100, "y": 100, "data": { "msg": "4. Init Menu System" } },
+    
+    { "id": "n_set_ready", "type": "var_set", "x": 1350, "y": 100, "data": { "name": "sys_ready", "val": 1 } },
+    { "id": "n_log_ready", "type": "eng_log", "x": 1350, "y": 250, "data": { "msg": "System Initialized & Ready" } }
+  ],
+  "wires": [
+    { "id": "w_1", "fromNode": "n_start", "fromPort": "out", "toNode": "n_step1", "toPort": "in" },
+    { "id": "w_2", "fromNode": "n_step1", "fromPort": "out", "toNode": "n_step2", "toPort": "in" },
+    { "id": "w_3", "fromNode": "n_step2", "fromPort": "out", "toNode": "n_step3", "toPort": "in" },
+    { "id": "w_4", "fromNode": "n_step3", "fromPort": "out", "toNode": "n_step4", "toPort": "in" },
+    { "id": "w_5", "fromNode": "n_step4", "fromPort": "out", "toNode": "n_set_ready", "toPort": "in" },
+    { "id": "w_6", "fromNode": "n_set_ready", "fromPort": "out", "toNode": "n_log_ready", "toPort": "in" }
+  ],
+  "vars": [
+    { "name": "sys_ready", "type": "num", "value": 0 }
+  ]
+}

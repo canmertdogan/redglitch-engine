@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LOCALIZATION STUDIO</title>
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --bg-panel: #0a0a0a;
+            --bg-canvas: #111;
+            --border: #333;
+            --accent: #f1c40f;
+            --text: #ccc;
+            --text-dim: #666;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --error: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 16px;
+        }
+
+        /* Menu Bar */
+        .menu-bar {
+            height: 32px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding: 0 8px;
+            position: relative;
+            z-index: 100;
+        }
+
+        .brand {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1rem;
+            margin-right: 20px;
+            text-transform: uppercase;
+        }
+
+        .menu-item-root {
+            position: relative;
+            display: inline-block;
+        }
+
+        .menu-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            transition: background 0.1s;
+        }
+
+        .menu-item:hover {
+            background: #222;
+        }
+
+        .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #000;
+            border: 2px solid var(--border);
+            min-width: 200px;
+            z-index: 200;
+        }
+
+        .menu-item-root:hover .dropdown {
+            display: block;
+        }
+
+        .drop-opt {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drop-opt:hover {
+            background: #222;
+        }
+
+        .shortcut {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            height: 40px;
+            background: var(--bg-panel);
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            background: #111;
+            border: 2px solid #444;
+            color: #aaa;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1rem;
+            transition: all 0.1s;
+        }
+
+        .tool-btn:hover {
+            background: #222;
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .tool-btn.primary {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        .tool-sep {
+            width: 2px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        .search-box {
+            background: #000;
+            border: 2px solid #444;
+            color: var(--accent);
+            padding: 6px 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            width: 200px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .lang-count {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+
+        /* Main Layout */
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Left Panel - Language Management */
+        .left-panel {
+            width: 200px;
+            background: var(--bg-panel);
+            border-right: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            height: 32px;
+            background: #000;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-weight: bold;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border);
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            justify-content: space-between;
+        }
+
+        .add-btn {
+            background: transparent;
+            border: 1px solid #444;
+            color: #888;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .add-btn:hover {
+            background: #222;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .lang-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .lang-item {
+            padding: 8px;
+            border-bottom: 1px solid #222;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lang-item:hover {
+            background: #111;
+        }
+
+        .lang-item.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .lang-flag {
+            width: 16px;
+            height: 12px;
+            background: #444;
+            border: 1px solid #666;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lang-stats {
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        /* Grid Area */
+        .grid-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-container {
+            flex: 1;
+            overflow: auto;
+            background: var(--bg);
+        }
+
+        /* Localization Table */
+        #loc-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table-header th {
+            background: #000;
+            padding: 12px 8px;
+            text-align: left;
+            border-right: 2px solid var(--border);
+            border-bottom: 2px solid var(--border);
+            color: var(--accent);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .key-header {
+            width: 250px;
+            min-width: 200px;
+        }
+
+        .lang-header {
+            width: 300px;
+            min-width: 200px;
+        }
+
+        .action-header {
+            width: 50px;
+        }
+
+        .table-row {
+            border-bottom: 1px solid #222;
+        }
+
+        .table-row:hover {
+            background: rgba(241, 196, 15, 0.05);
+        }
+
+        .key-cell {
+            background: var(--bg-panel);
+            padding: 8px;
+            font-weight: bold;
+            color: var(--accent);
+            border-right: 2px solid var(--border);
+            font-size: 0.9rem;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .text-cell {
+            padding: 0;
+            border-right: 1px solid #333;
+            position: relative;
+        }
+
+        .text-input {
+            width: 100%;
+            height: 40px;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            padding: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: none;
+        }
+
+        .text-input:focus {
+            outline: 2px solid var(--accent);
+            background: #000;
+            z-index: 5;
+            position: relative;
+        }
+
+        .text-input.missing {
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .text-input.rtl {
+            direction: rtl;
+            text-align: right;
+        }
+
+        .action-cell {
+            width: 50px;
+            text-align: center;
+            cursor: pointer;
+            color: var(--error);
+            font-size: 1.2rem;
+        }
+
+        .action-cell:hover {
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 24px;
+            background: #000;
+            border-top: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 0.8rem;
+        }
+
+        .status-info {
+            color: var(--text-dim);
+        }
+
+        .status-stats {
+            margin-left: auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-value {
+            color: var(--accent);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Bar -->
+    <div class="menu-bar">
+        <div class="brand">
+            <i class="fas fa-globe"></i> LOCALIZATION STUDIO
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="editor.newProject()">New Project <span class="shortcut">Ctrl+N</span></div>
+                <div class="drop-opt" onclick="editor.loadProject()">Load Project <span class="shortcut">Ctrl+O</span></div>
+                <div class="drop-opt" onclick="editor.saveProject()">Save Project <span class="shortcut">Ctrl+S</span></div>
+                <div style="height: 1px; background: #333; margin: 4px 0;"></div>
+                <div class="drop-opt" onclick="editor.importFromCSV()">Import CSV</div>
+                <div class="drop-opt" onclick="editor.exportToCSV()">Export CSV</div>
+                <div style="height: 1px; background: #333; margin: 4px 0;"></div>
+                <div class="drop-opt" onclick="window.close()">Exit</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="editor.addKey()">Add Key <span class="shortcut">Ctrl+K</span></div>
+                <div class="drop-opt" onclick="editor.addLanguage()">Add Language <span class="shortcut">Ctrl+L</span></div>
+                <div style="height: 1px; background: #333; margin: 4px 0;"></div>
+                <div class="drop-opt" onclick="editor.findMissingTranslations()">Find Missing</div>
+                <div class="drop-opt" onclick="editor.validateAll()">Validate All</div>
+            </div>
+        </div>
+        <div class="menu-item-root">
+            <div class="menu-item">Tools</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="editor.generateReport()">Translation Report</div>
+                <div class="drop-opt" onclick="editor.bulkTranslate()">Bulk Operations</div>
+                <div class="drop-opt" onclick="editor.settings()">Settings</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div id="toolbar">
+        <div class="tool-btn primary" onclick="editor.saveProject()" title="Save Project (Ctrl+S)">
+            <i class="fas fa-save"></i>
+        </div>
+        <div class="tool-btn" onclick="editor.addKey()" title="Add Translation Key (Ctrl+K)">
+            <i class="fas fa-plus"></i>
+        </div>
+        <div class="tool-btn" onclick="editor.addLanguage()" title="Add Language (Ctrl+L)">
+            <i class="fas fa-globe"></i>
+        </div>
+        
+        <div class="tool-sep"></div>
+        
+        <div class="tool-btn" onclick="editor.findMissingTranslations()" title="Find Missing Translations">
+            <i class="fas fa-search"></i>
+        </div>
+        <div class="tool-btn" onclick="editor.validateAll()" title="Validate All Translations">
+            <i class="fas fa-check"></i>
+        </div>
+        
+        <div class="tool-sep"></div>
+        
+        <input type="text" class="search-box" id="search-input" placeholder="SEARCH KEYS..." 
+               oninput="editor.filterKeys(this.value)">
+        
+        <div class="lang-count">
+            <span id="key-count">0</span> KEYS · <span id="lang-count">0</span> LANGUAGES
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Panel - Language Management -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <i class="fas fa-flag"></i> Languages
+                <button class="add-btn" onclick="editor.addLanguage()" title="Add Language">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div class="lang-list" id="lang-list">
+                <!-- Language items will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Grid Area -->
+        <div class="grid-area">
+            <div class="grid-container">
+                <table id="loc-table">
+                    <thead class="table-header">
+                        <tr id="header-row">
+                            <!-- Headers will be populated by JavaScript -->
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-info" id="status-text">
+            LOCALIZATION STUDIO READY
+        </div>
+        <div class="status-stats">
+            <div class="stat-item">
+                <i class="fas fa-key"></i>
+                <span class="stat-value" id="total-keys">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-globe"></i>
+                <span class="stat-value" id="total-langs">0</span>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-percentage"></i>
+                <span class="stat-value" id="completion-rate">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+
+    <script src="localization_editor.js"></script>
+</body>
+</html>

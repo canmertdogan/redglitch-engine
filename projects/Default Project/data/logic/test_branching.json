@@ -1,0 +1,117 @@
+{
+  "nodes": [
+    {
+      "id": "node_1",
+      "type": "evt_start",
+      "x": 100,
+      "y": 250,
+      "data": {}
+    },
+    {
+      "id": "node_2",
+      "type": "var_set",
+      "x": 300,
+      "y": 250,
+      "data": {
+        "name": "health",
+        "value": 75
+      }
+    },
+    {
+      "id": "node_3",
+      "type": "logic_greater",
+      "x": 450,
+      "y": 200,
+      "data": {
+        "a": 0,
+        "b": 50
+      }
+    },
+    {
+      "id": "node_4",
+      "type": "var_get",
+      "x": 400,
+      "y": 150,
+      "data": {
+        "varName": "health"
+      }
+    },
+    {
+      "id": "node_5",
+      "type": "flow_branch",
+      "x": 550,
+      "y": 250,
+      "data": {}
+    },
+    {
+      "id": "node_6",
+      "type": "eng_log",
+      "x": 750,
+      "y": 150,
+      "data": {
+        "msg": "Health is GOOD (>50)"
+      }
+    },
+    {
+      "id": "node_7",
+      "type": "eng_log",
+      "x": 750,
+      "y": 350,
+      "data": {
+        "msg": "Health is LOW (<=50)"
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "wire_1",
+      "fromNode": "node_1",
+      "fromPort": "out",
+      "toNode": "node_2",
+      "toPort": "in",
+      "invalid": false
+    },
+    {
+      "id": "wire_2",
+      "fromNode": "node_2",
+      "fromPort": "out",
+      "toNode": "node_5",
+      "toPort": "in",
+      "invalid": false
+    },
+    {
+      "id": "wire_3",
+      "fromNode": "node_4",
+      "fromPort": "value",
+      "toNode": "node_3",
+      "toPort": "a",
+      "invalid": true
+    },
+    {
+      "id": "wire_4",
+      "fromNode": "node_3",
+      "fromPort": "result",
+      "toNode": "node_5",
+      "toPort": "condition",
+      "invalid": true
+    },
+    {
+      "id": "wire_5",
+      "fromNode": "node_5",
+      "fromPort": "true",
+      "toNode": "node_6",
+      "toPort": "in",
+      "invalid": false
+    },
+    {
+      "id": "wire_6",
+      "fromNode": "node_5",
+      "fromPort": "false",
+      "toNode": "node_7",
+      "toPort": "in",
+      "invalid": false
+    }
+  ],
+  "variables": [],
+  "name": "test_branching"
+}

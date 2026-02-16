@@ -1,0 +1,931 @@
+{
+  "id": "forest_encounter_demo",
+  "name": "The Wounded Traveler - Forest Encounter",
+  "description": "An interactive cutscene demonstrating player entering a forest clearing and encountering a wounded traveler. Choices affect story progression and character relationships.",
+  "version": "1.0",
+  "metadata": {
+    "created": "2026-02-05",
+    "author": "Ketebe Studio",
+    "tags": ["demo", "forest", "encounter", "moral_choice", "rpg"],
+    "context": "Player has just entered the Whispering Woods level and discovers a clearing with an injured stranger."
+  },
+  "timeline": {
+    "duration": 75.0,
+    "fps": 60,
+    "tracks": [
+      {
+        "id": "environment_track",
+        "name": "Forest Environment",
+        "type": "actor",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 0,
+            "properties": {
+              "sprite": "forest_background.jpg",
+              "x": 0,
+              "y": 0,
+              "scale": 1.0,
+              "opacity": 0.0
+            }
+          },
+          {
+            "time": 3,
+            "properties": {
+              "opacity": 1.0
+            },
+            "easing": "fade-in"
+          },
+          {
+            "time": 40,
+            "properties": {
+              "sprite": "forest_clearing_dusk",
+              "opacity": 0.8
+            },
+            "easing": "cross-fade"
+          }
+        ]
+      },
+      {
+        "id": "player_track", 
+        "name": "Player Character",
+        "type": "actor",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 1,
+            "properties": {
+              "sprite": "player_walk_right",
+              "x": -50,
+              "y": 280,
+              "scale": 2.0,
+              "opacity": 1.0
+            }
+          },
+          {
+            "time": 8,
+            "properties": {
+              "x": 150,
+              "sprite": "player_idle_right"
+            },
+            "easing": "ease-out"
+          },
+          {
+            "time": 15,
+            "properties": {
+              "sprite": "player_idle_down"
+            }
+          },
+          {
+            "time": 25,
+            "properties": {
+              "x": 200,
+              "y": 250,
+              "sprite": "player_crouch"
+            },
+            "easing": "ease-in"
+          }
+        ]
+      },
+      {
+        "id": "traveler_track",
+        "name": "Wounded Traveler",
+        "type": "actor", 
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 10,
+            "properties": {
+              "sprite": "traveler_wounded_lying",
+              "x": 300,
+              "y": 280,
+              "scale": 1.8,
+              "opacity": 0.0
+            }
+          },
+          {
+            "time": 12,
+            "properties": {
+              "opacity": 1.0
+            },
+            "easing": "fade-in"
+          },
+          {
+            "time": 26,
+            "properties": {
+              "sprite": "traveler_wounded_sitting",
+              "y": 270
+            },
+            "easing": "ease-out"
+          },
+          {
+            "time": 50,
+            "properties": {
+              "sprite": "traveler_standing",
+              "y": 260,
+              "scale": 2.0
+            },
+            "easing": "ease-in-out"
+          }
+        ]
+      },
+      {
+        "id": "mysterious_figure_track",
+        "name": "Shadow Watcher",
+        "type": "actor",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 35,
+            "properties": {
+              "sprite": "shadow_figure",
+              "x": 450,
+              "y": 180,
+              "scale": 1.2,
+              "opacity": 0.0
+            }
+          },
+          {
+            "time": 37,
+            "properties": {
+              "opacity": 0.3
+            },
+            "easing": "fade-in"
+          },
+          {
+            "time": 45,
+            "properties": {
+              "x": 420,
+              "opacity": 0.6
+            },
+            "easing": "ease-in"
+          },
+          {
+            "time": 55,
+            "properties": {
+              "opacity": 0.0
+            },
+            "easing": "fade-out"
+          }
+        ]
+      },
+      {
+        "id": "atmospheric_audio",
+        "name": "Forest Ambience",
+        "type": "audio",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 0,
+            "properties": {
+              "file": "forest_birds_wind.ogg",
+              "volume": 0.0,
+              "loop": true
+            }
+          },
+          {
+            "time": 2,
+            "properties": {
+              "volume": 0.4
+            }
+          },
+          {
+            "time": 35,
+            "properties": {
+              "volume": 0.2,
+              "file": "forest_mysterious.ogg"
+            }
+          },
+          {
+            "time": 55,
+            "properties": {
+              "file": "forest_birds_wind.ogg",
+              "volume": 0.3
+            }
+          }
+        ]
+      },
+      {
+        "id": "music_track",
+        "name": "Emotional Music",
+        "type": "audio",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 18,
+            "properties": {
+              "file": "emotional_discovery.ogg",
+              "volume": 0.0,
+              "loop": true
+            }
+          },
+          {
+            "time": 20,
+            "properties": {
+              "volume": 0.6
+            }
+          },
+          {
+            "time": 32,
+            "properties": {
+              "file": "tension_mystery.ogg",
+              "volume": 0.4
+            }
+          },
+          {
+            "time": 48,
+            "properties": {
+              "file": "hope_recovery.ogg",
+              "volume": 0.5
+            }
+          }
+        ]
+      },
+      {
+        "id": "main_story_interactions",
+        "name": "Story & Dialogue",
+        "type": "interaction",
+        "visible": true,
+        "keyframes": [
+          {
+            "time": 5,
+            "type": "dialogue",
+            "data": {
+              "speaker": "narrator",
+              "text": "You step into a peaceful forest clearing, sunlight filtering through ancient trees...",
+              "textSpeed": 40,
+              "autoAdvance": true,
+              "delay": 4.0,
+              "style": {
+                "color": "#e8f4f8",
+                "background": "rgba(0,0,0,0.7)",
+                "position": "top"
+              }
+            }
+          },
+          {
+            "time": 13,
+            "type": "dialogue",
+            "data": {
+              "speaker": "player",
+              "text": "Wait... someone's there! They look hurt!",
+              "portrait": "player_concerned",
+              "textSpeed": 35,
+              "autoAdvance": false,
+              "choices": [
+                {
+                  "text": "→ Rush over to help immediately",
+                  "action": "set_variable",
+                  "variable": "player_impulsive", 
+                  "value": true,
+                  "then": "branch_timeline",
+                  "target": "immediate_help_branch"
+                },
+                {
+                  "text": "→ Approach cautiously and observe",
+                  "action": "set_variable",
+                  "variable": "player_cautious",
+                  "value": true,
+                  "then": "dialogue_continue",
+                  "target": "cautious_approach"
+                },
+                {
+                  "text": "→ Call out from a distance",
+                  "action": "set_variable", 
+                  "variable": "player_careful",
+                  "value": true,
+                  "then": "dialogue_continue",
+                  "target": "distant_call"
+                }
+              ]
+            }
+          },
+          {
+            "time": 28,
+            "type": "dialogue",
+            "data": {
+              "speaker": "wounded_traveler",
+              "text": "*coughs weakly* Please... help me...",
+              "portrait": "traveler_wounded_face",
+              "textSpeed": 25,
+              "autoAdvance": false,
+              "voiceFile": "traveler_weak_plea.wav",
+              "style": {
+                "color": "#ffaaaa",
+                "textShadow": "1px 1px 2px rgba(0,0,0,0.8)"
+              }
+            }
+          },
+          {
+            "time": 33,
+            "type": "dialogue",
+            "data": {
+              "speaker": "player",
+              "text": "You're badly injured! What happened to you?",
+              "portrait": "player_concerned",
+              "textSpeed": 30,
+              "autoAdvance": false,
+              "choices": [
+                {
+                  "text": "→ Give them a healing potion",
+                  "action": "branch_timeline",
+                  "target": "healing_branch",
+                  "condition": "inventory.has('healing_potion')"
+                },
+                {
+                  "text": "→ Bandage their wounds with cloth",
+                  "action": "branch_timeline",
+                  "target": "bandage_branch",
+                  "condition": null
+                },
+                {
+                  "text": "→ Ask what attacked them",
+                  "action": "dialogue_continue",
+                  "target": "attack_inquiry"
+                },
+                {
+                  "text": "→ Look around for threats first",
+                  "action": "set_variable",
+                  "variable": "noticed_shadow",
+                  "value": true,
+                  "then": "dialogue_continue", 
+                  "target": "threat_awareness"
+                }
+              ]
+            }
+          },
+          {
+            "time": 42,
+            "type": "dialogue",
+            "data": {
+              "speaker": "wounded_traveler", 
+              "text": "Shadow beasts... they came from nowhere... took my supplies...",
+              "portrait": "traveler_fearful",
+              "textSpeed": 30,
+              "autoAdvance": true,
+              "delay": 3.5
+            }
+          },
+          {
+            "time": 47,
+            "type": "dialogue",
+            "data": {
+              "speaker": "narrator",
+              "text": "A chill runs down your spine. Something is watching you both from the shadows...",
+              "textSpeed": 35,
+              "autoAdvance": false,
+              "style": {
+                "color": "#aa88ff",
+                "background": "rgba(20,0,40,0.8)"
+              },
+              "choices": [
+                {
+                  "text": "→ 'We need to get out of here NOW!'",
+                  "action": "branch_timeline",
+                  "target": "escape_branch"
+                },
+                {
+                  "text": "→ 'Stay calm, I'll protect you.'",
+                  "action": "set_variable",
+                  "variable": "player_brave",
+                  "value": true,
+                  "then": "branch_timeline",
+                  "target": "protection_branch"
+                },
+                {
+                  "text": "→ Quietly ready your weapon",
+                  "action": "set_variable",
+                  "variable": "player_prepared",
+                  "value": true,
+                  "then": "branch_timeline",
+                  "target": "combat_ready_branch"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "branches": {
+    "immediate_help_branch": {
+      "duration": 20.0,
+      "tracks": [
+        {
+          "id": "rush_action",
+          "name": "Player Rushes",
+          "type": "actor",
+          "keyframes": [
+            {
+              "time": 0,
+              "properties": {
+                "sprite": "player_run_right",
+                "x": 150,
+                "y": 280
+              }
+            },
+            {
+              "time": 2,
+              "properties": {
+                "x": 280,
+                "y": 270,
+                "sprite": "player_kneel"
+              },
+              "easing": "ease-out"
+            }
+          ]
+        },
+        {
+          "id": "rush_dialogue",
+          "name": "Impulsive Help",
+          "type": "interaction",
+          "keyframes": [
+            {
+              "time": 1,
+              "type": "dialogue", 
+              "data": {
+                "speaker": "player",
+                "text": "Don't worry! I'm here to help!",
+                "autoAdvance": true,
+                "delay": 2.5
+              }
+            },
+            {
+              "time": 4,
+              "type": "dialogue",
+              "data": {
+                "speaker": "wounded_traveler",
+                "text": "Thank you... you have a kind heart...",
+                "portrait": "traveler_grateful",
+                "autoAdvance": true,
+                "delay": 3.0
+              }
+            },
+            {
+              "time": 8,
+              "type": "variable_set",
+              "data": {
+                "variable": "traveler_trust",
+                "value": 10
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "healing_branch": {
+      "duration": 15.0,
+      "tracks": [
+        {
+          "id": "healing_action",
+          "name": "Potion Healing",
+          "type": "actor",
+          "keyframes": [
+            {
+              "time": 0,
+              "properties": {
+                "sprite": "player_use_item",
+                "x": 200,
+                "y": 250
+              }
+            },
+            {
+              "time": 3,
+              "properties": {
+                "sprite": "healing_effect",
+                "x": 300,
+                "y": 270,
+                "scale": 1.5
+              }
+            }
+          ]
+        },
+        {
+          "id": "healing_dialogue",
+          "name": "Healing Response", 
+          "type": "interaction",
+          "keyframes": [
+            {
+              "time": 1,
+              "type": "dialogue",
+              "data": {
+                "speaker": "player",
+                "text": "Here, drink this healing potion. It should help.",
+                "autoAdvance": true,
+                "delay": 3.0
+              }
+            },
+            {
+              "time": 5,
+              "type": "dialogue",
+              "data": {
+                "speaker": "wounded_traveler",
+                "text": "Incredible... I feel much better! You saved my life!",
+                "portrait": "traveler_amazed",
+                "autoAdvance": true,
+                "delay": 3.5
+              }
+            },
+            {
+              "time": 9,
+              "type": "variable_set",
+              "data": {
+                "variable": "traveler_trust",
+                "value": 15
+              }
+            },
+            {
+              "time": 10,
+              "type": "variable_set", 
+              "data": {
+                "variable": "used_healing_potion",
+                "value": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "combat_ready_branch": {
+      "duration": 25.0,
+      "tracks": [
+        {
+          "id": "combat_preparation",
+          "name": "Ready for Battle",
+          "type": "actor",
+          "keyframes": [
+            {
+              "time": 0,
+              "properties": {
+                "sprite": "player_draw_sword",
+                "x": 200,
+                "y": 250
+              }
+            },
+            {
+              "time": 2,
+              "properties": {
+                "sprite": "player_combat_stance"
+              }
+            },
+            {
+              "time": 8,
+              "properties": {
+                "sprite": "shadow_beast_emerge",
+                "x": 450,
+                "y": 200,
+                "scale": 2.0
+              }
+            }
+          ]
+        },
+        {
+          "id": "combat_dialogue",
+          "name": "Battle Ready",
+          "type": "interaction",
+          "keyframes": [
+            {
+              "time": 1,
+              "type": "dialogue",
+              "data": {
+                "speaker": "player", 
+                "text": "I can sense something out there. Stay behind me.",
+                "portrait": "player_determined",
+                "autoAdvance": true,
+                "delay": 3.0
+              }
+            },
+            {
+              "time": 5,
+              "type": "dialogue",
+              "data": {
+                "speaker": "wounded_traveler",
+                "text": "You're ready for them... you're not like other travelers...",
+                "portrait": "traveler_impressed",
+                "autoAdvance": false,
+                "choices": [
+                  {
+                    "text": "→ 'I've faced worse than shadow beasts.'",
+                    "action": "resume_timeline"
+                  },
+                  {
+                    "text": "→ 'Just stay quiet and let me handle this.'",
+                    "action": "set_variable",
+                    "variable": "player_stern",
+                    "value": true,
+                    "then": "resume_timeline"
+                  }
+                ]
+              }
+            },
+            {
+              "time": 10,
+              "type": "dialogue",
+              "data": {
+                "speaker": "narrator",
+                "text": "A shadow beast emerges from the treeline, drawn by the scent of blood...",
+                "style": {
+                  "color": "#ff6666",
+                  "background": "rgba(40,0,0,0.9)"
+                },
+                "autoAdvance": false,
+                "choices": [
+                  {
+                    "text": "→ Engage the beast in combat",
+                    "action": "branch_timeline",
+                    "target": "boss_fight_sequence"
+                  },
+                  {
+                    "text": "→ Try to intimidate it away",
+                    "action": "branch_timeline", 
+                    "target": "intimidation_attempt"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "protection_branch": {
+      "duration": 18.0,
+      "tracks": [
+        {
+          "id": "protective_stance",
+          "name": "Guardian Position",
+          "type": "actor",
+          "keyframes": [
+            {
+              "time": 0,
+              "properties": {
+                "sprite": "player_protective_stance",
+                "x": 220,
+                "y": 250
+              }
+            },
+            {
+              "time": 5,
+              "properties": {
+                "sprite": "shield_glow_effect",
+                "scale": 1.8
+              }
+            }
+          ]
+        },
+        {
+          "id": "protection_dialogue",
+          "name": "Reassuring Words",
+          "type": "interaction",
+          "keyframes": [
+            {
+              "time": 1,
+              "type": "dialogue",
+              "data": {
+                "speaker": "wounded_traveler",
+                "text": "You... you'd protect a stranger? Even with danger approaching?",
+                "portrait": "traveler_moved",
+                "autoAdvance": false,
+                "choices": [
+                  {
+                    "text": "→ 'Everyone deserves protection.'",
+                    "action": "set_variable",
+                    "variable": "player_noble",
+                    "value": true,
+                    "then": "dialogue_continue",
+                    "target": "noble_response"
+                  },
+                  {
+                    "text": "→ 'I won't let them hurt you.'",
+                    "action": "set_variable",
+                    "variable": "player_determined",
+                    "value": true,
+                    "then": "resume_timeline"
+                  }
+                ]
+              }
+            },
+            {
+              "time": 8,
+              "type": "dialogue",
+              "data": {
+                "speaker": "wounded_traveler",
+                "text": "I haven't met someone like you in years... there's still hope in this world.",
+                "portrait": "traveler_hopeful",
+                "autoAdvance": true,
+                "delay": 4.0
+              }
+            },
+            {
+              "time": 13,
+              "type": "variable_set",
+              "data": {
+                "variable": "traveler_trust",
+                "value": 20
+              }
+            },
+            {
+              "time": 14,
+              "type": "variable_set",
+              "data": {
+                "variable": "reputation_protector",
+                "value": true
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "dialogues": {
+    "cautious_approach": {
+      "nodes": [
+        {
+          "speaker": "player",
+          "text": "I should be careful... but they clearly need help.",
+          "choices": [
+            {
+              "text": "Continue approaching slowly",
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    },
+    "distant_call": {
+      "nodes": [
+        {
+          "speaker": "player",
+          "text": "HEY! Are you alright over there?",
+          "choices": [
+            {
+              "text": "Wait for a response",
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    },
+    "attack_inquiry": {
+      "nodes": [
+        {
+          "speaker": "wounded_traveler",
+          "text": "Shadow beasts... they hunt in packs... struck without warning...",
+          "choices": [
+            {
+              "text": "How many were there?",
+              "action": "dialogue_continue",
+              "target": "pack_size_info"
+            },
+            {
+              "text": "When did this happen?",
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    },
+    "threat_awareness": {
+      "nodes": [
+        {
+          "speaker": "player",
+          "text": "*scanning the forest* We're not alone here. Something's watching us.",
+          "choices": [
+            {
+              "text": "Stay alert and help them",
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    },
+    "noble_response": {
+      "nodes": [
+        {
+          "speaker": "wounded_traveler", 
+          "text": "The world needs more people like you... I won't forget this kindness.",
+          "choices": [
+            {
+              "text": "Focus on getting you to safety",
+              "action": "resume_timeline"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "variables": [
+    {
+      "name": "player_impulsive",
+      "type": "boolean", 
+      "default": false,
+      "description": "Player chose to rush in and help immediately"
+    },
+    {
+      "name": "player_cautious",
+      "type": "boolean",
+      "default": false,
+      "description": "Player chose to approach carefully and observe"
+    },
+    {
+      "name": "player_careful",
+      "type": "boolean",
+      "default": false,
+      "description": "Player chose to call out from a safe distance"
+    },
+    {
+      "name": "player_brave",
+      "type": "boolean",
+      "default": false,
+      "description": "Player chose to be protective and brave"
+    },
+    {
+      "name": "player_prepared",
+      "type": "boolean",
+      "default": false,
+      "description": "Player readied weapon and prepared for combat"
+    },
+    {
+      "name": "player_noble",
+      "type": "boolean",
+      "default": false,
+      "description": "Player expressed noble ideals about protecting others"
+    },
+    {
+      "name": "traveler_trust",
+      "type": "integer",
+      "default": 0,
+      "description": "How much the traveler trusts the player (0-20)"
+    },
+    {
+      "name": "used_healing_potion",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether player used a healing potion on the traveler"
+    },
+    {
+      "name": "noticed_shadow",
+      "type": "boolean", 
+      "default": false,
+      "description": "Player noticed the shadow figure watching"
+    },
+    {
+      "name": "reputation_protector",
+      "type": "boolean",
+      "default": false,
+      "description": "Player gained reputation as a protector of innocents"
+    }
+  ],
+  "settings": {
+    "pauseOnChoices": true,
+    "allowSkipping": false,
+    "allowRollback": true,
+    "autosaveProgress": true,
+    "exportCampaignEvents": true,
+    "contextualChoices": true,
+    "dynamicMusic": true
+  },
+  "integrations": {
+    "algorithmStudio": {
+      "enabled": true,
+      "aiDialogueGeneration": false,
+      "adaptiveChoices": true,
+      "dynamicNarration": true,
+      "emotionTracking": true
+    },
+    "campaignEditor": {
+      "enabled": true,
+      "exportVariables": [
+        "player_impulsive", "player_cautious", "player_brave", "player_prepared",
+        "traveler_trust", "used_healing_potion", "reputation_protector"
+      ],
+      "triggerQuests": [
+        "shadow_beast_investigation", "traveler_escort_mission", "forest_protection_quest"
+      ],
+      "unlockNodes": [
+        "traveler_shop_access", "reputation_based_dialogue", "shadow_beast_knowledge"
+      ],
+      "affectRelationships": {
+        "forest_travelers_guild": "+reputation_protector",
+        "shadow_beast_hunters": "+noticed_shadow", 
+        "healing_potion_vendors": "-used_healing_potion"
+      }
+    }
+  },
+  "levelContext": {
+    "location": "Whispering Woods - Ancient Clearing",
+    "levelPhase": "exploration",
+    "playerLevel": "3-7",
+    "recommendedItems": ["healing_potion", "rope", "torch"],
+    "followUpEvents": {
+      "if_helped_traveler": "traveler_becomes_merchant_contact",
+      "if_combat_ready": "shadow_beast_hunter_reputation",
+      "if_used_potion": "alchemist_guild_recognition"
+    },
+    "gameplayImpact": {
+      "questUnlocks": ["The Lost Caravan", "Shadow in the Woods"],
+      "shopAccess": ["Grateful Traveler's Wares"],
+      "skillChecks": ["Perception for shadow detection", "Medicine for healing"],
+      "moralityPoints": "+1 to +3 based on choices"
+    }
+  }
+}

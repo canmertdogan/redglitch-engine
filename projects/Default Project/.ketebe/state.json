@@ -1,0 +1,13 @@
+{
+  "state": {
+    "test": {
+      "value": "Hello World",
+      "watched": "Updated Value",
+      "undo": "Modified"
+    }
+  },
+  "metadata": {
+    "lastModified": 1770305950497,
+    "version": 1
+  }
+}

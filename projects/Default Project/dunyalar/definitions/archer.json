@@ -1,0 +1,20 @@
+{
+    "components":  [
+                       {
+                           "speed":  250,
+                           "type":  "Stats",
+                           "hp":  60
+                       },
+                       {
+                           "height":  48,
+                           "width":  32,
+                           "type":  "Collider"
+                       },
+                       {
+                           "scriptId":  "enemy_ranged",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Archer",
+    "sprite":  "Knight/Knight/Knight-Idle.png"
+}

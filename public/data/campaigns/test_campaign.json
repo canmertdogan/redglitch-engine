@@ -1,0 +1,61 @@
+{
+  "name": "Test Campaign",
+  "description": "A simple test campaign for slot system testing",
+  "version": "1.0.0",
+      "author": "Ongonluk Engine",  "metadata": {
+    "pattern": "linear",
+    "difficulty": "easy",
+    "estimatedPlaytime": "10-15 minutes"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "name": "Campaign Start",
+      "next": "level1"
+    },
+    {
+      "id": "level1",
+      "type": "level",
+      "name": "First Level",
+      "engineType": "rpg-topdown",
+      "levelId": "test_level_1",
+      "levelPath": "dunyalar/test_level_1.json",
+      "next": "branch1"
+    },
+    {
+      "id": "branch1",
+      "type": "branch",
+      "name": "Choose Your Path",
+      "condition": "hasKey",
+      "nextTrue": "level2a",
+      "nextFalse": "level2b"
+    },
+    {
+      "id": "level2a",
+      "type": "level",
+      "name": "Path A - Castle",
+      "engineType": "rpg-topdown",
+      "levelId": "castle",
+      "levelPath": "dunyalar/castle.json",
+      "next": "level3"
+    },
+    {
+      "id": "level2b",
+      "type": "level",
+      "name": "Path B - Forest",
+      "engineType": "iso-pixel",
+      "levelId": "forest",
+      "levelPath": "dunyalar/forest.json",
+      "next": "level3"
+    },
+    {
+      "id": "level3",
+      "type": "level",
+      "name": "Final Level",
+      "engineType": "platformer-2d",
+      "levelId": "final_boss",
+      "levelPath": "dunyalar/final_boss.json"
+    }
+  ]
+}

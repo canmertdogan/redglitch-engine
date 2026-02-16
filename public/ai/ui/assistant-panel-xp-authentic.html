@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRAB - Windows XP Assistant</title>
+    <style>
+        /* === WINDOWS XP AUTHENTIC STYLING === */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Tahoma, "Microsoft Sans Serif", Arial, sans-serif;
+            font-size: 11px;
+            background: transparent;
+            color: #000000;
+            /* XP-style font rendering - no smoothing */
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeSpeed;
+        }
+
+        /* === IRAB FLOATING CHARACTER === */
+        #ai-assistant-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            pointer-events: auto;
+        }
+
+        #ai-clippy {
+            width: 64px;
+            height: 64px;
+            background-image: url('/sprite-art/helper.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.4));
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        #ai-clippy:hover {
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        #ai-clippy:active {
+            transform: scale(0.98);
+        }
+
+        /* === WINDOWS XP NOTIFICATION BALLOON === */
+        #ai-speech-bubble {
+            position: absolute;
+            bottom: 75px;
+            right: 0;
+            width: 280px;
+            background: #FFFFE1;
+            border: 1px solid #000000;
+            border-radius: 8px;
+            padding: 12px 14px;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.35);
+            display: none;
+            animation: xpBalloonSlide 0.25s ease-out;
+        }
+
+        #ai-speech-bubble.show {
+            display: block;
+        }
+
+        @keyframes xpBalloonSlide {
+            0% { 
+                opacity: 0;
+                transform: translateY(10px) scale(0.95);
+            }
+            100% { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* XP Balloon Pointer Triangle */
+        #ai-speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 25px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid #000000;
+        }
+
+        #ai-speech-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 26px;
+            width: 0;
+            height: 0;
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+            border-top: 9px solid #FFFFE1;
+            z-index: 1;
+        }
+
+        .ai-speech-header {
+            font-weight: bold;
+            color: #003399;
+            margin-bottom: 6px;
+            font-size: 11px;
+        }
+
+        #ai-speech-text {
+            color: #000000;
+            line-height: 1.4;
+            margin-bottom: 10px;
+            font-size: 11px;
+        }
+
+        #ai-speech-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        /* Windows XP Button Style */
+        .xp-button {
+            background: linear-gradient(180deg, #EAF3FF 0%, #D9E9FC 45%, #BED6F5 50%, #A7C9F1 100%);
+            border: 1px solid #003C74;
+            border-radius: 3px;
+            padding: 3px 10px;
+            font-family: Tahoma, sans-serif;
+            font-size: 11px;
+            color: #000000;
+            cursor: pointer;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+            min-width: 65px;
+        }
+
+        .xp-button:hover {
+            background: linear-gradient(180deg, #F5F9FF 0%, #E3EFFF 45%, #D0E5FF 50%, #BCD9FF 100%);
+            border-color: #0054A6;
+        }
+
+        .xp-button:active {
+            background: linear-gradient(180deg, #B8D4F2 0%, #C8E0F7 50%, #D9EBFC 100%);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .xp-button.secondary {
+            background: linear-gradient(180deg, #F5F5F5 0%, #E5E5E5 45%, #D5D5D5 50%, #C5C5C5 100%);
+            border-color: #707070;
+        }
+
+        .xp-button.secondary:hover {
+            background: linear-gradient(180deg, #FFFFFF 0%, #F0F0F0 45%, #E0E0E0 50%, #D0D0D0 100%);
+        }
+
+        /* === MSN MESSENGER WINDOW (XP STYLE) === */
+        #ai-chat-panel {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 420px;
+            height: 500px;
+            background: #ECE9D8;
+            border: 3px solid;
+            border-color: #0054E3 #003C74 #003C74 #0054E3;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.4);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+        }
+
+        #ai-chat-panel.show {
+            display: flex;
+            animation: xpWindowOpen 0.2s ease-out;
+        }
+
+        @keyframes xpWindowOpen {
+            0% {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* XP Window Title Bar (Luna Blue) */
+        #ai-chat-header {
+            background: linear-gradient(180deg, #3F8CF3 0%, #2862D9 50%, #1A4AAE 100%);
+            padding: 4px 6px;
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+        }
+
+        #ai-chat-title {
+            color: #FFFFFF;
+            font-weight: bold;
+            font-size: 11px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #ai-chat-title::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            background-image: url('/sprite-art/helper.png');
+            background-size: contain;
+            image-rendering: pixelated;
+        }
+
+        /* XP Window Controls */
+        .xp-window-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .xp-control-btn {
+            width: 21px;
+            height: 21px;
+            background: linear-gradient(180deg, #4A9EFD 0%, #2B7FE5 50%, #1A5FC7 100%);
+            border: 1px solid #003C74;
+            border-radius: 2px;
+            color: #FFFFFF;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Marlett, sans-serif;
+            font-size: 10px;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+        }
+
+        .xp-control-btn:hover {
+            background: linear-gradient(180deg, #5AAEFF 0%, #3B8FFF 50%, #2670D9 100%);
+            border-color: #0054E3;
+        }
+
+        .xp-control-btn:active {
+            background: linear-gradient(180deg, #2870D9 0%, #1A5FC7 100%);
+        }
+
+        /* Settings Button */
+        .xp-control-btn.settings {
+            font-family: Tahoma, sans-serif;
+            font-size: 12px;
+        }
+
+        /* === CHAT MESSAGES AREA === */
+        #ai-chat-messages {
+            flex: 1;
+            background: #FFFFFF;
+            border: 1px solid #A0A0A0;
+            border-left: 1px solid #D4D0C8;
+            border-top: 1px solid #D4D0C8;
+            margin: 4px;
+            padding: 8px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* XP Scrollbar Styling */
+        #ai-chat-messages::-webkit-scrollbar {
+            width: 16px;
+        }
+
+        #ai-chat-messages::-webkit-scrollbar-track {
+            background: #ECE9D8;
+            border-left: 1px solid #A0A0A0;
+        }
+
+        #ai-chat-messages::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #F5F5F5 0%, #D4D0C8 50%, #C0BDB3 100%);
+            border: 1px solid #808080;
+            border-radius: 0;
+        }
+
+        #ai-chat-messages::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #FFFFFF 0%, #E0DDD5 50%, #D0CDC5 100%);
+        }
+
+        #ai-chat-messages::-webkit-scrollbar-button {
+            background: #ECE9D8;
+            border: 1px solid #808080;
+            height: 16px;
+        }
+
+        /* Message Bubbles */
+        .ai-message {
+            margin-bottom: 12px;
+            display: flex;
+            gap: 8px;
+            animation: xpFadeIn 0.25s ease;
+        }
+
+        @keyframes xpFadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .ai-message-avatar {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #808080;
+            background: #FFFFFF;
+            flex-shrink: 0;
+            image-rendering: pixelated;
+        }
+
+        .ai-message-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .ai-message-name {
+            font-weight: bold;
+            font-size: 11px;
+            color: #000080;
+        }
+
+        .ai-message.assistant .ai-message-name {
+            color: #800080;
+        }
+
+        .ai-message-timestamp {
+            font-size: 9px;
+            color: #808080;
+            margin-left: 4px;
+        }
+
+        .ai-message-bubble {
+            background: #E8F4FF;
+            border: 1px solid #5B9BD5;
+            padding: 6px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #000000;
+            word-wrap: break-word;
+        }
+
+        .ai-message.assistant .ai-message-bubble {
+            background: #FFF4E8;
+            border-color: #FFB366;
+        }
+
+        .ai-message.system .ai-message-bubble {
+            background: #FFFACD;
+            border-color: #FFD700;
+            font-style: italic;
+        }
+
+        .ai-message.error .ai-message-bubble {
+            background: #FFE8E8;
+            border-color: #FF6B6B;
+        }
+
+        /* === INPUT AREA === */
+        #ai-chat-input-container {
+            background: #ECE9D8;
+            padding: 4px;
+            border-top: 1px solid #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        #ai-chat-input {
+            width: 100%;
+            background: #FFFFFF;
+            border: 1px solid #A0A0A0;
+            border-left-color: #D4D0C8;
+            border-top-color: #D4D0C8;
+            color: #000000;
+            padding: 4px 6px;
+            font-size: 11px;
+            font-family: Tahoma, sans-serif;
+            resize: none;
+            height: 50px;
+        }
+
+        #ai-chat-input:focus {
+            outline: none;
+            border-color: #0054E3;
+        }
+
+        .xp-input-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2px;
+        }
+
+        .xp-toolbar-section {
+            display: flex;
+            gap: 4px;
+        }
+
+        .xp-tool-btn {
+            background: #ECE9D8;
+            border: 1px solid #ECE9D8;
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        .xp-tool-btn:hover {
+            border-color: #0054E3;
+            background: #F0EEDE;
+        }
+
+        .xp-tool-btn:active {
+            background: #D4D0C8;
+        }
+
+        #ai-chat-send {
+            background: linear-gradient(180deg, #EAF3FF 0%, #D9E9FC 45%, #BED6F5 50%, #A7C9F1 100%);
+            border: 1px solid #003C74;
+            border-radius: 3px;
+            padding: 4px 16px;
+            font-family: Tahoma, sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+            color: #000000;
+            cursor: pointer;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+        }
+
+        #ai-chat-send:hover {
+            background: linear-gradient(180deg, #F5F9FF 0%, #E3EFFF 45%, #D0E5FF 50%, #BCD9FF 100%);
+        }
+
+        #ai-chat-send:active {
+            background: linear-gradient(180deg, #B8D4F2 0%, #C8E0F7 50%, #D9EBFC 100%);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* === STATUS BAR === */
+        .xp-status-bar {
+            background: #ECE9D8;
+            border-top: 1px solid #FFFFFF;
+            padding: 2px 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: #000000;
+        }
+
+        .xp-status-indicator {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .xp-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00CC00;
+            border: 1px solid #008800;
+        }
+
+        .xp-status-dot.thinking {
+            background: #FFB300;
+            border-color: #CC8800;
+            animation: xpPulse 1s infinite;
+        }
+
+        @keyframes xpPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* === AI LOADING PROGRESS (XP STYLE) === */
+        #xp-ai-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .xp-loading-window {
+            width: 380px;
+            background: #ECE9D8;
+            border: 3px solid;
+            border-color: #0054E3 #003C74 #003C74 #0054E3;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.4);
+        }
+
+        .xp-loading-header {
+            background: linear-gradient(180deg, #3F8CF3 0%, #2862D9 50%, #1A4AAE 100%);
+            padding: 4px 6px;
+            border-radius: 6px 6px 0 0;
+            color: #FFFFFF;
+            font-weight: bold;
+            font-size: 11px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .xp-loading-content {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .xp-loading-icon {
+            width: 48px;
+            height: 48px;
+            animation: xpPulse 1.5s infinite;
+        }
+
+        .xp-loading-text {
+            text-align: center;
+        }
+
+        #xp-loading-status {
+            font-size: 11px;
+            font-weight: bold;
+            color: #000080;
+            margin-bottom: 4px;
+        }
+
+        #xp-loading-details {
+            font-size: 10px;
+            color: #000000;
+        }
+
+        /* XP Progress Bar */
+        .xp-progress-container {
+            width: 100%;
+        }
+
+        .xp-progress-bar {
+            width: 100%;
+            height: 18px;
+            background: #FFFFFF;
+            border: 1px solid;
+            border-color: #808080 #D4D0C8 #D4D0C8 #808080;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .xp-progress-fill {
+            height: 100%;
+            background: linear-gradient(180deg, #0066FF 0%, #0054E3 50%, #0044CC 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        /* XP Progress Bar Blocks Animation */
+        .xp-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 6px,
+                rgba(255, 255, 255, 0.3) 6px,
+                rgba(255, 255, 255, 0.3) 7px
+            );
+        }
+
+        .xp-progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: #000000;
+            margin-top: 4px;
+        }
+
+        /* === SETTINGS PANEL === */
+        #xp-settings {
+            position: absolute;
+            top: 30px;
+            right: 0;
+            width: 300px;
+            background: #ECE9D8;
+            border: 2px solid;
+            border-color: #808080 #D4D0C8 #D4D0C8 #808080;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
+            display: none;
+            z-index: 10000;
+        }
+
+        #xp-settings.show {
+            display: block;
+            animation: xpFadeIn 0.2s ease;
+        }
+
+        .xp-settings-header {
+            background: linear-gradient(180deg, #3F8CF3 0%, #2862D9 50%, #1A4AAE 100%);
+            color: #FFFFFF;
+            padding: 4px 6px;
+            font-weight: bold;
+            font-size: 11px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .xp-settings-content {
+            padding: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .xp-setting-group {
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #D4D0C8;
+        }
+
+        .xp-setting-group:last-child {
+            border-bottom: none;
+        }
+
+        .xp-setting-label {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 6px;
+            color: #000080;
+        }
+
+        .xp-setting-control {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+
+        .xp-setting-control input[type="checkbox"] {
+            width: 13px;
+            height: 13px;
+        }
+
+        .xp-setting-control select,
+        .xp-setting-control input[type="text"],
+        .xp-setting-control input[type="number"] {
+            flex: 1;
+            padding: 3px 4px;
+            border: 1px solid #A0A0A0;
+            border-left-color: #D4D0C8;
+            border-top-color: #D4D0C8;
+            background: #FFFFFF;
+            font-size: 11px;
+            font-family: Tahoma, sans-serif;
+        }
+
+        .xp-setting-desc {
+            font-size: 10px;
+            color: #808080;
+            margin-left: 19px;
+            line-height: 1.3;
+        }
+
+        .xp-settings-buttons {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid #FFFFFF;
+        }
+    </style>
+</head>
+<body>
+    <!-- IRAB Avatar Floating Character -->
+    <div id="ai-assistant-container">
+        <div id="ai-clippy" title="IRAB - Your Windows XP Assistant"></div>
+        
+        <!-- Windows XP Notification Balloon -->
+        <div id="ai-speech-bubble">
+            <div class="ai-speech-header">💬 IRAB says...</div>
+            <div id="ai-speech-text">GRRR... IRAB IS READY TO HELP!</div>
+            <div id="ai-speech-actions">
+                <button class="xp-button" onclick="AIChatUI.openChat()">Open</button>
+                <button class="xp-button secondary" onclick="AIChatUI.dismiss()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Windows XP AI Loading Dialog -->
+    <div id="xp-ai-loading" style="display: none;">
+        <div class="xp-loading-window">
+            <div class="xp-loading-header">
+                <img src="/sprite-art/helper.png" style="width: 16px; height: 16px; image-rendering: pixelated;">
+                <span>IRAB Assistant</span>
+            </div>
+            <div class="xp-loading-content">
+                <div class="xp-loading-icon">
+                    <img src="/sprite-art/helper.png" style="width: 48px; height: 48px; image-rendering: pixelated;">
+                </div>
+                <div class="xp-loading-text">
+                    <div id="xp-loading-status">Initializing AI...</div>
+                    <div id="xp-loading-details">Please wait while IRAB loads...</div>
+                </div>
+                <div class="xp-progress-container">
+                    <div class="xp-progress-bar">
+                        <div id="xp-progress-fill" class="xp-progress-fill"></div>
+                    </div>
+                    <div class="xp-progress-text">
+                        <span id="xp-progress-percent">0%</span>
+                        <span id="xp-progress-size"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MSN Messenger Style Chat Window (XP Theme) -->
+    <div id="ai-chat-panel">
+        <div id="ai-chat-header">
+            <span id="ai-chat-title">IRAB - Your Studio Assistant</span>
+            <div class="xp-window-controls">
+                <button class="xp-control-btn settings" onclick="AISettings.toggle()" title="Settings">⚙</button>
+                <button class="xp-control-btn" onclick="AIChatUI.closeChat()" title="Close">×</button>
+            </div>
+        </div>
+
+        <div id="ai-chat-messages"></div>
+
+        <div id="ai-chat-input-container">
+            <textarea id="ai-chat-input" placeholder="Type a message..."></textarea>
+            <div class="xp-input-toolbar">
+                <div class="xp-toolbar-section">
+                    <button class="xp-tool-btn" title="Font">A</button>
+                    <button class="xp-tool-btn" title="Emoticons">😊</button>
+                    <button class="xp-tool-btn" title="Help">?</button>
+                </div>
+                <button id="ai-chat-send" onclick="AIChatUI.sendMessage()">Send</button>
+            </div>
+        </div>
+
+        <div class="xp-status-bar">
+            <div class="xp-status-indicator">
+                <div class="xp-status-dot"></div>
+                <span id="xp-status-text">Online</span>
+            </div>
+            <div id="xp-char-count" style="font-size: 9px;">0/500</div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="xp-settings">
+            <div class="xp-settings-header">
+                <span>⚙ AI Settings</span>
+                <span style="cursor: pointer;" onclick="AISettings.toggle()">×</span>
+            </div>
+            <div class="xp-settings-content">
+                <div class="xp-setting-group">
+                    <div class="xp-setting-label">AI Provider</div>
+                    <div class="xp-setting-control">
+                        <select id="setting-provider">
+                            <option value="local">Local (Transformers.js)</option>
+                            <option value="cerebras">Cerebras (Cloud)</option>
+                        </select>
+                    </div>
+                    <div class="xp-setting-desc">Choose between local AI or cloud inference</div>
+                </div>
+
+                <div class="xp-setting-group">
+                    <div class="xp-setting-label">Personality</div>
+                    <div class="xp-setting-control">
+                        <input type="checkbox" id="setting-irab-personality" checked>
+                        <label for="setting-irab-personality">Use IRAB personality (CAPS, quirky)</label>
+                    </div>
+                    <div class="xp-setting-control">
+                        <input type="checkbox" id="setting-tips" checked>
+                        <label for="setting-tips">Show helpful tips</label>
+                    </div>
+                </div>
+
+                <div class="xp-setting-group">
+                    <div class="xp-setting-label">Sounds</div>
+                    <div class="xp-setting-control">
+                        <input type="checkbox" id="setting-sounds" checked>
+                        <label for="setting-sounds">🔊 Enable XP sounds</label>
+                    </div>
+                    <div class="xp-setting-desc">Play authentic Windows XP/MSN sounds</div>
+                </div>
+
+                <div class="xp-setting-group">
+                    <div class="xp-setting-label">Automation</div>
+                    <div class="xp-setting-control">
+                        <input type="checkbox" id="setting-auto-suggestions" checked>
+                        <label for="setting-auto-suggestions">Enable auto-suggestions</label>
+                    </div>
+                    <div class="xp-setting-control">
+                        <input type="checkbox" id="setting-require-permission">
+                        <label for="setting-require-permission">Always ask before actions</label>
+                    </div>
+                </div>
+
+                <div class="xp-setting-group">
+                    <div class="xp-setting-label">Knowledge Base</div>
+                    <div class="xp-setting-control">
+                        <input type="checkbox" id="setting-use-docs" checked>
+                        <label for="setting-use-docs">Use documentation</label>
+                    </div>
+                    <div class="xp-setting-control">
+                        <input type="checkbox" id="setting-use-tutorials" checked>
+                        <label for="setting-use-tutorials">Enable tutorials</label>
+                    </div>
+                </div>
+
+                <div class="xp-setting-group">
+                    <div class="xp-setting-label">Cerebras API Key</div>
+                    <div class="xp-setting-control">
+                        <input type="text" id="setting-cerebras-key" placeholder="csk-...">
+                    </div>
+                    <div class="xp-setting-desc">Required for cloud mode on Android</div>
+                </div>
+
+                <div class="xp-setting-group">
+                    <div class="xp-setting-label">Max Response Length</div>
+                    <div class="xp-setting-control">
+                        <input type="number" id="setting-max-tokens" value="500" min="100" max="2000" step="100">
+                        <span>tokens</span>
+                    </div>
+                </div>
+
+                <div class="xp-settings-buttons">
+                    <button class="xp-button" onclick="AISettings.save()">OK</button>
+                    <button class="xp-button secondary" onclick="AISettings.reset()">Reset</button>
+                    <button class="xp-button secondary" onclick="AISettings.toggle()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load AI Scripts -->
+    <script src="../irab-personality.js"></script>
+    <script src="../cerebras-adapter.js"></script>
+    <script src="../ketebe-ai-assistant.js"></script>
+    <script src="assistant-panel.js"></script>
+
+    <script>
+        // Windows XP Loading Progress Tester
+        window.testXPLoadingBar = async function() {
+            console.log('🪟 Testing Windows XP loading progress...');
+            
+            const loading = document.getElementById('xp-ai-loading');
+            loading.style.display = 'flex';
+            
+            const fill = document.getElementById('xp-progress-fill');
+            const percent = document.getElementById('xp-progress-percent');
+            const status = document.getElementById('xp-loading-status');
+            const details = document.getElementById('xp-loading-details');
+            
+            // Simulate loading
+            for (let i = 0; i <= 100; i += 10) {
+                await new Promise(r => setTimeout(r, 300));
+                fill.style.width = i + '%';
+                percent.textContent = i + '%';
+                
+                if (i < 30) {
+                    status.textContent = 'Initializing...';
+                    details.textContent = 'Starting IRAB assistant';
+                } else if (i < 70) {
+                    status.textContent = 'Loading AI Model...';
+                    details.textContent = 'Downloading intelligence from cloud';
+                } else if (i < 100) {
+                    status.textContent = 'Almost Ready...';
+                    details.textContent = 'Finalizing setup';
+                } else {
+                    status.textContent = 'Complete!';
+                    details.textContent = 'IRAB is ready to assist you';
+                }
+            }
+            
+            setTimeout(() => {
+                loading.style.display = 'none';
+            }, 1000);
+        };
+
+        // Keyboard shortcut: Ctrl+Shift+X to test XP loading
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
+                e.preventDefault();
+                testXPLoadingBar();
+            }
+        });
+
+        // Update character counter
+        const input = document.getElementById('ai-chat-input');
+        if (input) {
+            input.addEventListener('input', () => {
+                const counter = document.getElementById('xp-char-count');
+                if (counter) {
+                    counter.textContent = `${input.value.length}/500`;
+                }
+            });
+            
+            // Enter to send (Shift+Enter for new line)
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.AIChatUI) {
+                        window.AIChatUI.sendMessage();
+                    }
+                }
+            });
+        }
+
+        console.log('🪟 Windows XP IRAB UI loaded!');
+    </script>
+</body>
+</html>

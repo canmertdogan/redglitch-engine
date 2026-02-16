@@ -1,0 +1,58 @@
+[
+  {
+    "id": "start_node",
+    "type": "start",
+    "x": 100,
+    "y": 300,
+    "name": "START",
+    "next": "level_1294"
+  },
+  {
+    "id": "group_logic",
+    "type": "group",
+    "x": 350,
+    "y": 150,
+    "w": 700,
+    "h": 400,
+    "name": "LOGIC TEST AREA"
+  },
+  {
+    "id": "level_1294",
+    "type": "level",
+    "x": 340,
+    "y": 300,
+    "name": "LEVEL",
+    "levelId": "level5",
+    "engineType": "rpg-topdown",
+    "next": "level_6044"
+  },
+  {
+    "id": "level_6044",
+    "type": "level",
+    "x": 560,
+    "y": 300,
+    "name": "LEVEL",
+    "levelId": "iso_world_1",
+    "engineType": "iso-pixel",
+    "next": "level_3380"
+  },
+  {
+    "id": "level_3380",
+    "type": "level",
+    "x": 800,
+    "y": 300,
+    "name": "LEVEL",
+    "levelId": "level9",
+    "engineType": "rpg-topdown",
+    "next": "level_4900"
+  },
+  {
+    "id": "level_4900",
+    "type": "level",
+    "x": 1020,
+    "y": 300,
+    "name": "LEVEL",
+    "levelId": "layahheilpernsass",
+    "engineType": "platformer-2d"
+  }
+]

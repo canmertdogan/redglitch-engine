@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KETEBE ASSET MANAGER</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-size: 1.1rem; border-bottom: 1px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover { background: var(--accent); color: #000; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        input[type="text"] {
+            background: #000; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none; flex-grow: 1;
+        }
+        input:focus { border-color: var(--accent); }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- PANELS --- */
+        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border); }
+        .panel-header {
+            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; cursor: pointer;
+            justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+        }
+        
+        .panel-content { padding: 0; overflow-y: auto; flex-grow: 1; }
+
+        /* --- SIDEBAR (FILTERS) --- */
+        #sidebar { width: 220px; border-right: 1px solid var(--border); }
+        
+        .filter-item {
+            padding: 8px 15px; cursor: pointer; color: #888; border-bottom: 1px solid #1a1a1a;
+            display: flex; align-items: center; gap: 10px; font-size: 1.1rem;
+        }
+        .filter-item:hover { background: #111; color: #fff; }
+        .filter-item.active { background: #111; color: var(--accent); border-left: 3px solid var(--accent); }
+        .filter-count { font-size: 0.8rem; color: #555; margin-left: auto; }
+
+        /* --- CENTER (GRID) --- */
+        #center-panel { 
+            flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas);
+            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;
+        }
+        
+        #asset-grid {
+            padding: 15px; overflow-y: auto; flex-grow: 1;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px; align-content: start;
+        }
+
+        .asset-card {
+            background: #111; border: 1px solid #333; padding: 8px;
+            display: flex; flex-direction: column; align-items: center;
+            cursor: pointer; position: relative; height: 130px;
+            transition: transform 0.1s;
+        }
+        .asset-card:hover { border-color: #fff; background: #1a1a1a; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        .asset-card.selected { border-color: var(--accent); background: #222; box-shadow: 0 0 0 1px var(--accent); }
+        
+        .asset-preview {
+            width: 64px; height: 64px; object-fit: contain; margin-bottom: 10px;
+            image-rendering: pixelated; background: #000; border: 1px solid #222;
+        }
+        .asset-icon {
+            font-size: 48px; color: #444; margin-bottom: 15px; margin-top: 5px;
+        }
+        .asset-name {
+            font-size: 0.9rem; text-align: center; word-break: break-all;
+            max-height: 34px; overflow: hidden; color: #aaa; width: 100%;
+            line-height: 1.1;
+        }
+        .asset-tag {
+            position: absolute; top: 4px; right: 4px; font-size: 0.6rem;
+            background: #000; padding: 1px 3px; color: var(--accent);
+            border: 1px solid #333;
+        }
+
+        /* --- INSPECTOR --- */
+        #inspector { width: 300px; border-left: 1px solid var(--border); border-right: none; display: none; }
+        #inspector.active { display: flex; }
+        
+        .preview-box {
+            width: 100%; height: 200px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            background-image: linear-gradient(45deg, #111 25%, transparent 25%), linear-gradient(-45deg, #111 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #111 75%), linear-gradient(-45deg, transparent 75%, #111 75%);
+            background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .preview-img { max-width: 90%; max-height: 90%; object-fit: contain; image-rendering: pixelated; }
+        
+        .detail-row { padding: 10px; border-bottom: 1px solid #222; }
+        .detail-label { color: #666; font-size: 0.9rem; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .detail-val { color: #fff; font-size: 1rem; word-break: break-all; }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+        .btn {
+            background: #222; border: 1px solid #444; color: #ccc; padding: 8px;
+            width: 100%; cursor: pointer; font-family: inherit; font-size: 1rem;
+            text-transform: uppercase; text-align: center;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn.danger { border-color: #e74c3c; color: #e74c3c; }
+        .btn.danger:hover { background: #e74c3c; color: #000; }
+
+        /* LOADING */
+        #loading-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 5000; display: none;
+            align-items: center; justify-content: center; flex-direction: column;
+        }
+        .loader-bar { width: 300px; height: 4px; background: #222; margin-top: 10px; overflow: hidden; }
+        .loader-fill { width: 0%; height: 100%; background: var(--accent); transition: width 0.2s; }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <!-- MENUBAR -->
+    <div id="menubar">
+        <div style="color:var(--accent); font-weight:bold; margin-right:20px; letter-spacing:2px;">
+            <i class="fas fa-folder-open"></i> ASSET MANAGER
+        </div>
+        <div class="menu-item" onclick="scanAssets()">File</div>
+        <div class="menu-item">View</div>
+        <div class="menu-item">Help</div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div id="toolbar">
+        <button class="tool-btn" title="Rescan Assets" onclick="scanAssets()"><i class="fas fa-sync-alt"></i></button>
+        <button class="tool-btn" title="Import File" onclick="document.getElementById('upload').click()"><i class="fas fa-file-import"></i></button>
+        <input type="file" id="upload" style="display:none" multiple>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" title="List View"><i class="fas fa-list"></i></button>
+        <button class="tool-btn active" title="Grid View"><i class="fas fa-th-large"></i></button>
+        <div class="tool-sep"></div>
+        <input type="text" id="search" placeholder="Search assets..." oninput="filterSearch(this.value)">
+    </div>
+
+    <!-- LAYOUT -->
+    <div id="layout">
+        
+        <!-- SIDEBAR -->
+        <div id="sidebar" class="panel">
+            <div class="panel-header">LIBRARY <i class="fas fa-book"></i></div>
+            <div class="panel-content">
+                <div class="filter-item active" onclick="filter('all')">
+                    <i class="fas fa-layer-group"></i> ALL <span class="filter-count" id="count-all">0</span>
+                </div>
+                <div class="filter-item" onclick="filter('sprite')">
+                    <i class="fas fa-image"></i> SPRITES <span class="filter-count" id="count-sprite">0</span>
+                </div>
+                <div class="filter-item" onclick="filter('audio')">
+                    <i class="fas fa-music"></i> AUDIO <span class="filter-count" id="count-audio">0</span>
+                </div>
+                <div class="filter-item" onclick="filter('prefab')">
+                    <i class="fas fa-cube"></i> PREFABS <span class="filter-count" id="count-prefab">0</span>
+                </div>
+                <div class="filter-item" onclick="filter('data')">
+                    <i class="fas fa-file-code"></i> DATA <span class="filter-count" id="count-data">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ASSET GRID -->
+        <div id="center-panel">
+            <div id="asset-grid">
+                <!-- Injected -->
+            </div>
+        </div>
+
+        <!-- INSPECTOR -->
+        <div id="inspector" class="panel">
+            <div class="panel-header">DETAILS <i class="fas fa-info-circle"></i></div>
+            <div id="inspector-content" class="panel-content">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading-overlay">
+        <h2 style="color:var(--accent); letter-spacing:2px;">INDEXING FILES SYSTEM...</h2>
+        <div class="loader-bar"><div id="loading-fill" class="loader-fill"></div></div>
+        <div id="loading-text" style="color:#666; font-size:0.9rem; margin-top:5px;">PLEASE WAIT</div>
+    </div>
+
+    <script src="shared/EventBus.js"></script>
+    <script src="shared/AssetManager.js"></script>
+    <script>
+        let assetManager = window.KetebeAssetManager;
+        let allAssets = [];
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let selectedAsset = null;
+
+        async function init() {
+            // Wait for AssetManager to initialize if needed
+            if (!assetManager.assets.size) {
+                await assetManager.loadAssetRegistry();
+            }
+            allAssets = Array.from(assetManager.assets.values());
+            updateCounts();
+            render();
+            
+            // Generate thumbnails for images in background
+            generateThumbnails();
+        }
+
+        async function generateThumbnails() {
+            const images = allAssets.filter(a => a.type === 'image');
+            for (const img of images) {
+                if (!img.metadata.thumbnail) {
+                    await assetManager.generateThumbnail(img.id);
+                    // Update only the specific card if rendered
+                    render(); 
+                }
+            }
+        }
+
+        async function scanAssets() {
+            const overlay = document.getElementById('loading-overlay');
+            const fill = document.getElementById('loading-fill');
+            const text = document.getElementById('loading-text');
+            
+            overlay.style.display = 'flex';
+            fill.style.width = '20%';
+            text.innerText = "Scanning filesystem...";
+
+            try {
+                const res = await fetch('/api/assets/scan', { method: 'POST' });
+                if(res.ok) {
+                    fill.style.width = '60%';
+                    text.innerText = "Rebuilding registry...";
+                    await assetManager.loadAssetRegistry();
+                    allAssets = Array.from(assetManager.assets.values());
+                    updateCounts();
+                    render();
+                    fill.style.width = '100%';
+                    setTimeout(() => overlay.style.display = 'none', 500);
+                    generateThumbnails();
+                } else { throw new Error("Server Error"); }
+            } catch(e) {
+                text.innerText = "ERROR: " + e.message;
+                text.style.color = "#e74c3c";
+                setTimeout(() => overlay.style.display = 'none', 2000);
+            }
+        }
+
+        function updateCounts() {
+            const types = ['all', 'sprite', 'audio', 'prefab', 'data'];
+            types.forEach(t => {
+                const count = t === 'all' ? allAssets.length : allAssets.filter(a => a.type === t || (t === 'sprite' && a.type === 'image')).length;
+                document.getElementById(`count-${t}`).innerText = count;
+            });
+        }
+
+        function filter(type) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-item').forEach(el => el.classList.remove('active'));
+            // Find element that contains the type in its onclick
+            const clicked = Array.from(document.querySelectorAll('.filter-item')).find(el => {
+                const attr = el.getAttribute('onclick');
+                return attr && attr.includes(`'${type}'`);
+            });
+            if(clicked) clicked.classList.add('active');
+            render();
+        }
+
+        function filterSearch(q) {
+            searchQuery = q.toLowerCase();
+            render();
+        }
+
+        function render() {
+            const grid = document.getElementById('asset-grid');
+            grid.innerHTML = '';
+            
+            const filtered = allAssets.filter(a => {
+                const typeMatch = currentFilter === 'all' || a.type === currentFilter || (currentFilter === 'sprite' && a.type === 'image');
+                const nameMatch = a.name.toLowerCase().includes(searchQuery);
+                return typeMatch && nameMatch;
+            });
+
+            filtered.forEach(asset => {
+                const card = document.createElement('div');
+                card.className = 'asset-card';
+                if (selectedAsset && selectedAsset.id === asset.id) card.classList.add('selected');
+                
+                card.onclick = () => selectAsset(asset);
+                
+                let visual = '';
+                if (asset.type === 'image' || asset.type === 'sprite') {
+                    const src = asset.metadata.thumbnail || asset.path;
+                    visual = `<img src="${src}" class="asset-preview">`;
+                } else if (asset.type === 'audio') {
+                    visual = `<div class="asset-preview" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-music asset-icon" style="font-size:32px;margin:0;"></i></div>`;
+                } else if (asset.type === 'prefab') {
+                    visual = `<div class="asset-preview" style="display:flex;align-items:center;justify-content:center;color:#2ecc71;"><i class="fas fa-cube asset-icon" style="font-size:32px;margin:0;color:inherit;"></i></div>`;
+                } else {
+                    visual = `<div class="asset-preview" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-file-code asset-icon" style="font-size:32px;margin:0;"></i></div>`;
+                }
+
+                card.innerHTML = `
+                    ${visual}
+                    <div class="asset-name">${asset.name}</div>
+                    <div class="asset-tag">${asset.type.toUpperCase().substring(0,3)}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function selectAsset(asset) {
+            selectedAsset = asset;
+            render(); 
+            showInspector(asset);
+        }
+
+        function showInspector(asset) {
+            const inspector = document.getElementById('inspector');
+            const content = document.getElementById('inspector-content');
+            inspector.classList.add('active');
+            
+            let preview = '';
+            if (asset.type === 'image' || asset.type === 'sprite') {
+                preview = `<div class="preview-box"><img src="${asset.path}" class="preview-img"></div>`;
+            } else {
+                const icon = asset.type === 'audio' ? 'music' : (asset.type === 'prefab' ? 'cube' : 'file-code');
+                preview = `<div class="preview-box"><i class="fas fa-${icon}" style="font-size:64px; color:#555;"></i></div>`;
+            }
+
+            // Get dependencies
+            const deps = assetManager.getDependencies(asset.id);
+            const dependents = assetManager.getDependents(asset.id);
+
+            content.innerHTML = `
+                ${preview}
+                <div class="detail-row">
+                    <span class="detail-label">Name</span>
+                    <span class="detail-val" style="color:var(--accent); font-weight:bold;">${asset.name}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Type</span>
+                    <span class="detail-val">${asset.type.toUpperCase()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Size</span>
+                    <span class="detail-val">${(asset.size / 1024).toFixed(1)} KB</span>
+                </div>
+                
+                ${deps.length ? `
+                <div class="detail-row">
+                    <span class="detail-label">Depends On</span>
+                    <div style="font-size:0.8rem; color:#888;">${deps.join(', ')}</div>
+                </div>
+                ` : ''}
+
+                ${dependents.length ? `
+                <div class="detail-row">
+                    <span class="detail-label">Used By</span>
+                    <div style="font-size:0.8rem; color:#888;">${dependents.join(', ')}</div>
+                </div>
+                ` : ''}
+
+                <div class="action-grid">
+                    ${getActions(asset)}
+                </div>
+            `;
+        }
+
+        async function handleImport(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            const overlay = document.getElementById('loading-overlay');
+            overlay.style.display = 'flex';
+            
+            for (const file of files) {
+                try {
+                    document.getElementById('loading-text').innerText = `Importing ${file.name}...`;
+                    
+                    // Convert file to base64
+                    const reader = new FileReader();
+                    const dataPromise = new Promise(resolve => {
+                        reader.onload = () => resolve(reader.result);
+                    });
+                    reader.readAsDataURL(file);
+                    const data = await dataPromise;
+
+                    const res = await fetch('/api/assets/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: file.name,
+                            data: data,
+                            type: getAssetType(file.name)
+                        })
+                    });
+
+                    if (res.ok) {
+                        const result = await res.json();
+                        assetManager.registerAsset(result.asset);
+                    }
+                } catch (e) {
+                    console.error("Import failed for " + file.name, e);
+                }
+            }
+
+            allAssets = Array.from(assetManager.assets.values());
+            updateCounts();
+            render();
+            overlay.style.display = 'none';
+        }
+
+        document.getElementById('upload').addEventListener('change', handleImport);
+
+        function getAssetType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) return 'image';
+            if (['mp3', 'wav', 'ogg'].includes(ext)) return 'audio';
+            if (['json', 'js'].includes(ext)) return 'data';
+            return 'other';
+        }
+
+        function getActions(asset) {
+            let btns = `<button class="btn" onclick="copyPath('${asset.path}')">COPY PATH</button>`;
+            
+            if (asset.type === 'sprite') {
+                btns += `<button class="btn" onclick="openTool('pixel_editor', '${asset.path}')">EDIT PIXELS</button>`;
+                btns += `<button class="btn" onclick="createPrefab('${asset.path}')" style="grid-column:span 2; border-color:#2ecc71;">+ CREATE PREFAB</button>`;
+            } else if (asset.type === 'audio') {
+                btns += `<button class="btn" onclick="openTool('audio_tool', '${asset.path}')">EDIT AUDIO</button>`;
+            } else if (asset.type === 'prefab') {
+                btns += `<button class="btn" onclick="openTool('prefab_editor', '${asset.path}')">EDIT PREFAB</button>`;
+            } else {
+                btns += `<button class="btn" onclick="openTool('script_editor', '${asset.path}')">EDIT CODE</button>`;
+            }
+            
+            btns += `<button class="btn danger" onclick="deleteAsset('${asset.name}')" style="grid-column:span 2;">DELETE FILE</button>`;
+            return btns;
+        }
+
+        function copyPath(path) {
+            navigator.clipboard.writeText(path);
+            alert("Path copied to clipboard!");
+        }
+
+        function openTool(tool, path) {
+            // Logic to open tool with param - usually handled by parent
+            if (window.parent && window.parent.openWindow) {
+                // Find tool definition
+                // This is a bit hacky, normally we'd pass an ID
+                alert(`Opening ${tool} with ${path} (Integration Pending)`);
+            } else {
+                alert("Tool integration requires Studio Parent.");
+            }
+        }
+
+        function createPrefab(path) {
+            if(confirm("Create new Entity Prefab using this sprite?")) {
+                window.location.href = `prefab_editor.html?sprite=${encodeURIComponent(path)}`;
+            }
+        }
+
+        function deleteAsset(name) {
+            if(confirm(`Permanently delete ${name}?`)) {
+                alert("Delete logic not linked to file system yet (Safety Mode).");
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

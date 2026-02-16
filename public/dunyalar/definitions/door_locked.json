@@ -1,0 +1,15 @@
+{
+    "components":  [
+                       {
+                           "height":  48,
+                           "width":  48,
+                           "type":  "Collider"
+                       },
+                       {
+                           "scriptId":  "interact_door",
+                           "type":  "Script"
+                       }
+                   ],
+    "name":  "Locked Door",
+    "sprite":  "RF_Catacombs_v1.0/mainlevbuild.png"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "My Awesome Game",
+  "author": "Anonymous",
+  "version": "0.1.0",
+  "description": "A new rpg-topdown game project",
+  "engineType": "rpg-topdown",
+  "template": "base-rpg",
+  "created": "2026-02-11T15:27:46.287Z",
+  "engineVersion": "7.0.1"
+}

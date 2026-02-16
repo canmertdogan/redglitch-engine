@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK CODE FORGE</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="lib/monaco/vs/editor/editor.main.min.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #111;
+            --border: #333;
+            --accent: #f1c40f;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        /* --- MENUBAR --- */
+        #menubar {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0;
+            font-size: 1.1rem; border-bottom: 2px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
+        }
+        .menubar-title {
+            color: var(--accent); font-weight: bold; padding: 0 15px; 
+            border-right: 2px solid var(--border); margin-right: 10px; 
+            font-size: 1.2rem; letter-spacing: 2px; height: 100%;
+            display: flex; align-items: center; gap: 10px;
+        }
+        
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover, .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111; border: 2px solid var(--border);
+            display: none; flex-direction: column; min-width: 200px; box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+            z-index: 4000;
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .drop-opt {
+            padding: 8px 15px; cursor: pointer; color: #aaa; font-size: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .drop-opt:hover { background: #222; color: #fff; border-left: 4px solid var(--accent); }
+        .drop-sep { height: 1px; background: #333; margin: 4px 0; }
+        .shortcut { font-size: 0.8rem; color: #555; margin-left: 20px; }
+
+        /* --- TOOLBAR --- */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px; transition: all 0.1s;
+        }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn:active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* --- SIDEBAR --- */
+        #sidebar { width: 260px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-panel); flex-shrink: 0; }
+        .panel-header {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            text-transform: uppercase; font-size: 1rem; justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
+        }
+        #file-tree { flex-grow: 1; overflow-y: auto; padding: 5px 0; }
+        
+        .tree-node {
+            padding: 4px 10px; cursor: pointer; display: flex; align-items: center;
+            font-size: 1rem; color: #888; border-left: 3px solid transparent;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .tree-node:hover { background: #111; color: #fff; }
+        .tree-node.active { background: #1a1a1a; color: var(--accent); border-left-color: var(--accent); }
+        .tree-node i { width: 20px; text-align: center; margin-right: 5px; opacity: 0.7; }
+        .tree-node .icon { display: inline-block; width: 20px; text-align: center; margin-right: 5px; }
+
+        #sidebar-footer {
+            height: 36px; border-top: 1px solid var(--border); background: #000;
+            display: flex; align-items: center; padding: 0 10px;
+        }
+        .sidebar-btn {
+            background: none; border: none; color: #666; cursor: pointer; font-size: 1rem;
+            display: flex; align-items: center; gap: 8px; font-family: inherit;
+        }
+        .sidebar-btn:hover { color: var(--accent); }
+
+        /* --- EDITOR AREA --- */
+        #center-panel { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas); min-width: 0; position: relative; }
+        
+        #tabs {
+            height: 36px; background: #000; display: flex; overflow-x: auto;
+            border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .tab {
+            height: 100%; padding: 0 15px; display: flex; align-items: center; gap: 8px;
+            background: #0a0a0a; border-right: 1px solid var(--border);
+            color: #666; cursor: pointer; min-width: 120px; max-width: 200px;
+            font-size: 1rem; border-top: 2px solid transparent; user-select: none;
+        }
+        .tab:hover { background: #111; color: #aaa; }
+        .tab.active { background: var(--bg-panel); color: var(--accent); border-top-color: var(--accent); }
+        .tab-close { font-size: 0.9rem; opacity: 0.5; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .tab-close:hover { opacity: 1; background: #e74c3c; color: #fff; }
+
+        #monaco-host { flex-grow: 1; position: relative; }
+
+        /* --- WELCOME SCREEN --- */
+        #welcome-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #444; pointer-events: none; z-index: 10;
+        }
+        .welcome-logo { font-size: 4rem; margin-bottom: 20px; color: #222; }
+        .welcome-text { font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; color: #333; }
+        .welcome-hint { font-size: 1rem; color: #333; margin-top: 10px; }
+
+        /* --- STATUS BAR --- */
+        #status-bar {
+            height: 24px; background: #000; border-top: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; font-size: 0.9rem;
+            color: #666; justify-content: space-between; flex-shrink: 0;
+        }
+        .status-item { display: flex; gap: 15px; }
+        .status-action { cursor: pointer; }
+        .status-action:hover { color: #aaa; }
+        .status-highlight { color: var(--accent); }
+
+        /* --- SETTINGS MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); z-index: 9999; display: none;
+        }
+        .modal-overlay.active { display: block; }
+        
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #0a0a0f; border: 2px solid var(--accent);
+            padding: 20px; z-index: 10000; display: none;
+            width: 500px; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 0 60px rgba(0,0,0,0.9); border-radius: 4px;
+        }
+        .modal.active { display: block; }
+
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+            border-bottom: 1px solid #333; padding-bottom: 10px;
+        }
+        .modal-title { color: var(--accent); font-size: 1.3rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+
+        .settings-group { margin-bottom: 20px; }
+        .group-title { color: #888; text-transform: uppercase; font-size: 0.9rem; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .settings-label { color: #ccc; }
+        
+        select, input[type="number"] {
+            background: #111; border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none; width: 150px;
+        }
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+        
+        .close-btn { background: none; border: none; color: #888; font-size: 1.2rem; cursor: pointer; }
+        .close-btn:hover { color: #fff; }
+
+    </style>
+    <script src="theme.js"></script>
+</head>
+<body>
+
+    <!-- MENUBAR -->
+    <div id="menubar">
+        <div class="menubar-title">
+            <i class="fas fa-code"></i> CODE FORGE
+        </div>
+        
+        <!-- File Menu -->
+        <div class="menu-item-root">
+            <div class="menu-item">File</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="saveActiveFile()"><span>Save</span><span class="shortcut">Ctrl+S</span></div>
+                <div class="drop-opt" onclick="loadTree()"><span>Refresh Tree</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="closeActiveTab()"><span>Close Tab</span><span class="shortcut">Ctrl+W</span></div>
+                <div class="drop-opt" onclick="closeAllTabs()"><span>Close All</span></div>
+            </div>
+        </div>
+
+        <!-- Edit Menu -->
+        <div class="menu-item-root">
+            <div class="menu-item">Edit</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="triggerEditorAction('undo')"><span>Undo</span><span class="shortcut">Ctrl+Z</span></div>
+                <div class="drop-opt" onclick="triggerEditorAction('redo')"><span>Redo</span><span class="shortcut">Ctrl+Y</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="triggerEditorAction('actions.find')"><span>Find</span><span class="shortcut">Ctrl+F</span></div>
+                <div class="drop-opt" onclick="triggerEditorAction('editor.action.startFindReplaceAction')"><span>Replace</span><span class="shortcut">Ctrl+H</span></div>
+            </div>
+        </div>
+
+        <!-- View Menu -->
+        <div class="menu-item-root">
+            <div class="menu-item">View</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="toggleSidebar()"><span>Toggle Sidebar</span><span class="shortcut">Ctrl+B</span></div>
+                <div class="drop-opt" onclick="toggleMinimap()"><span>Toggle Minimap</span></div>
+                <div class="drop-opt" onclick="toggleWordWrap()"><span>Toggle Word Wrap</span><span class="shortcut">Alt+Z</span></div>
+                <div class="drop-sep"></div>
+                <div class="drop-opt" onclick="changeFontSize(1)"><span>Zoom In</span><span class="shortcut">Ctrl+=</span></div>
+                <div class="drop-opt" onclick="changeFontSize(-1)"><span>Zoom Out</span><span class="shortcut">Ctrl+-</span></div>
+            </div>
+        </div>
+        
+        <!-- Help Menu -->
+        <div class="menu-item-root">
+            <div class="menu-item">Help</div>
+            <div class="dropdown">
+                <div class="drop-opt" onclick="showShortcuts()"><span>Keyboard Shortcuts</span></div>
+                <div class="drop-opt" onclick="window.open('https://microsoft.github.io/monaco-editor/', '_blank')"><span>Monaco Docs</span></div>
+            </div>
+        </div>
+
+        <div style="flex-grow:1"></div>
+        <div style="font-size:0.9rem; color:#555; padding-right:15px;">KETEBE.DEV</div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div id="toolbar">
+        <button class="tool-btn" onclick="saveActiveFile()" title="Save (Ctrl+S)"><i class="fas fa-save"></i></button>
+        <button class="tool-btn" onclick="loadTree()" title="Reload Tree"><i class="fas fa-sync-alt"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="triggerEditorAction('undo')" title="Undo"><i class="fas fa-undo"></i></button>
+        <button class="tool-btn" onclick="triggerEditorAction('redo')" title="Redo"><i class="fas fa-redo"></i></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="triggerEditorAction('actions.find')" title="Find (Ctrl+F)"><i class="fas fa-search"></i></button>
+        <button class="tool-btn" onclick="showSettings()" title="Settings"><i class="fas fa-cog"></i></button>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div id="layout">
+        
+        <!-- SIDEBAR -->
+        <div id="sidebar">
+            <div class="panel-header">
+                <span>EXPLORER <i class="fas fa-folder"></i></span>
+                <i class="fas fa-sync-alt" style="cursor:pointer; opacity:0.5;" onclick="loadTree()"></i>
+            </div>
+            <div id="file-tree"></div>
+            <div id="sidebar-footer">
+                <button class="sidebar-btn" onclick="showSettings()">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- EDITOR -->
+        <div id="center-panel">
+            <div id="tabs"></div>
+            <div id="monaco-host">
+                <div id="welcome-screen">
+                    <i class="fas fa-code welcome-logo"></i>
+                    <div class="welcome-text">Code Forge</div>
+                    <div class="welcome-hint">Select a file from the explorer to begin</div>
+                    <div style="margin-top:20px; font-size:0.9rem; color:#444;">Ctrl+P to Quick Open (Coming Soon)</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- STATUS BAR -->
+    <div id="status-bar">
+        <div class="status-item">
+            <span class="status-action" onclick="toggleSidebar()"><i class="fas fa-columns"></i></span>
+            <span id="status-msg" class="status-highlight">READY</span>
+        </div>
+        <div class="status-item">
+            <span id="cursor-pos">LN 1, COL 1</span>
+            <span id="indent-status" class="status-action" onclick="showSettings()">Space: 4</span>
+            <span id="lang-status">Plain Text</span>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeSettings()"></div>
+    <div class="modal" id="settings-modal">
+        <div class="modal-header">
+            <span class="modal-title">Editor Settings</span>
+            <button class="close-btn" onclick="closeSettings()"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div class="settings-group">
+            <div class="group-title">Appearance</div>
+            <div class="settings-row">
+                <span class="settings-label">Theme</span>
+                <select id="set-theme" onchange="updateSetting('theme', this.value)">
+                    <option value="vs-dark">VS Dark</option>
+                    <option value="vs">VS Light</option>
+                    <option value="hc-black">High Contrast</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Font Family</span>
+                <select id="set-font" onchange="updateSetting('fontFamily', this.value)">
+                    <option value="'JetBrains Mono', Consolas, monospace">JetBrains Mono</option>
+                    <option value="'Fira Code', monospace">Fira Code</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Font Size (px)</span>
+                <input type="number" id="set-fontsize" value="14" min="8" max="32" onchange="updateSetting('fontSize', this.value)">
+            </div>
+        </div>
+
+        <div class="settings-group">
+            <div class="group-title">Behavior</div>
+            <div class="settings-row">
+                <span class="settings-label">Word Wrap</span>
+                <input type="checkbox" id="set-wordwrap" onchange="updateSetting('wordWrap', this.checked)">
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Minimap</span>
+                <input type="checkbox" id="set-minimap" onchange="updateSetting('minimap', this.checked)">
+            </div>
+            <div class="settings-row">
+                <span class="settings-label">Auto-Save</span>
+                <input type="checkbox" id="set-autosave" onchange="updateSetting('autoSave', this.checked)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Integration System -->
+    <script src="/shared/EventBus.js"></script>
+    <script src="/shared/SharedProjectState.js"></script>
+    <script src="/shared/AssetManager.js"></script>
+
+    <script src="lib/monaco/vs/loader.min.js"></script>
+    <script src="script_editor.js"></script>
+</body>
+</html>

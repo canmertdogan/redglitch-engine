@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KETEBE GAME STUDIO - CREDITS</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <script src="theme.js"></script>
+    <style>
+        :root {
+            --bg-deep: #060910;
+            --accent: #f1c40f;
+            --text: #cfd8dc;
+            --crt-glow: rgba(241, 196, 15, 0.2);
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-deep);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .mouse-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(241, 196, 15, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 5;
+            transform: translate(-50%, -50%);
+        }
+
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 11;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 6s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+
+        .helper-monster {
+            position: fixed;
+            right: 50px;
+            bottom: 50px;
+            width: 128px;
+            height: 128px;
+            background-image: url('sprite-art/helper.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+            z-index: 15;
+            animation: float 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px var(--accent));
+        }
+
+        .credits-container {
+            width: 80%;
+            height: 80%;
+            position: relative;
+            perspective: 500px;
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+        }
+
+        .credits-scroll {
+            position: absolute;
+            width: 100%;
+            top: 100%;
+            animation: scroll 80s linear infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        @keyframes scroll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-400%); }
+        }
+
+        .section {
+            margin-bottom: 100px;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--accent);
+            animation: glitch 5s infinite;
+        }
+
+        h2 {
+            color: var(--accent);
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            text-decoration: underline;
+        }
+
+        .name {
+            font-size: 2rem;
+            margin: 10px 0;
+            color: #fff;
+            transition: color 0.3s;
+        }
+
+        .name:hover {
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent);
+        }
+
+        .role {
+            font-size: 1.5rem;
+            color: var(--accent);
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+
+        .binary-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 600px;
+        }
+
+        .binary-item {
+            border: 2px solid var(--accent);
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            background: rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+        }
+
+        .binary-item:hover {
+            background: var(--accent);
+            color: #000;
+            transform: scale(1.1);
+        }
+
+        .back-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            padding: 10px 30px;
+            background: transparent;
+            border: 3px solid var(--accent);
+            color: var(--accent);
+            font-family: inherit;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        pre {
+            font-size: 0.8rem;
+            line-height: 1;
+            color: var(--accent);
+            margin-bottom: 50px;
+            filter: drop-shadow(0 0 5px var(--accent));
+        }
+    </style>
+</head>
+<body>
+    <canvas id="starfield"></canvas>
+    <div class="mouse-glow" id="mouse-glow"></div>
+    <div class="crt-overlay"></div>
+    <div class="scanline"></div>
+    <div class="helper-monster"></div>
+
+    <a href="index.html" class="back-btn">< BACK</a>
+
+    <div class="credits-container">
+        <div class="credits-scroll">
+            
+            <pre>
+██╗  ██╗███████╗████████╗███████╗██████╗ ███████╗
+██║ ██╔╝██╔════╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
+█████╔╝ █████╗     ██║   █████╗  ██████╔╝█████╗  
+██╔═██╗ ██╔══╝     ██║   ██╔══╝  ██╔══██╗██╔══╝  
+██║  ██╗███████╗   ██║   ███████╗██████╔╝███████╗
+╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═════╝ ╚══════╝
+                                                                        
+███████╗███╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗                        
+██╔════╝████╗  ██║██╔════╝ ██║████╗  ██║██╔════╝                        
+█████╗  ██╔██╗ ██║██║  ███╗██║██╔██╗ ██║█████╗                          
+██╔══╝  ██║╚██╗██║██║   ██║██║██║╚██╗██║██╔══╝                          
+███████╗██║ ╚████║╚██████╔╝██║██║ ╚████║███████╗                        
+╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝                        
+            </pre>
+
+            <div class="section">
+                <h1>KETEBE GAME STUDIO</h1>
+                <p class="role">EST. 2026</p>
+            </div>
+
+            <div class="section">
+                <h2>CORE ARCHITECT</h2>
+                <div class="name">Şeref Can MERTDOĞAN</div>
+                <div class="role">Engine Architecture, Core Systems & Shaders</div>
+            </div>
+
+            <div class="section">
+                <h2>ART & DESIGN</h2>
+                <div class="name">Esra BULAKBASAR</div>
+                <div class="role">Lead Asset Designer</div>
+                <div class="name">Alara KANLI</div>
+                <div class="role">The Muse & Visionary<br>
+                <span style="font-size: 1.1rem; opacity: 0.7;">Original "Let's make a game!" Concept Creator<br>
+                Artist of the 'Helper Monster'<br>
+                Engine Name Inspiration</span></div>
+                <div class="name">KETEBE TEAM</div>
+                <div class="role">Pixel Art, Animation & World Building</div>
+            </div>
+
+            <div class="section">
+                <h2>V8 RUNTIME</h2>
+                <p>The core engine block powering the universe</p>
+                <div class="binary-list">
+                    <div class="binary-item">ELECTRON JS</div>
+                    <div class="binary-item">NODE.JS</div>
+                    <div class="binary-item">V8 ENGINE</div>
+                    <div class="binary-item">CHROMIUM</div>
+                    <div class="binary-item">EXPRESS.JS</div>
+                    <div class="binary-item">NPM</div>
+                    <div class="binary-item">GIT</div>
+                    <div class="binary-item">GO-FONT (VT323)</div>
+                    <div class="binary-item">PIXI.JS (INSPIRATION)</div>
+                    <div class="binary-item">WEBAUDIO API</div>
+                    <div class="binary-item">WEBGL 2.0</div>
+                    <div class="binary-item">VS CODE</div>
+                    <div class="binary-item">GITHUB</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>SPECIAL THANKS</h2>
+                <p>To all the explorers of the Ketebe multiverse.</p>
+                <p>And to Open Source community for making this possible.</p>
+            </div>
+
+            <div class="section">
+                <p style="opacity: 0.5;">COPYRIGHT © 2026 KETEBE GAME STUDIO. ALL RIGHTS RESERVED.</p>
+                <p style="color: var(--accent); font-size: 2rem;">STAY RETRO.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Use the theme system
+        initTheme();
+
+        // Starfield Canvas
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initStars();
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    speed: Math.random() * 0.5 + 0.1,
+                    opacity: Math.random()
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            stars.forEach(star => {
+                ctx.globalAlpha = star.opacity;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+                star.y += star.speed;
+                if (star.y > canvas.height) star.y = 0;
+            });
+            requestAnimationFrame(drawStars);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        drawStars();
+
+        // Mouse Glow
+        const glow = document.getElementById('mouse-glow');
+        window.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+    </script>
+</body>
+</html>

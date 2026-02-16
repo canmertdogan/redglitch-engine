@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ONGONLUK GLOBAL SEARCH</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg: #05080f;
+            --panel: #0d1117;
+            --accent: #f1c40f;
+            --text: #cfd8dc;
+            --border: #1f2937;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 20px; background: var(--bg); color: var(--text);
+            font-family: 'VT323', monospace; font-size: 1.2rem;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .header { font-size: 1.8rem; color: var(--accent); margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+        
+        .search-box {
+            background: var(--panel); border: 2px solid var(--border); padding: 15px;
+            display: flex; gap: 10px; margin-bottom: 20px;
+        }
+        input {
+            flex-grow: 1; background: #000; border: 1px solid #444; color: #fff;
+            padding: 8px 12px; font-family: inherit; font-size: 1.2rem; outline: none;
+        }
+        input:focus { border-color: var(--accent); }
+        
+        button {
+            background: var(--accent); color: #000; border: none; padding: 8px 20px;
+            font-family: inherit; font-size: 1.2rem; cursor: pointer; font-weight: bold;
+        }
+        button:hover { background: #fff; }
+
+        #results {
+            flex-grow: 1; overflow-y: auto; background: #000; border: 1px solid var(--border);
+            padding: 10px;
+        }
+        .result-item {
+            padding: 10px; border-bottom: 1px solid #161b22; cursor: pointer;
+        }
+        .result-item:hover { background: #0d1117; }
+        .file-path { color: var(--accent); font-weight: bold; margin-bottom: 4px; }
+        .line-text { color: #8fa0bc; font-size: 1rem; font-family: 'Consolas', monospace; white-space: pre; }
+        .line-num { color: #546e7a; margin-right: 10px; }
+
+        .status { padding: 5px 0; color: #546e7a; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="header"><i class="fas fa-search"></i> GLOBAL PROJECT SEARCH</div>
+    
+    <div class="search-box">
+        <input type="text" id="query" placeholder="SEARCH FOR STRINGS, FUNCTIONS, IDS..." onkeydown="if(event.key==='Enter') doSearch()">
+        <button onclick="doSearch()">SEARCH</button>
+    </div>
+
+    <div class="status" id="status">Ready to scan files...</div>
+    
+    <div id="results">
+        <div style="text-align:center; margin-top:50px; color:#333;">NO RESULTS YET</div>
+    </div>
+
+    <script>
+        async function doSearch() {
+            const q = document.getElementById('query').value;
+            if(!q) return;
+
+            const resDiv = document.getElementById('results');
+            const status = document.getElementById('status');
+            
+            resDiv.innerHTML = '<div style="text-align:center; margin-top:50px; color:var(--accent);">SCANNING FILES...</div>';
+            status.innerText = `Searching for "${q}"...`;
+
+            try {
+                const res = await fetch(`/api/ide/search?query=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                
+                resDiv.innerHTML = '';
+                if (data.length === 0) {
+                    resDiv.innerHTML = '<div style="text-align:center; margin-top:50px; color:#e74c3c;">NO MATCHES FOUND</div>';
+                    status.innerText = 'Search complete: 0 matches.';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'result-item';
+                    div.innerHTML = `
+                        <div class="file-path">${item.file}</div>
+                        <div class="line-text"><span class="line-num">${item.line}:</span>${item.text.replace(/</g,'&lt;')}</div>
+                    `;
+                    div.onclick = () => {
+                        if (window.parent && window.parent.openWindow) {
+                            // If it's a script, open in script editor
+                            if (item.file.endsWith('.js')) {
+                                window.parent.openWindow({id:'script', title:'Scripting', icon:'💻', src:'script_editor.html?file=' + item.file});
+                            } else {
+                                alert("Feature coming soon: Opening non-JS files directly from search.");
+                            }
+                        }
+                    };
+                    resDiv.appendChild(div);
+                });
+
+                status.innerText = `Search complete: found ${data.length} matches.`;
+            } catch(e) {
+                resDiv.innerHTML = '<div style="text-align:center; margin-top:50px; color:#e74c3c;">SEARCH FAILED</div>';
+            }
+        }
+    </script>
+</body>
+</html>
