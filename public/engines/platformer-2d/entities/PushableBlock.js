@@ -3,7 +3,7 @@
  * An entity that can be pushed by the player and is affected by physics.
  */
 
-class PushableBlock extends Entity {
+class PlatformerPushableBlock extends PlatformerEntity {
     constructor(x, y, w = 32, h = 32) {
         super(x * 32, y * 32, w, h);
         this.color = '#7f8c8d';
@@ -40,4 +40,4 @@ class PushableBlock extends Entity {
     }
 }
 
-window.PushableBlock = PushableBlock;
+window.PlatformerPushableBlock = PlatformerPushableBlock;

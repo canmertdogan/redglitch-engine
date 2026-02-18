@@ -1,4 +1,4 @@
-class Player extends Entity {
+class PlatformerPlayer extends PlatformerEntity {
     constructor(x, y) {
         super(x, y, 24, 32);
         this.color = '#e74c3c';
@@ -323,4 +323,4 @@ class Player extends Entity {
     }
 }
 
-window.Player = Player;
+window.PlatformerPlayer = PlatformerPlayer;

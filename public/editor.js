@@ -84,7 +84,161 @@ function updateProgress(percent, text) {
     }
 }
 
+// Integration system references
+let eventBus, projectState, studioBridge;
+
+function initializeWorldIntegration() {
+    if (typeof window !== 'undefined') {
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        
+        if (eventBus) {
+            // Initialize StudioBridge for IRAB
+            if (window.StudioBridge) {
+                studioBridge = new window.StudioBridge('world', eventBus);
+                registerWorldTools();
+            }
+
+            // Phase 9: Thought Visualization
+            eventBus.on('studio:visual:ghost', (data) => {
+                editorState.aiGhost = data;
+                render();
+            });
+
+            eventBus.on('studio:visual:clear', () => {
+                editorState.aiGhost = null;
+                render();
+            });
+
+            console.log('[WorldEditor] EventBus connected');
+        }
+    }
+}
+
+/**
+ * Register IRAB tools for World Builder
+ */
+function registerWorldTools() {
+    // world.spawn
+    studioBridge.register({
+        name: 'spawn',
+        description: 'Spawn an entity, NPC, or prop at specific coordinates.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                type: { type: 'string', description: 'Type of entity (npc, enemy, chest, tree, etc.)' },
+                data: { type: 'string', description: 'Optional ID or data for the entity' }
+            },
+            required: ['x', 'y', 'type']
+        },
+        execute: async (args) => {
+            const { x, y, type, data } = args;
+            // Remove existing at this spot
+            map.decorations = map.decorations.filter(d => d.x !== x || d.y !== y);
+            
+            if (type === 'spawn') {
+                map.spawn = { x, y };
+            } else if (type === 'exit') {
+                map.exit = { x, y, data: data || "" };
+            } else {
+                map.decorations.push({ x, y, type, data: data || "" });
+            }
+            render();
+            return { success: true };
+        }
+    });
+
+    // world.setTile
+    studioBridge.register({
+        name: 'setTile',
+        description: 'Set a specific tile ID at map coordinates.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                tileID: { type: 'number' },
+                layer: { type: 'number', default: 0 }
+            },
+            required: ['x', 'y', 'tileID']
+        },
+        execute: async (args) => {
+            const { x, y, tileID, layer } = args;
+            if (x < 0 || x >= map.width || y < 0 || y >= map.height) throw new Error("Out of bounds");
+            
+            const targetLayer = layer || 0;
+            if (!map.layers[targetLayer]) {
+                while(map.layers.length <= targetLayer) {
+                    map.layers.push(new Array(map.width * map.height).fill(null));
+                }
+            }
+            
+            map.layers[targetLayer][y * map.width + x] = tileID;
+            render();
+            return { success: true };
+        }
+    });
+
+    // world.drawRect
+    studioBridge.register({
+        name: 'drawRect',
+        description: 'Fill a rectangular area with a specific tile.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                w: { type: 'number' },
+                h: { type: 'number' },
+                tileID: { type: 'number' },
+                layer: { type: 'number', default: 0 }
+            },
+            required: ['x', 'y', 'w', 'h', 'tileID']
+        },
+        execute: async (args) => {
+            const { x, y, w, h, tileID, layer } = args;
+            const targetLayer = layer || 0;
+            
+            for (let iy = y; iy < y + h; iy++) {
+                for (let ix = x; ix < x + w; ix++) {
+                    if (ix >= 0 && ix < map.width && iy >= 0 && iy < map.height) {
+                        map.layers[targetLayer][iy * map.width + ix] = tileID;
+                    }
+                }
+            }
+            render();
+            return { success: true };
+        }
+    });
+
+    // world.save
+    studioBridge.register({
+        name: 'save',
+        description: 'Save the current world to the server.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Optional name to save as.' }
+            }
+        },
+        execute: async (args) => {
+            if (args.name) {
+                document.getElementById('level-name').value = args.name;
+            }
+            await saveToServer(false);
+            return { success: true, message: `World ${map.name} saved.` };
+        }
+    });
+}
+
 window.onload = async () => {
+    initializeWorldIntegration();
     updateProgress(10, "CONNECTING INTERFACES...");
     
     document.getElementById('tile-search').addEventListener('input', (e) => filterPalette(e.target.value));
@@ -510,6 +664,25 @@ function renderStandard(ts) {
     });
     if(map.spawn) drawObject({type:'spawn'}, map.spawn.x*ts+ts/2, map.spawn.y*ts+ts/2, ts);
     if(map.exit) drawObject({type:'exit'}, map.exit.x*ts+ts/2, map.exit.y*ts+ts/2, ts);
+
+    // Phase 9: AI Ghost Visualization
+    if (editorState.aiGhost) {
+        const { x, y } = editorState.aiGhost;
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#f1c40f'; // Gold
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x * ts, y * ts, ts, ts);
+        ctx.fillRect(x * ts, y * ts, ts, ts);
+        
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText("IRAB INTENT", x * ts + ts/2, y * ts - 5);
+        ctx.restore();
+    }
     
     if(window.fx) window.fx.render(0,0);
 }

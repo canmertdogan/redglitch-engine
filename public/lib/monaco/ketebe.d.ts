@@ -63,10 +63,55 @@ declare namespace ketebe {
     }
 
     /**
-     * Ketebe AI Micro Edition API
-     * Local-first AI Assistant for the Ketebe Studio
+     * Ketebe AI Action Protocol (KAP)
+     * Standardized bridge for AI ↔ Studio tool communication
      */
     namespace ai {
+        /**
+         * Security classification for AI-driven actions.
+         */
+        type ActionSecurityLevel = 'safe' | 'low-risk' | 'high-risk';
+
+        /**
+         * Standard request format for a tool action.
+         */
+        interface ActionRequest {
+            /** Unique ID for tracking the request/response lifecycle */
+            id: string;
+            /** The tool's namespace and method (e.g., 'isopixel.setPixel') */
+            method: string;
+            /** Arguments matching the tool's defined schema */
+            params: Record<string, any>;
+            /** Timestamp of the request */
+            timestamp: number;
+        }
+
+        /**
+         * Standard response format for a tool action.
+         */
+        interface ActionResponse {
+            /** Matches the ID of the original ActionRequest */
+            id: string;
+            /** True if the action was executed successfully */
+            success: boolean;
+            /** The result data from the tool */
+            result?: any;
+            /** Error details if success is false */
+            error?: ActionError;
+        }
+
+        /**
+         * Standard error format for tool actions.
+         */
+        interface ActionError {
+            /** Short machine-readable error code */
+            code: string;
+            /** Human-readable error message for the user/AI */
+            message: string;
+            /** Optional extra context for debugging */
+            data?: any;
+        }
+
         interface KetebeAI {
             /**
              * Initialize the AI system (lazy-loaded).
@@ -135,16 +180,29 @@ declare namespace ketebe {
         }
 
         interface ToolRegistry {
+            /** Register a new capability with the AI system */
             register(tool: ToolDefinition): void;
-            execute(name: string, args: any): Promise<any>;
+            /** Execute a tool by name (e.g., 'isopixel.drawRect') */
+            execute(name: string, args: any): Promise<ActionResponse>;
+            /** Get a list of all tools currently available to the AI */
+            listTools(): ToolDefinition[];
         }
 
         interface ToolDefinition {
+            /** The name of the tool, including namespace (e.g., 'fs.writeFile') */
             name: string;
+            /** Detailed description for the LLM to understand when to use it */
             description: string;
+            /** Security tier (defaults to 'high-risk' if not specified) */
+            securityLevel?: ActionSecurityLevel;
+            /** Manual confirmation required before execution (overrides security level defaults) */
             requiresConfirmation?: boolean;
-            parameters: any; // JSON Schema
+            /** JSON Schema of the parameters this tool accepts */
+            parameters: any;
+            /** The actual implementation function */
             execute: (args: any) => Promise<any>;
+            /** Optional function to reverse the action */
+            undo?: (args: any, result: any) => Promise<void>;
         }
     }
 }

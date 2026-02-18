@@ -1323,7 +1323,14 @@
             console.error = function(...args) {
                 diagnostics.errors++;
                 updateDiagnosticsUI();
-                capture(args.map(a => String(a)).join(' '), 'error');
+                const msg = args.map(a => String(a)).join(' ');
+                capture(msg, 'error');
+                
+                // Phase 10: Emit to EventBus for AI Co-Pilot
+                if (window.KetebeEventBus) {
+                    window.KetebeEventBus.emit('editor:error', { message: msg });
+                }
+                
                 originalError.apply(console, args);
             };
             
@@ -1990,6 +1997,10 @@
     <script src="/shared/EventBus.js"></script>
     <script src="/shared/SharedProjectState.js"></script>
     <script src="/shared/AssetManager.js"></script>
+    <script type="module">
+        import { ThoughtVisualizer } from '/ai/ui/thought-visualizer.js';
+        window.KetebeThoughtVisualizer = new ThoughtVisualizer(window.KetebeEventBus);
+    </script>
     <script>
         // --- Activity Logging Hook ---
         const _originalOpenWindow = openWindow;

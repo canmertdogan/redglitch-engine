@@ -57,6 +57,13 @@ if (typeof window.IrabBridge === 'undefined') {
                     this.isConnected = false;
                     // No need to log full error here as it triggers onclose
                 };
+
+                // Forward sync events from EventBus to WebSocket
+                if (window.KetebeEventBus) {
+                    window.KetebeEventBus.on('ai:command:sync', (msg) => {
+                        this.send(msg);
+                    });
+                }
             } catch (e) {
                 console.error("[IrabBridge] Connection attempt failed:", e);
             }
@@ -73,6 +80,15 @@ if (typeof window.IrabBridge === 'undefined') {
                 case "COMMAND":
                     console.log("[IrabBridge] Received command:", msg.data);
                     if (this.onCommand) this.onCommand(msg.data);
+                    
+                    // Phase 10: Emit to Universal Tool Registry
+                    if (window.KetebeEventBus) {
+                        window.KetebeEventBus.emit('ai:command:request', {
+                            id: 'native_' + Date.now(),
+                            method: msg.data.action,
+                            params: msg.data.params
+                        });
+                    }
                     break;
                 case "LOAD_PROGRESS":
                     if (this.onLoadProgress) this.onLoadProgress(msg.data);

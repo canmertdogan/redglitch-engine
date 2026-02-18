@@ -1,4 +1,4 @@
-class MovingPlatform extends Entity {
+class PlatformerMovingPlatform extends PlatformerEntity {
     constructor(x, y, w = 64, h = 16) {
         super(x * 32, y * 32, w, h);
         this.color = '#3498db';
@@ -59,4 +59,4 @@ class MovingPlatform extends Entity {
     }
 }
 
-window.MovingPlatform = MovingPlatform;
+window.PlatformerMovingPlatform = PlatformerMovingPlatform;

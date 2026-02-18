@@ -218,6 +218,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "TOKEN",
                     "data": "\n[System] Brain reconfigured successfully."
                 }, websocket)
+            elif msg_type == "SYNC_TOOLS":
+                tools = message.get("data", [])
+                logger.info(f"Syncing {len(tools)} tools from Studio.")
+                if hasattr(brain, 'update_tools'):
+                    brain.update_tools(tools)
+                else:
+                    logger.warning("Brain does not support update_tools yet.")
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -277,10 +284,37 @@ async def handle_prompt(message, websocket):
         logger.info("Starting token generation...")
         KNOWN_COMMANDS = {'openTool', 'injectCode', 'nudge', 'wink', 'listFiles'}
         
+        in_tool_block = False
+        tool_buffer = ""
+
         for token in brain.generate_stream(augmented_prompt):
             if not token: continue
             full_response += token
             
+            # --- Phase 8: KAP Protocol Detection (JSON tool blocks) ---
+            if "```tool" in full_response and not in_tool_block:
+                in_tool_block = True
+            
+            if in_tool_block:
+                tool_buffer += token
+                if "```" in tool_buffer.split("```tool")[-1]:
+                    # Block finished
+                    try:
+                        json_str = tool_buffer.split("```tool")[1].split("```")[0].strip()
+                        call = json.loads(json_str)
+                        logger.info(f"KAP Action Detected: {call.get('name')}")
+                        await manager.send_personal_message({
+                            "type": "COMMAND",
+                            "data": {"action": call.get("name"), "params": call.get("args", {})}
+                        }, websocket)
+                    except Exception as e:
+                        logger.error(f"Failed to parse KAP JSON: {e}")
+                    
+                    in_tool_block = False
+                    tool_buffer = ""
+                    full_response = full_response.split("```")[-1] 
+                    continue
+
             # Skip this token if it's part of a prompt leak
             if any(phrase in full_response[-100:] for phrase in PROMPT_LEAK_PHRASES):
                 continue
@@ -328,7 +362,7 @@ async def handle_prompt(message, websocket):
                 continue
 
             # Only send token if we are not in the middle of a command bracket
-            if "[[" not in full_response:
+            if "[[" not in full_response and not in_tool_block:
                 await manager.send_personal_message({"type": "TOKEN", "data": token}, websocket)
             
             await asyncio.sleep(0)

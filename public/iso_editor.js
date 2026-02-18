@@ -2,15 +2,39 @@
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
-let eventBus, projectState, assetManager;
+let eventBus, projectState, assetManager, studioBridge;
 
-function initializeIsoIntegration() {
+async function initializeIsoIntegration() {
     if (typeof window !== 'undefined') {
+        // Wait for EventBus to be ready if needed
+        if (!window.KetebeEventBus) {
+            await new Promise(r => setTimeout(r, 500));
+        }
+
         eventBus = window.KetebeEventBus;
         projectState = window.KetebeProjectState;
         assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
+            // Initialize StudioBridge for IRAB
+            if (window.StudioBridge) {
+                studioBridge = new window.StudioBridge('pixel', eventBus);
+                registerPixelTools();
+                // Ensure tools are announced
+                studioBridge.announceAll();
+            }
+
+            // --- Phase 9: Thought Visualization ---
+            eventBus.on('studio:visual:ghost', (data) => {
+                state.aiGhost = data;
+                render();
+            });
+
+            eventBus.on('studio:visual:clear', () => {
+                state.aiGhost = null;
+                render();
+            });
+
             // Listen for tile/sprite updates
             eventBus.on('asset:sprite:*', (event) => {
                 console.log('[IsoEditor] Sprite asset updated:', event.data);
@@ -24,6 +48,198 @@ function initializeIsoIntegration() {
             console.log('[IsoEditor] EventBus connected');
         }
     }
+}
+
+/**
+ * Register IRAB tools for IsoPixel Studio
+ */
+function registerPixelTools() {
+    // pixel.setPixel (Standardize as 'placeBlock')
+    studioBridge.register({
+        name: 'placeBlock',
+        description: 'Place a specific tile/block at map coordinates.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                z: { type: 'number', default: 0 },
+                tileID: { type: 'number', description: 'The texture ID to place.' },
+                shape: { type: 'number', description: 'Shape ID (0=Block, 1=Half, 2-5=Slopes)', default: 0 }
+            },
+            required: ['x', 'y', 'tileID']
+        },
+        execute: async (args) => {
+            const oldZ = state.currentZ;
+            const oldTile = state.selectedTileID;
+            const oldShape = state.selectedShape;
+            
+            state.currentZ = args.z || 0;
+            state.selectedTileID = args.tileID;
+            state.selectedShape = args.shape || 0;
+            
+            state.mouseMapPos = { x: args.x, y: args.y };
+            paint(); // paint() uses mouseMapPos and state
+            
+            state.currentZ = oldZ;
+            state.selectedTileID = oldTile;
+            state.selectedShape = oldShape;
+            render();
+            return { success: true };
+        }
+    });
+
+    // pixel.drawRect
+    studioBridge.register({
+        name: 'drawRect',
+        description: 'Fill a rectangular area with a specific tile.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                w: { type: 'number' },
+                h: { type: 'number' },
+                z: { type: 'number', default: 0 },
+                tileID: { type: 'number' }
+            },
+            required: ['x', 'y', 'w', 'h', 'tileID']
+        },
+        execute: async (args) => {
+            const oldZ = state.currentZ;
+            const oldTile = state.selectedTileID;
+            state.currentZ = args.z || 0;
+            state.selectedTileID = args.tileID;
+            
+            for (let iy = args.y; iy < args.y + args.h; iy++) {
+                for (let ix = args.x; ix < args.x + args.w; ix++) {
+                    state.mouseMapPos = { x: ix, y: iy };
+                    paint();
+                }
+            }
+            
+            state.currentZ = oldZ;
+            state.selectedTileID = oldTile;
+            render();
+            return { success: true };
+        }
+    });
+
+    // pixel.generateTerrain
+    studioBridge.register({
+        name: 'generateTerrain',
+        description: 'Generate procedural terrain using Noise (Simplex/Perlin).',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                mode: { type: 'string', enum: ['islands', 'mountains', 'plains', 'void'], default: 'islands' },
+                scale: { type: 'number', default: 0.05 },
+                amplitude: { type: 'number', default: 10 }
+            }
+        },
+        execute: async (args) => {
+            // Set UI values so runGenerator sees them
+            document.getElementById('gen-mode').value = args.mode || 'islands';
+            document.getElementById('gen-scale').value = args.scale || 0.05;
+            document.getElementById('gen-amp').value = args.amplitude || 10;
+            
+            // runGenerator has a confirm(), we'll bypass it for AI if we wanted, 
+            // but for now we follow the plan's "supervised" logic.
+            // Actually, execute() is already approved by the PermissionGate.
+            const gen = new IsoGenerator();
+            const result = gen.generate(map.width, map.height, { 
+                mode: args.mode || 'islands', 
+                scale: args.scale || 0.05, 
+                amplitude: args.amplitude || 10,
+                seaLevel: parseInt(document.getElementById('gen-sea').value),
+                offset: parseInt(document.getElementById('gen-offset').value),
+                bottomZ: parseInt(document.getElementById('gen-bottom').value)
+            });
+            
+            map.layers = result.layers;
+            map.z = result.z;
+            map.shapes = result.shapes;
+            state.activeLayer = 0;
+            updateLayerList();
+            render();
+            return { success: true, message: 'Terrain generated' };
+        }
+    });
+
+    // pixel.generateVegetation
+    studioBridge.register({
+        name: 'generateVegetation',
+        description: 'Add procedural vegetation (trees, grass) to the current map.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                type: { type: 'string', enum: ['forest', 'sparse', 'jungle'], default: 'forest' },
+                density: { type: 'number', default: 0.1 }
+            }
+        },
+        execute: async (args) => {
+            const gen = new IsoGenerator();
+            const result = gen.generateVegetation(map.width, map.height, map.layers, map.z, { 
+                type: args.type || 'forest', 
+                density: args.density || 0.1 
+            });
+            map.layers = result.layers;
+            map.z = result.z;
+            render();
+            return { success: true, message: 'Vegetation generated' };
+        }
+    });
+
+    // pixel.spawnNPC
+    studioBridge.register({
+        name: 'spawnNPC',
+        description: 'Place an NPC at specific map coordinates.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                z: { type: 'number', default: 0 },
+                npcID: { type: 'string', description: 'The ID of the NPC definition to use.' }
+            },
+            required: ['x', 'y', 'npcID']
+        },
+        execute: async (args) => {
+            const { x, y, z, npcID } = args;
+            map.decorations = map.decorations.filter(d => d.x !== x || d.y !== y);
+            map.decorations.push({ x, y, z: z || 0, type: 'npc', id: npcID });
+            render();
+            return { success: true, message: `Spawned NPC ${npcID} at (${x}, ${y})` };
+        }
+    });
+
+    // pixel.placePrefab
+    studioBridge.register({
+        name: 'placePrefab',
+        description: 'Place a pre-defined structure (prefab) at map coordinates.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                x: { type: 'number' },
+                y: { type: 'number' },
+                prefabID: { type: 'string', description: 'The name of the prefab file.' }
+            },
+            required: ['x', 'y', 'prefabID']
+        },
+        execute: async (args) => {
+            const { x, y, prefabID } = args;
+            map.decorations = map.decorations.filter(d => d.x !== x || d.y !== y);
+            map.decorations.push({ x, y, type: 'prefab', data: prefabID });
+            render();
+            return { success: true, message: `Placed prefab ${prefabID} at (${x}, ${y})` };
+        }
+    });
 }
 
 function broadcastMapUpdate(mapName, action = 'updated') {
@@ -972,7 +1188,7 @@ function updateProgress(percent, text) {
 // --- INIT ---
 window.onload = async () => {
     // Initialize integration first
-    initializeIsoIntegration();
+    await initializeIsoIntegration();
     
     updateProgress(10, "INITIALIZING SYSTEM...");
     console.log("[IsoStudio] Initializing...");
@@ -1205,6 +1421,39 @@ function render() {
         showGrid: document.getElementById('show-grid').checked,
         show3DGuides: document.getElementById('show-guides').checked
     }, CONFIG, tileset, window.SPRITES);
+
+    // Phase 9: AI Ghost Visualization
+    if (state.aiGhost) {
+        const { x, y, z } = state.aiGhost;
+        const dims = getDims();
+        const screen = state.strategy.project(x, y, z, CONFIG, state, canvas);
+        
+        targetCtx.save();
+        targetCtx.globalAlpha = 0.5;
+        targetCtx.fillStyle = '#f1c40f'; // IRAB Gold
+        targetCtx.strokeStyle = '#fff';
+        targetCtx.lineWidth = 2;
+        targetCtx.setLineDash([2, 2]);
+        
+        // Draw simple iso diamond for ghost
+        targetCtx.beginPath();
+        targetCtx.moveTo(screen.x, screen.y - dims.h/2);
+        targetCtx.lineTo(screen.x + dims.w/2, screen.y);
+        targetCtx.lineTo(screen.x, screen.y + dims.h/2);
+        targetCtx.lineTo(screen.x - dims.w/2, screen.y);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
+        
+        // Add "THINKING" text
+        targetCtx.globalAlpha = 1.0;
+        targetCtx.fillStyle = '#fff';
+        targetCtx.font = '10px monospace';
+        targetCtx.textAlign = 'center';
+        targetCtx.fillText("IRAB INTENT", screen.x, screen.y - dims.h);
+        
+        targetCtx.restore();
+    }
     
     // FX World layer (particles) and Screen layer (lighting/weather)
     if (state.fxPreview && fxSystem) {

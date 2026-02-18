@@ -5,7 +5,7 @@ class PlatformerGame {
         
         this.physics = new PhysicsSystem();
         this.combat = new PlatformerCombatSystem(this);
-        this.player = new Player(50, 50);
+        this.player = new PlatformerPlayer(50, 50);
         
         this.map = null;
         this.currentLevelId = null;
@@ -207,7 +207,7 @@ class PlatformerGame {
     }
 
     _addMovingPlatform(d) {
-        const plat = new MovingPlatform(d.x, d.y);
+        const plat = new PlatformerMovingPlatform(d.x, d.y);
         // Add a simple back-and-forth waypoint if none exist
         plat.addWaypoint(d.x, d.y);
         plat.addWaypoint(d.x + 5, d.y);
@@ -224,18 +224,18 @@ class PlatformerGame {
 
     _addEntity(e) {
         if (e.type === 'enemy') {
-            const enemy = new Enemy(e.x, e.y, e.sprite || 'slime');
+            const enemy = new PlatformerEnemy(e.x, e.y, e.sprite || 'slime');
             if (e.behavior) enemy.behavior = e.behavior;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_flying') {
-            const enemy = new FlyingEnemy(e.x, e.y, e.sprite || 'bat');
+            const enemy = new PlatformerFlyingEnemy(e.x, e.y, e.sprite || 'bat');
             if (e.behavior) enemy.behavior = e.behavior;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_shooter') {
-            const enemy = new ShooterEnemy(e.x, e.y, e.sprite || 'goblin');
+            const enemy = new PlatformerShooterEnemy(e.x, e.y, e.sprite || 'goblin');
             this.entities.push(enemy);
         } else if (e.type === 'pushable') {
-            this.entities.push(new PushableBlock(e.x, e.y, e.w || 32, e.h || 32));
+            this.entities.push(new PlatformerPushableBlock(e.x, e.y, e.w || 32, e.h || 32));
         } else {
             this.entities.push({ ...e, x: e.x * 32, y: e.y * 32, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' });
         }
@@ -243,7 +243,7 @@ class PlatformerGame {
 
     _handlePushing() {
         this.entities.forEach(ent => {
-            if (ent instanceof PushableBlock) {
+            if (ent instanceof PlatformerPushableBlock) {
                 // Horizontal push
                 const footY = this.player.y + this.player.h;
                 const headY = this.player.y;

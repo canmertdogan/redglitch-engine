@@ -48,7 +48,7 @@ class PlatformerCombatSystem {
     }
 
     spawnProjectile(owner, x, y, vx, vy, config) {
-        const proj = new Projectile(owner, x, y, vx, vy, config);
+        const proj = new PlatformerProjectile(owner, x, y, vx, vy, config);
         this.projectiles.push(proj);
         return proj;
     }

@@ -29,6 +29,8 @@ window.IRAB = {
     _audioEnabled: true,
     currentSessionId: "latest",
     ismsInterval: null,
+    tokenBuffer: "", 
+    isHidingToolCall: false,
 
     init() {
         console.log("[IRAB] Classic MSN UI Initializing...");
@@ -66,6 +68,21 @@ window.IRAB = {
                     }
                 }, 2000);
             };
+
+            // Phase 10: Co-Pilot Integration
+            if (window.KetebeEventBus) {
+                window.KetebeEventBus.on('ai:suggestion', (data) => {
+                    this.showBalloon(`💡 SUGGESTION: ${data.text}`);
+                    // If there are actions, we can log them to chat or show them in a special way
+                    if (data.actions && data.actions.length > 0) {
+                        console.log("[IRAB] Proactive actions available:", data.actions);
+                    }
+                });
+
+                window.KetebeEventBus.on('ai:thought', (data) => {
+                    this.showBalloon(data.text);
+                });
+            }
         }
 
         // Setup UI hooks
@@ -179,18 +196,65 @@ window.IRAB = {
     },
 
     handleToken(token) {
+        if (token === null) {
+            this.tokenBuffer = "";
+            this.isHidingToolCall = false;
+            return;
+        }
+
+        this.tokenBuffer += token;
+
+        // Check for tool call start
+        if (!this.isHidingToolCall && this.tokenBuffer.includes('```tool')) {
+            this.isHidingToolCall = true;
+            // When we start hiding, we might have already sent some text to the UI
+            // but the ```tool part should be stripped if it was partially sent.
+            // However, our logic below avoids sending if a backtick is present.
+        }
+
+        // Check for tool call end
+        if (this.isHidingToolCall && this.tokenBuffer.includes('```', this.tokenBuffer.indexOf('```tool') + 7)) {
+            this.tokenBuffer = "";
+            this.isHidingToolCall = false;
+            return;
+        }
+
+        // Only add to UI if not hiding
+        if (!this.isHidingToolCall) {
+            // If we see a backtick, we buffer but don't show yet, 
+            // in case it's the start of a tool block
+            if (this.tokenBuffer.includes('`') && !this.tokenBuffer.includes('```tool')) {
+                // If it's been buffering for too long without seeing '```tool', 
+                // it's probably just code or a backtick in text, so show it.
+                if (this.tokenBuffer.length > 20) {
+                    this._flushBuffer();
+                }
+                return;
+            }
+
+            this._appendTokenToUI(token);
+        }
+
+        if (token.includes(']]')) this.saveHistory();
+    },
+
+    _flushBuffer() {
+        if (!this.tokenBuffer) return;
+        this._appendTokenToUI(this.tokenBuffer);
+        this.tokenBuffer = "";
+    },
+
+    _appendTokenToUI(text) {
         if (!this.currentBotMsg) {
-            // Open chat without reloading history to avoid wiping the incoming message
             const c = document.getElementById('irab-chat');
             if (c) c.style.display = 'flex';
             this.currentBotMsg = this.addMessage('bot', "", false);
             this.playSound('msg');
         }
         const bubble = this.currentBotMsg.querySelector('.irab-msg-bubble');
-        bubble.textContent += token;
+        bubble.textContent += text;
         const msgs = document.getElementById('irab-chat-messages');
         if (msgs) msgs.scrollTop = msgs.scrollHeight;
-        if (token === null || token.includes(']]')) this.saveHistory();
     },
 
     handleState(state) {

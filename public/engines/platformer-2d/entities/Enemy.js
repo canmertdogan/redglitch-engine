@@ -3,7 +3,7 @@
  * Basic AI-controlled entity for the Platformer Engine.
  */
 
-class Enemy extends Entity {
+class PlatformerEnemy extends PlatformerEntity {
     constructor(x, y, type = 'slime') {
         super(x, y, 32, 32);
         this.type = type;
@@ -86,4 +86,4 @@ class Enemy extends Entity {
     }
 }
 
-window.Enemy = Enemy;
+window.PlatformerEnemy = PlatformerEnemy;

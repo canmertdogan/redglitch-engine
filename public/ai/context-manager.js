@@ -22,15 +22,17 @@ export class ContextManager {
         this.history = [];
     }
 
-    buildPrompt(userMessage, ragContext = "", systemPrompt = "") {
-        if (!systemPrompt) {
-            systemPrompt = "You are IRAB, the Ketebe Studio AI Assistant. Professional, helpful, occasionally sarcastic. You help users build games in the Ketebe Engine.";
+    buildPrompt(userMessage, ragContext = "", toolsPrompt = "") {
+        let systemPrompt = "You are IRAB, the Ketebe Studio AI Assistant. Professional, helpful, occasionally sarcastic. You help users build games in the Ketebe Engine.";
+        
+        if (toolsPrompt) {
+            systemPrompt += `\n\nAVAILABLE TOOLS:\nYou have access to the following studio tools. To use a tool, output a JSON block like this:\n\`\`\`tool\n{"name": "namespace.method", "args": {...}}\n\`\`\`\n\nTools:\n${toolsPrompt}`;
         }
 
         let prompt = `<|im_start|>system\n${systemPrompt}`;
         
         if (ragContext) {
-            prompt += `\n\nUse the following documentation context to help answer the user:\n${ragContext}`;
+            prompt += `\n\nRELEVANT DOCUMENTATION:\n${ragContext}`;
         }
         
         prompt += `<|im_end|>\n`;

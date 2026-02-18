@@ -3,7 +3,7 @@
  * An enemy that ignores gravity and can move in any direction.
  */
 
-class FlyingEnemy extends Enemy {
+class PlatformerFlyingEnemy extends PlatformerEnemy {
     constructor(x, y, type = 'bat') {
         super(x, y, type);
         this.ignoreGravity = true;
@@ -58,4 +58,4 @@ class FlyingEnemy extends Enemy {
     }
 }
 
-window.FlyingEnemy = FlyingEnemy;
+window.PlatformerFlyingEnemy = PlatformerFlyingEnemy;

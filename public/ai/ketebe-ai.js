@@ -9,12 +9,18 @@ import { InferenceEngine } from './inference-engine.js';
 import { TokenizerUtils } from './tokenizer-utils.js';
 import { RAGEngine } from './rag-engine.js';
 import { ContextManager } from './context-manager.js';
+import { ToolRegistry } from './tool-registry.js';
+import { WorkflowManager } from './workflow-manager.js';
+import { CoPilot } from './co-pilot.js';
 import { EventBus } from '../shared/EventBus.js';
 
 export class KetebeAI {
     constructor() {
         this.modelManager = new ModelManager();
         this.inferenceEngine = new InferenceEngine(this.modelManager);
+        this.toolRegistry = new ToolRegistry(EventBus);
+        this.workflowManager = new WorkflowManager(this.toolRegistry, EventBus);
+        this.coPilot = new CoPilot(this, EventBus);
         this.ragEngine = new RAGEngine();
         this.contextManager = new ContextManager();
         this.isInitialized = false;
@@ -46,16 +52,34 @@ export class KetebeAI {
             }
         }
 
-        const prompt = this.contextManager.buildPrompt(message, ragContext);
+        // Get tools for the prompt
+        const toolsPrompt = this.toolRegistry.getToolPrompt();
+        const prompt = this.contextManager.buildPrompt(message, ragContext, toolsPrompt);
 
         try {
-            const response = await this.inferenceEngine.generate(prompt, options, options.onToken);
+            const responseText = await this.inferenceEngine.generate(prompt, options, options.onToken);
             
             // Add to history
             this.contextManager.addHistory('user', message);
-            this.contextManager.addHistory('assistant', response);
+            this.contextManager.addHistory('assistant', responseText);
             
-            return { text: response };
+            // Phase 8: Workflow Execution
+            const toolCalls = this.workflowManager.parseToolCalls(responseText);
+            if (toolCalls.length > 0) {
+                console.log(`[KetebeAI] Executing ${toolCalls.length} tool calls...`);
+                // Note: We don't await here if we want the chat to return immediately,
+                // but usually we want to see the result.
+                const workflowResult = await this.workflowManager.executeWorkflow(toolCalls);
+                
+                // Return combined result
+                return { 
+                    text: responseText, 
+                    toolCalls, 
+                    workflowResult 
+                };
+            }
+            
+            return { text: responseText, toolCalls: [] };
         } catch (error) {
             console.error('[KetebeAI] Chat Error:', error);
             return this.fallbackToServer(message);

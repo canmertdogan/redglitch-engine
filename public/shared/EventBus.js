@@ -169,16 +169,24 @@ class EventBus {
         // Broadcast to other editors via WebSocket
         this.broadcastEvent(eventData);
         
-        // Broadcast to parent window (for Electron)
-        if (window.opener && typeof window.opener.postMessage === 'function') {
+        // Broadcast to parent window (if we are in an iframe)
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({
+                    type: 'ketebe-event',
+                    ...eventData
+                }, '*');
+            } catch (e) {}
+        }
+        
+        // Broadcast to opener (if we were opened as a popup)
+        if (window.opener && window.opener !== window) {
             try {
                 window.opener.postMessage({
                     type: 'ketebe-event',
                     ...eventData
                 }, '*');
-            } catch (err) {
-                // Ignore cross-origin errors
-            }
+            } catch (err) {}
         }
         
         return eventData;

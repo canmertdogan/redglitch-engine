@@ -2,7 +2,7 @@
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
-let eventBus, projectState, assetManager;
+let eventBus, projectState, assetManager, studioBridge;
 
 function initializeScriptIntegration() {
     if (typeof window !== 'undefined') {
@@ -11,35 +11,163 @@ function initializeScriptIntegration() {
         assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
+            // Initialize StudioBridge for IRAB
+            if (window.StudioBridge) {
+                studioBridge = new window.StudioBridge('code', eventBus);
+                registerCodeTools();
+            }
+
             // Listen for script requests from other editors
             eventBus.on('script:request', (event) => {
                 console.log('[ScriptEditor] Script requested:', event.data.scriptPath);
             });
 
-            // --- AI INTEGRATION: Code Injection ---
+            // --- AI INTEGRATION: Code Injection (Legacy Support) ---
             eventBus.on('ai:inject-code', (data) => {
-                if (!editor) return;
-                const model = editor.getModel();
-                if (!model) return;
-
-                const lineCount = model.getLineCount();
-                const range = new monaco.Range(lineCount + 1, 1, lineCount + 1, 1);
-                const text = "\n\n// --- AI Generated Snippet ---\n" + data.code + "\n";
-                
-                const op = {
-                    range: range,
-                    text: text,
-                    forceMoveMarkers: true
-                };
-                
-                editor.executeEdits("AI-Injector", [op]);
-                editor.revealLine(model.getLineCount());
-                console.log('[ScriptEditor] AI Code Injected.');
+                injectCodeAtBottom(data.code);
             });
             
             console.log('[ScriptEditor] EventBus connected');
         }
     }
+}
+
+/**
+ * Register IRAB tools for Code Forge
+ */
+function registerCodeTools() {
+    // editor.open
+    studioBridge.register({
+        name: 'open',
+        description: 'Open a specific file in the code editor.',
+        securityLevel: 'safe',
+        parameters: {
+            type: 'object',
+            properties: {
+                path: { type: 'string', description: 'Path to the file to open.' }
+            },
+            required: ['path']
+        },
+        execute: async (args) => {
+            await openFile(args.path);
+            return { success: true, message: `Opened ${args.path}` };
+        }
+    });
+
+    // editor.insert
+    studioBridge.register({
+        name: 'insert',
+        description: 'Insert code at the current cursor position or at the end of the file.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                content: { type: 'string', description: 'The code to insert.' },
+                atEnd: { type: 'boolean', description: 'If true, inserts at the end of the file.', default: false }
+            },
+            required: ['content']
+        },
+        execute: async (args) => {
+            if (args.atEnd) {
+                injectCodeAtBottom(args.content);
+            } else {
+                insertCodeAtCursor(args.content);
+            }
+            return { success: true };
+        }
+    });
+
+    // editor.replace
+    studioBridge.register({
+        name: 'replace',
+        description: 'Replace a specific range of code or the entire file content.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                content: { type: 'string', description: 'The new code content.' },
+                range: { 
+                    type: 'object', 
+                    description: 'Optional range to replace. If omitted, replaces entire file.',
+                    properties: {
+                        startLine: { type: 'number' },
+                        startCol: { type: 'number' },
+                        endLine: { type: 'number' },
+                        endCol: { type: 'number' }
+                    }
+                }
+            },
+            required: ['content']
+        },
+        execute: async (args) => {
+            if (!editor) throw new Error("Editor not ready");
+            const model = editor.getModel();
+            
+            let range;
+            if (args.range) {
+                range = new monaco.Range(args.range.startLine, args.range.startCol, args.range.endLine, args.range.endCol);
+            } else {
+                range = model.getFullModelRange();
+            }
+
+            const op = { range: range, text: args.content, forceMoveMarkers: true };
+            editor.executeEdits("IRAB-Replace", [op]);
+            return { success: true };
+        }
+    });
+
+    // code.document
+    studioBridge.register({
+        name: 'document',
+        description: 'Add JSDoc documentation to the code.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                documentation: { type: 'string', description: 'The JSDoc string to insert.' },
+                line: { type: 'number', description: 'The line number to insert documentation above.' }
+            },
+            required: ['documentation', 'line']
+        },
+        execute: async (args) => {
+            if (!editor) throw new Error("Editor not ready");
+            const range = new monaco.Range(args.line, 1, args.line, 1);
+            const op = { range: range, text: args.documentation + "\n", forceMoveMarkers: true };
+            editor.executeEdits("IRAB-Doc", [op]);
+            return { success: true };
+        }
+    });
+}
+
+function injectCodeAtBottom(code) {
+    if (!editor) return;
+    const model = editor.getModel();
+    if (!model) return;
+
+    const lineCount = model.getLineCount();
+    const range = new monaco.Range(lineCount + 1, 1, lineCount + 1, 1);
+    const text = "\n\n// --- AI Generated Snippet ---\n" + code + "\n";
+    
+    const op = {
+        range: range,
+        text: text,
+        forceMoveMarkers: true
+    };
+    
+    editor.executeEdits("AI-Injector", [op]);
+    editor.revealLine(model.getLineCount());
+    console.log('[ScriptEditor] Code Injected at bottom.');
+}
+
+function insertCodeAtCursor(code) {
+    if (!editor) return;
+    const selection = editor.getSelection();
+    const op = {
+        range: selection,
+        text: code,
+        forceMoveMarkers: true
+    };
+    editor.executeEdits("AI-Injector", [op]);
 }
 
 // --- State ---

@@ -3,7 +3,7 @@
  * A moving object that deals damage on collision.
  */
 
-class Projectile extends Entity {
+class PlatformerProjectile extends PlatformerEntity {
     constructor(owner, x, y, vx, vy, config = {}) {
         super(x, y, config.w || 12, config.h || 12);
         this.owner = owner;
@@ -52,4 +52,4 @@ class Projectile extends Entity {
     }
 }
 
-window.Projectile = Projectile;
+window.PlatformerProjectile = PlatformerProjectile;
