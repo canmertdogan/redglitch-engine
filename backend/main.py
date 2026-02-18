@@ -210,6 +210,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     import random
                     isms = ["GRRR... I AM AWAKE!", "GRRR... READY TO PIXELATE!", "GRRR... SYSTEM ONLINE AND HUNGRY!", "GRRR... NEED HELP OR JUST A SNACK?"]
                     await manager.send_personal_message({"type": "TOKEN", "data": random.choice(isms)}, websocket)
+                    await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
             elif msg_type == "UPDATE_CONFIG":
                 config = message.get("data", {})
                 logger.info(f"Updating configuration: {config}")
@@ -282,7 +283,6 @@ async def handle_prompt(message, websocket):
     
     try:
         logger.info("Starting token generation...")
-        KNOWN_COMMANDS = {'openTool', 'injectCode', 'nudge', 'wink', 'listFiles'}
         
         in_tool_block = False
         tool_buffer = ""
@@ -291,78 +291,49 @@ async def handle_prompt(message, websocket):
             if not token: continue
             full_response += token
             
-            # --- Phase 8: KAP Protocol Detection (JSON tool blocks) ---
+            # --- KAP Protocol Detection (JSON tool blocks) ---
             if "```tool" in full_response and not in_tool_block:
                 in_tool_block = True
+                # Start buffer from the last occurrence of the marker
+                tool_buffer = full_response[full_response.rfind("```tool"):]
+                continue # Continue to next token to build the rest of the block
             
             if in_tool_block:
                 tool_buffer += token
-                if "```" in tool_buffer.split("```tool")[-1]:
+                # Look for the closing marker, ensuring we ignore the opening one
+                if "```" in tool_buffer[7:]: 
                     # Block finished
                     try:
-                        json_str = tool_buffer.split("```tool")[1].split("```")[0].strip()
-                        call = json.loads(json_str)
-                        logger.info(f"KAP Action Detected: {call.get('name')}")
-                        await manager.send_personal_message({
-                            "type": "COMMAND",
-                            "data": {"action": call.get("name"), "params": call.get("args", {})}
-                        }, websocket)
+                        # Robust extraction: find content between first { and last }
+                        start = tool_buffer.find('{')
+                        end = tool_buffer.rfind('}')
+                        if start != -1 and end != -1:
+                            json_str = tool_buffer[start:end+1]
+                            call = json.loads(json_str)
+                            logger.info(f"KAP Action Detected: {call.get('name')}")
+                            
+                            # Forward to Studio via WebSocket
+                            await manager.send_personal_message({
+                                "type": "COMMAND",
+                                "data": {"action": call.get("name"), "params": call.get("args", {})}
+                            }, websocket)
+                        else:
+                            logger.warning(f"KAP Block found but no JSON object detected. Buffer: {tool_buffer}")
                     except Exception as e:
-                        logger.error(f"Failed to parse KAP JSON: {e}")
+                        logger.error(f"Failed to parse KAP JSON: {e}. Buffer: {tool_buffer}")
                     
                     in_tool_block = False
                     tool_buffer = ""
-                    full_response = full_response.split("```")[-1] 
+                    # Keep everything AFTER the tool block for context
+                    full_response = full_response[full_response.rfind("```") + 3:]
                     continue
 
             # Skip this token if it's part of a prompt leak
             if any(phrase in full_response[-100:] for phrase in PROMPT_LEAK_PHRASES):
                 continue
             
-            # --- PHASE 3: MULTI-LINE INJECTION ---
-            if "[[injectCode]]" in full_response and "[[/injectCode]]" in full_response:
-                code = full_response.split("[[injectCode]]")[1].split("[[/injectCode]]")[0].strip()
-                logger.info("AI requesting code injection.")
-                await manager.send_personal_message({
-                    "type": "COMMAND",
-                    "data": {"action": "injectCode", "params": [code]}
-                }, websocket)
-                full_response = full_response.split("[[/injectCode]]")[1].strip()
-                continue
-
-            # --- ORIGINAL COMMANDS ---
-            if "[[" in full_response and "]]" in full_response and not "injectCode" in full_response:
-                parts = full_response.split("[[")[1].split("]]")[0].split(":")
-                action = parts[0]
-                params = parts[1].split(",") if len(parts) > 1 else []
-                
-                if action in KNOWN_COMMANDS:
-                    logger.info(f"AI Action: {action}")
-                    
-                    if action == "listFiles":
-                        subdir = params[0] if params else "assets"
-                        target_path = os.path.join(PROJECT_ROOT, subdir)
-                        try:
-                            files = [f for f in os.listdir(target_path) if not f.startswith('.')]
-                            result = f"\n[Files in {subdir}]: " + ", ".join(files)
-                            await manager.send_personal_message({"type": "TOKEN", "data": result}, websocket)
-                        except:
-                            await manager.send_personal_message({"type": "TOKEN", "data": f"\n[Error] Folder {subdir} not found."}, websocket)
-                    else:
-                        await manager.send_personal_message({
-                            "type": "COMMAND",
-                            "data": {"action": action, "params": params}
-                        }, websocket)
-                else:
-                    logger.warning(f"AI attempted unknown command: {action}")
-                    # Just send it as text if it's not a real command
-                    await manager.send_personal_message({"type": "TOKEN", "data": f"[[{action}]]"}, websocket)
-                
-                full_response = full_response.split("]]")[1].strip()
-                continue
-
-            # Only send token if we are not in the middle of a command bracket
-            if "[[" not in full_response and not in_tool_block:
+            # Only send token if we are not in the middle of a command/tool block
+            if not in_tool_block:
                 await manager.send_personal_message({"type": "TOKEN", "data": token}, websocket)
             
             await asyncio.sleep(0)
@@ -370,7 +341,9 @@ async def handle_prompt(message, websocket):
     except Exception as e:
         logger.error(f"Generation error: {e}")
         await manager.send_personal_message({"type": "TOKEN", "data": f"Error: {str(e)}"}, websocket)
-        
+    
+    # Signal end of stream for KetebeAI router
+    await manager.send_personal_message({"type": "TOKEN", "data": None}, websocket)
     await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
 
 if __name__ == "__main__":

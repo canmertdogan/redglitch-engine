@@ -1047,6 +1047,7 @@ window.Core = class Core {
         this.canvas = document.getElementById('gameCanvas'); this.ctx = this.canvas.getContext('2d');
         this.input = new window.InputHandler(this.canvas); this.mapSystem = new window.MapSystem(this.ctx);
         this.dialogueSystem = new window.DialogueSystem(); this.achievementSystem = new window.AchievementSystem(); this.saveSystem = new window.SaveSystem();
+        this.questSystem = new window.QuestSystem(this);
         this.campaignSystem = new window.CampaignSystem(this); 
         this.uiSystem = new window.UISystem(this);
         
@@ -1253,7 +1254,10 @@ window.Core = class Core {
 
     createExplosion(x, y, color, count = 8) { for (let i = 0; i < count; i++) { const angle = Math.random() * Math.PI * 2; const speed = 50 + Math.random() * 100; this.spawnParticle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, color, 0.5 + Math.random() * 0.5, 3 + Math.random() * 3); } }    async start(playerName, isNewGame) {
         this.playerName = playerName; this.isRunning = true; this.isPaused = false;
-        await this.loadDefinitions(); this.assignSkills(); await this.achievementSystem.init(playerName); await this.dialogueSystem.init();
+        await this.loadDefinitions(); this.assignSkills(); 
+        await this.achievementSystem.init(playerName); 
+        await this.dialogueSystem.init();
+        await this.questSystem.init();
         this.achievementSystem.unlock('START_GAME');
         if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; await this.loadLevel(this.currentLevel); } 
         else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.stamina = data.player.stamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true); }

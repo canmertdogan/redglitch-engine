@@ -210,6 +210,7 @@ class PlatformerEditor {
         canvas.width = cols * tSize;
         canvas.height = rows * tSize;
         const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
         let loadedCount = 0;
         const promises = [];
         for (let i = 1; i <= totalTiles; i++) {
@@ -223,10 +224,22 @@ class PlatformerEditor {
                     resolve();
                 };
                 img.onerror = () => resolve();
-                img.src = `sprite-art/worldpixelart/texture_16px ${i}.png`;
+                // Ensure absolute path from root
+                img.src = `/sprite-art/worldpixelart/texture_16px ${i}.png`;
             }));
         }
         await Promise.all(promises);
+
+        // Save combined spritesheet to server to keep it synced
+        try {
+            const dataUrl = canvas.toDataURL('image/png');
+            fetch('/api/save-spritesheet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataUrl }),
+            });
+        } catch (e) { console.warn('[PlatformerEditor] Could not save spritesheet to server', e); }
+
         return canvas;
     }
     

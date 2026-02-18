@@ -223,6 +223,7 @@ window.IRAB = {
         if (state === 'THINKING') {
             dot.className = 'irab-status-dot thinking';
             st.textContent = 'IRAB is thinking...';
+            this.currentBotMsg = null; // Ensure new bubble for prompt response
         } else if (state === 'CONNECTING') {
             dot.className = 'irab-status-dot';
             dot.style.background = '#f1c40f'; // Yellow
@@ -342,6 +343,10 @@ window.IRAB = {
         const text = input.value.trim();
         input.value = '';
         this.addMessage('user', text);
+        
+        // --- PHASE 4 FIX: Always force new bubble for AI response ---
+        this.currentBotMsg = null;
+        
         if (window.irab) window.irab.prompt(text);
     },
 

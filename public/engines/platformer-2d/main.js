@@ -14,7 +14,22 @@ class PlatformerGame {
         this.platforms = []; // List of MovingPlatforms
         this.collectibles = [];
         this.checkpoints = [];
+        this.dialogueSystem = new window.DialogueSystem();
+        this.questSystem = new window.QuestSystem(this);
         this.lastCheckpoint = null;
+        
+        // Dependencies for systems (Quest, Dialogue)
+        this.uiSystem = {
+            showNotification: (msg, type) => {
+                if (this.fx && this.fx.popText) {
+                    this.fx.popText(this.player.x, this.player.y - 50, msg, type === 'error' ? '#e74c3c' : '#f1c40f');
+                }
+                console.log(`[Notification:${type}] ${msg}`);
+            }
+        };
+        this.audio = {
+            play: (id) => console.log(`[Audio] Playing ${id}`)
+        };
         
         this.fx = null;
         this.campaignSystem = null;
@@ -103,6 +118,9 @@ class PlatformerGame {
         if (typeof window.CampaignSystem !== 'undefined') {
             this.campaignSystem = new window.CampaignSystem(this);
         }
+
+        await this.dialogueSystem.init();
+        await this.questSystem.init();
         
         // Force worm mode for the IRAB aesthetic if config says so
         if (this.player && window.PlatformerConfig) {
@@ -113,6 +131,21 @@ class PlatformerGame {
         if(loading) loading.classList.add('hidden');
         const container = document.getElementById('game-container');
         if(container) container.classList.remove('hidden');
+
+        // --- PHASE 7: Playtest Mode Detection ---
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('playtest') === 'true') {
+            console.log('[PlatformerEngine] Playtest mode active. Loading local data...');
+            const rawData = localStorage.getItem('temp_playtest_platformer');
+            if (rawData) {
+                try {
+                    const levelData = JSON.parse(rawData);
+                    await this.loadLevelFromData(levelData);
+                } catch (e) {
+                    console.error('Failed to parse playtest data:', e);
+                }
+            }
+        }
     }
 
     async loadLevel(levelId, levelPath = null) {
@@ -155,7 +188,19 @@ class PlatformerGame {
         
         // Reset Parallax
         this.renderer.parallax.clear();
-        if (window.PlatformerAssetManager) {
+        
+        // 1. Try map-defined layers first
+        if (this.map.parallaxLayers && this.map.parallaxLayers.length > 0) {
+            for (const layer of this.map.parallaxLayers) {
+                if (!layer.image) continue;
+                const img = new Image();
+                img.src = layer.image;
+                // Note: We might want to await these for perfect sync, but parallax usually loads fine asynchronously
+                this.renderer.addParallaxLayer(img, layer.scrollX, layer.scrollY || layer.scrollX, layer.opacity);
+            }
+        } 
+        // 2. Fallback to default
+        else if (window.PlatformerAssetManager) {
             const bgForest = window.PlatformerAssetManager.get('bg_forest');
             if (bgForest) {
                 this.renderer.addParallaxLayer(bgForest, 0.2, 0.1, 1.0);
@@ -178,6 +223,9 @@ class PlatformerGame {
             this.player.x = 100; 
             this.player.y = 100;
         }
+        
+        // Snap camera immediately
+        this.renderer.setCameraToPlayer(this.player, this.map.width, this.map.height);
         
         // Force worm mode and sprites
         this.player.isWorm = true;
@@ -226,19 +274,76 @@ class PlatformerGame {
         if (e.type === 'enemy') {
             const enemy = new PlatformerEnemy(e.x, e.y, e.sprite || 'slime');
             if (e.behavior) enemy.behavior = e.behavior;
+            enemy.id = e.id || enemy.id;
+            enemy.hp = e.hp || enemy.hp;
+            enemy.speed = e.speed || enemy.speed;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_flying') {
             const enemy = new PlatformerFlyingEnemy(e.x, e.y, e.sprite || 'bat');
+            enemy.id = e.id || enemy.id;
             if (e.behavior) enemy.behavior = e.behavior;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_shooter') {
             const enemy = new PlatformerShooterEnemy(e.x, e.y, e.sprite || 'goblin');
+            enemy.id = e.id || enemy.id;
             this.entities.push(enemy);
         } else if (e.type === 'pushable') {
-            this.entities.push(new PlatformerPushableBlock(e.x, e.y, e.w || 32, e.h || 32));
+            const push = new PlatformerPushableBlock(e.x, e.y, e.w || 32, e.h || 32);
+            push.id = e.id || push.id;
+            this.entities.push(push);
+        } else if (['switch', 'pressure_plate', 'zone'].includes(e.type)) {
+            const trigger = new PlatformerTrigger(e.x, e.y, {
+                triggerType: e.type,
+                targetId: e.targetId,
+                action: e.action,
+                questIdProgress: e.questIdProgress,
+                id: e.id
+            });
+            this.entities.push(trigger);
         } else {
-            this.entities.push({ ...e, x: e.x * 32, y: e.y * 32, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' });
+            const ent = { ...e, x: e.x * 32, y: e.y * 32, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' };
+            if (e.dialogueId) ent.dialogueId = e.dialogueId;
+            ent.id = e.id || ent.id;
+            this.entities.push(ent);
         }
+    }
+
+    _handleInteractions() {
+        if (this.dialogueSystem.active) return;
+
+        const interactPressed = this.keys['KeyE'] || this.keys['Enter'];
+        if (!interactPressed) return;
+
+        // Check for nearby NPCs with dialogues
+        const range = 64;
+        const px = this.player.x + this.player.w/2;
+        const py = this.player.y + this.player.h/2;
+
+        for (const ent of this.entities) {
+            if (ent.dialogueId) {
+                const ex = ent.x + (ent.w || 32)/2;
+                const ey = ent.y + (ent.h || 32)/2;
+                const dist = Math.sqrt((px - ex)**2 + (py - ey)**2);
+
+                if (dist < range) {
+                    console.log(`[Game] Starting dialogue: ${ent.dialogueId}`);
+                    this.dialogueSystem.start(ent.dialogueId);
+                    this.keys['KeyE'] = false; // Consume input
+                    this.keys['Enter'] = false;
+                    break;
+                }
+            }
+        }
+    }
+
+    triggerEntity(targetId, action, data) {
+        console.log(`[Game] Routing trigger to ${targetId}: ${action}`);
+        const targets = this.entities.filter(ent => ent.id === targetId);
+        if (targets.length === 0 && this.player.id === targetId) targets.push(this.player);
+        
+        targets.forEach(t => {
+            if (t.trigger) t.trigger(action, data);
+        });
     }
 
     _handlePushing() {
@@ -298,6 +403,7 @@ class PlatformerGame {
         
         this.combat.update(dt);
         this._updateEntities();
+        this._handleInteractions();
         this._checkCollectibles();
         this._checkCheckpoints();
         this._checkGoal();
@@ -317,6 +423,12 @@ class PlatformerGame {
                 if(this.physics.getTile(this.map, tileX, tileY) === 1) ent.patrolDir *= -1;
             }
             this.physics.apply(ent, this.map, this.platforms);
+
+            // Quest trigger for kills
+            if (ent.isDead && !ent._questLogged) {
+                ent._questLogged = true;
+                if (this.questSystem) this.questSystem.onEvent('kill', ent.type, 1);
+            }
         });
         
         // Remove dead entities
@@ -330,6 +442,9 @@ class PlatformerGame {
                 item.collected = true;
                 if(item.type === 'coin') this.player.coins++;
                 if(this.campaignSystem) this.campaignSystem.incrementVariable('coins', 1);
+
+                // Quest trigger
+                if (this.questSystem) this.questSystem.onEvent('collect', item.type, 1);
             }
         });
     }

@@ -37,6 +37,7 @@ class PlatformerPlayer extends PlatformerEntity {
         this.ghosts = []; // For dash trail
         this.isClimbing = false;
         this.isAttacking = false;
+        this.shootCooldown = 0;
         
         // Animation
         this.spriteName = 'player'; 
@@ -89,14 +90,39 @@ class PlatformerPlayer extends PlatformerEntity {
             this.jumpBufferTimer = this.jumpBufferMax;
         }
 
-        // Dash Request
-        if ((keys['KeyK'] || keys['ShiftRight']) && this.canDash && this.dashCooldownTimer <= 0) {
+        // Dash Request (Re-mapped to ShiftRight or KeyL to free up KeyK for Shooting)
+        if ((keys['KeyL'] || keys['ShiftRight']) && this.canDash && this.dashCooldownTimer <= 0) {
             this.startDash();
         }
 
-        // Attack Request
+        // Attack Request (Melee)
         if ((keys['KeyJ'] || keys['KeyZ']) && !this.isAttacking) {
             this.startAttack();
+        }
+
+        // Shoot Request
+        if ((keys['KeyK'] || keys['KeyX']) && this.shootCooldown <= 0) {
+            this.shoot();
+        }
+    }
+
+    shoot() {
+        this.shootCooldown = 0.3; // 300ms cooldown
+        
+        const speed = 10;
+        const vx = this.facingRight ? speed : -speed;
+        const vy = 0;
+        
+        if (window.game?.combat) {
+            window.game.combat.spawnProjectile(this, this.x + this.w/2, this.y + this.h/2, vx, vy, {
+                damage: 15,
+                color: '#f1c40f',
+                w: 12, h: 12
+            });
+        }
+
+        if (window.game?.fx) {
+            window.game.fx.spawnParticles(this.x + this.w/2, this.y + this.h/2, 'spark', 3);
         }
     }
 
@@ -198,6 +224,7 @@ class PlatformerPlayer extends PlatformerEntity {
         }
 
         if (this.dashCooldownTimer > 0) this.dashCooldownTimer -= dt;
+        if (this.shootCooldown > 0) this.shootCooldown -= dt;
 
         // Ladder Logic
         if (this.onLadder) {

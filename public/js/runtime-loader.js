@@ -159,7 +159,8 @@
             'engines/rpg-topdown/input.js',
             'engines/rpg-topdown/saveSystem.js',
             'engines/rpg-topdown/mapSystem.js',
-            'engines/rpg-topdown/dialogueSystem.js',
+            'shared/DialogueSystem.js',
+            'shared/QuestSystem.js',
             'engines/rpg-topdown/achievementSystem.js',
             'engines/rpg-topdown/fxSystem.js',
             'engines/rpg-topdown/audioSystem.js',
@@ -184,6 +185,8 @@
         ],
         'platformer-2d': [
             'engines/rpg-topdown/main.js', // For AtmosphereSystem
+            'shared/DialogueSystem.js',
+            'shared/QuestSystem.js',
             'engines/platformer-2d/PlatformerConfig.js',
             'engines/platformer-2d/PlatformerAssetManager.js',
             'engines/platformer-2d/ParallaxSystem.js',
@@ -197,6 +200,7 @@
             'engines/platformer-2d/entities/Projectile.js',
             'engines/platformer-2d/entities/PushableBlock.js',
             'engines/platformer-2d/entities/MovingPlatform.js',
+            'engines/platformer-2d/entities/Trigger.js',
             'engines/platformer-2d/PhysicsSystem.js',
             'engines/platformer-2d/renderer.js',
             'engines/platformer-2d/generator/SmartGenerator.js',

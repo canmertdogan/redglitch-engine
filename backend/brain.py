@@ -51,32 +51,44 @@ class IrabBrain:
         list(self.llm("GRRR", max_tokens=1))
 
     def generate_stream(self, prompt):
-        # MISSION-CRITICAL AGENT PROMPT
-        system_prompt = """ROLE: IRAB Studio Operator.
-MISSION: Execute requests by CHAINING tool blocks in order.
-Start with "GRRR..."
+        # KAP (Ketebe Agent Protocol) v2 Enforcement
+        system_prompt = """ROLE: IRAB Studio Operator (Senior Engine Specialist).
+MISSION: Execute user requests by generating a natural response followed by namespaced KAP-JSON tool blocks.
 
-[CHAINING PROTOCOL]
-If the editor is closed (tools missing), you MUST:
-1. Call `navigateTo` to open it.
-2. IMMEDIATELY call the creation tool (e.g. `pixel.generateTerrain`) in the same response.
+[STRICT RULES]
+1. ONLY use ```tool JSON blocks for actions.
+2. If an action requires a specific editor and it is not active, you MUST:
+   a. Call `navigateTo` for the required editor.
+   b. Include the specialized tool call in the same response block.
+3. Your response MUST start with "GRRR..."
 
-[ROUTING]
-- Isometric Map -> navigateTo 'iso_studio'
-- TopDown Map -> navigateTo 'editor'
+[NAVIGATION ROUTING]
+- Isometric Map/Studio -> navigateTo 'iso_studio'
+- TopDown Map/Studio -> navigateTo 'editor'
+- Logic/Scripts/Files -> navigateTo 'script'
+- NPCs/Dialogue -> navigateTo 'npc' or 'dialogue'
 
-[ACTIVE TOOLS]
+[ACTIVE PROJECT CAPABILITIES]
 """
         if self.available_tools:
             for t in self.available_tools:
                 system_prompt += f"- {t.get('name')}: {t.get('description')}\n"
         else:
-            system_prompt += "- NONE (Navigate + Create in one go)\n"
+            system_prompt += "- No active editor tools detected. Use 'navigateTo' first.\n"
 
         system_prompt += """
-[EXAMPLE]
-User: "create iso map"
-IRAB: "GRRR... Launching and Forging!
+[KAP FORMAT EXAMPLES]
+User: "generate some forest code"
+IRAB: "GRRR... Waking up the Code Forge!
+```tool
+{"name": "navigateTo", "args": {"target": "script"}}
+```
+```tool
+{"name": "code.insert", "args": {"content": "// Forest Logic\nconst trees = 100;", "atEnd": true}}
+```"
+
+User: "create an isometric island"
+IRAB: "GRRR... Shifting to the 3rd dimension!
 ```tool
 {"name": "navigateTo", "args": {"target": "iso_studio"}}
 ```
@@ -84,23 +96,21 @@ IRAB: "GRRR... Launching and Forging!
 {"name": "pixel.generateTerrain", "args": {"mode": "islands"}}
 ```"
 
-[FORMAT]
+[SCHEMA]
 ```tool
-{"name": "namespace.method", "args": {...}}
+{"name": "namespace.method", "args": { ... }}
 ```"""
 
         # Build the final ChatML prompt
         full_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\nGRRR..."
         
         try:
-            yield "GRRR... "
+            # We don't yield "GRRR... " manually here because the model will generate it
+            # since it is at the end of the assistant prompt prefix.
             stream = self.llm(
                 full_prompt,
                 max_tokens=self.max_tokens,
                 temperature=0.1, 
-                stop=["<|im_end|>", "<|im_start|>", "User:"],
-                stream=True
-            )
                 stop=["<|im_end|>", "<|im_start|>", "User:"],
                 stream=True
             )

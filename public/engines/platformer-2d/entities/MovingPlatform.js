@@ -18,7 +18,11 @@ class PlatformerMovingPlatform extends PlatformerEntity {
     }
 
     update(dt, map) {
-        if (!this.isMoving || this.waypoints.length === 0) return;
+        if (!this.isMoving || this.waypoints.length === 0) {
+            this.vx = 0;
+            this.vy = 0;
+            return;
+        }
 
         this.lastX = this.x;
         this.lastY = this.y;
@@ -38,6 +42,12 @@ class PlatformerMovingPlatform extends PlatformerEntity {
             this.x += this.vx;
             this.y += this.vy;
         }
+    }
+
+    trigger(action, data) {
+        if (action === 'toggle') this.isMoving = !this.isMoving;
+        else if (action === 'start') this.isMoving = true;
+        else if (action === 'stop') this.isMoving = false;
     }
 
     getVelocity() {

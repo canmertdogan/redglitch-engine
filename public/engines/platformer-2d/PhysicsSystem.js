@@ -59,6 +59,21 @@ class PhysicsSystem {
             if (entity.respawn) entity.respawn();
             else { entity.y = 0; entity.vy = 0; }
         }
+
+        // --- NEW: Trigger Overlaps ---
+        if (entity === window.game?.player) {
+            window.game.entities.forEach(ent => {
+                if (window.PlatformerTrigger && ent instanceof window.PlatformerTrigger) {
+                    if (this.checkOverlap(entity, ent)) {
+                        ent.onOverlap(entity);
+                    }
+                }
+            });
+        }
+    }
+
+    checkOverlap(a, b) {
+        return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     }
 
     handlePlatforms(entity, platforms) {

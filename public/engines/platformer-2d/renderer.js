@@ -51,6 +51,17 @@ class PlatformerRenderer {
         this.invalidateCache();
     }
 
+    setCameraToPlayer(player, mapWidth, mapHeight) {
+        if (!player || isNaN(player.x)) return;
+        this.camera.x = player.x + player.w/2 - this.viewW/2;
+        this.camera.y = player.y + player.h/2 - this.viewH/2;
+        
+        const maxW = (mapWidth || 20) * this.tileSize;
+        const maxH = (mapHeight || 15) * this.tileSize;
+        this.camera.x = Math.max(0, Math.min(this.camera.x, Math.max(0, maxW - this.viewW)));
+        this.camera.y = Math.max(0, Math.min(this.camera.y, Math.max(0, maxH - this.viewH)));
+    }
+
     addParallaxLayer(image, sx, sy, op) {
         this.parallax.addLayer(image, sx, sy, op);
     }
@@ -401,6 +412,10 @@ class PlatformerRenderer {
             for (let x = 0; x < this.CHUNK_SIZE; x++) {
                 const tileX = cx * this.CHUNK_SIZE + x;
                 const tileY = cy * this.CHUNK_SIZE + y;
+                
+                // Bounds Check: Prevent wrapping to next row if tileX >= mapWidth
+                if (tileX < 0 || tileX >= mapWidth || tileY < 0) continue;
+                
                 const idx = tileY * mapWidth + tileX;
                 if (idx < 0 || idx >= layerData.length) continue;
 
@@ -419,12 +434,14 @@ class PlatformerRenderer {
                         const ts = 16;
                         let tid = tileId - 1;
 
-                        // Auto-tiling logic for solid blocks (ID 1)
+                        // SMART AUTO-TILING: Focus on Solid Block (ID 1)
+                        // Connectivity layout assumed to be 16 tiles starting at index 16 (Row 2)
+                        // if tileId is 1. We can generalize this if needed.
                         if (tileId === 1 && this.currentMap?.autoTiling) {
                             const mask = this.calculateBitmask(this.currentMap, tileX, tileY);
-                            // We assume the auto-tile set for ID 1 starts at a certain offset
-                            // For now, let's just use the mask as an offset from the base tile
-                            tid += mask;
+                            // We assume Row 2 (index 16) is the connectivity row for grass/stone
+                            const autoTileRowOffset = 16; 
+                            tid = autoTileRowOffset + mask;
                         }
 
                         if (tid >= 0) {
@@ -434,7 +451,7 @@ class PlatformerRenderer {
                         }
                     } else {
                         // Color block fallback or "loading" state
-                        ctx.fillStyle = '#222';
+                        ctx.fillStyle = '#444'; // Slightly lighter than #222
                         ctx.fillRect(drawX, drawY, this.tileSize, this.tileSize);
                     }
                 }

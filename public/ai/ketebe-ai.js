@@ -43,6 +43,41 @@ export class KetebeAI {
     async chat(message, options = {}) {
         await this.initialize();
         
+        // --- Phase 4: Unified Router Logic ---
+        
+        // 1. PRIMARY: Local WebGPU (Micro Edition)
+        if (this.inferenceEngine.isModelReady && !options.forceNative) {
+            console.log('[KetebeAI] Using Local Inference...');
+            return await this._localChat(message, options);
+        }
+
+        // 2. SECONDARY: Native Cortex (Python WebSocket)
+        if (window.irab && window.irab.isConnected) {
+            console.log('[KetebeAI] Routing to Native Cortex...');
+            // IrabBridge handles its own UI, but we can return a promise that waits for complete response
+            return new Promise((resolve) => {
+                const originalOnToken = window.irab.onToken;
+                let fullText = "";
+
+                window.irab.onToken = (token) => {
+                    if (token === null) { // Stream end marker
+                        window.irab.onToken = originalOnToken;
+                        resolve({ text: fullText, source: 'native' });
+                    }
+                    fullText += token;
+                    if (options.onToken) options.onToken(token);
+                    if (originalOnToken) originalOnToken(token);
+                };
+
+                window.irab.prompt(message, options.context || {});
+            });
+        }
+
+        // 3. TERTIARY: Server Fallback
+        return this.fallbackToServer(message);
+    }
+
+    async _localChat(message, options) {
         let ragContext = "";
         if (AI_CONFIG.features.enableRAG && this.ragEngine.isLoaded) {
             try {
@@ -52,36 +87,24 @@ export class KetebeAI {
             }
         }
 
-        // Get tools for the prompt
         const toolsPrompt = this.toolRegistry.getToolPrompt();
         const prompt = this.contextManager.buildPrompt(message, ragContext, toolsPrompt);
 
         try {
             const responseText = await this.inferenceEngine.generate(prompt, options, options.onToken);
             
-            // Add to history
             this.contextManager.addHistory('user', message);
             this.contextManager.addHistory('assistant', responseText);
             
-            // Phase 8: Workflow Execution
             const toolCalls = this.workflowManager.parseToolCalls(responseText);
             if (toolCalls.length > 0) {
-                console.log(`[KetebeAI] Executing ${toolCalls.length} tool calls...`);
-                // Note: We don't await here if we want the chat to return immediately,
-                // but usually we want to see the result.
                 const workflowResult = await this.workflowManager.executeWorkflow(toolCalls);
-                
-                // Return combined result
-                return { 
-                    text: responseText, 
-                    toolCalls, 
-                    workflowResult 
-                };
+                return { text: responseText, toolCalls, workflowResult, source: 'local' };
             }
             
-            return { text: responseText, toolCalls: [] };
+            return { text: responseText, toolCalls: [], source: 'local' };
         } catch (error) {
-            console.error('[KetebeAI] Chat Error:', error);
+            console.error('[KetebeAI] Local Chat Failed:', error);
             return this.fallbackToServer(message);
         }
     }

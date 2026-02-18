@@ -131,13 +131,27 @@ export class ToolRegistry {
      */
     async execute(name, args, requestId = null) {
         const id = requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        // --- Phase 10: Tool Patience ---
-        // If tool is missing, wait up to 3 seconds for it to register (useful after navigateTo)
+        const [namespace, method] = name.includes('.') ? name.split('.') : [null, name];
+
+        // --- Phase 3: Auto-Navigation Orchestrator ---
+        const NAMESPACE_MAP = {
+            'pixel': 'iso_studio',
+            'world': 'editor',
+            'code': 'script',
+            'npc': 'npc',
+            'dialogue': 'dialogue'
+        };
+
         let tool = this.tools.get(name);
-        if (!tool) {
-            console.log(`[ToolRegistry] Tool ${name} not found. Waiting for registration...`);
-            for (let i = 0; i < 6; i++) { // 6 * 500ms = 3s
+        
+        if (!tool && namespace && NAMESPACE_MAP[namespace]) {
+            console.log(`[ToolRegistry] Namespace ${namespace} not found. Triggering Auto-Navigation to ${NAMESPACE_MAP[namespace]}...`);
+            
+            // Trigger navigation
+            await this.execute('navigateTo', { target: NAMESPACE_MAP[namespace] });
+            
+            // Wait for tool to appear (max 5 seconds now)
+            for (let i = 0; i < 10; i++) {
                 await new Promise(r => setTimeout(r, 500));
                 tool = this.tools.get(name);
                 if (tool) break;
@@ -154,11 +168,22 @@ export class ToolRegistry {
         console.log(`[ToolRegistry] AI Invoking Tool: ${name}`, args);
         
         try {
-            // Check permissions based on security level and manual override
+            // --- Phase 5: Trust Levels ---
+            // safe: no popup
+            // low-risk: toast only (auto-approve in Gate if toast is configured)
+            // high-risk: full modal
+            
+            const requiresConfirmation = tool.securityLevel === 'high-risk';
+            const isLowRisk = tool.securityLevel === 'low-risk';
+            
+            if (isLowRisk) {
+                this.eventBus.emit('ai:thought', { text: `GRRR... QUICK ACTION: ${name}` });
+            }
+
             const allowed = await this.permissionGate.requestPermission(
                 name, 
                 args, 
-                tool.requiresConfirmation || (tool.securityLevel !== 'safe')
+                requiresConfirmation || (tool.requiresConfirmation && !isLowRisk)
             );
 
             if (!allowed) {

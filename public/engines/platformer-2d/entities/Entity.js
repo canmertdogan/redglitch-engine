@@ -1,5 +1,6 @@
 class PlatformerEntity {
     constructor(x, y, w, h) {
+        this.id = `ent_${Math.random().toString(36).substr(2, 9)}`;
         this.x = x;
         this.y = y;
         this.w = w;
@@ -18,6 +19,10 @@ class PlatformerEntity {
 
         // Visual Effects
         this.light = null; // { radius, color, intensity }
+    }
+
+    trigger(action, data) {
+        console.log(`[Entity:${this.id}] Triggered with action: ${action}`);
     }
 
     update(dt, map) {
