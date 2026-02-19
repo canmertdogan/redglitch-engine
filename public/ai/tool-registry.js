@@ -1,4 +1,4 @@
-import { PermissionGate } from './permission-gate.js';
+import { PermissionGate } from './permission-gate.js?v=5';
 
 /**
  * Ketebe AI - Tool Registry (KAP)
@@ -10,11 +10,28 @@ export class ToolRegistry {
         this.eventBus = eventBus || window.KetebeEventBus;
         this.permissionGate = new PermissionGate();
         this.tools = new Map();
+        
+        console.log(`[ToolRegistry] Initialized in ${window.location.pathname}`);
+        this._debug(`Registry startup. Origin: ${window.location.origin}`);
+        
         this._setupListeners();
         this._registerDefaults();
         
         // Initial sync with Python Backend
         this._syncWithBackend();
+    }
+
+    _debug(msg, data = null) {
+        const trace = {
+            timestamp: new Date().toLocaleTimeString(),
+            location: window.location.pathname.split('/').pop(),
+            message: msg,
+            data: data
+        };
+        console.log(`%c[AI-DEBUG]%c ${msg}`, 'background: #7289da; color: white; padding: 2px 5px; border-radius: 2px;', '', data || '');
+        if (this.eventBus) {
+            this.eventBus.emit('ai:debug:trace', trace);
+        }
     }
 
     /**
@@ -23,59 +40,96 @@ export class ToolRegistry {
     _setupListeners() {
         if (!this.eventBus) return;
 
+        // --- Phase 3 & 4: Pending Action Recovery ---
+        this.eventBus.on('ai:tool:registered', (event) => {
+            if (!event || !event.data) return;
+            const data = event.data;
+            this._debug(`External tool registered: ${data.name}. Checking for pending actions...`);
+            this._checkPendingAction(data.name);
+        });
+
         // Re-sync tools when connection is established
         this.eventBus.on('system:websocket:connected', () => {
-            console.log(`[ToolRegistry] Connection detected. Syncing tools...`);
+            this._debug(`WebSocket connected. Syncing tools...`);
             this._syncWithBackend();
         });
 
         // The "Handshake": External tools can announce their presence
-        this.eventBus.on('studio:tool:announce', (toolDef) => {
-            console.log(`[ToolRegistry] Tool discovered: ${toolDef.name}`);
+        this.eventBus.on('studio:tool:announce', (event) => {
+            if (!event || !event.data) return;
+            const toolDef = event.data;
+            this._debug(`Tool discovered via announce: ${toolDef.name}`);
             this.register(toolDef);
-        });
-
-        // Tool removal (e.g., when window closes)
-        this.eventBus.on('studio:tool:remove', (data) => {
-            console.log(`[ToolRegistry] Tool removing: ${data.name}`);
-            this.deregister(data.name);
         });
 
         // Discovery Request: When a new AI component joins, it asks for all tools
         this.eventBus.on('ai:tool:discover', () => {
-            console.log(`[ToolRegistry] Discovery requested. Re-broadcasting all tools.`);
+            this._debug(`Discovery requested. Broadcasting all tools.`);
             for (const tool of this.tools.values()) {
                 this.eventBus.emit('ai:tool:registered', { name: tool.name, definition: tool });
             }
         });
 
         // Remote request for tool execution (from IRAB/Assistant)
-        this.eventBus.on('ai:command:request', async (request) => {
+        this.eventBus.on('ai:command:request', async (event) => {
+            if (!event || !event.data) return;
+            const request = event.data;
+            this._debug(`Remote command request: ${request.method}`, request.params);
             try {
                 const response = await this.execute(request.method, request.params, request.id);
                 this.eventBus.emit('ai:command:result', response);
             } catch (error) {
-                // execute() handles emitting its own error response
+                this._debug(`Remote command failed: ${request.method}`, error.message);
             }
         });
+    }
+
+    _checkPendingAction(toolName) {
+        const pending = localStorage.getItem('ai_pending_action');
+        if (pending) {
+            try {
+                const action = JSON.parse(pending);
+                const [ns] = toolName.split('.');
+                const [pendingNs] = action.method.split('.');
+                
+                this._debug(`Checking pending: ${action.method} vs ${toolName} (NS: ${pendingNs} vs ${ns})`);
+
+                if (action.method === toolName || (ns === pendingNs && ns !== null)) {
+                    this._debug(`MATCH FOUND! Recovering action: ${action.method}`);
+                    localStorage.removeItem('ai_pending_action');
+                    
+                    // Small delay to ensure the tool's environment (DOM/State) is fully ready
+                    setTimeout(() => {
+                        this._debug(`Executing recovered action: ${action.method}`);
+                        this.execute(action.method, action.params, action.id);
+                    }, 1000);
+                }
+            } catch (e) {
+                this._debug(`Recovery error: ${e.message}`);
+                localStorage.removeItem('ai_pending_action');
+            }
+        }
     }
 
     /**
      * Register a tool definition.
      */
     register(toolDef) {
-        // Ensure defaults for KAP compliance
         const compliantTool = {
-            securityLevel: 'high-risk', // Default to safest assumption
-            requiresConfirmation: toolDef.securityLevel !== 'safe',
+            securityLevel: 'high-risk',
+            requiresConfirmation: toolDef.requiresConfirmation !== false && toolDef.securityLevel !== 'safe',
             ...toolDef
         };
         this.tools.set(compliantTool.name, compliantTool);
         
-        // Announce registration success (with definition for remote listeners)
-        this.eventBus.emit('ai:tool:registered', { name: compliantTool.name, definition: compliantTool });
+        this._debug(`Tool registered locally: ${compliantTool.name}`);
+
+        this.eventBus.emit('ai:tool:registered', { 
+            name: compliantTool.name, 
+            namespace: compliantTool.name.split('.')[0],
+            definition: compliantTool 
+        });
         
-        // Sync with Python Backend
         this._syncWithBackend();
     }
 
@@ -131,9 +185,11 @@ export class ToolRegistry {
      */
     async execute(name, args, requestId = null) {
         const id = requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const [namespace, method] = name.includes('.') ? name.split('.') : [null, name];
+        const parts = name.split('.');
+        const namespace = parts.length > 1 ? parts[0] : null;
 
-        // --- Phase 3: Auto-Navigation Orchestrator ---
+        this._debug(`Executing tool: ${name}`, { args, namespace });
+
         const NAMESPACE_MAP = {
             'pixel': 'iso_studio',
             'world': 'editor',
@@ -145,34 +201,26 @@ export class ToolRegistry {
         let tool = this.tools.get(name);
         
         if (!tool && namespace && NAMESPACE_MAP[namespace]) {
-            console.log(`[ToolRegistry] Namespace ${namespace} not found. Triggering Auto-Navigation to ${NAMESPACE_MAP[namespace]}...`);
+            this._debug(`Namespace ${namespace} missing. Saving pending action and navigating...`);
             
-            // Trigger navigation
+            localStorage.setItem('ai_pending_action', JSON.stringify({ method: name, params: args, id }));
+
             await this.execute('navigateTo', { target: NAMESPACE_MAP[namespace] });
             
-            // Wait for tool to appear (max 5 seconds now)
-            for (let i = 0; i < 10; i++) {
-                await new Promise(r => setTimeout(r, 500));
-                tool = this.tools.get(name);
-                if (tool) break;
-            }
+            return { id, success: true, message: `Pending: Navigating to ${NAMESPACE_MAP[namespace]}` };
         }
         
         if (!tool) {
+            this._debug(`ERROR: Unknown tool ${name}`);
             const error = { code: 'UNKNOWN_TOOL', message: `Unknown tool: ${name}` };
             const response = { id, success: false, error };
             this.eventBus.emit('studio:action:result', response);
             return response;
         }
 
-        console.log(`[ToolRegistry] AI Invoking Tool: ${name}`, args);
+        this._debug(`Tool resolved: ${name}. Checking permissions...`);
         
         try {
-            // --- Phase 5: Trust Levels ---
-            // safe: no popup
-            // low-risk: toast only (auto-approve in Gate if toast is configured)
-            // high-risk: full modal
-            
             const requiresConfirmation = tool.securityLevel === 'high-risk';
             const isLowRisk = tool.securityLevel === 'low-risk';
             
@@ -187,12 +235,15 @@ export class ToolRegistry {
             );
 
             if (!allowed) {
+                this._debug(`Permission denied for ${name}`);
                 const error = { code: 'PERMISSION_DENIED', message: `User rejected action: ${name}` };
                 const response = { id, success: false, error };
                 this.eventBus.emit('ai:tool:rejected', { name, id });
                 this.eventBus.emit('studio:action:result', response);
                 return response;
             }
+
+            this._debug(`Permission granted. Invoking execute() for ${name}`);
 
             // Emit starting event (UI can show "AI is working...")
             const narrative = this._getNarrative(name);
@@ -202,7 +253,16 @@ export class ToolRegistry {
             
             this.eventBus.emit('studio:action:execute', { id, method: name, params: args });
             
-            const result = await tool.execute(args);
+            let result;
+            if (typeof tool.execute === 'function') {
+                this._debug(`Invoking local execution for ${name}`);
+                result = await tool.execute(args);
+            } else {
+                this._debug(`Invoking remote execution for ${name}. Waiting for result...`);
+                result = await this._waitForRemoteResult(id);
+            }
+            
+            this._debug(`Execution success for ${name}`, result);
             
             // Record the action for undo/audit
             this.permissionGate.recordAction(name, args, result, tool.undo);
@@ -213,6 +273,7 @@ export class ToolRegistry {
             
             return response;
         } catch (error) {
+            this._debug(`Execution error for ${name}`, error.message);
             const actionError = { 
                 code: 'EXECUTION_FAILED', 
                 message: error.message || 'Unknown execution error',
@@ -223,6 +284,27 @@ export class ToolRegistry {
             this.eventBus.emit('ai:tool:error', { name, id, error: actionError.message });
             return response;
         }
+    }
+
+    async _waitForRemoteResult(requestId) {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                this.eventBus.off('studio:action:result', handler);
+                reject(new Error("Remote execution timed out"));
+            }, 10000); // 10s timeout
+
+            const handler = (event) => {
+                const response = event.data;
+                if (response.id === requestId) {
+                    clearTimeout(timeout);
+                    this.eventBus.off('studio:action:result', handler);
+                    if (response.success) resolve(response.result);
+                    else reject(new Error(response.error?.message || "Remote execution failed"));
+                }
+            };
+
+            this.eventBus.on('studio:action:result', handler);
+        });
     }
 
     _getNarrative(toolName) {
@@ -317,9 +399,6 @@ export class ToolRegistry {
                 });
                 if (!res.ok) throw new Error(`Failed to write to ${args.path}`);
                 return { success: true, path: args.path };
-            },
-            undo: async (args, result) => {
-                // Not perfectly reversible if overwriting, but createUndoPoint in PermissionGate handles snapshots
             }
         });
 
@@ -423,9 +502,8 @@ export class ToolRegistry {
                     'npcs': '/api/npcs',
                     'items': '/api/items',
                     'quests': '/api/quests',
-                    'skills': '/api/skill-defs' // Assuming get exists too, checking...
+                    'skills': '/api/skill-defs' 
                 };
-                // Fallback for simple GETs
                 const res = await fetch(endpoint[args.type] || `/api/${args.type}`);
                 if (!res.ok) throw new Error(`Could not list ${args.type}`);
                 return await res.json();
@@ -462,7 +540,7 @@ export class ToolRegistry {
             }
         });
 
-        // --- STUDIO NAVIGATION (Legacy Compat) ---
+        // --- STUDIO NAVIGATION ---
 
         // navigateTo (Safe)
         this.register({
@@ -485,16 +563,24 @@ export class ToolRegistry {
                 required: ['target']
             },
             execute: async (args) => {
-                // Hub Integration: Use Studio window manager if available
-                if (window.openWindow && window.tools) {
-                    const tool = window.tools.find(t => t.id === args.target);
+                const target = (typeof args === 'string') ? args : args.target;
+                
+                if (!target) throw new Error("Navigation target missing");
+
+                this._debug(`Navigating to: ${target}`);
+
+                let hub = window;
+                if (!hub.openWindow && window.parent && window.parent.openWindow) hub = window.parent;
+                if (!hub.openWindow && window.top && window.top.openWindow) hub = window.top;
+
+                if (hub.openWindow && hub.tools) {
+                    const tool = hub.tools.find(t => t.id === target);
                     if (tool) {
-                        window.openWindow(tool);
+                        hub.openWindow(tool);
                         return { success: true, message: `Opened ${tool.title}` };
                     }
                 }
 
-                // Fallback for standalone mode
                 const nav = {
                     'dashboard': 'dashboard.html',
                     'project_dashboard': 'project_dashboard.html',
@@ -510,11 +596,14 @@ export class ToolRegistry {
                     'dialogue': 'dialogue_editor.html',
                     'pixel': 'pixel_editor.html'
                 };
-                if (nav[args.target]) {
-                    window.location.href = nav[args.target];
-                    return { message: `Redirecting to ${args.target}` };
+                
+                if (nav[target]) {
+                    const url = nav[target];
+                    if (window.top) window.top.location.href = url;
+                    else window.location.href = url;
+                    return { message: `Redirecting to ${target}` };
                 }
-                throw new Error(`Invalid navigation target: ${args.target}`);
+                throw new Error(`Invalid target: ${target}`);
             }
         });
         

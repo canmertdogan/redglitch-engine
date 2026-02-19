@@ -64,6 +64,7 @@ window.IRAB = {
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === 'LOAD_PROGRESS') this.handleLoadProgress(msg.data);
+                    if (msg.type === 'SYSTEM_GREETING') this.addMessage('system', msg.data);
                     if (msg.type === 'COMMAND') {
                         const { action, params } = msg.data;
                         console.log("[IRAB] Executing action:", action, params);
@@ -203,16 +204,28 @@ window.IRAB = {
     },
 
     handleToken(token) {
+        if (token === null) {
+            this.currentBotMsg = null;
+            this.saveHistory();
+            return;
+        }
+
         if (!this.currentBotMsg) {
             this.openChat(); // Auto-open on first token
             this.currentBotMsg = this.addMessage('bot', "", false);
             this.playSound('msg');
+            
+            // UI Persona Enforcement: If model starts without GRRR, add it.
+            if (token && !token.startsWith("GRRR")) {
+                const bubble = this.currentBotMsg.querySelector('.irab-msg-bubble');
+                bubble.textContent = "GRRR... ";
+            }
         }
         const bubble = this.currentBotMsg.querySelector('.irab-msg-bubble');
         bubble.textContent += token;
         const msgs = document.getElementById('irab-chat-messages');
         if (msgs) msgs.scrollTop = msgs.scrollHeight;
-        if (token === null || token.includes(']]')) this.saveHistory();
+        if (token.includes(']]')) this.saveHistory();
     },
 
     handleState(state) {

@@ -3,9 +3,9 @@
  * RAG pipeline: load corpus -> embed -> search -> retrieve.
  */
 
-import { AI_CONFIG } from './config.js';
-import { VectorStore } from './vector-store.js';
-import { EventBus } from '../shared/EventBus.js';
+import { AI_CONFIG } from './config.js?v=5';
+import { VectorStore } from './vector-store.js?v=5';
+import { EventBus } from './shim.js?v=5';
 
 export class RAGEngine {
     constructor() {

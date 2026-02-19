@@ -3,16 +3,16 @@
  * Main orchestrator for Ketebe AI Micro Edition.
  */
 
-import { AI_CONFIG } from './config.js';
-import { ModelManager } from './model-manager.js';
-import { InferenceEngine } from './inference-engine.js';
-import { TokenizerUtils } from './tokenizer-utils.js';
-import { RAGEngine } from './rag-engine.js';
-import { ContextManager } from './context-manager.js';
-import { ToolRegistry } from './tool-registry.js';
-import { WorkflowManager } from './workflow-manager.js';
-import { CoPilot } from './co-pilot.js';
-import { EventBus } from '../shared/EventBus.js';
+import { AI_CONFIG } from './config.js?v=5';
+import { ModelManager } from './model-manager.js?v=5';
+import { InferenceEngine } from './inference-engine.js?v=5';
+import { TokenizerUtils } from './tokenizer-utils.js?v=5';
+import { RAGEngine } from './rag-engine.js?v=5';
+import { ContextManager } from './context-manager.js?v=5';
+import { ToolRegistry } from './tool-registry.js?v=5';
+import { WorkflowManager } from './workflow-manager.js?v=5';
+import { CoPilot } from './co-pilot.js?v=5';
+import { EventBus } from './shim.js?v=5';
 
 export class KetebeAI {
     constructor() {
@@ -136,9 +136,4 @@ export class KetebeAI {
     clearHistory() {
         this.contextManager.clearHistory();
     }
-}
-
-// Auto-instantiate if loaded as a script
-if (typeof window !== 'undefined') {
-    window.KetebeAIInstance = new KetebeAI();
 }

@@ -32,6 +32,8 @@ window.IRAB = {
     tokenBuffer: "", 
     isHidingToolCall: false,
 
+    _commandQueue: [],
+
     init() {
         console.log("[IRAB] Classic MSN UI Initializing...");
         
@@ -43,15 +45,50 @@ window.IRAB = {
             
             window.irab.onCommand = (cmdData) => {
                 const { action, params } = cmdData;
-                if (action === 'nudge') this.nudge(true);
-                else if (action === 'wink') this.playWink(params[0] || 'thumb');
-                else if (action === 'showAsset') this.renderAsset(params[0]);
-                else if (action === 'injectCode') this.injectCode(params[0]);
-                else if (action === 'openTool') {
-                    if (window.openWindow) {
-                        const tool = window.tools?.find(t => t.id === params[0]);
-                        if (tool) window.openWindow(tool);
+                console.log("[IRAB] Received command from bridge:", action, params);
+                
+                // If Brain (Registry) is ready, execute immediately
+                if (window.KetebeAIInstance && window.KetebeAIInstance.toolRegistry) {
+                    window.KetebeAIInstance.toolRegistry.execute(action, params);
+                } else {
+                    // Brain not ready yet, queue the command
+                    console.log("[IRAB] Brain (Registry) not ready. Queuing command...");
+                    this._commandQueue.push(cmdData);
+                    
+                    // Start a polling interval to flush the queue once Brain is ready
+                    if (!this._flushInterval) {
+                        this._flushInterval = setInterval(() => {
+                            if (window.KetebeAIInstance && window.KetebeAIInstance.toolRegistry) {
+                                console.log("[IRAB] Brain detected! Flushing command queue...");
+                                while (this._commandQueue.length > 0) {
+                                    const next = this._commandQueue.shift();
+                                    window.KetebeAIInstance.toolRegistry.execute(next.action, next.params);
+                                }
+                                clearInterval(this._flushInterval);
+                                this._flushInterval = null;
+                            }
+                        }, 500);
                     }
+
+                    // Emergency Fallback: If after 5s Brain still isn't here, try direct navigation
+                    setTimeout(() => {
+                        if (this._commandQueue.includes(cmdData)) {
+                            console.warn("[IRAB] Brain initialization timeout. Attempting direct fallback.");
+                            const [namespace] = action.split('.');
+                            const NAMESPACE_MAP = {
+                                'pixel': 'iso_studio',
+                                'world': 'editor',
+                                'code': 'script',
+                                'npc': 'npc',
+                                'dialogue': 'dialogue'
+                            };
+                            
+                            const target = NAMESPACE_MAP[namespace] || params[0] || params.target;
+                            if (target) {
+                                this._directNavigate(target);
+                            }
+                        }
+                    }, 5000);
                 }
                 if (window.KetebeEventBus) window.KetebeEventBus.emit('ai:command', cmdData);
             };
@@ -106,6 +143,32 @@ window.IRAB = {
         };
         
         console.log("[IRAB] MSN UI Ready.");
+    },
+
+    _directNavigate(target) {
+        if (!target) return;
+        let hub = window;
+        if (!hub.openWindow && window.parent && window.parent.openWindow) hub = window.parent;
+        if (!hub.openWindow && window.top && window.top.openWindow) hub = window.top;
+
+        if (hub.openWindow && hub.tools) {
+            const tool = hub.tools.find(t => t.id === target);
+            if (tool) {
+                hub.openWindow(tool);
+                return;
+            }
+        }
+        
+        const nav = {
+            'dashboard': 'dashboard.html', 'project_dashboard': 'project_dashboard.html',
+            'editor': 'editor.html', 'iso_studio': 'iso_editor.html',
+            'platformer_studio': 'platformer_editor.html', 'script': 'script_editor.html',
+            'npc': 'npc_editor.html', 'pixel': 'pixel_editor.html'
+        };
+        if (nav[target]) {
+            if (window.top) window.top.location.href = nav[target];
+            else window.location.href = nav[target];
+        }
     },
 
     startIsms() {

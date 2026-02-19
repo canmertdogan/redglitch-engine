@@ -204,12 +204,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 }, websocket)
                 
                 # If brain is already READY, send a greeting if not sent yet for this connection
-                if brain.status == "READY" and id(websocket) not in greeted_connections:
-                    logger.info(f"Sending funny greeting to connection {id(websocket)}")
-                    greeted_connections.add(id(websocket))
+                ws_id = id(websocket)
+                if brain.status == "READY" and ws_id not in greeted_connections:
+                    logger.info(f"Sending funny greeting to connection {ws_id}")
+                    greeted_connections.add(ws_id)
                     import random
                     isms = ["GRRR... I AM AWAKE!", "GRRR... READY TO PIXELATE!", "GRRR... SYSTEM ONLINE AND HUNGRY!", "GRRR... NEED HELP OR JUST A SNACK?"]
-                    await manager.send_personal_message({"type": "TOKEN", "data": random.choice(isms)}, websocket)
+                    await manager.send_personal_message({"type": "SYSTEM_GREETING", "data": random.choice(isms)}, websocket)
                     await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
             elif msg_type == "UPDATE_CONFIG":
                 config = message.get("data", {})
@@ -289,53 +290,66 @@ async def handle_prompt(message, websocket):
 
         for token in brain.generate_stream(augmented_prompt):
             if not token: continue
-            full_response += token
             
             # --- KAP Protocol Detection (JSON tool blocks) ---
-            if "```tool" in full_response and not in_tool_block:
-                in_tool_block = True
-                # Start buffer from the last occurrence of the marker
-                tool_buffer = full_response[full_response.rfind("```tool"):]
-                continue # Continue to next token to build the rest of the block
+            if not in_tool_block:
+                potential_full = full_response + token
+                # Look for tool block start (flexible: ```tool OR just ``` if followed by {)
+                if "```" in potential_full:
+                    marker_pos = potential_full.rfind("```")
+                    split_idx = marker_pos - len(full_response)
+                    
+                    if split_idx > 0:
+                        await manager.send_personal_message({"type": "TOKEN", "data": token[:split_idx]}, websocket)
+                    
+                    in_tool_block = True
+                    tool_buffer = potential_full[marker_pos:]
+                    full_response = potential_full
+                    continue
+                else:
+                    if any(phrase in (full_response + token)[-100:] for phrase in PROMPT_LEAK_PHRASES):
+                        full_response += token
+                        continue
+                    
+                    full_response += token
+                    await manager.send_personal_message({"type": "TOKEN", "data": token}, websocket)
             
-            if in_tool_block:
+            else:
+                full_response += token
                 tool_buffer += token
-                # Look for the closing marker, ensuring we ignore the opening one
-                if "```" in tool_buffer[7:]: 
-                    # Block finished
+                
+                # SAFETY: If buffer gets too huge, flush.
+                if len(tool_buffer) > 1500:
+                    await manager.send_personal_message({"type": "TOKEN", "data": tool_buffer}, websocket)
+                    in_tool_block = False
+                    tool_buffer = ""
+                    continue
+
+                # Look for the closing marker
+                # Check if we have at least one closing ``` that IS NOT the starting one
+                if tool_buffer.count("```") >= 2: 
                     try:
-                        # Robust extraction: find content between first { and last }
                         start = tool_buffer.find('{')
                         end = tool_buffer.rfind('}')
                         if start != -1 and end != -1:
                             json_str = tool_buffer[start:end+1]
                             call = json.loads(json_str)
                             logger.info(f"KAP Action Detected: {call.get('name')}")
-                            
-                            # Forward to Studio via WebSocket
                             await manager.send_personal_message({
                                 "type": "COMMAND",
                                 "data": {"action": call.get("name"), "params": call.get("args", {})}
                             }, websocket)
                         else:
-                            logger.warning(f"KAP Block found but no JSON object detected. Buffer: {tool_buffer}")
+                            logger.warning("KAP Block found but no JSON object detected.")
                     except Exception as e:
-                        logger.error(f"Failed to parse KAP JSON: {e}. Buffer: {tool_buffer}")
+                        logger.error(f"Failed to parse KAP JSON: {e}")
                     
                     in_tool_block = False
                     tool_buffer = ""
-                    # Keep everything AFTER the tool block for context
-                    full_response = full_response[full_response.rfind("```") + 3:]
+                    if "```" in full_response:
+                        full_response = full_response[full_response.rfind("```") + 3:]
                     continue
 
-            # Skip this token if it's part of a prompt leak
-            if any(phrase in full_response[-100:] for phrase in PROMPT_LEAK_PHRASES):
-                continue
-            
-            # Only send token if we are not in the middle of a command/tool block
-            if not in_tool_block:
-                await manager.send_personal_message({"type": "TOKEN", "data": token}, websocket)
-            
             await asyncio.sleep(0)
             
     except Exception as e:

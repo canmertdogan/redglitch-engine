@@ -18,9 +18,7 @@ export class WorkflowManager {
      * ```
      */
     parseToolCalls(text) {
-        const regex = /```tool\s*
-([\s\S]*?)
-```/g;
+        const regex = /```tool\s*\n([\s\S]*?)\n```/g;
         const calls = [];
         let match;
 

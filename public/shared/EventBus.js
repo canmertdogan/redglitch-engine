@@ -11,8 +11,16 @@ class EventBus {
         this.isConnected = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
+        this.sourceId = this.generateSourceId();
         
         this.init();
+    }
+
+    generateSourceId() {
+        if (typeof window !== 'undefined') {
+            return `${window.location.pathname}_${Math.random().toString(36).substr(2, 5)}`;
+        }
+        return 'server';
     }
 
     init() {
@@ -22,8 +30,8 @@ class EventBus {
         // Listen for window messages (for Electron IPC compatibility)
         if (typeof window !== 'undefined') {
             window.addEventListener('message', (event) => {
-                if (event.data && event.data.type === 'ketebe-event') {
-                    this.handleRemoteEvent(event.data);
+                if (event.data && event.data.sourceType === 'ketebe-event') {
+                    this.handleRemoteEvent(event.data.event);
                 }
             });
         }
@@ -173,18 +181,31 @@ class EventBus {
         if (window.parent && window.parent !== window) {
             try {
                 window.parent.postMessage({
-                    type: 'ketebe-event',
-                    ...eventData
+                    sourceType: 'ketebe-event',
+                    event: eventData
                 }, '*');
             } catch (e) {}
         }
+        
+        // Broadcast to all child iframes
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+            try {
+                if (iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({
+                        sourceType: 'ketebe-event',
+                        event: eventData
+                    }, '*');
+                }
+            } catch (e) {}
+        });
         
         // Broadcast to opener (if we were opened as a popup)
         if (window.opener && window.opener !== window) {
             try {
                 window.opener.postMessage({
-                    type: 'ketebe-event',
-                    ...eventData
+                    sourceType: 'ketebe-event',
+                    event: eventData
                 }, '*');
             } catch (err) {}
         }
@@ -278,10 +299,7 @@ class EventBus {
      * Get source identifier for this EventBus instance
      */
     getSource() {
-        if (typeof window !== 'undefined') {
-            return `${window.location.pathname}_${Math.random().toString(36).substr(2, 5)}`;
-        }
-        return 'server';
+        return this.sourceId;
     }
 
     /**

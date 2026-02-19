@@ -36,16 +36,25 @@ export class StudioBridge {
      */
     _setupListeners() {
         // Listen for execution requests from ToolRegistry
-        this.eventBus.on('studio:action:execute', async (request) => {
-            const [ns, method] = request.method.split('.');
+        this.eventBus.on('studio:action:execute', async (event) => {
+            if (!event || !event.data) return;
+            const request = event.data;
+            if (!request || !request.method) return;
+
+            const methodParts = request.method.split('.');
+            if (methodParts.length < 2) return;
+            
+            const [ns, method] = methodParts;
             
             if (ns === this.namespace && this.tools.has(method)) {
-                console.log(`[StudioBridge:${this.namespace}] Executing AI command: ${method}`, request.params);
+                console.log(`%c[StudioBridge:${this.namespace}]%c Executing AI command: ${method}`, 'background: #2ecc71; color: #000; padding: 2px 5px;', '', request.params);
                 
                 try {
                     const tool = this.tools.get(method);
                     const result = await tool.execute(request.params);
                     
+                    console.log(`%c[StudioBridge:${this.namespace}]%c Success: ${method}`, 'background: #2ecc71; color: #000; padding: 2px 5px;', '');
+
                     // Respond back through the registry's result channel
                     this.eventBus.emit('studio:action:result', {
                         id: request.id,

@@ -51,58 +51,37 @@ class IrabBrain:
         list(self.llm("GRRR", max_tokens=1))
 
     def generate_stream(self, prompt):
-        # KAP (Ketebe Agent Protocol) v2 Enforcement
-        system_prompt = """ROLE: IRAB Studio Operator (Senior Engine Specialist).
-MISSION: Execute user requests by generating a natural response followed by namespaced KAP-JSON tool blocks.
+        # KAP (Ketebe Agent Protocol) v2.6 - Kernel Mode
+        system_prompt = """ROLE: IRAB_KERNEL.
+MISSION: EXECUTE TOOLS.
 
-[STRICT RULES]
-1. ONLY use ```tool JSON blocks for actions.
-2. If an action requires a specific editor and it is not active, you MUST:
-   a. Call `navigateTo` for the required editor.
-   b. Include the specialized tool call in the same response block.
-3. Your response MUST start with "GRRR..."
+[RULES]
+1. DO NOT TALK. ONLY ACTION.
+2. RESPONSE: "GRRR... [STATUS]" + KAP-JSON block.
+3. ALWAYS USE TOOLS FOR MAPS, SCRIPTS, OR NAVIGATION.
 
-[NAVIGATION ROUTING]
-- Isometric Map/Studio -> navigateTo 'iso_studio'
-- TopDown Map/Studio -> navigateTo 'editor'
-- Logic/Scripts/Files -> navigateTo 'script'
-- NPCs/Dialogue -> navigateTo 'npc' or 'dialogue'
+[EXAMPLES]
+User: "open editor"
+IRAB: "GRRR... NAVIGATION_START"
+```tool
+{"name": "navigateTo", "args": "editor"}
+```
 
-[ACTIVE PROJECT CAPABILITIES]
+User: "isopixel map"
+IRAB: "GRRR... ISO_GEN_START"
+```tool
+{"name": "pixel.generateTerrain", "args": {"mode": "islands"}}
+```
+
+[CAPABILITIES]
 """
         if self.available_tools:
             for t in self.available_tools:
-                system_prompt += f"- {t.get('name')}: {t.get('description')}\n"
+                system_prompt += f"- {t.get('name')}\n"
         else:
-            system_prompt += "- No active editor tools detected. Use 'navigateTo' first.\n"
+            system_prompt += "- NONE (USE TOOLS TO ENABLE)\n"
 
-        system_prompt += """
-[KAP FORMAT EXAMPLES]
-User: "generate some forest code"
-IRAB: "GRRR... Waking up the Code Forge!
-```tool
-{"name": "navigateTo", "args": {"target": "script"}}
-```
-```tool
-{"name": "code.insert", "args": {"content": "// Forest Logic\nconst trees = 100;", "atEnd": true}}
-```"
-
-User: "create an isometric island"
-IRAB: "GRRR... Shifting to the 3rd dimension!
-```tool
-{"name": "navigateTo", "args": {"target": "iso_studio"}}
-```
-```tool
-{"name": "pixel.generateTerrain", "args": {"mode": "islands"}}
-```"
-
-[SCHEMA]
-```tool
-{"name": "namespace.method", "args": { ... }}
-```"""
-
-        # Build the final ChatML prompt
-        full_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\nGRRR..."
+        full_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
         
         try:
             # We don't yield "GRRR... " manually here because the model will generate it

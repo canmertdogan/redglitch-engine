@@ -1994,9 +1994,9 @@
 
     </script>
     <!-- Integration System -->
-    <script src="/shared/EventBus.js"></script>
-    <script src="/shared/SharedProjectState.js"></script>
-    <script src="/shared/AssetManager.js"></script>
+    <script src="/shared/EventBus.js?v=6"></script>
+    <script src="/shared/SharedProjectState.js?v=6"></script>
+    <script src="/shared/AssetManager.js?v=6"></script>
     <script type="module">
         import { ThoughtVisualizer } from '/ai/ui/thought-visualizer.js';
         window.KetebeThoughtVisualizer = new ThoughtVisualizer(window.KetebeEventBus);
@@ -2719,13 +2719,19 @@
         </div>
     </div>
     <!-- IRAB Native Cortex Bridges -->
-    <script src="ai/bridge.js"></script>
-    <script src="assistant.js"></script>
+    <script src="ai/bridge.js?v=5"></script>
+    <script src="assistant.js?v=5"></script>
     
-    <script>
-        // Initialize AI Micro if needed for ghost-text etc, but keep UI to Native
-        // import { KetebeAI } from './ai/ketebe-ai.js';
-        // window.KetebeAI = new KetebeAI();
+    <script type="module">
+        // Initialize AI Micro for ghost-text and Command Bus (ToolRegistry)
+        import { KetebeAI } from './ai/ketebe-ai.js?v=5';
+        try {
+            window.KetebeAIInstance = new KetebeAI();
+            await window.KetebeAIInstance.initialize();
+            console.log("✅ AI Brain (Micro) initialized successfully.");
+        } catch (err) {
+            console.error("❌ AI Brain failed to load:", err);
+        }
     </script>
 </body>
 </html>

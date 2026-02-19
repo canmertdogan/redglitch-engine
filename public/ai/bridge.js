@@ -60,7 +60,8 @@ if (typeof window.IrabBridge === 'undefined') {
 
                 // Forward sync events from EventBus to WebSocket
                 if (window.KetebeEventBus) {
-                    window.KetebeEventBus.on('ai:command:sync', (msg) => {
+                    window.KetebeEventBus.on('ai:command:sync', (event) => {
+                        const msg = event.data || event;
                         this.send(msg);
                     });
                 }

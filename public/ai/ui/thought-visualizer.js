@@ -14,29 +14,37 @@ export class ThoughtVisualizer {
         if (!this.eventBus) return;
 
         // Listen for tool execution start
-        this.eventBus.on('studio:action:execute', (data) => {
+        this.eventBus.on('studio:action:execute', (event) => {
+            if (!event || !event.data) return;
+            const data = event.data;
             this.visualizeIntent(data.method, data.params);
         });
 
         // Listen for tool success
-        this.eventBus.on('ai:tool:success', (data) => {
+        this.eventBus.on('ai:tool:success', (event) => {
+            const data = event.data;
             this.clearVisuals();
-            this.speak(`Done. I've finished the ${data.name} task.`);
+            if (data && data.name) this.speak(`Done. I've finished the ${data.name} task.`);
         });
 
         // Listen for tool error
-        this.eventBus.on('ai:tool:error', (data) => {
+        this.eventBus.on('ai:tool:error', (event) => {
+            const data = event.data;
             this.clearVisuals();
-            this.speak(`Oops. I couldn't complete the ${data.name} task. ${data.error}`);
+            if (data && data.name) this.speak(`Oops. I couldn't complete the ${data.name} task. ${data.error}`);
         });
 
         // Listen for workflow steps
-        this.eventBus.on('ai:workflow:step', (data) => {
+        this.eventBus.on('ai:workflow:step', (event) => {
+            if (!event || !event.data) return;
+            const data = event.data;
             this.showProgressMessage(`Executing: ${data.name}...`);
         });
 
         // Listen for workflow completion
-        this.eventBus.on('ai:workflow:complete', (data) => {
+        this.eventBus.on('ai:workflow:complete', (event) => {
+            if (!event || !event.data) return;
+            const data = event.data;
             if (data.success) {
                 this.showProgressMessage(`Ready.`);
                 this.speak(`Excellent. I've finished the sequence of ${data.count} actions.`);
@@ -51,6 +59,7 @@ export class ThoughtVisualizer {
      * Show ghost indicators in the active editor.
      */
     visualizeIntent(method, params) {
+        if (!method || !params) return;
         console.log(`[ThoughtVisualizer] Visualizing intent: ${method}`, params);
         
         // Emit visual intent events that editors can pick up

@@ -4,7 +4,7 @@
  */
 
 import { AI_CONFIG } from './config.js';
-import { EventBus } from '../shared/EventBus.js';
+import { EventBus } from './shim.js';
 
 export class InferenceEngine {
     constructor(modelManager) {
