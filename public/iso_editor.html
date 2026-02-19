@@ -1192,18 +1192,21 @@
 
     <script src="js/android-adapter.bundle.js"></script>
     <script src="base_game/sprites.js"></script>
-    <script src="strategies/IsoStrategy.js"></script>
-    <script src="engines/iso-pixel/fxSystem.js"></script>
-    <script src="engines/iso-pixel/shaderSystem.js"></script>
-    <script src="iso_generator.js"></script>
+    <script src="strategies/IsoStrategy.js?v=7"></script>
+    <script src="engines/iso-pixel/fxSystem.js?v=7"></script>
+    <script src="engines/iso-pixel/shaderSystem.js?v=7"></script>
+    <script src="iso_generator.js?v=7"></script>
     
     <!-- Integration System -->
-    <script src="/shared/EventBus.js?v=6"></script>
-    <script src="/shared/SharedProjectState.js?v=6"></script>
-    <script src="/shared/AssetManager.js?v=6"></script>
-    <script type="module" src="/ai/studio-bridge.js?v=6"></script>
+    <script src="/shared/EventBus.js?v=7"></script>
+    <script src="/shared/SharedProjectState.js?v=7"></script>
+    <script src="/shared/AssetManager.js?v=7"></script>
+    <script type="module" src="/ai/studio-bridge.js?v=7"></script>
     
-    <script src="iso_editor.js?v=6"></script>
+    <!-- AI Brain for local action recovery -->
+    <script type="module" src="/ai/ketebe-ai.js?v=7"></script>
+    
+    <script src="iso_editor.js?v=7"></script>
     <script>
         function toggleInspector(force) {
             const el = document.getElementById('inspector-container');

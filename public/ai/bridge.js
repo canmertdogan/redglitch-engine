@@ -126,6 +126,14 @@ if (typeof window.IrabBridge === 'undefined') {
             });
             return true;
         }
+
+        abort() {
+            if (this.isConnected) {
+                this.send({ type: "ABORT" });
+                return true;
+            }
+            return false;
+        }
     }
 
     window.IrabBridge = IrabBridge;

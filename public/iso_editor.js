@@ -966,9 +966,16 @@ function changeZ(delta) {
     let val = state.currentZ + delta;
     val = Math.max(-32, Math.min(32, val));
     state.currentZ = val;
-    document.getElementById('z-slider').value = val;
-    document.getElementById('z-input').value = val;
-    document.getElementById('z-display').innerText = val;
+    
+    const zSlider = document.getElementById('z-slider');
+    if (zSlider) zSlider.value = val;
+    
+    const zInput = document.getElementById('z-input');
+    if (zInput) zInput.value = val;
+    
+    const zDisplay = document.getElementById('z-display');
+    if (zDisplay) zDisplay.innerText = val;
+    
     render();
 }
 
@@ -1892,7 +1899,9 @@ function placeAtLayer(layerIdx, idx) {
         map.shapes[layerIdx][idx] = state.selectedShape;
     }
     map.occlusionDirty = true;
-    state.strategy.invalidateChunks();
+    if (state.strategy && state.strategy.invalidateChunks) {
+        state.strategy.invalidateChunks();
+    }
 }
 
 function paint() {
@@ -1983,7 +1992,9 @@ function paint() {
         }
         if(erasedSomething) {
             map.occlusionDirty = true;
-            state.strategy.invalidateChunks();
+            if (state.strategy && state.strategy.invalidateChunks) {
+                state.strategy.invalidateChunks();
+            }
         }
 
         // If no block was found at this Z, maybe the user wants to erase decorations/lights?

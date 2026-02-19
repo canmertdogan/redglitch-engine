@@ -6,7 +6,7 @@
 export class ThoughtVisualizer {
     constructor(eventBus = null) {
         this.eventBus = eventBus || window.KetebeEventBus;
-        this.voiceEnabled = true;
+        this.voiceEnabled = false; // TTS disabled as requested
         this.setupListeners();
     }
 

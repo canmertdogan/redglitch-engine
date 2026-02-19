@@ -174,41 +174,8 @@ class EventBus {
         // Handle local listeners
         this.handleLocalEvent(eventData);
         
-        // Broadcast to other editors via WebSocket
+        // Broadcast to other windows/WS
         this.broadcastEvent(eventData);
-        
-        // Broadcast to parent window (if we are in an iframe)
-        if (window.parent && window.parent !== window) {
-            try {
-                window.parent.postMessage({
-                    sourceType: 'ketebe-event',
-                    event: eventData
-                }, '*');
-            } catch (e) {}
-        }
-        
-        // Broadcast to all child iframes
-        const iframes = document.querySelectorAll('iframe');
-        iframes.forEach(iframe => {
-            try {
-                if (iframe.contentWindow) {
-                    iframe.contentWindow.postMessage({
-                        sourceType: 'ketebe-event',
-                        event: eventData
-                    }, '*');
-                }
-            } catch (e) {}
-        });
-        
-        // Broadcast to opener (if we were opened as a popup)
-        if (window.opener && window.opener !== window) {
-            try {
-                window.opener.postMessage({
-                    sourceType: 'ketebe-event',
-                    event: eventData
-                }, '*');
-            } catch (err) {}
-        }
         
         return eventData;
     }
@@ -217,7 +184,7 @@ class EventBus {
      * Handle events from remote sources
      */
     handleRemoteEvent(eventData) {
-        if (eventData.source === this.getSource()) {
+        if (!eventData || eventData.source === this.getSource()) {
             // Ignore our own events
             return;
         }
@@ -257,15 +224,46 @@ class EventBus {
     }
 
     /**
-     * Broadcast event via WebSocket
+     * Broadcast event via WebSocket and postMessage
      */
     broadcastEvent(eventData) {
+        // 1. WebSocket Broadcast
         if (this.websocket && this.isConnected) {
             try {
                 this.websocket.send(JSON.stringify(eventData));
             } catch (err) {
-                console.error('[EventBus] Failed to broadcast event:', err);
+                console.error('[EventBus] Failed to broadcast event via WS:', err);
             }
+        }
+
+        // 2. Cross-Window postMessage Broadcast
+        const message = {
+            sourceType: 'ketebe-event',
+            event: eventData
+        };
+
+        // Broadcast to parent window (if we are in an iframe)
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage(message, '*');
+            } catch (e) {}
+        }
+        
+        // Broadcast to all child iframes
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+            try {
+                if (iframe.contentWindow) {
+                    iframe.contentWindow.postMessage(message, '*');
+                }
+            } catch (e) {}
+        });
+        
+        // Broadcast to opener (if we were opened as a popup)
+        if (window.opener && window.opener !== window) {
+            try {
+                window.opener.postMessage(message, '*');
+            } catch (err) {}
         }
     }
 

@@ -2211,85 +2211,112 @@
             box-shadow: 0px 0px 0px rgba(0,0,0,0.5);
         }
 
-        /* Settings Panel */
+        /* Settings Panel (Revamped) */
         #irab-settings {
             position: absolute;
-            top: 30px; right: 0;
-            width: 300px;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 420px;
             background: #ECE9D8;
-            border: 2px solid;
-            border-color: #808080 #D4D0C8 #D4D0C8 #808080;
-            box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
+            border: 1px solid #0054E3;
+            box-shadow: 4px 4px 20px rgba(0,0,0,0.5);
             display: none;
             z-index: 10000;
+            padding: 2px;
         }
-        #irab-settings.show { display: block; animation: irabSettingsIn 0.2s ease; }
-        @keyframes irabSettingsIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        #irab-settings.show { display: block; }
 
-        .irab-settings-header {
-            background: linear-gradient(180deg, #3F8CF3 0%, #2862D9 50%, #1A4AAE 100%);
-            color: #FFF;
-            padding: 4px 6px;
-            font-weight: bold;
-            font-size: 11px;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        .irab-settings-tabs {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 10px 10px 0 10px;
+            gap: 2px;
+            background: #ECE9D8;
         }
-        .irab-settings-content {
-            padding: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .irab-setting-group {
-            margin-bottom: 12px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #D4D0C8;
-        }
-        .irab-setting-group:last-child { border-bottom: none; }
-        .irab-setting-label {
-            font-weight: bold;
+        .irab-tab {
+            padding: 4px 12px;
+            background: #ECE9D8;
+            border: 1px solid #808080;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
             font-size: 11px;
-            margin-bottom: 6px;
-            color: #000080;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
         }
+        .irab-tab.active {
+            background: #FFF;
+            font-weight: bold;
+            padding-top: 6px;
+            margin-top: -2px;
+            z-index: 3;
+            border-color: #808080;
+        }
+        .irab-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px; left: 0; right: 0;
+            height: 3px; background: #FFF;
+        }
+
+        .irab-settings-content {
+            background: #FFF;
+            border: 1px solid #808080;
+            margin: 0 10px;
+            padding: 15px;
+            min-height: 280px;
+            position: relative;
+            z-index: 2;
+        }
+        .irab-settings-page { display: none; }
+        .irab-settings-page.active { display: block; }
+
+        .irab-fieldset {
+            border: 1px solid #D4D0C8;
+            margin-bottom: 15px;
+            padding: 10px;
+            padding-top: 5px;
+        }
+        .irab-fieldset legend {
+            font-size: 11px;
+            color: #000080;
+            padding: 0 5px;
+        }
+
         .irab-setting-control {
             display: flex;
-            gap: 6px;
+            gap: 10px;
             align-items: center;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             font-size: 11px;
         }
-        .irab-setting-control input[type="checkbox"] {
-            width: 13px;
-            height: 13px;
-        }
-        .irab-setting-control select,
-        .irab-setting-control input[type="text"] {
-            flex: 1;
-            padding: 3px 4px;
-            border: 1px solid #A0A0A0;
-            border-left-color: #D4D0C8;
-            border-top-color: #D4D0C8;
-            background: #FFF;
-            font-size: 11px;
+        .irab-setting-control label { flex: 1; }
+        .irab-setting-control input[type="text"],
+        .irab-setting-control input[type="number"],
+        .irab-setting-control select {
+            padding: 2px 4px;
+            border: 1px solid #7F9DB9;
             font-family: Tahoma, sans-serif;
+            font-size: 11px;
         }
-        .irab-setting-desc {
-            font-size: 10px;
-            color: #808080;
-            margin-left: 19px;
-            line-height: 1.3;
-        }
+
         .irab-settings-buttons {
             display: flex;
+            justify-content: flex-end;
             gap: 6px;
-            justify-content: center;
-            margin-top: 12px;
-            padding-top: 8px;
-            border-top: 1px solid #FFF;
+            padding: 10px;
+            background: #ECE9D8;
         }
+        .xp-btn {
+            padding: 4px 15px;
+            min-width: 75px;
+            background: #ECE9D8;
+            border: 1px solid #003C74;
+            font-family: Tahoma, sans-serif;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .xp-btn:hover { background: #E5F1FB; border-color: #0054E3; }
+        .xp-btn:active { background: #D4E7F7; }
 
         #irab-chat-messages {
             flex: 1; background: #FFF;
@@ -2605,57 +2632,103 @@
             </div>
         </div>
 
-        <!-- Settings Panel -->
+        <!-- Settings Panel (Revamped XP Options Style) -->
         <div id="irab-settings">
             <div class="irab-settings-header">
-                <span>⚙ Native Cortex Config</span>
-                <span style="cursor: pointer;" onclick="IRAB.toggleSettings()">×</span>
+                <span>Options</span>
+                <span style="cursor: pointer; font-family: sans-serif; font-weight: normal; font-size: 14px;" onclick="IRAB.toggleSettings()">×</span>
             </div>
+            
+            <!-- Tab Headers -->
+            <div class="irab-settings-tabs">
+                <div class="irab-tab active" onclick="IRAB.switchSettingsTab('general', this)">General</div>
+                <div class="irab-tab" onclick="IRAB.switchSettingsTab('brain', this)">Brain</div>
+                <div class="irab-tab" onclick="IRAB.switchSettingsTab('persona', this)">Persona</div>
+            </div>
+
             <div class="irab-settings-content">
-                <div class="irab-setting-group">
-                    <div class="irab-setting-label">Brain Parameters (DeepSeek 1.3B)</div>
-                    
-                    <div class="irab-setting-control" style="margin-top: 8px;">
-                        <label>Temperature: <span id="irab-setting-temperature-val">0.7</span></label>
-                        <input type="range" id="irab-setting-temperature" min="0.1" max="1.5" step="0.1" value="0.7" 
-                               oninput="document.getElementById('irab-setting-temperature-val').textContent = this.value"
-                               style="width: 100%;">
-                    </div>
-                    <div class="irab-setting-desc">Low = Focused, High = Creative</div>
-                    
-                    <div class="irab-setting-control" style="margin-top: 8px;">
-                        <label>Max Tokens:</label>
-                        <input type="number" id="irab-setting-max-tokens" min="64" max="2048" value="512" style="width: 100%;">
-                    </div>
-                    <div class="irab-setting-desc">Maximum length of response</div>
+                <!-- Tab: General -->
+                <div id="tab-general" class="irab-settings-page active">
+                    <fieldset class="irab-fieldset">
+                        <legend>Interface</legend>
+                        <div class="irab-setting-control">
+                            <input type="checkbox" id="irab-setting-audio" checked>
+                            <label for="irab-setting-audio">Play sounds when messages arrive</label>
+                        </div>
+                        <div class="irab-setting-control">
+                            <input type="checkbox" id="irab-setting-notifications" checked>
+                            <label for="irab-setting-notifications">Show balloon tips for suggestions</label>
+                        </div>
+                    </fieldset>
 
-                    <div class="irab-setting-control" style="margin-top: 8px;">
-                        <label>GPU Layers (Metal):</label>
-                        <input type="number" id="irab-setting-gpu-layers" min="0" max="99" value="4" style="width: 100%;">
-                    </div>
-                    <div class="irab-setting-desc">Requires restart to apply</div>
+                    <fieldset class="irab-fieldset">
+                        <legend>Appearance</legend>
+                        <div class="irab-setting-control">
+                            <label>Chat Theme:</label>
+                            <select id="irab-setting-theme">
+                                <option value="classic">Classic MSN (Green/Blue)</option>
+                                <option value="modern-dark">Modern Ketebe Dark</option>
+                                <option value="xp-silver">Luna Silver</option>
+                            </select>
+                        </div>
+                    </fieldset>
                 </div>
 
-                <div class="irab-setting-group">
-                    <div class="irab-setting-label">Interface Options</div>
-                    <div class="irab-setting-control" style="flex-direction: column; align-items: flex-start;">
-                        <label>Custom Personality / System Prompt:</label>
-                        <textarea id="irab-setting-personality-text" style="width: 100%; height: 60px; font-family: Tahoma; font-size: 10px; margin-top: 5px; resize: none;" placeholder="e.g. You are a helpful cat assistant who says Meow!"></textarea>
-                    </div>
-                    <div class="irab-setting-control" style="margin-top: 10px;">
-                        <input type="checkbox" id="irab-setting-personality" checked>
-                        <label for="irab-setting-personality">Enable Personality Quirks</label>
-                    </div>
-                    <div class="irab-setting-control">
-                        <input type="checkbox" id="irab-setting-audio" checked>
-                        <label for="irab-setting-audio">Enable Sound Effects</label>
-                    </div>
+                <!-- Tab: Brain -->
+                <div id="tab-brain" class="irab-settings-page">
+                    <fieldset class="irab-fieldset">
+                        <legend>Native Cortex (GGUF)</legend>
+                        <div class="irab-setting-control">
+                            <label>Temperature:</label>
+                            <input type="range" id="irab-setting-temperature" min="0.1" max="1.5" step="0.1" value="0.7" 
+                                   oninput="document.getElementById('irab-setting-temp-val').textContent = this.value" style="flex: 2;">
+                            <span id="irab-setting-temp-val" style="width: 30px; text-align: right;">0.7</span>
+                        </div>
+                        <div class="irab-setting-control">
+                            <label>Max Tokens:</label>
+                            <input type="number" id="irab-setting-max-tokens" value="512" style="width: 60px;">
+                        </div>
+                        <div class="irab-setting-control">
+                            <label>GPU Layers:</label>
+                            <input type="number" id="irab-setting-gpu-layers" value="32" style="width: 60px;">
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="irab-fieldset">
+                        <legend>Context & Memory</legend>
+                        <div class="irab-setting-control">
+                            <input type="checkbox" id="irab-setting-rag" checked>
+                            <label for="irab-setting-rag">Enable RAG (Local Docs Lookup)</label>
+                        </div>
+                        <div class="irab-setting-control">
+                            <input type="checkbox" id="irab-setting-history" checked>
+                            <label for="irab-setting-history">Remember session history</label>
+                        </div>
+                    </fieldset>
                 </div>
 
-                <div class="irab-settings-buttons">
-                    <button class="xp-btn" onclick="IRAB.saveSettings()">Apply</button>
-                    <button class="xp-btn secondary" onclick="IRAB.toggleSettings()">Cancel</button>
+                <!-- Tab: Persona -->
+                <div id="tab-persona" class="irab-settings-page">
+                    <fieldset class="irab-fieldset">
+                        <legend>Personality Presets</legend>
+                        <select id="irab-setting-persona-preset" onchange="IRAB.applyPersonaPreset(this.value)" style="width: 100%; margin-bottom: 8px;">
+                            <option value="default">Standard IRAB (Grumpy Assistant)</option>
+                            <option value="developer">Senior Engine Developer</option>
+                            <option value="creative">Creative Pixel Artist</option>
+                            <option value="minimal">Minimalist Kernel Mode</option>
+                            <option value="custom">Custom...</option>
+                        </select>
+                        <textarea id="irab-setting-personality-text" 
+                                  style="width: 100%; height: 80px; font-family: Tahoma; font-size: 10px; resize: none;" 
+                                  placeholder="Enter custom system prompt directives..."></textarea>
+                    </fieldset>
                 </div>
+            </div>
+
+            <div class="irab-settings-buttons">
+                <button class="xp-btn" onclick="IRAB.saveSettings()">OK</button>
+                <button class="xp-btn" onclick="IRAB.toggleSettings()">Cancel</button>
+                <button class="xp-btn" onclick="IRAB.saveSettings()" style="margin-left: 10px;">Apply</button>
             </div>
         </div>
 
@@ -2676,6 +2749,7 @@
                     </div>
                     <textarea id="irab-chat-input" placeholder="Type a message..."></textarea>
                     <div class="irab-input-bar">
+                        <button id="irab-abort-btn" onclick="IRAB.abort()" style="display:none; background: #e74c3c; color: white; border: 1px solid #c0392b; margin-right: 5px;">BLOCK</button>
                         <button id="irab-send-btn" onclick="IRAB.send()">Send</button>
                     </div>
                 </div>
@@ -2724,13 +2798,11 @@
     
     <script type="module">
         // Initialize AI Micro for ghost-text and Command Bus (ToolRegistry)
-        import { KetebeAI } from './ai/ketebe-ai.js?v=5';
-        try {
-            window.KetebeAIInstance = new KetebeAI();
-            await window.KetebeAIInstance.initialize();
-            console.log("✅ AI Brain (Micro) initialized successfully.");
-        } catch (err) {
-            console.error("❌ AI Brain failed to load:", err);
+        import { KetebeAI } from './ai/ketebe-ai.js?v=6';
+        if (window.KetebeAIInstance) {
+            window.KetebeAIInstance.initialize().catch(err => {
+                console.error("❌ AI Brain failed to initialize:", err);
+            });
         }
     </script>
 </body>

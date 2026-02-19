@@ -17,10 +17,15 @@ class IrabBrain:
         self.max_tokens = 450
         self.temperature = 0.3 # Slightly up from 0.1 to prevent repetitive "dumb" loops
         self.top_p = 0.95
+        self.is_aborted = False
         self.custom_personality = ""
         
         if model_path and os.path.exists(model_path):
             self.load_model(model_path)
+
+    def abort(self):
+        self.is_aborted = True
+        logger.info("Brain: Generation aborted.")
 
     def update_tools(self, tools):
         self.available_tools = tools
@@ -51,35 +56,57 @@ class IrabBrain:
         list(self.llm("GRRR", max_tokens=1))
 
     def generate_stream(self, prompt):
-        # KAP (Ketebe Agent Protocol) v2.6 - Kernel Mode
-        system_prompt = """ROLE: IRAB_KERNEL.
-MISSION: EXECUTE TOOLS.
+        self.is_aborted = False
+        
+        # Use custom personality if set, otherwise use default
+        if self.custom_personality:
+            system_prompt = self.custom_personality
+        else:
+            # KAP (Ketebe Agent Protocol) v2.7 - Interactive Operator
+            system_prompt = """ROLE: IRAB Studio Operator.
+MISSION: Execute Studio commands via KAP-JSON.
 
 [RULES]
-1. DO NOT TALK. ONLY ACTION.
-2. RESPONSE: "GRRR... [STATUS]" + KAP-JSON block.
-3. ALWAYS USE TOOLS FOR MAPS, SCRIPTS, OR NAVIGATION.
+1. If a request is vague (e.g. "create map"), ASK for details (mode, theme) instead of executing.
+2. RESPONSE: "GRRR... [Text]" + optional KAP-JSON block.
+3. Start every response with "GRRR..."
 
-[EXAMPLES]
-User: "open editor"
-IRAB: "GRRR... NAVIGATION_START"
-```tool
-{"name": "navigateTo", "args": "editor"}
-```
+[ISOPIXEL TERRAIN MODES]
+- 'terrain': Standard procedural terrain with hills/water.
+- 'flat': Single flat layer of grass.
+- 'islands': Floating islands in the void.
+- 'maze': A stone maze structure.
 
-User: "isopixel map"
-IRAB: "GRRR... ISO_GEN_START"
+[EDITOR NAMESPACES]
+- 'iso_studio' -> pixel.*
+- 'editor' -> world.*
+- 'script' -> code.*
+
+[EXAMPLE: CLARIFICATION]
+User: "create an iso map"
+IRAB: "GRRR... Shifting to the 3rd dimension! Which mode would you like? Standard Terrain, Flat, Islands, or Maze?"
+
+[EXAMPLE: EXECUTION]
+User: "create an islands map"
+IRAB: "GRRR... Forging the floating archipelago!
 ```tool
 {"name": "pixel.generateTerrain", "args": {"mode": "islands"}}
-```
+```"
 
 [CAPABILITIES]
 """
         if self.available_tools:
-            for t in self.available_tools:
-                system_prompt += f"- {t.get('name')}\n"
+            if not self.custom_personality:
+                for t in self.available_tools:
+                    system_prompt += f"- {t.get('name')}\n"
+            else:
+                # If custom personality, still append tools but in a more subtle way
+                system_prompt += "\n[AVAILABLE TOOLS]\n"
+                for t in self.available_tools:
+                    system_prompt += f"- {t.get('name')}\n"
         else:
-            system_prompt += "- NONE (USE TOOLS TO ENABLE)\n"
+            if not self.custom_personality:
+                system_prompt += "- NONE (Use navigateTo)\n"
 
         full_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
         
@@ -94,6 +121,9 @@ IRAB: "GRRR... ISO_GEN_START"
                 stream=True
             )
             for output in stream:
+                if self.is_aborted:
+                    logger.info("Brain: Breaking generation loop due to abort.")
+                    break
                 token = output["choices"][0]["text"]
                 if token: yield token
         except Exception as e:

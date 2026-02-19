@@ -219,6 +219,12 @@ class IsoStrategy {
         }
     }
 
+    invalidateChunks() {
+        // Clear caches that might be affected by map changes
+        this._projCache = {};
+        this.renderQueue.length = 0;
+    }
+
     render(ctx, map, state, config, tileset, sprites) {
         if (!this.isTilesetReady(tileset)) return;
         

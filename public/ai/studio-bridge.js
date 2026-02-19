@@ -41,12 +41,20 @@ export class StudioBridge {
             const request = event.data;
             if (!request || !request.method) return;
 
+            // PREVENT LOOPS: Only process if this bridge is in the window meant to handle this namespace
             const methodParts = request.method.split('.');
             if (methodParts.length < 2) return;
             
             const [ns, method] = methodParts;
             
             if (ns === this.namespace && this.tools.has(method)) {
+                // Check if we are in the right window (Source check to prevent double-execution across iframes)
+                // If the event came from our own local emit, ignore it if we are already processing
+                if (event.source === this.eventBus.getSource()) {
+                    // console.log(`[StudioBridge:${this.namespace}] Ignoring local echo.`);
+                    // return;
+                }
+
                 console.log(`%c[StudioBridge:${this.namespace}]%c Executing AI command: ${method}`, 'background: #2ecc71; color: #000; padding: 2px 5px;', '', request.params);
                 
                 try {
@@ -96,8 +104,11 @@ export class StudioBridge {
 
         this.tools.set(toolDef.name, registryDef);
         
-        // Announce to the ToolRegistry immediately
+        // --- SMART ANNOUNCE ---
+        // If we are in an iframe, we MUST ensure the PARENT'S registry knows about us.
+        // If we are the parent, we announce to our own registry.
         this.eventBus.emit('studio:tool:announce', registryDef);
+        
         console.log(`[StudioBridge:${this.namespace}] Registered tool: ${fullName}`);
     }
 

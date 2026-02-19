@@ -363,6 +363,7 @@ window.IRAB = {
             if (!this._readyAnnounced) {
                 this._readyAnnounced = true;
                 this.showBalloon("GRRR... SYSTEM ONLINE!");
+                this.addMessage('system', "IRAB is fully awake and ready to party (or debug, I guess).");
             }
             return;
         }
@@ -427,7 +428,19 @@ window.IRAB = {
         const text = input.value.trim();
         input.value = '';
         this.addMessage('user', text);
+        
+        // --- PHASE 4 FIX: Always force new bubble for AI response ---
+        this.currentBotMsg = null;
+        
         if (window.irab) window.irab.prompt(text);
+    },
+
+    abort() {
+        if (window.irab && window.irab.abort()) {
+            this.showBalloon("GRRR... YOU BLOCKED ME?! UNCOOL.");
+            this.addMessage('system', ">>> CONNECTION ABORTED BY USER <<<");
+            this.handleState('IDLE');
+        }
     },
 
     injectCode(code) {
@@ -483,7 +496,37 @@ window.IRAB = {
 
     toggleSettings() {
         const s = document.getElementById('irab-settings');
-        if (s) s.style.display = (s.style.display === 'block') ? 'none' : 'block';
+        if (s) {
+            const isShowing = s.classList.toggle('show');
+            if (isShowing) this.loadSettings();
+        }
+    },
+
+    switchSettingsTab(tabId, el) {
+        // Update tab buttons
+        document.querySelectorAll('.irab-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+
+        // Update pages
+        document.querySelectorAll('.irab-settings-page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+    },
+
+    applyPersonaPreset(preset) {
+        const text = document.getElementById('irab-setting-personality-text');
+        if (!text) return;
+
+        const prompts = {
+            'default': "You are IRAB, a grumpy but expert game engine assistant. You like pixels, hate bugs, and start every response with 'GRRR...'",
+            'developer': "You are a Senior Engine Developer at Ketebe. Focus on code efficiency, logic architecture, and technical precision. Professional tone.",
+            'creative': "You are a Master Pixel Artist and Game Designer. Focus on aesthetics, juice, game feel, and creative color palettes.",
+            'minimal': "Kernel mode active. Minimal text. Execute tools immediately. Direct and cold.",
+            'custom': text.value
+        };
+
+        if (prompts[preset]) {
+            text.value = prompts[preset];
+        }
     },
 
     nudge(isAITriggered = false) {
@@ -500,14 +543,24 @@ window.IRAB = {
             temperature: parseFloat(document.getElementById('irab-setting-temperature')?.value || 0.7),
             max_tokens: parseInt(document.getElementById('irab-setting-max-tokens')?.value || 512),
             gpu_layers: parseInt(document.getElementById('irab-setting-gpu-layers')?.value || 32),
-            personality: document.getElementById('irab-setting-personality')?.checked ?? true,
             personality_text: document.getElementById('irab-setting-personality-text')?.value || "",
-            audio: document.getElementById('irab-setting-audio')?.checked ?? true
+            audio: document.getElementById('irab-setting-audio')?.checked ?? true,
+            notifications: document.getElementById('irab-setting-notifications')?.checked ?? true,
+            theme: document.getElementById('irab-setting-theme')?.value || 'classic',
+            rag_enabled: document.getElementById('irab-setting-rag')?.checked ?? true,
+            history_enabled: document.getElementById('irab-setting-history')?.checked ?? true,
+            persona_preset: document.getElementById('irab-setting-persona-preset')?.value || 'default'
         };
+        
         this._audioEnabled = settings.audio;
         localStorage.setItem('irab_native_settings', JSON.stringify(settings));
-        if (window.irab && window.irab.socket) window.irab.send({ type: 'UPDATE_CONFIG', data: settings });
+        
+        if (window.irab && window.irab.socket) {
+            window.irab.send({ type: 'UPDATE_CONFIG', data: settings });
+        }
+        
         this.toggleSettings();
+        this.showBalloon("GRRR... SETTINGS UPDATED!");
     },
 
     loadSettings() {
@@ -516,8 +569,26 @@ window.IRAB = {
             try {
                 const s = JSON.parse(saved);
                 this._audioEnabled = s.audio ?? true;
-                // UI updates would go here if settings inputs existed in current context
-            } catch(e) {}
+                
+                const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+                const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+
+                setVal('irab-setting-temperature', s.temperature ?? 0.7);
+                if (document.getElementById('irab-setting-temp-val')) {
+                    document.getElementById('irab-setting-temp-val').textContent = s.temperature ?? 0.7;
+                }
+                setVal('irab-setting-max-tokens', s.max_tokens ?? 512);
+                setVal('irab-setting-gpu-layers', s.gpu_layers ?? 32);
+                setVal('irab-setting-personality-text', s.personality_text ?? "");
+                setVal('irab-setting-theme', s.theme ?? 'classic');
+                setVal('irab-setting-persona-preset', s.persona_preset ?? 'default');
+                
+                setCheck('irab-setting-audio', s.audio ?? true);
+                setCheck('irab-setting-notifications', s.notifications ?? true);
+                setCheck('irab-setting-rag', s.rag_enabled ?? true);
+                setCheck('irab-setting-history', s.history_enabled ?? true);
+
+            } catch(e) { console.error("Settings load error:", e); }
         }
     },
 

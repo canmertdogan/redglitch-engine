@@ -195,6 +195,9 @@ async def websocket_endpoint(websocket: WebSocket):
             
             if msg_type == "PROMPT":
                 await handle_prompt(message, websocket)
+            elif msg_type == "ABORT":
+                logger.info("Received ABORT request.")
+                brain.abort()
             elif msg_type == "PING":
                 await manager.send_personal_message({"type": "PONG"}, websocket)
             elif msg_type == "CHECK_STATUS":
