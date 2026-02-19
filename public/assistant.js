@@ -323,24 +323,29 @@ window.IRAB = {
     handleState(state) {
         const dot = document.getElementById('irab-status-dot');
         const st = document.getElementById('irab-status-text');
+        const abortBtn = document.getElementById('irab-abort-btn');
         if (!dot || !st) return;
 
         if (state === 'THINKING') {
             dot.className = 'irab-status-dot thinking';
             st.textContent = 'IRAB is thinking...';
             this.currentBotMsg = null;
+            if (abortBtn) abortBtn.style.display = 'inline-block';
         } else if (state === 'OFFLINE' || state === 'CONNECTING') {
             dot.style.background = '#e74c3c';
             st.textContent = state === 'CONNECTING' ? 'Connecting...' : 'Offline';
+            if (abortBtn) abortBtn.style.display = 'none';
         } else if (state === 'IDLE') {
             dot.className = 'irab-status-dot';
             dot.style.background = '#00CC00';
             st.textContent = 'Online';
             this.currentBotMsg = null;
+            if (abortBtn) abortBtn.style.display = 'none';
         } else if (state === 'ONLINE') {
             dot.className = 'irab-status-dot';
             dot.style.background = '#00CC00';
             st.textContent = 'Online';
+            if (abortBtn) abortBtn.style.display = 'none';
         }
     },
 
@@ -439,6 +444,10 @@ window.IRAB = {
         if (window.irab && window.irab.abort()) {
             this.showBalloon("GRRR... YOU BLOCKED ME?! UNCOOL.");
             this.addMessage('system', ">>> CONNECTION ABORTED BY USER <<<");
+            
+            const abortBtn = document.getElementById('irab-abort-btn');
+            if (abortBtn) abortBtn.style.display = 'none';
+            
             this.handleState('IDLE');
         }
     },
