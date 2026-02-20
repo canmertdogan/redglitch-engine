@@ -25,6 +25,7 @@ const cutscenesRouter = require('./server/routes/cutscenes');
 const campaignsRouter = require('./server/routes/campaigns');
 const assetsRouter = require('./server/routes/assets');
 const systemRouter = require('./server/routes/system');
+const ideRouter = require('./server/routes/ide');
 
 // Import WebSocket setup
 const setupWebSocket = require('./server/websocket');
@@ -132,6 +133,7 @@ app.use((req, res, next) => {
 
 // Mount routers
 app.use('/api/system', systemRouter);
+app.use('/api/assets', assetsRouter);
 app.use('/api', savesRouter);
 app.use('/api', levelsRouter);
 app.use('/api', projectsRouter);
@@ -142,7 +144,7 @@ app.use('/api/brains', brainsRouter);
 app.use('/api/slots', slotsRouter);
 app.use('/api', cutscenesRouter);
 app.use('/api', campaignsRouter);
-app.use('/api', assetsRouter);
+app.use('/api/ide', ideRouter);
 
 app.post('/api/save-spritesheet', async (req, res) => {
     try {

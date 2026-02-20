@@ -575,6 +575,8 @@ window.FXSystem = class FXSystem {
     }
 
     renderSoftLighting(cameraX, cameraY, lights) {
+        if (this.width <= 0 || this.height <= 0) return;
+
         if (!this.lightCanvas) {
             this.lightCanvas = document.createElement('canvas');
             this.lightCtx = this.lightCanvas.getContext('2d');

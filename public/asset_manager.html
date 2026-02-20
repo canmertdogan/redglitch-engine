@@ -275,7 +275,7 @@
             text.innerText = "Scanning filesystem...";
 
             try {
-                const res = await fetch('/api/assets/scan', { method: 'POST' });
+                const res = await fetch('/api/assets/rebuild', { method: 'POST' });
                 if(res.ok) {
                     fill.style.width = '60%';
                     text.innerText = "Rebuilding registry...";

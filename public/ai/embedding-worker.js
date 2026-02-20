@@ -6,7 +6,7 @@
 import { 
     pipeline, 
     env 
-} from '/lib/transformers/transformers.mjs?v=3.0.0-alpha.19';
+} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0-alpha.19';
 
 let embedder = null;
 

@@ -28,7 +28,7 @@ class PlatformerRenderer {
         this.shakeTimer = 0;
 
         // Editor / Zoom
-        this.zoom = 1.0;
+        this.zoom = config.DEFAULT_ZOOM || 1.0;
     }
 
     setZoom(value) {
@@ -53,13 +53,18 @@ class PlatformerRenderer {
 
     setCameraToPlayer(player, mapWidth, mapHeight) {
         if (!player || isNaN(player.x)) return;
-        this.camera.x = player.x + player.w/2 - this.viewW/2;
-        this.camera.y = player.y + player.h/2 - this.viewH/2;
+        
+        // World viewport size
+        const worldViewW = this.viewW / this.zoom;
+        const worldViewH = this.viewH / this.zoom;
+
+        this.camera.x = player.x + player.w/2 - worldViewW/2;
+        this.camera.y = player.y + player.h/2 - worldViewH/2;
         
         const maxW = (mapWidth || 20) * this.tileSize;
         const maxH = (mapHeight || 15) * this.tileSize;
-        this.camera.x = Math.max(0, Math.min(this.camera.x, Math.max(0, maxW - this.viewW)));
-        this.camera.y = Math.max(0, Math.min(this.camera.y, Math.max(0, maxH - this.viewH)));
+        this.camera.x = Math.max(0, Math.min(this.camera.x, Math.max(0, maxW - worldViewW)));
+        this.camera.y = Math.max(0, Math.min(this.camera.y, Math.max(0, maxH - worldViewH)));
     }
 
     addParallaxLayer(image, sx, sy, op) {
@@ -69,14 +74,18 @@ class PlatformerRenderer {
     updateCamera(player, mapWidth, mapHeight) {
         if (!player || isNaN(player.x)) return;
 
-        let targetX = player.x + player.w/2 - this.viewW/2;
-        let targetY = player.y + player.h/2 - this.viewH/2;
+        // World viewport size
+        const worldViewW = this.viewW / this.zoom;
+        const worldViewH = this.viewH / this.zoom;
+
+        let targetX = player.x + player.w/2 - worldViewW/2;
+        let targetY = player.y + player.h/2 - worldViewH/2;
 
         const maxW = (mapWidth || 20) * this.tileSize;
         const maxH = (mapHeight || 15) * this.tileSize;
 
-        targetX = Math.max(0, Math.min(targetX, Math.max(0, maxW - this.viewW)));
-        targetY = Math.max(0, Math.min(targetY, Math.max(0, maxH - this.viewH)));
+        targetX = Math.max(0, Math.min(targetX, Math.max(0, maxW - worldViewW)));
+        targetY = Math.max(0, Math.min(targetY, Math.max(0, maxH - worldViewH)));
 
         if (isNaN(this.camera.x)) this.camera.x = targetX;
         if (isNaN(this.camera.y)) this.camera.y = targetY;
@@ -101,45 +110,46 @@ class PlatformerRenderer {
         this.currentTilesetPath = path;
         this.tilesetReady = false;
 
-        // Try pre-loaded asset first if path matches WORLD_PIXEL_ART
-        if (path === 'WORLD_PIXEL_ART' && window.PlatformerAssetManager) {
-            const preloaded = window.PlatformerAssetManager.get('tileset');
-            if (preloaded) {
-                console.log('[PlatformerRenderer] Using pre-loaded tileset.');
-                this.tileset = preloaded;
+        // Reset additional tilesets
+        this.additionalTilesets = {};
+
+        // Helper to load a single image
+        const loadImage = (src) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => {
+                    console.warn(`[PlatformerRenderer] Failed to load tileset: ${src}`);
+                    resolve(null);
+                };
+                img.src = src;
+            });
+        };
+
+        // 1. Load Main Tileset
+        if (path === 'WORLD_PIXEL_ART') {
+            try {
+                this.tileset = await this.combineWorldPixelArt();
                 this.tilesetReady = true;
-                this.invalidateCache();
-                return;
+            } catch(e) {
+                console.error('[PlatformerRenderer] Tileset combining failed', e);
+                this.tileset = await loadImage('/engines/rpg-topdown/assets/world_tileset.png');
+                this.tilesetReady = true;
+            }
+        } else {
+            this.tileset = await loadImage(path || '/engines/rpg-topdown/assets/world_tileset.png');
+            this.tilesetReady = true;
+        }
+
+        // 2. Load Additional Tilesets if defined in map
+        if (this.currentMap && this.currentMap.additionalTilesets) {
+            for (const [key, tpath] of Object.entries(this.currentMap.additionalTilesets)) {
+                const img = await loadImage(tpath);
+                if (img) this.additionalTilesets[key] = img;
             }
         }
 
-        return new Promise(async (resolve) => {
-            if (path === 'WORLD_PIXEL_ART') {
-                try {
-                    this.tileset = await this.combineWorldPixelArt();
-                    this.tilesetReady = true;
-                    this.invalidateCache();
-                    resolve();
-                } catch(e) {
-                    console.error('[PlatformerRenderer] Tileset combining failed, using fallback', e);
-                    this.tileset.src = '/engines/rpg-topdown/assets/world_tileset.png';
-                    this.tileset.onload = () => { this.tilesetReady = true; this.invalidateCache(); resolve(); };
-                }
-            } else {
-                const img = new Image();
-                img.onload = () => { 
-                    this.tileset = img; 
-                    this.tilesetReady = true;
-                    this.invalidateCache();
-                    resolve(); 
-                };
-                img.onerror = () => {
-                    this.tileset.src = '/engines/rpg-topdown/assets/world_tileset.png';
-                    this.tileset.onload = () => { this.tilesetReady = true; this.invalidateCache(); resolve(); };
-                };
-                img.src = path || '/engines/rpg-topdown/assets/world_tileset.png';
-            }
-        });
+        this.invalidateCache();
     }
 
     async combineWorldPixelArt() {
@@ -157,51 +167,28 @@ class PlatformerRenderer {
         ctx.imageSmoothingEnabled = false;
         
         const v = Date.now();
-        const promises = [];
-        for (let i = 1; i <= totalTiles; i++) {
-            promises.push(new Promise(resolve => {
-                const img = new Image();
-                img.onload = () => {
-                    const x = ((i - 1) % cols) * tSize;
-                    const y = Math.floor((i - 1) / cols) * tSize;
-                    ctx.drawImage(img, x, y, tSize, tSize);
-                    resolve();
-                };
-                img.onerror = () => resolve();
-                // Ensure absolute path from root
-                img.src = '/sprite-art/worldpixelart/texture_16px ' + i + '.png?v=' + v;
-            }));
+        const batchSize = 50; // Load in batches to avoid browser throttling
+        
+        for (let i = 1; i <= totalTiles; i += batchSize) {
+            const promises = [];
+            for (let j = i; j < i + batchSize && j <= totalTiles; j++) {
+                promises.push(new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const x = ((j - 1) % cols) * tSize;
+                        const y = Math.floor((j - 1) / cols) * tSize;
+                        ctx.drawImage(img, x, y, tSize, tSize);
+                        resolve();
+                    };
+                    img.onerror = () => resolve();
+                    img.src = '/sprite-art/worldpixelart/texture_16px ' + j + '.png?v=' + v;
+                }));
+            }
+            await Promise.all(promises);
         }
-        await Promise.all(promises);
+
         console.log('[PlatformerRenderer] Tileset combined.');
         window._cachedCombinedTileset = canvas;
-
-        // ---- START MODIFICATION: SAVE SPRITESHEET ----
-        try {
-            const dataUrl = canvas.toDataURL('image/png');
-            fetch('/api/save-spritesheet', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ image: dataUrl }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('[PlatformerRenderer] Successfully saved spritesheet to server.');
-                } else {
-                    console.error('[PlatformerRenderer] Failed to save spritesheet:', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('[PlatformerRenderer] Error saving spritesheet:', error);
-            });
-        } catch (e) {
-            console.error('[PlatformerRenderer] Could not send spritesheet to server.', e);
-        }
-        // ---- END MODIFICATION ----
-
         return canvas;
     }
 
@@ -351,9 +338,14 @@ class PlatformerRenderer {
     }
 
     drawDecorations(decorations, foregroundOnly = false) {
+        if (!this.tilesetReady) return;
+
         decorations.forEach(deco => {
-            const isFG = deco.isForeground || (deco.type === 'prefab' && deco.data?.toLowerCase().includes('fg'));
+            const isFG = deco.isForeground || (deco.type === 'prefab' && deco.data?.toLowerCase().includes('fg')) || deco.layer === 'foreground';
             if (foregroundOnly !== !!isFG) return;
+
+            this.ctx.save();
+            this.ctx.globalAlpha = deco.opacity !== undefined ? deco.opacity : 1.0;
 
             if (deco.type === 'prefab') {
                 const spriteName = deco.sprite || deco.data;
@@ -364,25 +356,37 @@ class PlatformerRenderer {
                     }
                 }
             } else if (deco.tileId) {
-                // Static decorative tile
-                const ts = 16;
-                const totalCols = 16;
+                // Determine which tileset to use
+                let targetTileset = this.tileset;
+                let ts = 16;
+                let totalCols = 16;
+
+                if (deco.tilesetKey && this.additionalTilesets && this.additionalTilesets[deco.tilesetKey]) {
+                    targetTileset = this.additionalTilesets[deco.tilesetKey];
+                    ts = deco.tileSize || 16;
+                    totalCols = Math.floor(targetTileset.width / ts);
+                }
+
                 const tid = deco.tileId - 1;
-                if (tid >= 0 && this.tileset && this.tileset.width > 0) {
+                if (tid >= 0 && targetTileset && targetTileset.width > 0) {
                     const sx = (tid % totalCols) * ts;
                     const sy = Math.floor(tid / totalCols) * ts;
-                    this.ctx.drawImage(this.tileset, sx, sy, ts, ts, deco.x * 32, deco.y * 32, 32, 32);
+                    this.ctx.drawImage(targetTileset, sx, sy, ts, ts, deco.x * 32, deco.y * 32, deco.w || 32, deco.h || 32);
                 }
             }
+            this.ctx.restore();
         });
     }
 
     drawLayerChunked(layerData, mapWidth, layerIndex, isCollision = false) {
         if (!layerData) return;
+        const worldViewW = this.viewW / this.zoom;
+        const worldViewH = this.viewH / this.zoom;
+
         const startCx = Math.floor(this.camera.x / (this.tileSize * this.CHUNK_SIZE));
         const startCy = Math.floor(this.camera.y / (this.tileSize * this.CHUNK_SIZE));
-        const endCx = Math.floor((this.camera.x + this.viewW) / (this.tileSize * this.CHUNK_SIZE));
-        const endCy = Math.floor((this.camera.y + this.viewH) / (this.tileSize * this.CHUNK_SIZE));
+        const endCx = Math.floor((this.camera.x + worldViewW) / (this.tileSize * this.CHUNK_SIZE));
+        const endCy = Math.floor((this.camera.y + worldViewH) / (this.tileSize * this.CHUNK_SIZE));
 
         for (let cy = startCy; cy <= endCy; cy++) {
             for (let cx = startCx; cx <= endCx; cx++) {

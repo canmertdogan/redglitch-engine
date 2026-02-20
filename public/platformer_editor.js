@@ -59,6 +59,9 @@ class PlatformerEditor {
         this.showCollision = true;
         this.currentProject = null;
         
+        // Keyboard State for smooth navigation
+        this.keys = {};
+        
         // History
         this.history = [];
         this.historyIndex = -1;
@@ -81,6 +84,28 @@ class PlatformerEditor {
         };
         
         this.init();
+        this.startMovementLoop();
+    }
+
+    startMovementLoop() {
+        const move = () => {
+            // Don't move if typing in an input
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                requestAnimationFrame(move);
+                return;
+            }
+
+            let moved = false;
+            const speed = 10 / this.zoom;
+            if (this.keys['ArrowLeft'] || this.keys['KeyA']) { this.offsetX += speed; moved = true; }
+            if (this.keys['ArrowRight'] || this.keys['KeyD']) { this.offsetX -= speed; moved = true; }
+            if (this.keys['ArrowUp'] || this.keys['KeyW']) { this.offsetY += speed; moved = true; }
+            if (this.keys['ArrowDown'] || this.keys['KeyS']) { this.offsetY -= speed; moved = true; }
+            
+            if (moved) this.render();
+            requestAnimationFrame(move);
+        };
+        move();
     }
     
     async init() {
@@ -211,35 +236,30 @@ class PlatformerEditor {
         canvas.height = rows * tSize;
         const ctx = canvas.getContext('2d');
         ctx.imageSmoothingEnabled = false;
-        let loadedCount = 0;
-        const promises = [];
-        for (let i = 1; i <= totalTiles; i++) {
-            promises.push(new Promise(resolve => {
-                const img = new Image();
-                img.onload = () => {
-                    const x = ((i - 1) % cols) * tSize;
-                    const y = Math.floor((i - 1) / cols) * tSize;
-                    ctx.drawImage(img, x, y, tSize, tSize);
-                    loadedCount++;
-                    resolve();
-                };
-                img.onerror = () => resolve();
-                // Ensure absolute path from root
-                img.src = `/sprite-art/worldpixelart/texture_16px ${i}.png`;
-            }));
+        
+        const v = Date.now();
+        const batchSize = 50;
+        
+        for (let i = 1; i <= totalTiles; i += batchSize) {
+            const promises = [];
+            for (let j = i; j < i + batchSize && j <= totalTiles; j++) {
+                promises.push(new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const x = ((j - 1) % cols) * tSize;
+                        const y = Math.floor((j - 1) / cols) * tSize;
+                        ctx.drawImage(img, x, y, tSize, tSize);
+                        resolve();
+                    };
+                    img.onerror = () => resolve();
+                    // Fix path (added space between '16px' and index if that's the convention)
+                    img.src = `/sprite-art/worldpixelart/texture_16px ${j}.png?v=${v}`;
+                }));
+            }
+            await Promise.all(promises);
         }
-        await Promise.all(promises);
 
-        // Save combined spritesheet to server to keep it synced
-        try {
-            const dataUrl = canvas.toDataURL('image/png');
-            fetch('/api/save-spritesheet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: dataUrl }),
-            });
-        } catch (e) { console.warn('[PlatformerEditor] Could not save spritesheet to server', e); }
-
+        console.log('[PlatformerEditor] Tileset combined.');
         return canvas;
     }
     
@@ -333,12 +353,31 @@ class PlatformerEditor {
         this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
         window.addEventListener('resize', () => this.setupCanvas());
         window.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            this.keys[e.key] = true;
+
             if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); this.undo(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); this.saveLevel(); }
             if (this.currentMode === 'collision' && e.key >= '0' && e.key <= '8') {
                  this.selectedCollisionType = parseInt(e.key);
                  this.updateCollisionUI();
             }
+
+            // Keyboard Zoom
+            if (e.key === '+' || e.key === '=') {
+                this.zoom = Math.min(3, this.zoom + 0.1);
+                document.getElementById('zoom-slider').value = this.zoom;
+                this.render();
+            }
+            if (e.key === '-' || e.key === '_') {
+                this.zoom = Math.max(0.25, this.zoom - 0.1);
+                document.getElementById('zoom-slider').value = this.zoom;
+                this.render();
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+            this.keys[e.key] = false;
         });
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -517,9 +556,63 @@ class PlatformerEditor {
     newLevel() { if (confirm('Clear?')) { this.collision.fill(0); this.layers = [new Array(this.width * this.height).fill(0)]; this.render(); } }
     async loadLevel() { const id = prompt('Level ID:'); if (id) this.loadLevelById(id); }
     async saveLevel() {
-        const levelData = { width: this.width, height: this.height, type: 'platformer-2d', layers: this.layers, collision: this.collision, decorations: this.decorations, spawn: this.spawn, goal: this.goal, background: this.background, name: this.levelName };
-        const res = await fetch(`/api/levels/${this.levelId}.json`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(levelData) });
-        if (res.ok) alert('Saved!');
+        if (!this.currentProject) {
+            alert('Please select a project first!');
+            return;
+        }
+
+        const levelData = {
+            name: this.levelName,
+            id: this.levelId,
+            type: 'platformer-2d',
+            width: this.width,
+            height: this.height,
+            tilesetPath: this.tilesetPath,
+            layers: this.layers,
+            collision: this.collision,
+            decorations: this.decorations,
+            spawn: this.spawn,
+            goal: this.goal,
+            collectibles: this.collectibles,
+            checkpoints: this.checkpoints,
+            entities: this.entities,
+            background: this.background,
+            weather: this.weather,
+            lighting: this.lighting,
+            shader: this.shader,
+            parallaxLayers: this.parallaxLayers || []
+        };
+
+        const filename = this.levelId.endsWith('.json') ? this.levelId : `${this.levelId}.json`;
+        const path = `projects/${this.currentProject}/dunyalar/platformer/${filename}`;
+
+        try {
+            const res = await fetch('/api/ide/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    path: path,
+                    content: JSON.stringify(levelData, null, 2)
+                })
+            });
+
+            if (res.ok) {
+                this.setStatus(`Saved: ${path}`);
+                this.loadWorlds(); // Refresh list
+            } else {
+                const contentType = res.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const err = await res.json();
+                    alert('Save failed: ' + (err.error || 'Unknown error'));
+                } else {
+                    const text = await res.text();
+                    console.error('Server error response:', text);
+                    alert('Save failed: Server returned an unexpected response (likely 404 or 500). Check console.');
+                }
+            }
+        } catch (e) {
+            alert('Error saving level: ' + e.message);
+        }
     }
     setMode(mode) { 
         this.currentMode = mode; 

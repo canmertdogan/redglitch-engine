@@ -1664,7 +1664,7 @@
         async function scanAssets() {
             showStatusMessage("INDEXING ASSETS...");
             try {
-                const res = await fetch('/api/assets/scan', { method: 'POST' });
+                const res = await fetch('/api/assets/rebuild', { method: 'POST' });
                 const data = await res.json();
                 if(data.success) showStatusMessage(`INDEXED ${data.count || ''} ASSETS`);
             } catch(e) { showStatusMessage("INDEX FAILED"); }

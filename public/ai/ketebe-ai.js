@@ -32,8 +32,7 @@ export class KetebeAI {
         console.log('[KetebeAI] Initializing...');
         await this.inferenceEngine.initialize();
         
-        // RAG disabled by default to prevent CDN/CORS errors during core fixing
-        if (AI_CONFIG.features.enableRAG && false) {
+        if (AI_CONFIG.features.enableRAG) {
             this.ragEngine.initialize().catch(e => console.error('[KetebeAI] RAG Init Failed:', e));
         }
 

@@ -78,7 +78,11 @@ class PlatformerGame {
     }
 
     resize() {
-        this.renderer.resize(window.innerWidth, window.innerHeight);
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        
+        this.renderer.resize(w, h);
+        if (this.fx) this.fx.resize(w, h);
     }
 
     pause() {
@@ -131,6 +135,8 @@ class PlatformerGame {
         if(loading) loading.classList.add('hidden');
         const container = document.getElementById('game-container');
         if(container) container.classList.remove('hidden');
+        
+        this.resize();
 
         // --- PHASE 7: Playtest Mode Detection ---
         const urlParams = new URLSearchParams(window.location.search);

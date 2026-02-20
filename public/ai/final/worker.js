@@ -3,11 +3,11 @@
  */
 console.log('--- KETEBE AI FINAL WORKER INITIALIZING ---');
 
-// Import Transformers.js from local library as an ES module
+// Import Transformers.js from CDN as an ES module (Browser-compatible)
 import { 
     pipeline, 
     env 
-} from '/lib/transformers/transformers.mjs?v=3.0.0-alpha.19';
+} from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0-alpha.19';
 
 postMessage({ type: 'transformers:loaded' });
 
