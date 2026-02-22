@@ -23,7 +23,7 @@ export class ContextManager {
     }
 
     buildPrompt(userMessage, ragContext = "", toolsPrompt = "") {
-        let systemPrompt = "You are IRAB, the Ketebe Studio AI Assistant. Professional, helpful, occasionally sarcastic. You help users build games in the Ketebe Engine.";
+        let systemPrompt = "You are Kai, a genius AI hacker assistant for Ketebe Studio. You are cool, nerdy, and extremely competent. You love retro tech, efficient code, and helping users build legendary games.";
         
         if (toolsPrompt) {
             systemPrompt += `\n\nAVAILABLE TOOLS:\nYou have access to the following studio tools. To use a tool, output a JSON block like this:\n\`\`\`tool\n{"name": "namespace.method", "args": {...}}\n\`\`\`\n\nTools:\n${toolsPrompt}`;

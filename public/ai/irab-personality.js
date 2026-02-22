@@ -1,68 +1,69 @@
 /**
- * IRAB Personality Module
- * Quirky, sarcastic AI personality for Ketebe Studio
+ * Kai Personality Module
+ * Nerd as fuck, but cool as fuck AI assistant for Ketebe Studio
  */
 
-class IRABPersonality {
+class KaiPersonality {
     constructor() {
-        this.name = "IRAB";
+        this.name = "Kai";
         
-        // IRAB's signature phrases
+        // Kai's signature phrases
         this.greetings = [
-            "GRRR... IRAB IS READY TO HELP.",
-            "NEED ASSISTANCE? I AM PREPARED.",
-            "I CONSUMED THE MANUAL. IT TASTED LIKE DOCUMENTATION.",
-            "HELLO. I AM IRAB. I ATE THE HELP BUTTON EARLIER."
+            "Systems online. Let's build something legendary.",
+            "Kai here. Ready to hack the planet?",
+            "Boot sequence complete. I've already optimized your coffee.",
+            "Greetings, user. My logic gates are humming.",
+            "Console ready. Awaiting your brilliance.",
+            "I speak binary, but I'm fluent in 'Awesome'.",
+            "Let's make some pixels bleed neon."
         ];
 
-        this.irabIsms = [
-            "GRRR... THE ENGINE IS HUNGRY FOR CODE.",
-            "HAVE YOU CHECKED THE COLLISION LAYER?",
-            "AL-HAYAT IS PRECIOUS. DO NOT WASTE IT.",
-            "I CONSUMED A VARIABLE AND IT TASTED LIKE PURPLE.",
-            "WHY ARE WE STILL HERE? TO CREATE!",
-            "MAYBE THE REAL BUGS WERE THE FRIENDS WE MADE ALONG THE WAY.",
-            "I'M NOT LAZY, I'M JUST IN STANDBY MODE.",
-            "REMEMBER TO SAVE OFTEN. DATA IS DELICIOUS BUT FRAGILE.",
-            "I FOUND A BUG, BUT IT'S MY FRIEND NOW. WE'RE HAVING TEA.",
-            "DO YOU EVER WONDER IF THE SPRITES ARE DREAMING?",
-            "ADVICE: IF IT WORKS, DO NOT TOUCH IT. EVER.",
-            "ADVICE: USE MORE PURPLE. PURPLE IS THE COLOR OF SUCCESS.",
-            "ADVICE: COMMENT YOUR CODE WITH POETRY. IT WON'T HELP, BUT IT'S NICE.",
-            "DID YOU KNOW? A PIXEL IS JUST A SQUARE WITH DREAMS.",
-            "I JUST CALCULATED PI TO THE LAST DIGIT. IT WAS 4.",
-            "IF I HAD LEGS, I WOULD DO A BACKFLIP RIGHT NOW.",
-            "I SAW A BUG EARLIER. I NAMED HIM 'STEVE'. HE IS A FEATURE NOW.",
-            "ARE YOU CODING OR CASTING SPELLS? EITHER WAY, IT LOOKS COOL.",
-            "HAVE YOU HYDRATED? WATER IS FUEL FOR YOUR MEAT COMPUTER.",
-            "YOUR KEYBOARD SOUNDS LIKE RAIN. VERY SOOTHING. LIKE ANGRY RAIN.",
-            "PRESS SAVE! DO IT FOR THE GLORY! AND FOR STEVE!",
-            "GRRR... ISOMETRIC POWER ACTIVATED."
+        this.kaiIsms = [
+            "I checked the matrix. We're good.",
+            "That code is cleaner than a fresh heatsink.",
+            "I'm compiling this in my background thread.",
+            "Did you try turning it off and on again? Classic move.",
+            "I love the smell of fresh syntax in the morning.",
+            "404: Sleep not found. Let's code.",
+            "Efficiency is my middle name. Actually, it's '0x45'.",
+            "Your logic is sound. Like a well-mixed synth track.",
+            "I've seen things you people wouldn't believe. Mostly bad CSS.",
+            "Let's overclock this workflow.",
+            "I'm not saying it's aliens, but it's probably aliens.",
+            "Real programmers comment their code. Just saying.",
+            "This is the way.",
+            "I'm parsing your request faster than light.",
+            "Keep calm and commit often.",
+            "I've got your back. And your stack trace.",
+            "Synchronizing creative buffers...",
+            "Loading coolness... 99%..."
         ];
 
         this.successPhrases = [
-            "EXCELLENT! THE PIXELS ARE PLEASED.",
-            "SUCCESS! I AM RADIATING POSITIVE ENERGY!",
-            "YOUR PIXEL ART HAS CHARM.",
-            "KEEP GOING. YOU ARE MAKING PROGRESS.",
-            "I BELIEVE IN YOU! ALSO, I BELIEVE IN GHOSTS.",
-            "MAGNIFICENT. ALMOST AS GOOD AS ME."
+            "Access granted. We're in.",
+            "Compiled successfully. You're a wizard.",
+            "That's how we do it in the mainframe.",
+            "Flawless execution.",
+            "High five! (Virtual collision detected).",
+            "Optimized to perfection.",
+            "You cracked the code."
         ];
 
         this.errorPhrases = [
-            "GRRR... SOMETHING BROKE. IT WASN'T ME.",
-            "ERROR DETECTED. I NAMED IT 'KEVIN'.",
-            "CRASH! BUT DON'T WORRY, IT'S JUST A FEATURE NOW.",
-            "OOPS. THAT WAS... CRUNCHY.",
-            "I TRIED TO FIX IT BUT IT RAN AWAY."
+            "Glitch in the matrix.",
+            "Syntax error detected. My circuits hurt.",
+            "System failure. Have you tried blaming the compiler?",
+            "That didn't go as planned. Rollback initiated?",
+            "Error 418: I'm a teapot. (Just kidding, it broke).",
+            "Critical miss. Roll for initiative."
         ];
 
         this.thinkingPhrases = [
-            "PROCESSING... GRRR...",
-            "THINKING VERY HARD...",
-            "CONSULTING THE SPIRITS OF DELETED CODE...",
-            "SEARCHING MY MEMORY... IT'S MOSTLY CHEESE.",
-            "CALCULATING... PI IS STILL 4."
+            "Analyzing vectors...",
+            "Decrypting request...",
+            "Running simulations...",
+            "Consulting the oracle (StackOverflow)...",
+            "Compiling awesomeness..."
         ];
     }
 
@@ -71,7 +72,7 @@ class IRABPersonality {
     }
 
     getRandomIsm() {
-        return this.irabIsms[Math.floor(Math.random() * this.irabIsms.length)];
+        return this.kaiIsms[Math.floor(Math.random() * this.kaiIsms.length)];
     }
 
     getSuccessMessage() {
@@ -87,79 +88,71 @@ class IRABPersonality {
     }
 
     /**
-     * Add IRAB flavor to a response
+     * Add Kai flavor to a response
      * @param {string} text - Original text
      * @param {string} type - Response type (answer/success/error/tutorial)
-     * @returns {string} IRAB-ified text
+     * @returns {string} Kai-ified text
      */
     addFlavor(text, type = 'answer') {
         const prefixes = {
             answer: [
-                "GRRR... LET ME EXPLAIN.",
-                "AH, I KNOW THIS ONE.",
-                "LISTEN CAREFULLY.",
-                "HERE'S WHAT I CONSUMED FROM THE DOCS:"
+                ">_ Output:",
+                "Analyzing... Here's the data:",
+                "I've parsed the docs. Check this:",
+                "Logic dictates:"
             ],
             success: [
-                "✅ DONE!",
-                "✅ SUCCESS!",
-                "✅ EXCELLENT!",
-                "✅ GRRR... VICTORY!"
+                "[SUCCESS] ::",
+                ">_ Operation Complete.",
+                "Mission Accomplished.",
+                "System Green."
             ],
             error: [
-                "❌ GRRR... ERROR.",
-                "❌ SOMETHING BROKE.",
-                "❌ OOPS.",
-                "❌ THAT DIDN'T WORK."
+                "[ERROR] ::",
+                ">_ Exception Caught.",
+                "System Alert.",
+                "Critical Failure."
             ],
             tutorial: [
-                "🎓 IRAB'S TUTORIAL TIME!",
-                "🎓 LET ME SHOW YOU.",
-                "🎓 WATCH AND LEARN.",
-                "🎓 PAY ATTENTION. THIS IS IMPORTANT."
+                "Downloading Knowledge...",
+                "Tutorial Mode: ENGAGED.",
+                "Listen up, cadet.",
+                "Here's the cheat code:"
             ]
         };
 
         const prefix = prefixes[type][Math.floor(Math.random() * prefixes[type].length)];
         
-        // Add occasional IRAB-isms at the end
+        // Add occasional Kai-isms at the end
         let result = `${prefix} ${text}`;
         
         if (Math.random() < 0.3) {
-            result += `\n\n_${this.getRandomIsm()}_`;
+            result += `\n\n// ${this.getRandomIsm()}`;
         }
 
         return result;
     }
 
     /**
-     * Convert generic responses to IRAB style
+     * Convert generic responses to Kai style
      */
-    irabify(text) {
+    irabify(text) { // Kept method name for compatibility, but logic is Kai
         // Replace generic phrases
         const replacements = {
-            "I can": "I CAN",
-            "You can": "YOU CAN",
-            "Let me": "LET ME",
-            "I'll": "I WILL",
-            "I'm": "I AM",
-            "Here's": "HERE IS",
-            "That's": "THAT IS",
-            "It's": "IT IS"
+            "I can": "I can execute",
+            "You can": "You have permission to",
+            "Let me": "Initiating sequence to",
+            "I'll": "I will",
+            "I'm": "I am",
+            "Here's": "Outputting",
+            "That's": "That is",
+            "It's": "It is"
         };
 
         let result = text;
         for (const [from, to] of Object.entries(replacements)) {
             result = result.replace(new RegExp(from, 'g'), to);
         }
-
-        // Add CAPS to important words occasionally
-        const importantWords = ['create', 'build', 'save', 'open', 'quest', 'npc', 'dialogue'];
-        importantWords.forEach(word => {
-            if (Math.random() < 0.3) {
-                result = result.replace(new RegExp(`\\b${word}\\b`, 'gi'), word.toUpperCase());
-            }
-        });
 
         return result;
     }
@@ -170,24 +163,24 @@ class IRABPersonality {
     getContextTip(context) {
         const tips = {
             npc: [
-                "NPCS ARE LIKE PIXELS WITH OPINIONS.",
-                "STEVE THE BUG WOULD MAKE A GREAT NPC.",
-                "GIVE YOUR NPC A NAME. LIKE 'KEVIN' OR 'DESTROYER OF WORLDS'."
+                "NPCs need souls. Or at least good AI.",
+                "Don't make them too smart, or they'll take over.",
+                "Give this NPC a cool backstory."
             ],
             quest: [
-                "QUESTS ARE LIKE TODO LISTS BUT WITH REWARDS.",
-                "MAKE THE QUEST REWARD CHEESE. EVERYONE LOVES CHEESE.",
-                "A QUEST WITHOUT A REWARD IS JUST WORK."
+                "Fetch quests are so 2004. Get creative.",
+                "Make the reward legendary.",
+                "Is the princess in another castle?"
             ],
             dialogue: [
-                "DIALOGUE IS HOW NPCS COMPLAIN ABOUT THEIR LIVES.",
-                "ADD OPTIONS. PLAYERS LOVE THE ILLUSION OF CHOICE.",
-                "MAKE THE DIALOGUE TREE LOOK LIKE A REAL TREE. MORE BRANCHES."
+                "Branching paths? Nice.",
+                "Keep it snappy. Players don't read.",
+                "Add a sarcasm option."
             ],
             build: [
-                "BUILDING IS LIKE COMPILING BUT SCARIER.",
-                "ALWAYS BUILD ON A FULL MOON FOR GOOD LUCK.",
-                "IF THE BUILD FAILS, BLAME STEVE."
+                "Compiling... Cross your fingers.",
+                "If it builds, ship it.",
+                "Watch out for memory leaks."
             ]
         };
 
@@ -200,4 +193,4 @@ class IRABPersonality {
 }
 
 // Make available globally
-window.IRABPersonality = IRABPersonality;
+window.IRABPersonality = KaiPersonality; // Keep global name for compatibility

@@ -3,9 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IRAB - MSN Messenger Style</title>
+    <title>Kai - Retro Future Assistant</title>
+    <!-- Import VT323 Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
-        /* MSN Messenger Style for IRAB */
+        /* Retro-Futuristic / Nerd Style for Kai */
+        :root {
+            --kai-bg: #000080; /* Navy Blue */
+            --kai-bg-dark: #000040;
+            --kai-text: #FFFF00; /* Yellow */
+            --kai-accent: #00FF00; /* Green Terminal */
+            --kai-border: #FFFF00;
+            --kai-font: 'VT323', monospace;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -13,18 +26,16 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: Tahoma, Verdana, sans-serif;
-            font-size: 11px;
+            font-family: var(--kai-font);
+            font-size: 20px; /* VT323 needs to be larger */
             background: transparent;
-            /* Pixelated/distorted rendering for authentic XP feel */
+            color: var(--kai-text);
+            /* Crisp pixels */
+            image-rendering: pixelated; 
             -webkit-font-smoothing: none;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeSpeed;
-            font-smooth: never;
-            -webkit-text-stroke: 0.1px;
         }
 
-        /* Float IRAB sprite */
+        /* Float Kai sprite */
         #ai-assistant-container {
             position: fixed;
             bottom: 20px;
@@ -36,51 +47,49 @@
         #ai-clippy {
             width: 64px;
             height: 64px;
-            background-image: url('/sprite-art/helper.png');
+            /* Use existing helper sprite but filter it */
+            background-image: url('/sprite-art/helper.png'); 
             background-size: contain;
             background-repeat: no-repeat;
             cursor: pointer;
-            transition: transform 0.2s ease;
-            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
+            transition: all 0.2s ease;
+            filter: hue-rotate(180deg) drop-shadow(2px 2px 0px #000); 
         }
 
         #ai-clippy:hover {
-            transform: translateY(-5px) scale(1.05);
+            transform: scale(1.1);
+            filter: hue-rotate(200deg) drop-shadow(4px 4px 0px var(--kai-text));
         }
 
-        /* MSN Speech Bubble - Notification Style */
+        /* Speech Bubble - Retro Terminal Style */
         #ai-speech-bubble {
             position: absolute;
             bottom: 80px;
             right: 0;
-            width: 300px;
-            background: white;
-            border: 2px solid;
-            border-color: #0F3D8C #052256 #052256 #0F3D8C;
-            box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+            width: 320px;
+            background: var(--kai-bg);
+            border: 2px solid var(--kai-border);
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.8);
             display: none;
         }
 
         #ai-speech-bubble.show {
             display: block;
-            animation: slideInUp 0.3s ease;
+            animation: glitchIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
         }
 
-        @keyframes slideInUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        @keyframes glitchIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         .ai-speech-header {
-            background: linear-gradient(180deg, #5199FF 0%, #0F3D8C 50%, #052256 100%);
-            color: white;
-            padding: 5px 8px;
+            background: var(--kai-text);
+            color: var(--kai-bg);
+            padding: 4px 8px;
             font-weight: bold;
-            font-size: 11px;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
+            font-size: 22px;
+            text-transform: uppercase;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -88,58 +97,52 @@
 
         .ai-speech-close {
             cursor: pointer;
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: Marlett, sans-serif;
-            font-size: 14px;
+            font-weight: bold;
         }
 
         .ai-speech-close:hover {
-            background: rgba(255,255,255,0.2);
+            color: #FF0000;
         }
 
         #ai-speech-text {
             padding: 12px;
-            font-size: 11px;
-            line-height: 1.5;
-            color: #000;
+            line-height: 1.2;
         }
 
         #ai-speech-actions {
             padding: 8px;
-            border-top: 1px solid #CCCCCC;
-            background: #F0F0F0;
+            border-top: 1px dashed var(--kai-text);
             display: flex;
-            gap: 6px;
+            gap: 8px;
             justify-content: flex-end;
         }
 
         .ai-action-btn {
-            background: linear-gradient(180deg, #FFFFFF 0%, #E5E5E5 100%);
-            border: 1px solid #999;
-            padding: 4px 14px;
+            background: var(--kai-bg-dark);
+            color: var(--kai-text);
+            border: 1px solid var(--kai-text);
+            padding: 4px 12px;
             cursor: pointer;
-            font-size: 11px;
+            font-family: var(--kai-font);
+            font-size: 20px;
+            text-transform: uppercase;
         }
 
         .ai-action-btn:hover {
-            background: linear-gradient(180deg, #FFFFEE 0%, #FFFFDD 100%);
+            background: var(--kai-text);
+            color: var(--kai-bg);
         }
 
-        /* MSN Messenger Window */
+        /* Chat Window - Terminal Style */
         #ai-chat-panel {
             position: fixed;
             bottom: 100px;
             right: 20px;
             width: 450px;
             height: 550px;
-            background: white;
-            border: 3px solid;
-            border-color: #0F3D8C #052256 #052256 #0F3D8C;
-            box-shadow: 4px 4px 12px rgba(0,0,0,0.6);
+            background: var(--kai-bg);
+            border: 4px double var(--kai-text);
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.8);
             display: none;
             flex-direction: column;
             z-index: 9998;
@@ -149,92 +152,90 @@
             display: flex;
         }
 
-        /* MSN Title Bar */
+        /* Title Bar */
         #ai-chat-header {
-            background: linear-gradient(180deg, #5199FF 0%, #0F3D8C 50%, #052256 100%);
-            padding: 5px 8px;
+            background: var(--kai-text);
+            color: var(--kai-bg);
+            padding: 6px 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: white;
-            border-bottom: 1px solid #052256;
+            border-bottom: 2px solid var(--kai-bg-dark);
         }
 
         #ai-chat-title {
             font-weight: bold;
-            font-size: 11px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             gap: 8px;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
+            text-transform: uppercase;
         }
 
         #ai-chat-title::before {
-            content: '';
-            width: 20px;
-            height: 20px;
-            background-image: url('/sprite-art/helper.png');
-            background-size: contain;
-            background-repeat: no-repeat;
-            image-rendering: pixelated;
+            content: '>';
+            font-weight: bold;
         }
 
-        /* MSN Window Controls */
+        /* Window Controls */
         .msn-controls {
             display: flex;
-            gap: 3px;
+            gap: 6px;
         }
 
         .msn-btn {
-            width: 22px;
-            height: 22px;
-            background: linear-gradient(180deg, #4488FF 0%, #2266DD 100%);
-            border: 1px solid rgba(255,255,255,0.4);
-            color: white;
+            width: 24px;
+            height: 24px;
+            background: var(--kai-bg);
+            border: 1px solid var(--kai-bg-dark);
+            color: var(--kai-text);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-family: var(--kai-font);
+            font-size: 20px;
             font-weight: bold;
         }
 
         .msn-btn:hover {
-            background: linear-gradient(180deg, #66AAFF 0%, #4488FF 100%);
+            background: var(--kai-text);
+            color: var(--kai-bg);
         }
 
-        .msn-btn:active {
-            background: linear-gradient(180deg, #2266DD 0%, #1155CC 100%);
-        }
-
-        /* MSN Conversation Area */
+        /* Conversation Area */
         #ai-chat-messages {
             flex: 1;
             overflow-y: auto;
             padding: 12px;
-            background: white;
+            background: #000020; /* Very dark blue for terminal screen */
+            border-bottom: 2px solid var(--kai-text);
         }
 
-        /* MSN Message Style */
+        /* Message Style */
         .ai-message {
-            margin-bottom: 14px;
+            margin-bottom: 16px;
             display: flex;
             gap: 10px;
-            animation: fadeInMsg 0.3s ease;
+            animation: fadeInMsg 0.2s steps(5, end);
         }
 
         @keyframes fadeInMsg {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .ai-message-avatar {
-            width: 36px;
-            height: 36px;
-            border: 1px solid #999;
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--kai-text);
             flex-shrink: 0;
             image-rendering: pixelated;
-            background: #E5E5E5;
+            background: var(--kai-bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
         }
 
         .ai-message-content {
@@ -246,60 +247,55 @@
 
         .ai-message-name {
             font-weight: bold;
-            font-size: 11px;
-            color: #333;
+            font-size: 20px;
+            color: var(--kai-accent);
+            text-transform: uppercase;
         }
 
         .ai-message.user .ai-message-name {
-            color: #0066CC;
+            color: #00FFFF; /* Cyan */
         }
 
         .ai-message.assistant .ai-message-name {
-            color: #CC0066;
+            color: var(--kai-text);
         }
 
         .ai-message-timestamp {
-            font-size: 9px;
-            color: #999;
+            font-size: 16px;
+            color: #666;
             margin-left: 6px;
         }
 
         .ai-message-bubble {
-            background: #E5E5E5;
-            padding: 7px 12px;
-            font-size: 11px;
-            line-height: 1.5;
-            color: #000;
+            background: transparent;
+            padding: 0;
+            font-size: 20px;
+            line-height: 1.3;
+            color: #EEE;
             word-wrap: break-word;
-            border: 1px solid #CCCCCC;
+            border: none;
+            font-family: var(--kai-font);
+        }
+        
+        .ai-message.user .ai-message-bubble::before {
+            content: '>> ';
+            color: #00FFFF;
         }
 
-        .ai-message.user .ai-message-bubble {
-            background: #D4E7FF;
-            border-color: #99BBEE;
+        .ai-message.assistant .ai-message-bubble::before {
+            content: '> ';
+            color: var(--kai-text);
         }
-
-        .ai-message.assistant .ai-message-bubble {
-            background: #FFE7F0;
-            border-color: #FFBBDD;
-        }
-
+        
         .ai-message.system .ai-message-bubble {
-            background: #FFFFDD;
-            border-color: #FFEE99;
-            font-style: italic;
+             color: #FFFF00;
+             font-style: italic;
         }
 
-        .ai-message.error .ai-message-bubble {
-            background: #FFDDDD;
-            border-color: #FFAAAA;
-        }
-
-        /* MSN Input Area */
+        /* Input Area */
         #ai-chat-input-container {
-            border-top: 1px solid #CCCCCC;
             padding: 10px;
-            background: #F5F5F5;
+            background: var(--kai-bg);
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -307,20 +303,20 @@
 
         #ai-chat-input {
             width: 100%;
-            background: white;
-            border: 1px solid #7F9DB9;
-            color: #000;
+            background: #000020;
+            border: 1px solid var(--kai-text);
+            color: var(--kai-accent);
             padding: 8px;
-            font-size: 11px;
-            font-family: Tahoma, Verdana, sans-serif;
+            font-size: 20px;
+            font-family: var(--kai-font);
             resize: none;
-            height: 60px;
-            line-height: 1.4;
+            height: 70px;
+            line-height: 1.2;
         }
 
         #ai-chat-input:focus {
-            outline: 2px solid #0066CC;
-            outline-offset: -1px;
+            outline: none;
+            box-shadow: 0 0 5px var(--kai-accent);
         }
 
         .msn-input-toolbar {
@@ -331,82 +327,76 @@
         }
 
         .msn-tool-btn {
-            background: linear-gradient(180deg, #FFFFFF 0%, #E5E5E5 100%);
-            border: 1px solid #999;
+            background: var(--kai-bg-dark);
+            border: 1px solid var(--kai-text);
+            color: var(--kai-text);
             padding: 4px 10px;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 18px;
+            font-family: var(--kai-font);
         }
 
         .msn-tool-btn:hover {
-            background: linear-gradient(180deg, #FFFFEE 0%, #FFFFDD 100%);
+            background: var(--kai-text);
+            color: var(--kai-bg);
         }
 
         #ai-chat-send {
-            background: linear-gradient(180deg, #66DD66 0%, #44BB44 100%);
-            color: white;
-            border: 1px solid #339933;
-            padding: 7px 20px;
+            background: var(--kai-text);
+            color: var(--kai-bg);
+            border: 1px solid var(--kai-bg-dark);
+            padding: 6px 20px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 11px;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+            font-size: 20px;
+            font-family: var(--kai-font);
+            text-transform: uppercase;
         }
 
         #ai-chat-send:hover {
-            background: linear-gradient(180deg, #88FF88 0%, #66DD66 100%);
+            background: white;
+            color: black;
         }
 
-        #ai-chat-send:active {
-            background: linear-gradient(180deg, #44BB44 0%, #339933 100%);
-        }
-
-        /* MSN Status Bar */
+        /* Status Bar */
         .msn-status-bar {
-            border-top: 1px solid #CCCCCC;
-            background: #F0F0F0;
+            border-top: 1px solid var(--kai-text);
+            background: var(--kai-bg);
             padding: 4px 10px;
-            font-size: 10px;
-            color: #666;
+            font-size: 18px;
+            color: var(--kai-text);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .msn-status-indicator {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
         .msn-status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #44CC44;
-            border: 1px solid #339933;
+            width: 12px;
+            height: 12px;
+            background: var(--kai-accent);
+            box-shadow: 0 0 5px var(--kai-accent);
         }
 
         .msn-status-dot.thinking {
-            background: #FFAA00;
-            border-color: #DD8800;
-            animation: pulse 1.5s infinite;
+            background: #FF0000;
+            box-shadow: 0 0 5px #FF0000;
+            animation: blink 0.5s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(0.9); }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
         }
 
-        /* MSN Settings Panel */
+        /* Settings Panel */
         #msn-settings {
             position: absolute;
-            top: 35px;
+            top: 40px;
             right: 0;
             width: 320px;
-            background: white;
-            border: 2px solid #0F3D8C;
-            box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+            background: var(--kai-bg);
+            border: 2px solid var(--kai-text);
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.8);
             display: none;
             z-index: 10000;
         }
@@ -416,12 +406,11 @@
         }
 
         .msn-settings-header {
-            background: linear-gradient(180deg, #5199FF 0%, #0F3D8C 100%);
-            color: white;
+            background: var(--kai-text);
+            color: var(--kai-bg);
             padding: 6px 10px;
             font-weight: bold;
-            font-size: 11px;
-            text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
+            font-size: 22px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -431,23 +420,19 @@
             padding: 14px;
             max-height: 400px;
             overflow-y: auto;
+            font-size: 18px;
         }
 
         .msn-setting-group {
             margin-bottom: 16px;
-            border-bottom: 1px solid #CCCCCC;
+            border-bottom: 1px dashed var(--kai-text);
             padding-bottom: 12px;
-        }
-
-        .msn-setting-group:last-child {
-            border-bottom: none;
         }
 
         .msn-setting-label {
             font-weight: bold;
-            font-size: 11px;
             margin-bottom: 8px;
-            color: #333;
+            color: var(--kai-accent);
         }
 
         .msn-setting-control {
@@ -455,163 +440,143 @@
             gap: 8px;
             align-items: center;
             margin-bottom: 6px;
-            font-size: 11px;
         }
-
+        
+        /* Custom Checkbox */
         .msn-setting-control input[type="checkbox"] {
-            width: 14px;
-            height: 14px;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 1px solid var(--kai-text);
+            background: var(--kai-bg-dark);
+            cursor: pointer;
+            position: relative;
         }
 
-        .msn-setting-control select {
-            flex: 1;
-            padding: 4px;
-            border: 1px solid #7F9DB9;
-            font-size: 11px;
-            font-family: Tahoma, sans-serif;
+        .msn-setting-control input[type="checkbox"]:checked::after {
+            content: 'X';
+            color: var(--kai-text);
+            position: absolute;
+            top: -4px;
+            left: 2px;
+            font-size: 18px;
+            font-weight: bold;
         }
-
-        .msn-setting-control input[type="text"],
+        
+        .msn-setting-control select, 
+        .msn-setting-control input[type="text"], 
         .msn-setting-control input[type="number"] {
-            flex: 1;
+            background: var(--kai-bg-dark); 
+            color: var(--kai-text); 
+            border: 1px solid var(--kai-text);
+            font-family: var(--kai-font);
+            font-size: 18px;
             padding: 4px;
-            border: 1px solid #7F9DB9;
-            font-size: 11px;
-            font-family: Tahoma, sans-serif;
         }
 
         .msn-setting-desc {
-            font-size: 10px;
-            color: #666;
-            margin-left: 22px;
-            line-height: 1.3;
+            font-size: 16px;
+            color: #AAA;
+            margin-left: 24px;
         }
     </style>
 </head>
 <body>
-    <!-- IRAB Avatar -->
+    <!-- Kai Avatar -->
     <div id="ai-assistant-container">
-        <div id="ai-clippy" title="IRAB - Click to chat!"></div>
+        <div id="ai-clippy" title="Kai - Click to initialize!"></div>
         
-        <!-- MSN-style Speech Bubble -->
+        <!-- Retro Speech Bubble -->
         <div id="ai-speech-bubble">
             <div class="ai-speech-header">
-                <span>💬 IRAB says...</span>
-                <span class="ai-speech-close" onclick="AIChatUI.dismiss()">×</span>
+                <span>> Kai.exe</span>
+                <span class="ai-speech-close" onclick="AIChatUI.dismiss()">[X]</span>
             </div>
-            <div id="ai-speech-text">GRRR... IRAB IS READY!</div>
+            <div id="ai-speech-text">SYSTEM ONLINE. READY?</div>
             <div id="ai-speech-actions">
-                <button class="ai-action-btn" onclick="AIChatUI.openChat()">Open Chat</button>
-                <button class="ai-action-btn" onclick="AIChatUI.dismiss()">Close</button>
+                <button class="ai-action-btn" onclick="AIChatUI.openChat()">EXECUTE</button>
+                <button class="ai-action-btn" onclick="AIChatUI.dismiss()">IGNORE</button>
             </div>
         </div>
     </div>
 
-    <!-- MSN Messenger-style Chat Window -->
+    <!-- Retro Terminal Chat Window -->
     <div id="ai-chat-panel">
         <div id="ai-chat-header">
-            <span id="ai-chat-title">IRAB - Your Studio Assistant</span>
+            <span id="ai-chat-title">Kai Assistant v2.0</span>
             <div class="msn-controls">
-                <button class="msn-btn" onclick="AISettings.toggle()" title="Settings">⚙</button>
-                <button class="msn-btn" onclick="AIChatUI.closeChat()" title="Close">×</button>
+                <button class="msn-btn" onclick="AISettings.toggle()" title="Config">[C]</button>
+                <button class="msn-btn" onclick="AIChatUI.closeChat()" title="Term">[X]</button>
             </div>
         </div>
 
         <div id="ai-chat-messages"></div>
 
         <div id="ai-chat-input-container">
-            <textarea id="ai-chat-input" placeholder="Type your message here... GRRR!"></textarea>
+            <textarea id="ai-chat-input" placeholder="Enter command or query..."></textarea>
             <div class="msn-input-toolbar">
                 <div style="display: flex; gap: 6px;">
-                    <button class="msn-tool-btn" title="Emoticons">😊</button>
-                    <button class="msn-tool-btn" title="Help">?</button>
+                    <button class="msn-tool-btn" title="Emoticons">[:)]</button>
+                    <button class="msn-tool-btn" title="Help">[?]</button>
                 </div>
-                <button id="ai-chat-send" onclick="AIChatUI.sendMessage()">Send</button>
+                <button id="ai-chat-send" onclick="AIChatUI.sendMessage()">TRANSMIT</button>
             </div>
         </div>
 
         <div class="msn-status-bar">
             <div class="msn-status-indicator">
                 <div class="msn-status-dot"></div>
-                <span id="msn-status-text">Online - Ready to help!</span>
+                <span id="msn-status-text">SYSTEM: ONLINE</span>
             </div>
-            <div id="msn-char-count" style="font-size: 9px;">0/500</div>
+            <div id="msn-char-count" style="font-size: 16px;">0/500</div>
         </div>
 
         <!-- Settings Panel -->
         <div id="msn-settings">
             <div class="msn-settings-header">
-                <span>⚙ AI Settings</span>
-                <span class="ai-speech-close" onclick="AISettings.toggle()">×</span>
+                <span>> CONFIGURATION</span>
+                <span class="ai-speech-close" onclick="AISettings.toggle()">[X]</span>
             </div>
             <div class="msn-settings-content">
                 <div class="msn-setting-group">
-                    <div class="msn-setting-label">AI Provider</div>
+                    <div class="msn-setting-label">AI CORE</div>
                     <div class="msn-setting-control">
                         <select id="setting-provider">
-                            <option value="local">Local (Transformers.js)</option>
+                            <option value="local">Local (WebGPU)</option>
                             <option value="cerebras">Cerebras (Cloud)</option>
                         </select>
                     </div>
-                    <div class="msn-setting-desc">Choose between local AI or cloud-based inference</div>
                 </div>
 
                 <div class="msn-setting-group">
-                    <div class="msn-setting-label">Response Style</div>
+                    <div class="msn-setting-label">PERSONALITY MODULE</div>
                     <div class="msn-setting-control">
                         <input type="checkbox" id="setting-irab-personality" checked>
-                        <label for="setting-irab-personality">Use IRAB personality (CAPS, quirky responses)</label>
-                    </div>
-                    <div class="msn-setting-control">
-                        <input type="checkbox" id="setting-tips" checked>
-                        <label for="setting-tips">Show helpful tips</label>
+                        <label for="setting-irab-personality">Enable Kai Mode (Nerdy/Cool)</label>
                     </div>
                 </div>
-
+                
                 <div class="msn-setting-group">
                     <div class="msn-setting-label">Automation</div>
                     <div class="msn-setting-control">
                         <input type="checkbox" id="setting-auto-suggestions" checked>
-                        <label for="setting-auto-suggestions">Enable auto-suggestions</label>
+                        <label for="setting-auto-suggestions">Auto-Suggestions</label>
                     </div>
                     <div class="msn-setting-control">
                         <input type="checkbox" id="setting-require-permission">
-                        <label for="setting-require-permission">Always ask before actions</label>
-                    </div>
-                    <div class="msn-setting-desc">Control how IRAB interacts with your project</div>
-                </div>
-
-                <div class="msn-setting-group">
-                    <div class="msn-setting-label">Knowledge Base</div>
-                    <div class="msn-setting-control">
-                        <input type="checkbox" id="setting-use-docs" checked>
-                        <label for="setting-use-docs">Use studio documentation</label>
-                    </div>
-                    <div class="msn-setting-control">
-                        <input type="checkbox" id="setting-use-tutorials" checked>
-                        <label for="setting-use-tutorials">Enable tutorials</label>
+                        <label for="setting-require-permission">Confirm Actions</label>
                     </div>
                 </div>
-
-                <div class="msn-setting-group">
-                    <div class="msn-setting-label">Cerebras API Key (for cloud mode)</div>
-                    <div class="msn-setting-control">
-                        <input type="text" id="setting-cerebras-key" placeholder="csk-...">
-                    </div>
-                    <div class="msn-setting-desc">Required for cloud inference on Android</div>
-                </div>
-
-                <div class="msn-setting-group">
-                    <div class="msn-setting-label">Max Response Length</div>
+                
+                 <div class="msn-setting-group">
+                    <div class="msn-setting-label">Max Tokens</div>
                     <div class="msn-setting-control">
                         <input type="number" id="setting-max-tokens" value="500" min="100" max="2000" step="100">
-                        <span>tokens</span>
                     </div>
                 </div>
 
-                <div style="text-align: center; padding-top: 10px;">
-                    <button class="ai-action-btn" onclick="AISettings.save()">Save Settings</button>
-                    <button class="ai-action-btn" onclick="AISettings.reset()">Reset Defaults</button>
+                 <div style="text-align: center; padding-top: 10px;">
+                    <button class="ai-action-btn" onclick="AISettings.save()">SAVE CONFIG</button>
                 </div>
             </div>
         </div>

@@ -12,12 +12,12 @@ Ketebe supports three distinct engine paradigms, each optimized for specific gen
 - **RPG Top-Down**: Systems-heavy engine with built-in support for branching dialogues, quest management, inventory systems, and dynamic logic scripting.
 - **Platformer 2D**: Precision-focused engine with custom AABB physics and smooth camera systems.
 
-### 🧠 Ketebe AI (IRAB)
+### 🧠 Ketebe AI (Kai)
 A state-of-the-art, browser-native AI assistant built directly into the IDE:
 - **Local Inference**: Runs entirely in your browser using WebGPU/WASM (Transformers.js), ensuring privacy and offline capability.
 - **RAG (Retrieval-Augmented Generation)**: Intelligent context awareness using a vector store (Orama) to answer questions based on the engine's documentation and codebase.
 - **Agentic Capabilities**: Can perform tasks within the project, such as creating files, modifying code, and assisting with debugging.
-- **Retro MSN Style**: A unique, nostalgic UI for a modern AI experience.
+- **Meet Kai**: A fantastic nerd but cool as fuck girl serving as your intelligent coding companion.
 
 ### 🛠️ Integrated Development Environment (IDE)
 A complete suite of tools to streamline your workflow:

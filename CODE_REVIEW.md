@@ -45,10 +45,10 @@ Ketebe Engine is a hybrid web-desktop game development environment combining a N
 - **Capacitor integration**: Config swap for mobile sync.
 - **Standalone server generation**: Builds a minimal Express server for game runtime.
 
-### 5. IRAB/AI Integration
-- **Proxy**: `/api/history` and `/api/ai` proxy to `localhost:8000` (IRAB backend).
+### 5. Kai/AI Integration
+- **Proxy**: `/api/history` and `/api/ai` proxy to `localhost:8000` (Kai backend).
 - **Cortex manager**: Electron spawns Python backend (`backend/main.py`) with venv support.
-- **502 handling**: Graceful error when IRAB backend is offline.
+- **502 handling**: Graceful error when Kai backend is offline.
 
 ---
 
@@ -100,7 +100,7 @@ setupWebSocket(server, {
 
 ### 5. Error Handling
 - Several catch blocks only log and return 500 without details: `res.status(500).json({ error: 'Failed to create project' })`.
-- `req.pipe(connector)` in IRAB proxy: if `connector` errors before piping, the request may hang.
+- `req.pipe(connector)` in Kai proxy: if `connector` errors before piping, the request may hang.
 
 **Recommendation:**
 - In development, include `err.message` (or stack) in error responses.
@@ -111,7 +111,7 @@ setupWebSocket(server, {
 ### 6. Typo / Copy-Paste in Server Comments
 **File:** `server.js`
 
-- Line 37: Comment says "IRAB NATIVE PROXY" but earlier review mentioned "IRAB".
+- Line 37: Comment says "KAI NATIVE PROXY" but earlier review mentioned "Kai".
 - Line 79: Comment says "Legacy Alias: Redirect /base_game to /engines/rpg-topdown" but the route serves static files, not redirects.
 
 **Recommendation:** Align comments with actual behavior.
