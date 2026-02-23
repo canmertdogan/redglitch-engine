@@ -311,7 +311,7 @@
                 <div id="status-bars">
                     <div class="bar-container" id="hp_bar"><div class="bar-fill hp" style="width: 100%;"></div><span class="bar-label">AL-HAYAT</span></div>
                     <div class="bar-container" id="stamina_bar"><div class="bar-fill stamina" style="width: 100%;"></div><span class="bar-label">SAAF TA'ISH</span></div>
-                    <div class="bar-container" id="mana_bar"><div class="bar-fill mana" style="width: 100%;"></div><span class="bar-label">IRAB POWER</span></div>
+                    <div class="bar-container" id="mana_bar"><div class="bar-fill mana" style="width: 100%;"></div><span class="bar-label">KAI SYSTEM LOAD</span></div>
                 </div>
                 <div id="game-clock">08:00</div>
                 <div id="skill-bar">
@@ -419,18 +419,40 @@
         });
     </script>
     
-    <!-- IRAB AI Assistant - Full Windows XP UI -->
-    <iframe id="irab-ai-panel" src="ai/ui/assistant-panel.html" 
+    <!-- Kai AI Assistant - Retro Terminal UI -->
+    <iframe id="kai-ai-panel" src="ai/ui/assistant-panel.html?v=8" 
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                    border: none; pointer-events: none; z-index: 9998;">
     </iframe>
     
     <script>
-        // Make IRAB avatar clickable but keep rest of iframe pass-through
+        // Make Kai avatar clickable but keep rest of iframe pass-through
         window.addEventListener('load', () => {
-            const iframe = document.getElementById('irab-ai-panel');
+            const iframe = document.getElementById('kai-ai-panel');
             if (!iframe) return;
             
+            let hitZones = [];
+
+            // Listen for hit zones from the assistant
+            window.addEventListener('message', (e) => {
+                if (e.data && e.data.type === 'kai:hitzones') {
+                    hitZones = e.data.zones;
+                }
+            });
+
+            // Hit detection logic
+            window.addEventListener('mousemove', (e) => {
+                const { clientX: x, clientY: y } = e;
+                let hit = false;
+                for (const zone of hitZones) {
+                    if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
+                        hit = true;
+                        break;
+                    }
+                }
+                iframe.style.pointerEvents = hit ? 'auto' : 'none';
+            });
+
             // Wait for iframe to load
             iframe.addEventListener('load', () => {
                 try {
@@ -440,17 +462,10 @@
                     doc.body.style.background = 'transparent';
                     doc.body.style.pointerEvents = 'none';
                     
-                    // Enable pointer events only for IRAB avatar and UI elements
-                    const clickableElements = doc.querySelectorAll(
-                        '#ai-assistant-container, #ai-chat-panel, #xp-ai-loading, #xp-settings'
-                    );
-                    clickableElements.forEach(el => {
-                        if (el) el.style.pointerEvents = 'auto';
-                    });
-                    
-                    console.log('✅ IRAB Windows XP UI loaded!');
+                    console.log('✅ Kai Assistant UI loaded (with Hit Detection)!');
                 } catch (e) {
                     console.warn('Could not access iframe:', e);
+                    iframe.style.pointerEvents = 'auto';
                 }
             });
         });

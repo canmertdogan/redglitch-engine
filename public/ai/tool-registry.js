@@ -14,14 +14,21 @@ export class ToolRegistry {
         console.log(`[ToolRegistry] Initialized in ${window.location.pathname}`);
         this._debug(`Registry startup. Origin: ${window.location.origin}`);
         
+        // Setup listeners and defaults
         this._setupListeners();
         this._registerDefaults();
         
         // Initial sync with Python Backend
-        this._syncWithBackend();
+        if (this.eventBus) {
+            this._syncWithBackend();
+        }
     }
 
     _debug(msg, data = null) {
+        if (!this.eventBus) {
+            console.log(`[AI-DEBUG-NO-BUS] ${msg}`, data || '');
+            return;
+        }
         const trace = {
             timestamp: new Date().toLocaleTimeString(),
             location: window.location.pathname.split('/').pop(),
@@ -29,16 +36,17 @@ export class ToolRegistry {
             data: data
         };
         console.log(`%c[AI-DEBUG]%c ${msg}`, 'background: #7289da; color: white; padding: 2px 5px; border-radius: 2px;', '', data || '');
-        if (this.eventBus) {
-            this.eventBus.emit('ai:debug:trace', trace);
-        }
+        this.eventBus.emit('ai:debug:trace', trace);
     }
 
     /**
      * Setup EventBus listeners for tool registration and remote execution.
      */
     _setupListeners() {
-        if (!this.eventBus) return;
+        if (!this.eventBus) {
+            console.warn('[ToolRegistry] EventBus missing during _setupListeners');
+            return;
+        }
 
         // --- Phase 3 & 4: Pending Action Recovery ---
         this.eventBus.on('ai:tool:registered', (event) => {
@@ -124,11 +132,13 @@ export class ToolRegistry {
         
         this._debug(`Tool registered locally: ${compliantTool.name}`);
 
-        this.eventBus.emit('ai:tool:registered', { 
-            name: compliantTool.name, 
-            namespace: compliantTool.name.split('.')[0],
-            definition: compliantTool 
-        });
+        if (this.eventBus) {
+            this.eventBus.emit('ai:tool:registered', { 
+                name: compliantTool.name, 
+                namespace: compliantTool.name.split('.')[0],
+                definition: compliantTool 
+            });
+        }
         
         this._syncWithBackend();
     }

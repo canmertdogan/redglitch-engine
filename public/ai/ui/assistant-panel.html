@@ -171,14 +171,28 @@
             position: fixed;
             bottom: 100px;
             right: 20px;
-            width: 600px;
-            height: 500px;
+            width: 650px;
+            height: 550px;
             background: var(--kai-bg);
             border: 2px solid var(--kai-accent);
             display: none;
             flex-direction: column;
             z-index: 9998;
             box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        /* CRT Scanline Effect */
+        #ai-chat-panel::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 10001;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
         }
 
         #ai-chat-panel.show {
@@ -202,6 +216,7 @@
             font-weight: bold;
             font-size: 22px;
             cursor: move;
+            z-index: 10002;
         }
 
         #ai-chat-title::before {
@@ -419,52 +434,81 @@
             box-shadow: 0 0 10px var(--kai-accent);
         }
 
-        /* SETTINGS */
+        /* SETTINGS HUB (REVAMPED) */
         #xp-settings {
             background: var(--kai-bg);
             border: 2px solid var(--kai-accent);
             color: var(--kai-text);
             position: absolute;
-            top: 40px; right: 0;
-            width: 350px;
-            z-index: 10000;
+            top: 40px; right: 10px;
+            width: 500px;
+            height: 450px;
+            z-index: 10010;
             display: none;
-            box-shadow: -10px 10px 20px rgba(0,0,0,0.8);
+            flex-direction: column;
+            box-shadow: -10px 10px 40px rgba(0,0,0,0.9);
         }
-        #xp-settings.show { display: block; }
-        .xp-settings-header {
-            background: var(--kai-accent);
-            color: var(--kai-bg);
-            padding: 5px 10px;
-            font-size: 22px;
-            display: flex; justify-content: space-between;
-        }
-        .xp-settings-content { padding: 15px; }
-        .xp-setting-group { margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        .xp-setting-label { color: var(--kai-accent); font-size: 20px; margin-bottom: 5px; }
+        #xp-settings.show { display: flex; }
         
-        input, select {
+        .settings-tabs {
+            display: flex;
             background: #000;
-            border: 1px solid #444;
-            color: var(--kai-text);
+            border-bottom: 1px solid var(--kai-accent);
+        }
+        .settings-tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-right: 1px solid #222;
+            font-size: 16px;
+            color: #666;
+        }
+        .settings-tab.active {
+            background: var(--kai-bg);
+            color: var(--kai-accent);
+            font-weight: bold;
+        }
+
+        .settings-pane {
+            flex: 1;
+            padding: 20px;
+            display: none;
+            overflow-y: auto;
+        }
+        .settings-pane.active { display: block; }
+
+        .xp-setting-group { margin-bottom: 15px; border-bottom: 1px solid #111; padding-bottom: 10px; }
+        .xp-setting-label { color: var(--kai-accent); font-size: 18px; margin-bottom: 5px; display: block; }
+        
+        .setting-control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .setting-control-row label { flex: 1; font-size: 16px; color: #888; }
+
+        input[type="range"] { flex: 2; accent-color: var(--kai-accent); }
+        input[type="number"], select {
+            background: #000;
+            border: 1px solid #333;
+            color: var(--kai-accent);
             font-family: var(--kai-font);
             font-size: 18px;
-            padding: 5px;
+            padding: 2px 5px;
         }
     </style>
 </head>
 <body>
-    <!-- KAI Avatar Floating Character -->
     <div id="ai-assistant-container">
-        <div id="ai-clippy" title="KAI - Studio Assistant"></div>
+        <div id="ai-clippy" title="KAI - Studio Assistant" onclick="window.AIChatUI ? AIChatUI.openChat() : null"></div>
         
         <!-- Speech Bubble -->
         <div id="ai-speech-bubble">
             <div class="ai-speech-header">>> INCOMING_TRANSMISSION</div>
             <div id="ai-speech-text">SYSTEM READY. AWAITING INPUT.</div>
             <div id="ai-speech-actions">
-                <button class="xp-button" onclick="AIChatUI.openChat()">ACCESS</button>
-                <button class="xp-button secondary" onclick="AIChatUI.dismiss()">IGNORE</button>
+                <button class="xp-button" onclick="window.AIChatUI ? AIChatUI.openChat() : (window.parent && window.parent.KAI && window.parent.KAI.openChat())">ACCESS</button>
+                <button class="xp-button secondary" onclick="window.AIChatUI ? AIChatUI.dismiss() : document.getElementById('ai-speech-bubble').classList.remove('show')">IGNORE</button>
             </div>
         </div>
     </div>
@@ -477,16 +521,18 @@
             </div>
             <div class="xp-loading-content">
                 <div class="xp-loading-text">
-                    <div id="xp-loading-status" style="color: var(--kai-accent); font-size: 24px;">INITIALIZING KAI...</div>
-                    <div id="xp-loading-details" style="color: #666;">Loading neural matrix...</div>
+                    <div id="xp-loading-status" style="color: var(--kai-accent); font-size: 24px;">INITIALIZING KAI KERNEL...</div>
+                    <div id="boot-logs" style="height: 100px; overflow-y: hidden; font-size: 14px; color: #666; margin: 10px 0; text-align: left; border: 1px solid #222; padding: 5px; font-family: monospace; background: #000;">
+                        <div>>> SYSCALL: BOOT_SEQUENCE_INIT</div>
+                    </div>
                 </div>
                 <div class="xp-progress-container">
                     <div class="xp-progress-bar">
                         <div id="xp-progress-fill" class="xp-progress-fill"></div>
                     </div>
-                    <div class="xp-progress-text">
+                    <div class="xp-progress-text" style="display: flex; justify-content: space-between; font-size: 14px; margin-top: 5px;">
+                        <span id="xp-loading-details">Establishing neural datalink...</span>
                         <span id="xp-progress-percent">0%</span>
-                        <span id="xp-progress-size"></span>
                     </div>
                 </div>
             </div>
@@ -496,23 +542,24 @@
     <!-- Chat Window -->
     <div id="ai-chat-panel">
         <div id="ai-chat-header">
-            <span id="ai-chat-title">KAI_TERMINAL v2.0</span>
+            <span id="ai-chat-title">KAI_TERMINAL // STUDIO_PRO</span>
             <div class="xp-window-controls">
-                <button class="xp-control-btn settings" onclick="AISettings.toggle()" title="Settings">[*]</button>
-                <button class="xp-control-btn" onclick="AIChatUI.closeChat()" title="Close">[X]</button>
+                <button class="xp-control-btn settings" onclick="AISettings.toggle()" title="Kernel Config">[*]</button>
+                <button class="xp-control-btn" onclick="AIChatUI.closeChat()" title="Shutdown">[X]</button>
             </div>
         </div>
 
         <div id="ai-chat-messages"></div>
 
         <div id="ai-chat-input-container">
-            <textarea id="ai-chat-input" placeholder="Enter command or query..."></textarea>
+            <textarea id="ai-chat-input" placeholder=">> ENTER COMMAND OR QUERY..."></textarea>
             <div class="xp-input-toolbar">
                 <div class="xp-toolbar-section">
-                    <button class="xp-tool-btn" title="Clear">[CLR]</button>
-                    <button class="xp-tool-btn" title="Help">[?]</button>
+                    <button class="xp-tool-btn" title="Clear History" onclick="document.getElementById('ai-chat-messages').innerHTML=''">[CLR]</button>
+                    <button class="xp-tool-btn" title="Project Context">[CTX]</button>
+                    <button class="xp-tool-btn" title="System Status" onclick="AIChatUI.addMessage('system', '>> KERNEL_STATUS: OPTIMAL\n>> BRAIN_SYNC: 100%\n>> RAG_LATENCY: 12ms')">[LOG]</button>
                 </div>
-                <button id="ai-chat-send" onclick="AIChatUI.sendMessage()">EXECUTE</button>
+                <button id="ai-chat-send" onclick="AIChatUI.sendMessage()">TRANSMIT</button>
             </div>
         </div>
 
@@ -524,56 +571,124 @@
             <div id="xp-char-count">0/500</div>
         </div>
 
-        <!-- Settings Panel -->
+        <!-- Settings Hub (Advanced Multi-Tab) -->
         <div id="xp-settings">
             <div class="xp-settings-header">
-                <span>>> CONFIG</span>
+                <span>>> KAI_KERNEL_CONFIGURATION</span>
                 <span style="cursor: pointer;" onclick="AISettings.toggle()">[X]</span>
             </div>
-            <div class="xp-settings-content">
+            
+            <div class="settings-tabs">
+                <div id="tab-brain" class="settings-tab active" onclick="AISettings.switchTab('brain', this)">BRAIN</div>
+                <div id="tab-project" class="settings-tab" onclick="AISettings.switchTab('project', this)">PROJECT</div>
+                <div id="tab-interface" class="settings-tab" onclick="AISettings.switchTab('interface', this)">INTERFACE</div>
+                <div id="tab-debug" class="settings-tab" onclick="AISettings.switchTab('debug', this)">DEBUG</div>
+            </div>
+
+            <!-- Tab: Brain -->
+            <div id="pane-brain" class="settings-pane active">
                 <div class="xp-setting-group">
-                    <div class="xp-setting-label">AI CORE</div>
-                    <div class="xp-setting-control">
-                        <select id="setting-provider">
-                            <option value="local">LOCAL (TRANSFORMERS.JS)</option>
-                            <option value="cerebras">CLOUD (CEREBRAS)</option>
+                    <span class="xp-setting-label">INFERENCE_PROVIDER</span>
+                    <div class="setting-control-row">
+                        <select id="setting-provider" style="width: 100%;">
+                            <option value="native">NATIVE_CORTEX (PYTHON/GGUF)</option>
+                            <option value="local">WEB_GPU (TRANSFORMERS.JS)</option>
+                            <option value="cerebras">CLOUD_ORCHESTRATOR</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="xp-setting-group">
-                    <div class="xp-setting-label">PERSONALITY_MATRIX</div>
-                    <div class="xp-setting-control">
-                        <input type="checkbox" id="setting-irab-personality" checked>
-                        <label for="setting-irab-personality">KAI MODE (NERDY)</label>
+                    <span class="xp-setting-label">SAMPLING_CONTROL</span>
+                    <div class="setting-control-row">
+                        <label>Temperature:</label>
+                        <input type="range" id="setting-temp" min="0.1" max="1.5" step="0.1" value="0.7" oninput="document.getElementById('val-temp').textContent=this.value">
+                        <span id="val-temp" style="width: 30px; color: var(--kai-accent);">0.7</span>
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Max Tokens:</label>
+                        <input type="number" id="setting-max-tokens" value="512" style="width: 80px;">
                     </div>
                 </div>
+            </div>
 
+            <!-- Tab: Project -->
+            <div id="pane-project" class="settings-pane">
                 <div class="xp-setting-group">
-                    <div class="xp-setting-label">AUDIO</div>
-                    <div class="xp-setting-control">
+                    <span class="xp-setting-label">COGNITION (RAG)</span>
+                    <div class="setting-control-row">
+                        <label>Enable Local Indexing:</label>
+                        <input type="checkbox" id="setting-rag" checked>
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Index Codebase:</label>
+                        <input type="checkbox" id="setting-index-code" checked>
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">AUTOMATION</span>
+                    <div class="setting-control-row">
+                        <label>Proactive Suggestions:</label>
+                        <input type="checkbox" id="setting-proactive" checked>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Interface -->
+            <div id="pane-interface" class="settings-pane">
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">VISUALS</span>
+                    <div class="setting-control-row">
+                        <label>CRT Scanlines:</label>
+                        <input type="checkbox" id="setting-crt" checked onchange="document.getElementById('ai-chat-panel').style.filter = this.checked ? 'contrast(1.1)' : 'none'">
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Terminal Glow:</label>
+                        <input type="checkbox" id="setting-glow" checked>
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">AUDIO</span>
+                    <div class="setting-control-row">
+                        <label>Kernel SFX:</label>
                         <input type="checkbox" id="setting-sounds" checked>
-                        <label for="setting-sounds">SFX ENABLED</label>
                     </div>
                 </div>
+            </div>
 
-                <div class="xp-settings-buttons" style="display: flex; gap: 10px; justify-content: center;">
-                    <button class="xp-button" onclick="AISettings.save()">SAVE</button>
-                    <button class="xp-button secondary" onclick="AISettings.toggle()">CANCEL</button>
+            <!-- Tab: Debug -->
+            <div id="pane-debug" class="settings-pane">
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">SYSTEM_LOGS</span>
+                    <div id="debug-stream" style="font-family: monospace; font-size: 11px; color: #4a4; height: 220px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #222;">
+                        [08:42:11] KERNEL_INIT_COMPLETE<br>
+                        [08:42:12] EVENT_BUS_BRIDGE_CONNECTED<br>
+                        [08:42:12] RAG_VECTOR_STORE_READY (153 chunks)<br>
+                        [08:42:13] MONITORING_STUDIO_EVENTS...
+                    </div>
                 </div>
+            </div>
+
+            <div class="xp-settings-buttons">
+                <button class="xp-button" onclick="AISettings.save()">APPLY</button>
+                <button class="xp-button secondary" onclick="AISettings.toggle()">CANCEL</button>
             </div>
         </div>
     </div>
 
+    <!-- Core Shared Infra -->
+    <script src="/shared/EventBus.js?v=7"></script>
+    <script src="/shared/SharedProjectState.js?v=7"></script>
+    <script src="/shared/AssetManager.js?v=7"></script>
+
     <!-- Load AI Scripts -->
-    <script src="../irab-personality.js"></script>
-    <script src="../cerebras-adapter.js"></script>
+    <script src="../irab-personality.js?v=7"></script>
+    <!-- <script src="../cerebras-adapter.js?v=7"></script> -->
     <!-- Core AI Engine (Module) -->
-    <script type="module" src="../ketebe-ai.js"></script>
+    <script type="module" src="../ketebe-ai.js?v=7"></script>
     <!-- Compatibility Layer -->
-    <script src="../ketebe-ai-assistant.js"></script>
+    <script src="../ketebe-ai-assistant.js?v=7"></script>
     <!-- UI Controller -->
-    <script src="assistant-panel.js"></script>
+    <script src="assistant-panel.js?v=7"></script>
 
     <script>
         // Loading Bar Test (Hidden Feature)

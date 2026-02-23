@@ -3,16 +3,16 @@
  * Main orchestrator for Ketebe AI Micro Edition.
  */
 
-import { AI_CONFIG } from './config.js?v=5';
-import { ModelManager } from './model-manager.js?v=5';
-import { InferenceEngine } from './inference-engine.js?v=5';
-import { TokenizerUtils } from './tokenizer-utils.js?v=5';
-import { RAGEngine } from './rag-engine.js?v=5';
-import { ContextManager } from './context-manager.js?v=5';
-import { ToolRegistry } from './tool-registry.js?v=5';
-import { WorkflowManager } from './workflow-manager.js?v=5';
-import { CoPilot } from './co-pilot.js?v=5';
-import { EventBus } from './shim.js?v=5';
+import { AI_CONFIG } from './config.js?v=8';
+import { ModelManager } from './model-manager.js?v=8';
+import { InferenceEngine } from './inference-engine.js?v=8';
+import { TokenizerUtils } from './tokenizer-utils.js?v=8';
+import { RAGEngine } from './rag-engine.js?v=8';
+import { ContextManager } from './context-manager.js?v=8';
+import { ToolRegistry } from './tool-registry.js?v=8';
+import { WorkflowManager } from './workflow-manager.js?v=8';
+import { CoPilot } from './co-pilot.js?v=8';
+import { EventBus } from './shim.js?v=8';
 
 export class KetebeAI {
     constructor() {
@@ -30,47 +30,51 @@ export class KetebeAI {
         if (this.isInitialized) return;
         
         console.log('[KetebeAI] Initializing...');
-        await this.inferenceEngine.initialize();
+        // Only initialize inference engine if WebGPU is enabled and we don't have a native bridge
+        if (AI_CONFIG.features.enableWebGPU) {
+            await this.inferenceEngine.initialize().catch(e => console.warn('[KetebeAI] WebGPU Init Failed:', e));
+        }
         
         if (AI_CONFIG.features.enableRAG) {
             this.ragEngine.initialize().catch(e => console.error('[KetebeAI] RAG Init Failed:', e));
         }
 
         this.isInitialized = true;
-        EventBus.emit('ai:status', this.getStatus());
+        if (EventBus.instance) EventBus.emit('ai:status', this.getStatus());
     }
 
     async chat(message, options = {}) {
         await this.initialize();
         
-        // --- Phase 4: Unified Router Logic ---
+        // --- Phase 4: Unified Router Logic (FIXED: Prioritize Native Cortex) ---
         
-        // 1. PRIMARY: Local WebGPU (Micro Edition)
-        if (this.inferenceEngine.isModelReady && !options.forceNative) {
-            console.log('[KetebeAI] Using Local Inference...');
-            return await this._localChat(message, options);
-        }
-
-        // 2. SECONDARY: Native Cortex (Python WebSocket)
-        if (window.irab && window.irab.isConnected) {
+        // 1. PRIMARY: Native Cortex (Python WebSocket)
+        const irabBridge = window.irab || (window.parent && window.parent.irab);
+        if (irabBridge && irabBridge.isConnected) {
             console.log('[KetebeAI] Routing to Native Cortex...');
-            // IrabBridge handles its own UI, but we can return a promise that waits for complete response
             return new Promise((resolve) => {
-                const originalOnToken = window.irab.onToken;
+                const originalOnToken = irabBridge.onToken;
                 let fullText = "";
 
-                window.irab.onToken = (token) => {
+                irabBridge.onToken = (token) => {
                     if (token === null) { // Stream end marker
-                        window.irab.onToken = originalOnToken;
+                        irabBridge.onToken = originalOnToken;
                         resolve({ text: fullText, source: 'native' });
+                        return;
                     }
                     fullText += token;
                     if (options.onToken) options.onToken(token);
                     if (originalOnToken) originalOnToken(token);
                 };
 
-                window.irab.prompt(message, options.context || {});
+                irabBridge.prompt(message, options.context || {});
             });
+        }
+
+        // 2. SECONDARY: Local WebGPU (Micro Edition)
+        if (this.inferenceEngine.isModelReady && !options.forceNative) {
+            console.log('[KetebeAI] Using Local Inference...');
+            return await this._localChat(message, options);
         }
 
         // 3. TERTIARY: Server Fallback

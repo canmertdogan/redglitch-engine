@@ -17,8 +17,8 @@ export class VectorStore {
         console.log('[VectorStore] Initializing Orama...');
         
         try {
-            // Load Orama from CDN if not local
-            const { create, insert, search } = await import('https://unpkg.com/@orama/orama@latest/dist/index.js');
+            // Load Orama from CDN (using esm.sh for better CORS support)
+            const { create, insert, search } = await import('https://esm.sh/@orama/orama@3.1.18');
             
             this.db = await create({
                 schema: {

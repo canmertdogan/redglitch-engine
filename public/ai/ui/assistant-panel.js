@@ -16,12 +16,12 @@ class KaiChatUIController {
         
         // Sound system (Retro Synth/Bleeps)
         this.sounds = {
-            messageReceived: new Audio('/ai/sounds/message-received.mp3'),
-            messageSent: new Audio('/ai/sounds/message-sent.mp3'),
+            messageReceived: new Audio('/ai/sounds/msg.mp3'),
+            messageSent: new Audio('/ai/sounds/msg.mp3'),
             online: new Audio('/ai/sounds/online.mp3'),
             nudge: new Audio('/ai/sounds/nudge.mp3'),
-            error: new Audio('/ai/sounds/error.mp3'),
-            typing: new Audio('/ai/sounds/typing.mp3')
+            error: new Audio('/ai/sounds/nudge.mp3'),
+            typing: new Audio('/ai/sounds/msg.mp3')
         };
         
         Object.values(this.sounds).forEach(sound => {
@@ -111,13 +111,10 @@ class KaiChatUIController {
         if (this.isInitialized) return;
         console.log('Kai: Initializing System...');
 
-        if (typeof IRABAssistantSimple === 'undefined') {
-            console.error('Kai: Core Assistant Class Missing.');
-            this.isInitialized = true;
-            return;
-        }
-
         try {
+            // Bind to window early for hit detection bridge
+            window.AIChatUI = this;
+
             this.assistant = new IRABAssistantSimple();
             
             if (this.assistant.setProgressCallback) {
@@ -168,6 +165,39 @@ class KaiChatUIController {
                 this.toggleChat();
             }
         });
+
+        // Broadcast hit zones to parent for pointer-events passthrough
+        setInterval(() => {
+            const zones = [];
+            const elements = [
+                'ai-assistant-container', 
+                'ai-chat-panel', 
+                'xp-ai-loading', 
+                'xp-settings', 
+                'ai-speech-bubble'
+            ];
+            
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && (el.style.display !== 'none' && !el.classList.contains('hidden') || el.classList.contains('show'))) {
+                    // Check computed style for visibility
+                    const style = window.getComputedStyle(el);
+                    if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+                        const rect = el.getBoundingClientRect();
+                        zones.push({
+                            top: rect.top,
+                            left: rect.left,
+                            bottom: rect.bottom,
+                            right: rect.right
+                        });
+                    }
+                }
+            });
+
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'kai:hitzones', zones }, '*');
+            }
+        }, 100);
     }
 
     showSpeechBubble(text, actions = []) {
@@ -399,9 +429,10 @@ class KaiChatUIController {
 
 // Global instance
 window.AIChatUI = new KaiChatUIController();
-
+// Compatibility aliases
 window.openChat = () => window.AIChatUI.openChat();
 window.closeChat = () => window.AIChatUI.closeChat();
+window.dismiss = () => window.AIChatUI.dismiss();
 window.updateAIProgress = (data) => window.AIChatUI.updateLoadingProgress(data);
 
 // Settings Controller

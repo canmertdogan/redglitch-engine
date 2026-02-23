@@ -1208,16 +1208,16 @@
                         btn.innerHTML = `<div><i class="fas ${tool.icon}"></i> ${tool.title.toLowerCase()}</div>`;
                         btn.onclick = () => {
                             openWindow(tool);
-                            // Proactive IRAB Tip
-                            if (window.IRAB && window.IRAB.showBalloon) {
+                            // Proactive Kai Tip
+                            if (window.KAI && window.KAI.showBalloon) {
                                 const tips = {
-                                    'platformer_studio': "GRRR... TRY GENERATING A LEVEL AUTOMATICALLY!",
-                                    'script': "CODE IS POETRY. NEED A SNIPPET?",
-                                    'pixel': "PIXELS ARE SMALL BUT MIGHTY.",
-                                    'npc': "NPCs NEED BRAINS TOO. CHECK BEHAVIORS!",
-                                    'daw': "SOUNDS LIKE PROGRESS TO ME!"
+                                    'platformer_studio': ">> SUGGESTION: EXECUTE PROCEDURAL_LEVEL_GENERATOR.EXE",
+                                    'script': ">> ANALYZING CODE... SYNTAX_EFFICIENCY: 84%. NEED OPTIMIZATION?",
+                                    'pixel': ">> PIXEL_DENSITY_OPTIMAL. READY FOR MASTERPIECE_INIT.SH",
+                                    'npc': ">> DETECTED VACANT_NPC_BRAINS. UPLOADING HEURISTICS...",
+                                    'daw': ">> FREQUENCY_SPECTRUM_BALANCED. COMMENCING AUDIO_SYNTHESIS."
                                 };
-                                if (tips[tool.id]) window.IRAB.showBalloon(tips[tool.id]);
+                                if (tips[tool.id]) window.KAI.showBalloon(tips[tool.id]);
                             }
                         };
                         catDiv.appendChild(btn);
@@ -2013,792 +2013,84 @@
 
         init();
     </script>
-    <!-- ====== MSN MESSENGER IRAB UI ====== -->
-    <style>
-        #irab-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            font-family: Tahoma, "Microsoft Sans Serif", Arial, sans-serif;
-            font-size: 11px;
-        }
-        #irab-avatar {
-            width: 64px;
-            height: 64px;
-            background: url('/sprite-art/helper.png') center/contain no-repeat;
-            cursor: pointer;
-            transition: transform 0.15s ease;
-            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.4));
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-        }
-        #irab-avatar:hover { transform: translateY(-3px) scale(1.05); }
+    <!-- KAI AI Assistant (Ketebe AI Micro Edition) -->
+    <iframe id="kai-ai-panel" src="ai/ui/assistant-panel.html?v=8" 
+            style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                   border: none; pointer-events: none; z-index: 9998;">
+    </iframe>
+    
+    <script>
+        // Kai Bridge to parent
+        window.KAI = {
+            showBalloon: (text) => {
+                const iframe = document.getElementById('kai-ai-panel');
+                if (iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI) {
+                    iframe.contentWindow.AIChatUI.showSpeechBubble(text);
+                }
+            },
+            openChat: () => {
+                const iframe = document.getElementById('kai-ai-panel');
+                if (iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI) {
+                    iframe.contentWindow.AIChatUI.openChat();
+                }
+            },
+            dismissBalloon: () => {
+                const iframe = document.getElementById('kai-ai-panel');
+                if (iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI) {
+                    iframe.contentWindow.AIChatUI.dismiss();
+                }
+            }
+        };
+        // Legacy alias
+        window.IRAB = window.KAI;
 
-        /* XP Balloon - Pixelated with Rounded Corners */
-        #irab-balloon {
-            position: absolute;
-            bottom: 75px;
-            right: 0;
-            width: 260px;
-            background: #FFFFE1;
-            border: 2px solid #000;
-            border-radius: 12px; /* Rounded but will be pixelated */
-            padding: 10px 12px;
-            box-shadow: 4px 4px 0px rgba(0,0,0,0.8); /* Hard pixelated shadow */
-            display: none;
-            animation: irabBalloonIn 0.25s ease-out;
-            font-family: Tahoma, sans-serif;
-            font-size: 11px;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-            filter: contrast(1.15) brightness(1.05);
-            -webkit-font-smoothing: none;
-            font-smooth: never;
-        }
-        #irab-balloon.show { display: block; }
-        @keyframes irabBalloonIn {
-            from { opacity: 0; transform: translateY(8px) scale(0.96); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        #irab-balloon::after {
-            content: '';
-            position: absolute;
-            bottom: -12px; right: 22px;
-            width: 0;
-            height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-top: 12px solid #000;
-        }
-        #irab-balloon::before {
-            content: '';
-            position: absolute;
-            bottom: -9px; right: 24px;
-            width: 0;
-            height: 0;
-            border-left: 10px solid transparent;
-            border-right: 10px solid transparent;
-            border-top: 10px solid #FFFFE1;
-            z-index: 1;
-        }
-        #irab-balloon-title { 
-            font-weight: bold; 
-            color: #003399; 
-            margin-bottom: 5px;
-            font-family: Tahoma, sans-serif;
-            text-shadow: 1px 1px 0px rgba(0,0,0,0.2);
-        }
-        #irab-balloon-text { 
-            color: #000; 
-            line-height: 1.5;
-            margin-bottom: 8px;
-            font-family: Tahoma, sans-serif;
-        }
-        #irab-balloon-actions { display: flex; gap: 5px; justify-content: flex-end; }
-
-        .xp-btn {
-            background: linear-gradient(180deg, #EAF3FF 0%, #D9E9FC 45%, #BED6F5 50%, #A7C9F1 100%);
-            border: 2px solid #003C74;
-            border-radius: 4px; /* Rounded but pixelated */
-            padding: 4px 12px;
-            font-family: Tahoma, sans-serif;
-            font-size: 11px;
-            font-weight: bold;
-            color: #000;
-            cursor: pointer;
-            min-width: 60px;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
-            text-shadow: 0.5px 0.5px 0px rgba(255,255,255,0.8);
-            filter: contrast(1.1);
-            -webkit-font-smoothing: none;
-        }
-        .xp-btn:hover { 
-            background: linear-gradient(180deg, #F5F9FF 0%, #BCD9FF 100%);
-            transform: translate(1px, 1px);
-            box-shadow: 1px 1px 0px rgba(0,0,0,0.5);
-        }
-        .xp-btn.secondary { 
-            background: linear-gradient(180deg, #F5F5F5 0%, #C5C5C5 100%); 
-            border-color: #707070;
-        }
-
-        /* XP Chat Window - Pixelated with Rounded Corners */
-        #irab-chat {
-            position: fixed;
-            bottom: 100px; right: 20px;
-            width: 660px; height: 520px;
-            background: #ECE9D8;
-            border: 3px solid;
-            border-color: #0054E3 #003C74 #003C74 #0054E3;
-            border-radius: 10px 10px 0 0; /* Rounded top corners, pixelated */
-            box-shadow: 6px 6px 0px rgba(0,0,0,0.6);
-            display: none;
-            flex-direction: column;
-            z-index: 9998;
-            font-family: Tahoma, sans-serif;
-            font-size: 11px;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-            filter: contrast(1.12);
-            -webkit-font-smoothing: none;
-        }
-        #irab-chat.show { display: flex; }
-        #irab-chat-header {
-            background: linear-gradient(180deg, #3F8CF3 0%, #2862D9 50%, #1A4AAE 100%);
-            padding: 5px 7px;
-            border-radius: 8px 8px 0 0; /* Rounded top */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        #irab-chat-header span {
-            color: #FFF; 
-            font-weight: bold; 
-            font-size: 11px;
-            font-family: Tahoma, sans-serif;
-            text-shadow: 1px 1px 0px #000;
-            display: flex; align-items: center; gap: 6px;
-        }
-        #irab-chat-header span::before {
-            content: ''; width: 16px; height: 16px;
-            background: url('/sprite-art/helper.png') center/contain no-repeat;
-            image-rendering: pixelated;
-        }
-        .xp-window-controls {
-            display: flex;
-            gap: 2px;
-        }
-        .xp-control-btn {
-            width: 22px; height: 22px;
-            background: linear-gradient(180deg, #4A9EFD 0%, #2B7FE5 50%, #1A5FC7 100%);
-            border: 2px solid #003C74; 
-            border-radius: 3px; /* Small rounded corners, pixelated */
-            color: #FFF; cursor: pointer; font-weight: bold; font-size: 13px;
-            display: flex; align-items: center; justify-content: center;
-            text-shadow: 1px 1px 0px #000;
-            font-family: Tahoma, sans-serif;
-            image-rendering: pixelated;
-            box-shadow: 1px 1px 0px rgba(0,0,0,0.5);
-            filter: contrast(1.1);
-        }
-        .xp-control-btn:hover { 
-            background: linear-gradient(180deg, #5AAEFF 0%, #3B8FFF 50%, #2670D9 100%);
-            transform: translate(1px, 1px);
-            box-shadow: 0px 0px 0px rgba(0,0,0,0.5);
-        }
-        .xp-control-btn.settings { font-size: 15px; }
-        .xp-close-btn {
-            width: 22px; height: 22px;
-            background: linear-gradient(180deg, #E04848 0%, #C83030 100%);
-            border: 2px solid #993333; 
-            border-radius: 3px; /* Small rounded corners, pixelated */
-            color: #FFF; cursor: pointer; font-weight: bold; font-size: 13px;
-            display: flex; align-items: center; justify-content: center;
-            text-shadow: 1px 1px 0px #000;
-            font-family: Tahoma, sans-serif;
-            box-shadow: 1px 1px 0px rgba(0,0,0,0.5);
-            filter: contrast(1.1);
-        }
-        .xp-close-btn:hover { 
-            background: linear-gradient(180deg, #FF6060 0%, #E04848 100%);
-            transform: translate(1px, 1px);
-            box-shadow: 0px 0px 0px rgba(0,0,0,0.5);
-        }
-
-        /* Settings Panel (Revamped) */
-        #irab-settings {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 420px;
-            background: #ECE9D8;
-            border: 1px solid #0054E3;
-            box-shadow: 4px 4px 20px rgba(0,0,0,0.5);
-            display: none;
-            z-index: 10000;
-            padding: 2px;
-        }
-        #irab-settings.show { display: block; }
-
-        .irab-settings-tabs {
-            display: flex;
-            padding: 10px 10px 0 10px;
-            gap: 2px;
-            background: #ECE9D8;
-        }
-        .irab-tab {
-            padding: 4px 12px;
-            background: #ECE9D8;
-            border: 1px solid #808080;
-            border-bottom: none;
-            border-radius: 4px 4px 0 0;
-            font-size: 11px;
-            cursor: pointer;
-            position: relative;
-            z-index: 1;
-        }
-        .irab-tab.active {
-            background: #FFF;
-            font-weight: bold;
-            padding-top: 6px;
-            margin-top: -2px;
-            z-index: 3;
-            border-color: #808080;
-        }
-        .irab-tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px; left: 0; right: 0;
-            height: 3px; background: #FFF;
-        }
-
-        .irab-settings-content {
-            background: #FFF;
-            border: 1px solid #808080;
-            margin: 0 10px;
-            padding: 15px;
-            min-height: 280px;
-            position: relative;
-            z-index: 2;
-        }
-        .irab-settings-page { display: none; }
-        .irab-settings-page.active { display: block; }
-
-        .irab-fieldset {
-            border: 1px solid #D4D0C8;
-            margin-bottom: 15px;
-            padding: 10px;
-            padding-top: 5px;
-        }
-        .irab-fieldset legend {
-            font-size: 11px;
-            color: #000080;
-            padding: 0 5px;
-        }
-
-        .irab-setting-control {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 8px;
-            font-size: 11px;
-        }
-        .irab-setting-control label { flex: 1; }
-        .irab-setting-control input[type="text"],
-        .irab-setting-control input[type="number"],
-        .irab-setting-control select {
-            padding: 2px 4px;
-            border: 1px solid #7F9DB9;
-            font-family: Tahoma, sans-serif;
-            font-size: 11px;
-        }
-
-        .irab-settings-buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 6px;
-            padding: 10px;
-            background: #ECE9D8;
-        }
-        .xp-btn {
-            padding: 4px 15px;
-            min-width: 75px;
-            background: #ECE9D8;
-            border: 1px solid #003C74;
-            font-family: Tahoma, sans-serif;
-            font-size: 11px;
-            cursor: pointer;
-        }
-        .xp-btn:hover { background: #E5F1FB; border-color: #0054E3; }
-        .xp-btn:active { background: #D4E7F7; }
-
-        #irab-chat-messages {
-            flex: 1; background: #FFF;
-            border: 1px solid #A0A0A0;
-            margin: 4px; padding: 8px;
-            overflow-y: auto;
-        }
-        #irab-chat-messages::-webkit-scrollbar { width: 16px; }
-        #irab-chat-messages::-webkit-scrollbar-track { background: #ECE9D8; border-left: 1px solid #A0A0A0; }
-        #irab-chat-messages::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #F5F5F5 0%, #D4D0C8 50%, #C0BDB3 100%);
-            border: 1px solid #808080;
-        }
-
-        .irab-msg { 
-            margin-bottom: 12px; 
-            display: flex; 
-            gap: 8px; 
-            animation: irabMsgIn 0.2s ease;
-            image-rendering: pixelated;
-        }
-        @keyframes irabMsgIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .irab-msg-avatar { 
-            width: 32px; 
-            height: 32px; 
-            border: 2px solid #000; 
-            border-radius: 4px; /* Small rounded corners, pixelated */
-            flex-shrink: 0; 
-            image-rendering: pixelated; 
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.5);
-        }
-        .irab-msg-body { flex: 1; }
-        .irab-msg-name { 
-            font-weight: bold; 
-            font-size: 11px;
-            font-family: Tahoma, sans-serif;
-            text-shadow: 0.5px 0.5px 0px rgba(0,0,0,0.2);
-        }
-        .irab-msg-name.user { color: #000080; }
-        .irab-msg-name.bot { color: #800080; }
-        .irab-msg-time { 
-            font-size: 9px; 
-            color: #808080; 
-            margin-left: 4px;
-            font-family: Tahoma, sans-serif;
-        }
-        .irab-msg-bubble { 
-            padding: 6px 10px; 
-            border-radius: 8px; /* Rounded corners, pixelated */
-            border: 2px solid #808080;
-            font-size: 11px; 
-            line-height: 1.5; 
-            color: #000; 
-            word-wrap: break-word; 
-            margin-top: 2px; 
-            white-space: pre-wrap;
-            font-family: Tahoma, sans-serif;
-            background: #FFF;
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
-            image-rendering: pixelated;
-            filter: contrast(1.08);
-            -webkit-font-smoothing: none;
-        }
-        .irab-msg.user .irab-msg-bubble { background: #E8F4FF; border: 1px solid #5B9BD5; }
-        .irab-msg.bot .irab-msg-bubble { background: #FFF4E8; border: 1px solid #FFB366; }
-        .irab-msg.system .irab-msg-bubble { background: #FFFACD; border: 1px solid #FFD700; font-style: italic; }
-        .irab-msg.error .irab-msg-bubble { background: #FFE8E8; border: 1px solid #FF6B6B; }
-        
-        /* Progress bar for AI loading */
-        .irab-progress-bar {
-            width: 100%;
-            height: 18px;
-            background: #FFF;
-            border: 1px solid #808080;
-            box-shadow: inset -1px -1px 0 #F0F0F0, inset 1px 1px 0 #404040;
-            margin: 8px 0 4px 0;
-            position: relative;
-            overflow: hidden;
-        }
-        .irab-progress-fill {
-            height: 100%;
-            background: linear-gradient(180deg, #6699FF 0%, #3366FF 50%, #0033CC 100%);
-            transition: width 0.3s ease;
-            width: 0%;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
-        }
-        .irab-progress-text {
-            font-size: 10px;
-            color: #666;
-            text-align: center;
-            margin-top: 2px;
-        }
-        
-        /* Message type classes */
-        .irab-message {
-            margin-bottom: 10px;
-            animation: irabMsgIn 0.2s ease;
-        }
-        .irab-message-content {
-            padding: 6px 10px;
-            border-radius: 3px;
-            font-size: 11px;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        .user-message .irab-message-content { background: #E8F4FF; border: 1px solid #5B9BD5; }
-        .assistant-message .irab-message-content { background: #FFF4E8; border: 1px solid #FFB366; }
-        .system-message .irab-message-content { background: #FFFACD; border: 1px solid #FFD700; font-style: italic; }
-        .error-message .irab-message-content { background: #FFE8E8; border: 1px solid #FF6B6B; }
-
-        #irab-chat-input-area { background: #ECE9D8; padding: 4px; border-top: 1px solid #FFF; }
-        
-        /* MSN-like Toolbar under input */
-        .irab-toolbar {
-            display: flex;
-            gap: 2px;
-            padding: 3px 4px;
-            background: #D4D0C8;
-            border-top: 1px solid #FFF;
-            border-bottom: 1px solid #808080;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .irab-toolbar-btn {
-            width: 24px;
-            height: 24px;
-            background: linear-gradient(180deg, #F5F5F5 0%, #D4D0C8 100%);
-            border: 1px solid #808080;
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
-            color: #000;
-            filter: grayscale(0.2);
-            image-rendering: pixelated;
-            transition: all 0.1s;
-        }
-        .irab-toolbar-btn:hover {
-            background: linear-gradient(180deg, #FFF 0%, #E5E5E5 100%);
-            border-color: #0054E3;
-        }
-        .irab-toolbar-btn:active {
-            background: #C0C0C0;
-            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.3);
-        }
-        .irab-toolbar-separator {
-            width: 1px;
-            height: 20px;
-            background: #808080;
-            margin: 0 2px;
-        }
-        
-        /* Chat body with sidebar layout */
-        #irab-chat-body {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-        #irab-chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #A0A0A0;
-        }
-        #irab-chat-sidebar {
-            width: 140px;
-            background: #ECE9D8;
-            border-left: 1px solid #FFF;
-            display: flex;
-            flex-direction: column;
-            padding: 6px;
-            gap: 8px;
-        }
-        .irab-sidebar-section {
-            background: #FFF;
-            border: 1px solid #A0A0A0;
-            border-radius: 4px;
-            padding: 6px;
-            font-size: 10px;
-        }
-        .irab-sidebar-title {
-            font-weight: bold;
-            color: #003C74;
-            margin-bottom: 4px;
-            font-size: 10px;
-        }
-        .irab-sidebar-avatar {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 4px;
-            border: 2px solid #808080;
-            border-radius: 4px;
-            background: url('/sprite-art/helper.png') center/cover no-repeat;
-            image-rendering: pixelated;
-            box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
-        }
-        .irab-sidebar-status {
-            text-align: center;
-            color: #008000;
-            font-size: 10px;
-            font-weight: bold;
-        }
-        .irab-quick-action {
-            padding: 3px 6px;
-            margin: 2px 0;
-            background: #ECE9D8;
-            border: 1px solid #A0A0A0;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 10px;
-            text-align: center;
-            color: #000;
-        }
-        .irab-quick-action:hover {
-            background: #BCD9FF;
-            border-color: #0054E3;
-        }
-        
-        #irab-chat-input { 
-            width: 100%; 
-            max-width: 100%;
-            background: #FFF; 
-            border: 1px solid #7F9DB9; 
-            color: #000; 
-            padding: 4px 6px; 
-            font-size: 11px; 
-            font-family: Tahoma, sans-serif; 
-            resize: none; 
-            height: 46px;
-            box-sizing: border-box;
-            overflow: auto;
-            margin: 0;
-        }
-        #irab-chat-input:focus { outline: none; border-color: #0054E3; }
-        #irab-chat-input:disabled { background: #f0f0f0; color: #888; cursor: not-allowed; }
-        .irab-input-bar { display: flex; justify-content: flex-end; margin-top: 4px; }
-        #irab-send-btn {
-            background: linear-gradient(180deg, #EAF3FF 0%, #A7C9F1 100%);
-            border: 1px solid #003C74; border-radius: 3px;
-            padding: 4px 16px; font-family: Tahoma, sans-serif;
-            font-size: 11px; font-weight: bold; color: #000; cursor: pointer;
-        }
-        #irab-send-btn:hover { background: linear-gradient(180deg, #F5F9FF 0%, #BCD9FF 100%); }
-
-        .irab-status-bar { background: #ECE9D8; border-top: 1px solid #FFF; padding: 2px 6px; display: flex; justify-content: space-between; font-size: 10px; color: #000; }
-        .irab-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #00CC00; border: 1px solid #008800; margin-right: 4px; vertical-align: middle; }
-        .irab-status-dot.thinking { background: #FFB300; border-color: #CC8800; animation: irabPulse 1s infinite; }
-        @keyframes irabPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        
-        .nudge-animation {
-            animation: irabNudge 0.5s;
-        }
-
-        /* MSN Nudge Animation */
-        @keyframes irabNudge {
-            0%, 100% { transform: translate(0, 0); }
-            10% { transform: translate(-10px, -10px); }
-            20% { transform: translate(10px, 10px); }
-            30% { transform: translate(-10px, 10px); }
-            40% { transform: translate(10px, -10px); }
-            50% { transform: translate(-10px, -10px); }
-            60% { transform: translate(10px, 10px); }
-            70% { transform: translate(-10px, 10px); }
-            80% { transform: translate(10px, -10px); }
-            90% { transform: translate(-5px, 5px); }
-        }
-
-        /* Wink Overlay */
-        #irab-wink-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            pointer-events: none; z-index: 1000000;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.3s;
-        }
-        #irab-wink-overlay.show { opacity: 1; }
-        .wink-image {
-            width: 300px; height: 300px;
-            image-rendering: pixelated;
-            animation: winkPop 2s ease-in-out forwards;
-        }
-        @keyframes winkPop {
-            0% { transform: scale(0) rotate(-20deg); opacity: 0; }
-            20% { transform: scale(1.2) rotate(10deg); opacity: 1; }
-            80% { transform: scale(1) rotate(0deg); opacity: 1; }
-            100% { transform: scale(2) rotate(20deg); opacity: 0; }
-        }
-    </style>
-    <div id="irab-wink-overlay"></div>
-    <div id="irab-container">
-        <div id="irab-avatar" title="IRAB - Click to chat!"></div>
-        <div id="irab-balloon">
-            <div id="irab-balloon-title">💬 IRAB says...</div>
-            <div id="irab-balloon-text">GRRR... IRAB IS READY TO HELP!</div>
-            <div id="irab-balloon-actions">
-                <button class="xp-btn" onclick="IRAB.openChat()">Open Chat</button>
-                <button class="xp-btn secondary" onclick="IRAB.dismissBalloon()">Dismiss</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="irab-chat">
-        <div id="irab-chat-header">
-            <span>IRAB - Studio Assistant</span>
-            <div class="xp-window-controls">
-                <button class="xp-control-btn settings" onclick="IRAB.clearHistory()" title="Clear Chat">🗑</button>
-                <button class="xp-control-btn settings" onclick="IRAB.toggleSettings()" title="Settings">⚙</button>
-                <button class="xp-close-btn" onclick="IRAB.closeChat()">×</button>
-            </div>
-        </div>
-
-        <!-- Settings Panel (Revamped XP Options Style) -->
-        <div id="irab-settings">
-            <div class="irab-settings-header">
-                <span>Options</span>
-                <span style="cursor: pointer; font-family: sans-serif; font-weight: normal; font-size: 14px;" onclick="IRAB.toggleSettings()">×</span>
-            </div>
+        window.addEventListener('load', () => {
+            const iframe = document.getElementById('kai-ai-panel');
+            if (!iframe) return;
             
-            <!-- Tab Headers -->
-            <div class="irab-settings-tabs">
-                <div class="irab-tab active" onclick="IRAB.switchSettingsTab('general', this)">General</div>
-                <div class="irab-tab" onclick="IRAB.switchSettingsTab('brain', this)">Brain</div>
-                <div class="irab-tab" onclick="IRAB.switchSettingsTab('persona', this)">Persona</div>
-            </div>
+            let hitZones = [];
 
-            <div class="irab-settings-content">
-                <!-- Tab: General -->
-                <div id="tab-general" class="irab-settings-page active">
-                    <fieldset class="irab-fieldset">
-                        <legend>Interface</legend>
-                        <div class="irab-setting-control">
-                            <input type="checkbox" id="irab-setting-audio" checked>
-                            <label for="irab-setting-audio">Play sounds when messages arrive</label>
-                        </div>
-                        <div class="irab-setting-control">
-                            <input type="checkbox" id="irab-setting-notifications" checked>
-                            <label for="irab-setting-notifications">Show balloon tips for suggestions</label>
-                        </div>
-                    </fieldset>
+            // Listen for hit zones from the assistant
+            window.addEventListener('message', (e) => {
+                if (e.data && e.data.type === 'kai:hitzones') {
+                    hitZones = e.data.zones;
+                }
+            });
 
-                    <fieldset class="irab-fieldset">
-                        <legend>Appearance</legend>
-                        <div class="irab-setting-control">
-                            <label>Chat Theme:</label>
-                            <select id="irab-setting-theme">
-                                <option value="classic">Classic MSN (Green/Blue)</option>
-                                <option value="modern-dark">Modern Ketebe Dark</option>
-                                <option value="xp-silver">Luna Silver</option>
-                            </select>
-                        </div>
-                    </fieldset>
-                </div>
+            // Hit detection logic
+            window.addEventListener('mousemove', (e) => {
+                const { clientX: x, clientY: y } = e;
+                let hit = false;
+                for (const zone of hitZones) {
+                    if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
+                        hit = true;
+                        break;
+                    }
+                }
+                iframe.style.pointerEvents = hit ? 'auto' : 'none';
+            });
 
-                <!-- Tab: Brain -->
-                <div id="tab-brain" class="irab-settings-page">
-                    <fieldset class="irab-fieldset">
-                        <legend>Native Cortex (GGUF)</legend>
-                        <div class="irab-setting-control">
-                            <label>Temperature:</label>
-                            <input type="range" id="irab-setting-temperature" min="0.1" max="1.5" step="0.1" value="0.7" 
-                                   oninput="document.getElementById('irab-setting-temp-val').textContent = this.value" style="flex: 2;">
-                            <span id="irab-setting-temp-val" style="width: 30px; text-align: right;">0.7</span>
-                        </div>
-                        <div class="irab-setting-control">
-                            <label>Max Tokens:</label>
-                            <input type="number" id="irab-setting-max-tokens" value="512" style="width: 60px;">
-                        </div>
-                        <div class="irab-setting-control">
-                            <label>GPU Layers:</label>
-                            <input type="number" id="irab-setting-gpu-layers" value="32" style="width: 60px;">
-                        </div>
-                    </fieldset>
+            iframe.addEventListener('load', () => {
+                try {
+                    const doc = iframe.contentWindow.document;
+                    doc.body.style.background = 'transparent';
+                    doc.body.style.pointerEvents = 'none';
+                    console.log('✅ Kai System Online (with Hit Detection)!');
+                } catch (e) {
+                    console.warn('Kai: Cross-origin blocked hit detection:', e);
+                    // Fallback: Just enable it
+                    iframe.style.pointerEvents = 'auto';
+                }
+            });
+        });
+    </script>
 
-                    <fieldset class="irab-fieldset">
-                        <legend>Context & Memory</legend>
-                        <div class="irab-setting-control">
-                            <input type="checkbox" id="irab-setting-rag" checked>
-                            <label for="irab-setting-rag">Enable RAG (Local Docs Lookup)</label>
-                        </div>
-                        <div class="irab-setting-control">
-                            <input type="checkbox" id="irab-setting-history" checked>
-                            <label for="irab-setting-history">Remember session history</label>
-                        </div>
-                    </fieldset>
-                </div>
-
-                <!-- Tab: Persona -->
-                <div id="tab-persona" class="irab-settings-page">
-                    <fieldset class="irab-fieldset">
-                        <legend>Personality Presets</legend>
-                        <select id="irab-setting-persona-preset" onchange="IRAB.applyPersonaPreset(this.value)" style="width: 100%; margin-bottom: 8px;">
-                            <option value="default">Standard IRAB (Grumpy Assistant)</option>
-                            <option value="developer">Senior Engine Developer</option>
-                            <option value="creative">Creative Pixel Artist</option>
-                            <option value="minimal">Minimalist Kernel Mode</option>
-                            <option value="custom">Custom...</option>
-                        </select>
-                        <textarea id="irab-setting-personality-text" 
-                                  style="width: 100%; height: 80px; font-family: Tahoma; font-size: 10px; resize: none;" 
-                                  placeholder="Enter custom system prompt directives..."></textarea>
-                    </fieldset>
-                </div>
-            </div>
-
-            <div class="irab-settings-buttons">
-                <button class="xp-btn" onclick="IRAB.saveSettings()">OK</button>
-                <button class="xp-btn" onclick="IRAB.toggleSettings()">Cancel</button>
-                <button class="xp-btn" onclick="IRAB.saveSettings()" style="margin-left: 10px;">Apply</button>
-            </div>
-        </div>
-
-        <div id="irab-chat-body">
-            <div id="irab-chat-main">
-                <div id="irab-chat-messages"></div>
-                <div id="irab-chat-input-area">
-                    <div class="irab-toolbar">
-                        <button class="irab-toolbar-btn" title="Bold" onclick="IRAB.formatText('bold')">𝐁</button>
-                        <button class="irab-toolbar-btn" title="Italic" onclick="IRAB.formatText('italic')">𝘐</button>
-                        <div class="irab-toolbar-separator"></div>
-                        <button class="irab-toolbar-btn" title="Emoticons" onclick="IRAB.showEmoticons()">😊</button>
-                        <button class="irab-toolbar-btn" title="Winks" onclick="IRAB.showWinks()">✨</button>
-                        <button class="irab-toolbar-btn" title="Nudge" onclick="IRAB.nudge()">👋</button>
-                        <div class="irab-toolbar-separator"></div>
-                        <button class="irab-toolbar-btn" title="Capture Studio" onclick="IRAB.takeScreenshot()">📸</button>
-                        <button class="irab-toolbar-btn" title="Change Background" onclick="IRAB.changeBackground()">🖼️</button>
-                    </div>
-                    <textarea id="irab-chat-input" placeholder="Type a message..."></textarea>
-                    <div class="irab-input-bar">
-                        <button id="irab-abort-btn" onclick="IRAB.abort()" style="display:none; background: #e74c3c; color: white; border: 1px solid #c0392b; margin-right: 5px; padding: 4px 10px; font-family: inherit; font-size: 11px; font-weight: bold; cursor: pointer;">BLOCK</button>
-                        <button id="irab-send-btn" onclick="IRAB.send()">Send</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="irab-chat-sidebar">
-                <div class="irab-sidebar-section">
-                    <div class="irab-sidebar-avatar"></div>
-                    <div class="irab-sidebar-status">● Online</div>
-                    <div style="text-align:center; font-size:10px; color:#666; margin-top:2px;">
-                        IRAB v1.0
-                    </div>
-                </div>
-                
-                <div class="irab-sidebar-section">
-                    <div class="irab-sidebar-title">Dev Sessions</div>
-                    <div id="irab-session-list" style="max-height: 100px; overflow-y: auto; margin-bottom: 5px;">
-                        <!-- JS Injected -->
-                    </div>
-                    <div class="irab-quick-action" onclick="IRAB.newSession()" style="background:#E8F4FF; font-weight:bold;">+ New Session</div>
-                </div>
-                
-                <div class="irab-sidebar-section">
-                    <div class="irab-sidebar-title">Quick Actions</div>
-                    <div class="irab-quick-action" onclick="IRAB.quickHelp()">📚 Help Topics</div>
-                    <div class="irab-quick-action" onclick="IRAB.quickTutorial()">🎓 Tutorials</div>
-                    <div class="irab-quick-action" onclick="IRAB.quickTips()">💡 Random Tip</div>
-                </div>
-                
-                <div class="irab-sidebar-section">
-                    <div class="irab-sidebar-title">Fun Zone</div>
-                    <div class="irab-quick-action" onclick="IRAB.tellJoke()">😄 Tell Joke</div>
-                    <div class="irab-quick-action" onclick="IRAB.motivate()">💪 Motivate Me</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="irab-status-bar">
-            <span><span class="irab-status-dot" id="irab-status-dot"></span><span id="irab-status-text">Online</span></span>
-            <span id="irab-char-count">0/500</span>
-        </div>
-    </div>
     <!-- IRAB Native Cortex Bridges -->
-    <script src="ai/bridge.js?v=5"></script>
-    <script src="assistant.js?v=5"></script>
+    <script src="ai/bridge.js?v=7"></script>
     
     <script type="module">
         // Initialize AI Micro for ghost-text and Command Bus (ToolRegistry)
-        import { KetebeAI } from './ai/ketebe-ai.js?v=6';
+        import { KetebeAI } from './ai/ketebe-ai.js?v=7';
         if (window.KetebeAIInstance) {
             window.KetebeAIInstance.initialize().catch(err => {
                 console.error("❌ AI Brain failed to initialize:", err);

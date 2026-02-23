@@ -7,7 +7,7 @@
 
 class IRABAssistantSimple {
     constructor() {
-        this.ai = window.KetebeAIInstance || null;
+        this.ai = window.KetebeAIInstance || (window.parent && window.parent.KetebeAIInstance) || null;
         
         // Ensure personality is loaded
         if (typeof window.IRABPersonality !== 'undefined') {
@@ -41,6 +41,10 @@ class IRABAssistantSimple {
         if (this.ai) return this.ai;
         if (window.KetebeAIInstance) {
             this.ai = window.KetebeAIInstance;
+            return this.ai;
+        }
+        if (window.parent && window.parent.KetebeAIInstance) {
+            this.ai = window.parent.KetebeAIInstance;
             return this.ai;
         }
 
