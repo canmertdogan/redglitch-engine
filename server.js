@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 const http = require('http');
+const cors = require('cors');
 
 // Import configuration
 const config = require('./server/config');
@@ -26,12 +27,14 @@ const campaignsRouter = require('./server/routes/campaigns');
 const assetsRouter = require('./server/routes/assets');
 const systemRouter = require('./server/routes/system');
 const ideRouter = require('./server/routes/ide');
+const gitRouter = require('./server/routes/git');
 
 // Import WebSocket setup
 const setupWebSocket = require('./server/websocket');
 
 // Initialize Express app and HTTP server
 const app = express();
+app.use(cors()); // Enable CORS for all routes
 const server = http.createServer(app);
 
 // --- IRAB NATIVE PROXY ---
@@ -145,6 +148,7 @@ app.use('/api/slots', slotsRouter);
 app.use('/api', cutscenesRouter);
 app.use('/api', campaignsRouter);
 app.use('/api/ide', ideRouter);
+app.use('/api/git', gitRouter);
 
 app.post('/api/save-spritesheet', async (req, res) => {
     try {

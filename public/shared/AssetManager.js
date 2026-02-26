@@ -492,11 +492,13 @@ class AssetManager {
                 this.assets.clear();
                 
                 // Register all assets
-                if (data && data.assets && Array.isArray(data.assets)) {
-                    for (const assetData of data.assets) {
+                const assetList = (data && data.assets) ? data.assets : (Array.isArray(data) ? data : null);
+                
+                if (assetList && Array.isArray(assetList)) {
+                    for (const assetData of assetList) {
                         this.registerAsset(assetData);
                     }
-                    console.log(`[AssetManager] Loaded ${data.assets.length} assets from registry`);
+                    console.log(`[AssetManager] Loaded ${assetList.length} assets from registry`);
                 } else {
                     console.warn('[AssetManager] Received invalid or empty asset data from server:', data);
                 }

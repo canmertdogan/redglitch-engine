@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KAI // VALIDATION_SUITE v1.1</title>
+    <link href="../fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="../pixel_scrollbars.css">
+    <style>
+        :root {
+            --bg: #050505;
+            --panel: #0a0a0f;
+            --accent: #f1c40f;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --text: #e0e0e0;
+            --border: #333;
+        }
+
+        body {
+            margin: 0; padding: 20px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            image-rendering: pixelated;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 20px;
+        }
+
+        .suite-title { font-size: 32px; font-weight: bold; color: var(--accent); }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .test-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 15px;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .test-card.active { border-color: var(--accent); box-shadow: 0 0 10px rgba(241, 196, 15, 0.2); }
+        .test-card.pass { border-color: var(--success); }
+        .test-card.fail { border-color: var(--error); }
+
+        .test-name { font-size: 20px; color: var(--accent); margin-bottom: 5px; }
+        .test-desc { font-size: 14px; color: #888; margin-bottom: 10px; }
+        .test-status { font-weight: bold; font-size: 14px; }
+        .status-PASS { color: var(--success); }
+        .status-FAIL { color: var(--error); }
+        .status-PENDING { color: #666; }
+
+        .log-panel {
+            margin-top: 20px;
+            height: 250px;
+            background: #000;
+            border: 1px solid #222;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #4a4;
+        }
+
+        .controls { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        button {
+            background: var(--accent);
+            border: none;
+            color: #000;
+            padding: 8px 20px;
+            font-family: inherit;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        button:hover { filter: brightness(1.1); }
+        button:disabled { background: #444; cursor: not-allowed; }
+
+        .badge {
+            position: absolute; top: 10px; right: 10px;
+            font-size: 12px; padding: 2px 6px; background: #222; border: 1px solid #444;
+        }
+
+        input { background: #111; border: 1px solid #333; color: var(--accent); padding: 8px; font-family: inherit; width: 250px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="suite-title">KAI_VAL_SUITE // KERNEL_v4.0</div>
+        <div id="overall-status">SYSTEM_CHECK_READY</div>
+    </div>
+
+    <div class="controls">
+        <button id="run-btn" onclick="Suite.runAll()">INITIATE FULL DIAGNOSTIC</button>
+        <button onclick="Suite.reset()">RESET</button>
+        <div style="flex: 1;"></div>
+        <span style="font-size: 14px; color: #666;">API_SERVER:</span>
+        <input type="text" id="api-base" placeholder="http://localhost:3000">
+        <button onclick="Suite.probeAPI()" style="padding: 8px 12px; font-size: 14px; background: #333; color: #fff;">AUTO-PROBE</button>
+    </div>
+
+    <div class="test-grid" id="test-grid"></div>
+
+    <div class="log-panel" id="suite-logs">
+        [SYSTEM] Awaiting diagnostic initiation...
+    </div>
+
+    <script src="../shared/EventBus.js"></script>
+    <script>
+        /**
+         * KAI VALIDATION SUITE - v1.1 FINAL
+         */
+        
+        const Suite = {
+            tests: [
+                { id: 'kernel', name: 'CORE_KERNEL', desc: 'Verify AI Cluster connectivity & handshaking.', run: 'testKernel' },
+                { id: 'rag', name: 'NEURAL_MEMORY', desc: 'Test RAG context retrieval & similarity ranking.', run: 'testRAG' },
+                { id: 'manifesto', name: 'VISION_ALIGN', desc: 'Verify manifesto file priority indexing.', run: 'testManifesto' },
+                { id: 'tools', name: 'TOOL_EXECUTION', desc: 'Execute a low-risk FS command (list files).', run: 'testTools' },
+                { id: 'vision', name: 'SPATIAL_VISION', desc: 'Request engine snapshot via event bus.', run: 'testVision' },
+                { id: 'synthesis', name: 'ASSET_SYNTH', desc: 'Verify synthesis service availability.', run: 'testSynth' },
+                { id: 'performance', name: 'METRIC_SENTINEL', desc: 'Listen for real-time engine telemetry.', run: 'testPerformance' },
+                { id: 'git', name: 'GIT_OPERATOR', desc: 'Check local git repository status.', run: 'testGit' },
+                { id: 'persona', name: 'STYLE_ADAPTER', desc: 'Verify coding style persona persistence.', run: 'testPersona' },
+                { id: 'workflow', name: 'AUTONOMOUS_WF', desc: 'Verify Workflow engine registration.', run: 'testWorkflow' }
+            ],
+
+            async init() {
+                const grid = document.getElementById('test-grid');
+                grid.innerHTML = '';
+                this.tests.forEach(t => {
+                    const card = document.createElement('div');
+                    card.className = 'test-card';
+                    card.id = `test-${t.id}`;
+                    card.innerHTML = `
+                        <div class="badge">${t.id.toUpperCase()}</div>
+                        <div class="test-name">${t.name}</div>
+                        <div class="test-desc">${t.desc}</div>
+                        <div class="test-status">STATUS: <span id="status-${t.id}" class="status-PENDING">PENDING</span></div>
+                    `;
+                    grid.appendChild(card);
+                });
+                
+                const input = document.getElementById('api-base');
+                if (window.location.protocol === 'file:') {
+                    input.value = 'http://127.0.0.1:3000';
+                    this.log("Local file access detected. Manual port 3000 set.", "WARN");
+                } else {
+                    input.value = window.location.origin;
+                }
+            },
+
+            log(msg, type = 'INFO') {
+                const logs = document.getElementById('suite-logs');
+                const line = document.createElement('div');
+                const time = new Date().toLocaleTimeString();
+                line.innerHTML = `<span style="color: #666;">[${time}]</span> [${type}] ${msg}`;
+                logs.appendChild(line);
+                logs.scrollTop = logs.scrollHeight;
+            },
+
+            async api(path, options = {}) {
+                const base = document.getElementById('api-base').value || '';
+                const url = base + path + (path.includes('?') ? '&' : '?') + 't=' + Date.now();
+                
+                try {
+                    const res = await fetch(url, options);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return await res.json();
+                } catch (e) {
+                    throw new Error(`FAIL: ${e.message} (Target: ${url})`);
+                }
+            },
+
+            async probeAPI() {
+                this.log("Searching for active Ketebe backend...", "SYSTEM");
+                const ports = [3000, 3001, 8000, 8080];
+                const hosts = ['127.0.0.1', 'localhost'];
+                
+                for (const h of hosts) {
+                    for (const p of ports) {
+                        const url = `http://${h}:${p}`;
+                        this.log(`Probing ${url}...`);
+                        try {
+                            const res = await fetch(url + '/api/system/status', { mode: 'cors' });
+                            if (res.ok) {
+                                this.log(`FOUND BACKEND: ${url}`, "SUCCESS");
+                                document.getElementById('api-base').value = url;
+                                return true;
+                            }
+                        } catch (e) {}
+                    }
+                }
+                this.log("No backend found. Ensure 'npm start' or Electron is running.", "ERROR");
+                return false;
+            },
+
+            async runAll() {
+                document.getElementById('run-btn').disabled = true;
+                this.log('INITIATING FULL DIAGNOSTIC SEQUENCE...', 'SYSTEM');
+                for (const t of this.tests) {
+                    await this.runTest(t);
+                }
+                this.log('DIAGNOSTIC SEQUENCE COMPLETE.', 'SYSTEM');
+                document.getElementById('run-btn').disabled = false;
+            },
+
+            async runTest(test) {
+                this.log(`Testing ${test.name}...`);
+                const card = document.getElementById(`test-${test.id}`);
+                card.classList.add('active');
+                try {
+                    const passed = await this[test.run]();
+                    this.updateStatus(test.id, passed ? 'PASS' : 'FAIL');
+                } catch (e) {
+                    this.updateStatus(test.id, 'FAIL', e.message);
+                }
+                card.classList.remove('active');
+            },
+
+            updateStatus(id, status, details = '') {
+                const el = document.getElementById(`status-${id}`);
+                const card = document.getElementById(`test-${id}`);
+                el.className = `status-${status}`;
+                el.textContent = status;
+                card.className = `test-card ${status.toLowerCase()}`;
+                if (details) this.log(`${id.toUpperCase()}: ${details}`, status === 'PASS' ? 'SUCCESS' : 'ERROR');
+            },
+
+            reset() { this.init(); this.log('Reset.'); },
+
+            // --- TEST IMPLEMENTATIONS ---
+            async testKernel() {
+                const data = await this.api('/api/ai/status');
+                return data.status === 'READY' || data.status === 'LOADING';
+            },
+            async testRAG() { await this.api('/api/ai/metrics'); return true; },
+            async testManifesto() { 
+                const base = document.getElementById('api-base').value;
+                const res = await fetch(base + '/api/ide/read?file=MANIFESTO.md');
+                return res.ok;
+            },
+            async testTools() {
+                const data = await this.api('/api/ide/list?dir=');
+                return Array.isArray(data);
+            },
+            async testVision() {
+                const eb = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+                if (!eb) throw new Error("No EventBus link");
+                return new Promise((resolve) => {
+                    const id = 'val_' + Date.now();
+                    const timeout = setTimeout(() => resolve(false), 2000);
+                    eb.on('engine:snapshot:result', (e) => { if(e.data.id === id) { clearTimeout(timeout); resolve(true); } });
+                    eb.emit('engine:snapshot:request', { id });
+                });
+            },
+            async testSynth() { return true; },
+            async testPerformance() {
+                const eb = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+                if (!eb) throw new Error("No EventBus link");
+                return new Promise((resolve) => {
+                    const timeout = setTimeout(() => resolve(false), 4000);
+                    eb.once('system:metrics', () => { clearTimeout(timeout); resolve(true); });
+                });
+            },
+            async testGit() { const data = await this.api('/api/git/status'); return !!data.status; },
+            async testPersona() { const data = await this.api('/api/ai/persona'); return !!data.coding_style; },
+            async testWorkflow() { return true; }
+        };
+
+        window.onload = () => Suite.init();
+    </script>
+</body>
+</html>

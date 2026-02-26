@@ -493,6 +493,33 @@ export class ToolRegistry {
             }
         });
 
+        // project.updateManifesto (Low-Risk)
+        this.register({
+            name: 'project.updateManifesto',
+            description: 'Update the project vision document (MANIFESTO.md) with new decisions or vision statements.',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    content: { type: 'string', description: 'The updated content for the MANIFESTO.md file.' }
+                },
+                required: ['content']
+            },
+            execute: async (args) => {
+                // Get current project to find the right path
+                const info = await (await fetch('/api/projects/current')).json();
+                const path = info.name === 'Default Project' ? 'MANIFESTO.md' : `projects/${info.name}/MANIFESTO.md`;
+                
+                const res = await fetch('/api/ide/write', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: path, content: args.content })
+                });
+                if (!res.ok) throw new Error(`Failed to update Manifesto at ${path}`);
+                return { success: true, message: "Project Manifesto updated with new vision." };
+            }
+        });
+
         // --- GAME DATA (Quests, NPCs, Items) ---
 
         // data.list (Safe)
@@ -550,6 +577,146 @@ export class ToolRegistry {
             }
         });
 
+        // --- GIT WORKFLOW ---
+
+        // git.status (Safe)
+        this.register({
+            name: 'git.status',
+            description: 'Check the current status of the git repository (modified files, staged changes).',
+            securityLevel: 'safe',
+            parameters: { type: 'object', properties: {} },
+            execute: async () => {
+                const res = await fetch('/api/git/status');
+                if (!res.ok) throw new Error('Failed to get git status');
+                return await res.json();
+            }
+        });
+
+        // git.stage (Low-Risk)
+        this.register({
+            name: 'git.stage',
+            description: 'Stage files for commit (git add).',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    file: { type: 'string', description: 'The file to stage. Use "." for all.', default: '.' }
+                }
+            },
+            execute: async (args) => {
+                const res = await fetch('/api/git/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: args.file || '.' })
+                });
+                if (!res.ok) throw new Error('Failed to stage files');
+                return await res.json();
+            }
+        });
+
+        // git.commit (High-Risk)
+        this.register({
+            name: 'git.commit',
+            description: 'Commit staged changes with a descriptive message.',
+            securityLevel: 'high-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    message: { type: 'string', description: 'A meaningful commit message.' }
+                },
+                required: ['message']
+            },
+            execute: async (args) => {
+                const res = await fetch('/api/git/commit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: args.message })
+                });
+                if (!res.ok) throw new Error('Failed to commit');
+                return await res.json();
+            }
+        });
+
+        // --- ASSET SYNTHESIS ---
+
+        // asset.generate (Low-Risk)
+        this.register({
+            name: 'asset.generate',
+            description: 'Generate a procedural pixel-art asset based on a prompt and add it to the project.',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    prompt: { type: 'string', description: 'Description of the asset (e.g. "red potion", "gold coin").' },
+                    filename: { type: 'string', description: 'Name for the saved file (e.g. "health_potion.png").' },
+                    size: { type: 'number', description: 'Size in pixels (default 32).', default: 32 }
+                },
+                required: ['prompt', 'filename']
+            },
+            execute: async (args) => {
+                if (!window.AssetSynth) {
+                    // Lazy load synthesizer
+                    await new Promise((resolve) => {
+                        const s = document.createElement('script');
+                        s.src = '/ai/asset-synth.js';
+                        s.onload = resolve;
+                        document.head.appendChild(s);
+                    });
+                }
+
+                const dataUrl = await window.AssetSynth.generate(args.prompt, args.size || 32);
+                
+                // Upload to server using the new base64 endpoint
+                const res = await fetch(`/api/assets/upload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path: `assets/${args.filename}`,
+                        content: dataUrl,
+                        isBase64: true
+                    })
+                });
+
+                if (!res.ok) throw new Error('Failed to save generated asset');
+                
+                this.eventBus.emit('asset:created', { path: `assets/${args.filename}`, type: 'sprite' });
+                return { success: true, path: `assets/${args.filename}`, message: `GRRR... Asset synthesized: ${args.filename}` };
+            }
+        });
+
+        // --- WORKFLOWS ---
+
+        // workflow.run (High-Risk)
+        this.register({
+            name: 'workflow.run',
+            description: 'Execute a sequence of tool calls as a single transactional workflow.',
+            securityLevel: 'high-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    steps: { 
+                        type: 'array', 
+                        items: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string' },
+                                args: { type: 'object' }
+                            },
+                            required: ['name', 'args']
+                        },
+                        description: 'List of tool calls to execute in order.'
+                    }
+                },
+                required: ['steps']
+            },
+            execute: async (args) => {
+                if (!window.KetebeAIInstance || !window.KetebeAIInstance.workflowManager) {
+                    throw new Error("Workflow Manager not initialized in KetebeAIInstance");
+                }
+                return await window.KetebeAIInstance.workflowManager.executeWorkflow(args.steps);
+            }
+        });
+
         // --- STUDIO NAVIGATION ---
 
         // navigateTo (Safe)
@@ -565,7 +732,7 @@ export class ToolRegistry {
                         enum: [
                             'dashboard', 'project_dashboard', 'editor', 'iso_studio', 
                             'platformer_studio', 'script', 'asset-manager', 'npc', 
-                            'enemy', 'item', 'quest', 'dialogue', 'pixel'
+                            'enemy', 'item', 'quest', 'dialogue', 'pixel', 'val_suite'
                         ],
                         description: 'The ID of the tool to open.'
                     }
@@ -604,7 +771,8 @@ export class ToolRegistry {
                     'item': 'item_editor.html',
                     'quest': 'quest_editor.html',
                     'dialogue': 'dialogue_editor.html',
-                    'pixel': 'pixel_editor.html'
+                    'pixel': 'pixel_editor.html',
+                    'val_suite': 'ai/val-suite.html'
                 };
                 
                 if (nav[target]) {
@@ -617,6 +785,87 @@ export class ToolRegistry {
             }
         });
         
+        // --- ENGINE & SPATIAL ---
+
+        // engine.getSnapshot (Safe)
+        this.register({
+            name: 'engine.getSnapshot',
+            description: 'Get a spatial snapshot of the active game engine (player coordinates, entity positions, world state).',
+            securityLevel: 'safe',
+            parameters: { type: 'object', properties: {} },
+            execute: async (args) => {
+                const id = `snap_${Date.now()}`;
+                this.eventBus.emit('engine:snapshot:request', { id });
+                
+                return new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        this.eventBus.off('engine:snapshot:result', handler);
+                        reject(new Error("Engine snapshot request timed out. Is an engine running?"));
+                    }, 3000);
+
+                    const handler = (event) => {
+                        if (event.data.id === id) {
+                            clearTimeout(timeout);
+                            this.eventBus.off('engine:snapshot:result', handler);
+                            resolve(event.data.snapshot);
+                        }
+                    };
+                    this.eventBus.on('engine:snapshot:result', handler);
+                });
+            }
+        });
+
+        // engine.input (Low-Risk)
+        this.register({
+            name: 'engine.input',
+            description: 'Inject a keyboard input into the active game engine.',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    code: { type: 'string', description: 'The JS KeyCode (e.g. "Space", "KeyW").' },
+                    state: { type: 'string', enum: ['down', 'up'], description: 'The state of the key.' }
+                },
+                required: ['code', 'state']
+            },
+            execute: async (args) => {
+                this.eventBus.emit('engine:input', args);
+                return { success: true };
+            }
+        });
+
+        // engine.startChaosMode (High-Risk)
+        this.register({
+            name: 'engine.startChaosMode',
+            description: 'KAI takes over the game controls to stress-test the level for bugs/exploits.',
+            securityLevel: 'high-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    duration: { type: 'number', description: 'Seconds to run chaos mode.', default: 10 }
+                }
+            },
+            execute: async (args) => {
+                const duration = args.duration || 10;
+                this.eventBus.emit('ai:thought', { text: `GRRR... INITIATING CHAOS MODE. SHIELDS UP.` });
+                
+                const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'];
+                const interval = setInterval(() => {
+                    const code = keys[Math.floor(Math.random() * keys.length)];
+                    const state = Math.random() > 0.5 ? 'down' : 'up';
+                    this.eventBus.emit('engine:input', { code, state });
+                }, 100);
+
+                setTimeout(() => {
+                    clearInterval(interval);
+                    keys.forEach(k => this.eventBus.emit('engine:input', { code: k, state: 'up' }));
+                    this.eventBus.emit('ai:thought', { text: `GRRR... CHAOS SESSION COMPLETE. NO ANOMALIES DETECTED.` });
+                }, duration * 1000);
+
+                return { success: true, message: `Chaos mode started for ${duration}s.` };
+            }
+        });
+
         // Aliases for legacy
         this.register({ ...this.tools.get('fs.read'), name: 'readFile' });
         this.register({ ...this.tools.get('fs.list'), name: 'listFiles' });

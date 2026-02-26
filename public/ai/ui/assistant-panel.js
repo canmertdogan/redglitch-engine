@@ -232,6 +232,28 @@ class KaiChatUIController {
                         ]
                     );
                 });
+
+                // PROACTIVE PERFORMANCE SENTINEL
+                this.lastMetricWarning = 0;
+                eventBus.on('system:metrics', (event) => {
+                    const { fps, entities, memory } = event.data;
+                    const now = Date.now();
+                    
+                    // Only warn every 60 seconds to avoid spam
+                    if (now - this.lastMetricWarning < 60000) return;
+
+                    if (fps < 30 && fps > 0) {
+                        this.lastMetricWarning = now;
+                        this.setAvatarState('working');
+                        this.showSpeechBubble(
+                            `GRRR... Performance is dropping! FPS: ${fps}. I detect ${entities} entities. Should I analyze your update loops for optimization?`,
+                            [
+                                { label: 'OPTIMIZE', callback: () => { this.openChat(); this.addMessage('user', 'How can I optimize my game performance?'); this.sendMessage(); } },
+                                { label: 'IGNORE', secondary: true, callback: () => this.dismiss() }
+                            ]
+                        );
+                    }
+                });
             }
 
             this.isInitialized = true;
@@ -277,7 +299,28 @@ class KaiChatUIController {
                 e.preventDefault();
                 this.toggleChat();
             }
+            
+            // Omni-Box Hotkey (Ctrl + Space)
+            if (e.ctrlKey && e.code === 'Space') {
+                e.preventDefault();
+                this.toggleOmniBox();
+            }
+            
+            if (e.key === 'Escape') {
+                this.closeOmniBox();
+            }
         });
+
+        const omniInput = document.getElementById('omni-input');
+        if (omniInput) {
+            omniInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    this.processOmniCommand(omniInput.value);
+                    omniInput.value = '';
+                    this.closeOmniBox();
+                }
+            });
+        }
 
         // Broadcast hit zones to parent for pointer-events passthrough
         setInterval(() => {
@@ -391,6 +434,62 @@ class KaiChatUIController {
         if (panel) panel.classList.remove('show');
     }
 
+    toggleOmniBox() {
+        const box = document.getElementById('xp-omni-box');
+        if (box) {
+            const isShowing = box.classList.toggle('show');
+            if (isShowing) {
+                this.playSound('online');
+                setTimeout(() => document.getElementById('omni-input')?.focus(), 50);
+            }
+        }
+    }
+
+    closeOmniBox() {
+        const box = document.getElementById('xp-omni-box');
+        if (box) box.classList.remove('show');
+    }
+
+    async processOmniCommand(input) {
+        if (!input.trim()) return;
+        
+        // 1. Check for quick shortcuts
+        if (input.startsWith('/')) {
+            const parts = input.substring(1).split(' ');
+            const cmd = parts[0];
+            const args = parts.slice(1).join(' ');
+            
+            this.addMessage('user', `COMMAND: ${input}`);
+            
+            if (cmd === 'open') {
+                this.executeAction({ type: 'open', params: { path: args } });
+                return;
+            }
+            if (cmd === 'status') {
+                const res = await fetch('/api/git/status');
+                const data = await res.json();
+                this.showSpeechBubble(`GIT STATUS: ${data.status}`);
+                return;
+            }
+        }
+
+        // 2. Default: Quick Prompt
+        this.addMessage('user', input);
+        this.setAvatarState('working');
+        this.playSound('typing');
+
+        try {
+            const response = await this.assistant.processQuery(input);
+            this.addMessage('assistant', response.text);
+            this.setAvatarState('success');
+            this.showSpeechBubble(response.text.substring(0, 100) + '...');
+            this.playSound('messageReceived');
+        } catch (e) {
+            this.setAvatarState('error');
+            this.addMessage('error', e.message);
+        }
+    }
+
     toggleChat() {
         const panel = document.getElementById('ai-chat-panel');
         if (panel && panel.classList.contains('show')) this.closeChat();
@@ -502,8 +601,19 @@ class KaiChatUIController {
         bubble.className = 'ai-message-bubble';
         
         // Clean up the text (hide the RAG headers for a cleaner UI, but keep for logic)
+        const hasManifesto = text.includes('[MANIFESTO]');
         const cleanText = text.replace(/--- FILE: .*? ---/g, '').trim();
         bubble.textContent = cleanText;
+
+        if (hasManifesto && type === 'assistant') {
+            const badge = document.createElement('div');
+            badge.style.fontSize = '10px';
+            badge.style.color = '#ffd700';
+            badge.style.marginTop = '4px';
+            badge.style.opacity = '0.7';
+            badge.innerHTML = '<i class="fas fa-eye"></i> VISION_ALIGNED';
+            content.appendChild(badge);
+        }
 
         content.appendChild(bubble);
 

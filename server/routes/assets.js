@@ -136,4 +136,35 @@ router.get('/list', async (req, res) => {
     }
 });
 
+// POST /api/assets/upload - Upload an asset (Binary/Base64 support)
+router.post('/upload', async (req, res) => {
+    const { path: assetPath, content, isBase64 } = req.body;
+    if (!assetPath) return res.status(400).json({ error: 'No path provided' });
+
+    try {
+        const activeProject = projectService.getActiveProject();
+        const fullPath = path.join(activeProject, assetPath);
+        
+        // Security check
+        if (!fullPath.startsWith(activeProject)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        await fs.mkdir(path.dirname(fullPath), { recursive: true });
+
+        if (isBase64) {
+            const base64Data = content.replace(/^data:image\/png;base64,/, "");
+            await fs.writeFile(fullPath, base64Data, 'base64');
+        } else {
+            await fs.writeFile(fullPath, content, 'utf8');
+        }
+
+        console.log(`[AssetManager] Asset saved: ${assetPath}`);
+        res.json({ success: true, path: assetPath });
+    } catch (error) {
+        console.error('[AssetManager:Upload] Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

@@ -99,6 +99,30 @@ greeted_connections = set()
 
 # --- HISTORY HELPERS ---
 LOGS_DIR = os.path.join(os.path.dirname(__file__), "data", "chat_logs")
+PERSONA_PATH = os.path.join(os.path.dirname(__file__), "data", "user_persona.json")
+
+def load_persona():
+    try:
+        if os.path.exists(PERSONA_PATH):
+            with open(PERSONA_PATH, 'r') as f:
+                return json.load(f)
+    except: pass
+    return {"coding_style": {}, "preferences": {}}
+
+@app.get("/api/ai/persona")
+async def get_persona():
+    return load_persona()
+
+@app.post("/api/ai/persona/update")
+async def update_persona(data: dict):
+    try:
+        current = load_persona()
+        current.update(data)
+        with open(PERSONA_PATH, 'w') as f:
+            json.dump(current, f, indent=4)
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.post("/api/history/save")
 async def save_history(data: dict):
@@ -292,13 +316,17 @@ async def handle_prompt(message, websocket):
                 logger.error(f"RAG query failed: {e}")
                 context = ""
     
+    # Incorporate Phase 7: User Persona
+    persona = load_persona()
+    style_guidance = f"\nUser Coding Style: {json.dumps(persona.get('coding_style', {}))}"
+    
     if focused_code and not is_ghost:
         if len(focused_code) > 500: focused_code = focused_code[:500] + "..."
-        augmented_prompt = f"Code:\n{focused_code}\n\nQuestion: {prompt}"
+        augmented_prompt = f"Code:\n{focused_code}\n\n{style_guidance}\n\nQuestion: {prompt}"
     elif context:
-        augmented_prompt = f"Reference:\n{context}\n\nQuestion: {prompt}"
+        augmented_prompt = f"Reference:\n{context}\n\n{style_guidance}\n\nQuestion: {prompt}"
     else:
-        augmented_prompt = prompt
+        augmented_prompt = f"{style_guidance}\n\n{prompt}"
     
     logger.info(f"Augmented prompt length: {len(augmented_prompt)} chars")
     full_response = ""

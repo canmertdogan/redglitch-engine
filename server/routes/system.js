@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const os = require('os');
 
+// GET /api/system/status - Simple health check
+router.get('/status', (req, res) => {
+    res.json({ status: 'ONLINE', timestamp: Date.now() });
+});
+
 // GET /api/system/stats - Get system statistics
 router.get('/stats', (req, res) => {
     try {

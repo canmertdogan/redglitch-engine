@@ -447,6 +447,60 @@
             box-shadow: 0 0 10px var(--kai-accent);
         }
 
+        /* === OMNI-BOX (SPOTLIGHT) === */
+        #xp-omni-box {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            background: rgba(0, 5, 10, 0.95);
+            border: 2px solid var(--kai-accent);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 215, 0, 0.2);
+            z-index: 100000;
+            padding: 15px;
+            border-radius: 4px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: none;
+            opacity: 0;
+        }
+
+        #xp-omni-box.show {
+            display: block;
+            opacity: 1;
+            top: 25%;
+        }
+
+        .omni-inner {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .omni-prompt {
+            color: var(--kai-accent);
+            font-weight: bold;
+            font-size: 24px;
+            white-space: nowrap;
+        }
+
+        #omni-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: var(--kai-font);
+            font-size: 28px;
+            outline: none;
+        }
+
+        .omni-hint {
+            font-size: 14px;
+            color: #444;
+            text-transform: uppercase;
+        }
+
         /* SETTINGS HUB (REVAMPED) */
         #xp-settings {
             background: var(--kai-bg);
@@ -720,6 +774,15 @@
                 <button class="xp-button" onclick="AISettings.save()">APPLY</button>
                 <button class="xp-button secondary" onclick="AISettings.toggle()">CANCEL</button>
             </div>
+        </div>
+    </div>
+
+    <!-- OMNI-BOX -->
+    <div id="xp-omni-box">
+        <div class="omni-inner">
+            <span class="omni-prompt">KAI_KERNEL></span>
+            <input type="text" id="omni-input" placeholder="Enter command or query..." autocomplete="off">
+            <span class="omni-hint">ESC TO ABORT</span>
         </div>
     </div>
 
