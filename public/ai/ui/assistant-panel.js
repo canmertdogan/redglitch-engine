@@ -10,6 +10,11 @@ class KaiChatUIController {
         this.currentTutorial = null;
         this.tutorialStep = 0;
         
+        // Avatar States & Boredom Timer
+        this.avatarState = 'idle';
+        this.boredTimer = null;
+        this.BOREDOM_TIMEOUT = 12000; // 12 seconds
+        
         // AI Loading progress tracking
         this.loadingInProgress = false;
         this.loadingShown = false;
@@ -53,43 +58,39 @@ class KaiChatUIController {
     }
     
     updateLoadingProgress(data) {
-        const { percent, status, loaded, total } = data;
+        const { percent, status } = data;
         
         if (!this.loadingShown) this.showLoadingProgress();
+        this.setAvatarState('working');
         
         const fill = document.getElementById('xp-progress-fill');
         const percentText = document.getElementById('xp-progress-percent');
-        const sizeText = document.getElementById('xp-progress-size');
         const statusText = document.getElementById('xp-loading-status');
         const detailsText = document.getElementById('xp-loading-details');
         
         if (fill) fill.style.width = `${percent}%`;
         if (percentText) percentText.textContent = `${percent}%`;
         
-        if (loaded && total && sizeText) {
-            const loadedMB = (loaded / 1024 / 1024).toFixed(1);
-            const totalMB = (total / 1024 / 1024).toFixed(1);
-            sizeText.textContent = `[${loadedMB}/${totalMB} MB]`;
-        }
-        
         if (statusText) {
-            const statusMessages = {
-                'initializing': 'BOOTING KERNEL...',
-                'downloading': 'DOWNLOADING NEURAL MATRIX...',
-                'loading': 'LOADING INTO MEMORY...',
-                'ready': 'SYSTEM ONLINE'
-            };
-            statusText.textContent = statusMessages[status] || status.toUpperCase();
+            statusText.textContent = status.toUpperCase();
         }
         
         if (detailsText) {
-            if (status === 'downloading') detailsText.textContent = '>> ESTABLISHING SECURE DATALINK...';
-            else if (status === 'loading') detailsText.textContent = '>> PARSING SYNTAX TREES...';
-            else if (status === 'ready') detailsText.textContent = '>> READY FOR INPUT.';
+            detailsText.textContent = `>> ATTACHING NEURAL_SYNAPSES... [${percent}%]`;
         }
         
-        if (percent >= 100 || status === 'ready') {
+        if (percent >= 100 || status === 'READY' || status === 'ready') {
             this.hideLoadingProgress();
+            
+            // Show welcome message after boot
+            setTimeout(() => {
+                this.setAvatarState('idle');
+                this.showSpeechBubble(
+                    this.assistant.personality ? 
+                    this.assistant.personality.getRandomGreeting() : 
+                    ">> SYSTEM ONLINE. READY."
+                );
+            }, 1000);
         }
     }
     
@@ -107,6 +108,42 @@ class KaiChatUIController {
         localStorage.setItem('kai_sounds_enabled', enabled);
     }
 
+    setAvatarState(state) {
+        const clippy = document.getElementById('ai-clippy');
+        if (!clippy) return;
+
+        this.avatarState = state;
+        clippy.className = `state-${state}`;
+        
+        // Map to status bar if needed
+        const statusText = document.getElementById('xp-status-text');
+        if (statusText) {
+            if (state === 'working') statusText.textContent = 'PROCESSING...';
+            else if (state === 'error') statusText.textContent = 'SYSTEM_ERROR';
+            else statusText.textContent = 'ONLINE';
+        }
+
+        if (state === 'idle') {
+            this.resetBoredomTimer();
+        } else {
+            this.clearBoredomTimer();
+        }
+    }
+
+    resetBoredomTimer() {
+        this.clearBoredomTimer();
+        this.boredTimer = setTimeout(() => {
+            this.setAvatarState('bored');
+        }, this.BOREDOM_TIMEOUT);
+    }
+
+    clearBoredomTimer() {
+        if (this.boredTimer) {
+            clearTimeout(this.boredTimer);
+            this.boredTimer = null;
+        }
+    }
+
     async initialize() {
         if (this.isInitialized) return;
         console.log('Kai: Initializing System...');
@@ -117,29 +154,105 @@ class KaiChatUIController {
 
             this.assistant = new IRABAssistantSimple();
             
-            if (this.assistant.setProgressCallback) {
-                this.assistant.setProgressCallback((data) => this.updateLoadingProgress(data));
+            // --- DEEP BOOT: Hook into Native Cortex (Local Cluster) ---
+            const irab = window.irab || (window.parent && window.parent.irab);
+            if (irab) {
+                console.log('Kai: Connected to Native Cortex Bridge.');
+                
+                // Hook Progress
+                irab.onLoadProgress = (data) => {
+                    this.updateLoadingProgress(data);
+                    this.addBootLog(data.status);
+                    if (data.percent === 100 || data.status === 'READY') {
+                        this.playSound('online');
+                        this.addBootLog("KERNEL READY. STARTING SESSION...");
+                    }
+                };
+
+                // Initial Status Check
+                if (irab.isConnected) {
+                    // Check if it's already loading
+                    fetch('/api/ai/status').then(r => r.json()).then(data => {
+                        if (data.status === 'LOADING') {
+                            this.showLoadingProgress();
+                            this.updateLoadingProgress({ percent: data.progress, status: 'RESUMING BOOT...' });
+                        }
+                    });
+                }
             }
             
             this.setupEventListeners();
-            this.isInitialized = true;
-
-            console.log('Kai: Initialization Complete.');
             
-            // Override personality name if needed
-            if (this.assistant.personality) {
-                this.assistant.personality.name = "Kai";
+            // Hook into EventBus for Debug tab & Error Watcher
+            const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+            if (eventBus) {
+                // Live Debug Logs
+                eventBus.on('*', (eventData) => {
+                    const stream = document.getElementById('debug-stream');
+                    if (stream) {
+                        const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+                        const line = document.createElement('div');
+                        const event = eventData.type || 'unknown';
+                        const data = eventData.data || {};
+                        line.innerHTML = `[${time}] <span style="color: #ffd700">${event}</span>: ${JSON.stringify(data).substring(0, 100)}...`;
+                        stream.appendChild(line);
+                        stream.scrollTop = stream.scrollHeight;
+                        if (stream.children.length > 50) stream.removeChild(stream.firstChild);
+                    }
+                });
+
+                // PROACTIVE ERROR WATCHER
+                eventBus.on('system:error', (event) => {
+                    const error = event.data;
+                    console.log('Kai: Proactive Help triggered for error:', error.message);
+                    
+                    this.setAvatarState('error');
+                    this.playSound('error');
+
+                    const shortMsg = error.message.length > 60 ? error.message.substring(0, 60) + '...' : error.message;
+                    
+                    this.showSpeechBubble(
+                        `GRRR... I detect a glitch! "${shortMsg}". Want me to analyze the stack and fix it?`,
+                        [
+                            { 
+                                label: 'ANALYZE & FIX', 
+                                callback: () => {
+                                    this.openChat();
+                                    this.analyzeAndFixError(error);
+                                }
+                            },
+                            { 
+                                label: 'DISMISS', 
+                                secondary: true, 
+                                callback: () => {
+                                    this.dismiss();
+                                    setTimeout(() => this.setAvatarState('idle'), 2000);
+                                }
+                            }
+                        ]
+                    );
+                });
             }
 
-            this.showSpeechBubble(
-                this.assistant.personality ? 
-                this.assistant.personality.getRandomGreeting() : 
-                ">> SYSTEM ONLINE. READY."
-            );
+            this.isInitialized = true;
+            this.setAvatarState('idle');
+            console.log('Kai: Initialization Complete.');
         } catch (error) {
             console.error('Kai: Init Error:', error);
             this.isInitialized = true;
             throw error;
+        }
+    }
+
+    addBootLog(message) {
+        const logs = document.getElementById('boot-logs');
+        if (logs) {
+            const line = document.createElement('div');
+            const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            line.innerHTML = `<span style="color: #444;">[${time}]</span> >> ${message.toUpperCase()}`;
+            logs.appendChild(line);
+            logs.scrollTop = logs.scrollHeight;
+            this.playSound('typing');
         }
     }
 
@@ -311,6 +424,7 @@ class KaiChatUIController {
         if (statusDot) statusDot.classList.add('thinking');
         if (statusText) statusText.textContent = 'PROCESSING...';
         
+        this.setAvatarState('working');
         this.playSound('typing');
 
         try {
@@ -322,6 +436,12 @@ class KaiChatUIController {
             this.addMessage('assistant', response.text);
             this.playSound('messageReceived');
 
+            // Success animation
+            this.setAvatarState('success');
+            setTimeout(() => {
+                if (this.avatarState === 'success') this.setAvatarState('idle');
+            }, 3000);
+
             if (response.type === 'tutorial' && response.tutorial) {
                 this.startTutorial(response.tutorial);
             } else if (response.type === 'confirmation' && response.pendingAction) {
@@ -331,6 +451,7 @@ class KaiChatUIController {
         } catch (error) {
             if (statusDot) statusDot.classList.remove('thinking');
             if (statusText) statusText.textContent = 'ERROR';
+            this.setAvatarState('error');
             this.playSound('error');
             this.addMessage('error', `>> EXCEPTION: ${error.message}`);
         }
@@ -339,6 +460,19 @@ class KaiChatUIController {
     addMessage(type, text) {
         const messagesContainer = document.getElementById('ai-chat-messages');
         if (!messagesContainer) return;
+
+        // --- RAG 2.0: Proactive File Suggestions ---
+        const fileRegex = /--- FILE: (.*?) \(Relevance: (.*?)%\) ---/g;
+        let fileMatch;
+        const suggestedFiles = new Set();
+        
+        while ((fileMatch = fileRegex.exec(text)) !== null) {
+            const filePath = fileMatch[1];
+            const relevance = parseInt(fileMatch[2]);
+            if (relevance > 40) {
+                suggestedFiles.add(filePath);
+            }
+        }
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `ai-message ${type}`;
@@ -366,9 +500,41 @@ class KaiChatUIController {
 
         const bubble = document.createElement('div');
         bubble.className = 'ai-message-bubble';
-        bubble.textContent = text;
+        
+        // Clean up the text (hide the RAG headers for a cleaner UI, but keep for logic)
+        const cleanText = text.replace(/--- FILE: .*? ---/g, '').trim();
+        bubble.textContent = cleanText;
 
         content.appendChild(bubble);
+
+        // Add suggestion buttons if files found
+        if (suggestedFiles.size > 0 && type === 'assistant') {
+            const suggestDiv = document.createElement('div');
+            suggestDiv.style.marginTop = '8px';
+            suggestDiv.style.display = 'flex';
+            suggestDiv.style.gap = '5px';
+            suggestDiv.style.flexWrap = 'wrap';
+
+            suggestedFiles.forEach(path => {
+                const btn = document.createElement('button');
+                btn.className = 'xp-button';
+                btn.style.fontSize = '12px';
+                btn.style.padding = '2px 8px';
+                btn.innerHTML = `📂 OPEN ${path.split('/').pop()}`;
+                btn.onclick = () => {
+                    const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+                    if (eventBus) {
+                        eventBus.emit('ai:command:request', {
+                            method: path.includes('world') ? 'iso_studio.open' : 'open',
+                            params: { path: path }
+                        });
+                    }
+                };
+                suggestDiv.appendChild(btn);
+            });
+            content.appendChild(suggestDiv);
+        }
+
         messageDiv.appendChild(avatar);
         messageDiv.appendChild(content);
         messagesContainer.appendChild(messageDiv);
@@ -413,6 +579,20 @@ class KaiChatUIController {
         }
     }
 
+    async analyzeAndFixError(error) {
+        this.addMessage('system', `>> INITIATING DIAGNOSTIC ON: ${error.type.toUpperCase()}...`);
+        this.setAvatarState('working');
+        
+        const prompt = `I am getting this error: "${error.message}" in ${error.source} at line ${error.line}. 
+Full details: ${JSON.stringify(error)}. 
+Please analyze why this is happening and suggest a fix. If it's in a script I can edit, please provide the corrected code.`;
+
+        // We use the standard sendMessage flow but with a specialized prompt
+        const input = document.getElementById('ai-chat-input');
+        if (input) input.value = prompt;
+        this.sendMessage();
+    }
+
     startTutorial(tutorial) {
         this.currentTutorial = tutorial;
         this.tutorialStep = 0;
@@ -425,15 +605,33 @@ class KaiChatUIController {
         const step = this.currentTutorial.steps[this.tutorialStep];
         this.addMessage('system', `>> TUTORIAL STEP ${this.tutorialStep + 1}: ${step.instruction}`);
     }
-}
 
-// Global instance
-window.AIChatUI = new KaiChatUIController();
-// Compatibility aliases
-window.openChat = () => window.AIChatUI.openChat();
-window.closeChat = () => window.AIChatUI.closeChat();
-window.dismiss = () => window.AIChatUI.dismiss();
-window.updateAIProgress = (data) => window.AIChatUI.updateLoadingProgress(data);
+    async reindexCodebase() {
+        this.addMessage('system', '>> INITIATING FULL CODEBASE SCAN...');
+        this.playSound('typing');
+        try {
+            const res = await fetch('/api/ai/rag/reindex');
+            const data = await res.json();
+            if (data.success) {
+                this.addMessage('system', '>> RAG_INDEXER: BACKGROUND SCAN STARTED.');
+            } else {
+                this.addMessage('error', `>> RAG_ERROR: ${data.error}`);
+            }
+        } catch (e) {
+            this.addMessage('error', '>> RAG_ERROR: CLUSTER UNREACHABLE.');
+        }
+    }
+
+    clearHistory() {
+        if (confirm(">> WARNING: WIPE NEURAL BUFFER? (CANNOT BE UNDONE)")) {
+            const messages = document.getElementById('ai-chat-messages');
+            if (messages) messages.innerHTML = '';
+            if (window.KetebeAIInstance) window.KetebeAIInstance.clearHistory();
+            this.addMessage('system', '>> MEMORY_WIPE_COMPLETE.');
+            this.playSound('nudge');
+        }
+    }
+}
 
 // Settings Controller
 class KaiSettingsController {
@@ -443,38 +641,143 @@ class KaiSettingsController {
 
     loadSettings() {
         const saved = localStorage.getItem('kai_settings');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Kai: Failed to parse settings", e);
+            }
+        }
         return {
-            provider: 'local',
-            irabPersonality: true,
-            soundsEnabled: true
+            provider: 'native',
+            temp: 0.7,
+            topP: 0.9,
+            maxTokens: 512,
+            contextWindow: 2048,
+            quantization: 'q4f16',
+            ragEnabled: true,
+            historyLimit: 6,
+            crtEnabled: true,
+            soundsEnabled: true,
+            glowEnabled: true
         };
+    }
+
+    applyToUI() {
+        const s = this.settings;
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.type === 'checkbox') el.checked = !!val;
+                else el.value = val;
+                
+                // Update sibling value displays (for sliders)
+                const valDisp = document.getElementById('val-' + id.replace('setting-', ''));
+                if (valDisp) valDisp.textContent = val;
+            }
+        };
+
+        setVal('setting-provider', s.provider);
+        setVal('setting-temp', s.temp);
+        setVal('setting-top-p', s.topP);
+        setVal('setting-max-tokens', s.maxTokens);
+        setVal('setting-context-window', s.contextWindow);
+        setVal('setting-quantization', s.quantization);
+        setVal('setting-rag', s.ragEnabled);
+        setVal('setting-history-limit', s.historyLimit);
+        setVal('setting-crt', s.crtEnabled);
+        setVal('setting-sounds', s.soundsEnabled);
+        setVal('setting-glow', s.glowEnabled);
     }
 
     saveSettings() {
         localStorage.setItem('kai_settings', JSON.stringify(this.settings));
+        
+        // Push to global AI_CONFIG if available
+        if (window.KetebeAIInstance && window.KetebeAIInstance.config) {
+            const cfg = window.KetebeAIInstance.config;
+            cfg.models.llm.temperature = parseFloat(this.settings.temp);
+            cfg.models.llm.topP = parseFloat(this.settings.topP);
+            cfg.models.llm.maxNewTokens = parseInt(this.settings.maxTokens);
+            cfg.limits.contextWindow = parseInt(this.settings.contextWindow);
+            cfg.limits.maxHistoryMessages = parseInt(this.settings.historyLimit);
+            cfg.features.enableRAG = !!this.settings.ragEnabled;
+        }
+    }
+
+    switchTab(tabId, el) {
+        // Update tabs
+        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+
+        // Update panes
+        document.querySelectorAll('.settings-pane').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById('pane-' + tabId);
+        if (target) target.classList.add('active');
+        
+        if (window.AIChatUI) window.AIChatUI.playSound('typing');
     }
 
     toggle() {
         const panel = document.getElementById('xp-settings');
-        if (panel) panel.classList.toggle('show');
+        if (panel) {
+            const isShowing = panel.classList.toggle('show');
+            if (isShowing) {
+                this.applyToUI();
+                if (window.AIChatUI) window.AIChatUI.playSound('online');
+            }
+        }
     }
 
     save() {
-        this.settings.provider = document.getElementById('setting-provider')?.value || 'local';
-        this.settings.irabPersonality = document.getElementById('setting-irab-personality')?.checked || false;
-        this.settings.soundsEnabled = document.getElementById('setting-sounds')?.checked !== false;
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            return el.type === 'checkbox' ? el.checked : el.value;
+        };
+
+        this.settings = {
+            provider: getVal('setting-provider'),
+            temp: parseFloat(getVal('setting-temp')),
+            topP: parseFloat(getVal('setting-top-p')),
+            maxTokens: parseInt(getVal('setting-max-tokens')),
+            contextWindow: parseInt(getVal('setting-context-window')),
+            quantization: getVal('setting-quantization'),
+            ragEnabled: getVal('setting-rag'),
+            historyLimit: parseInt(getVal('setting-history-limit')),
+            crtEnabled: getVal('setting-crt'),
+            soundsEnabled: getVal('setting-sounds'),
+            glowEnabled: getVal('setting-glow')
+        };
 
         this.saveSettings();
+        
         if (window.AIChatUI) {
             window.AIChatUI.toggleSounds(this.settings.soundsEnabled);
-            window.AIChatUI.addMessage('system', '>> SETTINGS SAVED.');
+            window.AIChatUI.addMessage('system', '>> KERNEL CONFIGURATION UPDATED.');
+            
+            // Visual effects
+            const panel = document.getElementById('ai-chat-panel');
+            if (panel) {
+                panel.style.filter = this.settings.crtEnabled ? 'contrast(1.1) brightness(1.1)' : 'none';
+                if (this.settings.glowEnabled) panel.style.boxShadow = '0 0 30px rgba(255, 215, 0, 0.4)';
+                else panel.style.boxShadow = 'none';
+            }
         }
+        
         this.toggle();
     }
 }
 
+// Global instances
+window.AIChatUI = new KaiChatUIController();
 window.AISettings = new KaiSettingsController();
+
+// Compatibility aliases
+window.openChat = () => window.AIChatUI.openChat();
+window.closeChat = () => window.AIChatUI.closeChat();
+window.dismiss = () => window.AIChatUI.dismiss();
+window.updateAIProgress = (data) => window.AIChatUI.updateLoadingProgress(data);
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => window.AIChatUI.initialize().catch(console.error));

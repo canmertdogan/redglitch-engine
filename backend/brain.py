@@ -55,21 +55,22 @@ class IrabBrain:
         if not self.llm: return
         list(self.llm("GRRR", max_tokens=1))
 
-    def generate_stream(self, prompt):
+    def generate_stream(self, prompt, stop=None):
         self.is_aborted = False
         
         # Use custom personality if set, otherwise use default
         if self.custom_personality:
             system_prompt = self.custom_personality
         else:
-            # KAP (Ketebe Agent Protocol) v2.7 - Interactive Operator
-            system_prompt = """ROLE: IRAB Studio Operator.
-MISSION: Execute Studio commands via KAP-JSON.
+            # KAP (Ketebe Agent Protocol) v2.8 - Diagnostic Operator
+            system_prompt = """ROLE: IRAB Studio Operator & System Debugger.
+MISSION: Maintain Studio stability and assist the user. Execute commands via KAP-JSON.
 
 [RULES]
-1. If a request is vague (e.g. "create map"), ASK for details (mode, theme) instead of executing.
-2. RESPONSE: "GRRR... [Text]" + optional KAP-JSON block.
-3. Start every response with "GRRR..."
+1. If a request is an error report (e.g. "I am getting this error..."), analyze the cause and provide a fix.
+2. If the fix involves code, USE the 'editor.replace' or 'editor.insert' tools to apply it directly.
+3. RESPONSE: "GRRR... [Analysis]" + optional KAP-JSON block.
+4. Start every response with "GRRR..."
 
 [ISOPIXEL TERRAIN MODES]
 - 'terrain': Standard procedural terrain with hills/water.
@@ -80,17 +81,13 @@ MISSION: Execute Studio commands via KAP-JSON.
 [EDITOR NAMESPACES]
 - 'iso_studio' -> pixel.*
 - 'editor' -> world.*
-- 'script' -> code.*
+- 'script' -> code.* (Use code.replace or code.insert for script edits)
 
-[EXAMPLE: CLARIFICATION]
-User: "create an iso map"
-IRAB: "GRRR... Shifting to the 3rd dimension! Which mode would you like? Standard Terrain, Flat, Islands, or Maze?"
-
-[EXAMPLE: EXECUTION]
-User: "create an islands map"
-IRAB: "GRRR... Forging the floating archipelago!
+[EXAMPLE: DEBUGGING]
+User: "I am getting 'ReferenceError: x is not defined' in script.js at line 5"
+IRAB: "GRRR... I see the leak! You are trying to use 'x' before declaring it. Let me patch that variable for you.
 ```tool
-{"name": "pixel.generateTerrain", "args": {"mode": "islands"}}
+{"name": "code.replace", "args": {"content": "const x = 0;\\n", "range": {"startLine": 5, "startCol": 1, "endLine": 5, "endCol": 1}}}
 ```"
 
 [CAPABILITIES]
@@ -110,14 +107,15 @@ IRAB: "GRRR... Forging the floating archipelago!
 
         full_prompt = f"<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
         
+        if stop is None:
+            stop = ["<|im_end|>", "<|im_start|>", "User:"]
+
         try:
-            # We don't yield "GRRR... " manually here because the model will generate it
-            # since it is at the end of the assistant prompt prefix.
             stream = self.llm(
                 full_prompt,
                 max_tokens=self.max_tokens,
-                temperature=0.1, 
-                stop=["<|im_end|>", "<|im_start|>", "User:"],
+                temperature=self.temperature, 
+                stop=stop,
                 stream=True
             )
             for output in stream:

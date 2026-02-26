@@ -33,6 +33,9 @@
             background: transparent;
             color: var(--kai-text);
             -webkit-font-smoothing: none;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
         }
 
         /* === SCROLLBARS === */
@@ -61,31 +64,41 @@
         }
 
         #ai-clippy {
-            width: 64px;
-            height: 64px;
-            background: var(--kai-panel);
-            border: 2px solid var(--kai-accent);
-            border-radius: 50%;
+            width: 96px;
+            height: 96px;
+            background: transparent;
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
             transition: all 0.2s ease;
             position: relative;
             overflow: hidden;
         }
 
-        #ai-clippy::before {
-            content: ">_";
-            font-size: 32px;
-            color: var(--kai-accent);
-            animation: blink 1s step-end infinite;
+        .kai-avatar-img {
+            width: 100%;
+            height: 100%;
+            background-size: 220%; /* Reduced zoom to prevent clipping at the edges */
+            background-position: center;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+            transition: transform 0.2s ease;
         }
 
-        #ai-clippy:hover {
+        #ai-clippy.state-idle .kai-avatar-img { background-image: url('../holy-kai/state1.png'); }
+        #ai-clippy.state-working .kai-avatar-img { background-image: url('../holy-kai/state2.png'); }
+        #ai-clippy.state-bored .kai-avatar-img { background-image: url('../holy-kai/state3.png'); }
+        #ai-clippy.state-error .kai-avatar-img { background-image: url('../holy-kai/state4.png'); }
+        #ai-clippy.state-success .kai-avatar-img { background-image: url('../holy-kai/state5.png'); }
+
+        #ai-clippy::before {
+            display: none;
+        }
+
+        #ai-clippy:hover .kai-avatar-img {
             transform: scale(1.1);
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
         }
 
         @keyframes blink { 50% { opacity: 0; } }
@@ -93,7 +106,7 @@
         /* === SPEECH BUBBLE (TERMINAL POPUP) === */
         #ai-speech-bubble {
             position: absolute;
-            bottom: 80px;
+            bottom: 100px;
             right: 0;
             width: 300px;
             background: var(--kai-bg);
@@ -500,7 +513,9 @@
 </head>
 <body>
     <div id="ai-assistant-container">
-        <div id="ai-clippy" title="KAI - Studio Assistant" onclick="window.AIChatUI ? AIChatUI.openChat() : null"></div>
+        <div id="ai-clippy" class="state-idle" title="KAI - Studio Assistant (She/Her)" onclick="window.AIChatUI ? AIChatUI.openChat() : null">
+            <div class="kai-avatar-img"></div>
+        </div>
         
         <!-- Speech Bubble -->
         <div id="ai-speech-bubble">
@@ -580,15 +595,48 @@
             
             <div class="settings-tabs">
                 <div id="tab-brain" class="settings-tab active" onclick="AISettings.switchTab('brain', this)">BRAIN</div>
-                <div id="tab-project" class="settings-tab" onclick="AISettings.switchTab('project', this)">PROJECT</div>
-                <div id="tab-interface" class="settings-tab" onclick="AISettings.switchTab('interface', this)">INTERFACE</div>
+                <div id="tab-engine" class="settings-tab" onclick="AISettings.switchTab('engine', this)">ENGINE</div>
+                <div id="tab-project" class="settings-tab" onclick="AISettings.switchTab('project', this)">MEMORY</div>
+                <div id="tab-interface" class="settings-tab" onclick="AISettings.switchTab('interface', this)">UI</div>
                 <div id="tab-debug" class="settings-tab" onclick="AISettings.switchTab('debug', this)">DEBUG</div>
             </div>
 
             <!-- Tab: Brain -->
             <div id="pane-brain" class="settings-pane active">
                 <div class="xp-setting-group">
-                    <span class="xp-setting-label">INFERENCE_PROVIDER</span>
+                    <span class="xp-setting-label">SAMPLING_CONTROL</span>
+                    <div class="setting-control-row">
+                        <label>Temperature:</label>
+                        <input type="range" id="setting-temp" min="0.1" max="1.5" step="0.1" value="0.7" oninput="document.getElementById('val-temp').textContent=this.value">
+                        <span id="val-temp" style="width: 30px; color: var(--kai-accent);">0.7</span>
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Top-P:</label>
+                        <input type="range" id="setting-top-p" min="0.1" max="1.0" step="0.05" value="0.9" oninput="document.getElementById('val-top-p').textContent=this.value">
+                        <span id="val-top-p" style="width: 30px; color: var(--kai-accent);">0.9</span>
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Max New Tokens:</label>
+                        <input type="number" id="setting-max-tokens" value="512" step="32" style="width: 80px;">
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">CONTEXT_WINDOW</span>
+                    <div class="setting-control-row">
+                        <label>Window Size:</label>
+                        <select id="setting-context-window">
+                            <option value="1024">1024 (FAST)</option>
+                            <option value="2048">2048 (BALANCED)</option>
+                            <option value="4096">4096 (DEEP)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Engine -->
+            <div id="pane-engine" class="settings-pane">
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">INFERENCE_BACKEND</span>
                     <div class="setting-control-row">
                         <select id="setting-provider" style="width: 100%;">
                             <option value="native">NATIVE_CORTEX (PYTHON/GGUF)</option>
@@ -598,20 +646,18 @@
                     </div>
                 </div>
                 <div class="xp-setting-group">
-                    <span class="xp-setting-label">SAMPLING_CONTROL</span>
+                    <span class="xp-setting-label">QUANTIZATION</span>
                     <div class="setting-control-row">
-                        <label>Temperature:</label>
-                        <input type="range" id="setting-temp" min="0.1" max="1.5" step="0.1" value="0.7" oninput="document.getElementById('val-temp').textContent=this.value">
-                        <span id="val-temp" style="width: 30px; color: var(--kai-accent);">0.7</span>
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Max Tokens:</label>
-                        <input type="number" id="setting-max-tokens" value="512" style="width: 80px;">
+                        <select id="setting-quantization" style="width: 100%;">
+                            <option value="q4f16">4-BIT (OPTIMIZED)</option>
+                            <option value="q8">8-BIT (PRECISE)</option>
+                            <option value="f16">16-BIT (HEAVY)</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab: Project -->
+            <!-- Tab: Project/Memory -->
             <div id="pane-project" class="settings-pane">
                 <div class="xp-setting-group">
                     <span class="xp-setting-label">COGNITION (RAG)</span>
@@ -620,15 +666,17 @@
                         <input type="checkbox" id="setting-rag" checked>
                     </div>
                     <div class="setting-control-row">
-                        <label>Index Codebase:</label>
-                        <input type="checkbox" id="setting-index-code" checked>
+                        <button class="xp-button" style="width: 100%; font-size: 14px;" onclick="AIChatUI.reindexCodebase()">RE-INDEX PROJECT CODEBASE</button>
                     </div>
                 </div>
                 <div class="xp-setting-group">
-                    <span class="xp-setting-label">AUTOMATION</span>
+                    <span class="xp-setting-label">HISTORY</span>
                     <div class="setting-control-row">
-                        <label>Proactive Suggestions:</label>
-                        <input type="checkbox" id="setting-proactive" checked>
+                        <label>Max History Messages:</label>
+                        <input type="number" id="setting-history-limit" value="6" min="0" max="20" style="width: 60px;">
+                    </div>
+                    <div class="setting-control-row">
+                        <button class="xp-button" style="width: 100%; font-size: 14px;" onclick="AIChatUI.clearHistory()">CLEAR CONVERSATION MEMORY</button>
                     </div>
                 </div>
             </div>

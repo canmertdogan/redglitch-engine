@@ -131,6 +131,16 @@ async def list_sessions():
     except Exception as e:
         return []
 
+@app.get("/api/ai/rag/reindex")
+async def reindex_rag():
+    try:
+        loop = asyncio.get_event_loop()
+        # Run ingestion in a separate thread to avoid blocking the event loop
+        loop.run_in_executor(None, rag.ingest_project)
+        return {"success": True, "message": "Background re-indexing started."}
+    except Exception as e:
+        return {"error": str(e)}
+
 async def load_brain_task():
     global watcher
     
@@ -147,6 +157,14 @@ async def load_brain_task():
         watcher = IrabWatcher(PROJECT_ROOT, manager=manager, loop=loop)
     
     loop.run_in_executor(None, watcher.start)
+    
+    # 2. Start initial RAG scan in background after a short delay
+    async def initial_rag_scan():
+        await asyncio.sleep(5) # Wait for system to settle
+        logger.info("Starting initial RAG codebase scan...")
+        loop.run_in_executor(None, rag.ingest_project)
+    
+    asyncio.create_task(initial_rag_scan())
     
     model_path = os.path.join(PROJECT_ROOT, "backend", "models", "qwen2.5-coder-1.5b.gguf")
     if os.path.exists(model_path):
@@ -239,34 +257,42 @@ async def websocket_endpoint(websocket: WebSocket):
 
 async def handle_prompt(message, websocket):
     prompt = message.get("data", "")
-    logger.info(f"Handling prompt: {prompt[:50]}...")
+    is_ghost = "Ghost Text autocomplete" in prompt
     
-    await manager.send_personal_message({"type": "SET_STATE", "data": "THINKING"}, websocket)
+    logger.info(f"Handling prompt (Ghost: {is_ghost}): {prompt[:50]}...")
+    
+    if not is_ghost:
+        await manager.send_personal_message({"type": "SET_STATE", "data": "THINKING"}, websocket)
     
     # Incorporate Phase 2: Active Focus
     context_data = message.get("context", {})
     focused_code = context_data.get("focused_code", "")
     
-    # Only use RAG for code-related questions, keep context minimal for 1.3B model
+    max_tokens = context_data.get("max_tokens", brain.max_tokens)
+    temperature = context_data.get("temperature", 0.1)
+    
+    # Only use RAG for code-related questions
     context = ""
-    code_keywords = {'code', 'function', 'bug', 'error', 'fix', 'script', 'file', 'editor', 
-                     'sprite', 'npc', 'logic', 'quest', 'dialogue', 'level', 'map', 'engine',
-                     'kod', 'hata', 'dosya', 'düzelt', 'nasıl'}
+    if not is_ghost:
+        code_keywords = {'code', 'function', 'bug', 'error', 'fix', 'script', 'file', 'editor', 
+                         'sprite', 'npc', 'logic', 'quest', 'dialogue', 'level', 'map', 'engine',
+                         'kod', 'hata', 'dosya', 'düzelt', 'nasıl'}
+        
+        if any(kw in prompt.lower() for kw in code_keywords):
+            try:
+                logger.info("Querying RAG system...")
+                loop = asyncio.get_event_loop()
+                # Retrieve top 2 most relevant chunks
+                context = await loop.run_in_executor(None, lambda: rag.query(prompt, n_results=2))
+                logger.info(f"RAG context retrieved ({len(context)} chars).")
+                # Limit to 1500 chars to stay within the 2048 context window safely
+                if len(context) > 1500:
+                    context = context[:1500] + "..."
+            except Exception as e:
+                logger.error(f"RAG query failed: {e}")
+                context = ""
     
-    if any(kw in prompt.lower() for kw in code_keywords):
-        try:
-            logger.info("Querying RAG system...")
-            loop = asyncio.get_event_loop()
-            context = await loop.run_in_executor(None, lambda: rag.query(prompt, n_results=1))
-            logger.info(f"RAG context retrieved ({len(context)} chars).")
-            # Hard limit for 1.3B model
-            if len(context) > 800:
-                context = context[:800] + "..."
-        except Exception as e:
-            logger.error(f"RAG query failed: {e}")
-            context = ""
-    
-    if focused_code:
+    if focused_code and not is_ghost:
         if len(focused_code) > 500: focused_code = focused_code[:500] + "..."
         augmented_prompt = f"Code:\n{focused_code}\n\nQuestion: {prompt}"
     elif context:
@@ -276,9 +302,8 @@ async def handle_prompt(message, websocket):
     
     logger.info(f"Augmented prompt length: {len(augmented_prompt)} chars")
     full_response = ""
-    sent_response = ""
     
-    # Phrases the 1.3B model tends to regurgitate from the system prompt
+    # Phrases the 1.3B model tends to regurgitate
     PROMPT_LEAK_PHRASES = [
         'Available tools:', 'To open a tool:', 'To show emotion:', 
         'Do NOT repeat', 'COMMANDS:', 'RULES:', '--- FILE:', 
@@ -291,45 +316,41 @@ async def handle_prompt(message, websocket):
         in_tool_block = False
         tool_buffer = ""
 
-        for token in brain.generate_stream(augmented_prompt):
+        # Generation Loop - Use brain.generate_stream to get proper chat template wrapping
+        # We pass context options to brain if needed
+        brain.update_config({"max_tokens": max_tokens, "temperature": temperature})
+        
+        # Define stop sequences
+        stop_sequences = ["<|im_end|>", "<|im_start|>", "User:"]
+        if is_ghost:
+            stop_sequences.append("\n\n")
+
+        for token in brain.generate_stream(augmented_prompt, stop=stop_sequences):
+            if brain.is_aborted: break
             if not token: continue
             
-            # --- KAP Protocol Detection (JSON tool blocks) ---
+            # --- KAP Protocol Detection ---
             if not in_tool_block:
                 potential_full = full_response + token
-                # Look for tool block start (flexible: ```tool OR just ``` if followed by {)
-                if "```" in potential_full:
+                if "```" in potential_full and not is_ghost:
                     marker_pos = potential_full.rfind("```")
                     split_idx = marker_pos - len(full_response)
-                    
                     if split_idx > 0:
                         await manager.send_personal_message({"type": "TOKEN", "data": token[:split_idx]}, websocket)
-                    
                     in_tool_block = True
                     tool_buffer = potential_full[marker_pos:]
                     full_response = potential_full
                     continue
                 else:
-                    if any(phrase in (full_response + token)[-100:] for phrase in PROMPT_LEAK_PHRASES):
+                    if not is_ghost and any(phrase in (full_response + token)[-100:] for phrase in PROMPT_LEAK_PHRASES):
                         full_response += token
                         continue
                     
                     full_response += token
                     await manager.send_personal_message({"type": "TOKEN", "data": token}, websocket)
-            
             else:
                 full_response += token
                 tool_buffer += token
-                
-                # SAFETY: If buffer gets too huge, flush.
-                if len(tool_buffer) > 1500:
-                    await manager.send_personal_message({"type": "TOKEN", "data": tool_buffer}, websocket)
-                    in_tool_block = False
-                    tool_buffer = ""
-                    continue
-
-                # Look for the closing marker
-                # Check if we have at least one closing ``` that IS NOT the starting one
                 if tool_buffer.count("```") >= 2: 
                     try:
                         start = tool_buffer.find('{')
@@ -337,31 +358,23 @@ async def handle_prompt(message, websocket):
                         if start != -1 and end != -1:
                             json_str = tool_buffer[start:end+1]
                             call = json.loads(json_str)
-                            logger.info(f"KAP Action Detected: {call.get('name')}")
                             await manager.send_personal_message({
                                 "type": "COMMAND",
                                 "data": {"action": call.get("name"), "params": call.get("args", {})}
                             }, websocket)
-                        else:
-                            logger.warning("KAP Block found but no JSON object detected.")
-                    except Exception as e:
-                        logger.error(f"Failed to parse KAP JSON: {e}")
-                    
+                    except Exception as e: logger.error(f"KAP Error: {e}")
                     in_tool_block = False
                     tool_buffer = ""
-                    if "```" in full_response:
-                        full_response = full_response[full_response.rfind("```") + 3:]
                     continue
-
             await asyncio.sleep(0)
             
     except Exception as e:
         logger.error(f"Generation error: {e}")
         await manager.send_personal_message({"type": "TOKEN", "data": f"Error: {str(e)}"}, websocket)
     
-    # Signal end of stream for KetebeAI router
     await manager.send_personal_message({"type": "TOKEN", "data": None}, websocket)
-    await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
+    if not is_ghost:
+        await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

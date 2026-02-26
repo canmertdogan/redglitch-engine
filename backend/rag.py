@@ -113,12 +113,12 @@ class RAGSystem:
         logger.info(f"Ingested {count} files into Knowledge Base.")
 
     def ingest_file(self, file_path):
-        """Updates a single file in the index."""
+        """Updates a single file in the index with proper chunking."""
         if not self._ensure_embedder(): return
         
         # Safety check for ignored files/folders
         filename = os.path.basename(file_path)
-        valid_exts = {'.js', '.json', '.md', '.html', '.css', '.py'}
+        valid_exts = {'.js', '.json', '.md', '.html', '.css', '.py', '.vsl'}
         
         if filename.startswith('.') or not any(file_path.endswith(ext) for ext in valid_exts):
             return
@@ -133,22 +133,41 @@ class RAGSystem:
                 content = f.read()
             
             if content.strip():
-                # Manually compute embedding on CPU (disable multiprocessing to avoid crashes)
-                doc_text = content[:8000]
-                embeddings = self.embedder.encode([doc_text], show_progress_bar=False, convert_to_numpy=True).tolist()
-                self.collection.upsert(
-                    documents=[doc_text],
-                    embeddings=embeddings,
-                    metadatas=[{"source": rel_path}],
-                    ids=[rel_path]
-                )
-                logger.info(f"Updated index: {rel_path}")
+                # First, remove old chunks for this file
+                self.collection.delete(where={"source": rel_path})
+                
+                # CHUNKING STRATEGY: 2000 chars with 200 char overlap
+                chunk_size = 2000
+                overlap = 200
+                
+                batch_docs = []
+                batch_meta = []
+                batch_ids = []
+                
+                for i in range(0, len(content), chunk_size - overlap):
+                    chunk = content[i : i + chunk_size]
+                    chunk_id = f"{rel_path}_chunk_{i}"
+                    
+                    batch_docs.append(chunk)
+                    batch_meta.append({"source": rel_path, "offset": i})
+                    batch_ids.append(chunk_id)
+                
+                if batch_docs:
+                    embeddings = self.embedder.encode(batch_docs, show_progress_bar=False, convert_to_numpy=True).tolist()
+                    self.collection.upsert(
+                        documents=batch_docs,
+                        embeddings=embeddings,
+                        metadatas=batch_meta,
+                        ids=batch_ids
+                    )
+                
+                logger.info(f"Updated index (Real-time): {rel_path} ({len(batch_docs)} chunks)")
         except Exception as e:
             if os.path.exists(file_path):
                 logger.error(f"Failed to ingest {file_path}: {e}")
 
     def query(self, query_text, n_results=3):
-        """Retrieves relevant code snippets."""
+        """Retrieves and ranks relevant code snippets."""
         if not self._ensure_embedder(): return ""
         try:
             query_embeddings = self.embedder.encode(
@@ -156,17 +175,39 @@ class RAGSystem:
                 show_progress_bar=False, 
                 convert_to_numpy=True
             ).tolist()
-            results = self.collection.query(
+            
+            # Retrieve more than we need to allow for better ranking/filtering
+            raw_results = self.collection.query(
                 query_embeddings=query_embeddings,
-                n_results=n_results
+                n_results=n_results * 2
             )
             
-            context_parts = []
-            if results['documents']:
-                for i, doc in enumerate(results['documents'][0]):
-                    meta = results['metadatas'][0][i]
+            # Format and Filter (Similarity is 1 - distance in Chroma)
+            results = []
+            if raw_results['documents']:
+                for i, doc in enumerate(raw_results['documents'][0]):
+                    dist = raw_results['distances'][0][i]
+                    score = 1.0 - dist
+                    
+                    # Threshold for relevance
+                    if score < 0.2: continue 
+                    
+                    meta = raw_results['metadatas'][0][i]
                     source = meta.get('source', 'unknown')
-                    context_parts.append(f"--- FILE: {source} ---\n{doc}\n")
+                    
+                    results.append({
+                        "text": doc,
+                        "source": source,
+                        "score": score
+                    })
+
+            # Sort by score descending and take top N
+            results.sort(key=lambda x: x['score'], reverse=True)
+            top_results = results[:n_results]
+            
+            context_parts = []
+            for r in top_results:
+                context_parts.append(f"--- FILE: {r['source']} (Relevance: {round(r['score']*100)}%) ---\n{r['text']}\n")
             
             return "\n".join(context_parts)
         except Exception as e:
