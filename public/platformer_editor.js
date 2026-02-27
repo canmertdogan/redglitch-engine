@@ -239,22 +239,29 @@ class PlatformerEditor {
         
         const v = Date.now();
         const batchSize = 50;
-        
+        const supportsImageBitmap = typeof createImageBitmap === 'function';
+
         for (let i = 1; i <= totalTiles; i += batchSize) {
             const promises = [];
             for (let j = i; j < i + batchSize && j <= totalTiles; j++) {
-                promises.push(new Promise(resolve => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const x = ((j - 1) % cols) * tSize;
-                        const y = Math.floor((j - 1) / cols) * tSize;
-                        ctx.drawImage(img, x, y, tSize, tSize);
-                        resolve();
-                    };
-                    img.onerror = () => resolve();
-                    // Fix path (added space between '16px' and index if that's the convention)
-                    img.src = `/sprite-art/worldpixelart/texture_16px ${j}.png?v=${v}`;
-                }));
+                const x = ((j - 1) % cols) * tSize;
+                const y = Math.floor((j - 1) / cols) * tSize;
+                const url = encodeURI(`/sprite-art/worldpixelart/texture_16px ${j}.png?v=${v}`);
+
+                if (supportsImageBitmap) {
+                    promises.push(fetch(url)
+                        .then(r => r.ok ? r.blob() : null)
+                        .then(blob => blob ? createImageBitmap(blob) : null)
+                        .then(imgBitmap => { if (imgBitmap) ctx.drawImage(imgBitmap, x, y, tSize, tSize); })
+                        .catch(() => {}));
+                } else {
+                    promises.push(new Promise(resolve => {
+                        const img = new Image();
+                        img.onload = () => { ctx.drawImage(img, x, y, tSize, tSize); resolve(); };
+                        img.onerror = () => resolve();
+                        img.src = url;
+                    }));
+                }
             }
             await Promise.all(promises);
         }

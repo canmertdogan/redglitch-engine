@@ -5,6 +5,8 @@
 
 class PlatformerPushableBlock extends PlatformerEntity {
     constructor(x, y, w = 32, h = 32) {
+        const ts = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+        w = w || ts; h = h || ts;
         super(x, y, w, h);
         this.color = '#7f8c8d';
         this.vx = 0;

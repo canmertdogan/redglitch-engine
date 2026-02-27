@@ -4,7 +4,7 @@
  */
 
 class Hitbox {
-    constructor(owner, xOffset, yOffset, w, h, damage = 10, lifetime = 0.1) {
+    constructor(owner, xOffset, yOffset, w, h, damage = 10, lifetime = (window.PlatformerConfig && window.PlatformerConfig.COMBAT_LIFETIME) || 0.1) {
         this.owner = owner; // Entity
         this.xOffset = xOffset;
         this.yOffset = yOffset;

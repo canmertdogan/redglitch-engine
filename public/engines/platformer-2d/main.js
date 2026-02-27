@@ -171,7 +171,8 @@ class PlatformerGame {
         }
         await this._setupLevel();
         this.isRunning = true;
-        this.loop();
+        this._lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     async loadLevelFromData(levelData) {
@@ -180,7 +181,8 @@ class PlatformerGame {
         this.map = levelData;
         await this._setupLevel();
         this.isRunning = true;
-        this.loop();
+        this._lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     _createFallbackLevel() {
@@ -278,28 +280,32 @@ class PlatformerGame {
     }
 
     _addEntity(e) {
+        // Normalize entity coordinates to world pixels using tileSize
+        const ex = (typeof e.x === 'number') ? e.x * this.tileSize : 0;
+        const ey = (typeof e.y === 'number') ? e.y * this.tileSize : 0;
+
         if (e.type === 'enemy') {
-            const enemy = new PlatformerEnemy(e.x * this.tileSize, e.y * this.tileSize, e.sprite || 'slime');
+            const enemy = new PlatformerEnemy(ex, ey, e.sprite || 'slime');
             if (e.behavior) enemy.behavior = e.behavior;
             enemy.id = e.id || enemy.id;
             enemy.hp = e.hp || enemy.hp;
             enemy.speed = e.speed || enemy.speed;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_flying') {
-            const enemy = new PlatformerFlyingEnemy(e.x * this.tileSize, e.y * this.tileSize, e.sprite || 'bat');
+            const enemy = new PlatformerFlyingEnemy(ex, ey, e.sprite || 'bat');
             enemy.id = e.id || enemy.id;
             if (e.behavior) enemy.behavior = e.behavior;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_shooter') {
-            const enemy = new PlatformerShooterEnemy(e.x * this.tileSize, e.y * this.tileSize, e.sprite || 'goblin');
+            const enemy = new PlatformerShooterEnemy(ex, ey, e.sprite || 'goblin');
             enemy.id = e.id || enemy.id;
             this.entities.push(enemy);
         } else if (e.type === 'pushable') {
-            const push = new PlatformerPushableBlock(e.x * this.tileSize, e.y * this.tileSize, e.w || 32, e.h || 32);
+            const push = new PlatformerPushableBlock(ex, ey, e.w || this.tileSize, e.h || this.tileSize);
             push.id = e.id || push.id;
             this.entities.push(push);
         } else if (['switch', 'pressure_plate', 'zone'].includes(e.type)) {
-            const trigger = new PlatformerTrigger(e.x * this.tileSize, e.y * this.tileSize, {
+            const trigger = new PlatformerTrigger(ex, ey, {
                 triggerType: e.type,
                 targetId: e.targetId,
                 action: e.action,
@@ -308,7 +314,7 @@ class PlatformerGame {
             });
             this.entities.push(trigger);
         } else {
-            const ent = { ...e, x: e.x * this.tileSize, y: e.y * this.tileSize, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' };
+            const ent = { ...e, x: ex, y: ey, w: 24, h: this.tileSize, vx: 0, vy: 0, behavior: e.behavior || 'static' };
             if (e.dialogueId) ent.dialogueId = e.dialogueId;
             ent.id = e.id || ent.id;
             this.entities.push(ent);
@@ -328,8 +334,8 @@ class PlatformerGame {
 
         for (const ent of this.entities) {
             if (ent.dialogueId) {
-                const ex = ent.x + (ent.w || 32)/2;
-                const ey = ent.y + (ent.h || 32)/2;
+                const ex = ent.x + (ent.w || this.tileSize)/2;
+                const ey = ent.y + (ent.h || this.tileSize)/2;
                 const dist = Math.sqrt((px - ex)**2 + (py - ey)**2);
 
                 if (dist < range) {
@@ -382,10 +388,12 @@ class PlatformerGame {
         });
     }
 
-    update() {
+    update(dtArg) {
         if(this.isPaused || this.levelComplete) return;
 
-        const dt = 1/60;
+        const dt = (typeof dtArg === 'number') ? dtArg : (1/60);
+        // Scale factor to keep existing velocity units (which were per-1/60 tick)
+        const scale = Math.max(0, Math.min(dt * 60, 4));
 
         // 1. Update Platforms First
         this.platforms.forEach(p => p.update(dt, this.map));
@@ -393,7 +401,7 @@ class PlatformerGame {
         // 2. Handle Player
         this.player.handleInput(this.keys);
         this.player.update(dt, this.map);
-        this.physics.apply(this.player, this.map, this.platforms);
+        this.physics.apply(this.player, this.map, this.platforms, dt);
         this._handlePushing();
         
         // 3. Environment & Effects
@@ -409,7 +417,7 @@ class PlatformerGame {
         }
         
         this.combat.update(dt);
-        this._updateEntities();
+        this._updateEntities(dt);
         this._handleInteractions();
         this._checkCollectibles();
         this._checkCheckpoints();
@@ -417,10 +425,10 @@ class PlatformerGame {
         this._checkDeathZones();
     }
 
-    _updateEntities() {
+    _updateEntities(dt) {
         this.entities.forEach(ent => {
             if (ent.update) {
-                ent.update(1/60, this.map);
+                ent.update(dt, this.map);
             } else if(ent.behavior === 'patrol') {
                 if(!ent.patrolDir) ent.patrolDir = 1;
                 ent.vx = ent.patrolDir * 0.5;
@@ -429,7 +437,7 @@ class PlatformerGame {
                 const tileY = Math.floor(ent.y / this.tileSize);
                 if(this.physics.getTile(this.map, tileX, tileY) === 1) ent.patrolDir *= -1;
             }
-            this.physics.apply(ent, this.map, this.platforms);
+            this.physics.apply(ent, this.map, this.platforms, dt);
 
             // Quest trigger for kills
             if (ent.isDead && !ent._questLogged) {
@@ -507,11 +515,20 @@ class PlatformerGame {
         this.combat.draw(this.renderer);
     }
 
-    loop() {
+    loop(now) {
         if(!this.isRunning) return;
-        this.update();
+        const nowTime = typeof now === 'number' ? now : performance.now();
+        if (!this._lastTime) this._lastTime = nowTime;
+        let dt = (nowTime - this._lastTime) / 1000;
+        // Clamp dt to avoid big jumps (e.g., when tab was hidden)
+        const minDt = (window.PlatformerConfig && window.PlatformerConfig.MIN_DT) || (1/120);
+        const maxDt = (window.PlatformerConfig && window.PlatformerConfig.MAX_DT) || 0.1;
+        dt = Math.max(minDt, Math.min(dt, maxDt));
+        this._lastTime = nowTime;
+
+        this.update(dt);
         this.draw();
-        requestAnimationFrame(() => this.loop());
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     login(username) {

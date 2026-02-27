@@ -9,10 +9,11 @@ class PlatformerFlyingEnemy extends PlatformerEnemy {
         this.ignoreGravity = true;
         this.speed = 2;
         this.targetY = this.y;
-        this.bobAmount = 32;
+        const ts = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+        this.bobAmount = ts;
         this.bobSpeed = 0.003;
-        this.w = 32;
-        this.h = 24;
+        this.w = ts;
+        this.h = Math.floor(ts * 0.75);
     }
 
     update(dt, map) {
@@ -21,9 +22,10 @@ class PlatformerFlyingEnemy extends PlatformerEnemy {
         if (this.behavior === 'patrol') {
             // Horizontal patrol
             this.vx = this.direction * this.speed;
-            this.x += this.vx;
+            const scale = Math.max(0, Math.min(dt * 60, 4));
+            this.x += this.vx * scale;
             
-            // Bobbing motion
+            // Bobbing motion (absolute)
             this.y = this.targetY + Math.sin(Date.now() * this.bobSpeed) * this.bobAmount;
 
             // Check for walls
@@ -43,10 +45,11 @@ class PlatformerFlyingEnemy extends PlatformerEnemy {
             const dist = Math.sqrt(dx*dx + dy*dy);
 
             if (dist < this.visionRange) {
+                const scale = Math.max(0, Math.min(dt * 60, 4));
                 this.vx = (dx / dist) * this.speed;
                 this.vy = (dy / dist) * this.speed;
-                this.x += this.vx;
-                this.y += this.vy;
+                this.x += this.vx * scale;
+                this.y += this.vy * scale;
                 this.targetY = this.y; // Update patrol base
             } else {
                 this.behavior = 'patrol';

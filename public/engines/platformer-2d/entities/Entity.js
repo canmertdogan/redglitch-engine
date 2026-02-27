@@ -5,6 +5,7 @@ class PlatformerEntity {
         this.y = y;
         this.w = w;
         this.h = h;
+        this.ignoreGravity = false;
         this.vx = 0;
         this.vy = 0;
         this.color = '#f0f';

@@ -39,7 +39,15 @@ export class EditorTools {
             'behavior': 'behavior_editor.html',
             'prefab': 'prefab_editor.html',
             'localization': 'localization_editor.html',
+            // Iso / Isometric aliases
             'iso': 'iso_editor.html',
+            'isopixel': 'iso_editor.html',
+            'isopixelstudio': 'iso_editor.html',
+            'isopixel studio': 'iso_editor.html',
+            'isostudio': 'iso_editor.html',
+            'isometric': 'iso_editor.html',
+            'isometricstudio': 'iso_editor.html',
+            'iso-pixel': 'iso_editor.html',
             'pixel': 'pixel_editor.html',
             'fx': 'fx_editor.html',
             'background': 'background_editor.html',
@@ -268,7 +276,7 @@ export class EditorTools {
             'npc', 'quest', 'dialogue', 'script', 'item', 'enemy',
             'character', 'skill', 'achievement', 'cutscene', 'campaign',
             'menu', 'logic', 'algorithm', 'behavior', 'prefab',
-            'localization', 'iso', 'pixel', 'fx', 'background',
+            'localization', 'iso', 'isopixel', 'isometric', 'isostudio', 'isopixelstudio', 'pixel', 'fx', 'background',
             'shader', 'input'
         ];
     }

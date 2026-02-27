@@ -21,8 +21,9 @@ class PlatformerProjectile extends PlatformerEntity {
         this.lifetime -= dt;
         if (this.lifetime <= 0) this.isDead = true;
 
-        this.x += this.vx;
-        this.y += this.vy;
+        const scale = Math.max(0, Math.min(dt * 60, 4));
+        this.x += this.vx * scale;
+        this.y += this.vy * scale;
 
         // Simple tile collision for projectiles
         const ts = window.game?.tileSize || window.PlatformerConfig?.TILE_SIZE || 32;

@@ -7,7 +7,7 @@ class PlatformerRenderer {
         const config = window.PlatformerConfig || { TILE_SIZE: 32, CHUNK_SIZE: 16 };
         this.camera = { x: 0, y: 0 };
         this.tileset = new Image();
-        this.tileset.src = '/engines/rpg-topdown/assets/world_tileset.png'; 
+        this.tileset.src = '/sprite-art/platformer_spritesheet.png';
         
         this.tileSize = config.TILE_SIZE;
         this.viewW = canvas.width;
@@ -16,12 +16,16 @@ class PlatformerRenderer {
         // Chunking
         this.CHUNK_SIZE = config.CHUNK_SIZE;
         this.chunks = {}; 
+        // LRU-ish cache bookkeeping for rendered chunks to avoid unbounded memory growth
+        this.chunkUsage = new Map(); // key -> last used counter
+        this.maxChunks = (window.PlatformerConfig && window.PlatformerConfig.MAX_RENDER_CHUNKS) || 256;
+        this._chunkCounter = 0; 
 
         // Sprite Caching
         this.spriteCache = {}; // name_state_frame -> Canvas
 
         // Parallax
-        this.parallax = new window.ParallaxSystem(this);
+        this.parallax = window.ParallaxSystem ? new window.ParallaxSystem(this) : { addLayer: () => {}, render: () => {} };
 
         // Shake
         this.shakeAmount = 0;
@@ -90,8 +94,9 @@ class PlatformerRenderer {
         if (isNaN(this.camera.x)) this.camera.x = targetX;
         if (isNaN(this.camera.y)) this.camera.y = targetY;
 
-        this.camera.x += (targetX - this.camera.x) * 0.1;
-        this.camera.y += (targetY - this.camera.y) * 0.1;
+        const lerp = (window.PlatformerConfig && window.PlatformerConfig.CAMERA_LERP) || 0.1;
+        this.camera.x += (targetX - this.camera.x) * lerp;
+        this.camera.y += (targetY - this.camera.y) * lerp;
         
         this.camera.x = Math.floor(this.camera.x) || 0;
         this.camera.y = Math.floor(this.camera.y) || 0;
@@ -133,11 +138,11 @@ class PlatformerRenderer {
                 this.tilesetReady = true;
             } catch(e) {
                 console.error('[PlatformerRenderer] Tileset combining failed', e);
-                this.tileset = await loadImage('/engines/rpg-topdown/assets/world_tileset.png');
+                this.tileset = await loadImage('/sprite-art/platformer_spritesheet.png');
                 this.tilesetReady = true;
             }
         } else {
-            this.tileset = await loadImage(path || '/engines/rpg-topdown/assets/world_tileset.png');
+            this.tileset = await loadImage(path || '/sprite-art/platformer_spritesheet.png');
             this.tilesetReady = true;
         }
 
@@ -157,7 +162,7 @@ class PlatformerRenderer {
 
         console.log('[PlatformerRenderer] Combining tileset...');
         const canvas = document.createElement('canvas');
-        const tSize = 16;
+        const tSize = (window.PlatformerConfig && window.PlatformerConfig.SOURCE_TILE_SIZE) || 16;
         const cols = 16;
         const totalTiles = 600; 
         const rows = Math.ceil(totalTiles / cols);
@@ -169,20 +174,32 @@ class PlatformerRenderer {
         const v = Date.now();
         const batchSize = 50; // Load in batches to avoid browser throttling
         
+        // Use fetch + createImageBitmap for async decoding where available
+        const supportsImageBitmap = typeof createImageBitmap === 'function';
         for (let i = 1; i <= totalTiles; i += batchSize) {
             const promises = [];
             for (let j = i; j < i + batchSize && j <= totalTiles; j++) {
-                promises.push(new Promise(resolve => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const x = ((j - 1) % cols) * tSize;
-                        const y = Math.floor((j - 1) / cols) * tSize;
-                        ctx.drawImage(img, x, y, tSize, tSize);
-                        resolve();
-                    };
-                    img.onerror = () => resolve();
-                    img.src = '/sprite-art/worldpixelart/texture_16px ' + j + '.png?v=' + v;
-                }));
+                const x = ((j - 1) % cols) * tSize;
+                const y = Math.floor((j - 1) / cols) * tSize;
+                const url = encodeURI('/sprite-art/worldpixelart/texture_16px ' + j + '.png?v=' + v);
+
+                if (supportsImageBitmap) {
+                    promises.push(fetch(url)
+                        .then(r => r.ok ? r.blob() : null)
+                        .then(blob => blob ? createImageBitmap(blob) : null)
+                        .then(imgBitmap => {
+                            if (imgBitmap) ctx.drawImage(imgBitmap, x, y, tSize, tSize);
+                        })
+                        .catch(() => {}));
+                } else {
+                    // Fallback to Image() for older browsers
+                    promises.push(new Promise(resolve => {
+                        const img = new Image();
+                        img.onload = () => { ctx.drawImage(img, x, y, tSize, tSize); resolve(); };
+                        img.onerror = () => resolve();
+                        img.src = url;
+                    }));
+                }
             }
             await Promise.all(promises);
         }
@@ -194,6 +211,31 @@ class PlatformerRenderer {
 
     invalidateCache() {
         this.chunks = {};
+        this.chunkUsage.clear && this.chunkUsage.clear();
+        this._chunkCounter = 0;
+    }
+
+    // Ensure cache size stays under limit by evicting least-recently-used chunks
+    ensureCacheLimit() {
+        try {
+            const limit = this.maxChunks || 256;
+            const keys = Object.keys(this.chunks);
+            if (keys.length < limit) return;
+            // Build array of [key, usage] and sort ascending
+            const usages = keys.map(k => [k, this.chunkUsage.get(k) || 0]);
+            usages.sort((a,b) => a[1] - b[1]);
+            const toRemove = Math.max(1, Math.floor(keys.length - limit + 1));
+            for (let i = 0; i < toRemove; i++) {
+                const k = usages[i][0];
+                try { delete this.chunks[k]; } catch(e) {}
+                try { this.chunkUsage.delete(k); } catch(e) {}
+            }
+        } catch (e) { console.warn('[PlatformerRenderer] ensureCacheLimit failed', e); }
+    }
+
+    registerChunkUsage(key) {
+        this._chunkCounter = (this._chunkCounter || 0) + 1;
+        try { this.chunkUsage.set(key, this._chunkCounter); } catch(e) {}
     }
 
     isSolid(map, x, y) {
@@ -299,14 +341,12 @@ class PlatformerRenderer {
         fgLayers.forEach(l => this.drawLayerChunked(l.data, map.width, l.index));
 
         // 10. FX / Particles (World Space)
-        if (window.game && window.game.fx) {
-            window.game.fx.render(this.camera.x, this.camera.y);
-        }
+        window.game?.fx?.render?.(this.camera.x, this.camera.y);
 
         this.ctx.restore();
         
         // 11. Soft Lighting Pass (Screen Space)
-        if (window.game && window.game.fx) {
+        if (window.game?.fx) {
             const lights = [];
             // Collect lights from entities
             entities.forEach(ent => {
@@ -330,7 +370,7 @@ class PlatformerRenderer {
                 });
             }
 
-            window.game.fx.renderSoftLighting(this.camera.x, this.camera.y, lights);
+            window.game?.fx?.renderSoftLighting?.(this.camera.x, this.camera.y, lights);
         }
 
         // 12. HUD
@@ -358,13 +398,13 @@ class PlatformerRenderer {
             } else if (deco.tileId) {
                 // Determine which tileset to use
                 let targetTileset = this.tileset;
-                let ts = 16;
-                let totalCols = 16;
+                let ts = (window.PlatformerConfig && window.PlatformerConfig.SOURCE_TILE_SIZE) || 16;
+                let totalCols = Math.floor(this.tileset.width / ts) || 16;
 
                 if (deco.tilesetKey && this.additionalTilesets && this.additionalTilesets[deco.tilesetKey]) {
                     targetTileset = this.additionalTilesets[deco.tilesetKey];
-                    ts = deco.tileSize || 16;
-                    totalCols = Math.floor(targetTileset.width / ts);
+                    ts = deco.tileSize || ((window.PlatformerConfig && window.PlatformerConfig.SOURCE_TILE_SIZE) || 16);
+                    totalCols = Math.max(1, Math.floor(targetTileset.width / ts));
                 }
 
                 const tid = deco.tileId - 1;
@@ -392,9 +432,17 @@ class PlatformerRenderer {
             for (let cx = startCx; cx <= endCx; cx++) {
                 const key = `${layerIndex}_${cx}_${cy}`;
                 if (!this.chunks[key]) {
-                    this.chunks[key] = this.renderChunk(layerData, mapWidth, cx, cy, isCollision);
+                    // Keep cache bounded before creating new chunk
+                    this.ensureCacheLimit();
+                    const chunkCanvas = this.renderChunk(layerData, mapWidth, cx, cy, isCollision);
+                    if (chunkCanvas) {
+                        this.chunks[key] = chunkCanvas;
+                        this.registerChunkUsage(key);
+                    }
                 }
                 if (this.chunks[key]) {
+                    // Mark as recently used
+                    this.registerChunkUsage(key);
                     this.ctx.drawImage(this.chunks[key], cx * this.CHUNK_SIZE * this.tileSize, cy * this.CHUNK_SIZE * this.tileSize);
                 }
             }
@@ -409,8 +457,9 @@ class PlatformerRenderer {
         ctx.imageSmoothingEnabled = false;
 
         let hasContent = false;
-        // The combined tileset is 16 columns wide
-        const totalCols = 16; 
+        // Determine tileset columns from tileset width and source tile size
+        const tsForChunk = (window.PlatformerConfig && window.PlatformerConfig.SOURCE_TILE_SIZE) || 16;
+        const totalCols = Math.max(1, Math.floor((this.tileset && this.tileset.width) / tsForChunk)) || 16; 
 
         for (let y = 0; y < this.CHUNK_SIZE; y++) {
             for (let x = 0; x < this.CHUNK_SIZE; x++) {
@@ -507,36 +556,55 @@ class PlatformerRenderer {
     }
 
     generateSpriteFrame(spriteKey, frameIndex, targetW, targetH) {
-        const sprite = window.SPRITES[spriteKey];
+        const sprite = window.SPRITES && window.SPRITES[spriteKey];
         if (!sprite) return null;
 
+        // If sprite is already an image/canvas, return directly
         if (sprite instanceof HTMLImageElement || sprite instanceof HTMLCanvasElement) {
             return sprite;
         }
 
-        const frameW = sprite.height; 
-        const frameCount = Math.floor(sprite.width / frameW) || 1;
-        const actualFrame = frameIndex % frameCount;
+        // If sprite exposes frames as images/canvases, use them
+        if (Array.isArray(sprite.frames) && sprite.frames.length > 0) {
+            const idx = frameIndex % sprite.frames.length;
+            const f = sprite.frames[idx];
+            if (f instanceof HTMLImageElement || f instanceof HTMLCanvasElement) return f;
+        }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = frameW;
-        canvas.height = sprite.height;
-        const ctx = canvas.getContext('2d');
-        const startX = actualFrame * frameW;
-        
-        for (let y = 0; y < sprite.height; y++) {
-            const row = sprite.data[y];
-            if (!row) continue;
-            for (let x = 0; x < frameW; x++) {
-                const char = row[startX + x];
-                const color = sprite.palette[char];
-                if (color) {
-                    ctx.fillStyle = color;
-                    ctx.fillRect(x, y, 1, 1);
+        // If sprite has a single image property
+        if (sprite.image && (sprite.image instanceof HTMLImageElement || sprite.image instanceof HTMLCanvasElement)) {
+            return sprite.image;
+        }
+
+        // Fallback to legacy text-palette sprite format: sprite.data (array of strings) and sprite.palette
+        if (sprite.data && sprite.palette) {
+            const height = sprite.height || sprite.data.length || targetH || 32;
+            const frameW = sprite.frameWidth || sprite.width || targetW || height;
+            const frameCount = sprite.frameCount || Math.max(1, Math.floor((sprite.width || frameW) / frameW));
+            const actualFrame = frameIndex % frameCount;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = frameW;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            const startX = actualFrame * frameW;
+            for (let y = 0; y < height; y++) {
+                const row = sprite.data[y] || '';
+                for (let x = 0; x < frameW; x++) {
+                    const ch = row[startX + x];
+                    const color = sprite.palette && sprite.palette[ch];
+                    if (color) {
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x, y, 1, 1);
+                    }
                 }
             }
+            return canvas;
         }
-        return canvas;
+
+        // Nothing usable found
+        return null;
     }
 
     drawFallback(entity) {
@@ -573,11 +641,13 @@ class PlatformerRenderer {
         } else {
             const name = ghost.sprite || 'player';
             const frame = ghost.frame || 0;
-            const img = this.generateSpriteFrame(name, frame, 24, 32);
+            const gw = ghost.w || 24;
+            const gh = ghost.h || 32;
+            const img = this.generateSpriteFrame(name, frame, gw, gh);
             if (img) {
-                this.ctx.translate(Math.floor(ghost.x + 12), Math.floor(ghost.y + 16));
+                this.ctx.translate(Math.floor(ghost.x + gw/2), Math.floor(ghost.y + gh/2));
                 this.ctx.scale(ghost.facingRight ? 1 : -1, 1);
-                this.ctx.drawImage(img, -12, -16, 24, 32);
+                this.ctx.drawImage(img, -gw/2, -gh/2, gw, gh);
             }
         }
         this.ctx.restore();
@@ -606,7 +676,7 @@ class PlatformerRenderer {
             this.ctx.scale(pos.dir, 1);
             this.ctx.fillStyle = glowColor;
             
-            if (window.game && window.game.playerBody) {
+            if (window.game?.playerBody) {
                 this.ctx.drawImage(window.game.playerBody, -sw/2, -sh/2 + wobble, sw, sh);
             } else {
                 this.ctx.beginPath();
@@ -621,7 +691,7 @@ class PlatformerRenderer {
         this.ctx.translate(player.x + player.w/2, player.y + player.h/2 + headWobble);
         this.ctx.scale(player.facingRight ? 1 : -1, 1);
         
-        if (window.game && window.game.playerHead) {
+        if (window.game?.playerHead) {
             this.ctx.drawImage(window.game.playerHead, -player.w/2, -player.h/2, player.w, player.h);
         } else {
             this.ctx.fillStyle = glowColor;
@@ -657,11 +727,11 @@ class PlatformerRenderer {
     drawCheckpoint(cp) {
         this.ctx.save();
         this.ctx.fillStyle = cp.activated ? '#2ecc71' : '#95a5a6';
-        this.ctx.fillRect(cp.x + 12, cp.y, 4, 64);
+        this.ctx.fillRect(cp.x + Math.floor(this.tileSize/2), cp.y, Math.max(4, Math.floor(this.tileSize/8)), this.tileSize * 2);
         this.ctx.beginPath();
-        this.ctx.moveTo(cp.x + 16, cp.y + 8);
-        this.ctx.lineTo(cp.x + 32, cp.y + 16);
-        this.ctx.lineTo(cp.x + 16, cp.y + 24);
+        this.ctx.moveTo(cp.x + Math.floor(this.tileSize/2), cp.y + Math.floor(this.tileSize/4));
+        this.ctx.lineTo(cp.x + this.tileSize, cp.y + Math.floor(this.tileSize/2));
+        this.ctx.lineTo(cp.x + Math.floor(this.tileSize/2), cp.y + Math.floor(this.tileSize * 3/4));
         this.ctx.closePath();
         this.ctx.fill();
         this.ctx.restore();

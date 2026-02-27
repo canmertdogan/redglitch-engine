@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Platformer Slope Test</title>
+  <style>body{font-family:monospace;background:#222;color:#eee;padding:10px}</style>
+</head>
+<body>
+  <h1>Platformer Slope Test</h1>
+  <div id="output"></div>
+
+  <script src="../PlatformerConfig.js"></script>
+  <script src="../entities/Entity.js"></script>
+  <script src="../entities/Player.js"></script>
+  <script src="../PhysicsSystem.js"></script>
+
+  <script>
+    const out = document.getElementById('output');
+    function log(...args){
+      console.log(...args);
+      const el = document.createElement('div'); el.textContent = args.join(' '); out.appendChild(el);
+    }
+
+    // Map: width 10, height 6. We'll create a 45-degree right slope starting at x=3
+    // We'll encode slope tiles using collision codes 9 (slope right) and 10 (slope left) if PhysicsSystem supports them.
+    const width = 10, height = 6;
+    const collision = new Array(width*height).fill(0);
+
+    // Ground row at y=5 (bottom). Create slope from x=3..6 rising up-left (45deg)
+    // Layout (y increases downward):
+    // y=4: tiles at x=6 -> slope start
+    // y=5: tiles at x=3..6 -> base
+
+    // Use code 9 for slope-right and 10 for slope-left depending on engine conventions; include both to exercise handling
+    collision[5*width + 3] = 1; // flat
+    collision[5*width + 4] = 1; // flat
+    collision[5*width + 5] = 1; // flat
+    collision[5*width + 6] = 1; // flat
+    // Place a slope tile above at x=6,y=4
+    collision[4*width + 6] = 9; // slope right (engine-specific)
+
+    const map = { width, height, collision, layers: [], autoTiling: false };
+
+    const phys = new window.PhysicsSystem();
+    const player = new window.PlatformerPlayer(2 * phys.tileSize, 3 * phys.tileSize); // start left of slope
+    player.vx = 60; // pixels per second to the right
+
+    log('Starting player', player.x.toFixed(2), player.y.toFixed(2));
+
+    // Simulate over time with consistent dt to watch slope behavior
+    const dt = 1/60;
+    for (let i = 0; i < 240; i++) {
+      phys.apply(player, map, [], dt);
+      if (i % 30 === 0) log(`t=${(i*dt).toFixed(2)}s x=${player.x.toFixed(2)} y=${player.y.toFixed(2)} vx=${player.vx.toFixed(2)} vy=${player.vy.toFixed(2)} onGround=${!!player.onGround}`);
+    }
+
+    log('Simulation complete. Inspect values near slope entry (x ~ 3*tileSize -> 6*tileSize).');
+  </script>
+</body>
+</html>

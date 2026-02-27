@@ -149,8 +149,7 @@ function registerPixelTools() {
             // runGenerator has a confirm(), we'll bypass it for AI if we wanted, 
             // but for now we follow the plan's "supervised" logic.
             // Actually, execute() is already approved by the PermissionGate.
-            const gen = new IsoGenerator();
-            const result = gen.generate(map.width, map.height, { 
+            const result = await generateTerrainAsync(map.width, map.height, { 
                 mode: args.mode || 'islands', 
                 scale: args.scale || 0.05, 
                 amplitude: args.amplitude || 10,
@@ -1131,7 +1130,7 @@ window.selectNPC = (id, el) => {
 };
 
 // --- GENERATOR ---
-window.runGenerator = () => {
+window.runGenerator = async () => {
     if (!confirm("This will overwrite the ENTIRE map with new terrain. Proceed?")) return;
     
     const mode = document.getElementById('gen-mode').value;
@@ -1141,8 +1140,8 @@ window.runGenerator = () => {
     const offset = parseInt(document.getElementById('gen-offset').value);
     const bottomZ = parseInt(document.getElementById('gen-bottom').value);
     
-    const gen = new IsoGenerator();
-    const result = gen.generate(map.width, map.height, { mode, scale, amplitude, seaLevel, offset, bottomZ });
+    updateProgress(0, 'Generating terrain...');
+    const result = await generateTerrainAsync(map.width, map.height, { mode, scale, amplitude, seaLevel, offset, bottomZ });
     
     // Replace Map Data
     map.layers = result.layers;
@@ -1154,14 +1153,14 @@ window.runGenerator = () => {
     render();
 };
 
-window.runVegetation = () => {
+window.runVegetation = async () => {
     if (!confirm("Add vegetation to current map?")) return;
     
     const type = document.getElementById('veg-type').value;
     const density = parseFloat(document.getElementById('veg-density').value);
     
-    const gen = new IsoGenerator();
-    const result = gen.generateVegetation(map.width, map.height, map.layers, map.z, { type, density });
+    updateProgress(0, 'Generating vegetation...');
+    const result = await generateVegetationAsync(map.width, map.height, map.layers, map.z, { type, density });
     
     // Update Map (Vegetation generator returns updated arrays)
     map.layers = result.layers;
@@ -1375,6 +1374,41 @@ function initPalette() {
 }
 
 // Copy the robust 2D-to-ISO caching from the Strategy
+// Run heavy IsoGenerator tasks in a worker when available to avoid freezing the UI
+async function generateTerrainAsync(width, height, config) {
+    if (window.Worker) {
+        return new Promise((resolve, reject) => {
+            try {
+                const w = new Worker('/iso_generator_worker.js');
+                w.onmessage = (ev) => { w.terminate(); if (ev.data && ev.data.error) reject(new Error(ev.data.error)); else resolve(ev.data.result); };
+                w.onerror = (err) => { w.terminate(); reject(err); };
+                w.postMessage({ action: 'terrain', width, height, config });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+    const gen = new IsoGenerator();
+    return gen.generate(width, height, config);
+}
+
+async function generateVegetationAsync(width, height, currentLayers, currentZ, config) {
+    if (window.Worker) {
+        return new Promise((resolve, reject) => {
+            try {
+                const w = new Worker('/iso_generator_worker.js');
+                w.onmessage = (ev) => { w.terminate(); if (ev.data && ev.data.error) reject(new Error(ev.data.error)); else resolve(ev.data.result); };
+                w.onerror = (err) => { w.terminate(); reject(err); };
+                w.postMessage({ action: 'vegetation', width, height, currentLayers, currentZ, config });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+    const gen = new IsoGenerator();
+    return gen.generateVegetation(width, height, currentLayers, currentZ, config);
+}
+
 async function combineWorldPixelArt() {
     const tempCanvas = document.createElement('canvas');
     const tSize = 16;

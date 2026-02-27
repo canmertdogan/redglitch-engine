@@ -17,10 +17,13 @@ class PlatformerMovingPlatform extends PlatformerEntity {
         this.waypoints.push({ x: x, y: y });
     }
 
-    update(dt, map) {
-        // Record previous position so consumers can compute deltas reliably
-        this.lastX = this.x;
-        this.lastY = this.y;
+    update(dt = 1/60, map) {
+        // Preserve previous position so consumers can compute deltas reliably after movement
+        const prevX = this.x;
+        const prevY = this.y;
+
+        // Scale factor to keep existing velocity units (per-1/60 tick)
+        const scale = Math.max(0, Math.min(dt * 60, 4));
 
         if (!this.isMoving || this.waypoints.length === 0) {
             this.vx = 0;
@@ -43,9 +46,13 @@ class PlatformerMovingPlatform extends PlatformerEntity {
         } else {
             this.vx = (dx / dist) * this.speed;
             this.vy = (dy / dist) * this.speed;
-            this.x += this.vx;
-            this.y += this.vy;
+            this.x += this.vx * scale;
+            this.y += this.vy * scale;
         }
+
+        // After movement, set last to previous position so getVelocity computes delta = new - last
+        this.lastX = prevX;
+        this.lastY = prevY;
     }
 
     trigger(action, data) {

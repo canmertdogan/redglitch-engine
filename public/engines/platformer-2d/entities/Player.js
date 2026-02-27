@@ -1,6 +1,9 @@
 class PlatformerPlayer extends PlatformerEntity {
     constructor(x, y) {
-        super(x, y, 24, 32);
+        const ts = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+        const w = Math.floor(ts * 0.75);
+        const h = ts;
+        super(x, y, w, h);
         this.color = '#e74c3c';
         
         const config = window.PlatformerConfig || {};
@@ -306,14 +309,16 @@ class PlatformerPlayer extends PlatformerEntity {
         // Particle Triggers
         if (this.onGround && Math.abs(this.vx) > 3) {
             this.walkParticleTimer = (this.walkParticleTimer || 0) + dt;
-            if (this.walkParticleTimer > 0.15) {
+            const walkInterval = (window.PlatformerConfig && window.PlatformerConfig.PARTICLE_WALK_INTERVAL) || 0.15;
+            if (this.walkParticleTimer > walkInterval) {
                 this.walkParticleTimer = 0;
                 if (window.game?.fx) window.game.fx.spawnParticles(this.x + this.w/2, this.y + this.h, 'smoke', 1);
             }
         }
         if (this.isWallSliding) {
             this.wallParticleTimer = (this.wallParticleTimer || 0) + dt;
-            if (this.wallParticleTimer > 0.1) {
+            const wallInterval = (window.PlatformerConfig && window.PlatformerConfig.PARTICLE_WALL_INTERVAL) || 0.1;
+            if (this.wallParticleTimer > wallInterval) {
                 this.wallParticleTimer = 0;
                 const px = this.wallContact === 'left' ? this.x : this.x + this.w;
                 if (window.game?.fx) window.game.fx.spawnParticles(px, this.y + this.h/2, 'smoke', 1);

@@ -5,7 +5,8 @@
 
 class PlatformerEnemy extends PlatformerEntity {
     constructor(x, y, type = 'slime') {
-        super(x, y, 32, 32);
+        const ts = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+        super(x, y, ts, ts);
         this.type = type;
         this.color = '#9b59b6';
         this.speed = 1;
@@ -82,7 +83,7 @@ class PlatformerEnemy extends PlatformerEntity {
         this.hp--;
         if (this.hp <= 0) {
             this.isDead = true;
-            if (window.game && window.game.fx) window.game.fx.spawnParticles(this.x + this.w/2, this.y + this.h/2, 'spark', 10);
+            if (window.game?.fx) window.game.fx.spawnParticles(this.x + this.w/2, this.y + this.h/2, 'spark', 10);
         }
     }
 }
