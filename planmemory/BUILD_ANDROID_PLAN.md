@@ -1,6 +1,6 @@
-# Building ONGONLUK ENGINE for Android
+# Building ketebe ENGINE for Android
 
-This guide explains how to build the ONGONLUK ENGINE (Editor + Runtime) for Android using Capacitor.
+This guide explains how to build the ketebe ENGINE (Editor + Runtime) for Android using Capacitor.
 The system has been configured to use a "FileSystem Adapter" (`android-adapter.bundle.js`) which mimics the Node.js server operations using the Android device's storage.
 
 ## Prerequisites

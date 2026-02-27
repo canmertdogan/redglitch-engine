@@ -1,7 +1,7 @@
-# Comprehensive Project Review: ONGONLUK ENGINE (Ketebe Game Studio)
+# Comprehensive Project Review: ketebe ENGINE (Ketebe Game Studio)
 
 ## 1. Executive Summary
-The **ONGONLUK ENGINE** is a sophisticated, multi-paradigm game development environment designed for high-fidelity 2D and 2.5D game creation. Unlike monolithic engines, ONGONLUK employs a "Multi-Core" strategy, providing specialized mathematical and rendering models for Isometric, Top-Down RPG, and Platformer genres while maintaining a unified asset and tooling pipeline.
+The **ketebe ENGINE** is a sophisticated, multi-paradigm game development environment designed for high-fidelity 2D and 2.5D game creation. Unlike monolithic engines, ketebe employs a "Multi-Core" strategy, providing specialized mathematical and rendering models for Isometric, Top-Down RPG, and Platformer genres while maintaining a unified asset and tooling pipeline.
 
 A defining characteristic of this project is the deep integration of **IRAB Native Cortex**, a locally-hosted AI assistant that utilizes Retrieval-Augmented Generation (RAG) to provide context-aware development support directly within the studio environment.
 
@@ -84,7 +84,7 @@ The project is well-positioned for multi-platform delivery:
 ---
 
 ## 7. Conclusion
-The **ONGONLUK ENGINE** is a high-caliber project that successfully merges traditional game engine architecture with modern AI paradigms. Its robust design, unique personality, and cross-platform readiness make it a powerful toolset for modern game development.
+The **ketebe ENGINE** is a high-caliber project that successfully merges traditional game engine architecture with modern AI paradigms. Its robust design, unique personality, and cross-platform readiness make it a powerful toolset for modern game development.
 
 **Reviewer:** Gemini CLI Assistant
 **Date:** February 11, 2026

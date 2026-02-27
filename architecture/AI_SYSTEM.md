@@ -30,7 +30,7 @@ Ketebe AI is a **browser-native, offline-capable AI assistant** integrated direc
 *   **Streaming**: Tokens are streamed character-by-character to the UI.
 
 ### 2. RAG System (`public/ai/rag-engine.js`)
-*   **Goal**: Provide the small model (0.5B) with accurate knowledge about ONGONLUK ENGINE APIs to prevent hallucinations.
+*   **Goal**: Provide the small model (0.5B) with accurate knowledge about ketebe ENGINE APIs to prevent hallucinations.
 *   **Vector Store**: Uses **Orama** (a browser-native vector database).
 *   **Process**:
     1.  **Ingestion**: Documentation and core engine files are chunked and embedded (using `all-MiniLM-L6-v2`) into a `corpus.json`.

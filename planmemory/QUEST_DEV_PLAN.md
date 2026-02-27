@@ -1,7 +1,7 @@
 # Quest Studio & System Development Plan
 
 ## 1. Overview
-The goal is to build a fully integrated Quest System for the ONGONLUK ENGINE. This involves upgrading the **Quest Studio** (Editor) to handle complex quest logic and creating a runtime **QuestSystem** (Engine) to track progress and rewards.
+The goal is to build a fully integrated Quest System for the ketebe ENGINE. This involves upgrading the **Quest Studio** (Editor) to handle complex quest logic and creating a runtime **QuestSystem** (Engine) to track progress and rewards.
 
 ## 2. Data Architecture
 Quests will be stored in `dunyalar/definitions/quests.json`.

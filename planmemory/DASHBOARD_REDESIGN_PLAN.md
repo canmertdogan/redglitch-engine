@@ -1,7 +1,7 @@
 # Dashboard Redesign Plan: "Retro Workstation"
 
 ## Objective
-Replace the current simple dashboard with a high-fidelity, pixel-art styled "Game Developer Workstation" interface. This will improve usability by categorizing the growing number of tools and enhance the immersion of the ONGONLUK ENGINE.
+Replace the current simple dashboard with a high-fidelity, pixel-art styled "Game Developer Workstation" interface. This will improve usability by categorizing the growing number of tools and enhance the immersion of the ketebe ENGINE.
 
 ## 1. Visual Style & Aesthetic
 *   **Theme:** 90s Cyberpunk / Retro Console Dev Kit.

@@ -1,4 +1,4 @@
-# ONGONLUK ENGINE: Problem Report & Technical Debt (Feb 2026)
+# ketebe ENGINE: Problem Report & Technical Debt (Feb 2026)
 
 ## 🚨 Critical Severity: Architectural Integrity
 

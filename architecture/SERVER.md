@@ -1,6 +1,6 @@
 # Server Architecture (`server.js`)
 
-The ONGONLUK ENGINE server is a Node.js Express application that acts as the bridge between the host operating system and the web-based client.
+The ketebe ENGINE server is a Node.js Express application that acts as the bridge between the host operating system and the web-based client.
 
 ## Core Responsibilities
 

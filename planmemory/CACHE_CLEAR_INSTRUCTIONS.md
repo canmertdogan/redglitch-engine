@@ -24,7 +24,7 @@ The AI worker tensor error has been fixed in `worker-v3.js`, but your browser ha
 
 ### Option 4: Incognito/Private Window
 1. Open a new Incognito/Private browsing window
-2. Navigate to your ONGONLUK ENGINE
+2. Navigate to your ketebe ENGINE
 3. Test IRAB - it should work now
 
 ## What Was Fixed:

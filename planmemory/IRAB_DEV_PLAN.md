@@ -54,7 +54,7 @@
 *   **Tasks:**
     1.  **Read Active File:** Detect the active editor (Monaco/Textarea). Grab the text. Send the first 500 lines as "Current File Context".
     2.  **Read File Tree:** Send a simplified JSON tree of the `activeProject` so IRAB knows file paths for imports.
-    3.  **System Prompt Tuning:** Update the prompt to enforce the persona and awareness of the "ONGONLUK ENGINE" environment.
+    3.  **System Prompt Tuning:** Update the prompt to enforce the persona and awareness of the "ketebe ENGINE" environment.
 
 ### Phase 3: Deep Integration (Medium Term)
 *   **Goal:** Give IRAB "hands" to help build.

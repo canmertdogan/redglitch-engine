@@ -1,6 +1,6 @@
 # Shared Infrastructure (The Kernel)
 
-The "Kernel" of ONGONLUK ENGINE consists of three singleton classes that manage the application's lifecycle, data, and communication. These reside in `public/shared/`.
+The "Kernel" of ketebe ENGINE consists of three singleton classes that manage the application's lifecycle, data, and communication. These reside in `public/shared/`.
 
 ## 1. AssetManager (`AssetManager.js`)
 **Role:** The single source of truth for all game assets.

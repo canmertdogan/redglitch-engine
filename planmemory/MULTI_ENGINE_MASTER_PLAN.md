@@ -1,4 +1,4 @@
-# MULTI-ENGINE MASTER PLAN: ONGONLUK ENGINE Expansion
+# MULTI-ENGINE MASTER PLAN: ketebe ENGINE Expansion
 
 **Status:** Draft
 **Objective:** Introduce two new standalone game runtimes (Isometric 2.5D and 2D Platformer) alongside the existing Top-Down RPG engine, ensuring zero regression for existing projects.

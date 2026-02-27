@@ -1,7 +1,7 @@
-# ONGONLUK ENGINE Architecture Documentation
+# ketebe ENGINE Architecture Documentation
 
 ## Overview
-ONGONLUK ENGINE is a multi-paradigm game development environment supporting three distinct game engines. Each engine is specialized for a specific genre but shares a common infrastructure for asset management and tool integration.
+ketebe ENGINE is a multi-paradigm game development environment supporting three distinct game engines. Each engine is specialized for a specific genre but shares a common infrastructure for asset management and tool integration.
 
 ### Available Engines
 1.  **IsoPixel (iso-pixel)**: An isometric 2.5D engine focused on beautiful pixel art visuals, dynamic lighting, and atmospheric effects.
