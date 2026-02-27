@@ -108,8 +108,8 @@ class PhysicsSystem {
 
     checkCollisions(entity, map, axis) {
         if (!map || !map.collision) return;
-        const tileSize = 32;
-        
+        const tileSize = this.tileSize || 32;
+
         const left = Math.floor(entity.x / tileSize);
         const right = Math.floor((entity.x + entity.w - 0.01) / tileSize);
         const top = Math.floor(entity.y / tileSize);
@@ -243,7 +243,7 @@ class PhysicsSystem {
     }
 
     checkWallContact(entity, map) {
-        const tileSize = 32;
+        const tileSize = this.tileSize || 32;
         const margin = 2;
         
         // Left

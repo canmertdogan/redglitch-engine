@@ -10,7 +10,7 @@ class JumpSimulator {
         this.moveSpeed = physicsConfig.moveSpeed || 1.5;
         this.friction = physicsConfig.friction || 0.8;
         this.maxSpeed = physicsConfig.maxSpeed || 6;
-        this.tileSize = 32;
+        this.tileSize = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
     }
 
     getCapabilities() {

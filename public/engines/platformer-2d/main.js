@@ -4,6 +4,7 @@ class PlatformerGame {
         this.renderer = new PlatformerRenderer(this.canvas);
         
         this.physics = new PhysicsSystem();
+        this.tileSize = this.physics.tileSize || (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
         this.combat = new PlatformerCombatSystem(this);
         this.player = new PlatformerPlayer(50, 50);
         
@@ -219,8 +220,8 @@ class PlatformerGame {
         
         // Robust Spawn Detection (handles multiple formats)
         if(this.map.spawn) {
-            this.player.x = (this.map.spawn.x || 0) * 32;
-            this.player.y = (this.map.spawn.y || 0) * 32;
+            this.player.x = (this.map.spawn.x || 0) * this.tileSize;
+            this.player.y = (this.map.spawn.y || 0) * this.tileSize;
         } else if (this.map.spawnX !== undefined) {
             this.player.x = this.map.spawnX;
             this.player.y = this.map.spawnY;
@@ -261,44 +262,44 @@ class PlatformerGame {
     }
 
     _addMovingPlatform(d) {
-        const plat = new PlatformerMovingPlatform(d.x, d.y);
+        const plat = new PlatformerMovingPlatform(d.x * this.tileSize, d.y * this.tileSize);
         // Add a simple back-and-forth waypoint if none exist
-        plat.addWaypoint(d.x, d.y);
-        plat.addWaypoint(d.x + 5, d.y);
+        plat.addWaypoint(d.x * this.tileSize, d.y * this.tileSize);
+        plat.addWaypoint((d.x + 5) * this.tileSize, d.y * this.tileSize);
         this.platforms.push(plat);
     }
 
     _addCollectible(c) {
-        this.collectibles.push({ ...c, x: c.x * 32, y: c.y * 32, w: 16, h: 16, collected: false, type: c.type || 'coin' });
+        this.collectibles.push({ ...c, x: c.x * this.tileSize, y: c.y * this.tileSize, w: 16, h: 16, collected: false, type: c.type || 'coin' });
     }
 
     _addCheckpoint(cp) {
-        this.checkpoints.push({ x: cp.x * 32, y: cp.y * 32, w: 32, h: 64, activated: false });
+        this.checkpoints.push({ x: cp.x * this.tileSize, y: cp.y * this.tileSize, w: this.tileSize, h: this.tileSize * 2, activated: false });
     }
 
     _addEntity(e) {
         if (e.type === 'enemy') {
-            const enemy = new PlatformerEnemy(e.x, e.y, e.sprite || 'slime');
+            const enemy = new PlatformerEnemy(e.x * this.tileSize, e.y * this.tileSize, e.sprite || 'slime');
             if (e.behavior) enemy.behavior = e.behavior;
             enemy.id = e.id || enemy.id;
             enemy.hp = e.hp || enemy.hp;
             enemy.speed = e.speed || enemy.speed;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_flying') {
-            const enemy = new PlatformerFlyingEnemy(e.x, e.y, e.sprite || 'bat');
+            const enemy = new PlatformerFlyingEnemy(e.x * this.tileSize, e.y * this.tileSize, e.sprite || 'bat');
             enemy.id = e.id || enemy.id;
             if (e.behavior) enemy.behavior = e.behavior;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_shooter') {
-            const enemy = new PlatformerShooterEnemy(e.x, e.y, e.sprite || 'goblin');
+            const enemy = new PlatformerShooterEnemy(e.x * this.tileSize, e.y * this.tileSize, e.sprite || 'goblin');
             enemy.id = e.id || enemy.id;
             this.entities.push(enemy);
         } else if (e.type === 'pushable') {
-            const push = new PlatformerPushableBlock(e.x, e.y, e.w || 32, e.h || 32);
+            const push = new PlatformerPushableBlock(e.x * this.tileSize, e.y * this.tileSize, e.w || 32, e.h || 32);
             push.id = e.id || push.id;
             this.entities.push(push);
         } else if (['switch', 'pressure_plate', 'zone'].includes(e.type)) {
-            const trigger = new PlatformerTrigger(e.x, e.y, {
+            const trigger = new PlatformerTrigger(e.x * this.tileSize, e.y * this.tileSize, {
                 triggerType: e.type,
                 targetId: e.targetId,
                 action: e.action,
@@ -307,7 +308,7 @@ class PlatformerGame {
             });
             this.entities.push(trigger);
         } else {
-            const ent = { ...e, x: e.x * 32, y: e.y * 32, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' };
+            const ent = { ...e, x: e.x * this.tileSize, y: e.y * this.tileSize, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' };
             if (e.dialogueId) ent.dialogueId = e.dialogueId;
             ent.id = e.id || ent.id;
             this.entities.push(ent);
@@ -424,8 +425,8 @@ class PlatformerGame {
                 if(!ent.patrolDir) ent.patrolDir = 1;
                 ent.vx = ent.patrolDir * 0.5;
                 const nextX = ent.x + ent.vx * 5;
-                const tileX = Math.floor(nextX / 32);
-                const tileY = Math.floor(ent.y / 32);
+                const tileX = Math.floor(nextX / this.tileSize);
+                const tileY = Math.floor(ent.y / this.tileSize);
                 if(this.physics.getTile(this.map, tileX, tileY) === 1) ent.patrolDir *= -1;
             }
             this.physics.apply(ent, this.map, this.platforms);
@@ -468,12 +469,12 @@ class PlatformerGame {
     _checkGoal() {
         const goalData = this.map.exit || this.map.goal;
         if(!goalData) return;
-        const goal = { x: goalData.x * 32, y: goalData.y * 32, w: 32, h: 64 };
+        const goal = { x: goalData.x * this.tileSize, y: goalData.y * this.tileSize, w: this.tileSize, h: this.tileSize * 2 };
         if(this._collision(this.player, goal)) this.completeLevel();
     }
 
     _checkDeathZones() {
-        if(this.player.y > this.map.height * 32) this.respawn();
+        if(this.player.y > this.map.height * this.tileSize) this.respawn();
     }
 
     _collision(a, b) {
@@ -485,8 +486,8 @@ class PlatformerGame {
             this.player.x = this.lastCheckpoint.x;
             this.player.y = this.lastCheckpoint.y;
         } else if(this.map.spawn) {
-            this.player.x = this.map.spawn.x * 32;
-            this.player.y = this.map.spawn.y * 32;
+            this.player.x = this.map.spawn.x * this.tileSize;
+            this.player.y = this.map.spawn.y * this.tileSize;
         }
         this.player.vx = 0; this.player.vy = 0;
         this.player.history = [];

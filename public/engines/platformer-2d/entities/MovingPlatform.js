@@ -1,6 +1,6 @@
 class PlatformerMovingPlatform extends PlatformerEntity {
     constructor(x, y, w = 64, h = 16) {
-        super(x * 32, y * 32, w, h);
+        super(x, y, w, h);
         this.color = '#3498db';
         
         this.waypoints = [];
@@ -14,18 +14,22 @@ class PlatformerMovingPlatform extends PlatformerEntity {
     }
 
     addWaypoint(x, y) {
-        this.waypoints.push({ x: x * 32, y: y * 32 });
+        this.waypoints.push({ x: x, y: y });
     }
 
     update(dt, map) {
+        // Record previous position so consumers can compute deltas reliably
+        this.lastX = this.x;
+        this.lastY = this.y;
+
         if (!this.isMoving || this.waypoints.length === 0) {
             this.vx = 0;
             this.vy = 0;
+            // Ensure last position reflects current to avoid duplicated deltas
+            this.lastX = this.x;
+            this.lastY = this.y;
             return;
         }
-
-        this.lastX = this.x;
-        this.lastY = this.y;
 
         const target = this.waypoints[this.currentWaypointIndex];
         const dx = target.x - this.x;

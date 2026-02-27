@@ -5,7 +5,7 @@
 
 class PlatformerPushableBlock extends PlatformerEntity {
     constructor(x, y, w = 32, h = 32) {
-        super(x * 32, y * 32, w, h);
+        super(x, y, w, h);
         this.color = '#7f8c8d';
         this.vx = 0;
         this.vy = 0;

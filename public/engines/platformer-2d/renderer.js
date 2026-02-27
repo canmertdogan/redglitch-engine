@@ -352,7 +352,7 @@ class PlatformerRenderer {
                 if (window.createPixelImage) {
                     const img = window.createPixelImage(spriteName);
                     if (img) {
-                        this.ctx.drawImage(img, deco.x * 32, deco.y * 32, deco.w || 32, deco.h || 32);
+                        this.ctx.drawImage(img, deco.x * this.tileSize, deco.y * this.tileSize, deco.w || this.tileSize, deco.h || this.tileSize);
                     }
                 }
             } else if (deco.tileId) {
@@ -371,7 +371,7 @@ class PlatformerRenderer {
                 if (tid >= 0 && targetTileset && targetTileset.width > 0) {
                     const sx = (tid % totalCols) * ts;
                     const sy = Math.floor(tid / totalCols) * ts;
-                    this.ctx.drawImage(targetTileset, sx, sy, ts, ts, deco.x * 32, deco.y * 32, deco.w || 32, deco.h || 32);
+                    this.ctx.drawImage(targetTileset, sx, sy, ts, ts, deco.x * this.tileSize, deco.y * this.tileSize, deco.w || this.tileSize, deco.h || this.tileSize);
                 }
             }
             this.ctx.restore();
@@ -668,8 +668,8 @@ class PlatformerRenderer {
     }
 
     drawGoal(goal) {
-        const x = goal.x * 32;
-        const y = goal.y * 32;
+        const x = goal.x * this.tileSize;
+        const y = goal.y * this.tileSize;
         this.ctx.save();
         this.ctx.fillStyle = '#f1c40f';
         this.ctx.beginPath();

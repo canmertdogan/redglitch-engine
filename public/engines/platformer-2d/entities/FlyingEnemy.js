@@ -28,8 +28,9 @@ class PlatformerFlyingEnemy extends PlatformerEnemy {
 
             // Check for walls
             const nextX = this.x + (this.vx > 0 ? this.w : 0) + this.vx;
-            const tileX = Math.floor(nextX / 32);
-            const tileY = Math.floor((this.y + this.h / 2) / 32);
+            const ts = window.game?.tileSize || window.PlatformerConfig?.TILE_SIZE || 32;
+            const tileX = Math.floor(nextX / ts);
+            const tileY = Math.floor((this.y + this.h / 2) / ts);
             if (window.game?.physics && window.game.physics.getTile(map, tileX, tileY) === 1) {
                 this.direction *= -1;
             }

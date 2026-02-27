@@ -25,8 +25,9 @@ class PlatformerProjectile extends PlatformerEntity {
         this.y += this.vy;
 
         // Simple tile collision for projectiles
-        const tx = Math.floor((this.x + this.w/2) / 32);
-        const ty = Math.floor((this.y + this.h/2) / 32);
+        const ts = window.game?.tileSize || window.PlatformerConfig?.TILE_SIZE || 32;
+        const tx = Math.floor((this.x + this.w/2) / ts);
+        const ty = Math.floor((this.y + this.h/2) / ts);
         if (window.game?.physics.getTile(map, tx, ty) === 1) {
             this.onHitWall();
         }

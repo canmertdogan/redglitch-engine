@@ -47,9 +47,10 @@ class PlatformerEnemy extends PlatformerEntity {
 
         // Check for walls or edges
         const nextX = this.x + (this.vx > 0 ? this.w : 0) + this.vx;
-        const tileX = Math.floor(nextX / 32);
-        const tileY = Math.floor((this.y + this.h / 2) / 32);
-        const tileBelowY = Math.floor((this.y + this.h + 2) / 32);
+        const ts = window.game?.tileSize || window.PlatformerConfig?.TILE_SIZE || 32;
+        const tileX = Math.floor(nextX / ts);
+        const tileY = Math.floor((this.y + this.h / 2) / ts);
+        const tileBelowY = Math.floor((this.y + this.h + 2) / ts);
 
         const wall = window.game.physics.getTile(map, tileX, tileY);
         const floor = window.game.physics.getTile(map, tileX, tileBelowY);
