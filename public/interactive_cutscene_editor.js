@@ -1795,7 +1795,7 @@ class InteractiveCutsceneEditor {
     }
     
     showAbout() {
-        alert('INTERACTIVE CUTSCENE STUDIO v1.0\nBuilt with Ongonluk Engine\n\nPowered by ONGONLUK Technology');
+        alert('INTERACTIVE CUTSCENE STUDIO v1.0\nBuilt with Ketebe Engine\n\nPowered by KETEBE Technology');
     }
     
     // New editing tools

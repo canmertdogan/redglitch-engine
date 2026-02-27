@@ -3,25 +3,44 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
+const safeFs = require('../utils/safeFs');
 
 const ensureDir = async (dir) => {
     await fs.mkdir(dir, { recursive: true });
 };
 
+function isSafeBaseName(value) {
+    return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
+}
+
+function normalizeLogicName(value, allowAlgorithm = false) {
+    if (typeof value !== 'string') return null;
+    if (allowAlgorithm && value.endsWith('.algorithm')) {
+        const base = value.slice(0, -10);
+        return isSafeBaseName(base) ? `${base}.json` : null;
+    }
+    if (value.endsWith('.json')) {
+        const base = value.slice(0, -5);
+        return isSafeBaseName(base) ? `${base}.json` : null;
+    }
+    return isSafeBaseName(value) ? `${value}.json` : null;
+}
+
 // Save logic (visual workspace + executable code)
 router.post('/save', async (req, res) => {
     const { name, json, js } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
+    if (!isSafeBaseName(name)) return res.status(400).json({ error: 'Invalid name' });
     try {
         const activeProject = projectService.getActiveProject();
         const logicDir = path.join(activeProject, 'data', 'logic');
         await ensureDir(logicDir);
         
         // Save the visual workspace (JSON)
-        if (json) await fs.writeFile(path.join(logicDir, `${name}.json`), json);
+        if (json) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.json`), json, 'utf8');
         
         // Save the executable code (JS)
-        if (js) await fs.writeFile(path.join(logicDir, `${name}.js`), js);
+        if (js) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.js`), js, 'utf8');
         
         res.json({ success: true });
     } catch (err) {
@@ -47,6 +66,7 @@ router.get('/list', async (req, res) => {
 // Get logic JavaScript executable
 router.get('/js/:name', async (req, res) => {
     try {
+        if (!isSafeBaseName(req.params.name)) return res.status(400).json({ error: 'Invalid name' });
         const activeProject = projectService.getActiveProject();
         const js = await fs.readFile(path.join(activeProject, 'data', 'logic', `${req.params.name}.js`), 'utf8');
         res.set('Content-Type', 'application/javascript');
@@ -60,17 +80,9 @@ router.get('/js/:name', async (req, res) => {
 router.get('/:name', async (req, res) => {
     try {
         const activeProject = projectService.getActiveProject();
-        let name = req.params.name;
-        let filePath;
-        
-        // Support both .json and .algorithm extensions
-        if (name.endsWith('.algorithm')) {
-            filePath = path.join(activeProject, 'data', 'logic', name.replace('.algorithm', '.json'));
-        } else if (name.endsWith('.json')) {
-            filePath = path.join(activeProject, 'data', 'logic', name);
-        } else {
-            filePath = path.join(activeProject, 'data', 'logic', `${name}.json`);
-        }
+        const normalizedFile = normalizeLogicName(req.params.name, true);
+        if (!normalizedFile) return res.status(400).json({ error: 'Invalid name' });
+        const filePath = path.join(activeProject, 'data', 'logic', normalizedFile);
         
         const json = await fs.readFile(filePath, 'utf8');
         
@@ -90,17 +102,12 @@ router.get('/:name', async (req, res) => {
 router.post('/:name', async (req, res) => {
     try {
         const activeProject = projectService.getActiveProject();
-        let name = req.params.name;
-        let filePath;
-        
-        if (name.endsWith('.algorithm')) {
-            filePath = path.join(activeProject, 'data', 'logic', name.replace('.algorithm', '.json'));
-        } else {
-            filePath = path.join(activeProject, 'data', 'logic', `${name}.json`);
-        }
+        const normalizedFile = normalizeLogicName(req.params.name, true);
+        if (!normalizedFile) return res.status(400).json({ error: 'Invalid name' });
+        const filePath = path.join(activeProject, 'data', 'logic', normalizedFile);
         
         await ensureDir(path.dirname(filePath));
-        await fs.writeFile(filePath, JSON.stringify(req.body, null, 2), 'utf8');
+        await safeFs.safeWriteFullPath(path.dirname(filePath), filePath, JSON.stringify(req.body, null, 2), 'utf8');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to save algorithm' });

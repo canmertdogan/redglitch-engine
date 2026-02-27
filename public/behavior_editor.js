@@ -1,5 +1,5 @@
 /**
- * ONGONLUK BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
+ * KETEBE BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
  * Visual Behavior Tree / FSM Editor for NPCs
  * Integrated with EventBus, SharedProjectState, and AssetManager
  */
@@ -765,7 +765,7 @@ Tools:
 BRAIN ARCHITECT v1.0
 ====================
 
-Visual NPC behavior programming tool for Ongonluk Engine.
+Visual NPC behavior programming tool for Ketebe Engine.
 
 Features:
   • Node-based behavior design
@@ -774,7 +774,7 @@ Features:
   • Multi-select & alignment tools
   • Collapsible UI panels
 
-Created for Ongonluk Game Engine
+Created for Ketebe Game Engine
         `.trim());
     }
     

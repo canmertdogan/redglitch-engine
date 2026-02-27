@@ -11,6 +11,8 @@
  */
 
 export class PermissionGate {
+    static SESSION_ALLOW_KEY = 'ai_permission_always_allow_tools';
+
     // PROTECTED FILES - CANNOT BE MODIFIED BY AI
     static PROTECTED_PATTERNS = [
         /\/engines\/.*\/main\.js$/,                    // Engine cores
@@ -27,11 +29,45 @@ export class PermissionGate {
     ];
 
     constructor(config = {}) {
-        this.alwaysAllowSession = new Set(); // Tools allowed for this session
+        this.alwaysAllowSession = this._loadAlwaysAllowSession(); // Tools allowed for this browser session
         this.config = config;
         this.auditLog = []; // Track all actions
         this.maxAuditEntries = 1000;
         this.aiActionsStack = []; // AI specific undo stack
+        this._modalQueue = Promise.resolve(); // Prevent overlapping permission modals
+    }
+
+    _escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    _loadAlwaysAllowSession() {
+        try {
+            const raw = sessionStorage.getItem(PermissionGate.SESSION_ALLOW_KEY);
+            if (!raw) return new Set();
+            const list = JSON.parse(raw);
+            if (!Array.isArray(list)) return new Set();
+            return new Set(list.filter((item) => typeof item === 'string'));
+        } catch (err) {
+            console.warn('[PermissionGate] Could not load session approvals:', err);
+            return new Set();
+        }
+    }
+
+    _saveAlwaysAllowSession() {
+        try {
+            sessionStorage.setItem(
+                PermissionGate.SESSION_ALLOW_KEY,
+                JSON.stringify(Array.from(this.alwaysAllowSession))
+            );
+        } catch (err) {
+            console.warn('[PermissionGate] Could not persist session approvals:', err);
+        }
     }
 
     /**
@@ -70,36 +106,48 @@ export class PermissionGate {
      * Request permission for a tool action with KAP security awareness.
      */
     async requestPermission(toolName, args, requiresConfirmation) {
+        const safeArgs = args && typeof args === 'object' ? args : {};
         if (!requiresConfirmation) {
-            this.logAction('auto-approve', toolName, args, 'read-only/safe');
+            this.logAction('auto-approve', toolName, safeArgs, 'read-only/safe');
             return true;
         }
 
-        if (args.filePath || args.path || args.file) {
-            const targetPath = args.filePath || args.path || args.file;
+        if (safeArgs.filePath || safeArgs.path || safeArgs.file) {
+            const targetPath = safeArgs.filePath || safeArgs.path || safeArgs.file;
             const canModify = PermissionGate.canModifyFile(targetPath);
             if (!canModify.allowed) {
-                this.logAction('blocked', toolName, args, canModify.reason);
-                await this._showBlockedModal(toolName, targetPath, canModify.reason);
-                return false;
+                this.logAction('blocked', toolName, safeArgs, canModify.reason);
+                return this._enqueueModal(() => this._showBlockedModal(toolName, targetPath, canModify.reason).then(() => false));
             }
         }
 
         if (this.alwaysAllowSession.has(toolName)) {
-            this.logAction('auto-approve', toolName, args, 'session-allowed');
+            this.logAction('auto-approve', toolName, safeArgs, 'session-allowed');
             return true;
         }
 
-        const response = await this._showConfirmationModal(toolName, args);
+        const response = await this._enqueueModal(() => this._showConfirmationModal(toolName, safeArgs));
         if (response === 'always') {
             this.alwaysAllowSession.add(toolName);
-            this.logAction('approve', toolName, args, 'session-allowed-granted');
+            this._saveAlwaysAllowSession();
+            this.logAction('approve', toolName, safeArgs, 'session-allowed-granted');
             return true;
         }
 
         const approved = response === 'approve';
-        this.logAction(approved ? 'approve' : 'reject', toolName, args, response);
+        this.logAction(approved ? 'approve' : 'reject', toolName, safeArgs, response);
         return approved;
+    }
+
+    _enqueueModal(task) {
+        const run = this._modalQueue
+            .then(() => task())
+            .catch((err) => {
+                console.error('[PermissionGate] Modal queue error:', err);
+                return false;
+            });
+        this._modalQueue = run.then(() => undefined, () => undefined);
+        return run;
     }
 
     /**
@@ -141,7 +189,7 @@ export class PermissionGate {
                 diffHtml = `
                     <div class="ai-diff-container">
                         <div class="ai-diff-label">PROPOSED CHANGES:</div>
-                        <pre class="ai-code-preview">${code.substring(0, 500)}${code.length > 500 ? '...' : ''}</pre>
+                        <pre class="ai-code-preview">${this._escapeHtml(code.substring(0, 500))}${code.length > 500 ? '...' : ''}</pre>
                     </div>
                 `;
             }
@@ -157,10 +205,10 @@ export class PermissionGate {
                     
                     <div class="ai-permission-details">
                         <div class="ai-action-summary">
-                            IRAB wants to use <strong>${toolName}</strong>
+                            IRAB wants to use <strong>${this._escapeHtml(toolName)}</strong>
                         </div>
                         
-                        ${diffHtml || `<pre>${JSON.stringify(args, null, 2)}</pre>`}
+                        ${diffHtml || `<pre>${this._escapeHtml(JSON.stringify(args, null, 2))}</pre>`}
                         
                         <div class="ai-permission-warning">
                             THIS ACTION MAY MODIFY YOUR PROJECT FILES.
@@ -178,9 +226,9 @@ export class PermissionGate {
             this._ensureStyles();
             document.body.appendChild(modal);
 
-            document.getElementById('ai-reject-btn').onclick = () => { document.body.removeChild(modal); resolve('reject'); };
-            document.getElementById('ai-approve-btn').onclick = () => { document.body.removeChild(modal); resolve('approve'); };
-            document.getElementById('ai-always-btn').onclick = () => { document.body.removeChild(modal); resolve('always'); };
+            modal.querySelector('#ai-reject-btn').onclick = () => { document.body.removeChild(modal); resolve('reject'); };
+            modal.querySelector('#ai-approve-btn').onclick = () => { document.body.removeChild(modal); resolve('approve'); };
+            modal.querySelector('#ai-always-btn').onclick = () => { document.body.removeChild(modal); resolve('always'); };
         });
     }
 
@@ -194,9 +242,9 @@ export class PermissionGate {
                         <span class="ai-modal-title">🚫 ACTION BLOCKED</span>
                     </div>
                     <div class="ai-permission-details">
-                        <p><strong>Tool:</strong> ${toolName}</p>
-                        <p><strong>Target:</strong> ${filePath}</p>
-                        <p class="ai-block-reason">${reason}</p>
+                        <p><strong>Tool:</strong> ${this._escapeHtml(toolName)}</p>
+                        <p><strong>Target:</strong> ${this._escapeHtml(filePath)}</p>
+                        <p class="ai-block-reason">${this._escapeHtml(reason)}</p>
                     </div>
                     <div class="ai-permission-actions">
                         <button id="ai-ok-btn" class="ai-btn-primary">UNDERSTOOD</button>
@@ -205,7 +253,7 @@ export class PermissionGate {
             `;
             this._ensureStyles();
             document.body.appendChild(modal);
-            document.getElementById('ai-ok-btn').onclick = () => { document.body.removeChild(modal); resolve(); };
+            modal.querySelector('#ai-ok-btn').onclick = () => { document.body.removeChild(modal); resolve(); };
         });
     }
 

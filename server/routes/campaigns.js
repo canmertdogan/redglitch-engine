@@ -4,6 +4,17 @@ const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 
+function isSafeId(value) {
+    return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
+}
+
+function normalizeCampaignFileName(rawName) {
+    if (typeof rawName !== 'string') return null;
+    const base = rawName.endsWith('.json') ? rawName.slice(0, -5) : rawName;
+    if (!isSafeId(base)) return null;
+    return `${base}.json`;
+}
+
 async function ensureDir(dir) {
     try {
         await fs.mkdir(dir, { recursive: true });
@@ -19,7 +30,7 @@ async function saveDefinition(filename, data) {
     
     const filePath = path.join(targetDir, filename);
     await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
 // Save campaign flow definition
@@ -66,7 +77,8 @@ router.get('/campaigns/list', async (req, res) => {
 router.get('/campaigns/:name', async (req, res) => {
     try {
         const activeProject = projectService.getActiveProject();
-        const name = req.params.name.endsWith('.json') ? req.params.name : `${req.params.name}.json`;
+        const name = normalizeCampaignFileName(req.params.name);
+        if (!name) return res.status(400).json({ error: 'Invalid campaign name' });
         
         // Try project first
         let campaignFile = path.join(activeProject, 'campaigns', name);
@@ -88,14 +100,16 @@ router.get('/campaigns/:name', async (req, res) => {
 // Save campaign
 router.post('/campaigns/:name', async (req, res) => {
     try {
+        const campaignName = normalizeCampaignFileName(req.params.name);
+        if (!campaignName) return res.status(400).json({ error: 'Invalid campaign name' });
         const activeProject = projectService.getActiveProject();
         const campaignsDir = path.join(activeProject, 'campaigns');
         await fs.mkdir(campaignsDir, { recursive: true });
         
-        const campaignFile = path.join(campaignsDir, `${req.params.name}.json`);
-        await fs.writeFile(campaignFile, JSON.stringify(req.body, null, 2));
+        const campaignFile = path.join(campaignsDir, campaignName);
+        await safeFs.safeWriteFullPath(campaignsDir, campaignFile, JSON.stringify(req.body, null, 2), 'utf8');
         
-        console.log(`Campaign saved: ${req.params.name}`);
+        console.log(`Campaign saved: ${campaignName}`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error saving campaign:', err);
@@ -106,11 +120,13 @@ router.post('/campaigns/:name', async (req, res) => {
 // Delete campaign
 router.delete('/campaigns/:name', async (req, res) => {
     try {
+        const campaignName = normalizeCampaignFileName(req.params.name);
+        if (!campaignName) return res.status(400).json({ error: 'Invalid campaign name' });
         const activeProject = projectService.getActiveProject();
-        const campaignFile = path.join(activeProject, 'campaigns', `${req.params.name}.json`);
+        const campaignFile = path.join(activeProject, 'campaigns', campaignName);
         await fs.unlink(campaignFile);
         
-        console.log(`Campaign deleted: ${req.params.name}`);
+        console.log(`Campaign deleted: ${campaignName}`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting campaign:', err);
@@ -121,6 +137,7 @@ router.delete('/campaigns/:name', async (req, res) => {
 // Get campaign state for user
 router.get('/campaign-state/:username', async (req, res) => {
     try {
+        if (!isSafeId(req.params.username)) return res.status(400).json({ error: 'Invalid username' });
         const activeProject = projectService.getActiveProject();
         const stateFile = path.join(activeProject, 'data', 'saves', `campaign_${req.params.username}.json`);
         const data = await fs.readFile(stateFile, 'utf8');
@@ -133,12 +150,13 @@ router.get('/campaign-state/:username', async (req, res) => {
 // Save campaign state for user
 router.post('/campaign-state/:username', async (req, res) => {
     try {
+        if (!isSafeId(req.params.username)) return res.status(400).json({ error: 'Invalid username' });
         const activeProject = projectService.getActiveProject();
         const savesDir = path.join(activeProject, 'data', 'saves');
         await fs.mkdir(savesDir, { recursive: true });
         
         const stateFile = path.join(savesDir, `campaign_${req.params.username}.json`);
-        await fs.writeFile(stateFile, JSON.stringify(req.body, null, 2));
+        await safeFs.safeWriteFullPath(savesDir, stateFile, JSON.stringify(req.body, null, 2), 'utf8');
         
         res.json({ success: true });
     } catch (err) {

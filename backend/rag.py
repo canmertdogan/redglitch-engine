@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 import chromadb
 from chromadb.config import Settings
 
@@ -109,7 +110,8 @@ class RAGSystem:
                                     data = json.loads(content)
                                     if isinstance(data, (dict, list)):
                                         processed_content = self._json_to_text(data, file)
-                                except: pass
+                                except Exception:
+                                    pass
 
                             # Categorization
                             category = "code"

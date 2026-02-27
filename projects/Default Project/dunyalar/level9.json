@@ -24911,5 +24911,6 @@
   "exitX": 2208,
   "exitY": 1200,
   "spawnX": 2496,
-  "spawnY": 1776
+  "spawnY": 1776,
+  "engineType": "rpg-topdown"
 }

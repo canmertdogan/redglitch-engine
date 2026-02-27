@@ -1,0 +1,488 @@
+{
+  "assets": [
+    {
+      "id": "muzikler/menu_theme.mp3",
+      "name": "menu_theme.mp3",
+      "path": "muzikler/menu_theme.mp3",
+      "type": "audio",
+      "metadata": {
+        "size": 8945229,
+        "ext": ".mp3"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/achievements.json",
+      "name": "achievements.json",
+      "path": "dunyalar/definitions/achievements.json",
+      "type": "json",
+      "metadata": {
+        "size": 551,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/archer.json",
+      "name": "archer.json",
+      "path": "dunyalar/definitions/archer.json",
+      "type": "json",
+      "metadata": {
+        "size": 644,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/boss_demon.json",
+      "name": "boss_demon.json",
+      "path": "dunyalar/definitions/boss_demon.json",
+      "type": "json",
+      "metadata": {
+        "size": 672,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/camp_fire.json",
+      "name": "camp_fire.json",
+      "path": "dunyalar/definitions/camp_fire.json",
+      "type": "json",
+      "metadata": {
+        "size": 471,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/campaign.json",
+      "name": "campaign.json",
+      "path": "dunyalar/definitions/campaign.json",
+      "type": "json",
+      "metadata": {
+        "size": 1964,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/chest_gold.json",
+      "name": "chest_gold.json",
+      "path": "dunyalar/definitions/chest_gold.json",
+      "type": "json",
+      "metadata": {
+        "size": 456,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/chest_wood.json",
+      "name": "chest_wood.json",
+      "path": "dunyalar/definitions/chest_wood.json",
+      "type": "json",
+      "metadata": {
+        "size": 457,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/dialogues.json",
+      "name": "dialogues.json",
+      "path": "dunyalar/definitions/dialogues.json",
+      "type": "json",
+      "metadata": {
+        "size": 2119,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/door_locked.json",
+      "name": "door_locked.json",
+      "path": "dunyalar/definitions/door_locked.json",
+      "type": "json",
+      "metadata": {
+        "size": 475,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/enemies.json",
+      "name": "enemies.json",
+      "path": "dunyalar/definitions/enemies.json",
+      "type": "json",
+      "metadata": {
+        "size": 1171,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/ghost.json",
+      "name": "ghost.json",
+      "path": "dunyalar/definitions/ghost.json",
+      "type": "json",
+      "metadata": {
+        "size": 669,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/goblin.json",
+      "name": "goblin.json",
+      "path": "dunyalar/definitions/goblin.json",
+      "type": "json",
+      "metadata": {
+        "size": 671,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/health_font.json",
+      "name": "health_font.json",
+      "path": "dunyalar/definitions/health_font.json",
+      "type": "json",
+      "metadata": {
+        "size": 443,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/interactive_cutscenes/forest_encounter_demo.json",
+      "name": "forest_encounter_demo.json",
+      "path": "dunyalar/definitions/interactive_cutscenes/forest_encounter_demo.json",
+      "type": "json",
+      "metadata": {
+        "size": 26225,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/interactive_cutscenes/sample_interactive_cutscene.json",
+      "name": "sample_interactive_cutscene.json",
+      "path": "dunyalar/definitions/interactive_cutscenes/sample_interactive_cutscene.json",
+      "type": "json",
+      "metadata": {
+        "size": 5981,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/interactive_cutscenes/templates/undertale_style_intro.json",
+      "name": "undertale_style_intro.json",
+      "path": "dunyalar/definitions/interactive_cutscenes/templates/undertale_style_intro.json",
+      "type": "json",
+      "metadata": {
+        "size": 13086,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/items.json",
+      "name": "items.json",
+      "path": "dunyalar/definitions/items.json",
+      "type": "json",
+      "metadata": {
+        "size": 32999,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/lever_switch.json",
+      "name": "lever_switch.json",
+      "path": "dunyalar/definitions/lever_switch.json",
+      "type": "json",
+      "metadata": {
+        "size": 285,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/locales.json",
+      "name": "locales.json",
+      "path": "dunyalar/definitions/locales.json",
+      "type": "json",
+      "metadata": {
+        "size": 538,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/merchant.json",
+      "name": "merchant.json",
+      "path": "dunyalar/definitions/merchant.json",
+      "type": "json",
+      "metadata": {
+        "size": 414,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/music.json",
+      "name": "music.json",
+      "path": "dunyalar/definitions/music.json",
+      "type": "json",
+      "metadata": {
+        "size": 269,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/npcs.json",
+      "name": "npcs.json",
+      "path": "dunyalar/definitions/npcs.json",
+      "type": "json",
+      "metadata": {
+        "size": 1221,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/orc.json",
+      "name": "orc.json",
+      "path": "dunyalar/definitions/orc.json",
+      "type": "json",
+      "metadata": {
+        "size": 666,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/potted_plant.json",
+      "name": "potted_plant.json",
+      "path": "dunyalar/definitions/potted_plant.json",
+      "type": "json",
+      "metadata": {
+        "size": 309,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/quests.json",
+      "name": "quests.json",
+      "path": "dunyalar/definitions/quests.json",
+      "type": "json",
+      "metadata": {
+        "size": 5298,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/save_shrine.json",
+      "name": "save_shrine.json",
+      "path": "dunyalar/definitions/save_shrine.json",
+      "type": "json",
+      "metadata": {
+        "size": 441,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/skeleton.json",
+      "name": "skeleton.json",
+      "path": "dunyalar/definitions/skeleton.json",
+      "type": "json",
+      "metadata": {
+        "size": 676,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/skills.json",
+      "name": "skills.json",
+      "path": "dunyalar/definitions/skills.json",
+      "type": "json",
+      "metadata": {
+        "size": 1933,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/slime.json",
+      "name": "slime.json",
+      "path": "dunyalar/definitions/slime.json",
+      "type": "json",
+      "metadata": {
+        "size": 669,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/soldier.json",
+      "name": "soldier.json",
+      "path": "dunyalar/definitions/soldier.json",
+      "type": "json",
+      "metadata": {
+        "size": 646,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/spikes_trap.json",
+      "name": "spikes_trap.json",
+      "path": "dunyalar/definitions/spikes_trap.json",
+      "type": "json",
+      "metadata": {
+        "size": 423,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/ui.json",
+      "name": "ui.json",
+      "path": "dunyalar/definitions/ui.json",
+      "type": "json",
+      "metadata": {
+        "size": 16014,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/variables.json",
+      "name": "variables.json",
+      "path": "dunyalar/definitions/variables.json",
+      "type": "json",
+      "metadata": {
+        "size": 2,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/villager_man.json",
+      "name": "villager_man.json",
+      "path": "dunyalar/definitions/villager_man.json",
+      "type": "json",
+      "metadata": {
+        "size": 641,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/definitions/villager_woman.json",
+      "name": "villager_woman.json",
+      "path": "dunyalar/definitions/villager_woman.json",
+      "type": "json",
+      "metadata": {
+        "size": 641,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/enhanced_forest.json",
+      "name": "enhanced_forest.json",
+      "path": "dunyalar/enhanced_forest.json",
+      "type": "json",
+      "metadata": {
+        "size": 3857,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/iso_world_1.json",
+      "name": "iso_world_1.json",
+      "path": "dunyalar/iso_world_1.json",
+      "type": "json",
+      "metadata": {
+        "size": 243806,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/level1.json",
+      "name": "level1.json",
+      "path": "dunyalar/level1.json",
+      "type": "json",
+      "metadata": {
+        "size": 13006,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/level2.json",
+      "name": "level2.json",
+      "path": "dunyalar/level2.json",
+      "type": "json",
+      "metadata": {
+        "size": 247644,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/level3.json",
+      "name": "level3.json",
+      "path": "dunyalar/level3.json",
+      "type": "json",
+      "metadata": {
+        "size": 23509,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/level4.json",
+      "name": "level4.json",
+      "path": "dunyalar/level4.json",
+      "type": "json",
+      "metadata": {
+        "size": 11080,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/platformer_demo.json",
+      "name": "platformer_demo.json",
+      "path": "dunyalar/platformer_demo.json",
+      "type": "json",
+      "metadata": {
+        "size": 2230,
+        "ext": ".json"
+      },
+      "dependencies": []
+    },
+    {
+      "id": "dunyalar/unnamed.json",
+      "name": "unnamed.json",
+      "path": "dunyalar/unnamed.json",
+      "type": "json",
+      "metadata": {
+        "size": 23819,
+        "ext": ".json"
+      },
+      "dependencies": []
+    }
+  ]
+}

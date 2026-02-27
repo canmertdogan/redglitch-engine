@@ -1,4 +1,4 @@
-# Code Review: Ketebe Engine (Ongonluk Engine)
+# Code Review: Ketebe Engine (Ketebe Engine)
 
 **Review Date:** February 12, 2026  
 **Scope:** Server layer, project structure, architecture
@@ -82,10 +82,10 @@ setupWebSocket(server, {
 ---
 
 ### 3. Inconsistent Naming
-- **package.json**: `"ongonluk-engine"`, `"Ongonluk Engine Alpha"`
+- **package.json**: `"ketebe-engine"`, `"Ketebe Engine Alpha"`
 - **ketebe.json / UI**: `"Ketebe Game Studio"`, `"Revenge of the Ketebe Canavarı"`
 
-**Recommendation:** Standardize on a single product name (Ketebe vs Ongonluk) across configs, docs, and UI.
+**Recommendation:** Standardize on a single product name (Ketebe vs Ketebe) across configs, docs, and UI.
 
 ---
 
@@ -190,6 +190,6 @@ The project has a solid architecture and good security practices. The most impac
 
 1. Passing correct options to WebSocket and starting the file watcher.
 2. Unifying project creation logic and directory naming.
-3. Aligning naming (Ketebe vs Ongonluk) and configuration (port, product name).
+3. Aligning naming (Ketebe vs Ketebe) and configuration (port, product name).
 
 After these changes, the server and tooling would be more reliable and consistent.

@@ -4,6 +4,10 @@ const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 
+function isSafeName(value) {
+    return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
+}
+
 // Helper to ensure directory exists
 async function ensureDir(dirPath) {
     try {
@@ -21,7 +25,7 @@ async function saveDefinition(filename, data) {
     
     const filePath = path.join(targetDir, filename);
     await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
 // --- QUESTS API ---
@@ -118,6 +122,7 @@ router.get('/fx/list', async (req, res) => {
 });
 
 router.get('/fx/:name', async (req, res) => {
+    if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid FX name' });
     const filePath = path.join(projectService.getActiveProject(), 'data', 'fx', `${req.params.name}.json`);
     try {
         const data = await fs.readFile(filePath, 'utf8');
@@ -128,10 +133,11 @@ router.get('/fx/:name', async (req, res) => {
 router.post('/fx/save', async (req, res) => {
     const { name, config } = req.body;
     if (!name || !config) return res.status(400).json({ error: 'Missing name or config' });
+    if (!isSafeName(name)) return res.status(400).json({ error: 'Invalid FX name' });
     const dir = path.join(projectService.getActiveProject(), 'data', 'fx');
     await ensureDir(dir);
     try {
-        await fs.writeFile(path.join(dir, `${name}.json`), JSON.stringify(config, null, 2));
+        await safeFs.safeWriteFullPath(dir, path.join(dir, `${name}.json`), JSON.stringify(config, null, 2), 'utf8');
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: 'Save failed' }); }
 });

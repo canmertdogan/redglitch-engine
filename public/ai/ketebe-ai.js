@@ -29,21 +29,28 @@ export class KetebeAI {
         this.isInitialized = false;
     }
 
+    _getKaiSettings() {
+        const raw = localStorage.getItem('kai_settings');
+        if (!raw) return {};
+        try {
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+            console.warn('[KetebeAI] Invalid kai_settings JSON, using defaults.');
+            return {};
+        }
+    }
+
     loadSavedSettings() {
-        const saved = localStorage.getItem('kai_settings');
-        if (saved) {
-            try {
-                const s = JSON.parse(saved);
-                if (s.temp) this.config.models.llm.temperature = s.temp;
-                if (s.topP) this.config.models.llm.topP = s.topP;
-                if (s.maxTokens) this.config.models.llm.maxNewTokens = s.maxTokens;
-                if (s.contextWindow) this.config.limits.contextWindow = s.contextWindow;
-                if (s.historyLimit !== undefined) this.config.limits.maxHistoryMessages = s.historyLimit;
-                if (s.ragEnabled !== undefined) this.config.features.enableRAG = s.ragEnabled;
-                console.log('[KetebeAI] Saved settings loaded into kernel.');
-            } catch (e) {
-                console.warn('[KetebeAI] Failed to parse saved settings:', e);
-            }
+        const s = this._getKaiSettings();
+        if (s.temp) this.config.models.llm.temperature = s.temp;
+        if (s.topP) this.config.models.llm.topP = s.topP;
+        if (s.maxTokens) this.config.models.llm.maxNewTokens = s.maxTokens;
+        if (s.contextWindow) this.config.limits.contextWindow = s.contextWindow;
+        if (s.historyLimit !== undefined) this.config.limits.maxHistoryMessages = s.historyLimit;
+        if (s.ragEnabled !== undefined) this.config.features.enableRAG = s.ragEnabled;
+        if (Object.keys(s).length > 0) {
+            console.log('[KetebeAI] Saved settings loaded into kernel.');
         }
     }
 
@@ -53,8 +60,8 @@ export class KetebeAI {
         console.log('[KetebeAI] Initializing Kernel...');
         
         // Determine Provider
-        const savedSettings = localStorage.getItem('kai_settings');
-        const provider = savedSettings ? JSON.parse(savedSettings).provider : 'native';
+        const savedSettings = this._getKaiSettings();
+        const provider = savedSettings.provider || 'native';
 
         // 1. If Native, we don't need to load local weights (300MB save!)
         if (provider === 'native') {
@@ -81,7 +88,7 @@ export class KetebeAI {
         
         // 1. PRIMARY: Native Cortex (Python WebSocket)
         const irabBridge = window.irab || (window.parent && window.parent.irab);
-        const provider = localStorage.getItem('kai_settings') ? JSON.parse(localStorage.getItem('kai_settings')).provider : 'native';
+        const provider = this._getKaiSettings().provider || 'native';
         
         if (provider === 'native' && irabBridge && irabBridge.isConnected) {
             console.log('[KetebeAI] Routing to Native Cortex...');
@@ -173,67 +180,7 @@ ${suffix}<|im_end|>
 <|im_start|>assistant
 `;
 
-        const provider = localStorage.getItem('kai_settings') ? JSON.parse(localStorage.getItem('kai_settings')).provider : 'native';
-        
-        if (provider === 'native') {
-            const irabBridge = window.irab || (window.parent && window.parent.irab);
-            if (irabBridge && irabBridge.isConnected) {
-                return new Promise((resolve) => {
-                    let fullText = "";
-                    const originalOnToken = irabBridge.onToken;
-                    
-                    irabBridge.onToken = (token) => {
-                        if (token === null) {
-                            irabBridge.onToken = originalOnToken;
-                            resolve(fullText.trim());
-                            return;
-                        }
-                        fullText += token;
-                        // Max 200 chars for ghost text to keep it snappy
-                        if (fullText.length > 200) {
-                             irabBridge.abort();
-                             irabBridge.onToken = originalOnToken;
-                             resolve(fullText.trim());
-                        }
-                    };
-                    
-                    irabBridge.prompt(prompt, { max_tokens: 64, temperature: 0.1 });
-                });
-            }
-        }
-
-        if (this.inferenceEngine.isModelReady) {
-            const response = await this.inferenceEngine.generate(prompt, { 
-                maxNewTokens: 64, 
-                temperature: 0.1,
-                stop: ["<|im_end|>", "\n\n"] 
-            });
-            return response.trim();
-        }
-
-        return null;
-    }
-
-    async suggest(prefix, suffix, filePath) {
-        await this.initialize();
-        
-        // Don't suggest if user turned it off
-        if (!this.config.features.enableGhostText) return null;
-
-        const prompt = `<|im_start|>system
-You are a Ghost Text autocomplete provider for Ketebe Code Forge.
-Generate a SHORT (1-5 lines) code completion based on the prefix and suffix.
-Respond ONLY with the code to be inserted. Do not use markdown blocks.
-File: ${filePath}<|im_end|>
-<|im_start|>user
-Prefix:
-${prefix}
-Suffix:
-${suffix}<|im_end|>
-<|im_start|>assistant
-`;
-
-        const provider = localStorage.getItem('kai_settings') ? JSON.parse(localStorage.getItem('kai_settings')).provider : 'native';
+        const provider = this._getKaiSettings().provider || 'native';
         
         if (provider === 'native') {
             const irabBridge = window.irab || (window.parent && window.parent.irab);

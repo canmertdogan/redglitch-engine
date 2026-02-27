@@ -3,10 +3,20 @@ const path = require('path');
 const fs = require('fs').promises;
 const router = express.Router();
 const projectService = require('../services/projectService');
+const safeFs = require('../utils/safeFs');
+
+function isSafeKey(value) {
+    return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
+}
+
+function validateSaveParams(username, slot) {
+    return isSafeKey(username) && isSafeKey(slot);
+}
 
 // GET save file
 router.get('/save/:username/:slot', async (req, res) => {
     const { username, slot } = req.params;
+    if (!validateSaveParams(username, slot)) return res.status(400).json({ error: 'Invalid save key' });
     const activeProject = projectService.getActiveProject();
     const filePath = path.join(activeProject, 'data', 'saves', `${username}_${slot}.json`);
     try {
@@ -20,6 +30,7 @@ router.get('/save/:username/:slot', async (req, res) => {
 // POST save file
 router.post('/save/:username/:slot', async (req, res) => {
     const { username, slot } = req.params;
+    if (!validateSaveParams(username, slot)) return res.status(400).json({ error: 'Invalid save key' });
     const activeProject = projectService.getActiveProject();
     const filePath = path.join(activeProject, 'data', 'saves', `${username}_${slot}.json`);
     try {
@@ -34,6 +45,7 @@ router.post('/save/:username/:slot', async (req, res) => {
 // GET profile
 router.get('/profile/:username', async (req, res) => {
     const { username } = req.params;
+    if (!isSafeKey(username)) return res.status(400).json({ error: 'Invalid username' });
     const activeProject = projectService.getActiveProject();
     const filePath = path.join(activeProject, 'data', 'profiles', `${username}.json`);
     try {
@@ -48,6 +60,7 @@ router.get('/profile/:username', async (req, res) => {
 // POST profile
 router.post('/profile/:username', async (req, res) => {
     const { username } = req.params;
+    if (!isSafeKey(username)) return res.status(400).json({ error: 'Invalid username' });
     const activeProject = projectService.getActiveProject();
     const filePath = path.join(activeProject, 'data', 'profiles', `${username}.json`);
     try {
@@ -62,6 +75,7 @@ router.post('/profile/:username', async (req, res) => {
 // POST profile (alternate endpoint)
 router.post('/profiles/:username', async (req, res) => {
     const { username } = req.params;
+    if (!isSafeKey(username)) return res.status(400).json({ error: 'Invalid username' });
     const activeProject = projectService.getActiveProject();
     const filePath = path.join(activeProject, 'data', 'profiles', `${username}.json`);
     try {
@@ -76,6 +90,7 @@ router.post('/profiles/:username', async (req, res) => {
 // GET achievements
 router.get('/achievements/:username', async (req, res) => {
     const { username } = req.params;
+    if (!isSafeKey(username)) return res.status(400).json({ error: 'Invalid username' });
     const activeProject = projectService.getActiveProject();
     const filePath = path.join(activeProject, 'data', 'achievements', `${username}.json`);
     try {
@@ -89,6 +104,7 @@ router.get('/achievements/:username', async (req, res) => {
 // POST achievements
 router.post('/achievements/:username', async (req, res) => {
     const { username } = req.params;
+    if (!isSafeKey(username)) return res.status(400).json({ error: 'Invalid username' });
     const activeProject = projectService.getActiveProject();
     const filePath = path.join(activeProject, 'data', 'achievements', `${username}.json`);
     try {

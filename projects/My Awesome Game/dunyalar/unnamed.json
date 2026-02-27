@@ -2559,5 +2559,6 @@
   "spawnY": 912,
   "exit": null,
   "ambience": "rain",
-  "name": "unnamed"
+  "name": "unnamed",
+  "engineType": "rpg-topdown"
 }

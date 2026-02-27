@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
+const safeFs = require('../utils/safeFs');
 
 const PROJECTS_ROOT = path.join(__dirname, '..', '..', 'projects');
 const TEMPLATES_ROOT = path.join(__dirname, '..', '..', 'templates');
@@ -12,6 +13,179 @@ async function ensureDir(dir) {
     try {
         await fs.mkdir(dir, { recursive: true });
     } catch (e) {}
+}
+
+function sanitizeProjectName(name) {
+    return (name || '').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+}
+
+function resolveProjectPath(name) {
+    const safeName = sanitizeProjectName(name);
+    if (!safeName || safeName !== name) {
+        return null;
+    }
+
+    const root = path.resolve(PROJECTS_ROOT);
+    const projectPath = path.resolve(root, safeName);
+    if (!projectPath.startsWith(root + path.sep)) {
+        return null;
+    }
+    return projectPath;
+}
+
+function openInFileManager(targetPath) {
+    return new Promise((resolve, reject) => {
+        let command;
+        let args;
+        switch (process.platform) {
+            case 'win32':
+                command = 'explorer';
+                args = [targetPath];
+                break;
+            case 'darwin':
+                command = 'open';
+                args = [targetPath];
+                break;
+            default:
+                command = 'xdg-open';
+                args = [targetPath];
+                break;
+        }
+
+        const child = spawn(command, args, { stdio: 'ignore' });
+        child.on('error', reject);
+        child.on('close', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`File manager exited with code ${code}`));
+        });
+    });
+}
+
+async function pathExists(p) {
+    try {
+        await fs.access(p);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+async function copyDirIfExists(src, dest) {
+    if (await pathExists(src)) {
+        await fs.cp(src, dest, { recursive: true });
+        return true;
+    }
+    return false;
+}
+
+async function copyFileIfExists(src, dest) {
+    if (await pathExists(src)) {
+        await fs.copyFile(src, dest);
+        return true;
+    }
+    return false;
+}
+
+async function writeProjectConfig(projectPath, projectConfig) {
+    await safeFs.safeWriteFullPath(projectPath, path.join(projectPath, 'ketebe.json'), JSON.stringify(projectConfig, null, 2), 'utf8');
+}
+
+async function ensureProjectDataDirs(projectPath) {
+    await ensureDir(path.join(projectPath, 'data', 'saves'));
+    await ensureDir(path.join(projectPath, 'data', 'profiles'));
+    await ensureDir(path.join(projectPath, 'data', 'logic'));
+    await ensureDir(path.join(projectPath, 'data', 'brains'));
+    await ensureDir(path.join(projectPath, 'data', 'achievements'));
+    await ensureDir(path.join(projectPath, 'data', 'algorithms'));
+    await ensureDir(path.join(projectPath, 'assets'));
+}
+
+async function copyGameFromPublic(projectPath, options = {}) {
+    const publicDir = path.join(__dirname, '..', '..', 'public');
+    const allowedDirs = options.allowedDirs || [
+        'engines',
+        'base_game',
+        'fonts',
+        'js',
+        'lib',
+        'muzikler',
+        'sprite-art',
+        'dunyalar',
+        'data',
+        // Support both legacy and current naming
+        'oyuncu_profilleri',
+        'profiles'
+    ];
+    const allowedFiles = options.allowedFiles || [
+        'index.html',
+        'splash.html',
+        'credits.html',
+        'favicon.ico',
+        'pixel_scrollbars.css',
+        'theme.js'
+    ];
+
+    for (const dir of allowedDirs) {
+        const src = path.join(publicDir, dir);
+        const dest = path.join(projectPath, dir);
+        await copyDirIfExists(src, dest);
+    }
+    for (const file of allowedFiles) {
+        const src = path.join(publicDir, file);
+        const dest = path.join(projectPath, file);
+        await copyFileIfExists(src, dest);
+    }
+}
+
+async function copyTemplateProject(templatePath, projectPath) {
+    await fs.cp(templatePath, projectPath, { recursive: true });
+    await fs.rm(path.join(projectPath, 'template.json')).catch(() => {});
+    await fs.rm(path.join(projectPath, 'preview.png')).catch(() => {});
+}
+
+async function createProject({
+    name,
+    templateId,
+    projectConfig,
+    templateMode,
+    extraCopy = null
+}) {
+    const safeName = sanitizeProjectName(name);
+    if (!safeName) {
+        return { error: { status: 400, body: { error: 'Invalid project name' } } };
+    }
+
+    const projectPath = path.join(PROJECTS_ROOT, safeName);
+    if (await pathExists(projectPath)) {
+        return { error: { status: 400, body: { error: 'Project already exists' } } };
+    }
+
+    const resolvedTemplateId = templateId || 'base-rpg';
+    const templatePath = path.join(TEMPLATES_ROOT, resolvedTemplateId);
+    const templateExists = await pathExists(templatePath);
+
+    if (templateMode === 'template' && resolvedTemplateId !== 'empty' && templateExists) {
+        console.log(`Creating project "${safeName}" from template "${resolvedTemplateId}"...`);
+        try {
+            await copyTemplateProject(templatePath, projectPath);
+        } catch (copyErr) {
+            console.error("Template copy failed:", copyErr);
+            await fs.rm(projectPath, { recursive: true, force: true }).catch(() => {});
+            return { error: { status: 500, body: { error: 'Failed to copy template' } } };
+        }
+        await writeProjectConfig(projectPath, projectConfig);
+        if (extraCopy) {
+            await extraCopy(projectPath);
+        }
+        return { success: true, name: safeName, path: projectPath };
+    }
+
+    console.log(`Creating project "${safeName}" from main game data...`);
+    await fs.mkdir(projectPath, { recursive: true });
+    await writeProjectConfig(projectPath, projectConfig);
+    await copyGameFromPublic(projectPath);
+    await ensureProjectDataDirs(projectPath);
+    return { success: true, name: safeName, path: projectPath };
 }
 
 // Initialize roots
@@ -80,18 +254,6 @@ router.get('/projects', async (req, res) => {
 router.post('/projects', async (req, res) => {
     const { name, template } = req.body;
     if (!name) return res.status(400).json({ error: 'Project name required' });
-    
-    // Sanitize Project Name (Allow alphanumeric, spaces, hyphens, underscores)
-    const safeName = name.replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
-    if (!safeName) return res.status(400).json({ error: 'Invalid project name' });
-
-    const projectPath = path.join(PROJECTS_ROOT, safeName);
-    
-    // Check if exists
-    try {
-        await fs.access(projectPath);
-        return res.status(400).json({ error: 'Project already exists' });
-    } catch(e) {} // Path does not exist, safe to proceed
 
     // Default to base-rpg if template is 'default', 
     // but respect 'empty' or specific template IDs.
@@ -99,108 +261,58 @@ router.post('/projects', async (req, res) => {
     if (template === 'default') templateId = 'base-rpg';
 
     try {
-        // Check if template exists in templates folder
-        const templatePath = path.join(TEMPLATES_ROOT, templateId);
         const metadata = req.body.metadata || {};
         
         // Prepare ketebe.json content
         const projectConfig = {
-            name: safeName, // Use sanitized name
+            name: sanitizeProjectName(name), // Use sanitized name
             author: metadata.author || "Anonymous",
             version: "0.1.0",
-            description: metadata.description || "A new Ongonluk Engine project.",
+            description: metadata.description || "A new Ketebe Engine project.",
             template: templateId,
             created: new Date().toISOString(),
             engineVersion: "0.2.0"
         };
 
-        // If template exists and is not 'empty', perform copy
-        if (templateId !== 'empty' && require('fs').existsSync(templatePath)) {
-            console.log(`Creating project "${safeName}" from template "${templateId}"...`);
-            
-            try {
-                await fs.cp(templatePath, projectPath, { recursive: true });
-            } catch (copyErr) {
-                // Rollback
-                console.error("Template copy failed:", copyErr);
-                try { await fs.rm(projectPath, { recursive: true, force: true }); } catch(e){}
-                return res.status(500).json({ error: 'Failed to copy template' });
-            }
-            
-            // Clean up metadata from the project instance
-            try { await fs.rm(path.join(projectPath, 'template.json')); } catch(e) {}
-            try { await fs.rm(path.join(projectPath, 'preview.png')); } catch(e) {}
-            
-            // Write ketebe.json
-            await fs.writeFile(path.join(projectPath, 'ketebe.json'), JSON.stringify(projectConfig, null, 2));
-
-            // Copy engine/game files from public/ (skip dirs that template already provides)
-            const publicDir = path.join(__dirname, '..', '..', 'public');
-            const engineDirs = ['engines', 'base_game', 'fonts', 'js', 'lib', 'sprite-art'];
-            const gameFiles = ['index.html', 'splash.html', 'credits.html', 'favicon.ico', 'pixel_scrollbars.css', 'theme.js'];
-            for (const dir of engineDirs) {
-                const src = path.join(publicDir, dir);
-                const dest = path.join(projectPath, dir);
-                if (require('fs').existsSync(src) && !require('fs').existsSync(dest)) {
-                    await fs.cp(src, dest, { recursive: true });
+        const result = await createProject({
+            name,
+            templateId,
+            projectConfig,
+            templateMode: 'template',
+            extraCopy: async (projectPath) => {
+                // Copy engine/game files from public/ (skip dirs that template already provides)
+                const publicDir = path.join(__dirname, '..', '..', 'public');
+                const engineDirs = ['engines', 'base_game', 'fonts', 'js', 'lib', 'sprite-art'];
+                const gameFiles = ['index.html', 'splash.html', 'credits.html', 'favicon.ico', 'pixel_scrollbars.css', 'theme.js'];
+                for (const dir of engineDirs) {
+                    const src = path.join(publicDir, dir);
+                    const dest = path.join(projectPath, dir);
+                    if (await pathExists(src) && !(await pathExists(dest))) {
+                        await fs.cp(src, dest, { recursive: true });
+                    }
                 }
-            }
-            for (const file of gameFiles) {
-                const src = path.join(publicDir, file);
-                const dest = path.join(projectPath, file);
-                if (require('fs').existsSync(src) && !require('fs').existsSync(dest)) {
-                    await fs.copyFile(src, dest);
+                for (const file of gameFiles) {
+                    const src = path.join(publicDir, file);
+                    const dest = path.join(projectPath, file);
+                    if (await pathExists(src) && !(await pathExists(dest))) {
+                        await fs.copyFile(src, dest);
+                    }
                 }
-            }
-            // Ensure dunyalar/ exists (copy from public if template didn't include it)
-            if (!require('fs').existsSync(path.join(projectPath, 'dunyalar'))) {
-                const srcD = path.join(publicDir, 'dunyalar');
-                if (require('fs').existsSync(srcD)) {
-                    await fs.cp(srcD, path.join(projectPath, 'dunyalar'), { recursive: true });
+                // Ensure dunyalar/ exists (copy from public if template didn't include it)
+                const dunyalarDest = path.join(projectPath, 'dunyalar');
+                if (!(await pathExists(dunyalarDest))) {
+                    const srcD = path.join(publicDir, 'dunyalar');
+                    await copyDirIfExists(srcD, dunyalarDest);
                 }
+                await ensureProjectDataDirs(projectPath);
+                console.log(`[Server] Copied engine files to template project "${sanitizeProjectName(name)}"`);
             }
-            console.log(`[Server] Copied engine files to template project "${safeName}"`);
-            
-            res.json({ success: true, name: safeName, path: projectPath });
-            return;
+        });
+
+        if (result.error) {
+            return res.status(result.error.status).json(result.error.body);
         }
-
-        // Fallback: Scaffold from main game (for 'empty' or missing template)
-        console.log(`Creating project "${safeName}" from main game data...`);
-        await fs.mkdir(projectPath, { recursive: true });
-        
-        // Write ketebe.json
-        await fs.writeFile(path.join(projectPath, 'ketebe.json'), JSON.stringify(projectConfig, null, 2));
-
-        // Copy full game files from public/ using same whitelist as build-game.js
-        const publicDir = path.join(__dirname, '..', '..', 'public');
-        const allowedDirs = ['engines', 'base_game', 'fonts', 'js', 'lib', 'muzikler', 'sprite-art', 'dunyalar', 'data', 'oyuncu_profilleri'];
-        const allowedFiles = ['index.html', 'splash.html', 'credits.html', 'favicon.ico', 'pixel_scrollbars.css', 'theme.js'];
-
-        for (const dir of allowedDirs) {
-            const src = path.join(publicDir, dir);
-            if (require('fs').existsSync(src)) {
-                await fs.cp(src, path.join(projectPath, dir), { recursive: true });
-            }
-        }
-        for (const file of allowedFiles) {
-            const src = path.join(publicDir, file);
-            if (require('fs').existsSync(src)) {
-                await fs.copyFile(src, path.join(projectPath, file));
-            }
-        }
-        console.log(`[Server] Copied full game files to project "${safeName}"`);
-
-        // Ensure data subdirectories exist
-        await ensureDir(path.join(projectPath, 'data', 'saves'));
-        await ensureDir(path.join(projectPath, 'data', 'profiles'));
-        await ensureDir(path.join(projectPath, 'data', 'logic'));
-        await ensureDir(path.join(projectPath, 'data', 'brains'));
-        await ensureDir(path.join(projectPath, 'data', 'achievements'));
-        await ensureDir(path.join(projectPath, 'data', 'algorithms'));
-        await ensureDir(path.join(projectPath, 'assets'));
-
-        res.json({ success: true, name, path: projectPath });
+        res.json({ success: true, name: result.name, path: result.path });
     } catch (err) {
         res.status(500).json({ error: 'Failed to create project' });
     }
@@ -210,29 +322,15 @@ router.post('/projects', async (req, res) => {
 router.post('/projects/create', async (req, res) => {
     const { name, template, engineType, author } = req.body;
     if (!name) return res.status(400).json({ error: 'Project name required' });
-    
-    // Sanitize Project Name
-    const safeName = name.replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
-    if (!safeName) return res.status(400).json({ error: 'Invalid project name' });
-
-    const projectPath = path.join(PROJECTS_ROOT, safeName);
-    
-    // Check if exists
-    try {
-        await fs.access(projectPath);
-        return res.status(400).send('Project already exists');
-    } catch(e) {} // Path does not exist, safe to proceed
 
     // Default to base-rpg if template is 'default' or 'blank'
     let templateId = template || 'base-rpg';
     if (template === 'blank' || template === 'default') templateId = 'base-rpg';
 
     try {
-        const templatePath = path.join(TEMPLATES_ROOT, templateId);
-        
         // Prepare ketebe.json content
         const projectConfig = {
-            name: safeName,
+            name: sanitizeProjectName(name),
             author: author || "Anonymous",
             version: "0.1.0",
             description: `A new ${engineType || 'rpg-topdown'} game project`,
@@ -241,43 +339,17 @@ router.post('/projects/create', async (req, res) => {
             created: new Date().toISOString(),
             engineVersion: "7.0.1"
         };
-
-        // Create empty project from scratch
-        console.log(`Creating project "${safeName}" with engine type "${engineType}"...`);
-        await fs.mkdir(projectPath, { recursive: true });
-        
-        // Write ketebe.json
-        await fs.writeFile(path.join(projectPath, 'ketebe.json'), JSON.stringify(projectConfig, null, 2));
-
-        // Copy game files from public/
-        const publicDir = path.join(__dirname, '..', '..', 'public');
-        const allowedDirs = ['engines', 'base_game', 'fonts', 'js', 'lib', 'muzikler', 'sprite-art', 'dunyalar', 'data', 'oyuncu_profilleri'];
-        const allowedFiles = ['index.html', 'splash.html', 'credits.html', 'favicon.ico', 'pixel_scrollbars.css', 'theme.js'];
-
-        for (const dir of allowedDirs) {
-            const src = path.join(publicDir, dir);
-            if (require('fs').existsSync(src)) {
-                await fs.cp(src, path.join(projectPath, dir), { recursive: true });
-            }
+        const result = await createProject({
+            name,
+            templateId,
+            projectConfig,
+            templateMode: 'scaffold'
+        });
+        if (result.error) {
+            return res.status(result.error.status).send(result.error.body.error);
         }
-        for (const file of allowedFiles) {
-            const src = path.join(publicDir, file);
-            if (require('fs').existsSync(src)) {
-                await fs.copyFile(src, path.join(projectPath, file));
-            }
-        }
-        console.log(`[Server] Created project "${safeName}"`);
-
-        // Ensure data subdirectories exist
-        await ensureDir(path.join(projectPath, 'data', 'saves'));
-        await ensureDir(path.join(projectPath, 'data', 'profiles'));
-        await ensureDir(path.join(projectPath, 'data', 'logic'));
-        await ensureDir(path.join(projectPath, 'data', 'brains'));
-        await ensureDir(path.join(projectPath, 'data', 'achievements'));
-        await ensureDir(path.join(projectPath, 'data', 'algorithms'));
-        await ensureDir(path.join(projectPath, 'assets'));
-
-        res.json({ success: true, name: safeName, path: projectPath });
+        console.log(`[Server] Created project "${result.name}"`);
+        res.json({ success: true, name: result.name, path: result.path });
     } catch (err) {
         console.error('Create project error:', err);
         res.status(500).send('Failed to create project');
@@ -289,9 +361,8 @@ router.delete('/projects/:name', async (req, res) => {
     const { name } = req.params;
     if (!name) return res.status(400).send('Project name required');
     
-    const projectPath = path.join(PROJECTS_ROOT, name);
-    // Security check
-    if (!projectPath.startsWith(PROJECTS_ROOT)) return res.status(403).send('Access denied');
+    const projectPath = resolveProjectPath(name);
+    if (!projectPath) return res.status(403).send('Access denied');
 
     try {
         await fs.rm(projectPath, { recursive: true, force: true });
@@ -308,12 +379,8 @@ router.post('/projects/reveal', async (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).send('Project name required');
     
-    const projectPath = path.join(PROJECTS_ROOT, name);
-    
-    // Security check
-    if (!projectPath.startsWith(PROJECTS_ROOT)) {
-        return res.status(403).send('Access denied');
-    }
+    const projectPath = resolveProjectPath(name);
+    if (!projectPath) return res.status(403).send('Access denied');
 
     // Check if project exists
     try {
@@ -322,27 +389,14 @@ router.post('/projects/reveal', async (req, res) => {
         return res.status(404).send('Project not found');
     }
 
-    let command;
-    switch (process.platform) {
-        case 'win32': 
-            command = `explorer "${projectPath}"`; 
-            break;
-        case 'darwin': 
-            command = `open "${projectPath}"`; 
-            break;
-        default: 
-            command = `xdg-open "${projectPath}"`; 
-            break;
-    }
-
-    exec(command, (err) => {
-        if (err) {
-            console.error("Reveal error:", err);
-            return res.status(500).send('Failed to reveal folder');
-        }
+    try {
+        await openInFileManager(projectPath);
         console.log(`[Server] Revealed project: ${name}`);
         res.json({ success: true });
-    });
+    } catch (err) {
+        console.error("Reveal error:", err);
+        res.status(500).send('Failed to reveal folder');
+    }
 });
 
 // POST /api/projects/delete - Delete a project (legacy route)
@@ -350,14 +404,13 @@ router.post('/projects/delete', async (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Project name required' });
     
-    const projectPath = path.join(PROJECTS_ROOT, name);
-    // Security check to ensure we are deleting inside PROJECTS_ROOT
-    if (!projectPath.startsWith(PROJECTS_ROOT)) return res.status(403).json({ error: 'Access denied' });
+    const projectPath = resolveProjectPath(name);
+    if (!projectPath) return res.status(403).json({ error: 'Access denied' });
 
     try {
         await fs.rm(projectPath, { recursive: true, force: true });
-        if (req.activeProject === projectPath) {
-            req.setActiveProject(path.join(__dirname, '..', '..'));
+        if (req.projectService && req.projectService.getActiveProject() === projectPath) {
+            req.projectService.setActiveProject(null);
         }
         res.json({ success: true });
     } catch (err) {
@@ -369,32 +422,28 @@ router.post('/projects/delete', async (req, res) => {
 // POST /api/projects/explore - Open project folder in file explorer
 router.post('/projects/explore', async (req, res) => {
     const { name } = req.body;
-    let targetPath = req.activeProject;
+    const rootDir = path.resolve(__dirname, '..', '..');
+    let targetPath = req.projectService ? req.projectService.getActiveProject() : rootDir;
     
     if (name) {
-        targetPath = path.join(PROJECTS_ROOT, name);
+        const resolved = resolveProjectPath(name);
+        if (!resolved) return res.status(403).json({ error: 'Access denied' });
+        targetPath = resolved;
     }
 
-    const rootDir = path.join(__dirname, '..', '..');
     // Security check
-    if (!targetPath.startsWith(PROJECTS_ROOT) && targetPath !== rootDir) {
+    const projectsRootResolved = path.resolve(PROJECTS_ROOT);
+    if (!targetPath.startsWith(projectsRootResolved + path.sep) && targetPath !== rootDir) {
         return res.status(403).json({ error: 'Access denied' });
     }
 
-    let command;
-    switch (process.platform) {
-        case 'win32': command = `explorer "${targetPath}"`; break;
-        case 'darwin': command = `open "${targetPath}"`; break;
-        default: command = `xdg-open "${targetPath}"`; break;
-    }
-
-    exec(command, (err) => {
-        if (err) {
-            console.error("Explore error:", err);
-            return res.status(500).json({ error: 'Failed to open explorer' });
-        }
+    try {
+        await openInFileManager(targetPath);
         res.json({ success: true });
-    });
+    } catch (err) {
+        console.error("Explore error:", err);
+        res.status(500).json({ error: 'Failed to open explorer' });
+    }
 });
 
 // GET /api/projects/current - Get current active project
@@ -418,10 +467,18 @@ router.post('/projects/switch', async (req, res) => {
     if (!name) {
         req.projectService.setActiveProject(null);
         console.log(`[Server] Active project reset to ROOT`);
+        const websocket = req.app?.locals?.websocket;
+        if (websocket && typeof websocket.startFileWatcher === 'function') {
+            websocket.startFileWatcher();
+        }
         return res.json({ success: true, active: 'ROOT' });
     }
     req.projectService.setActiveProject(name);
     console.log(`[Server] Active project now: ${req.projectService.getActiveProject()}`);
+    const websocket = req.app?.locals?.websocket;
+    if (websocket && typeof websocket.startFileWatcher === 'function') {
+        websocket.startFileWatcher();
+    }
     res.json({ success: true, active: name });
 });
 

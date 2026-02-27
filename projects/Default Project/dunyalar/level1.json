@@ -1,7 +1,7 @@
 {
   "width": 40,
   "height": 20,
-  "type": "platformer-2d",
+  "type": "topdown",
   "tilesetPath": "WORLD_PIXEL_ART",
   "layers": [
     [
@@ -1625,5 +1625,6 @@
   "background": "",
   "weather": "none",
   "lighting": "day",
-  "shader": "default"
+  "shader": "default",
+  "engineType": "rpg-topdown"
 }

@@ -1,8 +1,8 @@
-# Copilot Instructions for Ongonluk Engine
+# Copilot Instructions for Ketebe Engine
 
 ## Project Overview
 
-**Ongonluk Engine** is a multi-platform game development studio and launcher built with Electron, capable of creating games across RPG, platformer, and isometric pixel art styles. It consists of:
+**Ketebe Engine** is a multi-platform game development studio and launcher built with Electron, capable of creating games across RPG, platformer, and isometric pixel art styles. It consists of:
 
 - **Launcher & Studio**: Electron-based IDE with HTML/JS editors for game creation
 - **Game Engines**: Three specialized runtime engines (rpg-topdown, platformer-2d, iso-pixel)
@@ -183,7 +183,7 @@ Profiles stored as `profile_{username}.json` with character stats (hp, mana, sta
 
 ## AI Architecture (KetebeAI)
 
-Ongonluk Engine features a **local-first AI assistant** ("IRAB") integrated directly into the studio. It provides intelligent code completion, documentation retrieval, and studio automation without relying on external cloud APIs.
+Ketebe Engine features a **local-first AI assistant** ("IRAB") integrated directly into the studio. It provides intelligent code completion, documentation retrieval, and studio automation without relying on external cloud APIs.
 
 ### Core Components
 

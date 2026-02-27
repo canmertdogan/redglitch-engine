@@ -1,8 +1,8 @@
 {
-  "name": "ongonluk-engine",
+  "name": "ketebe-engine",
   "productName": "Ketebe Game Studio",
   "version": "1.0.0",
-  "description": "Ongonluk Engine Alpha - Professional Game Development Studio",
+  "description": "Ketebe Engine Alpha - Professional Game Development Studio",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
@@ -14,7 +14,8 @@
     "build:game:android": "node build-game.js \"Default Project\" android",
     "build:game:win": "node build-game.js \"Default Project\" windows",
     "build:ai-worker": "node public/ai/build-worker.js",
-    "build:corpus": "node public/ai/docs/build-corpus.js"
+    "build:corpus": "node public/ai/docs/build-corpus.js",
+    "engine:lockstep": "node scripts/engine-lockstep.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.1",

@@ -1,5 +1,5 @@
 /**
- * Ongonluk Engine - Asset Manager
+ * Ketebe Engine - Asset Manager
  * Unified asset management and dependency tracking
  */
 class AssetManager {

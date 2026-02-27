@@ -1,5 +1,5 @@
 /**
- * Ongonluk Engine - Shared Project State Management
+ * Ketebe Engine - Shared Project State Management
  * Provides centralized state management across all editors
  */
 class SharedProjectState {

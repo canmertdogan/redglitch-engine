@@ -1421,5 +1421,6 @@
       "name": "Layer 0"
     }
   ],
-  "name": "level5"
+  "name": "level5",
+  "engineType": "rpg-topdown"
 }

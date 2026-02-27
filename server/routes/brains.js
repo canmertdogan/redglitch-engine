@@ -3,10 +3,15 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
+const safeFs = require('../utils/safeFs');
 
 const ensureDir = async (dir) => {
     await fs.mkdir(dir, { recursive: true });
 };
+
+function isSafeName(value) {
+    return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
+}
 
 // List all NPC brains
 router.get('/list', async (req, res) => {
@@ -25,12 +30,13 @@ router.get('/list', async (req, res) => {
 // Save brain (visual workspace + executable code)
 router.post('/save', async (req, res) => {
     const { name, json, js } = req.body;
+    if (!isSafeName(name)) return res.status(400).json({ error: 'Invalid brain name' });
     try {
         const activeProject = projectService.getActiveProject();
         const dir = path.join(activeProject, 'data', 'brains');
         await ensureDir(dir);
-        if (json) await fs.writeFile(path.join(dir, `${name}.json`), json);
-        if (js) await fs.writeFile(path.join(dir, `${name}.js`), js);
+        if (json) await safeFs.safeWriteFullPath(dir, path.join(dir, `${name}.json`), json, 'utf8');
+        if (js) await safeFs.safeWriteFullPath(dir, path.join(dir, `${name}.js`), js, 'utf8');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to save brain' });
@@ -40,6 +46,7 @@ router.post('/save', async (req, res) => {
 // Get brain JavaScript executable
 router.get('/js/:name', async (req, res) => {
     try {
+        if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid brain name' });
         const activeProject = projectService.getActiveProject();
         const js = await fs.readFile(path.join(activeProject, 'data', 'brains', `${req.params.name}.js`), 'utf8');
         res.set('Content-Type', 'application/javascript');
@@ -52,6 +59,7 @@ router.get('/js/:name', async (req, res) => {
 // Get brain JSON
 router.get('/:name', async (req, res) => {
     try {
+        if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid brain name' });
         const activeProject = projectService.getActiveProject();
         const json = await fs.readFile(path.join(activeProject, 'data', 'brains', `${req.params.name}.json`), 'utf8');
         res.json({ json });

@@ -224,7 +224,7 @@ app.on('window-all-closed', () => app.quit());
     const buildPackage = {
         name: "ketebe-game-release",
         version: "1.0.0",
-        description: "An Ongonluk Engine Game",
+        description: "A Ketebe Engine Game",
         author: "Ketebe Game Studio",
         main: "main.js",
         scripts: {
@@ -324,4 +324,3 @@ app.on('window-all-closed', () => app.quit());
     console.error(`\x1b[31m[FATAL] Build failed: ${err.message}\x1b[0m`);
     process.exit(1);
 }
-

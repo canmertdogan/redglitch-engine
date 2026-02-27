@@ -1,8 +1,8 @@
-# Ongonluk Engine Architecture Overview
+# Ketebe Engine Architecture Overview
 
 ## High-Level System Architecture
 
-ONGONLUK ENGINE is a **hybrid web-desktop game development environment**. It uses a local Node.js server to provide filesystem access and project management, while the entire IDE and Game Runtime operate as a Single Page Application (SPA) suite within the browser (or Electron container).
+KETEBE ENGINE is a **hybrid web-desktop game development environment**. It uses a local Node.js server to provide filesystem access and project management, while the entire IDE and Game Runtime operate as a Single Page Application (SPA) suite within the browser (or Electron container).
 
 ```ascii
 +-------------------------------------------------------+

@@ -26,7 +26,7 @@ class DebugConsole {
         
         this.createDOM();
         this.setupInput();
-        this.log("ONGONLUK ENGINE ALPHA // CONSOLE READY", 'system');
+        this.log("KETEBE ENGINE ALPHA // CONSOLE READY", 'system');
         this.log("Type 'help' for command list. Press [TAB] to autocomplete.", 'info');
     }
 
@@ -65,7 +65,7 @@ class DebugConsole {
         `;
         
         const prompt = document.createElement('span');
-        prompt.innerHTML = '<span style="color:#f1c40f">ongonluk</span>@<span style="color:#00f3ff">engine</span>:~$ ';
+        prompt.innerHTML = '<span style="color:#f1c40f">ketebe</span>@<span style="color:#00f3ff">engine</span>:~$ ';
         prompt.style.marginRight = '10px';
         
         this.input = document.createElement('input');

@@ -1,4 +1,4 @@
-// theme.js - Unified Theme System for Ongonluk Engine
+// theme.js - Unified Theme System for Ketebe Engine
 
 const THEMES = {
     'modern-dark': {

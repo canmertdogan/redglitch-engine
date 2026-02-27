@@ -1427,5 +1427,6 @@
       "name": "Layer 0"
     }
   ],
-  "name": "level7"
+  "name": "level7",
+  "engineType": "rpg-topdown"
 }

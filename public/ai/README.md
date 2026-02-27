@@ -1,10 +1,10 @@
 # IRAB AI Assistant System
 
-> **GRRR... LOCAL AI ASSISTANT FOR ONGONLUK GAME STUDIO**
+> **GRRR... LOCAL AI ASSISTANT FOR KETEBE GAME STUDIO**
 
 ## What Is This?
 
-IRAB (formerly "Ongonluk AI Assistant") is your quirky AI helper with:
+IRAB (formerly "Ketebe AI Assistant") is your quirky AI helper with:
 
 - 📚 **Knowledge Base Q&A** - I ATE THE DOCS
 - 🎓 **Interactive Tutorials** - STEP-BY-STEP GUIDES  

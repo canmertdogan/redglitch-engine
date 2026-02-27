@@ -9,6 +9,7 @@ if (typeof window.IrabBridge === 'undefined') {
             this.socket = null;
             this.url = "ws://localhost:8000/ws";
             this.isConnected = false;
+            this._syncListenerAttached = false;
             
             // Hooks for UI
             this.onToken = null;
@@ -58,8 +59,9 @@ if (typeof window.IrabBridge === 'undefined') {
                     // No need to log full error here as it triggers onclose
                 };
 
-                // Forward sync events from EventBus to WebSocket
-                if (window.KetebeEventBus) {
+                // Forward sync events from EventBus to WebSocket (attach once)
+                if (window.KetebeEventBus && !this._syncListenerAttached) {
+                    this._syncListenerAttached = true;
                     window.KetebeEventBus.on('ai:command:sync', (event) => {
                         const msg = event.data || event;
                         this.send(msg);

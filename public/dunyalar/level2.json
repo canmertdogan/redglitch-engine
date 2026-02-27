@@ -24885,5 +24885,6 @@
   },
   "exit": null,
   "weather": "none",
-  "lighting": "day"
+  "lighting": "day",
+  "engineType": "rpg-topdown"
 }

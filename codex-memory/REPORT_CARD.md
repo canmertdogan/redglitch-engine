@@ -1,4 +1,4 @@
-# Ketebe (Ongonluk) Engine - Codex Memory Report Card
+# Ketebe (Ketebe) Engine - Codex Memory Report Card
 
 Date: 2026-02-26
 Scope: Full repository scan with emphasis on `public/`, `server/`, `backend/`, `architecture/`, and `planmemory/`.
@@ -77,7 +77,7 @@ Server:
 ### 5.1 Vision and Product Cohesion - Grade A-
 - Strong, consistent intent: a studio-grade game creation ecosystem, not just a runtime.
 - Clear identity: hybrid editor + runtime, multi-engine, and AI-assisted creation.
-- Naming inconsistency persists (Ketebe vs Ongonluk) and shows up across docs and config.
+- Naming inconsistency persists (Ketebe vs Ketebe) and shows up across docs and config.
 
 ### 5.2 Architecture and Modularity - Grade B+
 - Good separation of concerns between Node server, browser tools, and Python AI.
@@ -138,7 +138,7 @@ Server:
 - Backend footprint is very large due to local model storage and dataset indexing.
 
 ## 8) Tech Debt Summary
-- Inconsistent naming across Ketebe/Ongonluk, Turkish vs English naming in paths.
+- Inconsistent naming across Ketebe/Ketebe, Turkish vs English naming in paths.
 - Mixed sync/async file IO and error handling patterns.
 - Duplicate logic across editors and tools.
 - Possible misconfigured WebSocket file-watcher startup.

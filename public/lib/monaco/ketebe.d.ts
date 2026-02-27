@@ -1,6 +1,6 @@
 /**
- * Ongonluk Engine Core Type Definitions
- * Providing intelligence to the Ongonluk Code Studio
+ * Ketebe Engine Core Type Definitions
+ * Providing intelligence to the Ketebe Code Studio
  */
 
 declare namespace ketebe {

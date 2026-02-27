@@ -81,17 +81,29 @@ class ConnectionManager:
         logger.info("New Studio client connected.")
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
         if id(websocket) in greeted_connections:
             greeted_connections.remove(id(websocket))
         logger.info("Studio client disconnected.")
 
     async def send_personal_message(self, message: dict, websocket: WebSocket):
-        await websocket.send_json(message)
+        try:
+            await websocket.send_json(message)
+        except Exception as e:
+            logger.warning(f"Failed to send personal message: {e}")
+            self.disconnect(websocket)
 
     async def broadcast(self, message: dict):
+        dead_connections = []
         for connection in self.active_connections:
-            await connection.send_json(message)
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logger.warning(f"Broadcast failed for a client: {e}")
+                dead_connections.append(connection)
+        for connection in dead_connections:
+            self.disconnect(connection)
 
 manager = ConnectionManager()
 watcher = None # Will initialize in startup
@@ -100,13 +112,15 @@ greeted_connections = set()
 # --- HISTORY HELPERS ---
 LOGS_DIR = os.path.join(os.path.dirname(__file__), "data", "chat_logs")
 PERSONA_PATH = os.path.join(os.path.dirname(__file__), "data", "user_persona.json")
+os.makedirs(LOGS_DIR, exist_ok=True)
 
 def load_persona():
     try:
         if os.path.exists(PERSONA_PATH):
             with open(PERSONA_PATH, 'r') as f:
                 return json.load(f)
-    except: pass
+    except Exception as e:
+        logger.warning(f"Failed to load persona: {e}")
     return {"coding_style": {}, "preferences": {}}
 
 @app.get("/api/ai/persona")
@@ -230,7 +244,14 @@ async def websocket_endpoint(websocket: WebSocket):
 
         while True:
             data = await websocket.receive_text()
-            message = json.loads(data)
+            try:
+                message = json.loads(data)
+            except json.JSONDecodeError:
+                await manager.send_personal_message({
+                    "type": "ERROR",
+                    "data": "Invalid JSON payload"
+                }, websocket)
+                continue
             logger.info(f"Received event: {message.get('type')}")
             
             msg_type = message.get("type")

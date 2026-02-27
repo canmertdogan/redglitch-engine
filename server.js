@@ -9,6 +9,7 @@ const config = require('./server/config');
 
 // Import services
 const projectService = require('./server/services/projectService');
+const safeFs = require('./server/utils/safeFs');
 
 // Import middleware
 const { securityHeaders, requestLogger } = require('./server/middleware/logging');
@@ -48,16 +49,31 @@ app.use(['/api/history', '/api/ai'], (req, res) => {
         headers: req.headers
     }, (proxyRes) => {
         res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.on('error', (err) => {
+            if (!res.headersSent) {
+                res.status(502).json({ error: "IRAB Backend Proxy Error", details: err.message });
+            } else {
+                res.end();
+            }
+        });
         proxyRes.pipe(res, { end: true });
     });
-    
-    req.pipe(connector, { end: true });
-    
+
     connector.on('error', (err) => {
         if (!res.headersSent) {
             res.status(502).json({ error: "IRAB Backend Offline", details: err.message });
+        } else {
+            res.end();
         }
     });
+
+    connector.setTimeout(10000, () => {
+        connector.destroy(new Error('IRAB proxy timeout'));
+    });
+
+    req.on('aborted', () => connector.destroy());
+    req.on('error', () => connector.destroy());
+    req.pipe(connector, { end: true });
 });
 
 // Security Headers for SharedArrayBuffer / WebGPU support
@@ -87,14 +103,20 @@ app.use('/base_game', express.static(path.join(__dirname, 'public', 'engines', '
 app.get('/engines/rpg-topdown/sprites.js', (req, res, next) => {
     const projectSprites = path.join(projectService.getActiveProject(), 'sprites.js');
     res.sendFile(projectSprites, err => {
-        if (err) next();
+        if (!err) return;
+        if (res.headersSent) return;
+        if (err.code === 'ENOENT') return next();
+        return next(err);
     });
 });
 
 app.get('/base_game/sprites.js', (req, res, next) => {
     const projectSprites = path.join(projectService.getActiveProject(), 'sprites.js');
     res.sendFile(projectSprites, err => {
-        if (err) next();
+        if (!err) return;
+        if (res.headersSent) return;
+        if (err.code === 'ENOENT') return next();
+        return next(err);
     });
 });
 
@@ -160,7 +182,7 @@ app.post('/api/save-spritesheet', async (req, res) => {
         const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
         const spritesheetPath = path.join(__dirname, 'public', 'sprite-art', 'platformer_spritesheet.png');
         
-        await fs.writeFile(spritesheetPath, base64Data, 'base64');
+        await safeFs.safeWriteFullPath(path.resolve(__dirname), spritesheetPath, base64Data, 'base64');
         
         console.log('[SERVER] Spritesheet saved to:', spritesheetPath);
 
@@ -177,7 +199,7 @@ app.post('/api/save-spritesheet', async (req, res) => {
         }
 
         const atlasPath = path.join(__dirname, 'public', 'sprite-art', 'platformer_atlas.json');
-        await fs.writeFile(atlasPath, JSON.stringify(atlas, null, 2));
+        await safeFs.safeWriteFullPath(path.resolve(__dirname), atlasPath, JSON.stringify(atlas, null, 2), 'utf8');
 
         console.log('[SERVER] Atlas saved to:', atlasPath);
 
@@ -194,7 +216,13 @@ app.get('/', (req, res) => {
 });
 
 // Setup WebSocket
-setupWebSocket(server);
+const websocket = setupWebSocket(server, {
+    rootDir: config.ROOT_DIR,
+    getActiveProject: () => projectService.getActiveProject(),
+    projectsRoot: config.PROJECTS_ROOT
+});
+websocket.startFileWatcher();
+app.locals.websocket = websocket;
 
 // Start server
 server.listen(config.PORT, () => {

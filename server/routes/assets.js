@@ -3,6 +3,8 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
+const { resolveUnderRoot } = require('../utils/pathGuard');
+const safeFs = require('../utils/safeFs');
 
 // GET /api/assets - Get all assets
 router.get('/', async (req, res) => {
@@ -50,39 +52,66 @@ router.post('/rebuild', async (req, res) => {
         for (const entry of scanDirs) {
             const fullPath = path.join(baseScanPath, entry.dir);
             try {
-                // Recursive scan
-                const entries = await fs.readdir(fullPath, { recursive: true, withFileTypes: true });
-                for (const dirent of entries) {
-                    if (dirent.isFile()) {
-                        const relativeInDir = dirent.name;
-                        const relativePath = path.join(entry.dir, relativeInDir);
-                        const ext = path.extname(dirent.name).toLowerCase();
-                        
-                        let type = entry.type;
-                        if (ext === '.json' || ext === '.algorithm') type = 'json';
-                        if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) type = 'image';
-                        if (['.mp3', '.wav', '.ogg'].includes(ext)) type = 'audio';
-
-                        let assetPath = relativePath.replace(/\\/g, '/');
-                        if (!isRoot) {
-                            assetPath = `projects/${projectBase}/${assetPath}`;
+                // Recursive scan using a safe walker (fs.readdir with withFileTypes)
+                async function walk(dir, rel) {
+                    const found = [];
+                    const entries = await fs.readdir(dir, { withFileTypes: true });
+                    for (const d of entries) {
+                        if (d.name === 'node_modules' || d.name === '.git' || d.name.startsWith('.')) continue;
+                        const childFull = path.join(dir, d.name);
+                        const childRel = path.join(rel, d.name).replace(/\\/g, '/');
+                        if (d.isDirectory()) {
+                            const children = await walk(childFull, path.join(rel, d.name));
+                            found.push(...children);
+                        } else {
+                            found.push({ dirent: d, full: childFull, rel: childRel });
                         }
-
-                        assets.push({
-                            id: relativePath.replace(/\\/g, '/'),
-                            name: path.basename(dirent.name),
-                            path: assetPath,
-                            type: type,
-                            metadata: {
-                                size: (await fs.stat(path.join(fullPath, relativeInDir))).size,
-                                ext: ext
-                            },
-                            dependencies: []
-                        });
                     }
+                    return found;
+                }
+
+                // Ensure directory exists, then walk
+                let files = [];
+                try {
+                    await fs.access(fullPath);
+                    files = await walk(fullPath, entry.dir);
+                } catch (err) {
+                    files = [];
+                }
+
+                for (const fileInfo of files) {
+                    const dirent = fileInfo.dirent;
+                    const fullFile = fileInfo.full;
+                    const relativePath = fileInfo.rel;
+                    const ext = path.extname(dirent.name).toLowerCase();
+
+                    let type = entry.type;
+                    if (ext === '.json' || ext === '.algorithm') type = 'json';
+                    if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) type = 'image';
+                    if (['.mp3', '.wav', '.ogg'].includes(ext)) type = 'audio';
+
+                    let assetPath = relativePath;
+                    if (!isRoot) {
+                        assetPath = `projects/${projectBase}/${assetPath}`;
+                    }
+
+                    let size = 0;
+                    try { size = (await fs.stat(fullFile)).size; } catch (e) { /* ignore */ }
+
+                    assets.push({
+                        id: relativePath.replace(/\\/g, '/'),
+                        name: path.basename(dirent.name),
+                        path: assetPath,
+                        type: type,
+                        metadata: {
+                            size: size,
+                            ext: ext
+                        },
+                        dependencies: []
+                    });
                 }
             } catch (e) {
-                // Directory might not exist
+                // Directory might not exist or be unreadable
             }
         }
 
@@ -92,7 +121,7 @@ router.post('/rebuild', async (req, res) => {
             : path.join(activeProject, 'data', 'assets.json');
             
         await fs.mkdir(path.dirname(registryPath), { recursive: true });
-        await fs.writeFile(registryPath, JSON.stringify({ assets }, null, 2));
+        await safeFs.safeWriteFullPath(activeProject, registryPath, JSON.stringify({ assets }, null, 2), 'utf8');
 
         console.log(`[AssetManager] Scanned ${assets.length} assets for ${isRoot ? 'ROOT' : projectBase}`);
         res.json({ success: true, count: assets.length });
@@ -143,10 +172,10 @@ router.post('/upload', async (req, res) => {
 
     try {
         const activeProject = projectService.getActiveProject();
-        const fullPath = path.join(activeProject, assetPath);
+        const fullPath = resolveUnderRoot(activeProject, assetPath);
         
         // Security check
-        if (!fullPath.startsWith(activeProject)) {
+        if (!fullPath) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -154,9 +183,9 @@ router.post('/upload', async (req, res) => {
 
         if (isBase64) {
             const base64Data = content.replace(/^data:image\/png;base64,/, "");
-            await fs.writeFile(fullPath, base64Data, 'base64');
+            await safeFs.safeWriteFullPath(activeProject, fullPath, base64Data, 'base64');
         } else {
-            await fs.writeFile(fullPath, content, 'utf8');
+            await safeFs.safeWriteFullPath(activeProject, fullPath, content, 'utf8');
         }
 
         console.log(`[AssetManager] Asset saved: ${assetPath}`);

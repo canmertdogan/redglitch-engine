@@ -91,7 +91,7 @@ if (process.platform === 'darwin') {
 
 // Start the Express server
 const { app: expressApp, server: httpServer } = require('./server'); // Import the server
-const PORT = 3000;
+const { PORT } = require('./server/config');
 
 let mainWindow;
 let splashWindow;

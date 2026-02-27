@@ -3,6 +3,11 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
+const safeFs = require('../utils/safeFs');
+
+function isSafeCutsceneId(value) {
+    return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
+}
 
 // Helper to ensure directory exists
 async function ensureDir(dirPath) {
@@ -21,7 +26,7 @@ async function saveDefinition(filename, data) {
     
     const filePath = path.join(targetDir, filename);
     await ensureDir(path.dirname(filePath));
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
 // --- CUTSCENES API ---
@@ -59,6 +64,7 @@ router.get('/cutscenes/list', async (req, res) => {
 
 router.get('/cutscenes/:id', async (req, res) => {
     try {
+        if (!isSafeCutsceneId(req.params.id)) return res.status(400).json({ error: 'Invalid cutscene id' });
         const targetDir = projectService.isRootProject()
             ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions', 'interactive_cutscenes')
             : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions', 'interactive_cutscenes');
@@ -74,13 +80,14 @@ router.get('/cutscenes/:id', async (req, res) => {
 
 router.post('/cutscenes/:id', async (req, res) => {
     try {
+        if (!isSafeCutsceneId(req.params.id)) return res.status(400).json({ error: 'Invalid cutscene id' });
         const targetDir = projectService.isRootProject()
             ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions', 'interactive_cutscenes')
             : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions', 'interactive_cutscenes');
         
         await ensureDir(targetDir);
         const filePath = path.join(targetDir, `${req.params.id}.json`);
-        await fs.writeFile(filePath, JSON.stringify(req.body, null, 2));
+        await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(req.body, null, 2), 'utf8');
         console.log(`Cutscene ${req.params.id} saved.`);
         res.json({ success: true });
     } catch (err) {
@@ -91,6 +98,7 @@ router.post('/cutscenes/:id', async (req, res) => {
 
 router.delete('/cutscenes/:id', async (req, res) => {
     try {
+        if (!isSafeCutsceneId(req.params.id)) return res.status(400).json({ error: 'Invalid cutscene id' });
         const targetDir = projectService.isRootProject()
             ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions', 'interactive_cutscenes')
             : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions', 'interactive_cutscenes');

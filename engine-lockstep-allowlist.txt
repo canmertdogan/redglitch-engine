@@ -1,0 +1,59 @@
+# Engine lockstep allowlist
+# One entry per line. Remove leading # to approve.
+# Formats:
+#   rpg-topdown/main.js
+#   Default Project:rpg-topdown/main.js
+#   shared/**
+
+# Default Project
+# Default Project:iso-pixel/fxSystem.js
+# Default Project:iso-pixel/main.js
+# Default Project:platformer-2d/CombatSystem.js
+# Default Project:platformer-2d/PhysicsSystem.js
+# Default Project:platformer-2d/PlatformerAssetManager.js
+# Default Project:platformer-2d/PlatformerConfig.js
+# Default Project:platformer-2d/entities/Enemy.js
+# Default Project:platformer-2d/entities/Entity.js
+# Default Project:platformer-2d/entities/FlyingEnemy.js
+# Default Project:platformer-2d/entities/MovingPlatform.js
+# Default Project:platformer-2d/entities/Player.js
+# Default Project:platformer-2d/entities/Projectile.js
+# Default Project:platformer-2d/entities/PushableBlock.js
+# Default Project:platformer-2d/entities/ShooterEnemy.js
+# Default Project:platformer-2d/generator/SmartGenerator.js
+# Default Project:platformer-2d/main.js
+# Default Project:platformer-2d/renderer.js
+# Default Project:rpg-topdown/NPC.js
+# Default Project:rpg-topdown/achievementSystem.js
+# Default Project:rpg-topdown/campaignSystem.js
+# Default Project:rpg-topdown/fxSystem.js
+# Default Project:rpg-topdown/input.js
+# Default Project:rpg-topdown/main.js
+# Default Project:rpg-topdown/mapSystem.js
+# Default Project:rpg-topdown/sprites.js
+# Default Project:rpg-topdown/style.css
+# Default Project:rpg-topdown/ui/uiRenderer.js
+
+# My Awesome Game
+# My Awesome Game:iso-pixel/main.js
+# My Awesome Game:platformer-2d/CombatSystem.js
+# My Awesome Game:platformer-2d/PhysicsSystem.js
+# My Awesome Game:platformer-2d/PlatformerAssetManager.js
+# My Awesome Game:platformer-2d/PlatformerConfig.js
+# My Awesome Game:platformer-2d/entities/Enemy.js
+# My Awesome Game:platformer-2d/entities/Entity.js
+# My Awesome Game:platformer-2d/entities/FlyingEnemy.js
+# My Awesome Game:platformer-2d/entities/MovingPlatform.js
+# My Awesome Game:platformer-2d/entities/Player.js
+# My Awesome Game:platformer-2d/entities/Projectile.js
+# My Awesome Game:platformer-2d/entities/PushableBlock.js
+# My Awesome Game:platformer-2d/entities/ShooterEnemy.js
+# My Awesome Game:platformer-2d/generator/SmartGenerator.js
+# My Awesome Game:platformer-2d/index.html
+# My Awesome Game:platformer-2d/main.js
+# My Awesome Game:platformer-2d/renderer.js
+# My Awesome Game:rpg-topdown/fxSystem.js
+# My Awesome Game:rpg-topdown/main.js
+# My Awesome Game:shared/ItemDefinitions.js
+# My Awesome Game:shared/PlatformerAdapter.js
+

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
+const safeFs = require('../utils/safeFs');
 
 // Get all slots
 router.get('/', async (req, res) => {
@@ -90,13 +91,13 @@ router.post('/:id', async (req, res) => {
         try {
             const existingData = await fs.readFile(slotFile, 'utf8');
             const backupFile = path.join(slotsDir, `slot_${slotId}.backup.json`);
-            await fs.writeFile(backupFile, existingData);
+            await safeFs.safeWriteFullPath(slotsDir, backupFile, existingData, 'utf8');
         } catch (err) {
             // No existing file, that's ok
         }
 
         // Write new slot data
-        await fs.writeFile(slotFile, JSON.stringify(slotData, null, 2));
+        await safeFs.safeWriteFullPath(slotsDir, slotFile, JSON.stringify(slotData, null, 2), 'utf8');
         
         console.log(`[Slots] Saved slot ${slotId}`);
         res.json({ success: true, slotId: slotId });

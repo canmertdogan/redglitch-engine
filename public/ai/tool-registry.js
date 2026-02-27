@@ -1,4 +1,4 @@
-import { PermissionGate } from './permission-gate.js?v=5';
+import { PermissionGate } from './permission-gate.js?v=6';
 
 /**
  * Ketebe AI - Tool Registry (KAP)

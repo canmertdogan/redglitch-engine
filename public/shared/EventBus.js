@@ -1,5 +1,5 @@
 /**
- * Ongonluk Engine - Central Event Bus
+ * Ketebe Engine - Central Event Bus
  * Provides unified communication across all editors and tools
  */
 class EventBus {
