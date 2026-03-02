@@ -30,12 +30,23 @@
         body {
             font-family: var(--kai-font);
             font-size: 20px;
-            background: transparent;
+            background: transparent !important;
             color: var(--kai-text);
             -webkit-font-smoothing: none;
             width: 100vw;
             height: 100vh;
             overflow: hidden;
+            pointer-events: none; /* Pass through to studio by default */
+        }
+
+        /* Interactive Elements */
+        #ai-assistant-container, 
+        #ai-chat-panel, 
+        #xp-ai-loading, 
+        #xp-settings, 
+        #xp-omni-box,
+        .ai-permission-modal {
+            pointer-events: auto !important;
         }
 
         /* === SCROLLBARS === */

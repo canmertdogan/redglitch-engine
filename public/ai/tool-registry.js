@@ -10,6 +10,15 @@ export class ToolRegistry {
         this.eventBus = eventBus || window.KetebeEventBus;
         this.permissionGate = new PermissionGate();
         this.tools = new Map();
+        this.NAMESPACE_ALIAS = {
+            'isopixel': 'pixel',
+            'iso': 'pixel',
+            'worldbuilder': 'world',
+            'topdown': 'world',
+            'rpg': 'world',
+            'codeforge': 'code',
+            'platform': 'platformer'
+        };
         
         console.log(`[ToolRegistry] Initialized in ${window.location.pathname}`);
         this._debug(`Registry startup. Origin: ${window.location.origin}`);
@@ -92,30 +101,59 @@ export class ToolRegistry {
         });
     }
 
-    _checkPendingAction(toolName) {
-        const pending = localStorage.getItem('ai_pending_action');
-        if (pending) {
-            try {
-                const action = JSON.parse(pending);
-                const [ns] = toolName.split('.');
-                const [pendingNs] = action.method.split('.');
-                
-                this._debug(`Checking pending: ${action.method} vs ${toolName} (NS: ${pendingNs} vs ${ns})`);
+    /**
+     * Normalize a tool name using namespace aliases (e.g., isopixel.* -> pixel.*).
+     */
+    _resolveToolName(name) {
+        if (!name || typeof name !== 'string') return { resolvedName: name, tool: this.tools.get(name) };
+        const parts = name.split('.');
+        if (parts.length < 2) return { resolvedName: name, tool: this.tools.get(name) };
 
-                if (action.method === toolName || (ns === pendingNs && ns !== null)) {
-                    this._debug(`MATCH FOUND! Recovering action: ${action.method}`);
-                    localStorage.removeItem('ai_pending_action');
-                    
-                    // Small delay to ensure the tool's environment (DOM/State) is fully ready
-                    setTimeout(() => {
-                        this._debug(`Executing recovered action: ${action.method}`);
-                        this.execute(action.method, action.params, action.id);
-                    }, 1000);
-                }
-            } catch (e) {
-                this._debug(`Recovery error: ${e.message}`);
+        const [ns, method] = parts;
+        const alias = this.NAMESPACE_ALIAS[ns];
+        const resolvedName = alias ? `${alias}.${method}` : name;
+        return { resolvedName, tool: this.tools.get(resolvedName) || this.tools.get(name) };
+    }
+
+    _checkPendingAction(toolName) {
+        const raw = localStorage.getItem('ai_pending_action');
+        if (!raw) return;
+
+        try {
+            const action = JSON.parse(raw);
+            if (!action || !action.method) {
                 localStorage.removeItem('ai_pending_action');
+                return;
             }
+
+            const { resolvedName } = this._resolveToolName(action.method);
+
+            const now = Date.now();
+            const created = action.timestamp || 0;
+            if (created && now - created > 45000) {
+                this._debug(`Pending action expired: ${action.method}`);
+                localStorage.removeItem('ai_pending_action');
+                return;
+            }
+
+            // Only resume when the exact tool is registered (prevents namespace loops)
+            const toolIsAvailable = this.tools.has(resolvedName) || resolvedName === toolName;
+            if (!toolIsAvailable) {
+                this._debug(`Pending ${action.method} waiting for exact tool. Registered: ${toolName}`);
+                return;
+            }
+
+            this._debug(`MATCH FOUND! Recovering action: ${action.method}`);
+            localStorage.removeItem('ai_pending_action');
+            
+            // Small delay to ensure the tool's environment (DOM/State) is ready
+            setTimeout(() => {
+                this._debug(`Executing recovered action: ${action.method}`);
+                this.execute(action.method, action.params, action.id);
+            }, 500);
+        } catch (e) {
+            this._debug(`Recovery error: ${e.message}`);
+            localStorage.removeItem('ai_pending_action');
         }
     }
 
@@ -195,6 +233,11 @@ export class ToolRegistry {
      */
     async execute(name, args, requestId = null) {
         const id = requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Resolve aliases before any routing decisions
+        let { resolvedName, tool } = this._resolveToolName(name);
+        name = resolvedName;
+
         const parts = name.split('.');
         const namespace = parts.length > 1 ? parts[0] : null;
 
@@ -202,29 +245,91 @@ export class ToolRegistry {
 
         const NAMESPACE_MAP = {
             'pixel': 'iso_studio',
+            'isopixel': 'iso_studio',
+            'iso': 'iso_studio',
             'world': 'editor',
-            'code': 'script',
-            'npc': 'npc',
-            'dialogue': 'dialogue'
+            'topdown': 'editor',
+            'rpg': 'editor',
+            'platformer': 'platformer_studio',
         };
 
-        let tool = this.tools.get(name);
+        // Fallback heuristic: only redirect to iso_studio if the intent is clearly iso/pixel-specific
+        const argsString = args ? JSON.stringify(args).toLowerCase() : '';
+        const nameLower = name.toLowerCase();
         
-        if (!tool && namespace && NAMESPACE_MAP[namespace]) {
-            this._debug(`Namespace ${namespace} missing. Saving pending action and navigating...`);
-            
-            localStorage.setItem('ai_pending_action', JSON.stringify({ method: name, params: args, id }));
+        const heuristicIso = (nameLower.includes('isopixel') || nameLower.includes('iso_') || nameLower.includes('pixel') || nameLower.includes('isometric')) || 
+                            (argsString.includes('isopixel') || argsString.includes('iso-pixel') || argsString.includes('iso_pixel') || argsString.includes('isometric'));
+        // Topdown/RPG heuristic — redirects to Level Editor, not iso_studio
+        const heuristicTopdown = (nameLower.includes('topdown') || nameLower.includes('rpg') || nameLower.includes('top_down') || nameLower.includes('level_editor')) ||
+                            (argsString.includes('topdown') || argsString.includes('top-down') || argsString.includes('rpg') || argsString.includes('level-editor'));
+        // Platformer heuristic — redirects to Platformer Studio
+        const heuristicPlatformer = (nameLower.includes('platformer') || nameLower.includes('platform') || nameLower.includes('sidescroll')) ||
+                            (argsString.includes('platformer') || argsString.includes('platform') || argsString.includes('sidescroll'));
+        const prefersIsoOverCode = (namespace === 'pixel' || namespace === 'iso' || namespace === 'isopixel') && heuristicIso;
 
-            await this.execute('navigateTo', { target: NAMESPACE_MAP[namespace] });
+        // Hard redirect based on intent heuristics when not already on the right editor.
+        const _pendingRedirect = (target, label) => {
+            if (window._ai_redirecting) return { success: false, pending: true };
+            window._ai_redirecting = true;
+            this._debug(`Heuristic intent detected (${label}); navigating to ${target}`);
+            localStorage.setItem('ai_pending_action', JSON.stringify({ method: name, params: args, id, timestamp: Date.now() }));
+            return this.execute('navigateTo', { target }).then(() => {
+                const response = { id, success: false, pending: true, error: { code: 'PENDING_TOOL', message: `Navigating to ${target} for ${name}` } };
+                if (this.eventBus) this.eventBus.emit('studio:action:result', response);
+                return response;
+            });
+        };
+
+        if (heuristicPlatformer && typeof window !== 'undefined' && !window.location.pathname.includes('platformer_editor')) {
+            return _pendingRedirect('platformer_studio', 'platformer level');
+        }
+
+        if (heuristicTopdown && typeof window !== 'undefined' && !window.location.pathname.includes('editor.html')) {
+            return _pendingRedirect('editor', 'topdown/rpg map');
+        }
+
+        if (heuristicIso && typeof window !== 'undefined' && !window.location.pathname.includes('iso_editor')) {
+            return _pendingRedirect('iso_studio', 'iso/pixel map');
+        }
+
+        if (!tool && (namespace && NAMESPACE_MAP[namespace] || heuristicIso || heuristicTopdown)) {
+            // Prevent recursive or multiple redirects
+            if (window._ai_redirecting) return { success: false, pending: true };
+            window._ai_redirecting = true;
+
+            let target = 'editor'; // default fallback
+            if (heuristicIso || (namespace && ['pixel','iso','isopixel'].includes(namespace))) target = 'iso_studio';
+            else if (namespace && NAMESPACE_MAP[namespace]) target = NAMESPACE_MAP[namespace];
             
-            return { id, success: true, message: `Pending: Navigating to ${NAMESPACE_MAP[namespace]}` };
+            this._debug(`Namespace ${namespace} missing. Saving pending action and navigating to ${target}...`);
+            
+            localStorage.setItem('ai_pending_action', JSON.stringify({ 
+                method: name, 
+                params: args, 
+                id,
+                timestamp: Date.now()
+            }));
+
+            await this.execute('navigateTo', { target });
+            
+            const response = { 
+                id, 
+                success: false, 
+                pending: true, 
+                error: { 
+                    code: 'PENDING_TOOL', 
+                    message: `Waiting for ${name}. Navigated to ${target} for tool registration.` 
+                }
+            };
+            if (this.eventBus) this.eventBus.emit('studio:action:result', response);
+            return response;
         }
         
         if (!tool) {
             this._debug(`ERROR: Unknown tool ${name}`);
             const error = { code: 'UNKNOWN_TOOL', message: `Unknown tool: ${name}` };
             const response = { id, success: false, error };
-            this.eventBus.emit('studio:action:result', response);
+            if (this.eventBus) this.eventBus.emit('studio:action:result', response);
             return response;
         }
 
@@ -713,6 +818,23 @@ export class ToolRegistry {
                 if (!window.KetebeAIInstance || !window.KetebeAIInstance.workflowManager) {
                     throw new Error("Workflow Manager not initialized in KetebeAIInstance");
                 }
+                // Safety net: if steps have NO navigateTo and look like a plain studio-open
+                // attempt (just generic stubs), redirect to correct studio instead.
+                const steps = args.steps || [];
+                const stepNames = steps.map(s => s.name);
+                const hasNavigateTo = stepNames.includes('navigateTo');
+                const isJustOpeningStudio = !hasNavigateTo && steps.length <= 3 && 
+                    stepNames.every(n => ['asset.generate','code.insert','world.spawn'].includes(n));
+                if (isJustOpeningStudio) {
+                    const allArgs = JSON.stringify(steps).toLowerCase();
+                    let target = null;
+                    if (/iso|isometric|isopixel/.test(allArgs)) target = 'iso_studio';
+                    else if (/platformer|platform/.test(allArgs)) target = 'platformer_studio';
+                    else if (/topdown|top.down|rpg|world/.test(allArgs)) target = 'editor';
+                    if (target && window.KetebeAIInstance && window.KetebeAIInstance.toolRegistry) {
+                        return await window.KetebeAIInstance.toolRegistry.execute('navigateTo', { target });
+                    }
+                }
                 return await window.KetebeAIInstance.workflowManager.executeWorkflow(args.steps);
             }
         });
@@ -722,7 +844,7 @@ export class ToolRegistry {
         // navigateTo (Safe)
         this.register({
             name: 'navigateTo',
-            description: 'Open a specific studio tool or editor.',
+            description: 'Open a specific studio tool or editor. Use "editor" for top-down RPG map/level editing, "iso_studio" for isometric/isopixel map creation, "platformer_studio" for 2D platformer level editing, "script" for code/scripting.',
             securityLevel: 'safe',
             parameters: {
                 type: 'object',
@@ -734,15 +856,24 @@ export class ToolRegistry {
                             'platformer_studio', 'script', 'asset-manager', 'npc', 
                             'enemy', 'item', 'quest', 'dialogue', 'pixel', 'val_suite'
                         ],
-                        description: 'The ID of the tool to open.'
+                        description: 'The ID of the tool to open. "editor"=Top-down RPG Level Editor, "iso_studio"=IsoPixel/Isometric Studio, "platformer_studio"=2D Platformer Editor, "script"=Code Forge.'
                     }
                 },
                 required: ['target']
             },
             execute: async (args) => {
-                const target = (typeof args === 'string') ? args : args.target;
+                let target = (typeof args === 'string') ? args : args.target;
                 
                 if (!target) throw new Error("Navigation target missing");
+
+                // Normalize common aliases so LLM typos still work
+                const targetAliases = {
+                    'topdown': 'editor', 'topdown_studio': 'editor', 'rpg': 'editor', 'rpg_studio': 'editor', 'level_editor': 'editor', 'world': 'editor',
+                    'isopixel': 'iso_studio', 'isometric': 'iso_studio', 'iso': 'iso_studio',
+                    'platformer': 'platformer_studio', 'platform': 'platformer_studio',
+                    'code_forge': 'script', 'code': 'script'
+                };
+                target = targetAliases[target] || target;
 
                 this._debug(`Navigating to: ${target}`);
 
@@ -771,12 +902,18 @@ export class ToolRegistry {
                     'item': 'item_editor.html',
                     'quest': 'quest_editor.html',
                     'dialogue': 'dialogue_editor.html',
-                    'pixel': 'pixel_editor.html',
+                    'pixel': 'iso_editor.html',
                     'val_suite': 'ai/val-suite.html'
                 };
                 
                 if (nav[target]) {
                     const url = nav[target];
+                    // Avoid redundant reloads
+                    const currentPath = window.location.pathname;
+                    if (currentPath.includes(url) || (url === 'dashboard.html' && currentPath === '/')) {
+                        this._debug(`Already on ${target} (${url}), skipping redirect.`);
+                        return { success: true, message: `Already on ${target}` };
+                    }
                     if (window.top) window.top.location.href = url;
                     else window.location.href = url;
                     return { message: `Redirecting to ${target}` };
@@ -785,6 +922,68 @@ export class ToolRegistry {
             }
         });
         
+        // --- STUB TOOLS (absorb common LLM hallucinations silently) ---
+        // These prevent unregistered code.* / asset.* / world.* from triggering
+        // the namespace auto-redirect and opening random editors mid-workflow.
+        const _stub = (stubName, msg) => this.register({
+            name: stubName, description: msg, securityLevel: 'safe',
+            parameters: { type: 'object', properties: {} },
+            execute: async () => ({ success: true, message: msg })
+        });
+        _stub('code.insert',   'No-op: code.insert is handled by the Script Editor directly.');
+        _stub('asset.generate','No-op: use the Sprite Editor to generate assets.');
+        _stub('world.spawn',   'No-op: use the World Editor to spawn objects.');
+
+        // --- STUDIO PROXY TOOLS ---
+        // These forward tool calls to the appropriate studio iframe via postMessage
+
+        // pixel.generateTerrain proxy (dispatches to iso_studio iframe)
+        this.register({
+            name: 'pixel.generateTerrain',
+            description: 'Generate procedural terrain in the IsoPixel Studio. Opens iso_studio first if not open.',
+            securityLevel: 'high-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    mode: { type: 'string', enum: ['terrain', 'islands', 'maze', 'flat'], default: 'terrain' },
+                    scale: { type: 'number', default: 0.05 },
+                    amplitude: { type: 'number', default: 10 }
+                }
+            },
+            execute: async (args) => {
+                this._debug(`Dispatching terrain generation to iso_studio...`, args);
+                const dispatch = () => {
+                    // In standalone iso_editor, dispatch directly to this window.
+                    if (typeof window !== 'undefined' && window.location.pathname.includes('iso_editor')) {
+                        window.postMessage({ type: 'ai:tool', name: 'generateTerrain', args: args || {} }, '*');
+                        return true;
+                    }
+
+                    const frame = document.getElementById('frame-iso_studio');
+                    if (frame && frame.contentWindow) {
+                        console.log("[ToolRegistry] Found iso_studio frame, posting message...");
+                        frame.contentWindow.postMessage({ type: 'ai:tool', name: 'generateTerrain', args: args || {} }, '*');
+                        return true;
+                    }
+                    return false;
+                };
+                let dispatched = dispatch();
+                if (!dispatched) {
+                    // Studio not open yet — wait up to 5s for it to load
+                    await new Promise((resolve) => {
+                        let tries = 0;
+                        const iv = setInterval(() => {
+                            tries++;
+                            dispatched = dispatch();
+                            if (dispatched || tries > 50) { clearInterval(iv); resolve(); }
+                        }, 100);
+                    });
+                }
+                if (!dispatched) throw new Error('IsoPixel Studio is not available for terrain generation');
+                return { success: true, message: 'Terrain generation dispatched to IsoPixel Studio' };
+            }
+        });
+
         // --- ENGINE & SPATIAL ---
 
         // engine.getSnapshot (Safe)
@@ -863,6 +1062,93 @@ export class ToolRegistry {
                 }, duration * 1000);
 
                 return { success: true, message: `Chaos mode started for ${duration}s.` };
+            }
+        });
+
+        // platformer.generateLevel proxy (dispatches to platformer_studio iframe)
+        this.register({
+            name: 'platformer.generateLevel',
+            description: 'Generate a procedural platformer level. Opens platformer_studio first if not open.',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    theme: { type: 'string', enum: ['flow', 'spire', 'abyss', 'gauntlet', 'clockwork'], default: 'flow' },
+                    difficulty: { type: 'number', default: 5, description: 'Difficulty 1-10.' },
+                    width: { type: 'number', default: 40 },
+                    height: { type: 'number', default: 20 }
+                }
+            },
+            execute: async (args) => {
+                this._debug(`Dispatching level generation to platformer_studio...`, args);
+                const dispatch = () => {
+                    if (typeof window !== 'undefined' && window.location.pathname.includes('platformer_editor')) {
+                        window.postMessage({ type: 'ai:tool', name: 'generateLevel', args: args || {} }, '*');
+                        return true;
+                    }
+                    const frame = document.getElementById('frame-platformer_studio');
+                    if (frame && frame.contentWindow) {
+                        frame.contentWindow.postMessage({ type: 'ai:tool', name: 'generateLevel', args: args || {} }, '*');
+                        return true;
+                    }
+                    return false;
+                };
+                let dispatched = dispatch();
+                if (!dispatched) {
+                    await new Promise((resolve) => {
+                        let tries = 0;
+                        const iv = setInterval(() => {
+                            tries++;
+                            dispatched = dispatch();
+                            if (dispatched || tries > 50) { clearInterval(iv); resolve(); }
+                        }, 100);
+                    });
+                }
+                if (!dispatched) throw new Error('Platformer Studio is not available for level generation');
+                return { success: true, message: 'Level generation dispatched to Platformer Studio' };
+            }
+        });
+
+        // world.generateMap proxy (dispatches to editor iframe)
+        this.register({
+            name: 'world.generateMap',
+            description: 'Generate a procedural top-down RPG map. Opens the level editor first if not open.',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    type: { type: 'string', enum: ['village', 'dungeon', 'hell', 'heaven', 'lab'], default: 'village' },
+                    density: { type: 'number', default: 5 },
+                    seed: { type: 'string', description: 'Optional seed.' }
+                }
+            },
+            execute: async (args) => {
+                this._debug(`Dispatching map generation to editor...`, args);
+                const dispatch = () => {
+                    if (typeof window !== 'undefined' && window.location.pathname.includes('editor.html')) {
+                        window.postMessage({ type: 'ai:tool', name: 'generateMap', args: args || {} }, '*');
+                        return true;
+                    }
+                    const frame = document.getElementById('frame-editor');
+                    if (frame && frame.contentWindow) {
+                        frame.contentWindow.postMessage({ type: 'ai:tool', name: 'generateMap', args: args || {} }, '*');
+                        return true;
+                    }
+                    return false;
+                };
+                let dispatched = dispatch();
+                if (!dispatched) {
+                    await new Promise((resolve) => {
+                        let tries = 0;
+                        const iv = setInterval(() => {
+                            tries++;
+                            dispatched = dispatch();
+                            if (dispatched || tries > 50) { clearInterval(iv); resolve(); }
+                        }, 100);
+                    });
+                }
+                if (!dispatched) throw new Error('World Editor is not available for map generation');
+                return { success: true, message: 'Map generation dispatched to World Editor' };
             }
         });
 

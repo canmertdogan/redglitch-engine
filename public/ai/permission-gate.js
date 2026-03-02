@@ -185,7 +185,9 @@ export class PermissionGate {
         return new Promise((resolve) => {
             let diffHtml = '';
             if (args.code || args.content || args.js) {
-                const code = args.code || args.content || args.js;
+                let code = args.code || args.content || args.js;
+                if (typeof code !== 'string') code = JSON.stringify(code, null, 2);
+                
                 diffHtml = `
                     <div class="ai-diff-container">
                         <div class="ai-diff-label">PROPOSED CHANGES:</div>
@@ -195,6 +197,7 @@ export class PermissionGate {
             }
 
             const modal = document.createElement('div');
+            modal.id = 'ai-permission-gate';
             modal.className = 'ai-permission-modal';
             modal.innerHTML = `
                 <div class="ai-permission-content irab-styled">
@@ -235,6 +238,7 @@ export class PermissionGate {
     _showBlockedModal(toolName, filePath, reason) {
         return new Promise((resolve) => {
             const modal = document.createElement('div');
+            modal.id = 'ai-permission-gate';
             modal.className = 'ai-permission-modal';
             modal.innerHTML = `
                 <div class="ai-permission-content irab-styled ai-blocked">
@@ -267,26 +271,35 @@ export class PermissionGate {
                     background: rgba(0,0,0,0.85); z-index: 2000000;
                     display: flex; justify-content: center; align-items: center;
                     font-family: 'VT323', monospace; letter-spacing: 1px;
+                    pointer-events: auto !important;
                 }
                 .ai-permission-content.irab-styled {
                     background: #080c18; border: 2px solid #f1c40f; padding: 0;
-                    width: 550px; color: #cfd8dc; box-shadow: 0 0 30px rgba(241, 196, 15, 0.2);
+                    width: 90%; max-width: 550px; color: #cfd8dc; 
+                    box-shadow: 0 0 30px rgba(241, 196, 15, 0.2);
                     display: flex; flex-direction: column;
+                    max-height: 95vh; overflow: hidden;
                 }
                 .ai-modal-header {
                     background: #f1c40f; color: #000; padding: 10px 15px;
                     display: flex; justify-content: space-between; align-items: center;
                     font-weight: bold; font-size: 1.1em;
+                    flex-shrink: 0;
                 }
                 .ai-security-tag {
                     font-size: 0.8em; padding: 2px 6px; background: #000; color: #f1c40f;
                     border-radius: 2px;
                 }
-                .ai-permission-details { padding: 20px; }
+                .ai-permission-details { 
+                    padding: 20px; 
+                    overflow-y: auto;
+                    flex-grow: 1;
+                }
                 .ai-action-summary { font-size: 1.3em; margin-bottom: 15px; border-bottom: 1px solid #1f2b42; padding-bottom: 10px; }
                 .ai-permission-details pre {
                     background: #000; padding: 12px; border: 1px solid #1f2b42;
                     max-height: 250px; overflow-y: auto; color: #2ecc71; font-size: 14px;
+                    white-space: pre-wrap; word-break: break-all;
                 }
                 .ai-diff-container { margin-bottom: 15px; }
                 .ai-diff-label { font-size: 0.9em; color: #f1c40f; margin-bottom: 5px; }
@@ -298,10 +311,12 @@ export class PermissionGate {
                 .ai-permission-actions {
                     display: flex; gap: 2px; padding: 10px; background: #020408;
                     justify-content: stretch;
+                    flex-shrink: 0;
                 }
                 .ai-permission-actions button {
                     flex: 1; border: 1px solid #333; padding: 12px; cursor: pointer;
                     font-family: inherit; font-size: 1.1em; transition: all 0.1s;
+                    pointer-events: auto !important;
                 }
                 .ai-btn-primary { background: #f1c40f; color: #000; font-weight: bold; border-color: #f1c40f !important; }
                 .ai-btn-danger { background: #1a0a0a; color: #e74c3c; }

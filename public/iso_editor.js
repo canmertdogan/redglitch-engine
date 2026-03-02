@@ -131,11 +131,11 @@ function registerPixelTools() {
     studioBridge.register({
         name: 'generateTerrain',
         description: 'Generate procedural terrain using Noise (Simplex/Perlin).',
-        securityLevel: 'low-risk',
+        securityLevel: 'high-risk',
         parameters: {
             type: 'object',
             properties: {
-                mode: { type: 'string', enum: ['islands', 'mountains', 'plains', 'void'], default: 'islands' },
+                mode: { type: 'string', enum: ['terrain', 'islands', 'maze', 'flat'], default: 'terrain' },
                 scale: { type: 'number', default: 0.05 },
                 amplitude: { type: 'number', default: 10 }
             }
@@ -1077,7 +1077,7 @@ async function selectPrefab(name, el) {
     
     if (!state.prefabCache[name]) {
         try {
-            const res = await fetch(`dunyalar/definitions/${name}`);
+            const res = await fetch(`/dunyalar/definitions/${name}`);
             if(res.ok) state.prefabCache[name] = await res.json();
         } catch(e) {}
     }
@@ -1268,7 +1268,77 @@ window.onload = async () => {
     updateLayerList();
     loop();
     updateProgress(100, "READY!");
+
+    // --- AI Generation Helper ---
+    window._isoAIGenerate = async (params) => {
+        const mode = (params && params.mode) || 'terrain';
+        const scale = (params && params.scale) || 0.05;
+        const amplitude = (params && params.amplitude) || 10;
+        console.log('[IsoStudio] AI generating terrain:', mode, { scale, amplitude });
+        document.getElementById('gen-mode').value = mode;
+        document.getElementById('gen-scale').value = scale;
+        document.getElementById('gen-amp').value = amplitude;
+        updateProgress(0, 'AI: Generating terrain...');
+        const result = await generateTerrainAsync(map.width, map.height, {
+            mode, scale, amplitude,
+            seaLevel: parseInt(document.getElementById('gen-sea').value),
+            offset: parseInt(document.getElementById('gen-offset').value),
+            bottomZ: parseInt(document.getElementById('gen-bottom').value)
+        });
+        map.layers = result.layers;
+        map.z = result.z;
+        map.shapes = result.shapes;
+        state.activeLayer = 0;
+        updateLayerList();
+        render();
+        updateProgress(100, "READY!");
+        console.log('[IsoStudio] AI terrain generated!');
+    };
+
+    // Check for pending AI action immediately
+    _isoPendingCheck();
 };
+
+function _isoPendingCheck() {
+    const raw = localStorage.getItem('ai_pending_action');
+    if (!raw) return;
+    try {
+        const action = JSON.parse(raw);
+        if (!action || !action.method) return;
+        const age = Date.now() - (action.timestamp || 0);
+        if (age > 60000) { localStorage.removeItem('ai_pending_action'); return; }
+        if (action.method === 'pixel.generateTerrain' || action.method === 'isopixel.generateTerrain' || action.method === 'iso.generateTerrain') {
+            localStorage.removeItem('ai_pending_action');
+            console.log('[IsoStudio] Recovering AI pending action:', action.params);
+            if (window._isoAIGenerate) {
+                window._isoAIGenerate(action.params || {});
+            }
+        }
+    } catch (e) {
+        console.error('[IsoStudio] Pending action recovery failed:', e);
+    }
+}
+
+// Listen for localStorage changes from other frames (assistant iframe sets it)
+window.addEventListener('storage', (e) => {
+    if (e.key === 'ai_pending_action' && e.newValue) {
+        console.log('[IsoStudio] Storage event: new pending action detected');
+        setTimeout(() => _isoPendingCheck(), 200);
+    }
+});
+
+// Cross-frame AI tool dispatch — assistant sends postMessage directly
+window.addEventListener('message', async (event) => {
+    if (!event.data || event.data.type !== 'ai:tool') return;
+    const { name, args } = event.data;
+    if (name === 'generateTerrain' || name === 'pixel.generateTerrain') {
+        console.log('[IsoStudio] Received ai:tool postMessage:', name, args);
+        localStorage.removeItem('ai_pending_action');
+        if (window._isoAIGenerate) {
+            await window._isoAIGenerate(args || {});
+        }
+    }
+});
 
 function updateLayerList() {
     const list = document.getElementById('layer-list');
@@ -1376,34 +1446,36 @@ function initPalette() {
 // Copy the robust 2D-to-ISO caching from the Strategy
 // Run heavy IsoGenerator tasks in a worker when available to avoid freezing the UI
 async function generateTerrainAsync(width, height, config) {
+    // Try Web Worker first for non-blocking generation
     if (window.Worker) {
-        return new Promise((resolve, reject) => {
-            try {
+        try {
+            return await new Promise((resolve, reject) => {
                 const w = new Worker('/iso_generator_worker.js');
                 w.onmessage = (ev) => { w.terminate(); if (ev.data && ev.data.error) reject(new Error(ev.data.error)); else resolve(ev.data.result); };
-                w.onerror = (err) => { w.terminate(); reject(err); };
+                w.onerror = (err) => { w.terminate(); reject(new Error('Worker failed: ' + (err.message || 'unknown error'))); };
                 w.postMessage({ action: 'terrain', width, height, config });
-            } catch (err) {
-                reject(err);
-            }
-        });
+            });
+        } catch (workerErr) {
+            console.warn('[IsoGen] Worker failed, falling back to sync generation:', workerErr.message);
+        }
     }
+    // Fallback: synchronous generation on main thread
     const gen = new IsoGenerator();
     return gen.generate(width, height, config);
 }
 
 async function generateVegetationAsync(width, height, currentLayers, currentZ, config) {
     if (window.Worker) {
-        return new Promise((resolve, reject) => {
-            try {
+        try {
+            return await new Promise((resolve, reject) => {
                 const w = new Worker('/iso_generator_worker.js');
                 w.onmessage = (ev) => { w.terminate(); if (ev.data && ev.data.error) reject(new Error(ev.data.error)); else resolve(ev.data.result); };
-                w.onerror = (err) => { w.terminate(); reject(err); };
+                w.onerror = (err) => { w.terminate(); reject(new Error('Worker failed: ' + (err.message || 'unknown error'))); };
                 w.postMessage({ action: 'vegetation', width, height, currentLayers, currentZ, config });
-            } catch (err) {
-                reject(err);
-            }
-        });
+            });
+        } catch (workerErr) {
+            console.warn('[IsoGen] Vegetation worker failed, falling back to sync:', workerErr.message);
+        }
     }
     const gen = new IsoGenerator();
     return gen.generateVegetation(width, height, currentLayers, currentZ, config);
@@ -1686,7 +1758,7 @@ window.deleteWorld = async (filename, e) => {
 
 window.loadWorld = async (filename) => {
     try {
-        const res = await fetch(`dunyalar/${filename}`);
+        const res = await fetch(`/dunyalar/${filename}`);
         if(res.ok) {
             const data = await res.json();
             map = data;
@@ -2043,4 +2115,3 @@ function onWheel(e) {
     state.zoom = Math.max(0.2, Math.min(4, state.zoom + delta));
     document.getElementById('zoom-level').innerText = Math.round(state.zoom * 100) + '%';
 }
-

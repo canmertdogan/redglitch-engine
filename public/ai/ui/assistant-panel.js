@@ -330,7 +330,8 @@ class KaiChatUIController {
                 'ai-chat-panel', 
                 'xp-ai-loading', 
                 'xp-settings', 
-                'ai-speech-bubble'
+                'ai-speech-bubble',
+                'ai-permission-gate'
             ];
             
             elements.forEach(id => {
@@ -354,6 +355,27 @@ class KaiChatUIController {
                 window.parent.postMessage({ type: 'kai:hitzones', zones }, '*');
             }
         }, 100);
+
+        // Forward mouse events to parent to prevent "trapping" the mouse
+        window.addEventListener('mousemove', (e) => {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ 
+                    type: 'kai:mousemove', 
+                    clientX: e.clientX, 
+                    clientY: e.clientY 
+                }, '*');
+            }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ 
+                    type: 'kai:mousemove', // Trigger hit check on click too
+                    clientX: e.clientX, 
+                    clientY: e.clientY 
+                }, '*');
+            }
+        });
     }
 
     showSpeechBubble(text, actions = []) {
@@ -545,6 +567,8 @@ class KaiChatUIController {
                 this.startTutorial(response.tutorial);
             } else if (response.type === 'confirmation' && response.pendingAction) {
                 this.showActionConfirmation(response.pendingAction);
+            } else if (response.type === 'choices' && response.intent) {
+                this.showChoices(response.intent);
             }
 
         } catch (error) {
@@ -668,6 +692,52 @@ class KaiChatUIController {
         actionsDiv.className = 'ai-message system';
         actionsDiv.innerHTML = `<div class="ai-message-bubble">${actionsHTML}</div>`;
         messagesContainer.appendChild(actionsDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    showChoices(intent) {
+        const messagesContainer = document.getElementById('ai-chat-messages');
+        if (!messagesContainer) return;
+
+        const choicesDiv = document.createElement('div');
+        choicesDiv.className = 'ai-message system';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-message-bubble';
+        bubble.style.display = 'flex';
+        bubble.style.flexWrap = 'wrap';
+        bubble.style.gap = '6px';
+        bubble.style.padding = '10px';
+
+        intent.choices.forEach((choice) => {
+            const btn = document.createElement('button');
+            btn.className = 'xp-button';
+            btn.style.fontSize = '13px';
+            btn.style.padding = '6px 14px';
+            btn.style.cursor = 'pointer';
+            btn.textContent = choice.label;
+            btn.onclick = async () => {
+                // Disable all choice buttons
+                bubble.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+                btn.style.opacity = '1';
+                btn.style.border = '2px solid #ffd700';
+
+                this.addMessage('user', choice.label);
+                this.addMessage('system', `>> GENERATING ${choice.label.toUpperCase()}...`);
+                this.setAvatarState('working');
+
+                try {
+                    await this.assistant._dispatchIntent(intent, choice.params);
+                } catch (e) {
+                    this.addMessage('error', `>> ERROR: ${e.message}`);
+                    this.setAvatarState('error');
+                }
+            };
+            bubble.appendChild(btn);
+        });
+
+        choicesDiv.appendChild(bubble);
+        messagesContainer.appendChild(choicesDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 

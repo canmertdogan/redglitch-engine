@@ -92,7 +92,7 @@ export class KetebeAI {
         
         if (provider === 'native' && irabBridge && irabBridge.isConnected) {
             console.log('[KetebeAI] Routing to Native Cortex...');
-            return new Promise((resolve) => {
+            const nativeResult = await new Promise((resolve) => {
                 const originalOnToken = irabBridge.onToken;
                 let fullText = "";
 
@@ -109,6 +109,14 @@ export class KetebeAI {
 
                 irabBridge.prompt(message, options.context || {});
             });
+
+            // Parse and execute any tool calls in the native response
+            const toolCalls = this.workflowManager.parseToolCalls(nativeResult.text);
+            if (toolCalls.length > 0) {
+                const workflowResult = await this.workflowManager.executeWorkflow(toolCalls);
+                return { ...nativeResult, toolCalls, workflowResult };
+            }
+            return { ...nativeResult, toolCalls: [] };
         }
 
         // 2. SECONDARY: Local WebGPU (Micro Edition)

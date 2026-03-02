@@ -691,6 +691,111 @@
         .btn-create:hover { background: #fff; }
         .btn-create:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* --- BUILD WIZARD MODAL --- */
+        #build-wizard {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2,4,8,0.97); z-index: 10000;
+            backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .bw-box {
+            width: 780px; max-height: 85vh;
+            background: #0b111e; border: 1px solid #34495e;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; border-radius: 4px; overflow: hidden;
+        }
+        .bw-header {
+            height: 56px; background: #020408;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; border-bottom: 1px solid #1f2b42; flex-shrink: 0;
+        }
+        .bw-title { font-size: 1.1rem; color: #fff; letter-spacing: 2px; font-weight: bold; display: flex; align-items: center; gap: 12px; }
+        .bw-title .bw-icon { color: var(--accent); }
+        .bw-close { font-size: 1.4rem; color: #5d6d7e; cursor: pointer; transition: color 0.2s; line-height: 1; }
+        .bw-close:hover { color: #e74c3c; }
+        /* Steps indicator */
+        .bw-steps {
+            display: flex; align-items: center; padding: 16px 24px;
+            background: #080c14; border-bottom: 1px solid #1f2b42; flex-shrink: 0; gap: 0;
+        }
+        .bw-step {
+            display: flex; align-items: center; gap: 8px; color: #3d4f66;
+            font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;
+        }
+        .bw-step.active { color: var(--accent); }
+        .bw-step.done { color: #27ae60; }
+        .bw-step-num {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid #2c3e50; display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem;
+        }
+        .bw-step.active .bw-step-num { border-color: var(--accent); color: var(--accent); }
+        .bw-step.done .bw-step-num { border-color: #27ae60; background: #27ae60; color: #000; }
+        .bw-sep { flex: 1; height: 1px; background: #1f2b42; margin: 0 12px; }
+        /* Content */
+        .bw-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+        /* Step 1 */
+        .bw-config { padding: 28px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .bw-target-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+        }
+        .bw-target-card {
+            background: #0e1525; border: 2px solid #1f2b42; border-radius: 4px;
+            padding: 16px 10px; cursor: pointer; text-align: center;
+            transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .bw-target-card:hover { border-color: #34495e; background: #162133; }
+        .bw-target-card.selected { border-color: var(--accent); background: #1a1e0a; box-shadow: 0 0 12px rgba(241,196,15,0.15); }
+        .bw-target-card .tc-icon { font-size: 1.8rem; }
+        .bw-target-card .tc-label { color: #cfd8dc; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; }
+        .bw-target-card .tc-sub { color: #5d6d7e; font-size: 0.7rem; }
+        .bw-info-row { display: flex; gap: 16px; }
+        .bw-info-item { flex: 1; background: #080c14; border: 1px solid #1f2b42; border-radius: 3px; padding: 14px 16px; }
+        .bw-info-label { color: #5d6d7e; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .bw-info-val { color: #fff; font-size: 0.95rem; font-weight: bold; }
+        /* Step 2 – terminal */
+        .bw-terminal-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .bw-terminal-bar {
+            padding: 10px 20px; background: #020408; border-bottom: 1px solid #1f2b42;
+            display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+        }
+        .bw-spinner {
+            width: 16px; height: 16px; border: 2px solid #1f2b42;
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: bwSpin 0.7s linear infinite; flex-shrink: 0;
+        }
+        @keyframes bwSpin { to { transform: rotate(360deg); } }
+        .bw-progress-bar-wrap { flex: 1; height: 6px; background: #1f2b42; border-radius: 3px; overflow: hidden; }
+        .bw-progress-bar { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s; }
+        .bw-pct { color: var(--accent); font-size: 0.8rem; font-weight: bold; min-width: 38px; text-align: right; }
+        #bw-log {
+            flex: 1; overflow-y: auto; padding: 14px 20px;
+            font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.55;
+            color: #8fa0bc; background: #050810; white-space: pre-wrap; word-break: break-all;
+        }
+        #bw-log .log-ok  { color: #27ae60; }
+        #bw-log .log-err { color: #e74c3c; }
+        #bw-log .log-acc { color: var(--accent); }
+        /* Step 3 */
+        .bw-result { padding: 40px 28px; display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
+        .bw-result-icon { font-size: 3.5rem; }
+        .bw-result-title { font-size: 1.3rem; font-weight: bold; color: #fff; letter-spacing: 2px; }
+        .bw-result-path { color: #5d6d7e; font-size: 0.8rem; font-family: monospace; background: #020408; padding: 8px 14px; border: 1px solid #1f2b42; border-radius: 2px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* Footer */
+        .bw-footer {
+            padding: 16px 24px; border-top: 1px solid #1f2b42;
+            display: flex; justify-content: flex-end; gap: 12px;
+            background: #080c14; flex-shrink: 0;
+        }
+        .bw-btn { padding: 10px 22px; font-family: inherit; font-weight: bold; font-size: 0.85rem; cursor: pointer; letter-spacing: 1px; border: none; transition: all 0.15s; }
+        .bw-btn-cancel { background: transparent; border: 1px solid #34495e; color: #8fa0bc; }
+        .bw-btn-cancel:hover { color: #fff; border-color: #fff; }
+        .bw-btn-primary { background: var(--accent); color: #000; }
+        .bw-btn-primary:hover { background: #fff; }
+        .bw-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+        .bw-btn-danger { background: transparent; border: 1px solid #522; color: #e74c3c; }
+        .bw-btn-danger:hover { background: #e74c3c; color: #000; }
+
         /* --- STATUS BAR --- */
         #status-bar {
             height: 22px; background: #020408; border-top: 1px solid #182236;
@@ -861,7 +966,9 @@
                         <div class="dropdown-item" onclick="buildGame(); closeAllDropdowns();"><span>🔨</span> Build Project</div>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-item" onclick="setBuildTarget('win')"><span>🪟</span> Platform: Windows (EXE)</div>
+                        <div class="dropdown-item" onclick="setBuildTarget('macos')"><span>🍎</span> Platform: macOS (.app)</div>
                         <div class="dropdown-item" onclick="setBuildTarget('android')"><span>🤖</span> Platform: Android (APK)</div>
+                        <div class="dropdown-item" onclick="setBuildTarget('ios')"><span>📱</span> Platform: iOS (Xcode)</div>
                         <div class="dropdown-item" onclick="setBuildTarget('web')"><span>🕸️</span> Platform: Web (HTML5)</div>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-item"><span>⚙️</span> Build Options...</div>
@@ -981,7 +1088,9 @@
                         <div class="cat-title">BUILD PIPELINE</div>
                         <select class="build-selector" id="build-target" onchange="setBuildTarget(this.value)">
                             <option value="win">WINDOWS (EXE)</option>
+                            <option value="macos">MACOS (.APP)</option>
                             <option value="android">ANDROID (APK)</option>
+                            <option value="ios">IOS (XCODE)</option>
                             <option value="web">WEB (HTML5)</option>
                             <option value="all">ALL TARGETS (CI)</option>
                         </select>
@@ -1041,6 +1150,96 @@
     </div>
 
     <!-- PROJECT MODAL REDESIGN (PHASE 2) -->
+    <!-- BUILD WIZARD MODAL -->
+    <div id="build-wizard" style="display:none;">
+        <div class="bw-box">
+            <div class="bw-header">
+                <div class="bw-title"><span class="bw-icon">🔨</span> BUILD WIZARD</div>
+                <div class="bw-close" onclick="closeBuildWizard()">×</div>
+            </div>
+            <div class="bw-steps">
+                <div class="bw-step active" id="bw-s1"><div class="bw-step-num">1</div>CONFIGURE</div>
+                <div class="bw-sep"></div>
+                <div class="bw-step" id="bw-s2"><div class="bw-step-num">2</div>BUILDING</div>
+                <div class="bw-sep"></div>
+                <div class="bw-step" id="bw-s3"><div class="bw-step-num">3</div>RESULT</div>
+            </div>
+            <div class="bw-content">
+                <!-- STEP 1: Configure -->
+                <div id="bw-step1" class="bw-config">
+                    <div>
+                        <div class="form-label" style="margin-bottom:12px;">Select Build Target</div>
+                        <div class="bw-target-grid">
+                            <div class="bw-target-card selected" id="bwtc-win" onclick="bwSelectTarget('win')">
+                                <div class="tc-icon">🪟</div>
+                                <div class="tc-label">WINDOWS</div>
+                                <div class="tc-sub">.exe installer</div>
+                            </div>
+                            <div class="bw-target-card" id="bwtc-android" onclick="bwSelectTarget('android')">
+                                <div class="tc-icon">🤖</div>
+                                <div class="tc-label">ANDROID</div>
+                                <div class="tc-sub">.apk / aab</div>
+                            </div>
+                            <div class="bw-target-card" id="bwtc-macos" onclick="bwSelectTarget('macos')">
+                                <div class="tc-icon">🍎</div>
+                                <div class="tc-label">MACOS</div>
+                                <div class="tc-sub">.app bundle</div>
+                            </div>
+                            <div class="bw-target-card" id="bwtc-ios" onclick="bwSelectTarget('ios')">
+                                <div class="tc-icon">📱</div>
+                                <div class="tc-label">IOS</div>
+                                <div class="tc-sub">xcode / ipa</div>
+                            </div>
+                            <div class="bw-target-card" id="bwtc-web" onclick="bwSelectTarget('web')">
+                                <div class="tc-icon">🕸️</div>
+                                <div class="tc-label">WEB</div>
+                                <div class="tc-sub">html5 bundle</div>
+                            </div>
+                            <div class="bw-target-card" id="bwtc-all" onclick="bwSelectTarget('all')">
+                                <div class="tc-icon">⚙️</div>
+                                <div class="tc-label">ALL CI</div>
+                                <div class="tc-sub">all targets</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bw-info-row">
+                        <div class="bw-info-item">
+                            <div class="bw-info-label">Project</div>
+                            <div class="bw-info-val" id="bw-project-name">—</div>
+                        </div>
+                        <div class="bw-info-item">
+                            <div class="bw-info-label">Output</div>
+                            <div class="bw-info-val" id="bw-output-path">dist/game/</div>
+                        </div>
+                        <div class="bw-info-item">
+                            <div class="bw-info-label">Target</div>
+                            <div class="bw-info-val" id="bw-target-label">WINDOWS</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- STEP 2: Building -->
+                <div id="bw-step2" class="bw-terminal-wrap" style="display:none;">
+                    <div class="bw-terminal-bar">
+                        <div class="bw-spinner" id="bw-spinner"></div>
+                        <div class="bw-progress-bar-wrap"><div class="bw-progress-bar" id="bw-progress" style="width:0%"></div></div>
+                        <div class="bw-pct" id="bw-pct">0%</div>
+                    </div>
+                    <pre id="bw-log"></pre>
+                </div>
+                <!-- STEP 3: Result -->
+                <div id="bw-step3" class="bw-result" style="display:none;">
+                    <div class="bw-result-icon" id="bw-result-icon">✅</div>
+                    <div class="bw-result-title" id="bw-result-title">BUILD COMPLETE</div>
+                    <div class="bw-result-path" id="bw-result-path"></div>
+                </div>
+            </div>
+            <div class="bw-footer" id="bw-footer">
+                <button class="bw-btn bw-btn-cancel" onclick="closeBuildWizard()">CANCEL</button>
+                <button class="bw-btn bw-btn-primary" id="bw-btn-start" onclick="bwStartBuild()">START BUILD</button>
+            </div>
+        </div>
+    </div>
+
     <div id="project-modal" style="display:none;">
         <div class="modal-box">
             <div class="modal-header">
@@ -1442,14 +1641,155 @@
             currentBuildTarget = target;
             const map = {
                 'win': 'Windows (EXE)',
+                'macos': 'macOS (.app)',
                 'android': 'Android (APK)',
+                'ios': 'iOS (Xcode)',
                 'web': 'Web (HTML5)',
                 'all': 'CI (All Targets)'
             };
             const label = map[target] || 'Unknown';
             document.getElementById('sb-build-target').innerText = label;
-            document.getElementById('build-target').value = target; // Sync with sidebar dropdown
+            document.getElementById('build-target').value = target;
             showStatusMessage(`Build Target Set: ${label}`);
+            openBuildWizard(target);
+        }
+
+        // --- BUILD WIZARD ---
+        let bwTarget = 'win';
+        let bwSSE = null;
+        let bwProgress = 0;
+        let bwProgressInterval = null;
+
+        function openBuildWizard(target) {
+            bwTarget = target || currentBuildTarget;
+            // sync target cards
+            ['win','macos','android','ios','web','all'].forEach(t => {
+                const el = document.getElementById('bwtc-' + t);
+                if (el) el.classList.toggle('selected', t === bwTarget);
+            });
+            // update info
+            const projName = document.getElementById('sb-project-name')?.innerText || 'Default Project';
+            document.getElementById('bw-project-name').innerText = projName;
+            const labelMap = { win:'WINDOWS', macos:'MACOS', android:'ANDROID', ios:'IOS', web:'WEB', all:'ALL CI' };
+            document.getElementById('bw-target-label').innerText = labelMap[bwTarget] || bwTarget.toUpperCase();
+            // reset to step 1
+            bwShowStep(1);
+            document.getElementById('bw-footer').innerHTML = `
+                <button class="bw-btn bw-btn-cancel" onclick="closeBuildWizard()">CANCEL</button>
+                <button class="bw-btn bw-btn-primary" id="bw-btn-start" onclick="bwStartBuild()">START BUILD</button>`;
+            document.getElementById('build-wizard').style.display = 'flex';
+        }
+
+        function closeBuildWizard() {
+            if (bwSSE) { bwSSE.close(); bwSSE = null; }
+            clearInterval(bwProgressInterval);
+            document.getElementById('build-wizard').style.display = 'none';
+        }
+
+        function bwSelectTarget(t) {
+            bwTarget = t;
+            ['win','macos','android','ios','web','all'].forEach(id => {
+                document.getElementById('bwtc-' + id)?.classList.toggle('selected', id === t);
+            });
+            const labelMap = { win:'WINDOWS', macos:'MACOS', android:'ANDROID', ios:'IOS', web:'WEB', all:'ALL CI' };
+            document.getElementById('bw-target-label').innerText = labelMap[t] || t.toUpperCase();
+        }
+
+        function bwShowStep(n) {
+            document.getElementById('bw-step1').style.display = n === 1 ? '' : 'none';
+            document.getElementById('bw-step2').style.display = n === 2 ? '' : 'none';
+            document.getElementById('bw-step3').style.display = n === 3 ? '' : 'none';
+            [1,2,3].forEach(i => {
+                const el = document.getElementById('bw-s' + i);
+                el.classList.remove('active','done');
+                if (i < n) el.classList.add('done');
+                else if (i === n) el.classList.add('active');
+            });
+        }
+
+        function bwAppendLog(text) {
+            const log = document.getElementById('bw-log');
+            // Colorize
+            const colored = text
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/(✓|✔|SUCCESS|COMPLETE|Done|done|OK)/g, '<span class="log-ok">$1</span>')
+                .replace(/(ERROR|FAILED|Error|error|failed|✗)/g, '<span class="log-err">$1</span>')
+                .replace(/(\[BUILDER\]|\[WIZARD\])/g, '<span class="log-acc">$1</span>');
+            log.innerHTML += colored;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function bwStartBuild() {
+            bwShowStep(2);
+            document.getElementById('bw-footer').innerHTML = `
+                <button class="bw-btn bw-btn-danger" onclick="closeBuildWizard()">ABORT</button>`;
+            document.getElementById('bw-log').innerHTML = '';
+            document.getElementById('bw-progress').style.width = '0%';
+            document.getElementById('bw-pct').innerText = '0%';
+            document.getElementById('bw-spinner').style.display = '';
+
+            const projName = document.getElementById('sb-project-name')?.innerText || 'Default Project';
+
+            // Fake progress pulse while building — asymptotic: fast start, slows near 90%
+            bwProgress = 0;
+            bwProgressInterval = setInterval(() => {
+                if (bwProgress < 89) {
+                    const remaining = 90 - bwProgress;
+                    bwProgress += Math.random() * remaining * 0.04;
+                    const p = Math.min(bwProgress, 89);
+                    document.getElementById('bw-progress').style.width = p + '%';
+                    document.getElementById('bw-pct').innerText = Math.round(p) + '%';
+                }
+            }, 800);
+
+            const url = `/api/build/stream?target=${encodeURIComponent(bwTarget)}&project=${encodeURIComponent(projName)}`;
+            bwSSE = new EventSource(url);
+
+            bwSSE.onmessage = (e) => {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'log' || msg.type === 'error') {
+                    bwAppendLog(msg.text);
+                } else if (msg.type === 'done') {
+                    bwSSE.close(); bwSSE = null;
+                    clearInterval(bwProgressInterval);
+                    document.getElementById('bw-progress').style.width = '100%';
+                    document.getElementById('bw-pct').innerText = '100%';
+                    document.getElementById('bw-spinner').style.display = 'none';
+                    setTimeout(() => bwShowResult(msg.success, msg.path), 400);
+                }
+            };
+
+            bwSSE.onerror = () => {
+                clearInterval(bwProgressInterval);
+                bwSSE.close(); bwSSE = null;
+                document.getElementById('bw-spinner').style.display = 'none';
+                bwAppendLog('\n[ERROR] Connection lost to build server.\n');
+                bwShowResult(false, '');
+            };
+        }
+
+        function bwShowResult(success, outputPath) {
+            bwShowStep(3);
+            document.getElementById('bw-result-icon').innerText = success ? '✅' : '❌';
+            document.getElementById('bw-result-title').innerText = success ? 'BUILD COMPLETE' : 'BUILD FAILED';
+            document.getElementById('bw-result-path').innerText = outputPath || 'See log for details';
+            document.getElementById('bw-footer').innerHTML = success
+                ? `<button class="bw-btn bw-btn-cancel" onclick="closeBuildWizard()">CLOSE</button>
+                   <button class="bw-btn bw-btn-primary" onclick="closeBuildWizard(); showStatusMessage('Build complete!')">DONE</button>`
+                : `<button class="bw-btn bw-btn-cancel" onclick="bwShowStep(2)">SEE LOG</button>
+                   <button class="bw-btn bw-btn-primary" onclick="bwStartBuild()">RETRY</button>`;
+            showStatusMessage(success ? 'BUILD COMPLETE' : 'BUILD FAILED');
+        }
+
+        function buildGame() { openBuildWizard(currentBuildTarget); }
+
+        async function cleanBuilds() {
+            if(!confirm("Wipe all previous builds from the 'builds' folder?")) return;
+            try {
+                const res = await fetch('/api/build/clean', { method: 'POST' });
+                const data = await res.json();
+                if(data.success) showStatusMessage("BUILDS FOLDER CLEANED");
+            } catch(e) { console.error(e); }
         }
 
         // --- DROPDOWN MANAGEMENT ---
@@ -1616,51 +1956,6 @@
         }
 
         // --- BUILD ---
-        async function buildGame() {
-            if(!confirm(`Start Build Process for ${currentBuildTarget.toUpperCase()}? This may take a moment.`)) return;
-            
-            const status = document.getElementById('sb-project-name');
-            const originalStatus = status.innerText;
-
-            status.innerText = "BUILDING...";
-            status.style.color = "var(--accent)";
-            showStatusMessage(`BUILDING [${currentBuildTarget.toUpperCase()}]...`);
-
-            try {
-                const res = await fetch('/api/build', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target: currentBuildTarget })
-                });
-                const data = await res.json();
-                
-                if(data.success) {
-                    setTimeout(() => alert(`Build Complete!\nLocation: ${data.path}`), 200);
-                    showStatusMessage("BUILD COMPLETE");
-                } else {
-                    alert("Build Failed. Check console.");
-                    showStatusMessage("BUILD FAILED");
-                }
-            } catch(e) {
-                alert("Build Error: " + e);
-                showStatusMessage("BUILD ERROR");
-            } finally {
-                setTimeout(() => {
-                    status.innerText = originalStatus;
-                    status.style.color = "#fff";
-                }, 3000);
-            }
-        }
-
-        async function cleanBuilds() {
-            if(!confirm("Wipe all previous builds from the 'builds' folder?")) return;
-            try {
-                const res = await fetch('/api/build/clean', { method: 'POST' });
-                const data = await res.json();
-                if(data.success) showStatusMessage("BUILDS FOLDER CLEANED");
-            } catch(e) { console.error(e); }
-        }
-
         async function scanAssets() {
             showStatusMessage("INDEXING ASSETS...");
             try {
@@ -1747,6 +2042,7 @@
 
         function toggleMaximize(id) {
             const win = document.getElementById(id);
+            if (!win) return;
             win.classList.toggle('maximized');
             if (!win.classList.contains('maximized')) {
                 win.style.width = '800px';
@@ -2051,16 +2347,9 @@
             
             let hitZones = [];
 
-            // Listen for hit zones from the assistant
-            window.addEventListener('message', (e) => {
-                if (e.data && e.data.type === 'kai:hitzones') {
-                    hitZones = e.data.zones;
-                }
-            });
-
             // Hit detection logic
-            window.addEventListener('mousemove', (e) => {
-                const { clientX: x, clientY: y } = e;
+            const checkHit = (coords) => {
+                const { clientX: x, clientY: y } = coords;
                 let hit = false;
                 for (const zone of hitZones) {
                     if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
@@ -2069,17 +2358,30 @@
                     }
                 }
                 iframe.style.pointerEvents = hit ? 'auto' : 'none';
+            };
+
+            // Listen for data from the assistant
+            window.addEventListener('message', (e) => {
+                if (!e.data) return;
+                
+                if (e.data.type === 'kai:hitzones') {
+                    hitZones = e.data.zones;
+                } else if (e.data.type === 'kai:mousemove') {
+                    checkHit(e.data);
+                }
             });
+
+            // Listen on parent window
+            window.addEventListener('mousemove', (e) => checkHit(e));
+            window.addEventListener('mousedown', (e) => checkHit(e));
 
             iframe.addEventListener('load', () => {
                 try {
                     const doc = iframe.contentWindow.document;
                     doc.body.style.background = 'transparent';
-                    doc.body.style.pointerEvents = 'none';
-                    console.log('✅ Kai System Online (with Hit Detection)!');
+                    console.log('✅ Kai System Online (Smart Mode)!');
                 } catch (e) {
-                    console.warn('Kai: Cross-origin blocked hit detection:', e);
-                    // Fallback: Just enable it
+                    console.warn('Kai: Cross-origin blocked hit detection fallback:', e);
                     iframe.style.pointerEvents = 'auto';
                 }
             });

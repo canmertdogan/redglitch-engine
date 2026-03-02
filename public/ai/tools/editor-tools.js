@@ -48,6 +48,12 @@ export class EditorTools {
             'isometric': 'iso_editor.html',
             'isometricstudio': 'iso_editor.html',
             'iso-pixel': 'iso_editor.html',
+            // Platformer aliases
+            'platformer': 'platformer_editor.html',
+            'platformer_studio': 'platformer_editor.html',
+            'platformerstudio': 'platformer_editor.html',
+            'platform': 'platformer_editor.html',
+            'sidescroller': 'platformer_editor.html',
             'pixel': 'pixel_editor.html',
             'fx': 'fx_editor.html',
             'background': 'background_editor.html',

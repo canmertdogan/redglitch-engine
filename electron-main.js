@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, nativeImage, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -71,6 +71,29 @@ class CortexManager {
 
 const cortex = new CortexManager();
 
+// --- SINGLE INSTANCE LOCK ---
+// If another instance is already running, show a warning and quit this one.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+    app.whenReady().then(() => {
+        dialog.showMessageBoxSync({
+            type: 'warning',
+            buttons: ['OK'],
+            title: 'Ketebe Game Studio',
+            message: 'Another instance of Ketebe Studio is already running.\nThis instance will now close.'
+        });
+        app.quit();
+    });
+} else {
+    app.on('second-instance', () => {
+        // A second instance tried to launch — focus the existing window.
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+}
+
 // Enable WebNN and WebGPU for hardware-accelerated AI inference
 app.commandLine.appendSwitch('enable-features', 'WebMachineLearningNeuralNetwork,WebNN');
 app.commandLine.appendSwitch('enable-unsafe-webgpu');
@@ -89,9 +112,8 @@ if (process.platform === 'darwin') {
     });
 }
 
-// Start the Express server
-const { app: expressApp, server: httpServer } = require('./server'); // Import the server
-const { PORT } = require('./server/config');
+// Start the Express server (only loaded when we have the single instance lock)
+let expressApp, httpServer, PORT;
 
 let mainWindow;
 let splashWindow;
@@ -268,6 +290,12 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+    if (!gotLock) return; // Already handled above
+
+    // Load the Express server now that we own the lock
+    ({ app: expressApp, server: httpServer } = require('./server'));
+    ({ PORT } = require('./server/config'));
+
     // Start AI Cortex
     cortex.start();
 

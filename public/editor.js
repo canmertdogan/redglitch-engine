@@ -235,7 +235,89 @@ function registerWorldTools() {
             return { success: true, message: `World ${map.name} saved.` };
         }
     });
+
+    // world.generateMap
+    studioBridge.register({
+        name: 'generateMap',
+        description: 'Generate a procedural top-down RPG map using the built-in generator.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                type: { type: 'string', enum: ['village', 'dungeon', 'hell', 'heaven', 'lab'], description: 'Map type/biome.', default: 'village' },
+                density: { type: 'number', description: 'Generation density 1-10.', default: 5 },
+                seed: { type: 'string', description: 'Optional seed for reproducible maps.' }
+            }
+        },
+        execute: async (args) => {
+            const typeSelect = document.getElementById('gen-type');
+            const densityInput = document.getElementById('gen-density');
+            const seedInput = document.getElementById('gen-seed');
+            if (typeSelect && args.type) typeSelect.value = args.type;
+            if (densityInput && args.density) densityInput.value = args.density;
+            if (seedInput && args.seed) seedInput.value = args.seed;
+            if (typeof window.generateMap === 'function') {
+                window.generateMap();
+                return { success: true, message: `Generated ${args.type || 'village'} map.` };
+            }
+            throw new Error('Map generator not loaded');
+        }
+    });
 }
+
+// AI tool message listener for cross-frame dispatch
+window.addEventListener('message', async (event) => {
+    if (!event.data || event.data.type !== 'ai:tool') return;
+    const { name, id, args } = event.data;
+
+    if (name === 'generateMap' || name === 'world.generateMap') {
+        console.log('[WorldEditor] Received ai:tool postMessage:', name, args);
+        localStorage.removeItem('ai_pending_action');
+        if (window._topdownAIGenerate) {
+            window._topdownAIGenerate(args || {});
+        } else {
+            // Fallback: set DOM values and call generateMap directly
+            const typeSelect = document.getElementById('gen-type');
+            const densityInput = document.getElementById('gen-density');
+            const seedInput = document.getElementById('gen-seed');
+            if (typeSelect && args && args.type) typeSelect.value = args.type;
+            if (densityInput && args && args.density) densityInput.value = args.density;
+            if (seedInput && args && args.seed) seedInput.value = args.seed;
+            if (typeof window.generateMap === 'function') window.generateMap();
+        }
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'ai:tool:success', id, result: { success: true } }, '*');
+        }
+    }
+});
+
+function _topdownPendingCheck() {
+    const raw = localStorage.getItem('ai_pending_action');
+    if (!raw) return;
+    try {
+        const action = JSON.parse(raw);
+        if (!action || !action.method) return;
+        const age = Date.now() - (action.timestamp || 0);
+        if (age > 60000) { localStorage.removeItem('ai_pending_action'); return; }
+        if (action.method === 'world.generateMap' || action.method === 'topdown.generateMap' || action.method === 'rpg.generateMap') {
+            localStorage.removeItem('ai_pending_action');
+            console.log('[WorldEditor] Recovering AI pending action:', action.params);
+            if (window._topdownAIGenerate) {
+                window._topdownAIGenerate(action.params || {});
+            }
+        }
+    } catch (e) {
+        console.error('[WorldEditor] Pending action recovery failed:', e);
+    }
+}
+
+// Listen for localStorage changes from assistant iframe
+window.addEventListener('storage', (e) => {
+    if (e.key === 'ai_pending_action' && e.newValue) {
+        console.log('[WorldEditor] Storage event: new pending action detected');
+        setTimeout(() => _topdownPendingCheck(), 200);
+    }
+});
 
 window.onload = async () => {
     initializeWorldIntegration();
@@ -284,6 +366,26 @@ window.onload = async () => {
     }, 5000);
     
     updateProgress(100, "READY");
+
+    // --- AI Generation Helper ---
+    window._topdownAIGenerate = (params) => {
+        console.log('[WorldEditor] AI generating map:', params);
+        const typeSelect = document.getElementById('gen-type');
+        const densityInput = document.getElementById('gen-density');
+        const seedInput = document.getElementById('gen-seed');
+        if (typeSelect && params.type) typeSelect.value = params.type;
+        if (densityInput && params.density) densityInput.value = params.density;
+        if (seedInput && params.seed) seedInput.value = params.seed;
+        if (typeof window.generateMap === 'function') {
+            window.generateMap();
+            console.log('[WorldEditor] AI map generated!');
+        } else {
+            console.error('[WorldEditor] generateMap function not available');
+        }
+    };
+
+    // Check for pending AI action immediately
+    _topdownPendingCheck();
 
     // Add Keyboard Shortcut for Save
     document.addEventListener('keydown', (e) => {

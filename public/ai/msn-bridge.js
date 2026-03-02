@@ -73,9 +73,16 @@ window.IRAB = {
                         else if (action === 'wink') this.playWink(params[0] || 'thumb');
                         else if (action === 'showAsset') this.renderAsset(params[0]);
                         else if (action === 'injectCode') this.injectCode(params[0]);
+                        else if (action === 'navigateTo') {
+                            const target = (params && (params.target || params[0])) || null;
+                            if (target && window.tools && window.openWindow) {
+                                const tool = window.tools.find(t => t.id === target);
+                                if (tool) window.openWindow(tool);
+                                else console.warn("[IRAB] navigateTo target not found:", target);
+                            }
+                        }
                         else if (action === 'openTool') {
                             if (window.openWindow) {
-                                // Find tool definition if possible
                                 const tool = window.tools?.find(t => t.id === params[0]);
                                 if (tool) window.openWindow(tool);
                                 else console.warn("[IRAB] Tool not found:", params[0]);

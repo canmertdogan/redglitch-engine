@@ -319,6 +319,7 @@ app.on('window-all-closed', () => app.quit());
     }
 
     console.log('\x1b[32m[DONE] Build process finished.\x1b[0m');
+    process.exit(0);
 
 } catch (err) {
     console.error(`\x1b[31m[FATAL] Build failed: ${err.message}\x1b[0m`);

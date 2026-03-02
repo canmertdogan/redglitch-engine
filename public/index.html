@@ -236,7 +236,36 @@
             }
             mdraw();
 
-            // Progress Logic
+            // Small powered-by intro banner (show ASCII art briefly) and Progress Logic
+            (function showPoweredBanner(){
+                const splash = document.getElementById('splash-screen');
+                if (!splash) return;
+                // Insert banner element
+                const banner = document.createElement('div');
+                banner.id = 'powered-banner';
+                banner.style.position = 'absolute';
+                banner.style.zIndex = 105;
+                banner.style.top = '40%';
+                banner.style.left = '50%';
+                banner.style.transform = 'translate(-50%, -50%)';
+                banner.style.opacity = '0';
+                banner.style.transition = 'opacity 0.5s ease';
+                banner.innerHTML = `<pre style="font-family: 'VT323', monospace; color:var(--accent); text-shadow:0 0 10px var(--accent); font-size:18px; line-height:1; margin:0;">
+  ██╗  ██╗███████╗████████╗███████╗██████╗ ███████╗
+  ██║ ██╔╝██╔════╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
+  █████╔╝ █████╗     ██║   █████╗  ██████╔╝█████╗  
+  ██╔═██╗ ██╔══╝     ██║   ██╔══╝  ██╔══██╗██╔══╝  
+  ██║  ██╗███████╗   ██║   ███████╗██║  ██║███████╗
+  ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
+
+          KETEBE GAME STUDIO — POWERED BY KETEBE ENGINE
+</pre>`;
+                splash.appendChild(banner);
+                // Trigger show/hide
+                requestAnimationFrame(() => { banner.style.opacity = '1'; });
+                setTimeout(() => { banner.style.opacity = '0'; setTimeout(()=>banner.remove(), 600); }, 2200);
+            })();
+
             let progress = 0;
             const pBar = document.getElementById('splash-progress-bar');
             const pText = document.getElementById('splash-progress-text');
@@ -426,23 +455,16 @@
     </iframe>
     
     <script>
-        // Make Kai avatar clickable but keep rest of iframe pass-through
+        // Kai Assistant - Smart Interaction Bridge
         window.addEventListener('load', () => {
             const iframe = document.getElementById('kai-ai-panel');
             if (!iframe) return;
             
             let hitZones = [];
 
-            // Listen for hit zones from the assistant
-            window.addEventListener('message', (e) => {
-                if (e.data && e.data.type === 'kai:hitzones') {
-                    hitZones = e.data.zones;
-                }
-            });
-
             // Hit detection logic
-            window.addEventListener('mousemove', (e) => {
-                const { clientX: x, clientY: y } = e;
+            const checkHit = (coords) => {
+                const { clientX: x, clientY: y } = coords;
                 let hit = false;
                 for (const zone of hitZones) {
                     if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
@@ -451,18 +473,30 @@
                     }
                 }
                 iframe.style.pointerEvents = hit ? 'auto' : 'none';
+            };
+
+            // Listen for data from the assistant
+            window.addEventListener('message', (e) => {
+                if (!e.data) return;
+                
+                if (e.data.type === 'kai:hitzones') {
+                    hitZones = e.data.zones;
+                } else if (e.data.type === 'kai:mousemove') {
+                    // Forwarded from inside the iframe
+                    checkHit(e.data);
+                }
             });
+
+            // Listen on parent window
+            window.addEventListener('mousemove', (e) => checkHit(e));
+            window.addEventListener('mousedown', (e) => checkHit(e));
 
             // Wait for iframe to load
             iframe.addEventListener('load', () => {
                 try {
                     const doc = iframe.contentWindow.document;
-                    
-                    // Make body transparent with no pointer events
                     doc.body.style.background = 'transparent';
-                    doc.body.style.pointerEvents = 'none';
-                    
-                    console.log('✅ Kai Assistant UI loaded (with Hit Detection)!');
+                    console.log('✅ Kai Assistant UI loaded (Smart Interaction Mode)!');
                 } catch (e) {
                     console.warn('Could not access iframe:', e);
                     iframe.style.pointerEvents = 'auto';

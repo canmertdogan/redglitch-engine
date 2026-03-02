@@ -639,3 +639,110 @@ class PlatformerEditor {
     testLevel() { window.open(`/engines/platformer-2d/index.html?level=${this.levelId}&project=${this.currentProject}`, '_blank'); }
 }
 window.editor = new PlatformerEditor();
+
+// --- AI Integration: StudioBridge + Tool Dispatch ---
+(function initPlatformerAI() {
+    const eventBus = window.KetebeEventBus;
+    if (!eventBus || !window.StudioBridge) {
+        console.log('[PlatformerEditor] EventBus or StudioBridge not available, AI integration skipped.');
+        return;
+    }
+
+    const bridge = new window.StudioBridge('platformer', eventBus);
+
+    bridge.register({
+        name: 'generateLevel',
+        description: 'Generate a procedural platformer level using SmartGenerator.',
+        securityLevel: 'low-risk',
+        parameters: {
+            type: 'object',
+            properties: {
+                theme: { type: 'string', enum: ['flow', 'spire', 'abyss', 'gauntlet', 'clockwork'], description: 'Level concept/theme.', default: 'flow' },
+                difficulty: { type: 'number', description: 'Difficulty 1-10.', default: 5 },
+                width: { type: 'number', description: 'Level width in tiles.', default: 40 },
+                height: { type: 'number', description: 'Level height in tiles.', default: 20 }
+            }
+        },
+        execute: async (args) => {
+            const themeSelect = document.getElementById('gen-theme');
+            const diffSelect = document.getElementById('gen-complexity');
+            if (themeSelect && args.theme) themeSelect.value = args.theme;
+            if (diffSelect && args.difficulty) diffSelect.value = args.difficulty;
+            if (args.width) window.editor.width = args.width;
+            if (args.height) window.editor.height = args.height;
+            window.editor.generateLevel();
+            return { success: true, message: `Generated ${args.theme || 'flow'} level (difficulty: ${args.difficulty || 5}).` };
+        }
+    });
+
+    bridge.register({
+        name: 'save',
+        description: 'Save the current platformer level.',
+        securityLevel: 'low-risk',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            window.editor.saveLevel();
+            return { success: true, message: 'Platformer level saved.' };
+        }
+    });
+
+    bridge.announceAll();
+    console.log('[PlatformerEditor] AI StudioBridge registered.');
+})();
+
+// --- AI Generation Helper ---
+window._platformerAIGenerate = (params) => {
+    console.log('[PlatformerEditor] AI generating level:', params);
+    const themeSelect = document.getElementById('gen-theme');
+    const diffSelect = document.getElementById('gen-complexity');
+    if (themeSelect && params.theme) themeSelect.value = params.theme;
+    if (diffSelect && params.difficulty) diffSelect.value = params.difficulty;
+    if (params.width) window.editor.width = params.width;
+    if (params.height) window.editor.height = params.height;
+    window.editor.generateLevel();
+    console.log('[PlatformerEditor] AI level generated!');
+};
+
+// AI tool message listener for cross-frame dispatch
+window.addEventListener('message', async (event) => {
+    if (!event.data || event.data.type !== 'ai:tool') return;
+    const { name, id, args } = event.data;
+
+    if (name === 'generateLevel' || name === 'platformer.generateLevel') {
+        console.log('[PlatformerEditor] Received ai:tool postMessage:', name, args);
+        localStorage.removeItem('ai_pending_action');
+        window._platformerAIGenerate(args || {});
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'ai:tool:success', id, result: { success: true } }, '*');
+        }
+    }
+});
+
+function _platformerPendingCheck() {
+    const raw = localStorage.getItem('ai_pending_action');
+    if (!raw) return;
+    try {
+        const action = JSON.parse(raw);
+        if (!action || !action.method) return;
+        const age = Date.now() - (action.timestamp || 0);
+        if (age > 60000) { localStorage.removeItem('ai_pending_action'); return; }
+        if (action.method === 'platformer.generateLevel' || action.method === 'platform.generateLevel') {
+            localStorage.removeItem('ai_pending_action');
+            console.log('[PlatformerEditor] Recovering AI pending action:', action.params);
+            window._platformerAIGenerate(action.params || {});
+        }
+    } catch (e) {
+        console.error('[PlatformerEditor] Pending action recovery failed:', e);
+    }
+}
+
+// Listen for localStorage changes from assistant iframe
+window.addEventListener('storage', (e) => {
+    if (e.key === 'ai_pending_action' && e.newValue) {
+        console.log('[PlatformerEditor] Storage event: new pending action detected');
+        setTimeout(() => _platformerPendingCheck(), 200);
+    }
+});
+
+// Check on load
+setTimeout(() => _platformerPendingCheck(), 500);

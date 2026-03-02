@@ -22,8 +22,10 @@ class AssetManager {
         // Load asset registry
         await this.loadAssetRegistry();
         
-        // Build initial dependency graph
-        this.rebuildDependencyGraph();
+        // --- OPTIMIZATION: DO NOT SCAN ALL DEPENDENCIES ON BOOT ---
+        // This causes extreme performance lag and network flood.
+        // We only rebuild graph for already cached/loaded assets if needed.
+        // this.rebuildDependencyGraph();
         
         // Start watching for file changes if EventBus is available
         if (this.eventBus) {
@@ -197,10 +199,12 @@ class AssetManager {
             // Expected: projects/ProjectName/folder/...
             if (parts.length > 2) {
                 const folder = parts[2];
-                if (['dunyalar', 'muzikler', 'assets'].includes(folder)) {
-                    assetPath = parts.slice(2).join('/');
+                if (['dunyalar', 'muzikler', 'assets', 'data'].includes(folder)) {
+                    assetPath = '/' + parts.slice(2).join('/');
                 }
             }
+        } else if (assetPath && !assetPath.startsWith('http') && !assetPath.startsWith('/')) {
+            assetPath = '/' + assetPath;
         }
 
         const asset = {

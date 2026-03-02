@@ -29,6 +29,7 @@ const assetsRouter = require('./server/routes/assets');
 const systemRouter = require('./server/routes/system');
 const ideRouter = require('./server/routes/ide');
 const gitRouter = require('./server/routes/git');
+const buildRouter = require('./server/routes/build');
 
 // Import WebSocket setup
 const setupWebSocket = require('./server/websocket');
@@ -171,6 +172,7 @@ app.use('/api', cutscenesRouter);
 app.use('/api', campaignsRouter);
 app.use('/api/ide', ideRouter);
 app.use('/api/git', gitRouter);
+app.use('/api/build', buildRouter);
 
 app.post('/api/save-spritesheet', async (req, res) => {
     try {

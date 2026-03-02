@@ -173,8 +173,8 @@ async def list_sessions():
 async def reindex_rag():
     try:
         loop = asyncio.get_event_loop()
-        # Run ingestion in a separate thread to avoid blocking the event loop
-        loop.run_in_executor(None, rag.ingest_project)
+        # Run forced ingestion in a separate thread to avoid blocking the event loop
+        loop.run_in_executor(None, lambda: rag.ingest_project(force=True))
         return {"success": True, "message": "Background re-indexing started."}
     except Exception as e:
         return {"error": str(e)}
@@ -196,14 +196,6 @@ async def load_brain_task():
     
     loop.run_in_executor(None, watcher.start)
     
-    # 2. Start initial RAG scan in background after a short delay
-    async def initial_rag_scan():
-        await asyncio.sleep(5) # Wait for system to settle
-        logger.info("Starting initial RAG codebase scan...")
-        loop.run_in_executor(None, rag.ingest_project)
-    
-    asyncio.create_task(initial_rag_scan())
-    
     model_path = os.path.join(PROJECT_ROOT, "backend", "models", "qwen2.5-coder-1.5b.gguf")
     if os.path.exists(model_path):
         # Notify initial progress
@@ -224,6 +216,17 @@ async def load_brain_task():
         brain.status = "ERROR"
         logger.error(f"Model not found at {model_path}")
 
+    # 6. Start RAG scan AFTER model is fully loaded and warmed up to avoid OOM
+    async def initial_rag_scan():
+        await asyncio.sleep(10)  # Extra buffer after model warmup
+        logger.info("Starting initial RAG codebase scan...")
+        try:
+            await loop.run_in_executor(None, rag.ingest_project)
+            logger.info("RAG codebase scan complete.")
+        except Exception as e:
+            logger.error(f"RAG ingestion failed (non-fatal): {e}")
+
+    asyncio.create_task(initial_rag_scan())
 @app.get("/api/ai/status")
 async def get_status():
     return {
@@ -308,6 +311,34 @@ async def handle_prompt(message, websocket):
     
     if not is_ghost:
         await manager.send_personal_message({"type": "SET_STATE", "data": "THINKING"}, websocket)
+
+    # Deterministic intent routing for iso map requests:
+    # Using pixel.generateTerrain directly allows ToolRegistry redirect/pending recovery
+    # and avoids workflow interruption during full-page navigation.
+    prompt_lower = prompt.lower()
+    iso_map_triggers = (
+        "isometric map",
+        "isopixel map",
+        "iso map",
+        "iso world",
+        "isometric terrain",
+        "isopixel terrain",
+    )
+    if not is_ghost and any(trigger in prompt_lower for trigger in iso_map_triggers):
+        await manager.send_personal_message({
+            "type": "TOKEN",
+            "data": "GRRR... Initiating IsoPixel terrain generation sequence."
+        }, websocket)
+        await manager.send_personal_message({
+            "type": "COMMAND",
+            "data": {
+                "action": "pixel.generateTerrain",
+                "params": {"mode": "islands", "scale": 0.05, "amplitude": 10}
+            }
+        }, websocket)
+        await manager.send_personal_message({"type": "TOKEN", "data": None}, websocket)
+        await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
+        return
     
     # Incorporate Phase 2: Active Focus
     context_data = message.get("context", {})
