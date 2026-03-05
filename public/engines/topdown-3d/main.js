@@ -40,6 +40,7 @@ import AudioSpatial3D           from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
 import TopDownCamera3D          from './TopDownCamera3D.js';
+import TerrainSystem3D, { BlockType } from './TerrainSystem3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -153,7 +154,8 @@ class TopDownGame3D extends Engine3DAdapter {
         this.raycast = new Raycast3D(this.scene);
         this.raycast.setCamera(this.renderer3d.camera);
 
-        // ── TopDown Camera (Phase 12) — replaces generic camera3d for topdown ─
+        // ── Terrain (Phase 13) ─────────────────────────────────────────────
+        this.terrain = new TerrainSystem3D(this.scene, this.palette, this.physics);
         this.topdownCamera = new TopDownCamera3D(this.renderer3d.camera, container, {
             pitch:       55,
             zoom:        24,
