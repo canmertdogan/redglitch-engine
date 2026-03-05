@@ -46,6 +46,7 @@ import Pathfinding3D, { AreaType } from './Pathfinding3D.js';
 import FogOfWar3D, { VisState } from './FogOfWar3D.js';
 import AbilitySystem3D, { AbilityShape, DamageType, BuffType } from './AbilitySystem3D.js';
 import VFXSystem3D, { EffectType } from './VFXSystem3D.js';
+import Minimap3D from './Minimap3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -191,6 +192,18 @@ class TopDownGame3D extends Engine3DAdapter {
             keyPan:      true,
             freeRotation: false,
         });
+
+        // ── Minimap (Phase 19) — needs topdownCamera + fogOfWar + entities ──
+        this.minimap = new Minimap3D(
+            this.renderer3d.webgl, this.scene, this.renderer3d.camera, {
+                worldW:       64,
+                worldH:       64,
+                topdownCamera: this.topdownCamera,
+                fogOfWar:      this.fogOfWar,
+                entities:      this.entities,
+                palette:       this.palette,
+            }
+        );
 
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
