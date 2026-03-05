@@ -47,6 +47,7 @@ import PlayerCharacter3D        from './PlayerCharacter3D.js';
 import CollectibleSystem3D      from './CollectibleSystem3D.js';
 import CheckpointSystem3D       from './CheckpointSystem3D.js';
 import EnemyPlatformer3D, { EnemyState } from './EnemyPlatformer3D.js';
+import VFX_Platformer3D              from './VFX_Platformer3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this.collectibles   = null;   // CollectibleSystem3D (Phase 47) — set in init()
         this.checkpoints    = null;   // CheckpointSystem3D  (Phase 48) — set in init()
         this.enemies        = null;   // EnemyPlatformer3D   (Phase 49) — set in init()
-        this.vfx            = null;   // VFX_Platformer3D    (Phase 50)
+        this.vfx            = null;   // VFX_Platformer3D    (Phase 50) — set in init()
 
         // ── Checkpoint / respawn state ─────────────────────────────────────
         this._checkpoint    = null;   // { position: THREE.Vector3, state: {} }
@@ -179,18 +180,20 @@ class Platformer3DGame extends Engine3DAdapter {
 
         // Wire character callbacks
         this.charController.onLanded = (speed) => {
-            if (speed > 8) this.vfx?.spawnLandDust?.(this.charController.getPosition());
+            if (speed > 8) this.vfx?.landDust?.(this.charController.getPosition());
         };
         this.charController.onDashStart = (dir) => {
             this._invincFrames = Math.max(this._invincFrames, 20);
-            this.vfx?.spawnDashTrail?.(this.charController.getPosition(), dir);
+            const pos = this.charController.getPosition();
+            if (pos) this.vfx?.dashTrailPoint?.(pos);
         };
         this.charController.onGroundPound = (pos, force) => {
-            this.vfx?.spawnGroundPoundShockwave?.(pos, force);
+            if (pos) this.vfx?.groundPoundImpact?.(pos);
             this.enemies?.onShockwave?.(pos, force);
         };
         this.charController.onWallJump = (normal) => {
-            this.vfx?.spawnWallJumpDust?.(this.charController.getPosition(), normal);
+            const pos = this.charController.getPosition();
+            if (pos && normal) this.vfx?.wallJumpSparks?.(pos, normal);
         };
 
         // Player character (low-poly model + animation)
@@ -219,7 +222,10 @@ class Platformer3DGame extends Engine3DAdapter {
             palette:      this.palette,
             audio:        this.audio,
         });
-        this.collectibles.onCoinCollected = (total) => { this._coins = total; };
+        this.collectibles.onCoinCollected = (total, pos) => {
+            this._coins = total;
+            if (pos) this.vfx?.coinBurst?.(pos);
+        };
         this.collectibles.onScoreChanged  = (score) => { this._score = score; };
         this.collectibles.onPowerUp       = (type)  => { this._handlePowerUp(type); };
 
@@ -231,6 +237,7 @@ class Platformer3DGame extends Engine3DAdapter {
         });
         this.checkpoints.onCheckpointActivated = (id, pos) => {
             this.setCheckpoint(pos, { coins: this._coins, score: this._score });
+            this.vfx?.flashCheckpoint?.();
         };
         this.checkpoints.onPlayerDeath = () => { this._triggerDeath(); };
         this.checkpoints.onLevelComplete = (stats) => {
@@ -255,7 +262,16 @@ class Platformer3DGame extends Engine3DAdapter {
         };
         this.enemies.onPlayerHit = (damage) => {
             this.playerChar?.takeDamage?.(damage);
+            this.vfx?.flashInvincible?.();
         };
+
+        // VFX system (Phase 50)
+        const hudEl = document.getElementById('hud');
+        this.vfx = new VFX_Platformer3D({
+            scene:        this.renderer3d.scene,
+            palette:      this.palette?.colors ?? null,
+            hudContainer: hudEl ?? null,
+        });
         this._bindInputActions();
 
         this.onReady?.();
@@ -385,6 +401,15 @@ class Platformer3DGame extends Engine3DAdapter {
         this.collectibles?.update?.(dt, this._getPlayerPosition());
         this.checkpoints?.update?.(dt, this._getPlayerPosition());
         this.enemies?.update?.(dt);
+        this.vfx?.update?.(dt);
+
+        // Jump dust on takeoff (rising edge of jump action while was-grounded)
+        if (inputState.jump && !this._prevJumpInput) {
+            const charPos = this._getPlayerPosition();
+            if (charPos) this.vfx?.jumpDust?.(charPos);
+        }
+        this._prevJumpInput = !!inputState.jump;
+
         this.audio?.update?.(dt, this.camera3d?.camera);
 
         // Invincibility countdown
@@ -426,7 +451,7 @@ class Platformer3DGame extends Engine3DAdapter {
         }
 
         // Respawn delay — show death VFX then teleport
-        this.vfx?.spawnDeathExplosion?.(this._getPlayerPosition());
+        this.vfx?.flashDeath?.();
         setTimeout(() => this._respawn(), 1200);
     }
 
@@ -449,6 +474,7 @@ class Platformer3DGame extends Engine3DAdapter {
     /** Called by CheckpointSystem3D when the player reaches the level exit */
     levelComplete(stats = {}) {
         this.isRunning = false;
+        this.vfx?.flashComplete?.();
         this.onLevelComplete?.({ coins: this._coins, score: this._score, ...stats });
     }
 
@@ -572,6 +598,8 @@ class Platformer3DGame extends Engine3DAdapter {
         this.charController?.destroy?.();
         this.playerChar?.destroy?.();
         this.thirdPersonCam?.destroy?.();
+        this.enemies?.destroy?.();
+        this.vfx?.destroy?.();
         this.renderer3d?.dispose?.();
         this.physics?.destroy?.();
         this.audio?.destroy?.();
