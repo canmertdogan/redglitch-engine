@@ -51,6 +51,10 @@ function levelFilePath(projectDir, levelId) {
 /**
  * Validate a 3D level payload.
  * Returns the normalised level object or throws on hard errors.
+ *
+ * For 'fps-3d' maps (produced by MapExporter.js) the full payload is
+ * preserved as-is; only the engineType field is validated strictly.
+ * For other engine types the legacy schema normalisation is applied.
  */
 function validateLevel3D(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -59,6 +63,19 @@ function validateLevel3D(raw) {
     if (raw.engineType && !VALID_3D_ENGINE_TYPES.includes(raw.engineType)) {
         throw new Error(`Invalid engineType "${raw.engineType}". Must be one of: ${VALID_3D_ENGINE_TYPES.join(', ')}`);
     }
+
+    // fps-3d maps carry voxelGrid, palette, lights, emissiveBlocks, etc.
+    // Pass through all fields and only add missing top-level identifiers.
+    if (raw.engineType === 'fps-3d') {
+        return {
+            ...raw,
+            version:    raw.version    || LEVEL_SCHEMA_VERSION,
+            engineType: 'fps-3d',
+            name:       typeof raw.name === 'string' ? raw.name : (raw.mapName || 'Untitled Level'),
+        };
+    }
+
+    // Legacy schema normalisation for topdown-3d / platformer-3d
     return {
         version:    raw.version    || LEVEL_SCHEMA_VERSION,
         engineType: raw.engineType || 'topdown-3d',

@@ -858,22 +858,18 @@ const FPSEditor = (() => {
 
     function saveMap() {
         const mapData = _buildMapData();
-        const project = _state.project || 'FPS3D Demo';
-        const mapName = _state.mapName || 'untitled_map';
-
-        fetch(`/api/levels3d/${encodeURIComponent(project)}/${encodeURIComponent(mapName)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(mapData),
-        })
-        .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
-        .then(() => { _clearDirty(); console.log('[FPSEditor] Map saved'); })
-        .catch(err => {
-            // No server endpoint yet (Phase 41) — download as fallback
-            console.warn('[FPSEditor] Server save failed, downloading:', err);
-            _downloadJSON(mapData, `${mapName}.fpsmap.json`);
+        if (typeof MapExporter !== 'undefined') {
+            MapExporter.exportToServer(mapData)
+                .then(() => { _clearDirty(); console.log('[FPSEditor] Map saved to server'); })
+                .catch(err => {
+                    console.warn('[FPSEditor] Server save failed, downloading:', err);
+                    MapExporter.exportToFile(mapData);
+                    _clearDirty();
+                });
+        } else {
+            _downloadJSON(mapData, `${_state.mapName || 'untitled_map'}.fpsmap.json`);
             _clearDirty();
-        });
+        }
     }
 
     function saveMapAs() {
@@ -906,12 +902,16 @@ const FPSEditor = (() => {
 
     function exportMap() {
         const mapData = _buildMapData();
-        _downloadJSON(mapData, `${_state.mapName}.fpsmap.json`);
+        if (typeof MapExporter !== 'undefined') {
+            MapExporter.exportToFile(mapData);
+        } else {
+            _downloadJSON(mapData, `${_state.mapName}.fpsmap.json`);
+        }
     }
 
     function importMap() { openMap(); }
 
-    /** Export optimized greedy mesh data for Phase 41 GLTF generation. */
+    /** Export optimized greedy mesh data for GLTF generation. */
     function exportGreedyMeshData() {
         if (typeof BrushTools === 'undefined') return [];
         return BrushTools.exportGreedyMesh(_state.voxelGrid, _state.cellSize);
@@ -1006,39 +1006,59 @@ const FPSEditor = (() => {
     }
 
     // ── build / validate ─────────────────────────────────────────────────────
+
     function testPlay() {
-        const mapData = _buildMapData();
-        // Phase 41 will implement a proper preview launch via FPS engine
-        // For now store in sessionStorage and notify parent
-        try {
-            sessionStorage.setItem('fps_preview_map', JSON.stringify(mapData));
-        } catch(e) { /* ignore quota */ }
-        if (window.opener?.FPSEditor_onTestPlay) {
-            window.opener.FPSEditor_onTestPlay(mapData);
-        } else {
-            alert('Test Play: map data saved to sessionStorage.\nLaunch the FPS engine from the launcher to preview.');
+        if (typeof MapExporter === 'undefined') {
+            alert('MapExporter not loaded.');
+            return;
         }
+        const mapData = _buildMapData();
+        const result  = MapExporter.validate(mapData);
+        if (!result.ok) {
+            const msg = 'Cannot test play — map has errors:\n\n' +
+                result.issues.map(i => '✖ ' + i).join('\n');
+            alert(msg);
+            return;
+        }
+        MapExporter.testPlay(mapData);
     }
 
     function buildNavmesh() {
-        // Phase 41 auto-generates navmesh from walkable floor geometry
-        console.log('[FPSEditor] buildNavmesh — Phase 41');
-        alert('Navmesh generation will be implemented in Phase 41 (FPS Map Export/Import).');
+        if (typeof MapExporter === 'undefined') {
+            alert('MapExporter not loaded.');
+            return;
+        }
+        const mapData = _buildMapData();
+        const navmesh = MapExporter.buildNavmesh(mapData.voxelGrid, mapData.cellSize);
+        const nodeCount = navmesh.nodes.length;
+        const edgeCount = navmesh.edges.length;
+        console.log('[FPSEditor] Navmesh built:', navmesh);
+        // Store navmesh in state for export
+        _state._navmesh = navmesh;
+        const msg = nodeCount === 0
+            ? 'No walkable floor cells found.\nPlace floor blocks with empty space above them.'
+            : `✓ Navmesh built: ${nodeCount} nodes, ${edgeCount} edges.`;
+        alert(msg);
     }
 
     function validateMap() {
-        const issues = [];
-        const hasPlayerSpawn = _state.entities.some(e => e.type === 'player-spawn');
-        if (!hasPlayerSpawn) issues.push('⚠ No player spawn point placed');
-        if (Object.keys(_state.voxelGrid).length === 0) issues.push('⚠ Map is empty — no blocks placed');
-        const hasLevelExit = _state.entities.some(e => e.type === 'level-exit') ||
-                             _state.triggers.some(t => t.event === 'levelComplete');
-        if (!hasLevelExit) issues.push('ℹ No level exit defined');
-        if (issues.length === 0) {
-            alert('✓ Map validation passed!');
-        } else {
-            alert('Map validation issues:\n\n' + issues.join('\n'));
+        if (typeof MapExporter === 'undefined') {
+            // Minimal built-in fallback
+            const issues = [];
+            if (!_state.entities.some(e => e.type === 'player-spawn'))
+                issues.push('No player spawn placed');
+            if (!Object.keys(_state.voxelGrid).length)
+                issues.push('Map is empty');
+            alert(issues.length ? 'Issues:\n' + issues.join('\n') : '✓ Map OK');
+            return;
         }
+        const mapData = _buildMapData();
+        const result  = MapExporter.validate(mapData);
+        const lines   = [];
+        if (result.issues.length)   lines.push('ERRORS:', ...result.issues.map(i => '  ✖ ' + i));
+        if (result.warnings.length) lines.push('WARNINGS:', ...result.warnings.map(w => '  ⚠ ' + w));
+        if (!lines.length)          lines.push('✓ Map validation passed — no issues found.');
+        alert(lines.join('\n'));
     }
 
     function clearMap() {
