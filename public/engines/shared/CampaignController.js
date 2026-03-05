@@ -872,6 +872,9 @@ class CampaignController {
                 case 'platformer-2d':
                     adapter = new PlatformerAdapter();
                     break;
+                case 'fps-3d':
+                    adapter = new FPS3DAdapter();
+                    break;
                 default:
                     throw new Error(`Unknown engine type: ${newEngineType}`);
             }

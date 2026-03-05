@@ -205,6 +205,11 @@
             'engines/platformer-2d/renderer.js',
             'engines/platformer-2d/generator/SmartGenerator.js',
             'engines/platformer-2d/main.js'
+        ],
+        'fps-3d': [
+            // fps-3d uses ES modules loaded via main.js; only the entry point is needed
+            // All sub-systems (EnemyAI, HUD_FPS, etc.) are imported inside main.js
+            'engines/fps-3d/main.js'
         ]
     };
 
@@ -218,6 +223,7 @@
             'engines/shared/TopDownAdapter.js',
             'engines/shared/IsoPixelAdapter.js',
             'engines/shared/PlatformerAdapter.js',
+            'engines/fps-3d/FPS3DAdapter.js',
             'engines/shared/CampaignController.js'
         ];
         scripts = [...campaignScripts, ...scripts];
