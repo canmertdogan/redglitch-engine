@@ -42,6 +42,7 @@ import Raycast3D,
 import TopDownCamera3D          from './TopDownCamera3D.js';
 import TerrainSystem3D, { BlockType } from './TerrainSystem3D.js';
 import EntitySystem3D, { AIState, Entity3D } from './EntitySystem3D.js';
+import Pathfinding3D, { AreaType } from './Pathfinding3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,9 @@ class TopDownGame3D extends Engine3DAdapter {
         this.entities = new EntitySystem3D(
             this.scene, this.assets, this.physics, this.palette, this.terrain
         );
+
+        // ── Pathfinding (Phase 15) ─────────────────────────────────────────
+        this.pathfinding = new Pathfinding3D(this.scene);
         this.topdownCamera = new TopDownCamera3D(this.renderer3d.camera, container, {
             pitch:       55,
             zoom:        24,
@@ -234,10 +238,11 @@ class TopDownGame3D extends Engine3DAdapter {
         }
 
         // Phase-13+ systems: hydrate if already loaded
-        if (this.terrain)    this.terrain.onLevelLoaded(level);
-        if (this.entities)   this.entities.onLevelLoaded(level);
-        if (this.fogOfWar)   this.fogOfWar.onLevelLoaded(level);
-        if (this.minimap)    this.minimap.onLevelLoaded(level);
+        if (this.terrain)      this.terrain.onLevelLoaded(level);
+        if (this.pathfinding)  this.pathfinding.buildFromLevel(level);
+        if (this.entities)     this.entities.onLevelLoaded(level);
+        if (this.fogOfWar)     this.fogOfWar.onLevelLoaded(level);
+        if (this.minimap)      this.minimap.onLevelLoaded(level);
     }
 
     onLevelUnloaded() {
@@ -298,8 +303,15 @@ class TopDownGame3D extends Engine3DAdapter {
         // 4. Entity / NPC tick (AI + movement)
         this.entities?.update(dt);
 
-        // 5. Pathfinding (obstacle re-solve at reduced rate handled internally)
-        this.pathfinding?.update(dt);
+        // 5. Pathfinding ORCA tick (feed live entity positions/velocities)
+        if (this.pathfinding && this.entities) {
+            const agents = this.entities.getAllEntities().map(e => ({
+                id:       e.id,
+                position: { x: e.root.position.x, y: e.root.position.y, z: e.root.position.z },
+                velocity: e.orcaVelocity ?? { x: 0, z: 0 },
+            }));
+            this.pathfinding.updateAgents(dt, agents);
+        }
 
         // 6. Abilities + combat
         this.abilities?.update(dt);
