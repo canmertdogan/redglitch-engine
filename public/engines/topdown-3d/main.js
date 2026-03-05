@@ -39,6 +39,7 @@ import Input3D                  from '../shared/Input3D.js';
 import AudioSpatial3D           from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
+import TopDownCamera3D          from './TopDownCamera3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -152,8 +153,14 @@ class TopDownGame3D extends Engine3DAdapter {
         this.raycast = new Raycast3D(this.scene);
         this.raycast.setCamera(this.renderer3d.camera);
 
-        // ── 3D lifecycle base ──────────────────────────────────────────────
-        await this.initialize3D();
+        // ── TopDown Camera (Phase 12) — replaces generic camera3d for topdown ─
+        this.topdownCamera = new TopDownCamera3D(this.renderer3d.camera, container, {
+            pitch:       55,
+            zoom:        24,
+            edgeScroll:  true,
+            keyPan:      true,
+            freeRotation: false,
+        });
 
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
@@ -386,6 +393,7 @@ class TopDownGame3D extends Engine3DAdapter {
             entityStates:   this.entities?.serialize()         || null,
             abilityStates:  this.abilities?.serialize()        || null,
             timestamp:      Date.now(),
+            cameraState:    this.topdownCamera?.serialize() || null,
         };
     }
 
@@ -397,6 +405,7 @@ class TopDownGame3D extends Engine3DAdapter {
         if (data.fogExplored) this.fogOfWar?.deserializeExplored(data.fogExplored);
         if (data.entityStates) this.entities?.deserialize(data.entityStates);
         if (data.abilityStates) this.abilities?.deserialize(data.abilityStates);
+        if (data.cameraState)   this.topdownCamera?.deserialize(data.cameraState);
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
