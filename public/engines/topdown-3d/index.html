@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topdown 3D Engine — Ketebe</title>
+    <link href="../../fonts/fonts.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            margin: 0; padding: 0; box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* ── Loading Screen ─────────────────────────────────── */
+        #loading-screen {
+            position: fixed; inset: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 10000;
+        }
+        #loading-screen.hidden { display: none; }
+
+        #loading-title {
+            color: #4ecdc4;
+            font-size: 48px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+        }
+
+        #loading-text {
+            color: #888;
+            font-size: 22px;
+            letter-spacing: 3px;
+        }
+
+        #loading-bar-wrap {
+            width: 320px;
+            height: 6px;
+            background: #111;
+            border: 1px solid #333;
+        }
+        #loading-bar {
+            height: 100%;
+            background: #4ecdc4;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* ── Login Screen ───────────────────────────────────── */
+        #login-screen {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.97);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 5000;
+        }
+        #login-screen.hidden { display: none; }
+
+        #login-box {
+            background: #0a0a0a;
+            border: 2px solid #4ecdc4;
+            padding: 48px 56px;
+            text-align: center;
+            min-width: 360px;
+        }
+
+        #login-logo {
+            color: #4ecdc4;
+            font-size: 14px;
+            letter-spacing: 6px;
+            margin-bottom: 8px;
+            opacity: 0.6;
+        }
+
+        #login-title {
+            color: #fff;
+            font-size: 52px;
+            letter-spacing: 4px;
+            margin-bottom: 36px;
+        }
+
+        #username-input {
+            background: #000;
+            border: 2px solid #333;
+            color: #4ecdc4;
+            font-family: 'VT323', monospace;
+            font-size: 26px;
+            padding: 10px 20px;
+            width: 100%;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            text-align: center;
+            outline: none;
+            letter-spacing: 3px;
+        }
+        #username-input:focus { border-color: #4ecdc4; }
+
+        #login-btn {
+            background: #4ecdc4;
+            border: none;
+            color: #000;
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            padding: 12px 48px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            transition: background 0.1s, transform 0.1s;
+            width: 100%;
+        }
+        #login-btn:hover  { background: #80e8e2; }
+        #login-btn:active { transform: scale(0.97); }
+
+        /* ── Game Container ─────────────────────────────────── */
+        #game-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: none;
+        }
+        #game-container.active { display: block; }
+
+        /* Three.js injects its own canvas — let it fill the container */
+        #game-container canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ── HUD overlay ────────────────────────────────────── */
+        #hud {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #hud.hidden { display: none; }
+
+        #hud-top-left {
+            position: absolute;
+            top: 16px; left: 16px;
+            font-size: 18px;
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 2px;
+        }
+
+        #hud-minimap {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            width: 180px; height: 180px;
+            border: 2px solid rgba(78,205,196,0.5);
+            background: rgba(0,0,0,0.6);
+            pointer-events: auto;
+        }
+        #hud-minimap canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ── Pause overlay ──────────────────────────────────── */
+        #pause-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        #pause-overlay.hidden { display: none; }
+        #pause-text {
+            color: #4ecdc4;
+            font-size: 64px;
+            letter-spacing: 8px;
+            animation: blink 1.2s step-end infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* ── Error banner ───────────────────────────────────── */
+        #error-banner {
+            position: fixed;
+            top: 16px; left: 50%; transform: translateX(-50%);
+            background: #c0392b;
+            color: #fff;
+            font-size: 18px;
+            padding: 10px 28px;
+            letter-spacing: 2px;
+            z-index: 20000;
+        }
+        #error-banner.hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div id="loading-title">KETEBE</div>
+        <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+        <div id="loading-text">LOADING TOPDOWN 3D ENGINE...</div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="hidden">
+        <div id="login-box">
+            <div id="login-logo">KETEBE ENGINE</div>
+            <div id="login-title">TOPDOWN 3D</div>
+            <input type="text" id="username-input" placeholder="ENTER USERNAME" maxlength="16" autocomplete="off">
+            <button id="login-btn" onclick="attemptLogin()">START GAME</button>
+        </div>
+    </div>
+
+    <!-- Game Container (Three.js canvas injected here) -->
+    <div id="game-container">
+        <!-- HUD overlay -->
+        <div id="hud" class="hidden">
+            <div id="hud-top-left">
+                <span id="hud-project"></span>
+            </div>
+            <div id="hud-minimap">
+                <!-- Minimap3D (Phase 19) injects canvas here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Pause overlay -->
+    <div id="pause-overlay" class="hidden">
+        <div id="pause-text">PAUSED</div>
+    </div>
+
+    <!-- Error banner -->
+    <div id="error-banner" class="hidden"></div>
+
+    <!-- Engine bootstrap (ES module) -->
+    <script type="module">
+        import TopDownGame3D from './main.js';
+
+        // ── DOM refs ──────────────────────────────────────────────────────
+        const loadingScreen  = document.getElementById('loading-screen');
+        const loadingBar     = document.getElementById('loading-bar');
+        const loadingText    = document.getElementById('loading-text');
+        const loginScreen    = document.getElementById('login-screen');
+        const gameContainer  = document.getElementById('game-container');
+        const hud            = document.getElementById('hud');
+        const pauseOverlay   = document.getElementById('pause-overlay');
+        const errorBanner    = document.getElementById('error-banner');
+        const hudProject     = document.getElementById('hud-project');
+
+        function setLoadingProgress(pct, text) {
+            loadingBar.style.width = `${pct}%`;
+            if (text) loadingText.textContent = text;
+        }
+
+        function showError(msg) {
+            errorBanner.textContent = msg;
+            errorBanner.classList.remove('hidden');
+            setTimeout(() => errorBanner.classList.add('hidden'), 6000);
+            console.error('[TopDown3D Launcher]', msg);
+        }
+
+        // ── URL params ────────────────────────────────────────────────────
+        const params      = new URLSearchParams(window.location.search);
+        const levelId     = params.get('level');
+        const project     = params.get('project');
+        const isPlaytest  = params.get('playtest') === 'true';
+        const username    = params.get('username') || null;
+
+        // ── Create game ───────────────────────────────────────────────────
+        setLoadingProgress(10, 'CREATING ENGINE...');
+        const game = new TopDownGame3D(gameContainer);
+
+        game.onReady = () => {
+            setLoadingProgress(80, 'ENGINE READY');
+        };
+
+        game.onLevelReady = (level) => {
+            setLoadingProgress(100, `LEVEL: ${level?.name || '?'}`);
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                gameContainer.classList.add('active');
+                hud.classList.remove('hidden');
+                if (hudProject) hudProject.textContent = project || '';
+            }, 300);
+        };
+
+        // ── Init ──────────────────────────────────────────────────────────
+        setLoadingProgress(20, 'INITIALISING SYSTEMS...');
+
+        game.init().then(async () => {
+            setLoadingProgress(50, 'SYSTEMS ONLINE');
+
+            if (isPlaytest) {
+                // ── Playtest mode: data from localStorage ─────────────────
+                const raw = localStorage.getItem('temp_playtest_topdown3d');
+                if (!raw) { showError('No playtest data in localStorage'); return; }
+                try {
+                    const levelData = JSON.parse(raw);
+                    game.username = username || 'TEST_USER';
+                    setLoadingProgress(70, 'LOADING PLAYTEST LEVEL...');
+                    await game.loadLevelFromData(levelData);
+                    game._startLoop();
+                } catch (e) {
+                    showError('Playtest load failed: ' + e.message);
+                }
+
+            } else if (levelId && project) {
+                // ── Normal mode: load from server ─────────────────────────
+                game.username       = username || 'PLAYER';
+                game.currentProject = project;
+                setLoadingProgress(70, `LOADING ${project.toUpperCase()}...`);
+                try {
+                    await game.loadProject(project, levelId);
+                    game._startLoop();
+                } catch (e) {
+                    showError('Level load failed: ' + e.message);
+                }
+
+            } else {
+                // ── Dev / login mode ──────────────────────────────────────
+                setLoadingProgress(100, 'READY');
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
+                }, 400);
+            }
+
+        }).catch(e => {
+            showError('Init failed: ' + e.message);
+            console.error(e);
+        });
+
+        // ── Login ─────────────────────────────────────────────────────────
+        window.attemptLogin = function() {
+            const input = document.getElementById('username-input');
+            const name  = (input?.value || '').trim().toUpperCase();
+            if (!name) return;
+
+            loginScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            setLoadingProgress(60, 'STARTING...');
+
+            game.login(name).then(() => {
+                setLoadingProgress(100, 'WELCOME ' + name);
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    gameContainer.classList.add('active');
+                    hud.classList.remove('hidden');
+                }, 400);
+            }).catch(e => showError('Login failed: ' + e.message));
+        };
+
+        document.getElementById('username-input')?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') window.attemptLogin();
+        });
+
+        // ── Keyboard shortcuts ────────────────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                game.toggle();
+                pauseOverlay.classList.toggle('hidden', !game.isPaused);
+            }
+            // F5 quicksave
+            if (e.key === 'F5') {
+                e.preventDefault();
+                game.saveGame().catch(err => showError('Save failed: ' + err.message));
+            }
+        });
+
+        // ── Expose for debugging in DevTools ──────────────────────────────
+        window.game = game;
+    </script>
+</body>
+</html>
