@@ -1016,8 +1016,14 @@
         isDragging = false;
 
         if (state.tool === 'select') {
+            // Delegate to object tools plugin for prop gizmo drag + selection
+            if (window.__topdown3dObjectTools) {
+                const pos = groundPos(e);
+                window.__topdown3dObjectTools.onCanvasMouseUp(e, pos ?? { x: 0, y: 0, z: 0 }, state.tool);
+                return;
+            }
             if (dx < 5 && dy < 5) {
-                // single click pick
+                // single click pick (entities)
                 const picked = pickObject(e);
                 if (e.shiftKey && picked) {
                     state.selectedIds.add(picked);
@@ -1026,23 +1032,32 @@
                     setSelected(picked ? [picked] : []);
                 }
             }
-            // box select handled by rubber-band rect; full implementation in Phase 22+
         } else if (state.tool === 'place') {
+            // Route to object tools plugin (prop placement) OR fallback entity placement
             const pos = groundPos(e);
-            if (pos) placeObjectAt(pos);
+            if (pos && window.__topdown3dObjectTools) {
+                window.__topdown3dObjectTools.onCanvasMouseUp(e, pos, state.tool);
+            } else if (pos) {
+                placeObjectAt(pos);
+            }
         } else if (state.tool === 'paint' || state.tool === 'height') {
             const pos = groundPos(e);
             if (pos && window.__topdown3dTerrainTools) {
                 window.__topdown3dTerrainTools.onCanvasClick(e, pos, state.tool);
             }
         } else if (state.tool === 'erase') {
-            const picked = pickObject(e);
-            if (picked) {
-                const entry = sceneObjects.get(picked);
-                if (entry) pushUndo({ type: 'DEL_OBJECT', data: JSON.parse(JSON.stringify(entry.data)) });
-                removeSceneObject(picked);
-                state.level.entities = state.level.entities.filter(ent => ent.id !== picked);
-                markDirty();
+            const pos = groundPos(e);
+            if (pos && window.__topdown3dObjectTools) {
+                window.__topdown3dObjectTools.onCanvasMouseUp(e, pos, state.tool);
+            } else {
+                const picked = pickObject(e);
+                if (picked) {
+                    const entry = sceneObjects.get(picked);
+                    if (entry) pushUndo({ type: 'DEL_OBJECT', data: JSON.parse(JSON.stringify(entry.data)) });
+                    removeSceneObject(picked);
+                    state.level.entities = state.level.entities.filter(ent => ent.id !== picked);
+                    markDirty();
+                }
             }
         }
     });

@@ -166,6 +166,23 @@
             display: flex; align-items: center; gap: 8px; padding: 5px 6px;
             background: #0c0c18; border: 1px solid #222; cursor: pointer; border-radius: 2px;
         }
+
+        /* Phase 23 — Asset browser */
+        .asset-thumb-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px;
+        }
+        .asset-thumb-card {
+            background: #0c0c18; border: 1px solid #2a2a3a; cursor: pointer; border-radius: 2px;
+            padding: 6px 4px; display: flex; flex-direction: column; align-items: center;
+            gap: 4px; font-size: 0.7rem; color: #666; text-align: center;
+            transition: border-color .1s; overflow: hidden;
+        }
+        .asset-thumb-card i { font-size: 1.2rem; color: #555; }
+        .asset-thumb-card span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+        .asset-thumb-card:hover { border-color: var(--accent); color: var(--accent); }
+        .asset-thumb-card:hover i { color: var(--accent); }
+        .asset-thumb-card.selected { border-color: var(--accent); background: #0e1a2a; color: var(--accent); }
+        .asset-thumb-card.selected i { color: var(--accent); }
         .obj-item:hover { border-color: var(--accent); color: var(--accent); }
         .obj-item.selected { border-color: var(--accent); background: #0e1a2e; }
         .obj-icon { color: var(--accent2); width: 20px; text-align: center; }
@@ -720,5 +737,6 @@
 
 <script src="topdown3d_editor.js"></script>
 <script src="topdown3d_terrain_tools.js"></script>
+<script src="topdown3d_object_tools.js"></script>
 </body>
 </html>
