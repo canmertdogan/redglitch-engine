@@ -39,6 +39,7 @@ import Raycast3D,
 import FPS3DStrategy            from './FPS3DStrategy.js';
 import FPSCamera                from './FPSCamera.js';
 import FPSController, { MoveState } from './FPSController.js';
+import WorldGeometry            from './WorldGeometry.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -197,6 +198,14 @@ class FPSGame extends Engine3DAdapter {
         this.fpsController._gameTimeRef = () => this.gameTime;
         await this.fpsController.init();
 
+        // ── World Geometry (Phase 29) ──────────────────────────────────────
+        this.worldGeometry = new WorldGeometry({
+            scene:         this.scene,
+            physics:       this.physics,
+            assets:        this.assets,
+            fpsController: this.fpsController,
+        });
+
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
         this._onResize();
@@ -263,6 +272,11 @@ class FPSGame extends Engine3DAdapter {
             await this.fpsController.init(spawn);
         }
 
+        // Phase 29: load world geometry + collision
+        if (this.worldGeometry) {
+            await this.worldGeometry.loadFromLevel(level, this.currentProject ?? '');
+        }
+
         // Phase 29+: WorldGeometry — null until loaded
         // this.worldGeometry?.onLevelLoaded(level);
     }
@@ -273,8 +287,7 @@ class FPSGame extends Engine3DAdapter {
         this._accumulator = 0;
         this._currentLevel = null;
 
-        // Phase 29+
-        // this.worldGeometry?.dispose();
+        this.worldGeometry?.dispose();
         // this.weaponSystem?.dispose();
         // this.enemyAI?.dispose();
     }
@@ -326,6 +339,9 @@ class FPSGame extends Engine3DAdapter {
 
         // 5. Weapon system (Phase 30)
         this.weaponSystem?.update(dt);
+
+        // 5b. World geometry — stair climb, ceiling detection, triggers, portals (Phase 29)
+        this.worldGeometry?.update(dt, this.gameTime);
 
         // 6. FPS camera (Phase 27) — bob, recoil, lean
         if (this.fpsCamera && this.input) {
@@ -466,6 +482,7 @@ class FPSGame extends Engine3DAdapter {
         this.releasePointerLock();
         this.fpsCamera?.detach();
         this.fpsController?.dispose();
+        this.worldGeometry?.dispose();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();
