@@ -41,6 +41,7 @@ import AudioSpatial3D           from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
 import ThirdPersonCamera        from './ThirdPersonCamera.js';
+import PlatformerPhysics3D      from './PlatformerPhysics3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ class Platformer3DGame extends Engine3DAdapter {
 
         // ── Engine-specific systems (Phase 43-50, lazy-loaded) ─────────────
         this.thirdPersonCam = null;   // ThirdPersonCamera   (Phase 43) — set in init()
-        this.platformerPhys = null;   // PlatformerPhysics3D (Phase 44)
+        this.platformerPhys = null;   // PlatformerPhysics3D (Phase 44) — set in init()
         this.charController = null;   // CharacterController3D (Phase 45)
         this.playerChar     = null;   // PlayerCharacter3D   (Phase 46)
         this.collectibles   = null;   // CollectibleSystem3D (Phase 47)
@@ -151,6 +152,12 @@ class Platformer3DGame extends Engine3DAdapter {
             { distance: 6, pivotHeight: 1.2, autoRotate: true }
         );
         this.thirdPersonCam.attach();
+
+        // Platformer physics layer
+        this.platformerPhys = new PlatformerPhysics3D(this.physics, {
+            gravity:    -20,
+            airJumps:   1,
+        });
 
         // Bind platformer-specific input actions
         this._bindInputActions();
