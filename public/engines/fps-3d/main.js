@@ -38,6 +38,7 @@ import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
 import FPS3DStrategy            from './FPS3DStrategy.js';
 import FPSCamera                from './FPSCamera.js';
+import FPSController, { MoveState } from './FPSController.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -182,6 +183,20 @@ class FPSGame extends Engine3DAdapter {
             }
         };
 
+        // ── FPS Controller (Phase 28) ──────────────────────────────────────
+        this.fpsController = new FPSController({
+            physics:   this.physics,
+            fpsCamera: this.fpsCamera,
+            input:     this.input,
+            audio:     this.audio,
+        }, {
+            bunnyHop:    true,
+            proneEnabled: false,
+        });
+        // Provide game-time accessor for bhop window
+        this.fpsController._gameTimeRef = () => this.gameTime;
+        await this.fpsController.init();
+
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
         this._onResize();
@@ -241,6 +256,12 @@ class FPSGame extends Engine3DAdapter {
 
         // Strategy: set player spawn point from level data
         this.strategy?.loadLevel(level);
+
+        // Phase 28: re-position controller at level spawn
+        if (this.fpsController) {
+            const spawn = level?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
+            await this.fpsController.init(spawn);
+        }
 
         // Phase 29+: WorldGeometry — null until loaded
         // this.worldGeometry?.onLevelLoaded(level);
@@ -397,16 +418,17 @@ class FPSGame extends Engine3DAdapter {
 
     _buildSavePayload() {
         return {
-            version:     this.version,
-            engineType:  'fps-3d',
-            project:     this.currentProject,
-            levelId:     this._levelId,
-            gameTime:    this.gameTime,
-            health:      this._health,
-            ammo:        this._ammo,
-            playerPos:   this.strategy?.getPlayerPosition() ?? null,
-            cameraState: this.fpsCamera?.serialize() ?? null,
-            timestamp:   Date.now(),
+            version:         this.version,
+            engineType:      'fps-3d',
+            project:         this.currentProject,
+            levelId:         this._levelId,
+            gameTime:        this.gameTime,
+            health:          this._health,
+            ammo:            this._ammo,
+            playerPos:       this.strategy?.getPlayerPosition() ?? null,
+            cameraState:     this.fpsCamera?.serialize()      ?? null,
+            controllerState: this.fpsController?.serialize()  ?? null,
+            timestamp:       Date.now(),
         };
     }
 
@@ -417,8 +439,9 @@ class FPSGame extends Engine3DAdapter {
         if (data.gameTime !== undefined) this.gameTime = data.gameTime;
         if (data.health   !== undefined) this._health  = data.health;
         if (data.ammo     !== undefined) this._ammo    = data.ammo;
-        if (data.playerPos)   this.strategy?.setSpawnPoint(data.playerPos);
-        if (data.cameraState) this.fpsCamera?.deserialize(data.cameraState);
+        if (data.playerPos)       this.strategy?.setSpawnPoint(data.playerPos);
+        if (data.cameraState)     this.fpsCamera?.deserialize(data.cameraState);
+        if (data.controllerState) this.fpsController?.deserialize(data.controllerState);
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
@@ -442,6 +465,7 @@ class FPSGame extends Engine3DAdapter {
         this.onLevelUnloaded();
         this.releasePointerLock();
         this.fpsCamera?.detach();
+        this.fpsController?.dispose();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();
