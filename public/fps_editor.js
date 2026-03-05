@@ -67,6 +67,10 @@ const FPSEditor = (() => {
     let _showGrid    = true;
     let _selection   = null;   // selected entity/trigger id
 
+    // ── rect-stamp drag state ────────────────────────────────────────────────
+    // Set on mousedown when drawMode === 'rect'; cleared on mouseup.
+    let _rectDrag = null;  // { gx0, gz0, gx1, gz1, erase: bool }
+
     // ── undo stack ───────────────────────────────────────────────────────────
     const _undoStack = [];
     const _redoStack = [];
@@ -182,6 +186,23 @@ const FPSEditor = (() => {
             ctx.fillRect(tx, ty, tw, th);
             ctx.strokeRect(tx, ty, tw, th);
         }
+
+        // rect-stamp live preview
+        if (_rectDrag && (_activeTool === 'draw-room' || _activeTool === 'corridor')) {
+            const cs   = _state.cellSize * _zoom2d;
+            const snap = _state.snapSize;
+            const px0  = _pan2d.x + Math.min(_rectDrag.gx0, _rectDrag.gx1) * cs / _state.cellSize;
+            const pz0  = _pan2d.y + Math.min(_rectDrag.gz0, _rectDrag.gz1) * cs / _state.cellSize;
+            const pw   = (Math.abs(_rectDrag.gx1 - _rectDrag.gx0) + 1) * cs / _state.cellSize;
+            const ph   = (Math.abs(_rectDrag.gz1 - _rectDrag.gz0) + 1) * cs / _state.cellSize;
+            ctx.strokeStyle = _rectDrag.erase ? 'rgba(231,76,60,.9)' : 'rgba(255,107,53,.9)';
+            ctx.fillStyle   = _rectDrag.erase ? 'rgba(231,76,60,.12)' : 'rgba(255,107,53,.12)';
+            ctx.lineWidth   = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.fillRect(px0, pz0, pw, ph);
+            ctx.strokeRect(px0, pz0, pw, ph);
+            ctx.setLineDash([]);
+        }
     }
 
     function _entityColor(type) {
@@ -204,6 +225,14 @@ const FPSEditor = (() => {
         if (e.button === 1 || (e.button === 0 && e.altKey)) {
             // pan
             _drag2d = { cx, cy, px: _pan2d.x, py: _pan2d.y };
+            return;
+        }
+
+        const { gx, gz } = _screenToGrid(cx, cy);
+
+        if (_drawMode === 'rect' && (_activeTool === 'draw-room' || _activeTool === 'corridor')) {
+            // begin rect drag — no painting until mouseup
+            _rectDrag = { gx0: gx, gz0: gz, gx1: gx, gz1: gz, erase: e.button === 2 };
             return;
         }
 
@@ -232,11 +261,32 @@ const FPSEditor = (() => {
             _pan2d.y = _drag2d.py + (cy - _drag2d.cy);
             return;
         }
+        // update rect preview end corner
+        if (_rectDrag) {
+            const { gx, gz } = _screenToGrid(cx, cy);
+            _rectDrag.gx1 = gx;
+            _rectDrag.gz1 = gz;
+            return;
+        }
         if (_painting2d) _applyTool2d(cx, cy, e.buttons === 2);
     }
 
     function _on2dUp() {
-        _drag2d     = null;
+        _drag2d = null;
+        // commit rect stamp
+        if (_rectDrag) {
+            const { gx0, gz0, gx1, gz1, erase: er } = _rectDrag;
+            const prev = _snapshot();
+            let changes;
+            if (er) {
+                changes = BrushTools.rectErase(_state.voxelGrid, gx0, gz0, gx1, gz1, 0);
+            } else {
+                changes = BrushTools.rectStamp(_state.voxelGrid, gx0, gz0, gx1, gz1, 0, _activeBlock, _activeColor);
+            }
+            if (changes.length) { _pushUndo(prev); markDirty(); _updateBlockCount(); _rebuild3d(); }
+            _rectDrag = null;
+            return;
+        }
         _painting2d = false;
         _paintPrev  = null;
         if (_state.dirty) _rebuild3d();
@@ -254,41 +304,56 @@ const FPSEditor = (() => {
         _zoom2d  = Math.max(4, Math.min(200, _zoom2d));
     }
 
-    function _applyTool2d(cx, cy, erase) {
-        const cs  = _state.cellSize;
+    /** Convert screen pixel → snapped grid coords { gx, gz }. */
+    function _screenToGrid(cx, cy) {
         const snap = _state.snapSize;
+        const cs   = _state.cellSize;
         const rawX = (cx - _pan2d.x) / _zoom2d;
         const rawZ = (cy - _pan2d.y) / _zoom2d;
-        const gx   = Math.floor(rawX / snap) * snap / cs | 0;
-        const gz   = Math.floor(rawZ / snap) * snap / cs | 0;
-        const gy   = 0;   // floor-level
-        const key  = `${gx},${gy},${gz}`;
+        return {
+            gx:   Math.floor(rawX / snap) * (snap / cs) | 0,
+            gz:   Math.floor(rawZ / snap) * (snap / cs) | 0,
+            rawX, rawZ,
+        };
+    }
+
+    function _applyTool2d(cx, cy, isErase) {
+        const { gx, gz, rawX, rawZ } = _screenToGrid(cx, cy);
+        const gy  = 0;
+        const grid = _state.voxelGrid;
 
         if (_activeTool === 'draw-room' || _activeTool === 'corridor') {
-            const prev = _snapshot();
-            if (erase) {
-                if (_state.voxelGrid[key]) { delete _state.voxelGrid[key]; _pushUndo(prev); markDirty(); }
-            } else {
-                if (!_state.voxelGrid[key] || _state.voxelGrid[key].type !== _activeBlock) {
-                    _pushUndo(prev);
-                    _state.voxelGrid[key] = { type: _activeBlock, color: _activeColor };
-                    markDirty();
-                }
+            if (_drawMode === 'pencil') {
+                const prev = _snapshot();
+                const changes = isErase
+                    ? BrushTools.erase(grid, gx, gy, gz)
+                    : BrushTools.pencil(grid, gx, gy, gz, _activeBlock, _activeColor);
+                if (changes.length) { _pushUndo(prev); markDirty(); }
+
+            } else if (_drawMode === 'fill') {
+                const prev = _snapshot();
+                const changes = isErase
+                    ? BrushTools.floodFill(grid, gx, gy, gz, null, null)
+                    : BrushTools.floodFill(grid, gx, gy, gz, _activeBlock, _activeColor);
+                if (changes.length) { _pushUndo(prev); markDirty(); }
+                // fill rebuilds immediately
+                if (changes.length) { _rebuild3d(); }
             }
+            // rect mode is handled via _rectDrag (mousedown/mouseup)
             _updateBlockCount();
-        } else if (_activeTool === 'paint' && !erase && _state.voxelGrid[key]) {
+
+        } else if (_activeTool === 'paint' && !isErase) {
+            const prev = _snapshot();
+            const changes = BrushTools.paintBlock(grid, gx, gy, gz, _activeColor);
+            if (changes.length) { _pushUndo(prev); markDirty(); }
+
+        } else if (_activeTool === 'entity' && !isErase) {
             const prev = _snapshot();
             _pushUndo(prev);
-            _state.voxelGrid[key].color = _activeColor;
-            markDirty();
-        } else if (_activeTool === 'entity' && !erase) {
-            const prev = _snapshot();
-            _pushUndo(prev);
-            const wx = rawX, wz = rawZ;
-            _state.entities.push({ id: `ent_${Date.now()}`, type: _activeEntity, x: wx, y: _state.floorY, z: wz, props: {} });
-            _pushUndo(prev);
+            _state.entities.push({ id: `ent_${Date.now()}`, type: _activeEntity, x: rawX, y: _state.floorY, z: rawZ, props: {} });
             markDirty();
             _updateEntityCount();
+            _painting2d = false;  // single-click only for entities
         }
     }
 
@@ -386,27 +451,24 @@ const FPSEditor = (() => {
         }
 
         const cs = _state.cellSize;
-        for (const key in _state.voxelGrid) {
-            const [gx, gy, gz] = key.split(',').map(Number);
-            const cell = _state.voxelGrid[key];
-            const color = cell.color || BLOCK_COLORS[cell.type] || '#666';
 
-            let geo, h = cs;
-            if (cell.type === 'floor')   { geo = new THREE.BoxGeometry(cs, 0.1, cs); }
-            else if (cell.type === 'ceiling') { geo = new THREE.BoxGeometry(cs, 0.1, cs); }
-            else if (cell.type === 'wall')    { geo = new THREE.BoxGeometry(cs, _state.ceilingH, cs); }
-            else if (cell.type === 'pillar')  { geo = new THREE.BoxGeometry(cs * 0.4, _state.ceilingH, cs * 0.4); }
-            else { geo = new THREE.BoxGeometry(cs, cs, cs); }
-
-            const mat  = new THREE.MeshLambertMaterial({ color });
-            const mesh = new THREE.Mesh(geo, mat);
-            const wy = cell.type === 'ceiling'
-                ? _state.floorY + _state.ceilingH
-                : _state.floorY + (cell.type === 'wall' ? _state.ceilingH / 2 : 0);
-            mesh.position.set(gx * cs + cs/2, wy, gz * cs + cs/2);
-            mesh.castShadow    = true;
-            mesh.receiveShadow = true;
-            group.add(mesh);
+        if (typeof BrushTools !== 'undefined') {
+            // ── Greedy mesh path (Phase 37) ───────────────────────────────────
+            const groups = BrushTools.buildGreedyMesh(_state.voxelGrid, cs);
+            const meshes = BrushTools.buildThreeGeometries(groups, THREE);
+            for (const m of meshes) group.add(m);
+        } else {
+            // ── Fallback: one box per block ───────────────────────────────────
+            for (const key in _state.voxelGrid) {
+                const [gx, gy, gz] = key.split(',').map(Number);
+                const cell  = _state.voxelGrid[key];
+                const color = cell.color || '#666';
+                const geo   = new THREE.BoxGeometry(cs, cs, cs);
+                const mat   = new THREE.MeshLambertMaterial({ color });
+                const mesh  = new THREE.Mesh(geo, mat);
+                mesh.position.set(gx * cs + cs / 2, gy * cs + cs / 2, gz * cs + cs / 2);
+                group.add(mesh);
+            }
         }
 
         // entity markers
@@ -785,6 +847,12 @@ const FPSEditor = (() => {
 
     function importMap() { openMap(); }
 
+    /** Export optimized greedy mesh data for Phase 41 GLTF generation. */
+    function exportGreedyMeshData() {
+        if (typeof BrushTools === 'undefined') return [];
+        return BrushTools.exportGreedyMesh(_state.voxelGrid, _state.cellSize);
+    }
+
     function _buildMapData() {
         return {
             version:   2,
@@ -955,7 +1023,7 @@ const FPSEditor = (() => {
             document.getElementById('map-project').value = project;
         }
 
-        console.log('[FPSEditor] Phase 36 scaffold ready');
+        console.log('[FPSEditor] Phase 37 BrushTools ready');
     }
 
     window.addEventListener('DOMContentLoaded', _init);
@@ -969,7 +1037,7 @@ const FPSEditor = (() => {
         selectEntity, addTrigger,
         updateFog, updateLighting,
         randomizePalette, loadPalette, savePalette,
-        newMap, openMap, saveMap, saveMapAs, exportMap, importMap,
+        newMap, openMap, saveMap, saveMapAs, exportMap, importMap, exportGreedyMeshData,
         undo, redo, selectAll, deleteSelected,
         testPlay, buildNavmesh, validateMap, clearMap,
         markDirty,
