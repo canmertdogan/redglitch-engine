@@ -43,6 +43,7 @@ import WorldGeometry            from './WorldGeometry.js';
 import WeaponSystem, { WeaponState } from './WeaponSystem.js';
 import EnemyAI, { EnemyState, Difficulty } from './EnemyAI.js';
 import HUD_FPS from './HUD_FPS.js';
+import DecalSystem from './DecalSystem.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,7 @@ class FPSGame extends Engine3DAdapter {
         this.weaponSystem   = null;   // WeaponSystem    (Phase 30)
         this.enemyAI        = null;   // EnemyAI         (Phase 31)
         this.hud            = null;   // HUD_FPS         (Phase 32)
+        this.decals         = null;   // DecalSystem     (Phase 33)
         this.strategy       = null;   // FPS3DStrategy   (Phase 26)
 
         // ── Game state ─────────────────────────────────────────────────────
@@ -242,10 +244,19 @@ class FPSGame extends Engine3DAdapter {
         this.enemyAI.onEnemyAttack = (_id, damage) => {
             this._health = Math.max(0, this._health - damage);
         };
-        // Wire WeaponSystem onHit → enemyAI damage
+        // Wire WeaponSystem onHit → enemyAI damage + decals + HUD
         this.weaponSystem.onHit = (id, damage, hitInfo) => {
+            const isEnemy = !!this.enemyAI?.getEnemyState?.(id);
             this.enemyAI?.damageEnemy(id, damage, hitInfo?.point ?? null);
             this.hud?.showHitMarker(false);
+            if (hitInfo?.point && hitInfo?.normal) {
+                if (isEnemy) {
+                    this.decals?.spawnBloodSplatter(hitInfo.point, hitInfo.normal);
+                } else {
+                    this.decals?.spawnBulletHole(hitInfo.point, hitInfo.normal, hitInfo.surface);
+                }
+                this.decals?.spawnImpactParticles(hitInfo.point, hitInfo.normal, hitInfo.surface);
+            }
         };
 
         // ── HUD (Phase 32) ─────────────────────────────────────────────────
@@ -275,6 +286,13 @@ class FPSGame extends Engine3DAdapter {
         this.enemyAI.onEnemyDied = (_id) => {
             this.hud?.showHitMarker(true);
         };
+
+        // ── DecalSystem (Phase 33) ─────────────────────────────────────────
+        this.decals = new DecalSystem({
+            scene:   this.scene,
+            raycast: this.raycast,
+            palette: this.palette,
+        });
 
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
@@ -362,6 +380,7 @@ class FPSGame extends Engine3DAdapter {
         this.worldGeometry?.dispose();
         this.weaponSystem?.dispose();
         this.enemyAI?.dispose();
+        this.decals?.clear();    // clear decals on level unload (keep system alive)
     }
 
     // ── Game loop ─────────────────────────────────────────────────────────────
@@ -414,6 +433,9 @@ class FPSGame extends Engine3DAdapter {
 
         // 5b. World geometry — stair climb, ceiling detection, triggers, portals (Phase 29)
         this.worldGeometry?.update(dt, this.gameTime);
+
+        // 5c. Decal system — particle physics + decal lifetime/fade (Phase 33)
+        this.decals?.update(dt);
 
         // 6. FPS camera (Phase 27) — bob, recoil, lean
         if (this.fpsCamera && this.input) {
@@ -577,6 +599,7 @@ class FPSGame extends Engine3DAdapter {
         this.weaponSystem?.dispose();
         this.enemyAI?.dispose();
         this.hud?.dispose();
+        this.decals?.dispose();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();
