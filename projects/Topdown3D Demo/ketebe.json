@@ -1,0 +1,11 @@
+{
+  "name": "Topdown3D Demo",
+  "engineType": "topdown-3d",
+  "version": "0.1.0",
+  "author": "Ketebe",
+  "description": "Demo project for the topdown-3d engine — voxel terrain, units, abilities, fog of war, minimap.",
+  "startLevel": "demo_level_01",
+  "playerTeam": 0,
+  "worldW": 64,
+  "worldH": 64
+}

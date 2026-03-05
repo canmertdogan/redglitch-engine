@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "engineType": "topdown-3d",
+  "name": "Demo Level 01",
+  "bounds": { "width": 64, "height": 64 },
+  "geometry": [],
+  "entities": [
+    {
+      "id": "hero_01",
+      "type": "hero",
+      "team": 0,
+      "position": [8, 0, 8],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "stats": { "hp": 100, "maxHp": 100, "mana": 80, "maxMana": 80, "stamina": 60, "maxStamina": 60, "speed": 5, "attack": 15, "defense": 5, "resistance": 3 },
+      "abilities": [
+        { "id": "fireball",  "cooldown": 3 },
+        { "id": "heal_self", "cooldown": 8 }
+      ]
+    },
+    {
+      "id": "enemy_01",
+      "type": "grunt",
+      "team": 1,
+      "position": [40, 0, 40],
+      "rotation": [0, 0, 0],
+      "scale": [1, 1, 1],
+      "stats": { "hp": 60, "maxHp": 60, "mana": 0, "maxMana": 0, "stamina": 40, "maxStamina": 40, "speed": 3, "attack": 8, "defense": 2, "resistance": 0 },
+      "abilities": []
+    }
+  ],
+  "lights": [
+    {
+      "type": "ambient",
+      "intensity": 0.6,
+      "colorHex": "#c8b8a2"
+    },
+    {
+      "type": "directional",
+      "intensity": 1.2,
+      "colorHex": "#fff5e0",
+      "position": [30, 60, 20],
+      "castShadow": true
+    }
+  ],
+  "navmesh": null,
+  "skybox": {
+    "type": "color",
+    "colorHex": "#1a1a2e"
+  },
+  "physics": {
+    "gravity": [0, -9.8, 0],
+    "fixedStep": 0.016,
+    "iterations": 10
+  }
+}

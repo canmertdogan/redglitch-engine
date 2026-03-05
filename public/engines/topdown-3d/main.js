@@ -47,6 +47,7 @@ import FogOfWar3D, { VisState } from './FogOfWar3D.js';
 import AbilitySystem3D, { AbilityShape, DamageType, BuffType } from './AbilitySystem3D.js';
 import VFXSystem3D, { EffectType } from './VFXSystem3D.js';
 import Minimap3D from './Minimap3D.js';
+import TopDown3DStrategy from './TopDown3DStrategy.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -93,12 +94,23 @@ class TopDownGame3D extends Engine3DAdapter {
         this.abilities       = null;   // AbilitySystem3D    (Phase 17)
         this.vfx             = null;   // VFXSystem3D        (Phase 18)
         this.minimap         = null;   // Minimap3D          (Phase 19)
+        this.strategy        = null;   // TopDown3DStrategy  (Phase 20)
 
         // ── Game state ─────────────────────────────────────────────────────
         this.selectedUnits   = [];     // array of entity ids
         this.gameTime        = 0;      // seconds since level start
         this._accumulator    = 0;      // physics sub-step accumulator
         this._lastTS         = 0;      // last requestAnimationFrame timestamp
+        this._levelComplete  = false;  // set true to trigger exit (Phase 20)
+        this._levelId        = null;   // current loaded level id
+
+        // ── Event listeners (on/off/emit — Phase 20) ───────────────────────
+        this._listeners      = new Map([
+            ['levelComplete', []],
+            ['gameOver',      []],
+            ['unitDied',      []],
+            ['abilityCast',   []],
+        ]);
 
         // ── Event callbacks (set by launcher / editor) ─────────────────────
         this.onReady         = null;
@@ -205,6 +217,9 @@ class TopDownGame3D extends Engine3DAdapter {
             }
         );
 
+        // ── Strategy (Phase 20) ────────────────────────────────────────────
+        this.strategy = new TopDown3DStrategy(this);
+
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
         this._onResize();
@@ -253,6 +268,8 @@ class TopDownGame3D extends Engine3DAdapter {
      */
     onLevelLoaded(level) {
         console.log(`[TopDownGame3D] onLevelLoaded: "${level.name}"`);
+        this._levelId       = level.id ?? level.name ?? null;
+        this._levelComplete = false;
 
         // Sync physics world with the level config
         if (this.physics && level.physics?.gravity) {
@@ -417,6 +434,45 @@ class TopDownGame3D extends Engine3DAdapter {
     deselectAll() {
         this.selectedUnits = [];
         this.entities?.setSelected([]);
+    }
+
+    // ── Event emitter (Phase 20) ───────────────────────────────────────────────
+    on(event, cb) {
+        if (!this._listeners.has(event)) this._listeners.set(event, []);
+        this._listeners.get(event).push(cb);
+    }
+
+    off(event, cb) {
+        const arr = this._listeners.get(event);
+        if (!arr) return;
+        const i = arr.indexOf(cb);
+        if (i !== -1) arr.splice(i, 1);
+    }
+
+    emit(event, data) {
+        for (const cb of (this._listeners.get(event) ?? [])) {
+            try { cb(data); } catch (e) { console.warn(`[TopDownGame3D] emit(${event}) error:`, e); }
+        }
+    }
+
+    // ── Strategy helpers (Phase 20) ────────────────────────────────────────────
+    /** Screen pixel → world map position via terrain raycast. */
+    screenToMap(screenX, screenY) {
+        return this.strategy?.screenToMap(screenX, screenY)
+            ?? { wx: 0, wz: 0, wy: 0, hit: false };
+    }
+
+    /** Issue a move order for selected units to a screen position. */
+    commandTo(screenX, screenY) {
+        this.strategy?.commandUnitsTo(this.selectedUnits, screenX, screenY);
+    }
+
+    /** Rubber-band select units inside a screen-space rectangle. */
+    selectRect(x0, y0, x1, y1, team = 0) {
+        const ids = this.strategy?.selectUnitsInRect(x0, y0, x1, y1, team) ?? [];
+        this.selectedUnits = ids;
+        this.entities?.setSelected(ids);
+        return ids;
     }
 
     // ── Save / Load ───────────────────────────────────────────────────────────
