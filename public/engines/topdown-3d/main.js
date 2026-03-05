@@ -45,6 +45,7 @@ import EntitySystem3D, { AIState, Entity3D } from './EntitySystem3D.js';
 import Pathfinding3D, { AreaType } from './Pathfinding3D.js';
 import FogOfWar3D, { VisState } from './FogOfWar3D.js';
 import AbilitySystem3D, { AbilityShape, DamageType, BuffType } from './AbilitySystem3D.js';
+import VFXSystem3D, { EffectType } from './VFXSystem3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -173,6 +174,11 @@ class TopDownGame3D extends Engine3DAdapter {
         this.fogOfWar = new FogOfWar3D(this.scene, {
             worldW: 64, worldH: 64, playerTeam: 0,
         });
+
+        // ── VFX (Phase 18) — created before abilities so abilities can ref it ─
+        this.vfx = new VFXSystem3D(
+            this.scene, this.palette, this.renderer3d.outlinePass ?? null
+        );
 
         // ── Abilities (Phase 17) ───────────────────────────────────────────
         this.abilities = new AbilitySystem3D(
