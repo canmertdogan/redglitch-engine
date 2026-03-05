@@ -1,0 +1,8 @@
+{
+  "name": "FPS3D Demo",
+  "engineType": "fps-3d",
+  "author": "Ketebe Studio",
+  "version": "0.1.0",
+  "description": "FPS 3D engine demonstration project",
+  "startLevel": "demo_level"
+}

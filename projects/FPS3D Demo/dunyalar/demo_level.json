@@ -1,0 +1,12 @@
+{
+  "id": "demo_level",
+  "name": "Demo Level",
+  "engineType": "fps-3d",
+  "playerSpawn": { "x": 0, "y": 1.8, "z": 0 },
+  "physics": { "gravity": [0, -9.82, 0] },
+  "entities": [],
+  "lights": [
+    { "type": "ambient", "color": "#404040", "intensity": 0.5 },
+    { "type": "directional", "color": "#ffffff", "intensity": 1.0, "position": [5, 10, 5] }
+  ]
+}
