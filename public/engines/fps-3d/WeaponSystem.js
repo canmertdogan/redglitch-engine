@@ -193,6 +193,8 @@ export default class WeaponSystem {
         this.onExplosion     = null;
         /** Called with (weaponId, ammoState) when ammo changes. */
         this.onAmmoChanged   = null;
+        /** Called with (weaponId, def) when a weapon is equipped. */
+        this.onEquip         = null;
     }
 
     // ── Weapon registry ───────────────────────────────────────────────────────
@@ -252,7 +254,18 @@ export default class WeaponSystem {
 
         // Notify ammo
         this._emitAmmoChanged();
+        if (this.onEquip) this.onEquip(weaponId, def);
         console.log(`[WeaponSystem] equipped: ${def.name}`);
+    }
+
+    /**
+     * Returns current spread as 0..1 for HUD crosshair expansion.
+     * Based on recoil index relative to curve length.
+     */
+    getSpreadNormalized() {
+        if (!this._current) return 0;
+        const curve = this._current.recoilCurve ?? [[0, 0]];
+        return Math.min(1, this._recoilIndex / Math.max(1, curve.length));
     }
 
     // ── Per-frame update ──────────────────────────────────────────────────────

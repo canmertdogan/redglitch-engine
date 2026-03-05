@@ -42,6 +42,7 @@ import FPSController, { MoveState } from './FPSController.js';
 import WorldGeometry            from './WorldGeometry.js';
 import WeaponSystem, { WeaponState } from './WeaponSystem.js';
 import EnemyAI, { EnemyState, Difficulty } from './EnemyAI.js';
+import HUD_FPS from './HUD_FPS.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,7 @@ class FPSGame extends Engine3DAdapter {
         this.worldGeometry  = null;   // WorldGeometry   (Phase 29)
         this.weaponSystem   = null;   // WeaponSystem    (Phase 30)
         this.enemyAI        = null;   // EnemyAI         (Phase 31)
+        this.hud            = null;   // HUD_FPS         (Phase 32)
         this.strategy       = null;   // FPS3DStrategy   (Phase 26)
 
         // ── Game state ─────────────────────────────────────────────────────
@@ -243,6 +245,35 @@ class FPSGame extends Engine3DAdapter {
         // Wire WeaponSystem onHit → enemyAI damage
         this.weaponSystem.onHit = (id, damage, hitInfo) => {
             this.enemyAI?.damageEnemy(id, damage, hitInfo?.point ?? null);
+            this.hud?.showHitMarker(false);
+        };
+
+        // ── HUD (Phase 32) ─────────────────────────────────────────────────
+        this.hud = new HUD_FPS(this._container, this.renderer3d?.camera);
+        // Sync enemy-attack → player damage + HUD flash
+        this.enemyAI.onEnemyAttack = (_id, damage, hitPos) => {
+            this._health = Math.max(0, this._health - damage);
+            this.hud?.updateHealth(this._health / 100);
+            const camYaw = this.fpsCamera?._yaw ?? 0;
+            const pp     = this.fpsController?.getPosition?.() ?? null;
+            const ppv    = pp ? { x: pp.x, y: pp.y, z: pp.z } : null;
+            if (ppv) {
+                const THREE_V = { x: ppv.x, y: ppv.y, z: ppv.z };
+                this.hud?.flashDamage(hitPos ?? null, THREE_V, camYaw);
+            }
+        };
+        // Sync WeaponSystem ammo → HUD
+        this.weaponSystem.onAmmoChanged = (id, ammo) => {
+            this._ammo = ammo;
+            this.hud?.updateAmmo(ammo.current, ammo.reserve);
+        };
+        // Weapon toast on equip
+        this.weaponSystem.onEquip = (id, def) => {
+            this.hud?.showWeaponToast(def?.name ?? id);
+        };
+        // Kill hit-marker
+        this.enemyAI.onEnemyDied = (_id) => {
+            this.hud?.showHitMarker(true);
         };
 
         // ── Window resize ──────────────────────────────────────────────────
@@ -394,7 +425,22 @@ class FPSGame extends Engine3DAdapter {
         }
         this.fpsCamera?.update(dt);
 
-        // 7. Spatial audio listener follows camera (Phase 8)
+        // 7. HUD update — crosshair decay, damage flash, objective projections (Phase 32)
+        if (this.hud) {
+            this.hud.update(dt, this.renderer3d?.camera);
+            // Crosshair spread from weapon recoil
+            const spread = this.weaponSystem?.getSpreadNormalized() ?? 0;
+            this.hud.setCrosshairSpread(spread);
+            // Keep minimap current: pass enemy positions
+            const pp = this.fpsController?.getPosition?.();
+            if (pp) {
+                const yaw     = this.fpsCamera?._yaw ?? 0;
+                const enemies = this.enemyAI?.getEnemies() ?? [];
+                this.hud.updateMinimap(pp, yaw, enemies);
+            }
+        }
+
+        // 8. Spatial audio listener follows camera (Phase 8)
         if (this.audio && this.renderer3d?.camera) {
             const cam = this.renderer3d.camera;
             this.audio.updateListenerPosition(
@@ -530,6 +576,7 @@ class FPSGame extends Engine3DAdapter {
         this.worldGeometry?.dispose();
         this.weaponSystem?.dispose();
         this.enemyAI?.dispose();
+        this.hud?.dispose();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();
