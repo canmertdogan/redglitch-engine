@@ -121,6 +121,45 @@
         }
         .swatch:hover, .swatch.active { border-color: #fff; }
 
+        /* Phase 22 — Terrain mode toggle */
+        .terrain-mode-row { display: flex; gap: 4px; margin-bottom: 8px; }
+        .terrain-mode-btn {
+            flex: 1; padding: 5px 0; text-align: center; font-size: 0.8rem; letter-spacing: 1px;
+            background: #0c0c18; border: 1px solid #2a2a3a; color: #555; cursor: pointer; border-radius: 2px;
+        }
+        .terrain-mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .terrain-mode-btn.active { background: #0e1a2a; border-color: var(--accent); color: var(--accent); }
+
+        /* Phase 22 — Block type grid */
+        .block-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; }
+        .block-type-cell {
+            height: 34px; border: 2px solid #2a2a3a; cursor: pointer; border-radius: 2px;
+            display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.75rem; color: #666;
+        }
+        .block-type-cell:hover { border-color: var(--accent); color: var(--accent); }
+        .block-type-cell.active { border-color: var(--accent); background: #0e1a2a; color: var(--accent); }
+        .block-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+        /* Phase 22 — Brush stamp sizes */
+        .stamp-row { display: flex; gap: 4px; margin-bottom: 8px; }
+        .stamp-btn {
+            flex: 1; padding: 4px 0; text-align: center; font-size: 0.85rem; color: #666;
+            background: #0c0c18; border: 1px solid #2a2a3a; cursor: pointer; border-radius: 2px;
+        }
+        .stamp-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .stamp-btn.active { background: #0e1a2a; border-color: var(--accent); color: var(--accent); }
+
+        /* Phase 22 — 256-color palette grid */
+        #pal256-grid {
+            display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; margin-bottom: 6px;
+        }
+        .pal256-cell {
+            width: 100%; padding-top: 100%; position: relative; cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .pal256-cell:hover { border-color: #fff; z-index: 1; }
+        .pal256-cell.active { border: 2px solid #fff; z-index: 2; }
+
         /* ── OBJECTS PANEL ──────────────────────────────────────────────── */
         .obj-list { display: flex; flex-direction: column; gap: 4px; }
         .obj-item {
@@ -352,18 +391,49 @@
 
         <!-- TERRAIN PANEL -->
         <div class="panel-body active" id="panel-terrain">
-            <div class="section-header">TERRAIN TYPE</div>
-            <div class="brush-grid">
-                <div class="brush-cell active"  data-terrain="flat"     title="Flat">FLAT</div>
-                <div class="brush-cell"          data-terrain="raise"    title="Raise">RAIS</div>
-                <div class="brush-cell"          data-terrain="lower"    title="Lower">LOWR</div>
-                <div class="brush-cell"          data-terrain="smooth"   title="Smooth">SMO</div>
-                <div class="brush-cell"          data-terrain="voxel"    title="Voxel Block">VOX</div>
-                <div class="brush-cell"          data-terrain="lowpoly"  title="Low-Poly">LPY</div>
-                <div class="brush-cell"          data-terrain="water"    title="Water">H2O</div>
-                <div class="brush-cell"          data-terrain="cliff"    title="Cliff">CLF</div>
+            <!-- Phase 22: Terrain mode toggle -->
+            <div class="terrain-mode-row">
+                <div class="terrain-mode-btn active" id="tmode-voxel"   data-tmode="voxel">VOXEL</div>
+                <div class="terrain-mode-btn"          id="tmode-lowpoly" data-tmode="lowpoly">LOW-POLY</div>
             </div>
 
+            <!-- Voxel section (shown in voxel mode) -->
+            <div id="voxel-section">
+                <div class="section-header">BLOCK TYPE</div>
+                <div class="block-type-grid" id="block-type-grid">
+                    <!-- populated by topdown3d_terrain_tools.js -->
+                </div>
+
+                <div class="section-header">STAMP SIZE</div>
+                <div class="stamp-row">
+                    <div class="stamp-btn active" data-stamp="1">1×1</div>
+                    <div class="stamp-btn"         data-stamp="3">3×3</div>
+                    <div class="stamp-btn"         data-stamp="5">5×5</div>
+                </div>
+
+                <div class="section-header">BLOCK HEIGHT</div>
+                <div class="field-row">
+                    <label>LAYERS</label>
+                    <input type="number" id="voxel-layers" value="1" min="1" max="16" step="1" style="width:60px">
+                    <label style="margin-left:6px">Y BASE</label>
+                    <input type="number" id="voxel-ybase" value="0" min="0" max="32" step="1" style="width:50px">
+                </div>
+            </div>
+
+            <!-- Low-poly section (shown in lowpoly mode) -->
+            <div id="lowpoly-section" style="display:none">
+                <div class="section-header">FACE PAINT</div>
+                <div class="field-row" style="font-size:0.82rem;color:#666;padding:4px 0;line-height:1.3">
+                    Click a terrain face to paint it with the active palette color.
+                </div>
+                <div class="field-row">
+                    <label>RADIUS</label>
+                    <input type="range" id="lp-radius" min="1" max="10" value="1">
+                    <span id="lp-radius-val" style="min-width:20px;text-align:right;color:var(--accent)">1</span>
+                </div>
+            </div>
+
+            <!-- Shared brush settings -->
             <div class="section-header">BRUSH</div>
             <div class="field-row">
                 <label>SIZE</label>
@@ -380,7 +450,21 @@
                 <input type="number" id="brush-height" value="0" step="0.5" style="width:70px">
             </div>
 
-            <div class="section-header">PALETTE</div>
+            <!-- 256-color palette -->
+            <div class="section-header">256-COLOR PALETTE
+                <span id="pal-save-btn" style="float:right;font-size:0.75rem;color:#555;cursor:pointer" title="Save palette to project">SAVE</span>
+                <span id="pal-load-btn" style="float:right;font-size:0.75rem;color:#555;cursor:pointer;margin-right:8px" title="Load palette from project">LOAD</span>
+            </div>
+            <div id="pal256-grid"></div>
+            <div class="field-row">
+                <label>ACTIVE</label>
+                <div id="pal-active-swatch" style="width:24px;height:24px;border:2px solid #fff;border-radius:2px;background:#4db6ac;flex-shrink:0"></div>
+                <input type="color" id="pal-color-picker" value="#4db6ac" style="margin-left:6px">
+                <button class="btn" id="pal-set-btn" style="font-size:.8rem;padding:3px 8px">SET</button>
+            </div>
+
+            <!-- Legacy quick palette -->
+            <div class="section-header">QUICK PALETTE</div>
             <div class="swatch-grid" id="palette-swatches"></div>
             <div class="field-row">
                 <label>PICK</label>
@@ -635,5 +719,6 @@
 </div>
 
 <script src="topdown3d_editor.js"></script>
+<script src="topdown3d_terrain_tools.js"></script>
 </body>
 </html>

@@ -980,6 +980,10 @@
                 cursorMesh.position.set(cx, pos.y + 0.03, cz);
             }
         }
+        // Delegate to terrain tools plugin when in paint/height mode
+        if ((state.tool === 'paint' || state.tool === 'height') && pos) {
+            window.__topdown3dTerrainTools?.onMouseMove(e, pos);
+        }
 
         // rubber-band selection rect
         if (isDragging && dragStart && state.tool === 'select') {
@@ -1026,6 +1030,11 @@
         } else if (state.tool === 'place') {
             const pos = groundPos(e);
             if (pos) placeObjectAt(pos);
+        } else if (state.tool === 'paint' || state.tool === 'height') {
+            const pos = groundPos(e);
+            if (pos && window.__topdown3dTerrainTools) {
+                window.__topdown3dTerrainTools.onCanvasClick(e, pos, state.tool);
+            }
         } else if (state.tool === 'erase') {
             const picked = pickObject(e);
             if (picked) {
@@ -1091,11 +1100,16 @@
 
     // Expose for debugging
     window.__topdown3dEditor = {
-        state, scene, camera, renderer,
+        state, scene, camera, renderer, THREE,
         saveLevel, loadLevel, newLevel, bakeNavMesh,
         applyLevelJSON, buildLevelJSON,
         addSceneObject, removeSceneObject,
         addSceneLight, removeSceneLight,
+        getTerrainMesh: () => terrainMesh,
+        groundPos,
+        pushUndo, undo, redo,
+        markDirty, setStatus,
+        cursorMesh,
     };
 
 })();
