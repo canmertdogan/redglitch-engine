@@ -746,9 +746,18 @@ const FPSEditor = (() => {
     }
 
     function _updateBlockCount()  { document.getElementById('status-blocks').textContent   = `Blocks: ${Object.keys(_state.voxelGrid).length}`; }
-    function _updateEntityCount() { document.getElementById('status-entities').textContent = `Entities: ${_state.entities.length}`; }
+    function _updateEntityCount() {
+        document.getElementById('status-entities').textContent = `Entities: ${_state.entities.length}`;
+        if (typeof EntitySpawner !== 'undefined') EntitySpawner.syncEntities(_state.entities);
+    }
     function _updateTriggerList() {
+        if (typeof EntitySpawner !== 'undefined') {
+            EntitySpawner.syncTriggers(_state.triggers);
+            return;
+        }
+        // fallback (no EntitySpawner)
         const el = document.getElementById('trigger-map-list');
+        if (!el) return;
         if (!_state.triggers.length) { el.textContent = 'No triggers placed.'; return; }
         el.innerHTML = _state.triggers.map(t =>
             `<div class="trigger-item" style="margin-bottom:3px">
@@ -1158,7 +1167,51 @@ const FPSEditor = (() => {
             });
         }
 
-        console.log('[FPSEditor] Phase 39 LightEditor ready');
+        // Init entity & trigger spawner (Phase 40)
+        if (typeof EntitySpawner !== 'undefined') {
+            EntitySpawner.init(
+                document.getElementById('entity-spawner-mount'),
+                document.getElementById('trigger-spawner-mount')
+            );
+            EntitySpawner.onEntityChanged((type, id, data) => {
+                if (type === 'remove') {
+                    const prev = _snapshot();
+                    _state.entities = _state.entities.filter(e => e.id !== id);
+                    _pushUndo(prev);
+                    markDirty();
+                    _rebuild3d();
+                    _updateEntityCount();
+                } else if (type === 'update') {
+                    const prev = _snapshot();
+                    const idx = _state.entities.findIndex(e => e.id === id);
+                    if (idx !== -1) Object.assign(_state.entities[idx], data);
+                    _pushUndo(prev);
+                    markDirty();
+                    _rebuild3d();
+                    _updateEntityCount();
+                }
+            });
+            EntitySpawner.onTriggerChanged((type, id, data) => {
+                if (type === 'remove') {
+                    const prev = _snapshot();
+                    _state.triggers = _state.triggers.filter(t => t.id !== id);
+                    _pushUndo(prev);
+                    markDirty();
+                    _rebuild3d();
+                    _updateTriggerList();
+                } else if (type === 'update') {
+                    const prev = _snapshot();
+                    const idx = _state.triggers.findIndex(t => t.id === id);
+                    if (idx !== -1) Object.assign(_state.triggers[idx], data);
+                    _pushUndo(prev);
+                    markDirty();
+                    _rebuild3d();
+                    _updateTriggerList();
+                }
+            });
+        }
+
+        console.log('[FPSEditor] Phase 40 EntitySpawner ready');
     }
 
     window.addEventListener('DOMContentLoaded', _init);
