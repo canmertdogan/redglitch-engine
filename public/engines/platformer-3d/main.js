@@ -40,6 +40,7 @@ import Input3D                  from '../shared/Input3D.js';
 import AudioSpatial3D           from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
+import ThirdPersonCamera        from './ThirdPersonCamera.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this.raycaster      = null;   // Raycast3D
 
         // ── Engine-specific systems (Phase 43-50, lazy-loaded) ─────────────
-        this.thirdPersonCam = null;   // ThirdPersonCamera   (Phase 43)
+        this.thirdPersonCam = null;   // ThirdPersonCamera   (Phase 43) — set in init()
         this.platformerPhys = null;   // PlatformerPhysics3D (Phase 44)
         this.charController = null;   // CharacterController3D (Phase 45)
         this.playerChar     = null;   // PlayerCharacter3D   (Phase 46)
@@ -141,6 +142,15 @@ class Platformer3DGame extends Engine3DAdapter {
         this.raycaster= new Raycast3D(this.renderer3d.scene, this.camera3d.camera);
 
         await this.input.init();
+
+        // Third-person camera
+        this.thirdPersonCam = new ThirdPersonCamera(
+            this.camera3d,
+            this.renderer3d.scene,
+            this._container,
+            { distance: 6, pivotHeight: 1.2, autoRotate: true }
+        );
+        this.thirdPersonCam.attach();
 
         // Bind platformer-specific input actions
         this._bindInputActions();
@@ -244,6 +254,9 @@ class Platformer3DGame extends Engine3DAdapter {
         // Update game systems (stub-safe null checks throughout)
         this.charController?.update?.(dt, inputState);
         this.thirdPersonCam?.update?.(dt, this._getPlayerPosition());
+        this.thirdPersonCam?.addLookDelta?.(-inputState.camLeft + inputState.camRight, inputState.camDown - inputState.camUp);
+        if (inputState.camShoulderSwap && !this._prevShoulderSwap) this.thirdPersonCam?.swapShoulder?.();
+        this._prevShoulderSwap = !!inputState.camShoulderSwap;
         this.camera3d?.update?.(dt);
         this.collectibles?.update?.(dt, this._getPlayerPosition());
         this.enemies?.update?.(dt);
@@ -413,6 +426,7 @@ class Platformer3DGame extends Engine3DAdapter {
     destroy() {
         if (this._rafId) cancelAnimationFrame(this._rafId);
         this.isRunning  = false;
+        this.thirdPersonCam?.destroy?.();
         this.renderer3d?.dispose?.();
         this.physics?.destroy?.();
         this.audio?.destroy?.();
