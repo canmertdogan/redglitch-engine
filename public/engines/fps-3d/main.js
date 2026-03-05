@@ -37,6 +37,7 @@ import AudioSpatial3D           from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
 import FPS3DStrategy            from './FPS3DStrategy.js';
+import FPSCamera                from './FPSCamera.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -164,6 +165,23 @@ class FPSGame extends Engine3DAdapter {
         this.strategy = new FPS3DStrategy(this);
         this.strategy.initialize();
 
+        // ── FPS Camera (Phase 27) ──────────────────────────────────────────
+        this.fpsCamera = new FPSCamera(this.camera3d, container, {
+            sensitivity: 0.0015,
+            bobEnabled:  true,
+            leanEnabled: true,
+            fovBase:     75,
+            fovSprint:   10,
+        });
+        this.fpsCamera.attach();
+        // Sync pointer lock callbacks to game pause system
+        this.fpsCamera.onUnlocked = () => {
+            if (this.isRunning && !this.isPaused) {
+                // Pointer lock lost without ESC — treat as implicit pause
+                this.pause();
+            }
+        };
+
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
         this._onResize();
@@ -289,6 +307,13 @@ class FPSGame extends Engine3DAdapter {
         this.weaponSystem?.update(dt);
 
         // 6. FPS camera (Phase 27) — bob, recoil, lean
+        if (this.fpsCamera && this.input) {
+            // Q = lean left, E = lean right (if Input3D exposes isActionHeld)
+            const leanLeft  = this.input.isActionHeld?.('lean_left')  ?? this.input.isKeyHeld?.('KeyQ') ?? false;
+            const leanRight = this.input.isActionHeld?.('lean_right') ?? this.input.isKeyHeld?.('KeyE') ?? false;
+            const leanDir   = leanRight ? 1 : leanLeft ? -1 : 0;
+            this.fpsCamera.setLean(leanDir);
+        }
         this.fpsCamera?.update(dt);
 
         // 7. Spatial audio listener follows camera (Phase 8)
@@ -312,15 +337,19 @@ class FPSGame extends Engine3DAdapter {
 
     /**
      * requestPointerLock() — called on first click-to-start.
-     * Phase 27 will wire mouse-delta → yaw/pitch inside FPSCamera.
+     * Delegates to FPSCamera which manages pointer lock state.
      */
     requestPointerLock() {
-        document.body.requestPointerLock?.();
+        this.fpsCamera
+            ? this.fpsCamera.requestPointerLock()
+            : document.body.requestPointerLock?.();
     }
 
     /** releasePointerLock() — called on ESC / pause. */
     releasePointerLock() {
-        document.exitPointerLock?.();
+        this.fpsCamera
+            ? this.fpsCamera.releasePointerLock()
+            : document.exitPointerLock?.();
     }
 
     // ── Event emitter ─────────────────────────────────────────────────────────
@@ -368,15 +397,16 @@ class FPSGame extends Engine3DAdapter {
 
     _buildSavePayload() {
         return {
-            version:    this.version,
-            engineType: 'fps-3d',
-            project:    this.currentProject,
-            levelId:    this._levelId,
-            gameTime:   this.gameTime,
-            health:     this._health,
-            ammo:       this._ammo,
-            playerPos:  this.strategy?.getPlayerPosition() ?? null,
-            timestamp:  Date.now(),
+            version:     this.version,
+            engineType:  'fps-3d',
+            project:     this.currentProject,
+            levelId:     this._levelId,
+            gameTime:    this.gameTime,
+            health:      this._health,
+            ammo:        this._ammo,
+            playerPos:   this.strategy?.getPlayerPosition() ?? null,
+            cameraState: this.fpsCamera?.serialize() ?? null,
+            timestamp:   Date.now(),
         };
     }
 
@@ -387,7 +417,8 @@ class FPSGame extends Engine3DAdapter {
         if (data.gameTime !== undefined) this.gameTime = data.gameTime;
         if (data.health   !== undefined) this._health  = data.health;
         if (data.ammo     !== undefined) this._ammo    = data.ammo;
-        if (data.playerPos) this.strategy?.setSpawnPoint(data.playerPos);
+        if (data.playerPos)   this.strategy?.setSpawnPoint(data.playerPos);
+        if (data.cameraState) this.fpsCamera?.deserialize(data.cameraState);
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
@@ -410,6 +441,7 @@ class FPSGame extends Engine3DAdapter {
         this._stopLoop();
         this.onLevelUnloaded();
         this.releasePointerLock();
+        this.fpsCamera?.detach();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();
