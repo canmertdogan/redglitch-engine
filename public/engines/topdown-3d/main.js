@@ -43,6 +43,7 @@ import TopDownCamera3D          from './TopDownCamera3D.js';
 import TerrainSystem3D, { BlockType } from './TerrainSystem3D.js';
 import EntitySystem3D, { AIState, Entity3D } from './EntitySystem3D.js';
 import Pathfinding3D, { AreaType } from './Pathfinding3D.js';
+import FogOfWar3D, { VisState } from './FogOfWar3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -166,6 +167,11 @@ class TopDownGame3D extends Engine3DAdapter {
 
         // ── Pathfinding (Phase 15) ─────────────────────────────────────────
         this.pathfinding = new Pathfinding3D(this.scene);
+
+        // ── Fog of War (Phase 16) ──────────────────────────────────────────
+        this.fogOfWar = new FogOfWar3D(this.scene, {
+            worldW: 64, worldH: 64, playerTeam: 0,
+        });
         this.topdownCamera = new TopDownCamera3D(this.renderer3d.camera, container, {
             pitch:       55,
             zoom:        24,
@@ -316,8 +322,14 @@ class TopDownGame3D extends Engine3DAdapter {
         // 6. Abilities + combat
         this.abilities?.update(dt);
 
-        // 7. Fog of war raster
-        this.fogOfWar?.update(dt);
+        // 7. Fog of war raster — build unit-position map for vision update
+        if (this.fogOfWar && this.entities) {
+            const unitPos = new Map();
+            for (const e of this.entities.getAllEntities()) {
+                unitPos.set(e.id, e.root.position);
+            }
+            this.fogOfWar.update(dt, unitPos);
+        }
 
         // 8. VFX particles
         this.vfx?.update(dt);
@@ -413,7 +425,7 @@ class TopDownGame3D extends Engine3DAdapter {
             levelId:        this._levelId,
             gameTime:       this.gameTime,
             selectedUnits:  [...this.selectedUnits],
-            fogExplored:    this.fogOfWar?.serializeExplored() || null,
+            fogExplored:    this.fogOfWar?.serialize()          || null,
             entityStates:   this.entities?.serialize()         || null,
             abilityStates:  this.abilities?.serialize()        || null,
             timestamp:      Date.now(),
@@ -426,7 +438,7 @@ class TopDownGame3D extends Engine3DAdapter {
             await this.loadProject(data.project, data.levelId);
         }
         if (data.gameTime)    this.gameTime = data.gameTime;
-        if (data.fogExplored) this.fogOfWar?.deserializeExplored(data.fogExplored);
+        if (data.fogExplored) this.fogOfWar?.deserialize(data.fogExplored);
         if (data.entityStates) this.entities?.deserialize(data.entityStates);
         if (data.abilityStates) this.abilities?.deserialize(data.abilityStates);
         if (data.cameraState)   this.topdownCamera?.deserialize(data.cameraState);
