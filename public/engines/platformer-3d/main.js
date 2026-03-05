@@ -46,6 +46,7 @@ import CharacterController3D, { MoveState } from './CharacterController3D.js';
 import PlayerCharacter3D        from './PlayerCharacter3D.js';
 import CollectibleSystem3D      from './CollectibleSystem3D.js';
 import CheckpointSystem3D       from './CheckpointSystem3D.js';
+import EnemyPlatformer3D, { EnemyState } from './EnemyPlatformer3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this.playerChar     = null;   // PlayerCharacter3D   (Phase 46) — set in init()
         this.collectibles   = null;   // CollectibleSystem3D (Phase 47) — set in init()
         this.checkpoints    = null;   // CheckpointSystem3D  (Phase 48) — set in init()
-        this.enemies        = null;   // EnemyPlatformer3D   (Phase 49)
+        this.enemies        = null;   // EnemyPlatformer3D   (Phase 49) — set in init()
         this.vfx            = null;   // VFX_Platformer3D    (Phase 50)
 
         // ── Checkpoint / respawn state ─────────────────────────────────────
@@ -235,6 +236,26 @@ class Platformer3DGame extends Engine3DAdapter {
         this.checkpoints.onLevelComplete = (stats) => {
             this.levelComplete({ ...stats, coins: this.collectibles.coins, score: this.collectibles.score });
         };
+
+        // Enemy system
+        this.enemies = new EnemyPlatformer3D({
+            scene:   this.renderer3d.scene,
+            physics: this.physics,
+            assets:  this.assets,
+            palette: this.palette,
+            audio:   this.audio,
+        });
+        this.enemies.setPlayerRef(this.charController);
+        this.enemies.onEnemyDied = (id) => {
+            // Bounce player up on stomp
+            if (this.platformerPhys?._body) {
+                this.platformerPhys._body.velocity.y = 8;
+            }
+            this._score += 100;
+        };
+        this.enemies.onPlayerHit = (damage) => {
+            this.playerChar?.takeDamage?.(damage);
+        };
         this._bindInputActions();
 
         this.onReady?.();
@@ -299,6 +320,12 @@ class Platformer3DGame extends Engine3DAdapter {
             this.collectibles.spawnFromLevelData(data.entities);
         }
 
+        // Spawn enemies from entity list
+        if (this.enemies && data.entities?.length) {
+            this.enemies.clear();
+            await this.enemies.loadFromLevel(data);
+        }
+
         // Place player at spawn
         const spawn = data.playerSpawn ?? { x: 0, y: 2, z: 0 };
         this._setPlayerPosition(spawn.x, spawn.y, spawn.z);
@@ -358,7 +385,6 @@ class Platformer3DGame extends Engine3DAdapter {
         this.collectibles?.update?.(dt, this._getPlayerPosition());
         this.checkpoints?.update?.(dt, this._getPlayerPosition());
         this.enemies?.update?.(dt);
-        this.vfx?.update?.(dt);
         this.audio?.update?.(dt, this.camera3d?.camera);
 
         // Invincibility countdown
