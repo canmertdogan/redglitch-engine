@@ -18,24 +18,13 @@
 
 const FPSEditor = (() => {
     // ── constants ────────────────────────────────────────────────────────────
+    // DEFAULT_PALETTE kept for backward compat (used in _loadMapData fallback)
     const DEFAULT_PALETTE = [
         '#2c1810','#4a2820','#6b3a28','#8b4513',
         '#a0522d','#cd853f','#daa520','#b8860b',
         '#444444','#666666','#888888','#aaaaaa',
         '#1a2a3a','#2a4a6a','#3a6a8a','#ccddee',
     ];
-
-    const BLOCK_COLORS = {
-        'floor':       '#555555',
-        'wall':        '#888888',
-        'ceiling':     '#444444',
-        'slope-n':     '#7a6a4a',
-        'slope-s':     '#7a6a4a',
-        'pillar':      '#666666',
-        'door-frame':  '#8b4513',
-        'window-open': '#1a2a3a',
-        'arch':        '#6a5a4a',
-    };
 
     // ── state ────────────────────────────────────────────────────────────────
     let _state = {
@@ -46,26 +35,23 @@ const FPSEditor = (() => {
         ceilingH:    3,
         floorY:      0,
         snapSize:    1,
-        // voxelGrid: { "x,y,z": { type, colorIdx } }
         voxelGrid:   {},
-        entities:    [],   // { id, type, x, y, z, props }
-        triggers:    [],   // { id, event, x, y, z, w, h, d, action }
-        palette:     [...DEFAULT_PALETTE],
+        entities:    [],
+        triggers:    [],
         fog:         { color: '#1a1208', near: 8, far: 30 },
         ambient:     '#1a1208',
         sun:         '#ffcc88',
         dirty:       false,
     };
 
-    let _activeTool  = 'draw-room';
-    let _activeBlock = 'floor';
-    let _drawMode    = 'pencil';
-    let _activeColor = '#888888';
-    let _activePalIdx = 0;
+    let _activeTool   = 'draw-room';
+    let _activeBlock  = 'floor';
+    let _drawMode     = 'pencil';
+    let _activeColor  = '#888888';  // kept in sync with ColorPalette.getActive()
     let _activeEntity = 'player-spawn';
-    let _shading     = 'shaded';
-    let _showGrid    = true;
-    let _selection   = null;   // selected entity/trigger id
+    let _shading      = 'shaded';
+    let _showGrid     = true;
+    let _selection    = null;
 
     // ── rect-stamp drag state ────────────────────────────────────────────────
     // Set on mousedown when drawMode === 'rect'; cleared on mouseup.
@@ -548,27 +534,10 @@ const FPSEditor = (() => {
         _draw2d();
     }
 
-    // ── palette UI ───────────────────────────────────────────────────────────
+    // ── palette UI (managed by ColorPalette.js from Phase 38) ───────────────
     function _buildPaletteUI() {
-        const grid = document.getElementById('palette-grid');
-        if (!grid) return;
-        grid.innerHTML = '';
-        _state.palette.forEach((col, i) => {
-            const cell = document.createElement('div');
-            cell.className  = 'pal-swatch' + (i === _activePalIdx ? ' active' : '');
-            cell.title      = col;
-            cell.innerHTML  = `<div class="swatch-inner" style="background:${col}"></div>`;
-            cell.onclick    = () => _pickPalette(i);
-            grid.appendChild(cell);
-        });
-    }
-
-    function _pickPalette(idx) {
-        _activePalIdx = idx;
-        _activeColor  = _state.palette[idx];
-        document.getElementById('color-picker').value = _activeColor;
-        document.getElementById('color-hex').textContent = _activeColor;
-        _buildPaletteUI();
+        // No-op: ColorPalette manages its own rendering.
+        // Kept so legacy call-sites don't throw.
     }
 
     // ── public API ───────────────────────────────────────────────────────────
@@ -607,11 +576,10 @@ const FPSEditor = (() => {
     function setCeilingHeight(v) { _state.ceilingH = v; markDirty(); _rebuild3d(); }
     function setFloorY(v) { _state.floorY  = v; markDirty(); _rebuild3d(); }
 
+    /** Called by ColorPalette.onColorSelected callback — keeps _activeColor in sync. */
     function setActiveColor(hex) {
         _activeColor = hex;
-        _state.palette[_activePalIdx] = hex;
-        document.getElementById('color-hex').textContent = hex;
-        _buildPaletteUI();
+        // ColorPalette owns its own state; this just syncs the editor's active color.
     }
 
     function selectEntity(type) {
@@ -766,16 +734,16 @@ const FPSEditor = (() => {
 
     // ── palette actions ──────────────────────────────────────────────────────
     function randomizePalette() {
-        _state.palette = Array.from({ length: 16 }, () =>
-            `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6,'0')}`
-        );
-        _activeColor  = _state.palette[_activePalIdx];
-        _buildPaletteUI();
+        if (typeof ColorPalette !== 'undefined') { ColorPalette.randomize(); }
         markDirty();
     }
 
-    function loadPalette() { console.log('[FPSEditor] loadPalette — Phase 38'); }
-    function savePalette() { console.log('[FPSEditor] savePalette — Phase 38'); }
+    function loadPalette() {
+        if (typeof ColorPalette !== 'undefined') { ColorPalette.importPAL(); }
+    }
+    function savePalette() {
+        if (typeof ColorPalette !== 'undefined') { ColorPalette.exportPAL(); }
+    }
 
     // ── map I/O ──────────────────────────────────────────────────────────────
     function newMap() {
@@ -854,6 +822,9 @@ const FPSEditor = (() => {
     }
 
     function _buildMapData() {
+        const palette = (typeof ColorPalette !== 'undefined')
+            ? ColorPalette.toArray()
+            : DEFAULT_PALETTE;
         return {
             version:   2,
             mapName:   _state.mapName,
@@ -862,7 +833,7 @@ const FPSEditor = (() => {
             cellSize:  _state.cellSize,
             ceilingH:  _state.ceilingH,
             floorY:    _state.floorY,
-            palette:   _state.palette,
+            palette,
             fog:       _state.fog,
             ambient:   _state.ambient,
             sun:       _state.sun,
@@ -879,13 +850,17 @@ const FPSEditor = (() => {
         _state.cellSize  = data.cellSize  || 1;
         _state.ceilingH  = data.ceilingH  || 3;
         _state.floorY    = data.floorY    ?? 0;
-        _state.palette   = data.palette   || [...DEFAULT_PALETTE];
         _state.fog       = data.fog       || _state.fog;
         _state.ambient   = data.ambient   || '#1a1208';
         _state.sun       = data.sun       || '#ffcc88';
         _state.voxelGrid = data.voxelGrid || {};
         _state.entities  = data.entities  || [];
         _state.triggers  = data.triggers  || [];
+
+        // restore palette into ColorPalette if available
+        if (typeof ColorPalette !== 'undefined' && Array.isArray(data.palette)) {
+            ColorPalette.loadFromArray(data.palette);
+        }
 
         // update UI fields
         document.getElementById('map-name').value    = _state.mapName;
@@ -900,7 +875,6 @@ const FPSEditor = (() => {
         document.getElementById('sun-color').value     = _state.sun;
         document.getElementById('project-label').textContent = _state.project || '— no project —';
 
-        _buildPaletteUI();
         _undoStack.length = 0;
         _redoStack.length = 0;
         _clearDirty();
@@ -1007,12 +981,59 @@ const FPSEditor = (() => {
 
     // ── init ─────────────────────────────────────────────────────────────────
     function _init() {
-        _buildPaletteUI();
         _init2d();
         _init3d();
         _initKeyboard();
         _initResize();
         _animate();
+
+        // Init 256-color palette (Phase 38)
+        if (typeof ColorPalette !== 'undefined') {
+            const palMount = document.getElementById('tab-textures');
+            ColorPalette.init(palMount);
+            ColorPalette.onColorSelected((hex /*, idx*/) => {
+                _activeColor = hex;
+            });
+            // seed active color from palette's default selection
+            _activeColor = ColorPalette.getActive().hex;
+        }
+
+        // 3D face-paint click handler (Phase 38)
+        const canvas3d = document.getElementById('canvas-3d');
+        if (canvas3d) {
+            canvas3d.addEventListener('click', e => {
+                if (_activeTool !== 'paint') return;
+                if (!_three || typeof THREE === 'undefined') return;
+                const rect  = canvas3d.getBoundingClientRect();
+                const mouse = new THREE.Vector2(
+                    ((e.clientX - rect.left)  / rect.width)  * 2 - 1,
+                    -((e.clientY - rect.top)  / rect.height) * 2 + 1
+                );
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, _three.camera);
+                const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
+                if (!hits.length) return;
+                const hit  = hits[0];
+                const cs   = _state.cellSize;
+                // move point 1% inward along the face normal to land inside the voxel
+                const inset = cs * 0.01;
+                const px = hit.point.x - hit.face.normal.x * inset;
+                const py = hit.point.y - hit.face.normal.y * inset;
+                const pz = hit.point.z - hit.face.normal.z * inset;
+                const gx = Math.floor(px / cs);
+                const gy = Math.floor(py / cs);
+                const gz = Math.floor(pz / cs);
+                if (typeof BrushTools === 'undefined') return;
+                const prev    = _snapshot();
+                const changes = BrushTools.paintBlock(_state.voxelGrid, gx, gy, gz, _activeColor);
+                if (changes.length) {
+                    _pushUndo(prev);
+                    markDirty();
+                    _rebuild3d();
+                    _updateBlockCount();
+                }
+            });
+        }
 
         // read project from URL param ?project=NAME
         const params  = new URLSearchParams(window.location.search);
@@ -1023,7 +1044,7 @@ const FPSEditor = (() => {
             document.getElementById('map-project').value = project;
         }
 
-        console.log('[FPSEditor] Phase 37 BrushTools ready');
+        console.log('[FPSEditor] Phase 38 ColorPalette ready');
     }
 
     window.addEventListener('DOMContentLoaded', _init);
@@ -1032,7 +1053,7 @@ const FPSEditor = (() => {
     return {
         switchTab, setTool, setSnap,
         selectBlock, setDrawMode, setCellSize, setCeilingHeight, setFloorY,
-        setActiveColor, setActiveColor, setShading, toggleGrid, toggleWireframe, resetCam, setView,
+        setActiveColor, setShading, toggleGrid, toggleWireframe, resetCam, setView,
         zoom2d, fitView2d,
         selectEntity, addTrigger,
         updateFog, updateLighting,

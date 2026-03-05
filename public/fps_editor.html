@@ -395,30 +395,9 @@
             </div>
         </div>
 
-        <!-- COLOR PALETTE PANEL -->
+        <!-- COLOR PALETTE PANEL — populated by ColorPalette.js -->
         <div class="panel-body" id="tab-textures">
-            <div class="section-header">Active Color</div>
-            <div class="field-row">
-                <label>Color</label>
-                <input type="color" id="color-picker" value="#888888" onchange="FPSEditor.setActiveColor(this.value)">
-                <span id="color-hex" style="color:#888;font-size:0.85rem">#888888</span>
-            </div>
-            <div class="section-header">Palette (16 colors)</div>
-            <div class="palette-grid" id="palette-grid">
-                <!-- populated by fps_editor.js -->
-            </div>
-            <div class="field-row" style="margin-top:6px">
-                <button class="action-btn" onclick="FPSEditor.randomizePalette()">Randomize</button>
-            </div>
-            <div class="field-row">
-                <button class="action-btn" onclick="FPSEditor.loadPalette()">Load .pal</button>
-                <button class="action-btn" onclick="FPSEditor.savePalette()">Save .pal</button>
-            </div>
-            <div class="section-header">Block Colors</div>
-            <div style="font-size:0.8rem;color:#555;line-height:1.6">
-                Click any block in the 2D or 3D viewport to assign the active color.
-                Colors are stored per block type in the project palette.
-            </div>
+            <!-- ColorPalette.init() mounts its full UI here at runtime -->
         </div>
 
         <!-- ENTITIES PANEL -->
@@ -595,6 +574,7 @@
 </div>
 
 <script src="fps_editor/BrushTools.js"></script>
+<script src="fps_editor/ColorPalette.js"></script>
 <script src="fps_editor.js"></script>
 </body>
 </html>
