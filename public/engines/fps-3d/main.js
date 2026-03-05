@@ -44,6 +44,7 @@ import WeaponSystem, { WeaponState } from './WeaponSystem.js';
 import EnemyAI, { EnemyState, Difficulty } from './EnemyAI.js';
 import HUD_FPS from './HUD_FPS.js';
 import DecalSystem from './DecalSystem.js';
+import VFX_FPS from './VFX_FPS.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,7 @@ class FPSGame extends Engine3DAdapter {
         this.enemyAI        = null;   // EnemyAI         (Phase 31)
         this.hud            = null;   // HUD_FPS         (Phase 32)
         this.decals         = null;   // DecalSystem     (Phase 33)
+        this.vfx            = null;   // VFX_FPS         (Phase 34)
         this.strategy       = null;   // FPS3DStrategy   (Phase 26)
 
         // ── Game state ─────────────────────────────────────────────────────
@@ -294,6 +296,26 @@ class FPSGame extends Engine3DAdapter {
             palette: this.palette,
         });
 
+        // ── VFX (Phase 34) ────────────────────────────────────────────────
+        this.vfx = new VFX_FPS({
+            scene:      this.scene,
+            renderer3d: this.renderer3d,
+            palette:    this.palette,
+        });
+        // Setup directional sun light with shadow map
+        this.vfx.configureDirectionalLight();
+        // Wire WeaponSystem muzzle flash + tracer callbacks
+        this.weaponSystem.onMuzzleFlash = (pos, dir) => {
+            this.vfx?.muzzleFlash(pos, dir);
+        };
+        this.weaponSystem.onBulletTracer = (from, to) => {
+            this.vfx?.bulletTracer(from, to);
+        };
+        this.weaponSystem.onExplosion = (projectile) => {
+            const pos = projectile?.position ?? projectile;
+            if (pos) this.vfx?.explosion(pos, projectile?.splashRadius ?? 1.5);
+        };
+
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
         this._onResize();
@@ -436,6 +458,9 @@ class FPSGame extends Engine3DAdapter {
 
         // 5c. Decal system — particle physics + decal lifetime/fade (Phase 33)
         this.decals?.update(dt);
+
+        // 5d. VFX system — muzzle flash, tracers, explosions, voxel debris (Phase 34)
+        this.vfx?.update(dt);
 
         // 6. FPS camera (Phase 27) — bob, recoil, lean
         if (this.fpsCamera && this.input) {
@@ -600,6 +625,7 @@ class FPSGame extends Engine3DAdapter {
         this.enemyAI?.dispose();
         this.hud?.dispose();
         this.decals?.dispose();
+        this.vfx?.dispose();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();

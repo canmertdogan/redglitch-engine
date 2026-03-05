@@ -195,6 +195,10 @@ export default class WeaponSystem {
         this.onAmmoChanged   = null;
         /** Called with (weaponId, def) when a weapon is equipped. */
         this.onEquip         = null;
+        /** Called with (position, direction) on each shot fired. */
+        this.onMuzzleFlash   = null;
+        /** Called with (from: THREE.Vector3, to: THREE.Vector3) for hitscan shots. */
+        this.onBulletTracer  = null;
     }
 
     // ── Weapon registry ───────────────────────────────────────────────────────
@@ -368,6 +372,13 @@ export default class WeaponSystem {
             this._doHitscan(def, dir);
         }
 
+        // Muzzle flash + tracer (Phase 34 VFX)
+        if (this.onMuzzleFlash) {
+            const muzzlePos = this._camera.position.clone()
+                .add(dir.clone().multiplyScalar(0.22));
+            this.onMuzzleFlash(muzzlePos, dir.clone());
+        }
+
         // Recoil
         this._applyRecoil(def);
 
@@ -418,6 +429,11 @@ export default class WeaponSystem {
         });
 
         if (!hit) return;
+
+        // Bullet tracer (Phase 34 VFX)
+        if (this.onBulletTracer) {
+            this.onBulletTracer(origin.clone(), hit.point.clone());
+        }
 
         // Impact VFX placeholder (Phase 18 VFXSystem can extend this)
         this._spawnImpactDecal(hit.point, hit.face?.normal ?? new THREE.Vector3(0, 1, 0));
