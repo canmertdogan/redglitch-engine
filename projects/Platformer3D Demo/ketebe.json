@@ -1,0 +1,11 @@
+{
+  "name": "Platformer3D Demo",
+  "author": "Ketebe Engine",
+  "version": "1.0.0",
+  "description": "A demo third-person 3D platformer project showcasing the platformer-3d engine with low-poly voxel aesthetics.",
+  "engineType": "platformer-3d",
+  "startLevel": "level01",
+  "palette": "default",
+  "maxLives": 3,
+  "startCoins": 0
+}

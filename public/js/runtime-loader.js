@@ -224,6 +224,7 @@
             'engines/shared/IsoPixelAdapter.js',
             'engines/shared/PlatformerAdapter.js',
             'engines/fps-3d/FPS3DAdapter.js',
+            'engines/platformer-3d/Platformer3DAdapter.js',
             'engines/shared/CampaignController.js'
         ];
         scripts = [...campaignScripts, ...scripts];

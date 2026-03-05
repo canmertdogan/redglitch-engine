@@ -1,0 +1,36 @@
+{
+  "id": "level01",
+  "name": "Starter Plains",
+  "engineType": "platformer-3d",
+  "sky": { "topColor": 87, "bottomColor": 23 },
+  "ambientLight": { "color": 16777215, "intensity": 0.5 },
+  "lights": [
+    { "type": "directional", "color": 16777215, "intensity": 1.0,
+      "position": { "x": 50, "y": 80, "z": 40 }, "castShadow": true }
+  ],
+  "playerSpawn": { "x": 0, "y": 2, "z": 0 },
+  "deathY": -20,
+  "checkpoints": [
+    { "id": "start", "x": 0, "y": 1, "z": 0 },
+    { "id": "cp1",   "x": 20, "y": 3, "z": -15 }
+  ],
+  "levelExit": { "x": 40, "y": 2, "z": -30 },
+  "platforms": [
+    { "type": "flat",  "x": 0,   "y": 0,  "z": 0,   "w": 20, "h": 1, "d": 20, "colorIdx": 12 },
+    { "type": "flat",  "x": 15,  "y": 2,  "z": -15, "w": 8,  "h": 1, "d": 8,  "colorIdx": 18 },
+    { "type": "flat",  "x": 30,  "y": 4,  "z": -20, "w": 8,  "h": 1, "d": 8,  "colorIdx": 25 },
+    { "type": "flat",  "x": 42,  "y": 2,  "z": -30, "w": 12, "h": 1, "d": 12, "colorIdx": 12 }
+  ],
+  "entities": [
+    { "type": "coin",   "x":  5, "y": 2, "z":  0 },
+    { "type": "coin",   "x":  8, "y": 2, "z":  0 },
+    { "type": "coin",   "x": 11, "y": 2, "z":  0 },
+    { "type": "coin",   "x": 14, "y": 2, "z":  0 },
+    { "type": "coin",   "x": 17, "y": 4, "z": -15 },
+    { "type": "star",   "x": 20, "y": 5, "z": -15 },
+    { "type": "powerup","x": 30, "y": 6, "z": -20 },
+    { "type": "walker", "x": 12, "y": 2, "z":  0, "patrol": [{"x":8,"y":1,"z":0},{"x":16,"y":1,"z":0}] },
+    { "type": "flyer",  "x": 30, "y": 5, "z": -20 },
+    { "type": "coin_trail_arc", "x": 0, "y": 1, "z": -8, "length": 5 }
+  ]
+}
