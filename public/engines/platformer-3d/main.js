@@ -42,6 +42,7 @@ import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
 import ThirdPersonCamera        from './ThirdPersonCamera.js';
 import PlatformerPhysics3D      from './PlatformerPhysics3D.js';
+import CharacterController3D, { MoveState } from './CharacterController3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ class Platformer3DGame extends Engine3DAdapter {
         // ── Engine-specific systems (Phase 43-50, lazy-loaded) ─────────────
         this.thirdPersonCam = null;   // ThirdPersonCamera   (Phase 43) — set in init()
         this.platformerPhys = null;   // PlatformerPhysics3D (Phase 44) — set in init()
-        this.charController = null;   // CharacterController3D (Phase 45)
+        this.charController = null;   // CharacterController3D (Phase 45) — set in init()
         this.playerChar     = null;   // PlayerCharacter3D   (Phase 46)
         this.collectibles   = null;   // CollectibleSystem3D (Phase 47)
         this.checkpoints    = null;   // CheckpointSystem3D  (Phase 48)
@@ -159,7 +160,34 @@ class Platformer3DGame extends Engine3DAdapter {
             airJumps:   1,
         });
 
-        // Bind platformer-specific input actions
+        // Character controller
+        this.charController = new CharacterController3D({
+            physics:      this.physics,
+            platformerPhys: this.platformerPhys,
+            input:        this.input,
+            audio:        this.audio,
+            camera3d:     this.camera3d,
+        });
+        await this.charController.init();
+
+        // Give camera the proxy mesh to follow
+        this.thirdPersonCam.setTarget(this.charController.getMesh());
+
+        // Wire character callbacks
+        this.charController.onLanded = (speed) => {
+            if (speed > 8) this.vfx?.spawnLandDust?.(this.charController.getPosition());
+        };
+        this.charController.onDashStart = (dir) => {
+            this._invincFrames = Math.max(this._invincFrames, 20);
+            this.vfx?.spawnDashTrail?.(this.charController.getPosition(), dir);
+        };
+        this.charController.onGroundPound = (pos, force) => {
+            this.vfx?.spawnGroundPoundShockwave?.(pos, force);
+            this.enemies?.onShockwave?.(pos, force);
+        };
+        this.charController.onWallJump = (normal) => {
+            this.vfx?.spawnWallJumpDust?.(this.charController.getPosition(), normal);
+        };
         this._bindInputActions();
 
         this.onReady?.();
@@ -261,7 +289,6 @@ class Platformer3DGame extends Engine3DAdapter {
         // Update game systems (stub-safe null checks throughout)
         this.charController?.update?.(dt, inputState);
         this.thirdPersonCam?.update?.(dt, this._getPlayerPosition());
-        this.thirdPersonCam?.addLookDelta?.(-inputState.camLeft + inputState.camRight, inputState.camDown - inputState.camUp);
         if (inputState.camShoulderSwap && !this._prevShoulderSwap) this.thirdPersonCam?.swapShoulder?.();
         this._prevShoulderSwap = !!inputState.camShoulderSwap;
         this.camera3d?.update?.(dt);
@@ -433,6 +460,7 @@ class Platformer3DGame extends Engine3DAdapter {
     destroy() {
         if (this._rafId) cancelAnimationFrame(this._rafId);
         this.isRunning  = false;
+        this.charController?.destroy?.();
         this.thirdPersonCam?.destroy?.();
         this.renderer3d?.dispose?.();
         this.physics?.destroy?.();
