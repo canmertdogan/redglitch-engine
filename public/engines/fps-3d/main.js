@@ -41,6 +41,7 @@ import FPSCamera                from './FPSCamera.js';
 import FPSController, { MoveState } from './FPSController.js';
 import WorldGeometry            from './WorldGeometry.js';
 import WeaponSystem, { WeaponState } from './WeaponSystem.js';
+import EnemyAI, { EnemyState, Difficulty } from './EnemyAI.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -224,6 +225,26 @@ class FPSGame extends Engine3DAdapter {
         // Default starting weapon
         await this.weaponSystem.equip('pistol');
 
+        // ── EnemyAI (Phase 31) ─────────────────────────────────────────────
+        this.enemyAI = new EnemyAI({
+            scene:         this.scene,
+            physics:       this.physics,
+            assets:        this.assets,
+            palette:       this.palette,
+            raycast:       this.raycast,
+            weaponSystem:  this.weaponSystem,
+            difficulty:    this._options?.difficulty ?? 'normal',
+        });
+        this.enemyAI.setPlayerRef(this.fpsController);
+        // Wire enemy-attack callback → player damage
+        this.enemyAI.onEnemyAttack = (_id, damage) => {
+            this._health = Math.max(0, this._health - damage);
+        };
+        // Wire WeaponSystem onHit → enemyAI damage
+        this.weaponSystem.onHit = (id, damage, hitInfo) => {
+            this.enemyAI?.damageEnemy(id, damage, hitInfo?.point ?? null);
+        };
+
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
         this._onResize();
@@ -295,8 +316,10 @@ class FPSGame extends Engine3DAdapter {
             await this.worldGeometry.loadFromLevel(level, this.currentProject ?? '');
         }
 
-        // Phase 29+: WorldGeometry — null until loaded
-        // this.worldGeometry?.onLevelLoaded(level);
+        // Phase 31: load enemies and cover points
+        if (this.enemyAI) {
+            await this.enemyAI.loadFromLevel(level, this.currentProject ?? '');
+        }
     }
 
     onLevelUnloaded() {
@@ -307,7 +330,7 @@ class FPSGame extends Engine3DAdapter {
 
         this.worldGeometry?.dispose();
         this.weaponSystem?.dispose();
-        // this.enemyAI?.dispose();
+        this.enemyAI?.dispose();
     }
 
     // ── Game loop ─────────────────────────────────────────────────────────────
@@ -463,6 +486,7 @@ class FPSGame extends Engine3DAdapter {
             cameraState:     this.fpsCamera?.serialize()           ?? null,
             controllerState: this.fpsController?.serialize()       ?? null,
             weaponState:     this.weaponSystem?.serialize()        ?? null,
+            enemyState:      this.enemyAI?.serialize()             ?? null,
             timestamp:       Date.now(),
         };
     }
@@ -478,6 +502,7 @@ class FPSGame extends Engine3DAdapter {
         if (data.cameraState)     this.fpsCamera?.deserialize(data.cameraState);
         if (data.controllerState) this.fpsController?.deserialize(data.controllerState);
         if (data.weaponState)     this.weaponSystem?.deserialize(data.weaponState);
+        if (data.enemyState)      this.enemyAI?.deserialize(data.enemyState);
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
@@ -504,6 +529,7 @@ class FPSGame extends Engine3DAdapter {
         this.fpsController?.dispose();
         this.worldGeometry?.dispose();
         this.weaponSystem?.dispose();
+        this.enemyAI?.dispose();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();
