@@ -43,6 +43,7 @@ import Raycast3D,
 import ThirdPersonCamera        from './ThirdPersonCamera.js';
 import PlatformerPhysics3D      from './PlatformerPhysics3D.js';
 import CharacterController3D, { MoveState } from './CharacterController3D.js';
+import PlayerCharacter3D        from './PlayerCharacter3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this.thirdPersonCam = null;   // ThirdPersonCamera   (Phase 43) — set in init()
         this.platformerPhys = null;   // PlatformerPhysics3D (Phase 44) — set in init()
         this.charController = null;   // CharacterController3D (Phase 45) — set in init()
-        this.playerChar     = null;   // PlayerCharacter3D   (Phase 46)
+        this.playerChar     = null;   // PlayerCharacter3D   (Phase 46) — set in init()
         this.collectibles   = null;   // CollectibleSystem3D (Phase 47)
         this.checkpoints    = null;   // CheckpointSystem3D  (Phase 48)
         this.enemies        = null;   // EnemyPlatformer3D   (Phase 49)
@@ -187,6 +188,25 @@ class Platformer3DGame extends Engine3DAdapter {
         };
         this.charController.onWallJump = (normal) => {
             this.vfx?.spawnWallJumpDust?.(this.charController.getPosition(), normal);
+        };
+
+        // Player character (low-poly model + animation)
+        this.playerChar = new PlayerCharacter3D({
+            scene:          this.renderer3d.scene,
+            assets:         this.assets,
+            palette:        this.palette,
+            charController: this.charController,
+            audio:          this.audio,
+        });
+        await this.playerChar.init();
+
+        // Wire player character callbacks
+        this.playerChar.onDeath = () => {
+            this.vfx?.spawnDeathExplosion?.(this.charController.getPosition());
+            setTimeout(() => this._triggerDeath(), 800);
+        };
+        this.playerChar.onHurt = (hp) => {
+            this._health = hp;
         };
         this._bindInputActions();
 
@@ -288,6 +308,7 @@ class Platformer3DGame extends Engine3DAdapter {
 
         // Update game systems (stub-safe null checks throughout)
         this.charController?.update?.(dt, inputState);
+        this.playerChar?.update?.(dt);
         this.thirdPersonCam?.update?.(dt, this._getPlayerPosition());
         if (inputState.camShoulderSwap && !this._prevShoulderSwap) this.thirdPersonCam?.swapShoulder?.();
         this._prevShoulderSwap = !!inputState.camShoulderSwap;
@@ -347,6 +368,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this._invincFrames = INVINCIBILITY_FRAMES;
         this._respawning   = false;
         this.platformerPhys?.resetVelocity?.();
+        this.playerChar?.revive?.();
     }
 
     _gameOver() {
@@ -461,6 +483,7 @@ class Platformer3DGame extends Engine3DAdapter {
         if (this._rafId) cancelAnimationFrame(this._rafId);
         this.isRunning  = false;
         this.charController?.destroy?.();
+        this.playerChar?.destroy?.();
         this.thirdPersonCam?.destroy?.();
         this.renderer3d?.dispose?.();
         this.physics?.destroy?.();
