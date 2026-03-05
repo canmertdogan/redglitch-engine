@@ -42,9 +42,10 @@ function resolveProjectPath(projectName) {
 }
 
 function levelFilePath(projectDir, levelId) {
-    const filePath = path.join(projectDir, 'dunyalar', `${levelId}.json`);
-    const resolved = resolveUnderRoot(filePath, PROJECTS_ROOT);
-    return resolved;
+    // Build a relative path from PROJECTS_ROOT for the guard check
+    const relPath = path.relative(PROJECTS_ROOT, path.join(projectDir, 'dunyalar', `${levelId}.json`));
+    if (relPath.startsWith('..')) return null; // traversal attempt
+    return resolveUnderRoot(PROJECTS_ROOT, relPath);
 }
 
 /**

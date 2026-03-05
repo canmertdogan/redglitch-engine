@@ -514,5 +514,4 @@ function _noise(t) {
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export { CameraMode };
 export default Camera3DController;

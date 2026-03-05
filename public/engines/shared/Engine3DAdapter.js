@@ -12,8 +12,8 @@
  * Usage:
  *   class MyEngine extends Engine3DAdapter {
  *     get engineType3D() { return 'topdown-3d'; }
- *     onLevelLoaded(level)  { /* hydrate engine-specific systems */ }
- *     onLevelUnloaded()     { /* teardown */ }
+ *     onLevelLoaded(level)  { // hydrate engine-specific systems
+ *     onLevelUnloaded()     { // teardown
  *   }
  */
 

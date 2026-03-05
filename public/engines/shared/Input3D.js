@@ -483,5 +483,4 @@ const _PREVENT_DEFAULT_CODES = new Set([
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export { DEFAULT_ACTION_MAP };
 export default Input3D;

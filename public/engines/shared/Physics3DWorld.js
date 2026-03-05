@@ -434,5 +434,4 @@ function _convexFromGeometry(geo) {
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export { PhysicsBody3D, BodyType, ShapeType };
 export default Physics3DWorld;

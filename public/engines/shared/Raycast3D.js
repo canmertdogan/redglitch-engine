@@ -464,5 +464,4 @@ function _wireMesh(geo) {
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export { LayerMask, CollisionShape };
 export default Raycast3D;
