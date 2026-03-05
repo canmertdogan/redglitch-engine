@@ -26,7 +26,8 @@ const slotsRouter = require('./server/routes/slots');
 const cutscenesRouter = require('./server/routes/cutscenes');
 const campaignsRouter = require('./server/routes/campaigns');
 const assetsRouter   = require('./server/routes/assets');
-const assets3dRouter = require('./server/routes/assets3d');
+const assets3dRouter  = require('./server/routes/assets3d');
+const levels3dRouter  = require('./server/routes/levels3d');
 const systemRouter = require('./server/routes/system');
 const ideRouter = require('./server/routes/ide');
 const gitRouter = require('./server/routes/git');
@@ -162,6 +163,7 @@ app.use((req, res, next) => {
 app.use('/api/system',   systemRouter);
 app.use('/api/assets',   assetsRouter);
 app.use('/api/assets3d', assets3dRouter);
+app.use('/api', levels3dRouter);
 app.use('/api', savesRouter);
 app.use('/api', levelsRouter);
 app.use('/api', projectsRouter);
