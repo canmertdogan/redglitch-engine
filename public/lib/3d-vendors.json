@@ -1,0 +1,9 @@
+{
+  "// generated": "Phase 1 — Three.js Integration (3d-engines-plan.md)",
+  "three": "^0.183.2",
+  "cannon-es": "^0.20.0",
+  "parse-magica-voxel": "^2.1.2",
+  "// note": "parse-magica-voxel is the npm package used in place of vox-loader (not on npm). Files vendored to public/lib/vox-loader/",
+  "// style": "NO PBR, NO HDR, NO texture atlases — palette-indexed flat colors only",
+  "// renderer": "THREE.MeshLambertMaterial / MeshToonMaterial, FlatShading, OutlinePass (1-2px), 3-tone cel quantization"
+}
