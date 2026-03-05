@@ -45,6 +45,7 @@ import PlatformerPhysics3D      from './PlatformerPhysics3D.js';
 import CharacterController3D, { MoveState } from './CharacterController3D.js';
 import PlayerCharacter3D        from './PlayerCharacter3D.js';
 import CollectibleSystem3D      from './CollectibleSystem3D.js';
+import CheckpointSystem3D       from './CheckpointSystem3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this.charController = null;   // CharacterController3D (Phase 45) — set in init()
         this.playerChar     = null;   // PlayerCharacter3D   (Phase 46) — set in init()
         this.collectibles   = null;   // CollectibleSystem3D (Phase 47) — set in init()
-        this.checkpoints    = null;   // CheckpointSystem3D  (Phase 48)
+        this.checkpoints    = null;   // CheckpointSystem3D  (Phase 48) — set in init()
         this.enemies        = null;   // EnemyPlatformer3D   (Phase 49)
         this.vfx            = null;   // VFX_Platformer3D    (Phase 50)
 
@@ -220,6 +221,20 @@ class Platformer3DGame extends Engine3DAdapter {
         this.collectibles.onCoinCollected = (total) => { this._coins = total; };
         this.collectibles.onScoreChanged  = (score) => { this._score = score; };
         this.collectibles.onPowerUp       = (type)  => { this._handlePowerUp(type); };
+
+        // Checkpoint system
+        this.checkpoints = new CheckpointSystem3D({
+            scene:   this.renderer3d.scene,
+            palette: this.palette,
+            audio:   this.audio,
+        });
+        this.checkpoints.onCheckpointActivated = (id, pos) => {
+            this.setCheckpoint(pos, { coins: this._coins, score: this._score });
+        };
+        this.checkpoints.onPlayerDeath = () => { this._triggerDeath(); };
+        this.checkpoints.onLevelComplete = (stats) => {
+            this.levelComplete({ ...stats, coins: this.collectibles.coins, score: this.collectibles.score });
+        };
         this._bindInputActions();
 
         this.onReady?.();
@@ -265,8 +280,23 @@ class Platformer3DGame extends Engine3DAdapter {
 
         // Read platformer-specific fields
         this._deathY = data.deathY ?? -20;
-        if (data.checkpoints?.length) {
-            this.checkpoints?.fromData?.(data.checkpoints);
+
+        // Clear and re-hydrate systems for new level
+        this.checkpoints?.clear?.();
+        this.collectibles?.clear?.();
+        this.collectibles?.resetScore?.();
+
+        if (this.checkpoints) {
+            this.checkpoints.spawnFromLevelData(data);
+            // Sync death plane to checkpoint system
+            this._deathY = this.checkpoints.deathY;
+        } else if (data.checkpoints?.length) {
+            // Fallback if checkpoints system not yet init
+        }
+
+        // Spawn collectibles from entity list
+        if (this.collectibles && data.entities?.length) {
+            this.collectibles.spawnFromLevelData(data.entities);
         }
 
         // Place player at spawn
@@ -326,6 +356,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this._prevShoulderSwap = !!inputState.camShoulderSwap;
         this.camera3d?.update?.(dt);
         this.collectibles?.update?.(dt, this._getPlayerPosition());
+        this.checkpoints?.update?.(dt, this._getPlayerPosition());
         this.enemies?.update?.(dt);
         this.vfx?.update?.(dt);
         this.audio?.update?.(dt, this.camera3d?.camera);
@@ -374,7 +405,8 @@ class Platformer3DGame extends Engine3DAdapter {
     }
 
     _respawn() {
-        const pos = this._checkpoint?.position ?? { x: 0, y: 2, z: 0 };
+        const cpPos = this.checkpoints?.getActiveCPPosition?.() ?? this._checkpoint?.position;
+        const pos   = cpPos ?? { x: 0, y: 2, z: 0 };
         this._setPlayerPosition(pos.x, pos.y, pos.z);
         this._health       = 3;
         this._invincFrames = INVINCIBILITY_FRAMES;
