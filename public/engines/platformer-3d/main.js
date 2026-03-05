@@ -44,6 +44,7 @@ import ThirdPersonCamera        from './ThirdPersonCamera.js';
 import PlatformerPhysics3D      from './PlatformerPhysics3D.js';
 import CharacterController3D, { MoveState } from './CharacterController3D.js';
 import PlayerCharacter3D        from './PlayerCharacter3D.js';
+import CollectibleSystem3D      from './CollectibleSystem3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ class Platformer3DGame extends Engine3DAdapter {
         this.platformerPhys = null;   // PlatformerPhysics3D (Phase 44) — set in init()
         this.charController = null;   // CharacterController3D (Phase 45) — set in init()
         this.playerChar     = null;   // PlayerCharacter3D   (Phase 46) — set in init()
-        this.collectibles   = null;   // CollectibleSystem3D (Phase 47)
+        this.collectibles   = null;   // CollectibleSystem3D (Phase 47) — set in init()
         this.checkpoints    = null;   // CheckpointSystem3D  (Phase 48)
         this.enemies        = null;   // EnemyPlatformer3D   (Phase 49)
         this.vfx            = null;   // VFX_Platformer3D    (Phase 50)
@@ -208,6 +209,17 @@ class Platformer3DGame extends Engine3DAdapter {
         this.playerChar.onHurt = (hp) => {
             this._health = hp;
         };
+
+        // Collectible system
+        this.collectibles = new CollectibleSystem3D({
+            scene:        this.renderer3d.scene,
+            camera:       this.camera3d.camera,
+            palette:      this.palette,
+            audio:        this.audio,
+        });
+        this.collectibles.onCoinCollected = (total) => { this._coins = total; };
+        this.collectibles.onScoreChanged  = (score) => { this._score = score; };
+        this.collectibles.onPowerUp       = (type)  => { this._handlePowerUp(type); };
         this._bindInputActions();
 
         this.onReady?.();
@@ -473,6 +485,23 @@ class Platformer3DGame extends Engine3DAdapter {
         this.enemies?.clear?.();
         this.vfx?.clear?.();
         this._checkpoint = null;
+    }
+
+    _handlePowerUp(type) {
+        switch (type) {
+            case 'invincible':
+                this._invincFrames = 600;   // 10 s
+                this.playerChar?.setInvincible?.(600);
+                break;
+            case 'doublejump':
+                if (this.platformerPhys) this.platformerPhys._maxAirJumps = 2;
+                setTimeout(() => { if (this.platformerPhys) this.platformerPhys._maxAirJumps = 1; }, 15000);
+                break;
+            case 'speed':
+                if (this.charController) this.charController._runSpeed = 14;
+                setTimeout(() => { if (this.charController) this.charController._runSpeed = 8; }, 10000);
+                break;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
