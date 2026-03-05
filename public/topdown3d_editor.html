@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ketebe TOPDOWN-3D MAP EDITOR</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root:    #050508;
+            --bg-panel:   #0a0a12;
+            --bg-header:  #000000;
+            --bg-canvas:  #07070e;
+            --bg-input:   #000;
+            --border:     #2a2a3a;
+            --accent:     #4fc3f7;
+            --accent2:    #7c4dff;
+            --text-main:  #e0e0ef;
+            --text-muted: #666;
+        }
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; font-size: 18px;
+            height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; image-rendering: pixelated;
+        }
+
+        /* ── MENUBAR ─────────────────────────────────────────────────────── */
+        #menubar {
+            height: 36px; background: #000; display: flex; align-items: center;
+            border-bottom: 2px solid var(--border); z-index: 3000; flex-shrink: 0;
+        }
+        .menubar-title {
+            color: var(--accent); font-weight: bold; padding: 0 15px;
+            border-right: 2px solid var(--border); margin-right: 10px;
+            font-size: 1.2rem; letter-spacing: 2px; height: 100%;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; }
+        .menu-item { padding: 0 14px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover, .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111;
+            border: 2px solid var(--border); display: none; flex-direction: column;
+            min-width: 200px; box-shadow: 8px 8px 0 rgba(0,0,0,.6); z-index: 4000;
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .drop-opt { padding: 7px 14px; cursor: pointer; color: #aaa; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .drop-opt:hover { background: #1a1a2a; color: #fff; border-left: 3px solid var(--accent); }
+        .drop-sep { height: 1px; background: #222; margin: 3px 0; }
+        .shortcut { font-size: 0.8rem; color: #555; margin-left: 16px; }
+        #menubar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; padding-right: 12px; }
+        #project-label { color: var(--accent); font-size: 0.95rem; letter-spacing: 1px; }
+
+        /* ── TOOLBAR ─────────────────────────────────────────────────────── */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #0e0e1a; border: 1px solid #333; color: #888;
+            width: 34px; height: 34px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px; transition: background .1s, color .1s;
+        }
+        .tool-btn:hover { background: #1a1a2e; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 22px; background: #2a2a3a; margin: 0 4px; }
+        .tool-label { color: #555; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; padding: 0 6px; }
+        #tool-coords { margin-left: auto; color: #555; font-size: 0.9rem; letter-spacing: 1px; padding-right: 12px; }
+
+        /* ── LAYOUT ──────────────────────────────────────────────────────── */
+        #layout { flex: 1; display: flex; overflow: hidden; position: relative; min-height: 0; }
+
+        /* ── LEFT SIDEBAR ─────────────────────────────────────────────────── */
+        #sidebar-left {
+            width: 240px; background: var(--bg-panel); border-right: 2px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+        }
+        .panel-tabs { display: flex; border-bottom: 2px solid var(--border); }
+        .panel-tab {
+            flex: 1; padding: 7px 0; text-align: center; cursor: pointer;
+            color: #555; font-size: 0.85rem; letter-spacing: 1px;
+            border-right: 1px solid var(--border); transition: background .1s;
+        }
+        .panel-tab:last-child { border-right: none; }
+        .panel-tab:hover { background: #111; color: #999; }
+        .panel-tab.active { background: #0f0f1e; color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -2px; }
+        .panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px; display: none; }
+        .panel-body.active { display: block; }
+
+        /* ── TERRAIN PANEL ──────────────────────────────────────────────── */
+        .section-header {
+            color: var(--accent); font-size: 0.85rem; letter-spacing: 2px;
+            text-transform: uppercase; padding: 6px 0 4px;
+            border-bottom: 1px solid var(--border); margin-bottom: 6px;
+        }
+        .field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.9rem; }
+        .field-row label { color: #777; min-width: 70px; }
+        .field-row input[type=range] { flex: 1; accent-color: var(--accent); }
+        .field-row input[type=number], .field-row select, .field-row input[type=text] {
+            flex: 1; background: var(--bg-input); border: 1px solid #333; color: var(--text-main);
+            padding: 3px 6px; font-family: inherit; font-size: 1rem; border-radius: 2px;
+        }
+        .field-row input[type=color] { width: 36px; height: 26px; border: none; cursor: pointer; background: none; padding: 0; }
+        .brush-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; }
+        .brush-cell {
+            height: 36px; border: 2px solid #2a2a3a; cursor: pointer; border-radius: 2px;
+            display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #666;
+            transition: border-color .1s;
+        }
+        .brush-cell:hover { border-color: var(--accent); color: var(--accent); }
+        .brush-cell.active { border-color: var(--accent); background: #0e1a2a; color: var(--accent); }
+
+        /* Palette swatches */
+        .swatch-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-bottom: 8px; }
+        .swatch {
+            width: 100%; padding-top: 100%; position: relative; cursor: pointer;
+            border: 2px solid transparent; border-radius: 2px;
+        }
+        .swatch:hover, .swatch.active { border-color: #fff; }
+
+        /* ── OBJECTS PANEL ──────────────────────────────────────────────── */
+        .obj-list { display: flex; flex-direction: column; gap: 4px; }
+        .obj-item {
+            display: flex; align-items: center; gap: 8px; padding: 5px 6px;
+            background: #0c0c18; border: 1px solid #222; cursor: pointer; border-radius: 2px;
+        }
+        .obj-item:hover { border-color: var(--accent); color: var(--accent); }
+        .obj-item.selected { border-color: var(--accent); background: #0e1a2e; }
+        .obj-icon { color: var(--accent2); width: 20px; text-align: center; }
+        .obj-name { font-size: 0.9rem; flex: 1; }
+        .obj-team { font-size: 0.75rem; color: #666; }
+
+        /* ── LIGHTS PANEL ────────────────────────────────────────────────── */
+        .light-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; background: #0c0c18; border: 1px solid #222; cursor: pointer; border-radius: 2px; margin-bottom: 4px; }
+        .light-item:hover { border-color: var(--accent); }
+        .light-item.selected { border-color: var(--accent); background: #0e1a2e; }
+        .light-color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+        .light-name { flex: 1; font-size: 0.9rem; }
+        .light-type-badge { font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* ── NAVMESH PANEL ───────────────────────────────────────────────── */
+        .nm-stat { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid #1a1a2a; }
+        .nm-stat span { color: var(--accent); }
+
+        /* ── VIEWPORT (CENTER) ───────────────────────────────────────────── */
+        #viewport { flex: 1; position: relative; background: var(--bg-canvas); overflow: hidden; }
+        #three-canvas { width: 100%; height: 100%; display: block; }
+        #viewport-overlay {
+            position: absolute; inset: 0; pointer-events: none;
+        }
+        /* selection rect */
+        #sel-rect {
+            position: absolute; display: none; border: 1px dashed var(--accent);
+            background: rgba(79, 195, 247, 0.08); pointer-events: none;
+        }
+        /* gizmo axes legend */
+        #gizmo-legend {
+            position: absolute; bottom: 10px; left: 10px;
+            font-size: 0.8rem; color: #555; letter-spacing: 1px;
+        }
+        /* zoom controls */
+        #zoom-controls {
+            position: absolute; bottom: 10px; right: 10px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .zoom-btn {
+            width: 28px; height: 28px; background: #0e0e1a; border: 1px solid #333;
+            color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; border-radius: 2px;
+        }
+        .zoom-btn:hover { border-color: var(--accent); color: var(--accent); }
+        /* top-right HUD */
+        #viewport-hud {
+            position: absolute; top: 10px; right: 10px;
+            display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none;
+        }
+        .hud-badge {
+            background: rgba(0,0,0,.7); border: 1px solid var(--border); padding: 2px 8px;
+            font-size: 0.75rem; color: #666; letter-spacing: 1px; border-radius: 2px;
+        }
+        .hud-badge.mode-badge { color: var(--accent); border-color: var(--accent); }
+
+        /* ── RIGHT SIDEBAR (properties) ──────────────────────────────────── */
+        #sidebar-right {
+            width: 220px; background: var(--bg-panel); border-left: 2px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+        }
+        #props-header {
+            padding: 8px 10px; border-bottom: 1px solid var(--border);
+            color: var(--accent); font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #props-body { flex: 1; overflow-y: auto; padding: 8px; }
+        .prop-group { margin-bottom: 10px; }
+        .prop-group-title { color: #555; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+        .prop-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; font-size: 0.9rem; }
+        .prop-row label { color: #666; min-width: 60px; }
+        .prop-row input, .prop-row select {
+            flex: 1; background: var(--bg-input); border: 1px solid #2a2a3a;
+            color: var(--text-main); padding: 2px 5px; font-family: inherit; font-size: 0.9rem; border-radius: 2px;
+        }
+        .prop-row input:focus, .prop-row select:focus { border-color: var(--accent); }
+        #props-empty { color: #444; font-size: 0.9rem; padding: 12px 6px; text-align: center; }
+
+        /* ── STATUSBAR ───────────────────────────────────────────────────── */
+        #statusbar {
+            height: 26px; background: #000; border-top: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 12px; gap: 20px;
+            font-size: 0.8rem; color: #555; letter-spacing: 1px; flex-shrink: 0;
+        }
+        .status-seg { display: flex; align-items: center; gap: 6px; }
+        .status-seg .val { color: #999; }
+        .status-seg.ok .val { color: #4caf50; }
+        .status-seg.warn .val { color: #ffb300; }
+
+        /* ── MODALS ──────────────────────────────────────────────────────── */
+        .modal-bg {
+            position: fixed; inset: 0; background: rgba(0,0,0,.8);
+            display: none; align-items: center; justify-content: center; z-index: 9000;
+        }
+        .modal-bg.open { display: flex; }
+        .modal {
+            background: var(--bg-panel); border: 2px solid var(--border);
+            min-width: 340px; max-width: 520px; padding: 20px;
+            box-shadow: 16px 16px 0 rgba(0,0,0,.7);
+        }
+        .modal h2 { color: var(--accent); font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 14px; }
+        .modal-row { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+        .btn { padding: 6px 18px; background: #111; border: 1px solid #444; color: #aaa; cursor: pointer; font-family: inherit; font-size: 1rem; border-radius: 2px; }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+        .btn.primary:hover { background: #29b6f6; }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+    </style>
+</head>
+<body>
+
+<!-- ── MENUBAR ──────────────────────────────────────────────────────────── -->
+<div id="menubar">
+    <div class="menubar-title">
+        <i class="fa fa-map"></i> TOPDOWN-3D EDITOR
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">FILE</div>
+        <div class="dropdown">
+            <div class="drop-opt" data-action="new-level">New Level <span class="shortcut">Ctrl+N</span></div>
+            <div class="drop-opt" data-action="open-level">Open Level… <span class="shortcut">Ctrl+O</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" data-action="save-level">Save Level <span class="shortcut">Ctrl+S</span></div>
+            <div class="drop-opt" data-action="save-level-as">Save As…</div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" data-action="close-editor">Close Editor</div>
+        </div>
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">EDIT</div>
+        <div class="dropdown">
+            <div class="drop-opt" data-action="undo">Undo <span class="shortcut">Ctrl+Z</span></div>
+            <div class="drop-opt" data-action="redo">Redo <span class="shortcut">Ctrl+Y</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" data-action="select-all">Select All <span class="shortcut">Ctrl+A</span></div>
+            <div class="drop-opt" data-action="delete-selected">Delete Selected <span class="shortcut">Del</span></div>
+        </div>
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">VIEW</div>
+        <div class="dropdown">
+            <div class="drop-opt" data-action="toggle-grid">Toggle Grid <span class="shortcut">G</span></div>
+            <div class="drop-opt" data-action="toggle-wireframe">Wireframe <span class="shortcut">W</span></div>
+            <div class="drop-opt" data-action="toggle-navmesh">Show NavMesh <span class="shortcut">N</span></div>
+            <div class="drop-opt" data-action="toggle-fog">Show FoW <span class="shortcut">F</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" data-action="view-top">Top View <span class="shortcut">Numpad 7</span></div>
+            <div class="drop-opt" data-action="view-iso">Isometric View <span class="shortcut">Numpad 5</span></div>
+            <div class="drop-opt" data-action="view-front">Front View <span class="shortcut">Numpad 1</span></div>
+            <div class="drop-opt" data-action="frame-all">Frame All <span class="shortcut">Home</span></div>
+        </div>
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">LEVEL</div>
+        <div class="dropdown">
+            <div class="drop-opt" data-action="level-settings">Level Settings…</div>
+            <div class="drop-opt" data-action="bake-navmesh">Bake NavMesh <span class="shortcut">Ctrl+B</span></div>
+            <div class="drop-opt" data-action="bake-lighting">Bake Lighting</div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" data-action="test-play">Test Play <span class="shortcut">F5</span></div>
+        </div>
+    </div>
+
+    <div id="menubar-right">
+        <span id="project-label">— no project —</span>
+    </div>
+</div>
+
+<!-- ── TOOLBAR ───────────────────────────────────────────────────────────── -->
+<div id="toolbar">
+    <span class="tool-label">MODE</span>
+    <button class="tool-btn active" data-tool="select"   title="Select (Q)"><i class="fa fa-mouse-pointer"></i></button>
+    <button class="tool-btn"        data-tool="paint"    title="Paint Terrain (P)"><i class="fa fa-paint-brush"></i></button>
+    <button class="tool-btn"        data-tool="place"    title="Place Object (E)"><i class="fa fa-cube"></i></button>
+    <button class="tool-btn"        data-tool="erase"    title="Erase (D)"><i class="fa fa-eraser"></i></button>
+    <button class="tool-btn"        data-tool="height"   title="Height Sculpt (H)"><i class="fa fa-mountain"></i></button>
+    <div class="tool-sep"></div>
+    <span class="tool-label">VIEW</span>
+    <button class="tool-btn" id="btn-grid"       title="Toggle Grid (G)"><i class="fa fa-border-all"></i></button>
+    <button class="tool-btn" id="btn-wireframe"  title="Toggle Wireframe (W)"><i class="fa fa-draw-polygon"></i></button>
+    <button class="tool-btn" id="btn-navmesh"    title="Show NavMesh (N)"><i class="fa fa-project-diagram"></i></button>
+    <div class="tool-sep"></div>
+    <span class="tool-label">LEVEL</span>
+    <button class="tool-btn" id="btn-undo"       title="Undo (Ctrl+Z)"><i class="fa fa-undo"></i></button>
+    <button class="tool-btn" id="btn-redo"       title="Redo (Ctrl+Y)"><i class="fa fa-redo"></i></button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="btn-save"       title="Save (Ctrl+S)" style="color: #4caf50"><i class="fa fa-save"></i></button>
+    <button class="tool-btn" id="btn-testplay"   title="Test Play (F5)" style="color: #ffb300"><i class="fa fa-play"></i></button>
+    <span id="tool-coords">X: 0  Y: 0  Z: 0</span>
+</div>
+
+<!-- ── LAYOUT ─────────────────────────────────────────────────────────────── -->
+<div id="layout">
+
+    <!-- LEFT SIDEBAR -->
+    <div id="sidebar-left">
+        <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="terrain" title="Terrain">
+                <i class="fa fa-layer-group"></i>
+            </div>
+            <div class="panel-tab" data-panel="objects" title="Objects">
+                <i class="fa fa-cube"></i>
+            </div>
+            <div class="panel-tab" data-panel="lights" title="Lights">
+                <i class="fa fa-lightbulb"></i>
+            </div>
+            <div class="panel-tab" data-panel="navmesh" title="NavMesh">
+                <i class="fa fa-project-diagram"></i>
+            </div>
+            <div class="panel-tab" data-panel="settings" title="Settings">
+                <i class="fa fa-cog"></i>
+            </div>
+        </div>
+
+        <!-- TERRAIN PANEL -->
+        <div class="panel-body active" id="panel-terrain">
+            <div class="section-header">TERRAIN TYPE</div>
+            <div class="brush-grid">
+                <div class="brush-cell active"  data-terrain="flat"     title="Flat">FLAT</div>
+                <div class="brush-cell"          data-terrain="raise"    title="Raise">RAIS</div>
+                <div class="brush-cell"          data-terrain="lower"    title="Lower">LOWR</div>
+                <div class="brush-cell"          data-terrain="smooth"   title="Smooth">SMO</div>
+                <div class="brush-cell"          data-terrain="voxel"    title="Voxel Block">VOX</div>
+                <div class="brush-cell"          data-terrain="lowpoly"  title="Low-Poly">LPY</div>
+                <div class="brush-cell"          data-terrain="water"    title="Water">H2O</div>
+                <div class="brush-cell"          data-terrain="cliff"    title="Cliff">CLF</div>
+            </div>
+
+            <div class="section-header">BRUSH</div>
+            <div class="field-row">
+                <label>SIZE</label>
+                <input type="range" id="brush-size" min="1" max="20" value="3">
+                <span id="brush-size-val" style="min-width:24px;text-align:right;color:var(--accent)">3</span>
+            </div>
+            <div class="field-row">
+                <label>STRENGTH</label>
+                <input type="range" id="brush-str" min="1" max="100" value="50">
+                <span id="brush-str-val" style="min-width:24px;text-align:right;color:var(--accent)">50</span>
+            </div>
+            <div class="field-row">
+                <label>HEIGHT</label>
+                <input type="number" id="brush-height" value="0" step="0.5" style="width:70px">
+            </div>
+
+            <div class="section-header">PALETTE</div>
+            <div class="swatch-grid" id="palette-swatches"></div>
+            <div class="field-row">
+                <label>PICK</label>
+                <input type="color" id="custom-color" value="#4db6ac">
+                <button class="btn" id="add-color-btn" style="font-size:.8rem;padding:3px 8px">ADD</button>
+            </div>
+        </div>
+
+        <!-- OBJECTS PANEL -->
+        <div class="panel-body" id="panel-objects">
+            <div class="section-header">PLACE OBJECT</div>
+            <div class="field-row">
+                <label>TYPE</label>
+                <select id="obj-type-select">
+                    <option value="unit">Unit / Entity</option>
+                    <option value="prop">Prop / Static</option>
+                    <option value="trigger">Trigger Zone</option>
+                    <option value="spawn">Spawn Point</option>
+                    <option value="waypoint">Waypoint</option>
+                </select>
+            </div>
+            <div class="field-row" id="obj-team-row">
+                <label>TEAM</label>
+                <input type="number" id="obj-team" value="0" min="0" max="7" style="width:60px">
+            </div>
+            <div class="field-row">
+                <label>ID</label>
+                <input type="text" id="obj-id" placeholder="unit_hero_01">
+            </div>
+
+            <div class="section-header" style="margin-top:8px">SCENE OBJECTS</div>
+            <div class="obj-list" id="scene-obj-list">
+                <div style="color:#444;font-size:.85rem;padding:8px 0">No objects placed yet.</div>
+            </div>
+        </div>
+
+        <!-- LIGHTS PANEL -->
+        <div class="panel-body" id="panel-lights">
+            <div class="section-header">ADD LIGHT</div>
+            <div class="field-row">
+                <label>TYPE</label>
+                <select id="light-type-select">
+                    <option value="ambient">Ambient</option>
+                    <option value="directional">Directional</option>
+                    <option value="point">Point</option>
+                    <option value="spot">Spot</option>
+                    <option value="hemisphere">Hemisphere</option>
+                </select>
+            </div>
+            <div class="field-row">
+                <label>COLOR</label>
+                <input type="color" id="light-color" value="#ffffff">
+            </div>
+            <div class="field-row">
+                <label>INTENSITY</label>
+                <input type="number" id="light-intensity" value="1.0" step="0.1" min="0">
+            </div>
+            <button class="btn" id="add-light-btn" style="width:100%;margin-bottom:10px">
+                <i class="fa fa-plus"></i> ADD LIGHT
+            </button>
+
+            <div class="section-header">SCENE LIGHTS</div>
+            <div id="lights-list">
+                <div style="color:#444;font-size:.85rem;padding:8px 0">No lights added yet.</div>
+            </div>
+        </div>
+
+        <!-- NAVMESH PANEL -->
+        <div class="panel-body" id="panel-navmesh">
+            <div class="section-header">NAVMESH</div>
+            <div class="nm-stat">Triangles <span id="nm-tris">0</span></div>
+            <div class="nm-stat">Walkable   <span id="nm-walk">0</span></div>
+            <div class="nm-stat">Blocked    <span id="nm-block">0</span></div>
+            <div class="nm-stat">Status     <span id="nm-status">—</span></div>
+            <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+                <button class="btn" id="btn-bake-nm" style="width:100%">
+                    <i class="fa fa-hammer"></i> BAKE NAVMESH
+                </button>
+                <button class="btn" id="btn-clear-nm" style="width:100%">
+                    <i class="fa fa-times"></i> CLEAR NAVMESH
+                </button>
+                <button class="btn" id="btn-show-nm" style="width:100%">
+                    <i class="fa fa-eye"></i> TOGGLE OVERLAY
+                </button>
+            </div>
+
+            <div class="section-header" style="margin-top:10px">BAKE SETTINGS</div>
+            <div class="field-row">
+                <label>AGENT R</label>
+                <input type="number" id="nm-agent-r" value="0.5" step="0.1" min="0.1" max="5">
+            </div>
+            <div class="field-row">
+                <label>MAX SLOPE</label>
+                <input type="number" id="nm-slope" value="45" step="5" min="0" max="89">
+            </div>
+            <div class="field-row">
+                <label>STEP HT</label>
+                <input type="number" id="nm-step" value="0.5" step="0.1" min="0">
+            </div>
+        </div>
+
+        <!-- SETTINGS PANEL -->
+        <div class="panel-body" id="panel-settings">
+            <div class="section-header">LEVEL</div>
+            <div class="field-row">
+                <label>NAME</label>
+                <input type="text" id="set-level-name" placeholder="level_01">
+            </div>
+            <div class="field-row">
+                <label>WIDTH</label>
+                <input type="number" id="set-world-w" value="64" step="8" min="8" max="512">
+            </div>
+            <div class="field-row">
+                <label>HEIGHT</label>
+                <input type="number" id="set-world-h" value="64" step="8" min="8" max="512">
+            </div>
+
+            <div class="section-header">ENVIRONMENT</div>
+            <div class="field-row">
+                <label>SKY</label>
+                <input type="color" id="set-sky-color" value="#101030">
+            </div>
+            <div class="field-row">
+                <label>FOG</label>
+                <input type="color" id="set-fog-color" value="#151530">
+            </div>
+            <div class="field-row">
+                <label>FOG NEAR</label>
+                <input type="number" id="set-fog-near" value="40" step="5" min="0">
+            </div>
+            <div class="field-row">
+                <label>FOG FAR</label>
+                <input type="number" id="set-fog-far" value="120" step="10" min="1">
+            </div>
+
+            <div class="section-header">PHYSICS</div>
+            <div class="field-row">
+                <label>GRAVITY Y</label>
+                <input type="number" id="set-gravity" value="-9.8" step="0.1">
+            </div>
+
+            <div class="section-header">GRID</div>
+            <div class="field-row">
+                <label>CELL SIZE</label>
+                <input type="number" id="set-cell" value="1" step="0.5" min="0.25">
+            </div>
+            <div class="field-row">
+                <label>COLOR</label>
+                <input type="color" id="set-grid-color" value="#1a1a2e">
+            </div>
+
+            <div style="margin-top:12px">
+                <button class="btn" id="btn-apply-settings" style="width:100%">APPLY SETTINGS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEWPORT -->
+    <div id="viewport">
+        <canvas id="three-canvas"></canvas>
+        <div id="viewport-overlay">
+            <div id="sel-rect"></div>
+            <div id="gizmo-legend">RMB: orbit · MMB: pan · Scroll: zoom</div>
+            <div id="viewport-hud">
+                <div class="hud-badge mode-badge" id="hud-mode">SELECT</div>
+                <div class="hud-badge" id="hud-level">no level</div>
+                <div class="hud-badge" id="hud-objs">0 objects</div>
+            </div>
+        </div>
+        <div id="zoom-controls">
+            <button class="zoom-btn" data-zoom="in"  title="Zoom In"><i class="fa fa-plus"></i></button>
+            <button class="zoom-btn" data-zoom="fit" title="Frame All"><i class="fa fa-expand-arrows-alt"></i></button>
+            <button class="zoom-btn" data-zoom="out" title="Zoom Out"><i class="fa fa-minus"></i></button>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR (Properties Inspector) -->
+    <div id="sidebar-right">
+        <div id="props-header">
+            PROPERTIES <i class="fa fa-info-circle" style="font-size:.9rem;color:#444"></i>
+        </div>
+        <div id="props-body">
+            <div id="props-empty">Select an object to inspect its properties.</div>
+            <div id="props-content" style="display:none"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── STATUSBAR ───────────────────────────────────────────────────────────── -->
+<div id="statusbar">
+    <div class="status-seg ok">
+        ENGINE <span class="val" id="stat-engine">topdown-3d</span>
+    </div>
+    <div class="status-seg">
+        LEVEL <span class="val" id="stat-level">—</span>
+    </div>
+    <div class="status-seg">
+        OBJS <span class="val" id="stat-objs">0</span>
+    </div>
+    <div class="status-seg">
+        LIGHTS <span class="val" id="stat-lights">0</span>
+    </div>
+    <div class="status-seg">
+        TOOL <span class="val" id="stat-tool">SELECT</span>
+    </div>
+    <div class="status-seg" style="margin-left:auto">
+        <span id="stat-msg">Ready.</span>
+    </div>
+</div>
+
+<!-- ── NEW LEVEL MODAL ─────────────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-new-level">
+    <div class="modal">
+        <h2><i class="fa fa-plus-square"></i> NEW LEVEL</h2>
+        <div class="field-row">
+            <label style="min-width:80px">NAME</label>
+            <input type="text" id="new-level-name" placeholder="level_01" style="flex:1;background:#000;border:1px solid #333;color:#e0e0ef;padding:4px 8px;font-family:inherit;font-size:1rem">
+        </div>
+        <div class="field-row" style="margin-top:8px">
+            <label style="min-width:80px">WIDTH</label>
+            <input type="number" id="new-level-w" value="64" min="8" max="512" step="8" style="flex:1;background:#000;border:1px solid #333;color:#e0e0ef;padding:4px 8px;font-family:inherit;font-size:1rem">
+        </div>
+        <div class="field-row" style="margin-top:8px">
+            <label style="min-width:80px">HEIGHT</label>
+            <input type="number" id="new-level-h" value="64" min="8" max="512" step="8" style="flex:1;background:#000;border:1px solid #333;color:#e0e0ef;padding:4px 8px;font-family:inherit;font-size:1rem">
+        </div>
+        <div class="modal-row">
+            <button class="btn" id="modal-new-cancel">CANCEL</button>
+            <button class="btn primary" id="modal-new-confirm">CREATE</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── LEVEL SETTINGS MODAL ────────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-level-settings">
+    <div class="modal">
+        <h2><i class="fa fa-cog"></i> LEVEL SETTINGS</h2>
+        <div class="field-row">
+            <label style="min-width:90px">LEVEL ID</label>
+            <input type="text" id="ls-id" style="flex:1;background:#000;border:1px solid #333;color:#e0e0ef;padding:4px 8px;font-family:inherit;font-size:1rem">
+        </div>
+        <div class="field-row" style="margin-top:6px">
+            <label style="min-width:90px">DISPLAY NAME</label>
+            <input type="text" id="ls-name" style="flex:1;background:#000;border:1px solid #333;color:#e0e0ef;padding:4px 8px;font-family:inherit;font-size:1rem">
+        </div>
+        <div class="modal-row">
+            <button class="btn" id="modal-ls-cancel">CANCEL</button>
+            <button class="btn primary" id="modal-ls-confirm">SAVE</button>
+        </div>
+    </div>
+</div>
+
+<script src="topdown3d_editor.js"></script>
+</body>
+</html>
