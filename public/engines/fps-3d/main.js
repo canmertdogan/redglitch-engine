@@ -40,6 +40,7 @@ import FPS3DStrategy            from './FPS3DStrategy.js';
 import FPSCamera                from './FPSCamera.js';
 import FPSController, { MoveState } from './FPSController.js';
 import WorldGeometry            from './WorldGeometry.js';
+import WeaponSystem, { WeaponState } from './WeaponSystem.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -206,6 +207,23 @@ class FPSGame extends Engine3DAdapter {
             fpsController: this.fpsController,
         });
 
+        // ── Weapon System (Phase 30) ───────────────────────────────────────
+        this.weaponSystem = new WeaponSystem({
+            scene:         this.scene,
+            camera:        this.renderer3d.camera,
+            raycast:       this.raycast,
+            fpsCamera:     this.fpsCamera,
+            fpsController: this.fpsController,
+            assets:        this.assets,
+            audio:         this.audio,
+        });
+        // Wire ammo HUD callback
+        this.weaponSystem.onAmmoChanged = (id, ammo) => {
+            this._ammo = ammo;
+        };
+        // Default starting weapon
+        await this.weaponSystem.equip('pistol');
+
         // ── Window resize ──────────────────────────────────────────────────
         window.addEventListener('resize', () => this._onResize());
         this._onResize();
@@ -288,7 +306,7 @@ class FPSGame extends Engine3DAdapter {
         this._currentLevel = null;
 
         this.worldGeometry?.dispose();
-        // this.weaponSystem?.dispose();
+        this.weaponSystem?.dispose();
         // this.enemyAI?.dispose();
     }
 
@@ -441,9 +459,10 @@ class FPSGame extends Engine3DAdapter {
             gameTime:        this.gameTime,
             health:          this._health,
             ammo:            this._ammo,
-            playerPos:       this.strategy?.getPlayerPosition() ?? null,
-            cameraState:     this.fpsCamera?.serialize()      ?? null,
-            controllerState: this.fpsController?.serialize()  ?? null,
+            playerPos:       this.strategy?.getPlayerPosition()    ?? null,
+            cameraState:     this.fpsCamera?.serialize()           ?? null,
+            controllerState: this.fpsController?.serialize()       ?? null,
+            weaponState:     this.weaponSystem?.serialize()        ?? null,
             timestamp:       Date.now(),
         };
     }
@@ -458,6 +477,7 @@ class FPSGame extends Engine3DAdapter {
         if (data.playerPos)       this.strategy?.setSpawnPoint(data.playerPos);
         if (data.cameraState)     this.fpsCamera?.deserialize(data.cameraState);
         if (data.controllerState) this.fpsController?.deserialize(data.controllerState);
+        if (data.weaponState)     this.weaponSystem?.deserialize(data.weaponState);
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
@@ -483,6 +503,7 @@ class FPSGame extends Engine3DAdapter {
         this.fpsCamera?.detach();
         this.fpsController?.dispose();
         this.worldGeometry?.dispose();
+        this.weaponSystem?.dispose();
         this.input?.detach();
         this.audio?.dispose();
         this.renderer3d?.dispose();
