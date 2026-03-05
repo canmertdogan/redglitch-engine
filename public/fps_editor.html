@@ -347,6 +347,7 @@
         <div class="panel-tabs">
             <div class="panel-tab active" data-tab="geo"      onclick="FPSEditor.switchTab('geo')">GEO</div>
             <div class="panel-tab"        data-tab="textures" onclick="FPSEditor.switchTab('textures')">COL</div>
+            <div class="panel-tab"        data-tab="lights"   onclick="FPSEditor.switchTab('lights')">LIT</div>
             <div class="panel-tab"        data-tab="entities" onclick="FPSEditor.switchTab('entities')">ENT</div>
             <div class="panel-tab"        data-tab="triggers" onclick="FPSEditor.switchTab('triggers')">TRG</div>
             <div class="panel-tab"        data-tab="settings" onclick="FPSEditor.switchTab('settings')">SET</div>
@@ -398,6 +399,11 @@
         <!-- COLOR PALETTE PANEL — populated by ColorPalette.js -->
         <div class="panel-body" id="tab-textures">
             <!-- ColorPalette.init() mounts its full UI here at runtime -->
+        </div>
+
+        <!-- LIGHTS PANEL — populated by LightEditor.js -->
+        <div class="panel-body" id="tab-lights">
+            <!-- LightEditor.init() mounts its full UI here at runtime -->
         </div>
 
         <!-- ENTITIES PANEL -->
@@ -575,6 +581,7 @@
 
 <script src="fps_editor/BrushTools.js"></script>
 <script src="fps_editor/ColorPalette.js"></script>
+<script src="fps_editor/LightEditor.js"></script>
 <script src="fps_editor.js"></script>
 </body>
 </html>

@@ -38,6 +38,8 @@ const FPSEditor = (() => {
         voxelGrid:   {},
         entities:    [],
         triggers:    [],
+        lights:      [],          // managed by LightEditor
+        emissiveBlocks: {},       // { "x,y,z": true }
         fog:         { color: '#1a1208', near: 8, far: 30 },
         ambient:     '#1a1208',
         sun:         '#ffcc88',
@@ -173,6 +175,27 @@ const FPSEditor = (() => {
             ctx.strokeRect(tx, ty, tw, th);
         }
 
+        // point-light gizmos (Phase 39)
+        for (const lt of _state.lights) {
+            const lx = _pan2d.x + lt.x * _zoom2d;
+            const lz = _pan2d.y + lt.z * _zoom2d;
+            const lr = Math.max(4, lt.radius * _zoom2d);
+            // radius circle (faint)
+            ctx.beginPath();
+            ctx.arc(lx, lz, lr, 0, Math.PI * 2);
+            ctx.strokeStyle = lt.color + '55';
+            ctx.lineWidth   = 1;
+            ctx.stroke();
+            // centre dot
+            ctx.beginPath();
+            ctx.arc(lx, lz, Math.max(4, cs * 0.35), 0, Math.PI * 2);
+            ctx.fillStyle   = lt.color;
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth   = 1;
+            ctx.stroke();
+        }
+
         // rect-stamp live preview
         if (_rectDrag && (_activeTool === 'draw-room' || _activeTool === 'corridor')) {
             const cs   = _state.cellSize * _zoom2d;
@@ -241,6 +264,13 @@ const FPSEditor = (() => {
         const wz = (cy - _pan2d.y) / _zoom2d;
         document.getElementById('tool-coords').textContent =
             `X: ${wx.toFixed(2)}   Y: ${_state.floorY.toFixed(2)}   Z: ${wz.toFixed(2)}`;
+
+        // track hovered voxel key for LightEditor emissive tool (Phase 39)
+        if (typeof LightEditor !== 'undefined') {
+            const { gx, gz } = _screenToGrid(cx, cy);
+            const key = `${gx},0,${gz}`;
+            LightEditor._hoveredKey = (_state.voxelGrid[key]) ? key : null;
+        }
 
         if (_drag2d) {
             _pan2d.x = _drag2d.px + (cx - _drag2d.cx);
@@ -340,6 +370,18 @@ const FPSEditor = (() => {
             markDirty();
             _updateEntityCount();
             _painting2d = false;  // single-click only for entities
+
+        } else if (_activeTool === 'light' && !isErase) {
+            // Phase 39: place a point light at clicked world position
+            if (typeof LightEditor !== 'undefined') {
+                const worldY = _state.floorY + _state.ceilingH * 0.5;
+                const activeHex = (typeof ColorPalette !== 'undefined')
+                    ? ColorPalette.getActive().hex
+                    : _activeColor;
+                LightEditor.addLight(rawX, worldY, rawZ, activeHex, 1.0, 8, 'Light');
+                // _state.lights updated via onChanged callback
+            }
+            _painting2d = false;
         }
     }
 
@@ -386,10 +428,12 @@ const FPSEditor = (() => {
         const gridHelper = new THREE.GridHelper(40, 40, 0x2a2018, 0x1a1208);
         scene.add(gridHelper);
 
-        const meshGroup = new THREE.Group();
+        const meshGroup  = new THREE.Group();
         scene.add(meshGroup);
+        const lightGroup = new THREE.Group();
+        scene.add(lightGroup);
 
-        _three = { scene, camera, renderer, meshGroup, dirLight, gridHelper };
+        _three = { scene, camera, renderer, meshGroup, lightGroup, dirLight, gridHelper };
 
         // Orbit controls via pointer events
         canvas.addEventListener('pointerdown', _on3dDown);
@@ -442,7 +486,30 @@ const FPSEditor = (() => {
             // ── Greedy mesh path (Phase 37) ───────────────────────────────────
             const groups = BrushTools.buildGreedyMesh(_state.voxelGrid, cs);
             const meshes = BrushTools.buildThreeGeometries(groups, THREE);
-            for (const m of meshes) group.add(m);
+            for (const m of meshes) {
+                // Phase 39: apply emissive to blocks whose keys are flagged
+                // BrushTools groups by color so we do a per-vertex check on rebuild
+                group.add(m);
+            }
+            // Apply emissive per-mesh based on emissiveBlocks set
+            if (Object.keys(_state.emissiveBlocks).length) {
+                group.traverse(m => {
+                    if (!m.isMesh) return;
+                    const hex = m.material.color?.getHexString?.();
+                    if (!hex) return;
+                    // Check if any emissive block shares this mesh's color
+                    let glows = false;
+                    for (const key of Object.keys(_state.emissiveBlocks)) {
+                        const cell = _state.voxelGrid[key];
+                        if (cell && (cell.color || '#888888') === `#${hex}`) { glows = true; break; }
+                    }
+                    if (glows) {
+                        m.material = m.material.clone();
+                        m.material.emissive = new THREE.Color(`#${hex}`);
+                        m.material.emissiveIntensity = 0.6;
+                    }
+                });
+            }
         } else {
             // ── Fallback: one box per block ───────────────────────────────────
             for (const key in _state.voxelGrid) {
@@ -473,6 +540,23 @@ const FPSEditor = (() => {
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(trg.x + trg.w/2, _state.floorY + (trg.h||2)/2, trg.z + trg.d/2);
             group.add(mesh);
+        }
+
+        // ── Point lights (Phase 39) ───────────────────────────────────────────
+        if (_three.lightGroup) {
+            const lg = _three.lightGroup;
+            while (lg.children.length) lg.remove(lg.children[0]);
+            for (const lt of _state.lights) {
+                const pl = new THREE.PointLight(lt.color, lt.intensity, lt.radius, 2);
+                pl.position.set(lt.x, lt.y, lt.z);
+                lg.add(pl);
+                // small helper sphere so the light is visible in the viewport
+                const sg = new THREE.SphereGeometry(0.12, 5, 4);
+                const sm = new THREE.MeshBasicMaterial({ color: lt.color });
+                const sh = new THREE.Mesh(sg, sm);
+                sh.position.copy(pl.position);
+                lg.add(sh);
+            }
         }
 
         if (_shading === 'wireframe') {
@@ -748,9 +832,12 @@ const FPSEditor = (() => {
     // ── map I/O ──────────────────────────────────────────────────────────────
     function newMap() {
         if (_state.dirty && !confirm('Discard unsaved changes?')) return;
-        _state.voxelGrid = {};
-        _state.entities  = [];
-        _state.triggers  = [];
+        _state.voxelGrid      = {};
+        _state.entities       = [];
+        _state.triggers       = [];
+        _state.lights         = [];
+        _state.emissiveBlocks = {};
+        if (typeof LightEditor !== 'undefined') LightEditor.fromData({ lights: [], emissiveBlocks: {} });
         _clearDirty();
         _undoStack.length = 0;
         _redoStack.length = 0;
@@ -825,21 +912,26 @@ const FPSEditor = (() => {
         const palette = (typeof ColorPalette !== 'undefined')
             ? ColorPalette.toArray()
             : DEFAULT_PALETTE;
+        const lightsData = (typeof LightEditor !== 'undefined')
+            ? LightEditor.toData()
+            : { lights: _state.lights, emissiveBlocks: _state.emissiveBlocks };
         return {
-            version:   2,
-            mapName:   _state.mapName,
-            author:    _state.author,
-            project:   _state.project,
-            cellSize:  _state.cellSize,
-            ceilingH:  _state.ceilingH,
-            floorY:    _state.floorY,
+            version:        2,
+            mapName:        _state.mapName,
+            author:         _state.author,
+            project:        _state.project,
+            cellSize:       _state.cellSize,
+            ceilingH:       _state.ceilingH,
+            floorY:         _state.floorY,
             palette,
-            fog:       _state.fog,
-            ambient:   _state.ambient,
-            sun:       _state.sun,
-            voxelGrid: _state.voxelGrid,
-            entities:  _state.entities,
-            triggers:  _state.triggers,
+            fog:            _state.fog,
+            ambient:        _state.ambient,
+            sun:            _state.sun,
+            lights:         lightsData.lights,
+            emissiveBlocks: lightsData.emissiveBlocks,
+            voxelGrid:      _state.voxelGrid,
+            entities:       _state.entities,
+            triggers:       _state.triggers,
         };
     }
 
@@ -861,6 +953,15 @@ const FPSEditor = (() => {
         if (typeof ColorPalette !== 'undefined' && Array.isArray(data.palette)) {
             ColorPalette.loadFromArray(data.palette);
         }
+        // restore lights into LightEditor if available
+        if (typeof LightEditor !== 'undefined') {
+            LightEditor.fromData({
+                lights:         data.lights         || [],
+                emissiveBlocks: data.emissiveBlocks || {},
+            });
+        }
+        _state.lights         = data.lights         || [];
+        _state.emissiveBlocks = data.emissiveBlocks || {};
 
         // update UI fields
         document.getElementById('map-name').value    = _state.mapName;
@@ -1044,7 +1145,20 @@ const FPSEditor = (() => {
             document.getElementById('map-project').value = project;
         }
 
-        console.log('[FPSEditor] Phase 38 ColorPalette ready');
+        // Init light editor (Phase 39)
+        if (typeof LightEditor !== 'undefined') {
+            const litMount = document.getElementById('tab-lights');
+            LightEditor.init(litMount);
+            LightEditor.onChanged(() => {
+                const data = LightEditor.toData();
+                _state.lights         = data.lights;
+                _state.emissiveBlocks = data.emissiveBlocks;
+                markDirty();
+                _rebuild3d();
+            });
+        }
+
+        console.log('[FPSEditor] Phase 39 LightEditor ready');
     }
 
     window.addEventListener('DOMContentLoaded', _init);
