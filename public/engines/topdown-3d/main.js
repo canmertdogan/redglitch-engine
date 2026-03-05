@@ -41,6 +41,7 @@ import Raycast3D,
        { LayerMask }            from '../shared/Raycast3D.js';
 import TopDownCamera3D          from './TopDownCamera3D.js';
 import TerrainSystem3D, { BlockType } from './TerrainSystem3D.js';
+import EntitySystem3D, { AIState, Entity3D } from './EntitySystem3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -156,6 +157,11 @@ class TopDownGame3D extends Engine3DAdapter {
 
         // ── Terrain (Phase 13) ─────────────────────────────────────────────
         this.terrain = new TerrainSystem3D(this.scene, this.palette, this.physics);
+
+        // ── Entities (Phase 14) ────────────────────────────────────────────
+        this.entities = new EntitySystem3D(
+            this.scene, this.assets, this.physics, this.palette, this.terrain
+        );
         this.topdownCamera = new TopDownCamera3D(this.renderer3d.camera, container, {
             pitch:       55,
             zoom:        24,
@@ -350,7 +356,10 @@ class TopDownGame3D extends Engine3DAdapter {
      * selectUnit(id) — add a unit to the selection set.
      */
     selectUnit(id) {
-        if (!this.selectedUnits.includes(id)) this.selectedUnits.push(id);
+        if (!this.selectedUnits.includes(id)) {
+            this.selectedUnits.push(id);
+            this.entities?.setSelected(this.selectedUnits);
+        }
     }
 
     /**
@@ -358,6 +367,7 @@ class TopDownGame3D extends Engine3DAdapter {
      */
     deselectAll() {
         this.selectedUnits = [];
+        this.entities?.setSelected([]);
     }
 
     // ── Save / Load ───────────────────────────────────────────────────────────
