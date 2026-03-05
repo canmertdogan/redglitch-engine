@@ -178,6 +178,62 @@ app.use('/api/ide', ideRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/build', buildRouter);
 
+// ── /api/project-file — generic project-relative file read/write ─────────────
+// Used by topdown3d_editor.js and terrain_tools.js to save arbitrary
+// project files (level JSON, palette JSON, etc.) without encoding them
+// as saves or level objects.
+//
+// POST  { project, path, content }  — write file (content is a string)
+// GET   ?project=&path=             — read file (returns { content } JSON)
+(function () {
+    const { resolveUnderRoot } = require('./server/utils/pathGuard');
+    const fss = require('fs').promises;
+    const PROJECTS_ROOT = path.resolve(__dirname, 'projects');
+
+    function resolveFilePath(project, relPath) {
+        const safeProject = (project || '').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
+        if (!safeProject || safeProject !== project) return null;
+        // relPath must stay within the project directory
+        const projectDir = path.join(PROJECTS_ROOT, safeProject);
+        const full = path.resolve(projectDir, relPath);
+        if (!full.startsWith(projectDir + path.sep) && full !== projectDir) return null;
+        return full;
+    }
+
+    app.post('/api/project-file', async (req, res) => {
+        const { project, path: relPath, content } = req.body;
+        if (!project || !relPath || typeof content !== 'string') {
+            return res.status(400).json({ error: 'project, path, and content are required' });
+        }
+        const fullPath = resolveFilePath(project, relPath);
+        if (!fullPath) return res.status(400).json({ error: 'Invalid project or path' });
+        try {
+            await fss.mkdir(path.dirname(fullPath), { recursive: true });
+            await fss.writeFile(fullPath, content, 'utf8');
+            res.json({ ok: true, path: relPath });
+        } catch (err) {
+            console.error('[project-file] write error:', err.message);
+            res.status(500).json({ error: 'Write failed' });
+        }
+    });
+
+    app.get('/api/project-file', async (req, res) => {
+        const { project, path: relPath } = req.query;
+        if (!project || !relPath) {
+            return res.status(400).json({ error: 'project and path are required' });
+        }
+        const fullPath = resolveFilePath(project, relPath);
+        if (!fullPath) return res.status(400).json({ error: 'Invalid project or path' });
+        try {
+            const content = await fss.readFile(fullPath, 'utf8');
+            res.json({ ok: true, content });
+        } catch (err) {
+            if (err.code === 'ENOENT') return res.status(404).json({ error: 'File not found' });
+            res.status(500).json({ error: 'Read failed' });
+        }
+    });
+})();
+
 app.post('/api/save-spritesheet', async (req, res) => {
     try {
         const dataUrl = req.body.image;
