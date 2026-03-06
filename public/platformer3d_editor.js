@@ -212,6 +212,18 @@ const Pf3dEditor = (() => {
             _lastTime = now;
             if (typeof PathEditor3D !== 'undefined') PathEditor3D.update(dt);
             if (typeof HazardEditor !== 'undefined') HazardEditor.update(dt);
+            // WASD fly-cam
+            if (_canvasHovered && _flyKeysHeld.size) {
+                const sinT = Math.sin(_orbitTheta), cosT = Math.cos(_orbitTheta);
+                const speed = _orbitDist * 0.015;
+                if (_flyKeysHeld.has('w')) { _orbitCenter.x -= sinT * speed; _orbitCenter.z -= cosT * speed; }
+                if (_flyKeysHeld.has('s')) { _orbitCenter.x += sinT * speed; _orbitCenter.z += cosT * speed; }
+                if (_flyKeysHeld.has('a')) { _orbitCenter.x -= cosT * speed; _orbitCenter.z += sinT * speed; }
+                if (_flyKeysHeld.has('d')) { _orbitCenter.x += cosT * speed; _orbitCenter.z -= sinT * speed; }
+                if (_flyKeysHeld.has('q')) _orbitCenter.y += speed;
+                if (_flyKeysHeld.has('e')) _orbitCenter.y -= speed;
+                _updateOrbitCamera();
+            }
             _renderer.render(_scene, _camera);
         };
         tick();
@@ -242,9 +254,19 @@ const Pf3dEditor = (() => {
         canvas.addEventListener('mouseup',     _onMouseUp);
         canvas.addEventListener('wheel',       _onWheel, { passive: false });
 
+        // WASD fly-cam hover tracking
+        canvas.addEventListener('pointerenter', () => { _canvasHovered = true; });
+        canvas.addEventListener('pointerleave', () => { _canvasHovered = false; _flyKeysHeld.clear(); });
+
         window.addEventListener('resize',  () => { _resizeRenderer(); });
         window.addEventListener('keydown', _onKeyDown);
+        window.addEventListener('keyup',   e => { _flyKeysHeld.delete(e.key.toLowerCase()); });
     }
+
+    // WASD fly-cam state
+    const _flyKeysSet = new Set(['w','a','s','d','q','e']);
+    const _flyKeysHeld = new Set();
+    let _canvasHovered = false;
 
     let _gizmoAxisDragging = null;  // active gizmo axis during drag
 
@@ -401,6 +423,12 @@ const Pf3dEditor = (() => {
 
     function _onKeyDown(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        // WASD fly-cam: consume keys when canvas is hovered (priority over tool shortcuts)
+        if (_canvasHovered && _flyKeysSet.has(e.key.toLowerCase()) && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            _flyKeysHeld.add(e.key.toLowerCase());
+            return;
+        }
         if (e.ctrlKey || e.metaKey) {
             switch (e.key) {
                 case 'z': case 'Z': undo(); break;
