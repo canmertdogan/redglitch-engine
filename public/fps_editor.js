@@ -565,11 +565,12 @@ const FPSEditor = (() => {
     }
 
     function _setCam3dFromOrbit(cam) {
+        cam = cam || _three?.camera;
+        if (!cam) return;
         const o = _orbitState;
         const x = o.target.x + o.radius * Math.sin(o.phi) * Math.sin(o.theta);
         const y = o.target.y + o.radius * Math.cos(o.phi);
         const z = o.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta);
-        cam = cam || _three.camera;
         cam.position.set(x, y, z);
         cam.lookAt(o.target.x, o.target.y, o.target.z);
     }
