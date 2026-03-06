@@ -48,6 +48,12 @@ import AbilitySystem3D, { AbilityShape, DamageType, BuffType } from './AbilitySy
 import VFXSystem3D, { EffectType } from './VFXSystem3D.js';
 import Minimap3D from './Minimap3D.js';
 import TopDown3DStrategy from './TopDown3DStrategy.js';
+import {
+    serializeSavePayload3D,
+    deserializeSavePayload3D,
+    serialize3DPlayerState,
+    deserialize3DPlayerState,
+} from '../shared/Save3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -499,30 +505,52 @@ class TopDownGame3D extends Engine3DAdapter {
     }
 
     _buildSavePayload() {
-        return {
+        // Snapshot the hero-unit mesh for positional state if available
+        const heroMesh = this.entities?.getHero?.()?.mesh ?? null;
+        return serializeSavePayload3D('topdown-3d', {
             version:        this.version,
-            engineType:     'topdown-3d',
             project:        this.currentProject,
             levelId:        this._levelId,
             gameTime:       this.gameTime,
             selectedUnits:  [...this.selectedUnits],
-            fogExplored:    this.fogOfWar?.serialize()          || null,
-            entityStates:   this.entities?.serialize()         || null,
-            abilityStates:  this.abilities?.serialize()        || null,
-            timestamp:      Date.now(),
-            cameraState:    this.topdownCamera?.serialize() || null,
-        };
+            player:         serialize3DPlayerState(heroMesh, {
+                hp:    this.player?.hp    ?? 100,
+                maxHp: this.player?.maxHp ?? 100,
+            }),
+            // topdown-3d has no platformer checkpoints; checkpoint = last level/portal
+            lastCheckpoint: this._levelId ? { id: this._levelId, levelId: this._levelId } : null,
+            // Collected interactables this session (populated by EntitySystem3D)
+            collectedItems: this.entities?.getCollectedIds?.() ?? [],
+            levelState: {
+                fog:          this.fogOfWar?.serialize()    || null,
+                entityStates: this.entities?.serialize()   || null,
+                abilityStates:this.abilities?.serialize()  || null,
+                cameraState:  this.topdownCamera?.serialize() || null,
+            },
+        });
     }
 
-    async _applySavePayload(data) {
+    async _applySavePayload(raw) {
+        const data = deserializeSavePayload3D(raw, 'topdown-3d');
+        if (!data) return; // schema mismatch or 2D save — silently skip
+
         if (data.project && data.levelId) {
             await this.loadProject(data.project, data.levelId);
         }
-        if (data.gameTime)    this.gameTime = data.gameTime;
-        if (data.fogExplored) this.fogOfWar?.deserialize(data.fogExplored);
-        if (data.entityStates) this.entities?.deserialize(data.entityStates);
-        if (data.abilityStates) this.abilities?.deserialize(data.abilityStates);
-        if (data.cameraState)   this.topdownCamera?.deserialize(data.cameraState);
+        if (data.gameTime !== undefined) this.gameTime = data.gameTime;
+
+        const ls = data.levelState ?? {};
+        if (ls.fog)          this.fogOfWar?.deserialize(ls.fog);
+        if (ls.entityStates) this.entities?.deserialize(ls.entityStates);
+        if (ls.abilityStates)this.abilities?.deserialize(ls.abilityStates);
+        if (ls.cameraState)  this.topdownCamera?.deserialize(ls.cameraState);
+
+        // Restore player vitals from 3D player state
+        const ps = deserialize3DPlayerState(data.player);
+        if (ps && this.player) {
+            if (ps.hp    !== undefined) this.player.hp    = ps.hp;
+            if (ps.maxHp !== undefined) this.player.maxHp = ps.maxHp;
+        }
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

@@ -88,6 +88,7 @@ export default class CollectibleSystem3D {
         /** @type {Map<string, CollectibleItem>} */
         this._items        = new Map();
         this._nextId       = 1;
+        this._collectedIds = new Set();  // IDs of already-collected items (for save/load)
 
         // Running totals
         this._coins        = 0;
@@ -305,6 +306,7 @@ export default class CollectibleSystem3D {
         item.mesh.geometry?.dispose();
         item.mesh.material?.dispose();
         this._items.delete(item.id);
+        this._collectedIds.add(item.id);  // remember for save/load
 
         // Score
         if (def.score > 0) {
@@ -431,6 +433,16 @@ export default class CollectibleSystem3D {
     /** Was a specific star collected? */
     hasCollectedStar(id) { return this._stars.includes(id); }
 
+    /** Returns an Array of all collectible IDs picked up since last clear(). For save/load. */
+    getCollectedIds() { return [...this._collectedIds]; }
+
+    /**
+     * Mark an item as already collected without spawning or animating it.
+     * Called during load to suppress re-spawning items the player already picked up.
+     * @param {string} id
+     */
+    markCollected(id) { this._collectedIds.add(id); }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Reset / clear
     // ─────────────────────────────────────────────────────────────────────────
@@ -442,6 +454,7 @@ export default class CollectibleSystem3D {
             item.mesh.material?.dispose();
         }
         this._items.clear();
+        this._collectedIds.clear();
         for (const p of this._popups) p.el.remove();
         this._popups.length = 0;
     }

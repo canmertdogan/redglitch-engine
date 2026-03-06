@@ -42,6 +42,12 @@ import FPSController, { MoveState } from './FPSController.js';
 import WorldGeometry            from './WorldGeometry.js';
 import WeaponSystem, { WeaponState } from './WeaponSystem.js';
 import EnemyAI, { EnemyState, Difficulty } from './EnemyAI.js';
+import {
+    serializeSavePayload3D,
+    deserializeSavePayload3D,
+    serialize3DPlayerState,
+    deserialize3DPlayerState,
+} from '../shared/Save3D.js';
 import HUD_FPS from './HUD_FPS.js';
 import DecalSystem from './DecalSystem.js';
 import VFX_FPS from './VFX_FPS.js';
@@ -74,6 +80,8 @@ class FPSGame extends Engine3DAdapter {
         // Player vitals (populated by save/load + weapon/damage systems)
         this._health        = 100;
         this._ammo          = { current: 30, reserve: 90 };
+        this._collectedItems = new Set();   // item IDs picked up this level
+        this._lastCheckpoint = null;        // { id, position[3] } set at spawn-zone triggers
 
         // ── Shared systems (Phase 3–9, instantiated in init()) ─────────────
         this.renderer3d     = null;   // Renderer3D
@@ -567,35 +575,58 @@ class FPSGame extends Engine3DAdapter {
     }
 
     _buildSavePayload() {
-        return {
+        const playerPos = this.strategy?.getPlayerPosition() ?? null;
+        const playerQuat = this.fpsCamera ? { x: 0, y: 0, z: 0, w: 1 } : null; // yaw stored in cameraState
+        return serializeSavePayload3D('fps-3d', {
             version:         this.version,
-            engineType:      'fps-3d',
             project:         this.currentProject,
             levelId:         this._levelId,
             gameTime:        this.gameTime,
-            health:          this._health,
-            ammo:            this._ammo,
-            playerPos:       this.strategy?.getPlayerPosition()    ?? null,
-            cameraState:     this.fpsCamera?.serialize()           ?? null,
-            controllerState: this.fpsController?.serialize()       ?? null,
-            weaponState:     this.weaponSystem?.serialize()        ?? null,
-            enemyState:      this.enemyAI?.serialize()             ?? null,
-            timestamp:       Date.now(),
-        };
+            player:          serialize3DPlayerState(
+                playerPos ? { position: { x: playerPos[0], y: playerPos[1], z: playerPos[2] }, quaternion: playerQuat } : null,
+                { hp: this._health, maxHp: 100 }
+            ),
+            // Checkpoint = last spawn point reached (doorway / respawn zone)
+            lastCheckpoint: this._lastCheckpoint ?? null,
+            // Keys/items picked up this level
+            collectedItems: this._collectedItems ? [...this._collectedItems] : [],
+            levelState: {
+                ammo:            this._ammo,
+                cameraState:     this.fpsCamera?.serialize()     ?? null,
+                controllerState: this.fpsController?.serialize() ?? null,
+                weaponState:     this.weaponSystem?.serialize()  ?? null,
+                enemyState:      this.enemyAI?.serialize()       ?? null,
+            },
+        });
     }
 
-    async _applySavePayload(data) {
+    async _applySavePayload(raw) {
+        const data = deserializeSavePayload3D(raw, 'fps-3d');
+        if (!data) return; // schema mismatch or 2D save — silently skip
+
         if (data.project && data.levelId) {
             await this.loadProject(data.project, data.levelId);
         }
         if (data.gameTime !== undefined) this.gameTime = data.gameTime;
-        if (data.health   !== undefined) this._health  = data.health;
-        if (data.ammo     !== undefined) this._ammo    = data.ammo;
-        if (data.playerPos)       this.strategy?.setSpawnPoint(data.playerPos);
-        if (data.cameraState)     this.fpsCamera?.deserialize(data.cameraState);
-        if (data.controllerState) this.fpsController?.deserialize(data.controllerState);
-        if (data.weaponState)     this.weaponSystem?.deserialize(data.weaponState);
-        if (data.enemyState)      this.enemyAI?.deserialize(data.enemyState);
+
+        // Restore player vitals + position
+        const ps = deserialize3DPlayerState(data.player);
+        if (ps) {
+            if (ps.hp !== undefined) this._health = ps.hp;
+            if (ps.position) this.strategy?.setSpawnPoint(ps.position);
+        }
+
+        // Restore collected items set
+        if (Array.isArray(data.collectedItems)) {
+            this._collectedItems = new Set(data.collectedItems);
+        }
+
+        const ls = data.levelState ?? {};
+        if (ls.ammo            !== undefined) this._ammo = ls.ammo;
+        if (ls.cameraState)     this.fpsCamera?.deserialize(ls.cameraState);
+        if (ls.controllerState) this.fpsController?.deserialize(ls.controllerState);
+        if (ls.weaponState)     this.weaponSystem?.deserialize(ls.weaponState);
+        if (ls.enemyState)      this.enemyAI?.deserialize(ls.enemyState);
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────

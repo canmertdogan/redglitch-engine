@@ -261,6 +261,11 @@ export default class CheckpointSystem3D {
         return cp?.pos.clone() ?? this._startPos?.clone() ?? new THREE.Vector3();
     }
 
+    /** Returns the ID of the last activated checkpoint (or null before first activation). */
+    getActiveCPId() {
+        return this._activeId === '__spawn__' ? null : (this._activeId ?? null);
+    }
+
     get timeSec() { return this._levelTimeSec; }
     get deathY()  { return this._deathY; }
 

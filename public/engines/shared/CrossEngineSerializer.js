@@ -409,10 +409,12 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
      */
     static serializeEntity3D(entity) {
         if (!entity) return null;
+        const v = entity.velocity ?? entity._velocity ?? entity.body?.velocity ?? { x:0, y:0, z:0 };
         return {
             id:         entity.id   || entity.name || '',
             type:       entity.type || 'entity',
             transform:  CrossEngineSerializer.serializeTransform3D(entity),
+            velocity:   [v.x ?? 0, v.y ?? 0, v.z ?? 0],
             properties: { ...(entity.properties || entity.userData || {}) },
         };
     }
@@ -431,6 +433,7 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
             position:   t.position || [0,0,0],
             rotation:   t.rotation || [0,0,0,1],
             scale:      t.scale    || [1,1,1],
+            velocity:   Array.isArray(data.velocity) ? data.velocity : [0,0,0],
             properties: { ...(data.properties || {}) },
         };
     }

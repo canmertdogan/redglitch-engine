@@ -46,6 +46,12 @@ import CharacterController3D, { MoveState } from './CharacterController3D.js';
 import PlayerCharacter3D        from './PlayerCharacter3D.js';
 import CollectibleSystem3D      from './CollectibleSystem3D.js';
 import CheckpointSystem3D       from './CheckpointSystem3D.js';
+import {
+    serializeSavePayload3D,
+    deserializeSavePayload3D,
+    serialize3DPlayerState,
+    deserialize3DPlayerState,
+} from '../shared/Save3D.js';
 import EnemyPlatformer3D, { EnemyState } from './EnemyPlatformer3D.js';
 import VFX_Platformer3D              from './VFX_Platformer3D.js';
 
@@ -555,32 +561,84 @@ class Platformer3DGame extends Engine3DAdapter {
     // Save / load
     // ─────────────────────────────────────────────────────────────────────────
 
-    async saveGame() {
+    async saveGame(slot = this.saveSlot) {
         if (!this.username) return;
-        const data = {
-            lives:  this._lives,
-            health: this._health,
-            coins:  this._coins,
-            score:  this._score,
-            checkpoint: this._checkpoint,
-        };
+        const payload = this._buildSavePayload();
         const res = await fetch(
-            `/api/save/${encodeURIComponent(this.username)}/${this.saveSlot}`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }
+            `/api/save/${encodeURIComponent(this.username)}/${slot}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
         );
         if (!res.ok) throw new Error(`Save failed: ${res.status}`);
+        console.log(`[Platformer3D] Game saved: slot ${slot}`);
     }
 
-    async loadGame() {
+    async loadGame(slot = this.saveSlot) {
         if (!this.username) return;
-        const res = await fetch(`/api/save/${encodeURIComponent(this.username)}/${this.saveSlot}`);
+        const res = await fetch(`/api/save/${encodeURIComponent(this.username)}/${slot}`);
         if (!res.ok) return;
-        const data = await res.json();
-        this._lives      = data.lives  ?? MAX_LIVES;
-        this._health     = data.health ?? 3;
-        this._coins      = data.coins  ?? 0;
-        this._score      = data.score  ?? 0;
-        this._checkpoint = data.checkpoint ?? null;
+        const raw = await res.json();
+        await this._applySavePayload(raw);
+        console.log(`[Platformer3D] Game loaded: slot ${slot}`);
+    }
+
+    _buildSavePayload() {
+        const playerMesh = this.charController
+            ? { position: this.charController.getPosition?.() ?? { x:0, y:0, z:0 },
+                quaternion: this.playerChar?.mesh?.quaternion ?? null,
+                _velocity:  this.charController._velocity ?? null }
+            : null;
+        const cpPos = this.checkpoints?.getActiveCPPosition?.() ?? this._checkpoint?.position ?? null;
+        return serializeSavePayload3D('platformer-3d', {
+            version:  this.version,
+            project:  this.currentProject,
+            levelId:  this._levelId,
+            player:   serialize3DPlayerState(playerMesh, {
+                hp:    this._health,
+                lives: this._lives,
+                coins: this._coins,
+                score: this._score,
+            }),
+            lastCheckpoint: cpPos
+                ? { id: this.checkpoints?.getActiveCPId?.() ?? null,
+                    position: [cpPos.x ?? cpPos[0], cpPos.y ?? cpPos[1], cpPos.z ?? cpPos[2]] }
+                : null,
+            // IDs of collectibles already picked up in the current level
+            collectedItems: this.collectibles?.getCollectedIds?.() ?? [],
+            levelState: {
+                levelId: this._levelId,
+            },
+        });
+    }
+
+    async _applySavePayload(raw) {
+        const data = deserializeSavePayload3D(raw, 'platformer-3d');
+        if (!data) return; // schema mismatch or 2D save
+
+        if (data.project && data.levelId) {
+            await this.loadProject(data.project, data.levelId);
+        }
+
+        const ps = deserialize3DPlayerState(data.player);
+        if (ps) {
+            if (ps.hp    !== undefined) this._health = ps.hp;
+            if (ps.lives !== undefined) this._lives  = ps.lives;
+            if (ps.coins !== undefined) this._coins  = ps.coins;
+            if (ps.score !== undefined) this._score  = ps.score;
+        }
+
+        // Restore checkpoint position so player respawns correctly
+        const cp = data.lastCheckpoint;
+        if (cp?.position) {
+            this._checkpoint = {
+                position: { x: cp.position[0], y: cp.position[1], z: cp.position[2] },
+                state:    { coins: this._coins, score: this._score },
+            };
+        }
+
+        // Mark already-collected items so they don't respawn
+        if (Array.isArray(data.collectedItems) && this.collectibles?.markCollected) {
+            for (const id of data.collectedItems) this.collectibles.markCollected(id);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
