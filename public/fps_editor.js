@@ -51,6 +51,7 @@ const FPSEditor = (() => {
     let LowPolyTerrainGen = null;
     import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
     let _activeBlock  = 'floor';
+    let _activeTool   = 'draw-room';
     let _drawMode     = 'pencil';
     let _activeColor  = '#888888';  // kept in sync with ColorPalette.getActive()
     let _activeEntity = 'player-spawn';

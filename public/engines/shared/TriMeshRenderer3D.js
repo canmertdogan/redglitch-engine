@@ -5,7 +5,10 @@
  * No PBR, no textures — palette colors only.
  */
 
-import * as THREE from '/lib/three/three.module.js';
+import * as _THREE_MOD from '/lib/three/three.module.js';
+// Prefer the globally-loaded THREE (three.min.js) to avoid duplicate-instance warnings.
+// Fall back to the ES module namespace when running outside a browser context.
+const THREE = (typeof globalThis !== 'undefined' && globalThis.THREE) || _THREE_MOD;
 
 export default class TriMeshRenderer3D {
   /**

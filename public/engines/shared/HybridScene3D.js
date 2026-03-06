@@ -5,7 +5,8 @@
  * Provides frustum culling, draw-call budgeting, and a unified remove/visibility API.
  */
 
-import * as THREE from '/lib/three/three.module.js';
+import * as _THREE_MOD from '/lib/three/three.module.js';
+const THREE = (typeof globalThis !== 'undefined' && globalThis.THREE) || _THREE_MOD;
 import TriMeshRenderer3D from './TriMeshRenderer3D.js';
 
 export default class HybridScene3D {

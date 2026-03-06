@@ -214,7 +214,7 @@ window.BlockTools = (() => {
     function buildMaterial(colorIdx, wireframe = false) {
         const pal   = _palette || _defaultPalette();
         const color = pal[Math.max(0, Math.min(255, colorIdx ?? 12))];
-        return new THREE.MeshLambertMaterial({ color, flatShading: true, wireframe });
+        return new THREE.MeshPhongMaterial({ color, flatShading: true, shininess: 0, wireframe });
     }
 
     function _defaultPalette() {
@@ -402,11 +402,11 @@ window.BlockTools = (() => {
         for (const a of axes) {
             // Shaft
             const shaftGeo = new THREE.CylinderGeometry(shaftRadius, shaftRadius, arrowLen - arrowHead, 6);
-            const shaftMat = new THREE.MeshLambertMaterial({ color: a.color, flatShading: true });
+            const shaftMat = new THREE.MeshPhongMaterial({ color: a.color, flatShading: true, shininess: 0 });
             const shaft    = new THREE.Mesh(shaftGeo, shaftMat);
             // Cone tip
             const coneGeo  = new THREE.ConeGeometry(arrowHead * 0.6, arrowHead, 6);
-            const coneMat  = new THREE.MeshLambertMaterial({ color: a.color, flatShading: true });
+            const coneMat  = new THREE.MeshPhongMaterial({ color: a.color, flatShading: true, shininess: 0 });
             const cone     = new THREE.Mesh(coneGeo, coneMat);
             cone.position.y = (arrowLen - arrowHead) / 2 + arrowHead / 2;
             const group    = new THREE.Group();

@@ -109,9 +109,10 @@
 
         _buildAllMeshes() {
             for (const bt of BLOCK_TYPES) {
-                const mat = new this._THREE.MeshLambertMaterial({
+                const mat = new this._THREE.MeshPhongMaterial({
                     color: new this._THREE.Color(bt.color),
                     flatShading: true,
+                    shininess: 0,
                 });
                 const im = new this._THREE.InstancedMesh(this._blockGeo, mat, this._MAX_INSTANCES);
                 im.count = 0;

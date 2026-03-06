@@ -225,7 +225,7 @@
 
         const geo = new THREE.PlaneGeometry(w, h, Math.floor(w / cellSize), Math.floor(h / cellSize));
         geo.rotateX(-Math.PI / 2);
-        const mat = new THREE.MeshLambertMaterial({ color: 0x2e7d32, flatShading: true });
+        const mat = new THREE.MeshPhongMaterial({ color: 0x2e7d32, flatShading: true, shininess: 0 });
         terrainMesh = new THREE.Mesh(geo, mat);
         terrainMesh.userData.isTerrain = true;
         scene.add(terrainMesh);

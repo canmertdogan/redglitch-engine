@@ -5,7 +5,8 @@
  * No textures, no UV maps — palette color bands only.
  */
 
-import * as THREE from '/lib/three/three.module.js';
+import * as _THREE_MOD from '/lib/three/three.module.js';
+const THREE = (typeof globalThis !== 'undefined' && globalThis.THREE) || _THREE_MOD;
 import TriMeshRenderer3D from './TriMeshRenderer3D.js';
 
 /** Default height-band colors (hex integers). */
