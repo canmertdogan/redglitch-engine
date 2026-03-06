@@ -4,5 +4,8 @@
   "author": "Ketebe Studio",
   "version": "0.1.0",
   "description": "FPS 3D engine demonstration project",
-  "startLevel": "demo_level"
+  "startLevel": "demo_level",
+  "renderQuality": "medium",
+  "physics3D": true,
+  "shadowQuality": true
 }

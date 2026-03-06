@@ -7,5 +7,8 @@
   "startLevel": "level01",
   "palette": "default",
   "maxLives": 3,
-  "startCoins": 0
+  "startCoins": 0,
+  "renderQuality": "medium",
+  "physics3D": true,
+  "shadowQuality": true
 }

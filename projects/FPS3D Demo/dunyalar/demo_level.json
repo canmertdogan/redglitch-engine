@@ -2,11 +2,279 @@
   "id": "demo_level",
   "name": "Demo Level",
   "engineType": "fps-3d",
-  "playerSpawn": { "x": 0, "y": 1.8, "z": 0 },
-  "physics": { "gravity": [0, -9.82, 0] },
-  "entities": [],
+  "playerSpawn": {
+    "x": 0,
+    "y": 1.8,
+    "z": 0
+  },
+  "roomSize": 30,
+  "roomHeight": 4,
+  "physics": {
+    "gravity": [
+      0,
+      -9.82,
+      0
+    ]
+  },
+  "enemies": [
+    {
+      "id": "guard_01",
+      "position": [
+        8,
+        0,
+        -8
+      ],
+      "properties": {
+        "hp": 80,
+        "maxHp": 80,
+        "speed": 2.5,
+        "viewAngle": 110,
+        "viewRange": 14,
+        "alertRange": 6,
+        "attackRange": 1.8,
+        "attackDamage": 12,
+        "attackRate": 1.0,
+        "paletteIndex": 1
+      },
+      "patrol": [
+        {
+          "x": 8,
+          "y": 0,
+          "z": -8
+        },
+        {
+          "x": 8,
+          "y": 0,
+          "z": 8
+        },
+        {
+          "x": -4,
+          "y": 0,
+          "z": 8
+        }
+      ]
+    },
+    {
+      "id": "guard_02",
+      "position": [
+        -8,
+        0,
+        8
+      ],
+      "properties": {
+        "hp": 80,
+        "maxHp": 80,
+        "speed": 2.5,
+        "viewAngle": 110,
+        "viewRange": 14,
+        "alertRange": 6,
+        "attackRange": 1.8,
+        "attackDamage": 12,
+        "attackRate": 1.0,
+        "paletteIndex": 1
+      },
+      "patrol": [
+        {
+          "x": -8,
+          "y": 0,
+          "z": 8
+        },
+        {
+          "x": -8,
+          "y": 0,
+          "z": -8
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "z": -8
+        }
+      ]
+    },
+    {
+      "id": "sniper_01",
+      "position": [
+        12,
+        0,
+        0
+      ],
+      "properties": {
+        "hp": 55,
+        "maxHp": 55,
+        "speed": 1.5,
+        "viewAngle": 60,
+        "viewRange": 22,
+        "alertRange": 18,
+        "attackRange": 20,
+        "attackDamage": 28,
+        "attackRate": 0.4,
+        "paletteIndex": 3
+      },
+      "patrol": [
+        {
+          "x": 12,
+          "y": 0,
+          "z": -4
+        },
+        {
+          "x": 12,
+          "y": 0,
+          "z": 4
+        }
+      ]
+    },
+    {
+      "id": "berserker_01",
+      "position": [
+        -6,
+        0,
+        -6
+      ],
+      "properties": {
+        "hp": 160,
+        "maxHp": 160,
+        "speed": 4.5,
+        "viewAngle": 180,
+        "viewRange": 10,
+        "alertRange": 8,
+        "attackRange": 1.5,
+        "attackDamage": 22,
+        "attackRate": 1.8,
+        "paletteIndex": 5
+      },
+      "patrol": []
+    }
+  ],
+  "coverPoints": [
+    {
+      "id": "cp1",
+      "position": [
+        6,
+        0,
+        -2
+      ],
+      "normal": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "id": "cp2",
+      "position": [
+        -6,
+        0,
+        2
+      ],
+      "normal": [
+        0,
+        0,
+        -1
+      ]
+    },
+    {
+      "id": "cp3",
+      "position": [
+        2,
+        0,
+        6
+      ],
+      "normal": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "cp4",
+      "position": [
+        -2,
+        0,
+        -6
+      ],
+      "normal": [
+        -1,
+        0,
+        0
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "id": "health_pack_01",
+      "type": "pickup",
+      "pickupType": "health",
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "healAmount": 50
+    },
+    {
+      "id": "ammo_crate_01",
+      "type": "pickup",
+      "pickupType": "ammo",
+      "position": [
+        0,
+        0,
+        -5
+      ],
+      "ammoAmount": 30,
+      "weaponId": "pistol"
+    },
+    {
+      "id": "level_end",
+      "type": "levelEnd",
+      "position": [
+        13,
+        0,
+        -13
+      ],
+      "radius": 2,
+      "nextLevel": null
+    }
+  ],
   "lights": [
-    { "type": "ambient", "color": "#404040", "intensity": 0.5 },
-    { "type": "directional", "color": "#ffffff", "intensity": 1.0, "position": [5, 10, 5] }
+    {
+      "type": "ambient",
+      "color": "#303040",
+      "intensity": 0.4
+    },
+    {
+      "type": "directional",
+      "color": "#ffe8c0",
+      "intensity": 0.9,
+      "position": [
+        5,
+        10,
+        5
+      ],
+      "castShadow": true
+    },
+    {
+      "type": "point",
+      "color": "#40ff80",
+      "intensity": 0.6,
+      "position": [
+        0,
+        3,
+        0
+      ],
+      "distance": 12,
+      "decay": 2
+    },
+    {
+      "type": "point",
+      "color": "#ff4020",
+      "intensity": 0.4,
+      "position": [
+        12,
+        2,
+        0
+      ],
+      "distance": 8,
+      "decay": 2
+    }
   ]
 }
