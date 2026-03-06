@@ -1327,19 +1327,6 @@ window.addEventListener('storage', (e) => {
     }
 });
 
-// Cross-frame AI tool dispatch — assistant sends postMessage directly
-window.addEventListener('message', async (event) => {
-    if (!event.data || event.data.type !== 'ai:tool') return;
-    const { name, args } = event.data;
-    if (name === 'generateTerrain' || name === 'pixel.generateTerrain') {
-        console.log('[IsoStudio] Received ai:tool postMessage:', name, args);
-        localStorage.removeItem('ai_pending_action');
-        if (window._isoAIGenerate) {
-            await window._isoAIGenerate(args || {});
-        }
-    }
-});
-
 function updateLayerList() {
     const list = document.getElementById('layer-list');
     list.innerHTML = '';
@@ -2006,7 +1993,8 @@ function placeAtLayer(layerIdx, idx) {
     }
     map.occlusionDirty = true;
     if (state.strategy && state.strategy.invalidateChunks) {
-        state.strategy.invalidateChunks();
+        const { x, y } = state.mouseMapPos;
+        state.strategy.invalidateChunks(x, y);
     }
 }
 
@@ -2099,7 +2087,7 @@ function paint() {
         if(erasedSomething) {
             map.occlusionDirty = true;
             if (state.strategy && state.strategy.invalidateChunks) {
-                state.strategy.invalidateChunks();
+                state.strategy.invalidateChunks(x, y);
             }
         }
 

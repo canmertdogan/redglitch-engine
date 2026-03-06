@@ -690,7 +690,7 @@ window.editor = new PlatformerEditor();
     console.log('[PlatformerEditor] AI StudioBridge registered.');
 })();
 
-// --- AI Generation Helper ---
+// AI Generation Helper
 window._platformerAIGenerate = (params) => {
     console.log('[PlatformerEditor] AI generating level:', params);
     const themeSelect = document.getElementById('gen-theme');
@@ -702,21 +702,6 @@ window._platformerAIGenerate = (params) => {
     window.editor.generateLevel();
     console.log('[PlatformerEditor] AI level generated!');
 };
-
-// AI tool message listener for cross-frame dispatch
-window.addEventListener('message', async (event) => {
-    if (!event.data || event.data.type !== 'ai:tool') return;
-    const { name, id, args } = event.data;
-
-    if (name === 'generateLevel' || name === 'platformer.generateLevel') {
-        console.log('[PlatformerEditor] Received ai:tool postMessage:', name, args);
-        localStorage.removeItem('ai_pending_action');
-        window._platformerAIGenerate(args || {});
-        if (window.parent !== window) {
-            window.parent.postMessage({ type: 'ai:tool:success', id, result: { success: true } }, '*');
-        }
-    }
-});
 
 function _platformerPendingCheck() {
     const raw = localStorage.getItem('ai_pending_action');

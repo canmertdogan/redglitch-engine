@@ -39,7 +39,8 @@ router.get('/stream', (req, res) => {
     child.stderr.on('data', (d) => send('log', { text: d.toString() }));
 
     child.on('exit', (code) => {
-        const outputPath = path.join(ROOT_DIR, 'dist', 'game');
+        const releaseDir = path.join(ROOT_DIR, 'dist', 'game', 'release');
+        const outputPath = fs.existsSync(releaseDir) ? releaseDir : path.join(ROOT_DIR, 'dist', 'game');
         // Small delay to let any remaining stdout/stderr data flush through
         setTimeout(() => {
             if (!res.writableEnded) {

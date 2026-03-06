@@ -81,6 +81,47 @@ export class KetebeAI {
         if (EventBus.instance) EventBus.emit('ai:status', this.getStatus());
     }
 
+    /**
+     * Get low-latency code completions (Ghost-Text).
+     * @param {string} prefix - Code before the cursor.
+     * @param {string} suffix - Code after the cursor (optional).
+     * @returns {Promise<string>} - The completion text.
+     */
+    async getCompletions(prefix, suffix = "") {
+        await this.initialize();
+        
+        // Fast-path: Native Cortex (if available)
+        const irabBridge = window.irab || (window.parent && window.parent.irab);
+        const provider = this._getKaiSettings().provider || 'native';
+
+        if (provider === 'native' && irabBridge && irabBridge.isConnected) {
+            return new Promise((resolve) => {
+                const timeout = setTimeout(() => resolve(""), 2000); // 2s timeout for ghost text
+                
+                irabBridge.send({
+                    type: "COMPLETION",
+                    data: { prefix, suffix }
+                }, (response) => {
+                    clearTimeout(timeout);
+                    resolve(response.text || "");
+                });
+            });
+        }
+
+        // Local Fallback: Small model inference
+        if (this.inferenceEngine.isModelReady) {
+            const prompt = `<|completion_start|>${prefix}<|cursor|>${suffix}<|completion_end|>`;
+            const result = await this.inferenceEngine.generate(prompt, {
+                maxNewTokens: 32, // Keep completions short for speed
+                stopSequences: ["\n", ";", "}"], // Stop at logical breaks
+                temperature: 0.2 // Low temperature for high predictability
+            });
+            return result.text || "";
+        }
+
+        return "";
+    }
+
     async chat(message, options = {}) {
         await this.initialize();
         
@@ -93,21 +134,12 @@ export class KetebeAI {
         if (provider === 'native' && irabBridge && irabBridge.isConnected) {
             console.log('[KetebeAI] Routing to Native Cortex...');
             const nativeResult = await new Promise((resolve) => {
-                const originalOnToken = irabBridge.onToken;
-                let fullText = "";
-
-                irabBridge.onToken = (token) => {
-                    if (token === null) { // Stream end marker
-                        irabBridge.onToken = originalOnToken;
-                        resolve({ text: fullText, source: 'native' });
-                        return;
-                    }
-                    fullText += token;
-                    if (options.onToken) options.onToken(token);
-                    if (originalOnToken) originalOnToken(token);
-                };
-
-                irabBridge.prompt(message, options.context || {});
+                irabBridge.send({
+                    type: "CHAT",
+                    data: { message, context: options.context || {} }
+                }, (response) => {
+                    resolve({ text: response.text, source: 'native' });
+                });
             });
 
             // Parse and execute any tool calls in the native response

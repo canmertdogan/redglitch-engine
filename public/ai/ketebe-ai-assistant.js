@@ -148,11 +148,47 @@ class IRABAssistantSimple {
     }
 
     /**
-     * Dispatch a tool intent: open the editor and trigger generation.
-     * Strategy: direct postMessage to already-loaded iframe first,
-     * then openWindow + wait for load + postMessage, then localStorage fallback.
+     * Dispatch a tool intent via the central ToolRegistry.
+     * This ensures the call goes through the PermissionGate and EventBus.
      */
     async _dispatchIntent(intent, params) {
+        this._debug(`Dispatching intent: ${intent.action}`, params);
+
+        // Always store pending action for recovery on page load
+        localStorage.setItem('ai_pending_action', JSON.stringify({
+            method: intent.action, 
+            params: params || {},
+            id: `intent_${Date.now()}`, 
+            timestamp: Date.now()
+        }));
+
+        try {
+            const ai = await this.waitForCore();
+            if (ai && ai.toolRegistry) {
+                // Execute via the formal registry (this triggers PermissionGate)
+                const result = await ai.toolRegistry.execute(intent.action, params || {});
+                
+                // If the tool was successful and didn't require a redirect, 
+                // we can clear the pending action.
+                if (result && result.success) {
+                    localStorage.removeItem('ai_pending_action');
+                }
+                return result;
+            } else {
+                throw new Error("ToolRegistry not available");
+            }
+        } catch (error) {
+            console.warn('[Kai] Registry dispatch failed, falling back to legacy bridge:', error);
+            // Fallback for when the AI kernel isn't fully booted but we want to trigger a tool
+            return this._legacyDispatch(intent, params);
+        }
+    }
+
+    /**
+     * Legacy dispatch logic using postMessage and localStorage recovery.
+     * Used only as a fallback if the AI Kernel/ToolRegistry is unavailable.
+     */
+    async _legacyDispatch(intent, params) {
         const frameMap = {
             'iso_studio': 'frame-iso_studio',
             'platformer_studio': 'frame-platformer_studio',
@@ -170,16 +206,9 @@ class IRABAssistantSimple {
 
         const msg = { type: 'ai:tool', name: intent.action, args: params || {}, id: `intent_${Date.now()}` };
 
-        // Always store pending action — editors check this on load as safety net
-        localStorage.setItem('ai_pending_action', JSON.stringify({
-            method: intent.action, params: params || {},
-            id: msg.id, timestamp: Date.now()
-        }));
-
         const hub = (window.parent !== window && window.parent) ||
                     (window.top !== window && window.top) || null;
 
-        // Case 1: iframe already loaded — postMessage directly
         if (hub) {
             const existingFrame = hub.document.getElementById(frameId);
             if (existingFrame && existingFrame.contentWindow) {
@@ -189,38 +218,37 @@ class IRABAssistantSimple {
                     if (hub.focusWindow) hub.focusWindow('win-' + intent.target);
                     existingFrame.contentWindow.postMessage(msg, '*');
                     localStorage.removeItem('ai_pending_action');
-                    console.log('[Kai] Direct postMessage to existing frame:', frameId);
                     return { success: true, direct: true };
-                } catch (e) {
-                    console.warn('[Kai] Direct frame message failed:', e);
-                }
+                } catch (e) {}
             }
         }
 
-        // Case 2: open new iframe via hub — editor will pick up from localStorage on load
         if (hub && hub.openWindow && hub.tools) {
             const tool = hub.tools.find(t => t.id === intent.target);
             if (tool) {
                 hub.openWindow(tool);
-                console.log('[Kai] Opened new editor window, localStorage pending action set');
                 return { success: true, pending: true };
             }
         }
 
-        // Case 3: standalone page navigation — localStorage recovery handles it
         const top = window.top || window.parent || window;
         top.location.href = url;
         return { success: true, pending: true };
     }
 
+    _debug(msg, data) {
+        console.log(`%c[Kai:Assistant]%c ${msg}`, 'background: #f1c40f; color: #000; padding: 2px 5px;', '', data || '');
+    }
+
     async processQuery(query) {
         try {
-            // Phase 1: Detect tool intent BEFORE waiting for AI core (no AI needed for intent matching)
+            // PHASE 1: HIGH-SPEED INTENT DETECTION (Regex)
+            // We still use regex for instant response on very common studio commands
             const intent = this._detectToolIntent(query);
             if (intent) {
-                console.log('Kai: Intent detected →', intent.action);
+                this._debug('Instant intent detected:', intent.action);
 
-                // If user needs to choose a variant, return choices
+                // If user needs to choose a variant, return choices for the UI to handle
                 if (intent.needsChoice) {
                     return {
                         text: intent.choiceLabel,
@@ -229,49 +257,66 @@ class IRABAssistantSimple {
                     };
                 }
 
-                // Direct dispatch (user already specified type in their query)
-                await this._dispatchIntent(intent, intent.params);
-                let text = `[WORKING] Opening ${intent.target.replace('_', ' ')} and generating...`;
+                // Execute via formal registry (audited by KAP)
+                const result = await this._dispatchIntent(intent, intent.params);
+                
+                let flavorText = `[SYSTEM] Executing ${intent.action}...`;
+                if (result && result.message) flavorText = `[SYSTEM] ${result.message}`;
+                
                 if (this.personality && this.personality.addFlavor) {
-                    text = this.personality.addFlavor(text, 'answer');
+                    flavorText = this.personality.addFlavor(flavorText, 'answer');
                 }
-                return { text, type: 'tool_action', action: intent.action };
+                return { text: flavorText, type: 'tool_action', action: intent.action, result };
             }
 
-            // Phase 2: Use KetebeAI's chat method for general queries (needs AI core)
+            // PHASE 2: UNIFIED AI CORE (LLM + ToolRegistry)
+            // For everything else, use the smart brain
             await this.waitForCore();
-            const response = await this.ai.chat(query, {});
+            
+            // Get conversation context if possible (from project state)
+            const context = {};
+            if (window.KetebeProjectState) {
+                context.project = window.KetebeProjectState.projectName;
+                context.activeEditor = localStorage.getItem('ketebe_last_editor');
+            }
 
-            // Handle different response structures
+            const response = await this.ai.chat(query, { context });
+
+            // Normalize response text
             let text = "";
             if (typeof response === 'string') text = response;
             else if (response.text) text = response.text;
             else text = JSON.stringify(response);
 
-            // Surface tool call results in the response
+            // Surface tool call results in the response for user feedback
             if (response.toolCalls && response.toolCalls.length > 0) {
                 const toolNames = response.toolCalls.map(tc => tc.name).join(', ');
                 const success = response.workflowResult && response.workflowResult.success;
                 text += success
-                    ? `\n\n>> TOOLS EXECUTED: ${toolNames} ✓`
-                    : `\n\n>> TOOLS ATTEMPTED: ${toolNames} (check console for details)`;
+                    ? `\n\n>> AUDIT: ${toolNames} executed successfully ✓`
+                    : `\n\n>> AUDIT: Attempted ${toolNames} (execution deferred or failed)`;
             }
 
-            // Apply personality flavor
+            // Apply personality flavor if not already formatted as a system message
             if (this.personality && this.personality.addFlavor) {
-                if (!text.startsWith(">>") && !text.startsWith("[SUCCESS]")) {
+                if (!text.includes(">>") && !text.includes("[SYSTEM]")) {
                      text = this.personality.addFlavor(text, 'answer');
                 }
             }
 
             return {
                 text: text,
-                type: response.toolCalls && response.toolCalls.length > 0 ? 'tool_action' : 'text'
+                type: (response.toolCalls && response.toolCalls.length > 0) ? 'tool_action' : 'text',
+                response: response
             };
 
         } catch (error) {
-            console.error('Kai: Process Query Failed', error);
-            throw error;
+            this._debug('Process Query Failed', error);
+            const errorMsg = `[ERROR] I encountered a glitch: ${error.message}`;
+            return { 
+                text: this.personality ? this.personality.addFlavor(errorMsg, 'error') : errorMsg, 
+                type: 'error' 
+            };
         }
     }
 }

@@ -168,6 +168,60 @@ window.editorInit = function() {
             document.getElementById('status-right').innerText = `Line: ${e.position.lineNumber}, Col: ${e.position.column}`;
         });
 
+        // --- AI INTEGRATION: Ghost-Text Autocomplete ---
+        try {
+            const { KetebeAI } = await import('/ai/ketebe-ai.js');
+            const { EventBus } = await import('/ai/shim.js');
+            const ai = new KetebeAI();
+            window.KetebeAIInstance = ai;
+
+            monaco.languages.registerInlineCompletionsProvider('javascript', {
+                provideInlineCompletions: async (model, position, context, token) => {
+                    if (token.isCancellationRequested) return;
+
+                    // Only trigger on typing (not on cursor move only)
+                    if (context.triggerKind === monaco.languages.InlineCompletionTriggerKind.Automatic) {
+                        // Small delay to debounce
+                        await new Promise(r => setTimeout(r, 500));
+                        if (token.isCancellationRequested) return;
+                    }
+
+                    const prefix = model.getValueInRange({
+                        startLineNumber: Math.max(1, position.lineNumber - 5),
+                        startColumn: 1,
+                        endLineNumber: position.lineNumber,
+                        endColumn: position.column
+                    });
+
+                    const suffix = model.getValueInRange({
+                        startLineNumber: position.lineNumber,
+                        startColumn: position.column,
+                        endLineNumber: Math.min(model.getLineCount(), position.lineNumber + 5),
+                        endColumn: model.getLineMaxColumn(Math.min(model.getLineCount(), position.lineNumber + 5))
+                    });
+
+                    try {
+                        const completion = await ai.getCompletions(prefix, suffix);
+                        if (!completion) return;
+
+                        return {
+                            items: [{
+                                insertText: completion,
+                                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
+                            }]
+                        };
+                    } catch (e) {
+                        console.warn('[AI:Autocomplete] Error:', e);
+                        return;
+                    }
+                },
+                freeInlineCompletions: () => {}
+            });
+            console.log("Ketebe AI Ghost-Text enabled.");
+        } catch (e) {
+            console.error("Failed to initialize AI Ghost-Text:", e);
+        }
+
         // --- AI INTEGRATION: Code Injection ---
         if (window.KetebeEventBus) {
             window.KetebeEventBus.on('ai:inject-code', (data) => {

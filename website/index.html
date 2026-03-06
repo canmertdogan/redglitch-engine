@@ -3,407 +3,683 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KETEBE | The AI-Native Retro Engine</title>
+    <title>Ketebe — Multi-Engine Pixel Art Game Studio</title>
+    <meta name="description" content="Ketebe is an open-source game development studio for building pixel art games — RPG, Platformer, Isometric, 3D TopDown, and FPS. Ships to Desktop, Web, Android, and iOS.">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
-<body class="pro-retro">
+<body>
+
+    <!-- BOOTLOADER -->
     <div id="bootloader">
         <div class="boot-text">
-            <div>KETEBE_BOOTLOADER_v1.0.0</div>
-            <div id="boot-progress">INITIALIZING_SYSTEM_CORES...</div>
+            <div>KETEBE_ENGINE_STUDIO</div>
+            <div id="boot-progress">INITIALIZING...</div>
         </div>
     </div>
-    <div class="crt-overlay"></div>
 
-    <!-- HIGH-TECH NAVIGATION -->
-    <nav class="nav-pro">
+    <!-- NAVIGATION -->
+    <nav class="nav">
         <div class="nav-container">
-            <div class="nav-brand">
-                <img src="assets/logo.png" alt="Logo">
-                <span>KETEBE_v1.0.0</span>
+            <a href="#" class="nav-brand">
+                <img src="assets/logo.png" alt="Ketebe" class="nav-logo">
+                <span>KETEBE</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="#engines">Engines</a>
+                <a href="#studio">Studio</a>
+                <a href="#ai">Kai AI</a>
+                <a href="#downloads">Downloads</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#platforms">Platforms</a>
+                <a href="#start">Get Started</a>
+                <a href="https://github.com/n0rthstar/ketebe" class="nav-github" target="_blank" rel="noopener">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a>
             </div>
-            <div class="nav-links">
-                <a href="#cores">CORE_CORES</a>
-                <a href="#irab">NEURAL_LINK</a>
-                <a href="#studio">WORKSHOP</a>
-                <a href="#tech">ARCHITECTURE</a>
-                <a href="https://github.com/n0rthstar/ketebe" class="btn-git">GIT_PULL</a>
-            </div>
-            <button id="menuToggle" class="btn-switcher mobile-only">MENU.EXE</button>
+            <button id="menuToggle" class="nav-toggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
         </div>
     </nav>
 
-    <!-- MOBILE MENU OVERLAY -->
-    <div id="mobileMenu" class="mobile-menu-overlay">
-        <div class="mobile-menu-content">
-            <div class="menu-header">KETEBE_SYSTEM_MENU</div>
-            <div class="menu-list">
-                <a href="#cores" class="menu-item">> CORE_CORES</a>
-                <a href="#irab" class="menu-item">> NEURAL_LINK</a>
-                <a href="#studio" class="menu-item">> WORKSHOP</a>
-                <a href="#tech" class="menu-item">> ARCHITECTURE</a>
-                <a href="https://github.com/n0rthstar/ketebe" class="menu-item">> GIT_SOURCE</a>
-            </div>
-            <button id="menuClose" class="btn-sub">CLOSE_SESSION</button>
+    <!-- MOBILE MENU -->
+    <div id="mobileMenu" class="mobile-menu">
+        <div class="mobile-menu-inner">
+            <button id="menuClose" class="mobile-close" aria-label="Close menu">✕</button>
+            <a href="#engines" class="mobile-link">Engines</a>
+            <a href="#studio" class="mobile-link">Studio</a>
+            <a href="#ai" class="mobile-link">Kai AI</a>
+            <a href="#downloads" class="mobile-link">Downloads</a>
+            <a href="#pricing" class="mobile-link">Pricing</a>
+            <a href="#platforms" class="mobile-link">Platforms</a>
+            <a href="#start" class="mobile-link">Get Started</a>
+            <a href="https://github.com/n0rthstar/ketebe" class="mobile-link" target="_blank" rel="noopener">GitHub ↗</a>
         </div>
     </div>
 
-    <main class="main-content">
-        
-        <!-- HERO: THE TERMINAL -->
-        <header class="hero-pro">
-            <div class="hero-grid">
-                <div class="hero-info">
-                    <div class="sys-label">[ STATUS: OPTIMAL ]</div>
-                    <h1 class="glitch" data-text="BEYOND PIXELS">BEYOND PIXELS</h1>
-                    <div class="hero-desc">
-                        <p class="typewriter">Ketebe is a multi-paradigm game development ecosystem. We've combined the crunchiest pixel art aesthetics with brain-melting browser AI. Build isometric, platformer, and top-down RPGs with a browser-native assistant that lives in your workspace.</p>
-                    </div>
+    <main>
+
+        <!-- HERO -->
+        <header class="hero">
+            <div class="hero-container">
+                <div class="hero-text">
+                    <div class="hero-badge">Open Source Core · v7</div>
+                    <h1>Build <span class="hl glitch" data-text="pixel art">pixel art</span> games.<br>Ship to <span class="hl">any platform.</span></h1>
+                    <p class="hero-sub">Ketebe is a full game development studio — multiple specialized engines covering every genre (2D, 3D, isometric, FPS, survival, and more), 30+ integrated editors, and a local AI assistant — all running in your browser or as a desktop app.</p>
                     <div class="hero-cta">
-                        <a href="../public/project_dashboard.html" class="btn-main">INITIALIZE_STUDIO</a>
-                        <a href="#tech" class="btn-sub">READ_SPECS.LOG</a>
+                        <a href="../public/project_dashboard.html" class="btn-primary">Open Studio</a>
+                        <a href="https://github.com/n0rthstar/ketebe" class="btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
                     </div>
                 </div>
-                <div class="hero-frame">
-                    <div class="frame-header">
-                        <span>ISO_VIEWPORT_v0.4</span>
-                        <div class="frame-dots"><span></span><span></span><span></span></div>
-                    </div>
-                    <div class="frame-body">
+                <div class="hero-visual">
+                    <div class="canvas-frame">
+                        <div class="canvas-frame-header">
+                            <div class="frame-dots">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                            </div>
+                            <span class="frame-title">IsoPixel Renderer</span>
+                        </div>
                         <canvas id="heroCanvas"></canvas>
-                        <div id="hero-log"></div>
                     </div>
                 </div>
             </div>
         </header>
 
-        <!-- STATS: THE DATASHEET -->
-        <section class="stats-bar">
-            <div class="stat-block">
-                <span class="stat-val">82K+</span>
-                <span class="stat-key">CORE_LINES_OF_CODE</span>
-            </div>
-            <div class="stat-block">
-                <span class="stat-val">60fps</span>
-                <span class="stat-key">LOCKED_REFRESH</span>
-            </div>
-            <div class="stat-block">
-                <span class="stat-val">1.3B</span>
-                <span class="stat-key">AI_PARAMETERS</span>
-            </div>
-            <div class="stat-block">
-                <span class="stat-val">100%</span>
-                <span class="stat-key">LOCAL_STORAGE</span>
-            </div>
-        </section>
-
-        <!-- CORES: THE TRINITY -->
-        <section id="cores" class="section-pro">
-            <h2 class="section-title">THE <span class="highlight">HOLY TRINITY</span> OF CORES</h2>
-            <div class="pro-grid">
-                <div class="pro-card">
-                    <div class="card-tag">SYSTEM_01</div>
-                    <h3>IsoPixel (2.5D)</h3>
-                    <p>Advanced isometric rendering with "illegal" lighting tricks and a Day/Night cycle that breathes. Built for tactical depth and complex world-states.</p>
+        <!-- STATS -->
+        <section class="stats">
+            <div class="stats-container">
+                <div class="stat">
+                    <span class="stat-num">5+</span>
+                    <span class="stat-label">Game Engines</span>
                 </div>
-                <div class="pro-card">
-                    <div class="card-tag">SYSTEM_02</div>
-                    <h3>RPG Top-Down</h3>
-                    <p>Heavy systems core with branching dialogue trees, quest management, and NPC schedule logic. The spirit of '94, reborn in the browser.</p>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num">30+</span>
+                    <span class="stat-label">Integrated Editors</span>
                 </div>
-                <div class="pro-card">
-                    <div class="card-tag">SYSTEM_03</div>
-                    <h3>Platformer 2D</h3>
-                    <p>Precision-focused physics with AABB collision and butter-smooth camera movement. Every pixel of movement is calculated for tight, responsive gameplay.</p>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num">4</span>
+                    <span class="stat-label">Target Platforms</span>
                 </div>
-            </div>
-
-            <!-- NEW: ATMOSPHERE ENGINE SHOWCASE -->
-            <div class="atmosphere-showcase">
-                <div class="showcase-visuals">
-                    <div class="atmosphere-frame day">
-                        <div class="frame-tag">TIME_PROTOCOL: 1200HR</div>
-                        <div class="atmosphere-art day-art"></div>
-                    </div>
-                    <div class="atmosphere-frame night">
-                        <div class="frame-tag">TIME_PROTOCOL: 0000HR</div>
-                        <div class="atmosphere-art night-art"></div>
-                    </div>
-                </div>
-                <div class="showcase-content">
-                    <div class="sys-label">ATMOSPHERE_v0.5</div>
-                    <h3>BEYOND PIXEL COLOR</h3>
-                    <p>Ketebe goes beyond just rendering tiles. Our atmosphere engine handles global illumination shifts, procedural vegetation growth, and weather particle systems.</p>
-                    <div class="feature-pills">
-                        <span>PROCEDURAL_TREES</span>
-                        <span>DYNAMIC_SHADOWS</span>
-                        <span>AMBIENT_OCCLUSION</span>
-                        <span>WEATHER_BUS</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- NEW: VISUAL PROTOCOL SWITCHER -->
-            <div class="visual-switcher-pro">
-                <div class="switcher-label">VISUAL_PROTOCOLS.CFG</div>
-                <div class="switcher-buttons">
-                    <button class="btn-switcher active" data-fx="crt">CRT_ON</button>
-                    <button class="btn-switcher active" data-fx="scanlines">SCANLINES_ON</button>
-                    <button class="btn-switcher" data-theme="amber">AMBER_MONITOR</button>
-                    <button class="btn-switcher" data-theme="green">GREEN_PHOSPHOR</button>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num">100%</span>
+                    <span class="stat-label">Local — No Cloud Required</span>
                 </div>
             </div>
         </section>
 
-        <!-- NEW: SYSTEM CONSOLE INTERACTIVE -->
-        <section id="console" class="section-pro black-bg">
-            <div class="console-frame">
-                <div class="console-leds">
-                    <div class="led"><div class="led-dot power active"></div> PWR</div>
-                    <div class="led"><div class="led-dot link active"></div> LNK</div>
+        <!-- ENGINES -->
+        <section id="engines" class="section">
+            <div class="section-container">
+                <div class="section-header">
+                    <span class="section-label">Multi-Genre Engine Platform</span>
+                    <h2>Any genre. Any dimension. <span class="hl">One studio.</span></h2>
+                    <p>Ketebe ships with five production-ready engines today — and is expanding to cover every major game genre. Pick your engine, and the tooling, physics, and editors follow automatically.</p>
                 </div>
-                <div class="console-bezel">
-                    <div class="console-body">
-                        <div id="console-output">
-                            <div>KETEBE_SYSTEM_REMOTE_LINK_ESTABLISHED...</div>
-                            <div>AUTH_LEVEL: DEVELOPER_ROOT</div>
-                            <div>TYPE 'HELP' FOR COMMANDS.</div>
-                        </div>
-                        <div class="console-input-line">
-                            <span class="console-prompt">KETEBE:\></span>
-                            <input type="text" id="console-input" placeholder="" autocomplete="off">
-                            <span class="cursor"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- AI: THE NEURAL LINK -->
-        ...
-        <!-- AUDIO: THE SONIC BOOM (EXPANDED) -->
-        <section id="audio" class="section-pro">
-            <h2 class="section-title">THE <span class="highlight-blue">SONIC BOOM</span></h2>
-            <div class="audio-pro-layout">
-                <div class="pro-grid">
-                    <div class="pro-card">
-                        <h3>Integrated DAW</h3>
-                        <p>Full Piano Roll and step sequencer inside the workspace.</p>
-                        <div class="sound-test-grid">
-                            <button class="btn-sound" data-sound="kick">KICK.WAV</button>
-                            <button class="btn-sound" data-sound="snare">SNARE.WAV</button>
-                            <button class="btn-sound" data-sound="lead">LEAD_01.SYN</button>
-                        </div>
+                <div class="engines-grid">
+                    <div class="engine-card featured">
+                        <div class="engine-icon">◈</div>
+                        <h3>IsoPixel <span class="tag">2.5D</span></h3>
+                        <p>Isometric pixel art engine with depth-sorted rendering, a dynamic day/night cycle, particle systems (IsoFX), and procedural vegetation. Built for tactical RPGs and simulation games.</p>
+                        <ul class="engine-features">
+                            <li>Depth-sorted tile rendering</li>
+                            <li>Day/Night atmosphere system</li>
+                            <li>IsoFX particle system</li>
+                            <li>NPC behavior scripting</li>
+                        </ul>
                     </div>
-                    <div class="pro-card">
-                        <h3>16-Channel Mixer</h3>
-                        <p>Real-time FX chains and filter automation.</p>
-                        <div class="mixer-mockup">
-                            <div class="mixer-track"><div class="fader"></div></div>
-                            <div class="mixer-track"><div class="fader"></div></div>
-                            <div class="mixer-track"><div class="fader" style="bottom: 40%"></div></div>
-                            <div class="mixer-track"><div class="fader" style="bottom: 70%"></div></div>
-                        </div>
+                    <div class="engine-card">
+                        <div class="engine-icon">⬡</div>
+                        <h3>RPG Top-Down <span class="tag">2D</span></h3>
+                        <p>Systems-heavy engine with branching dialogue trees, quest management, inventory, NPC schedules, and a dynamic logic scripting runtime. Great for story-driven RPGs.</p>
+                        <ul class="engine-features">
+                            <li>Branching dialogue trees</li>
+                            <li>Quest & achievement system</li>
+                            <li>Inventory management</li>
+                            <li>JSON/JS logic scripts</li>
+                        </ul>
                     </div>
-                    <div class="pro-card">
-                        <h3>Spatial Audio</h3>
-                        <p>Distance-aware 2.5D sound positioning engine.</p>
+                    <div class="engine-card">
+                        <div class="engine-icon">▶</div>
+                        <h3>Platformer 2D <span class="tag">2D</span></h3>
+                        <p>Precision physics engine with AABB collision detection, smooth camera interpolation, and a frame-perfect character animator. Tight, responsive gameplay is the priority.</p>
+                        <ul class="engine-features">
+                            <li>AABB collision system</li>
+                            <li>Smooth camera interpolation</li>
+                            <li>Frame animator</li>
+                            <li>Visual platformer editor</li>
+                        </ul>
+                    </div>
+                    <div class="engine-card">
+                        <div class="engine-icon">⬛</div>
+                        <h3>TopDown 3D <span class="tag">3D</span></h3>
+                        <p>Top-down perspective with real 3D depth. Includes an ability system, fog of war, minimap, and full A* pathfinding. Bridges pixel aesthetics with 3D immersion.</p>
+                        <ul class="engine-features">
+                            <li>3D depth rendering</li>
+                            <li>Ability & entity systems</li>
+                            <li>Fog of war + minimap</li>
+                            <li>A* pathfinding</li>
+                        </ul>
+                    </div>
+                    <div class="engine-card">
+                        <div class="engine-icon">◎</div>
+                        <h3>FPS 3D <span class="tag">3D</span></h3>
+                        <p>First-person engine with custom 3D camera, enemy AI, decal systems, and adapter-based rendering. For retro-aesthetic first-person experiences.</p>
+                        <ul class="engine-features">
+                            <li>First-person 3D camera</li>
+                            <li>Enemy AI system</li>
+                            <li>Decal system</li>
+                            <li>FPS3D adapter</li>
+                        </ul>
                     </div>
                 </div>
-            </div>
-        </section>
-        <section id="irab" class="section-pro alt-bg">
-            <div class="ai-pro-layout">
-                <div class="ai-pro-text">
-                    <div class="sys-label blue">IRQ_LEVEL_05</div>
-                    <h2>IRAB NEURAL LINK</h2>
-                    <p>The first game engine with a built-in local brain. No cloud, no lag, no privacy leaks. IRAB uses WebGPU to process your project logic locally.</p>
-                    <ul class="pro-list">
-                        <li><span>></span> LOCAL_INFERENCE: DeepSeek-powered logic suggestions.</li>
-                        <li><span>></span> CONTEXT_RAG: Smart awareness of your entire project structure.</li>
-                        <li><span>></span> GHOST_TEXT: Real-time code completion inside Monaco.</li>
-                    </ul>
-                </div>
-                <div class="ai-pro-visual">
-                    <div class="retro-chat-mockup" id="msnChat">
-                        <div class="chat-header">
-                            <span>IRAB_MESSENGER.exe</span>
-                            <button id="nudgeBtn">NUDGE</button>
+
+                <!-- COMING SOON ENGINES -->
+                <div class="engines-roadmap">
+                    <div class="roadmap-header">
+                        <span class="section-label">IN_DEVELOPMENT</span>
+                        <p>More engines are being built. All lifetime license holders get them free on release.</p>
+                    </div>
+                    <div class="roadmap-engines-grid">
+                        <div class="roadmap-engine-card">
+                            <div class="roadmap-tag">SOON</div>
+                            <div class="roadmap-name">Platformer 3D</div>
+                            <div class="roadmap-desc">3D platformer with physics-based movement, wall-running, and dynamic camera.</div>
                         </div>
-                        <div class="chat-body">
-                            <div class="msg bot">Welcome to IRAB_v7.0. Neural link established. How can I help you today?</div>
-                            <div class="msg user">Analyze 'Iso_World_1.json' for occlusion bottlenecks.</div>
-                            <div class="msg bot">Scanning_Geometry... Found 142 redundant draw calls. Auto-culling applied. Frame stability increased by 14%.</div>
-                            <div class="msg bot typing">Ready_for_next_directive...</div>
+                        <div class="roadmap-engine-card">
+                            <div class="roadmap-tag">SOON</div>
+                            <div class="roadmap-name">Third-Person Shooter</div>
+                            <div class="roadmap-desc">Over-the-shoulder camera, cover system, aiming, and full character animation rig.</div>
+                        </div>
+                        <div class="roadmap-engine-card">
+                            <div class="roadmap-tag">SOON</div>
+                            <div class="roadmap-name">Survival / Open World</div>
+                            <div class="roadmap-desc">Hunger/health systems, day-night survival loop, crafting, and procedural terrain.</div>
+                        </div>
+                        <div class="roadmap-engine-card roadmap-engine-open">
+                            <div class="roadmap-tag">PLANNED</div>
+                            <div class="roadmap-name">More Genres</div>
+                            <div class="roadmap-desc">Strategy, MOBA, Racing, Visual Novel, Puzzle — Ketebe is built to cover them all.</div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- STUDIO: THE WORKSHOP -->
-        <section id="studio" class="section-pro">
-            <h2 class="section-title">THE <span class="highlight">WORKSHOP</span></h2>
-            <div class="studio-pro-grid">
-                <div class="studio-pro-item">
-                    <div class="studio-img code-forge"></div>
-                    <h4>Code_Forge</h4>
-                    <p>AI-augmented IDE with real-time vector-RAG context. Features ghost-text autocomplete, hot-module reloading, and a built-in asset pipeline.</p>
+        <!-- STUDIO TOOLS -->
+        <section id="studio" class="section section-alt">
+            <div class="section-container">
+                <div class="section-header">
+                    <span class="section-label">30+ Integrated Tools</span>
+                    <h2>Everything you need, <span class="hl">already built in</span></h2>
+                    <p>No switching between apps. Every tool your game needs is a tab away inside the Ketebe Studio.</p>
                 </div>
-                <div class="studio-pro-item">
-                    <div class="studio-img iso-studio"></div>
-                    <h4>IsoPixel_Studio</h4>
-                    <p>Visual world architect for massive isometric tilemaps. Integrated vegetation generation, dynamic lighting bakes, and NPC behavior scripting.</p>
-                </div>
-                <div class="studio-pro-item">
-                    <div class="studio-img algorithm-studio"></div>
-                    <h4>Algorithm_Studio</h4>
-                    <p>Node-based logic flow for complex game states. Bridge the gap between visual intuition and high-performance JS bytecode.</p>
-                </div>
-            </div>
-        </section>
 
-        <!-- ARCHITECTURE: THE SPECS (EXPANDED WITH INTERACTIVE DIAGRAM) -->
-        <section id="tech" class="section-pro black-bg">
-            <h2 class="section-title">THE <span class="highlight">CORE_ARCHITECTURE</span></h2>
-            
-            <div class="architecture-visualizer">
-                <div class="circuit-board">
-                    <div class="node" data-id="gpu" data-info="WEB_GPU_ACCELERATION" style="top: 20%; left: 10%;">GPU_CORE</div>
-                    <div class="node" data-id="neural" data-info="TRANSFORMERS_JS_V3" style="top: 20%; right: 10%;">NEURAL_GATE</div>
-                    <div class="node" data-id="rag" data-info="ORAMA_VECTOR_DB" style="top: 50%; left: 45%;">RAG_HUB</div>
-                    <div class="node" data-id="render" data-info="V8_CANVAS_PIPELINE" style="top: 80%; left: 10%;">RENDER_BUS</div>
-                    <div class="node" data-id="native" data-info="ELECTRON_CAPACITOR_BRIDGE" style="top: 80%; right: 10%;">NATIVE_LINK</div>
-                    <div class="circuit-lines">
-                        <canvas id="circuitCanvas"></canvas>
+                <div class="screenshot-placeholder" data-label="Studio Dashboard — project overview, tools, recent activity">
+                    <span>📸 Screenshot: Project Dashboard</span>
+                </div>
+
+                <div class="tools-grid">
+                    <div class="tool-category">
+                        <h4>World Building</h4>
+                        <ul>
+                            <li><strong>Iso Editor</strong> — visual isometric world designer with real-time preview</li>
+                            <li><strong>Platformer Studio</strong> — drag-and-drop platformer level builder</li>
+                            <li><strong>TopDown 3D Editor</strong> — terrain, lighting, and object placement for 3D scenes</li>
+                            <li><strong>Background Editor</strong> — layered parallax background designer</li>
+                        </ul>
+                    </div>
+                    <div class="tool-category">
+                        <h4>Game Logic</h4>
+                        <ul>
+                            <li><strong>Script Editor</strong> — Monaco-powered code editor with syntax highlighting</li>
+                            <li><strong>Logic Editor</strong> — JSON logic scripting for game events</li>
+                            <li><strong>Algorithm Editor</strong> — visual node graph for game state logic</li>
+                            <li><strong>Input Editor</strong> — keybinding and controller configuration</li>
+                        </ul>
+                    </div>
+                    <div class="tool-category">
+                        <h4>Content & Narrative</h4>
+                        <ul>
+                            <li><strong>Dialogue Editor</strong> — branching conversation trees</li>
+                            <li><strong>Quest Editor</strong> — quest chains with conditions and rewards</li>
+                            <li><strong>Campaign Editor</strong> — multi-chapter campaign structure</li>
+                            <li><strong>Cutscene Editor</strong> — interactive cutscene sequencer</li>
+                        </ul>
+                    </div>
+                    <div class="tool-category">
+                        <h4>Characters & Entities</h4>
+                        <ul>
+                            <li><strong>Character Editor</strong> — stats, sprites, and progression</li>
+                            <li><strong>NPC Editor</strong> — NPC schedules, dialogue, and behavior</li>
+                            <li><strong>Enemy Editor</strong> — enemy patterns and AI configuration</li>
+                            <li><strong>Behavior Editor</strong> — reusable behavior scripts</li>
+                        </ul>
+                    </div>
+                    <div class="tool-category">
+                        <h4>Visual & Effects</h4>
+                        <ul>
+                            <li><strong>Pixel Editor</strong> — in-engine sprite and tile painter</li>
+                            <li><strong>FX Editor</strong> — particle effects and visual FX</li>
+                            <li><strong>Shader Editor</strong> — custom shader authoring</li>
+                            <li><strong>Prefab Editor</strong> — reusable scene object library</li>
+                        </ul>
+                    </div>
+                    <div class="tool-category">
+                        <h4>Data & Audio</h4>
+                        <ul>
+                            <li><strong>Audio Tool</strong> — sound import, preview, and spatial config</li>
+                            <li><strong>Item Editor</strong> — item database and properties</li>
+                            <li><strong>Skill Editor</strong> — skill trees and ability definitions</li>
+                            <li><strong>Achievement Editor</strong> — achievement conditions and rewards</li>
+                        </ul>
                     </div>
                 </div>
-                <div id="architecture-desc" class="terminal-box">
-                    > HOVER OVER A SYSTEM MODULE TO INTERROGATE...
-                </div>
-            </div>
 
-            <div class="tech-grid">
-                <div class="tech-card">
-                    <h5>NEURAL_CORE</h5>
-                    <p>Transformers.js v3 + WebGPU acceleration. 1.3B parameter local inference.</p>
-                </div>
-                <div class="tech-card">
-                    <h5>VECTOR_ENGINE</h5>
-                    <p>Orama Hybrid Search with IndexedDB persistence for sub-1ms RAG retrieval.</p>
-                </div>
-                <div class="tech-card">
-                    <h5>RENDER_PIPELINE</h5>
-                    <p>V8-optimized canvas rendering with depth-sorting and chunk-based occlusion.</p>
-                </div>
-                <div class="tech-card">
-                    <h5>CROSS_COMPILER</h5>
-                    <p>Electron (Desktop) & Capacitor (Mobile) native bridge protocols.</p>
+                <div class="screenshot-placeholder" data-label="Script Editor — Monaco code editor with AI autocomplete">
+                    <span>📸 Screenshot: Script Editor (Monaco)</span>
                 </div>
             </div>
         </section>
 
-        <!-- SYNC: THE EVENT BUS -->
-        <section id="sync" class="section-pro">
-            <h2 class="section-title">REAL-TIME <span class="highlight-blue">SYNC_PROTOCOL</span></h2>
-            <div class="sync-grid">
-                <div class="sync-visual">
-                    <div class="sync-window main">
-                        <div class="window-label">ISO_EDITOR.exe</div>
-                        <div class="window-content">
-                            <div class="sync-tile"></div>
-                            <div class="sync-tile"></div>
-                            <div class="sync-tile active"></div>
-                            <div class="sync-tile"></div>
+        <!-- KAI AI -->
+        <section id="ai" class="section">
+            <div class="section-container">
+                <div class="ai-layout">
+                    <div class="ai-text">
+                        <span class="section-label">Kai — Built-in AI</span>
+                        <h2>Your AI pair programmer, <span class="hl">without the cloud</span></h2>
+                        <p>Kai is Ketebe's local AI assistant. It runs entirely in your browser using WebGPU and WASM — no API keys, no internet connection required, no data leaving your machine.</p>
+                        <div class="ai-features">
+                            <div class="ai-feature">
+                                <div class="ai-feature-icon">⚡</div>
+                                <div>
+                                    <strong>Local inference</strong>
+                                    <p>Powered by Transformers.js running on WebGPU/WASM. Everything executes on your hardware.</p>
+                                </div>
+                            </div>
+                            <div class="ai-feature">
+                                <div class="ai-feature-icon">🔍</div>
+                                <div>
+                                    <strong>Project-aware RAG</strong>
+                                    <p>Kai indexes your project files, logic scripts, and engine documentation using a local vector store (Orama) for context-aware answers.</p>
+                                </div>
+                            </div>
+                            <div class="ai-feature">
+                                <div class="ai-feature-icon">🛠</div>
+                                <div>
+                                    <strong>Agentic capabilities</strong>
+                                    <p>Kai can create files, modify logic scripts, and perform tasks inside your project — not just suggest them.</p>
+                                </div>
+                            </div>
+                            <div class="ai-feature">
+                                <div class="ai-feature-icon">🔒</div>
+                                <div>
+                                    <strong>100% private</strong>
+                                    <p>No cloud, no telemetry, no API subscriptions. Your project code never leaves your machine.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="sync-line">
-                        <div class="pulse"></div>
-                    </div>
-                    <div class="sync-window side">
-                        <div class="window-label">CODE_FORGE.js</div>
-                        <div class="window-content">
-                            <pre><code>tile.tint = "#f1c40f";</code></pre>
+                    <div class="ai-visual">
+                        <div class="screenshot-placeholder" data-label="Kai AI chat panel inside the Studio">
+                            <span>📸 Screenshot: Kai AI Panel</span>
                         </div>
                     </div>
                 </div>
-                <div class="sync-info">
-                    <div class="sys-label blue">EVENT_BUS_v2.0</div>
-                    <h3>THE MULTI-WINDOW HEARTBEAT</h3>
-                    <p>Ketebe's editors don't just "save" files. They talk to each other. Through our proprietary EventBus protocol, every change in Code_Forge is instantly reflected in the running game and all open editors. No more refreshing, no more state-desync.</p>
-                    <ul class="pro-list">
-                        <li><span>></span> ZERO_LATENCY: WebSocket-based state broadcasting.</li>
-                        <li><span>></span> DISTRIBUTED_TOOLS: Run editors on different monitors or even different devices.</li>
-                        <li><span>></span> HOT_RELOAD: Automatic injection of logic and assets into the active runtime.</li>
-                    </ul>
+            </div>
+        </section>
+
+        <!-- PLATFORMS -->
+        <section id="platforms" class="section section-alt">
+            <div class="section-container">
+                <div class="section-header">
+                    <span class="section-label">Multi-Platform</span>
+                    <h2>Build once, <span class="hl">ship everywhere</span></h2>
+                    <p>One command packages your game for any target. The same project runs on desktop, web, and mobile without changes.</p>
+                </div>
+                <div class="platforms-grid">
+                    <div class="platform-card">
+                        <div class="platform-icon">🖥</div>
+                        <h4>Desktop</h4>
+                        <p>Ships as a standalone Windows app via Electron. Embeds the game server internally — no separate install needed.</p>
+                        <code>npm run build:game "MyGame" electron</code>
+                    </div>
+                    <div class="platform-card">
+                        <div class="platform-icon">🌐</div>
+                        <h4>Web</h4>
+                        <p>Serves directly from an Express static server. The same HTML/JS game runs in any modern browser.</p>
+                        <code>npm run build:game "MyGame" web</code>
+                    </div>
+                    <div class="platform-card">
+                        <div class="platform-icon">📱</div>
+                        <h4>Android</h4>
+                        <p>Packaged via Capacitor. Sync assets and open Android Studio with a single command.</p>
+                        <code>npm run build:game "MyGame" android</code>
+                    </div>
+                    <div class="platform-card">
+                        <div class="platform-icon">🍎</div>
+                        <h4>iOS</h4>
+                        <p>Also via Capacitor. Builds the iOS project and opens Xcode ready for deployment.</p>
+                        <code>npx cap open ios</code>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- NEW: EASE OF USE (LIVE SCRIPTING MOCKUP) -->
-        <section id="ease-of-use" class="section-pro alt-bg">
-            <h2 class="section-title">EASE OF <span class="highlight-blue">DEPLOYMENT</span></h2>
-            <div class="hot-reload-playground">
-                <div class="playground-code">
-                    <div class="frame-header">SCRIPTOR_v1.0</div>
-                    <div class="code-editor-mockup">
-                        <div class="line"><span>1</span> <span class="keyword">export class</span> <span class="class">Player</span> {</div>
-                        <div class="line"><span>2</span>   <span class="func">onUpdate</span>() {</div>
-                        <div class="line"><span>3</span>     <span class="this">this</span>.scale = <span class="variable" id="code-scale">1.0</span>;</div>
-                        <div class="line"><span>4</span>     <span class="this">this</span>.tint = <span class="string" id="code-tint">"#f1c40f"</span>;</div>
-                        <div class="line"><span>5</span>   }</div>
-                        <div class="line"><span>6</span> }</div>
+        <!-- MOBILE HIGHLIGHT -->
+        <section class="section">
+            <div class="section-container">
+                <div class="ai-layout">
+                    <div class="ai-visual">
+                        <div class="screenshot-placeholder" data-label="Ketebe Studio running on a Tablet / iPad">
+                            <span>📸 Screenshot: Tablet Interface</span>
+                        </div>
                     </div>
-                    <div class="code-controls">
-                        <button class="btn-switcher" onclick="updateMockup('scale', 1.5)">ENLARGE</button>
-                        <button class="btn-switcher" onclick="updateMockup('tint', '#3498db')">BLUE_TINT</button>
-                        <button class="btn-switcher" onclick="updateMockup('reset', 1.0)">RESET</button>
-                    </div>
-                </div>
-                <div class="playground-result">
-                    <div class="frame-header">LIVE_PREVIEW</div>
-                    <div class="result-view">
-                        <div id="mockup-sprite">📐</div>
-                        <div class="hot-reload-tag">HOT_RELOAD_ACTIVE</div>
+                    <div class="ai-text">
+                        <span class="section-label">Touch Optimized</span>
+                        <h2>IT ALSO WORKS ON YOUR <span class="hl">MOBILE DEVICE</span> OR YOUR <span class="hl">TABLET</span> TOO!</h2>
+                        <p>Ketebe isn't just for desktop. Our studio and all engine runners are fully responsive and touch-optimized. Experience the full power of a game studio right in your pocket or on your tablet.</p>
+                        <div class="ai-features">
+                            <div class="ai-feature">
+                                <div class="ai-feature-icon">📱</div>
+                                <div>
+                                    <strong>Fully Responsive UI</strong>
+                                    <p>The entire Studio dashboard and all 30+ editors adapt perfectly to smaller screens.</p>
+                                </div>
+                            </div>
+                            <div class="ai-feature">
+                                <div class="ai-feature-icon">👆</div>
+                                <div>
+                                    <strong>Touch-Friendly Controls</strong>
+                                    <p>Visual editors, node graphs, and painting tools are optimized for finger and stylus input.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ROADMAP: THE LOG -->
-        <section id="roadmap" class="section-pro">
-            <h2 class="section-title">THE <span class="highlight">SYSTEM_ROADMAP</span></h2>
-            <div class="roadmap-container">
-                <div class="roadmap-item completed">
-                    <div class="roadmap-ver">v1.0 (CURRENT)</div>
-                    <div class="roadmap-desc">Multi-Paradigm Engine, Neural Link v1, Integrated DAW, WebGPU Rasterizer.</div>
+        <!-- DOWNLOADS -->
+        <section id="downloads" class="section section-alt">
+            <div class="section-container">
+                <div class="section-header">
+                    <span class="section-label">Downloads</span>
+                    <h2>Install on <span class="hl">your machine</span></h2>
+                    <p>Grab the desktop app for your OS, or install via npm for a web-server workflow. All packages ship with the full studio and all five engines.</p>
                 </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-ver">v1.1 (Q2 2026)</div>
-                    <div class="roadmap-desc">Procedural World Generation, Multiplayer WebSocket Relay, Advanced Shaders Lab.</div>
+
+                <!-- Desktop packages -->
+                <div class="dl-group-label">DESKTOP_PACKAGES</div>
+                <div class="dl-grid">
+                    <a href="#" class="dl-card">
+                        <div class="dl-os-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.03 3.02 2.65 4.03 2.68 4.04l-.05.27zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        </div>
+                        <div class="dl-info">
+                            <div class="dl-os">macOS</div>
+                            <div class="dl-detail">Universal · .dmg</div>
+                        </div>
+                        <div class="dl-arrow">↓</div>
+                    </a>
+                    <a href="#" class="dl-card">
+                        <div class="dl-os-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                        </div>
+                        <div class="dl-info">
+                            <div class="dl-os">Windows</div>
+                            <div class="dl-detail">x64 · .exe installer</div>
+                        </div>
+                        <div class="dl-arrow">↓</div>
+                    </a>
+                    <a href="#" class="dl-card">
+                        <div class="dl-os-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.144 4.486l2.55 4.416-2.55 4.416-2.55-4.416zm-5.658 2.772l4.416 2.55-4.416 2.55V7.258zm11.028 0v5.1l-4.416-2.55zm-11.028 7.2l4.416 2.55-4.416 2.55zm6.642 2.55l-2.55 4.416-2.55-4.416h5.1zm4.386-2.55v5.1l-4.416-2.55zm-9.372 5.1l2.55-4.416 2.55 4.416z"/></svg>
+                        </div>
+                        <div class="dl-info">
+                            <div class="dl-os">Linux</div>
+                            <div class="dl-detail">x64 · .AppImage / .deb</div>
+                        </div>
+                        <div class="dl-arrow">↓</div>
+                    </a>
                 </div>
-                <div class="roadmap-item">
-                    <div class="roadmap-ver">v1.2 (Q4 2026)</div>
-                    <div class="roadmap-desc">Neural Asset Generation (PixelDiffusion), Native Mobile Bridge (DirectX/Metal), Cloud Sync.</div>
+
+                <!-- Mobile packages -->
+                <div class="dl-group-label" style="margin-top: 44px;">MOBILE_PACKAGES</div>
+                <div class="dl-grid">
+                    <a href="#" class="dl-card">
+                        <div class="dl-os-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M17.523 15.3414C17.0609 15.3414 16.691 14.9664 16.691 14.5093C16.691 14.0522 17.0609 13.6772 17.523 13.6772C17.9851 13.6772 18.355 14.0522 18.355 14.5093C18.355 14.9664 17.9851 15.3414 17.523 15.3414ZM6.47702 15.3414C6.01492 15.3414 5.64502 14.9664 5.64502 14.5093C5.64502 14.0522 6.01492 13.6772 6.47702 13.6772C6.93912 13.6772 7.30902 14.0522 7.30902 14.5093C7.30902 14.9664 6.93912 15.3414 6.47702 15.3414ZM17.8852 10.5186L19.4627 7.75545C19.5592 7.58666 19.502 7.37198 19.3353 7.27503C19.1687 7.17808 18.9566 7.23555 18.8601 7.40434L17.2536 10.2198C15.8073 9.56068 13.9789 9.17188 12 9.17188C10.0211 9.17188 8.19273 9.56068 6.74643 10.2198L5.13988 7.40434C5.04341 7.23555 4.83125 7.17808 4.66465 7.27503C4.49805 7.37198 4.44078 7.58666 4.53725 7.75545L6.11478 10.5186C2.71694 12.3392 0.454224 15.759 0.0510254 19.7827H23.949C23.5458 15.759 21.2831 12.3392 17.8852 10.5186Z"/></svg>
+                        </div>
+                        <div class="dl-info">
+                            <div class="dl-os">Android</div>
+                            <div class="dl-detail">Engine Runner · .apk</div>
+                        </div>
+                        <div class="dl-arrow">↓</div>
+                    </a>
+                    <a href="#" class="dl-card">
+                        <div class="dl-os-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.03 3.02 2.65 4.03 2.68 4.04l-.05.27zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        </div>
+                        <div class="dl-info">
+                            <div class="dl-os">iOS</div>
+                            <div class="dl-detail">Engine Runner · .ipa</div>
+                        </div>
+                        <div class="dl-arrow">↓</div>
+                    </a>
+                </div>
+
+                <!-- npm install -->
+                <div class="dl-group-label" style="margin-top: 44px;">NPM_PACKAGE</div>
+                <div class="dl-npm-block">
+                    <div class="dl-npm-desc">
+                        <p>Run the Ketebe studio as a local web server — open it in any browser at <code class="inline-code">localhost:3000</code>. Ideal for CI, headless builds, or Linux servers without a display.</p>
+                        <div class="npm-badges">
+                            <span class="npm-badge">Node.js 16+</span>
+                            <span class="npm-badge">Cross-platform</span>
+                            <span class="npm-badge">Web-first</span>
+                        </div>
+                    </div>
+                    <div class="dl-npm-commands">
+                        <div class="npm-cmd-block">
+                            <div class="npm-cmd-label">INSTALL</div>
+                            <div class="code-block">
+                                <pre><code>npm install -g ketebe</code></pre>
+                                <button class="copy-btn" data-code="npm install -g ketebe">Copy</button>
+                            </div>
+                        </div>
+                        <div class="npm-cmd-block">
+                            <div class="npm-cmd-label">OR — RUN WITHOUT INSTALLING</div>
+                            <div class="code-block">
+                                <pre><code>npx ketebe</code></pre>
+                                <button class="copy-btn" data-code="npx ketebe">Copy</button>
+                            </div>
+                        </div>
+                        <div class="npm-cmd-block">
+                            <div class="npm-cmd-label">OPEN STUDIO</div>
+                            <div class="code-block">
+                                <pre><code># opens at http://localhost:3000
+ketebe start</code></pre>
+                                <button class="copy-btn" data-code="ketebe start">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- PRICING -->
+        <section id="pricing" class="section">
+            <div class="section-container">
+                <div class="section-header">
+                    <span class="section-label">Pricing</span>
+                    <h2>Own your tools. <span class="hl">Forever.</span></h2>
+                    <p>No subscription lock-in for those who want it. Pay once, build forever. All plans include every engine, every editor, and Kai AI.</p>
+                </div>
+                <div class="pricing-grid">
+
+                    <!-- FREE -->
+                    <div class="pricing-card">
+                        <div class="pricing-tier">FREE</div>
+                        <div class="pricing-price">
+                            <span class="price-amount">$0</span>
+                        </div>
+                        <div class="pricing-desc">For personal projects and learning. Ketebe watermarks game exports.</div>
+                        <ul class="pricing-features">
+                            <li>All 5 game engines</li>
+                            <li>All 30+ studio editors</li>
+                            <li>Kai AI assistant</li>
+                            <li>Web & desktop builds</li>
+                            <li class="dim">Ketebe watermark on exports</li>
+                            <li class="dim">No mobile builds</li>
+                            <li class="dim">Non-commercial use only</li>
+                        </ul>
+                        <a href="#start" class="pricing-cta pricing-cta-ghost">Get Started Free</a>
+                    </div>
+
+                    <!-- MONTHLY -->
+                    <div class="pricing-card">
+                        <div class="pricing-tier">MONTHLY</div>
+                        <div class="pricing-price">
+                            <span class="price-amount">$5</span>
+                            <span class="price-period">/ month</span>
+                        </div>
+                        <div class="pricing-desc">Full indie license billed monthly. Cancel any time.</div>
+                        <ul class="pricing-features">
+                            <li>Everything in Free</li>
+                            <li>No watermarks</li>
+                            <li>Android & iOS builds</li>
+                            <li>Commercial use</li>
+                            <li>Priority support</li>
+                            <li class="dim">1 developer seat</li>
+                        </ul>
+                        <a href="#start" class="pricing-cta pricing-cta-ghost">Subscribe Monthly</a>
+                    </div>
+
+                    <!-- INDIE LIFETIME — FEATURED -->
+                    <div class="pricing-card pricing-featured">
+                        <div class="pricing-badge">[ LIMITED TIME ]</div>
+                        <div class="pricing-tier">INDIE LIFETIME</div>
+                        <div class="pricing-price">
+                            <span class="price-original">$199</span>
+                            <span class="price-amount">$79.99</span>
+                            <span class="price-period">one-time</span>
+                        </div>
+                        <div class="pricing-desc">Pay once, yours forever. Single developer, personal license.</div>
+                        <ul class="pricing-features">
+                            <li>Everything in Monthly</li>
+                            <li>Lifetime updates</li>
+                            <li>No recurring fees</li>
+                            <li>All future engines</li>
+                            <li>1 developer seat</li>
+                        </ul>
+                        <a href="#start" class="pricing-cta pricing-cta-primary">Get Lifetime — $79.99</a>
+                    </div>
+
+                    <!-- STUDIO -->
+                    <div class="pricing-card">
+                        <div class="pricing-tier">STUDIO</div>
+                        <div class="pricing-price">
+                            <span class="price-amount">$399</span>
+                            <span class="price-period">one-time</span>
+                        </div>
+                        <div class="pricing-desc">For small studios. Up to 5 developers on one license.</div>
+                        <ul class="pricing-features">
+                            <li>Everything in Indie</li>
+                            <li>Up to 5 developer seats</li>
+                            <li>Team project sync</li>
+                            <li>Commercial distribution</li>
+                            <li>Dedicated support channel</li>
+                        </ul>
+                        <a href="#start" class="pricing-cta pricing-cta-ghost">Get Studio License</a>
+                    </div>
+
+                </div>
+                <p class="pricing-note">All licenses are per-computer. Ketebe Engine runs fully offline — no activation servers, no phone-home.</p>
+            </div>
+        </section>
+
+        <!-- GET STARTED -->
+        <section id="start" class="section">
+            <div class="section-container">
+                <div class="section-header">
+                    <span class="section-label">Primal Simplicity</span>
+                    <h2>Primitive instinct. <span class="hl">Modern power.</span></h2>
+                    <p>Even a caveman can build a world with Ketebe. We've distilled the complexity of game development into an experience so natural, it feels like muscle memory. Get up and running in three steps.</p>
+                </div>
+                <div class="start-steps">
+                    <div class="step">
+                        <div class="step-num">1</div>
+                        <div class="step-content">
+                            <h4>Clone and install</h4>
+                            <div class="code-block">
+                                <pre><code>git clone https://github.com/n0rthstar/ketebe.git
+cd ketebe
+npm install</code></pre>
+                                <button class="copy-btn" data-code="git clone https://github.com/n0rthstar/ketebe.git&#10;cd ketebe&#10;npm install">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">2</div>
+                        <div class="step-content">
+                            <h4>Launch the studio</h4>
+                            <div class="code-block">
+                                <pre><code># Desktop app (Electron)
+npm start
+
+# Or in your browser
+npm run server
+# → open http://localhost:3000</code></pre>
+                                <button class="copy-btn" data-code="npm start">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-num">3</div>
+                        <div class="step-content">
+                            <h4>Create or open a project</h4>
+                            <p>From the project dashboard, pick one of the included demo projects — <em>Default Project</em> (RPG), <em>Platformer Demo</em>, or <em>Iso Pixel Demo</em> — or create a new project and choose your engine type.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="start-cta">
+                    <a href="../public/project_dashboard.html" class="btn-primary btn-large">Open Studio</a>
+                    <a href="https://github.com/n0rthstar/ketebe" class="btn-secondary" target="_blank" rel="noopener">View on GitHub ↗</a>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <footer class="footer-pro">
+    <footer class="footer">
         <div class="footer-container">
-            <div class="footer-brand">KETEBE_ENGINE_STUDIO_2026</div>
-            <div class="footer-cta">
-                <a href="../public/project_dashboard.html" class="btn-main">RETURN_TO_STUDIO</a>
+            <div class="footer-brand">
+                <img src="assets/logo.png" alt="Ketebe" class="footer-logo">
+                <span>Ketebe Engine Studio</span>
             </div>
+            <div class="footer-links">
+                <a href="https://github.com/n0rthstar/ketebe" target="_blank" rel="noopener">GitHub</a>
+                <a href="#engines">Engines</a>
+                <a href="#studio">Studio</a>
+                <a href="#ai">Kai AI</a>
+                <a href="#start">Get Started</a>
+            </div>
+            <p class="footer-copy">Built with ❤️ by the Ketebe Team</p>
         </div>
     </footer>
 
     <script src="main.js"></script>
-    <script src="visualizer.js"></script>
 </body>
 </html>

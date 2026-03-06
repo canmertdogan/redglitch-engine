@@ -1813,16 +1813,6 @@ async function initRPGEngine() {
     console.log("[RPG Core] Initializing Top-Down Engine...");
     window.LOCALE.setLanguage(localStorage.getItem('ketebe_lang') || 'EN'); 
     
-    // V2.0: Reflection System (Dev Mode Only)
-    // In a real build, this JSON would be pre-generated.
-    import('./ReflectionSystem.js').then(m => {
-        const reflector = new m.ReflectionSystem(window.game);
-        const schema = reflector.generateSchema();
-        // Expose for Algorithm Studio to read
-        window.GAME_API_SCHEMA = schema;
-        console.log(`[Reflection] Generated ${schema.length} API nodes.`);
-    });
-
     try { 
         const res = await fetch('dunyalar/definitions/music.json'); 
         if(res.ok) window.MUSIC_CONFIG = await res.json(); 
@@ -1836,6 +1826,17 @@ async function initRPGEngine() {
     
     if (!window.game) window.game = new window.Core(); 
     if (!window.menuSystem) window.menuSystem = new window.MenuSystem(window.game); 
+
+    // V2.0: Reflection System (Dev Mode Only)
+    // In a real build, this JSON would be pre-generated.
+    import('./ReflectionSystem.js').then(m => {
+        if (!window.game) return;
+        const reflector = new m.ReflectionSystem(window.game);
+        const schema = reflector.generateSchema();
+        // Expose for Algorithm Studio to read
+        window.GAME_API_SCHEMA = schema;
+        console.log(`[Reflection] Generated ${schema.length} API nodes.`);
+    });
 }
 
 if (document.readyState === 'complete') {

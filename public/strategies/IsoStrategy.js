@@ -5,6 +5,11 @@ class IsoStrategy {
         this.cacheCols = 0;
         this.renderQueue = []; 
         this._projCache = {};
+        
+        // --- CHUNK CACHING (Performance Optimization) ---
+        this.chunkSize = 8; // 8x8 tiles per chunk
+        this.chunks = new Map(); // Key: "cx_cy", Value: { canvas, ctx, lastZ: Int8Array }
+        this.dirtyChunks = new Set();
     }
 
     getTileDims(config) {
@@ -219,8 +224,112 @@ class IsoStrategy {
         }
     }
 
-    invalidateChunks() {
-        // Clear caches that might be affected by map changes
+    /**
+     * Re-render a single 8x8 chunk into its offscreen canvas.
+     */
+    renderChunk(cx, cy, map, config, tileset) {
+        const key = `${cx}_${cy}`;
+        let chunk = this.chunks.get(key);
+        const dims = this.getTileDims(config);
+        const halfW = dims.w / 2;
+        const halfH = dims.h / 2;
+
+        if (!chunk) {
+            const canvas = document.createElement('canvas');
+            // A chunk needs space for the vertical stacking (Z)
+            canvas.width = this.chunkSize * dims.w + dims.w;
+            canvas.height = this.chunkSize * dims.h + (dims.h * 12); // Max Z headroom
+            chunk = { 
+                canvas, 
+                ctx: canvas.getContext('2d'),
+                originX: 0,
+                originY: 0
+            };
+            chunk.ctx.imageSmoothingEnabled = false;
+            this.chunks.set(key, chunk);
+        }
+
+        const ctx = chunk.ctx;
+        ctx.clearRect(0, 0, chunk.canvas.width, chunk.canvas.height);
+
+        // Calculate chunk center to project tiles correctly relative to chunk origin
+        // Map space (x, y) start for this chunk:
+        const startX = cx * this.chunkSize;
+        const startY = cy * this.chunkSize;
+        
+        // Find the bounding box of the chunk in screen space to set origin
+        // The leftmost point is (startX, startY + size)
+        // The rightmost is (startX + size, startY)
+        // The top is (startX, startY)
+        // The bottom is (startX + size, startY + size)
+        
+        const originX = (this.chunkSize) * halfW;
+        const originY = 0; // Top is origin
+        chunk.originX = originX;
+        chunk.originY = originY;
+
+        // Collect and sort tiles in this chunk by depth
+        const tiles = [];
+        const mapW = map.width;
+        const layers = map.layers;
+        const zLayers = map.z || [];
+        const shapes = map.shapes || [];
+
+        for (let y = 0; y < this.chunkSize; y++) {
+            for (let x = 0; x < this.chunkSize; x++) {
+                const mx = startX + x;
+                const my = startY + y;
+                if (mx >= map.width || my >= map.height) continue;
+                
+                const idx = my * mapW + mx;
+                for (let l = 0; l < layers.length; l++) {
+                    const tid = layers[l][idx];
+                    if (tid === null || tid === undefined) continue;
+                    
+                    const z = zLayers[l] ? zLayers[l][idx] : 0;
+                    const shape = shapes[l] ? shapes[l][idx] : 0;
+                    
+                    tiles.push({
+                        tid, shape, z,
+                        lx: x, ly: y, // Local chunk coordinates
+                        depth: (x + y) + (z * 0.01)
+                    });
+                }
+            }
+        }
+
+        tiles.sort((a, b) => a.depth - b.depth);
+
+        // Draw sorted tiles
+        for (const t of tiles) {
+            const img = this.getTileImage(t.tid, t.shape, tileset, config);
+            // Project relative to chunk origin
+            const px = originX + (t.lx - t.ly) * halfW;
+            const py = originY + (t.lx + t.ly) * halfH - (t.z * dims.h);
+            ctx.drawImage(img, 0, t.shape * (dims.h * 2), dims.w, dims.h * 2, px - halfW, py, dims.w, dims.h * 2);
+        }
+
+        return chunk;
+    }
+
+    getChunk(cx, cy, map, config, tileset) {
+        const key = `${cx}_${cy}`;
+        if (this.dirtyChunks.has(key) || !this.chunks.has(key)) {
+            this.renderChunk(cx, cy, map, config, tileset);
+            this.dirtyChunks.delete(key);
+        }
+        return this.chunks.get(key);
+    }
+
+    invalidateChunks(x, y) {
+        if (x !== undefined && y !== undefined) {
+            const cx = Math.floor(x / this.chunkSize);
+            const cy = Math.floor(y / this.chunkSize);
+            this.dirtyChunks.add(`${cx}_${cy}`);
+        } else {
+            this.chunks.clear();
+            this.dirtyChunks.clear();
+        }
         this._projCache = {};
         this.renderQueue.length = 0;
     }
@@ -240,6 +349,8 @@ class IsoStrategy {
         const dims = this.getTileDims(config);
         const cw = ctx.canvas.width;
         const ch = ctx.canvas.height;
+        const halfW = dims.w / 2;
+        const halfH = dims.h / 2;
         
         ctx.save();
         ctx.translate(cw / 2 + (state.camX || 0), ch / 4 + (state.camY || 0));
@@ -252,90 +363,50 @@ class IsoStrategy {
         const vTop = -ch/4 - camY - (dims.h * 12); 
         const vBottom = ch - ch/4 - camY + dims.h * 2;
 
-        // Calculate visible tile range more efficiently
-        const halfW = dims.w / 2;
-        const halfH = dims.h / 2;
-        
-        // Convert screen corners to map coords
-        const toMap = (sx, sy) => ({
-            x: Math.floor((sx / halfW + sy / halfH) / 2),
-            y: Math.floor((sy / halfH - sx / halfW) / 2)
-        });
-        
-        const corners = [
-            toMap(vLeft, vTop), toMap(vRight, vTop),
-            toMap(vLeft, vBottom), toMap(vRight, vBottom)
-        ];
-        
-        const pad = 3;
-        const minX = Math.max(0, Math.min(...corners.map(c => c.x)) - pad);
-        const maxX = Math.min(map.width, Math.max(...corners.map(c => c.x)) + pad);
-        const minY = Math.max(0, Math.min(...corners.map(c => c.y)) - pad);
-        const maxY = Math.min(map.height, Math.max(...corners.map(c => c.y)) + pad);
-
         // Reuse render queue array (avoid allocation)
         this.renderQueue.length = 0;
 
-        // Light tints (pre-defined to avoid allocations)
-        const colShadow = 'rgba(10, 15, 40, 0.45)'; 
-        const colSun = 'rgba(255, 220, 150, 0.12)'; 
-
-        // Build render queue - tiles only
-        const mapW = map.width;
-        const layers = map.layers;
-        const zLayers = map.z || [];
-        const shapes = map.shapes || [];
-        const occlusion = map.occlusion || [];
-        const lighting = map.lighting || [];
-        const layerCount = layers ? layers.length : 0;
-
-        for (let y = minY; y < maxY; y++) {
-            for (let x = minX; x < maxX; x++) {
-                const idx = y * mapW + x;
-                const occlusionZ = occlusion[idx];
-                const isShadowed = lighting[idx] === 1;
-
-                const baseX = (x - y) * halfW;
-                const baseY = (x + y) * halfH;
+        // 1. Identify and add visible CHUNKS to the queue
+        const numChunksX = Math.ceil(map.width / this.chunkSize);
+        const numChunksY = Math.ceil(map.height / this.chunkSize);
+        
+        for (let cy = 0; cy < numChunksY; cy++) {
+            for (let cx = 0; cx < numChunksX; cx++) {
+                // Approximate screen position of chunk center
+                const sx = (cx * this.chunkSize - cy * this.chunkSize) * halfW;
+                const sy = (cx * this.chunkSize + cy * this.chunkSize) * halfH;
                 
-                // Quick viewport cull
-                if (baseX < vLeft || baseX > vRight || baseY < vTop || baseY > vBottom) continue;
+                // Culling (with padding for chunk height)
+                if (sx < vLeft - (this.chunkSize * dims.w) || sx > vRight + dims.w || 
+                    sy < vTop - (dims.h * 12) || sy > vBottom + (this.chunkSize * dims.h)) continue;
 
-                for (let l = 0; l < layerCount; l++) {
-                    const layer = layers[l];
-                    if (!layer) continue;
-                    
-                    // Skip hidden layers
-                    if (map.layerProps && map.layerProps[l] && !map.layerProps[l].visible) continue;
+                const chunk = this.getChunk(cx, cy, map, config, tileset);
+                const screenX = (cx * this.chunkSize - cy * this.chunkSize) * halfW;
+                const screenY = (cx * this.chunkSize + cy * this.chunkSize) * halfH;
 
-                    const tid = layer[idx];
-                    if (tid === null || tid === undefined) continue;
-
-                    // Safety check for z-layers
-                    const zLayer = zLayers[l];
-                    if (!zLayer) continue;
-                    const z = zLayer[idx];
-                    // if (z < occlusionZ) continue; // Occluded - Disabled to allow floating/stacked blocks
-
-                    this.renderQueue.push({
-                        type: 't',
-                        img: this.getTileImage(tid, shapes[l] ? shapes[l][idx] : 0, tileset, config),
-                        sy: (shapes[l] ? shapes[l][idx] : 0) * (dims.h * 2),
-                        x: baseX,
-                        y: baseY - (z * dims.h),
-                        depth: (x + y) + (z * 0.01),
-                        tint: isShadowed ? colShadow : colSun,
-                        isShadowed: isShadowed
-                    });
-                }
+                this.renderQueue.push({
+                    type: 'chunk',
+                    img: chunk.canvas,
+                    x: screenX - chunk.originX,
+                    y: screenY - chunk.originY,
+                    depth: (cx * this.chunkSize + cy * this.chunkSize) // Basic chunk depth
+                });
             }
         }
 
-        // Add entities (player, decorations)
+        // 2. Add entities (player, decorations) to the queue
+        const mapW = map.width;
         const ents = state.entities || [];
+        const lighting = map.lighting || [];
+        const colShadow = 'rgba(10, 15, 40, 0.45)'; 
+
         if (map.decorations) {
             for (const d of map.decorations) {
-                if (d.x < minX - 1 || d.x > maxX + 1 || d.y < minY - 1 || d.y > maxY + 1) continue;
+                // Quick map-space cull based on loop bounds (reuse min/max from chunk logic if we had them)
+                // For now, simpler coordinate check
+                const pos = this.project(d.x, d.y, d.z||0, dims);
+                if (pos.x < vLeft || pos.x > vRight || pos.y < vTop || pos.y > vBottom) continue;
+
                 const lIdx = Math.floor(d.y) * mapW + Math.floor(d.x);
                 const isShad = lIdx >= 0 && lIdx < lighting.length && lighting[lIdx] === 1;
                 this.renderQueue.push({
@@ -347,6 +418,9 @@ class IsoStrategy {
             }
         }
         for (const e of ents) {
+            const pos = this.project(e.x, e.y, e.z||0, dims);
+            if (pos.x < vLeft || pos.x > vRight || pos.y < vTop || pos.y > vBottom) continue;
+
             const lIdx = Math.floor(e.y) * mapW + Math.floor(e.x);
             const isShad = lIdx >= 0 && lIdx < lighting.length && lighting[lIdx] === 1;
             this.renderQueue.push({
@@ -362,35 +436,22 @@ class IsoStrategy {
 
         // Render all items
         const qLen = this.renderQueue.length;
-        const tsW = dims.w;
-        const tsH = dims.h * 2;
-
         for (let i = 0; i < qLen; i++) {
             const item = this.renderQueue[i];
             
-            if (item.type === 't') {
-                if (item.img) {
-                    ctx.drawImage(item.img, 0, item.sy, tsW, tsH, item.x - tsW/2, item.y, tsW, tsH);
-                    
-                    // Apply lighting tint (simplified)
-                    if (item.tint && item.isShadowed) {
-                        ctx.fillStyle = item.tint;
-                        ctx.fillRect(item.x - tsW/2, item.y, tsW, tsH);
-                    }
-                }
+            if (item.type === 'chunk') {
+                ctx.drawImage(item.img, item.x, item.y);
             } else {
                 const pos = this.project(item.x, item.y, item.z, dims);
                 
                 if (item.type === 'd') {
                     this.drawObject(ctx, item.data, pos.x, pos.y, dims, config, state, sprites);
                 } else if (item.type === 'e') {
-                    // Check if this is a worm entity
                     if (item.data.isWorm && item.data.history) {
                         this.drawWorm(ctx, item.data, dims, sprites);
                     } else if (sprites && sprites[item.data.animState]) {
                         this.drawCharacter(ctx, item.data, pos.x, pos.y, dims, sprites);
                     } else {
-                        // Fallback player rendering
                         ctx.fillStyle = item.data.color || '#f1c40f';
                         const pH = dims.h * 1.5;
                         ctx.fillRect(pos.x - 8, pos.y - pH, 16, pH);

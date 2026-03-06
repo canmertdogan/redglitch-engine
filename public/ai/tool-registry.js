@@ -74,13 +74,17 @@ export class ToolRegistry {
         // The "Handshake": External tools can announce their presence
         this.eventBus.on('studio:tool:announce', (event) => {
             if (!event || !event.data) return;
+            // Ignore our own announcements
+            if (event.source === this.eventBus.getSource()) return;
+            
             const toolDef = event.data;
             this._debug(`Tool discovered via announce: ${toolDef.name}`);
-            this.register(toolDef);
+            this.register(toolDef, false); // Register without re-broadcasting
         });
 
         // Discovery Request: When a new AI component joins, it asks for all tools
-        this.eventBus.on('ai:tool:discover', () => {
+        this.eventBus.on('ai:tool:discover', (event) => {
+            // Only respond if we are the primary registry or the discovery came from elsewhere
             this._debug(`Discovery requested. Broadcasting all tools.`);
             for (const tool of this.tools.values()) {
                 this.eventBus.emit('ai:tool:registered', { name: tool.name, definition: tool });
@@ -90,6 +94,9 @@ export class ToolRegistry {
         // Remote request for tool execution (from IRAB/Assistant)
         this.eventBus.on('ai:command:request', async (event) => {
             if (!event || !event.data) return;
+            // Ignore our own requests
+            if (event.source === this.eventBus.getSource()) return;
+            
             const request = event.data;
             this._debug(`Remote command request: ${request.method}`, request.params);
             try {
@@ -160,7 +167,7 @@ export class ToolRegistry {
     /**
      * Register a tool definition.
      */
-    register(toolDef) {
+    register(toolDef, broadcast = true) {
         const compliantTool = {
             securityLevel: 'high-risk',
             requiresConfirmation: toolDef.requiresConfirmation !== false && toolDef.securityLevel !== 'safe',
@@ -170,7 +177,7 @@ export class ToolRegistry {
         
         this._debug(`Tool registered locally: ${compliantTool.name}`);
 
-        if (this.eventBus) {
+        if (this.eventBus && broadcast) {
             this.eventBus.emit('ai:tool:registered', { 
                 name: compliantTool.name, 
                 namespace: compliantTool.name.split('.')[0],
@@ -380,7 +387,8 @@ export class ToolRegistry {
             this._debug(`Execution success for ${name}`, result);
             
             // Record the action for undo/audit
-            this.permissionGate.recordAction(name, args, result, tool.undo);
+            const undoFn = (result && typeof result.undo === 'function') ? result.undo : tool.undo;
+            this.permissionGate.recordAction(name, args, result, undoFn);
             
             const response = { id, success: true, result };
             this.eventBus.emit('studio:action:result', response);
@@ -507,13 +515,43 @@ export class ToolRegistry {
                 required: ['path', 'content']
             },
             execute: async (args) => {
+                // SHADOW BACKUP: Read existing content before writing
+                let previousContent = null;
+                let exists = false;
+                try {
+                    const check = await fetch(`/api/ide/read?file=${encodeURIComponent(args.path)}`);
+                    if (check.ok) {
+                        previousContent = await check.text();
+                        exists = true;
+                    }
+                } catch (e) {}
+
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ file: args.path, content: args.content })
                 });
                 if (!res.ok) throw new Error(`Failed to write to ${args.path}`);
-                return { success: true, path: args.path };
+
+                // Return UNDO function
+                const undo = async () => {
+                    console.log(`[Undo] Restoring ${args.path}...`);
+                    if (exists) {
+                        await fetch('/api/ide/write', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ file: args.path, content: previousContent })
+                        });
+                    } else {
+                        await fetch('/api/ide/delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ file: args.path })
+                        });
+                    }
+                };
+
+                return { success: true, path: args.path, undo };
             }
         });
 
@@ -530,13 +568,35 @@ export class ToolRegistry {
                 required: ['path']
             },
             execute: async (args) => {
+                // SHADOW BACKUP: Read existing content before deleting
+                let previousContent = null;
+                try {
+                    const check = await fetch(`/api/ide/read?file=${encodeURIComponent(args.path)}`);
+                    if (check.ok) {
+                        previousContent = await check.text();
+                    }
+                } catch (e) {}
+
                 const res = await fetch('/api/ide/delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ file: args.path })
                 });
                 if (!res.ok) throw new Error(`Failed to delete ${args.path}`);
-                return { success: true, message: `${args.path} deleted.` };
+
+                // Return UNDO function
+                const undo = async () => {
+                    if (previousContent !== null) {
+                        console.log(`[Undo] Restoring deleted file: ${args.path}`);
+                        await fetch('/api/ide/write', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ file: args.path, content: previousContent })
+                        });
+                    }
+                };
+
+                return { success: true, message: `${args.path} deleted.`, undo };
             }
         });
 
@@ -937,10 +997,45 @@ export class ToolRegistry {
         // --- STUDIO PROXY TOOLS ---
         // These forward tool calls to the appropriate studio iframe via postMessage
 
-        // pixel.generateTerrain proxy (dispatches to iso_studio iframe)
+        /**
+         * Helper to ensure a specific studio/editor is open before dispatching.
+         */
+        const ensureStudioOpen = async (studioId, filename = null) => {
+            const hub = window.parent || window;
+            if (!hub.openWindow || !hub.tools) return false;
+
+            const tool = hub.tools.find(t => t.id === studioId);
+            if (!tool) return false;
+
+            // Open the window if not already visible
+            hub.openWindow(tool);
+            if (filename) {
+                // Future: add logic to open specific file
+            }
+
+            const frameId = `frame-${studioId}`;
+            return new Promise((resolve) => {
+                let tries = 0;
+                const iv = setInterval(() => {
+                    tries++;
+                    const frame = hub.document.getElementById(frameId);
+                    // Check if frame exists and is likely loaded (has contentWindow)
+                    if (frame && frame.contentWindow) {
+                        clearInterval(iv);
+                        resolve(true);
+                    }
+                    if (tries > 50) { // 5s timeout
+                        clearInterval(iv);
+                        resolve(false);
+                    }
+                }, 100);
+            });
+        };
+
+        // pixel.generateTerrain proxy (ensures iso_studio is open)
         this.register({
             name: 'pixel.generateTerrain',
-            description: 'Generate procedural terrain in the IsoPixel Studio. Opens iso_studio first if not open.',
+            description: 'Generate procedural terrain in the IsoPixel Studio.',
             securityLevel: 'high-risk',
             parameters: {
                 type: 'object',
@@ -951,125 +1046,20 @@ export class ToolRegistry {
                 }
             },
             execute: async (args) => {
-                this._debug(`Dispatching terrain generation to iso_studio...`, args);
-                const dispatch = () => {
-                    // In standalone iso_editor, dispatch directly to this window.
-                    if (typeof window !== 'undefined' && window.location.pathname.includes('iso_editor')) {
-                        window.postMessage({ type: 'ai:tool', name: 'generateTerrain', args: args || {} }, '*');
-                        return true;
-                    }
-
-                    const frame = document.getElementById('frame-iso_studio');
-                    if (frame && frame.contentWindow) {
-                        console.log("[ToolRegistry] Found iso_studio frame, posting message...");
-                        frame.contentWindow.postMessage({ type: 'ai:tool', name: 'generateTerrain', args: args || {} }, '*');
-                        return true;
-                    }
-                    return false;
-                };
-                let dispatched = dispatch();
-                if (!dispatched) {
-                    // Studio not open yet — wait up to 5s for it to load
-                    await new Promise((resolve) => {
-                        let tries = 0;
-                        const iv = setInterval(() => {
-                            tries++;
-                            dispatched = dispatch();
-                            if (dispatched || tries > 50) { clearInterval(iv); resolve(); }
-                        }, 100);
-                    });
-                }
-                if (!dispatched) throw new Error('IsoPixel Studio is not available for terrain generation');
-                return { success: true, message: 'Terrain generation dispatched to IsoPixel Studio' };
-            }
-        });
-
-        // --- ENGINE & SPATIAL ---
-
-        // engine.getSnapshot (Safe)
-        this.register({
-            name: 'engine.getSnapshot',
-            description: 'Get a spatial snapshot of the active game engine (player coordinates, entity positions, world state).',
-            securityLevel: 'safe',
-            parameters: { type: 'object', properties: {} },
-            execute: async (args) => {
-                const id = `snap_${Date.now()}`;
-                this.eventBus.emit('engine:snapshot:request', { id });
+                const ready = await ensureStudioOpen('iso_studio');
+                if (!ready) throw new Error('IsoPixel Studio could not be opened.');
                 
-                return new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => {
-                        this.eventBus.off('engine:snapshot:result', handler);
-                        reject(new Error("Engine snapshot request timed out. Is an engine running?"));
-                    }, 3000);
-
-                    const handler = (event) => {
-                        if (event.data.id === id) {
-                            clearTimeout(timeout);
-                            this.eventBus.off('engine:snapshot:result', handler);
-                            resolve(event.data.snapshot);
-                        }
-                    };
-                    this.eventBus.on('engine:snapshot:result', handler);
-                });
+                // The actual execution is handled by StudioBridge in iso_editor.js
+                // which listens for 'studio:action:execute' emitted by ToolRegistry.execute()
+                return { success: true, message: 'Terrain generation requested in IsoPixel Studio.' };
             }
         });
 
-        // engine.input (Low-Risk)
-        this.register({
-            name: 'engine.input',
-            description: 'Inject a keyboard input into the active game engine.',
-            securityLevel: 'low-risk',
-            parameters: {
-                type: 'object',
-                properties: {
-                    code: { type: 'string', description: 'The JS KeyCode (e.g. "Space", "KeyW").' },
-                    state: { type: 'string', enum: ['down', 'up'], description: 'The state of the key.' }
-                },
-                required: ['code', 'state']
-            },
-            execute: async (args) => {
-                this.eventBus.emit('engine:input', args);
-                return { success: true };
-            }
-        });
-
-        // engine.startChaosMode (High-Risk)
-        this.register({
-            name: 'engine.startChaosMode',
-            description: 'KAI takes over the game controls to stress-test the level for bugs/exploits.',
-            securityLevel: 'high-risk',
-            parameters: {
-                type: 'object',
-                properties: {
-                    duration: { type: 'number', description: 'Seconds to run chaos mode.', default: 10 }
-                }
-            },
-            execute: async (args) => {
-                const duration = args.duration || 10;
-                this.eventBus.emit('ai:thought', { text: `GRRR... INITIATING CHAOS MODE. SHIELDS UP.` });
-                
-                const keys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'];
-                const interval = setInterval(() => {
-                    const code = keys[Math.floor(Math.random() * keys.length)];
-                    const state = Math.random() > 0.5 ? 'down' : 'up';
-                    this.eventBus.emit('engine:input', { code, state });
-                }, 100);
-
-                setTimeout(() => {
-                    clearInterval(interval);
-                    keys.forEach(k => this.eventBus.emit('engine:input', { code: k, state: 'up' }));
-                    this.eventBus.emit('ai:thought', { text: `GRRR... CHAOS SESSION COMPLETE. NO ANOMALIES DETECTED.` });
-                }, duration * 1000);
-
-                return { success: true, message: `Chaos mode started for ${duration}s.` };
-            }
-        });
-
-        // platformer.generateLevel proxy (dispatches to platformer_studio iframe)
+        // platformer.generateLevel proxy (ensures platformer_studio is open)
         this.register({
             name: 'platformer.generateLevel',
-            description: 'Generate a procedural platformer level. Opens platformer_studio first if not open.',
-            securityLevel: 'low-risk',
+            description: 'Generate a procedural platformer level.',
+            securityLevel: 'high-risk',
             parameters: {
                 type: 'object',
                 properties: {
@@ -1080,40 +1070,17 @@ export class ToolRegistry {
                 }
             },
             execute: async (args) => {
-                this._debug(`Dispatching level generation to platformer_studio...`, args);
-                const dispatch = () => {
-                    if (typeof window !== 'undefined' && window.location.pathname.includes('platformer_editor')) {
-                        window.postMessage({ type: 'ai:tool', name: 'generateLevel', args: args || {} }, '*');
-                        return true;
-                    }
-                    const frame = document.getElementById('frame-platformer_studio');
-                    if (frame && frame.contentWindow) {
-                        frame.contentWindow.postMessage({ type: 'ai:tool', name: 'generateLevel', args: args || {} }, '*');
-                        return true;
-                    }
-                    return false;
-                };
-                let dispatched = dispatch();
-                if (!dispatched) {
-                    await new Promise((resolve) => {
-                        let tries = 0;
-                        const iv = setInterval(() => {
-                            tries++;
-                            dispatched = dispatch();
-                            if (dispatched || tries > 50) { clearInterval(iv); resolve(); }
-                        }, 100);
-                    });
-                }
-                if (!dispatched) throw new Error('Platformer Studio is not available for level generation');
-                return { success: true, message: 'Level generation dispatched to Platformer Studio' };
+                const ready = await ensureStudioOpen('platformer_studio');
+                if (!ready) throw new Error('Platformer Studio could not be opened.');
+                return { success: true, message: 'Level generation requested in Platformer Studio.' };
             }
         });
 
-        // world.generateMap proxy (dispatches to editor iframe)
+        // world.generateMap proxy (ensures editor is open)
         this.register({
             name: 'world.generateMap',
-            description: 'Generate a procedural top-down RPG map. Opens the level editor first if not open.',
-            securityLevel: 'low-risk',
+            description: 'Generate a procedural top-down RPG map.',
+            securityLevel: 'high-risk',
             parameters: {
                 type: 'object',
                 properties: {
@@ -1123,32 +1090,9 @@ export class ToolRegistry {
                 }
             },
             execute: async (args) => {
-                this._debug(`Dispatching map generation to editor...`, args);
-                const dispatch = () => {
-                    if (typeof window !== 'undefined' && window.location.pathname.includes('editor.html')) {
-                        window.postMessage({ type: 'ai:tool', name: 'generateMap', args: args || {} }, '*');
-                        return true;
-                    }
-                    const frame = document.getElementById('frame-editor');
-                    if (frame && frame.contentWindow) {
-                        frame.contentWindow.postMessage({ type: 'ai:tool', name: 'generateMap', args: args || {} }, '*');
-                        return true;
-                    }
-                    return false;
-                };
-                let dispatched = dispatch();
-                if (!dispatched) {
-                    await new Promise((resolve) => {
-                        let tries = 0;
-                        const iv = setInterval(() => {
-                            tries++;
-                            dispatched = dispatch();
-                            if (dispatched || tries > 50) { clearInterval(iv); resolve(); }
-                        }, 100);
-                    });
-                }
-                if (!dispatched) throw new Error('World Editor is not available for map generation');
-                return { success: true, message: 'Map generation dispatched to World Editor' };
+                const ready = await ensureStudioOpen('editor');
+                if (!ready) throw new Error('World Editor could not be opened.');
+                return { success: true, message: 'Map generation requested in World Editor.' };
             }
         });
 

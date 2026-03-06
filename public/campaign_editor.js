@@ -558,27 +558,29 @@ class CampaignEditor {
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             
-            // Pan with arrow keys (hold shift for faster movement)
+            // Pan with arrow keys or WASD (hold shift for faster movement)
             const panSpeed = e.shiftKey ? 50 : 20;
-            if (e.key === 'ArrowUp' && !e.ctrlKey && !e.metaKey) {
+            const key = e.key.toLowerCase();
+            
+            if ((key === 'arrowup' || key === 'w') && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 this.transform.y += panSpeed;
                 this.updateTransform();
                 return;
             }
-            if (e.key === 'ArrowDown' && !e.ctrlKey && !e.metaKey) {
+            if ((key === 'arrowdown' || key === 's') && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 this.transform.y -= panSpeed;
                 this.updateTransform();
                 return;
             }
-            if (e.key === 'ArrowLeft' && !e.ctrlKey && !e.metaKey) {
+            if ((key === 'arrowleft' || key === 'a') && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 this.transform.x += panSpeed;
                 this.updateTransform();
                 return;
             }
-            if (e.key === 'ArrowRight' && !e.ctrlKey && !e.metaKey) {
+            if ((key === 'arrowright' || key === 'd') && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 this.transform.x -= panSpeed;
                 this.updateTransform();
@@ -1921,6 +1923,7 @@ window.showShortcuts = () => {
             <tr style="border-bottom:1px solid #333;"><td style="padding:10px;"><kbd style="background:#222; padding:3px 8px; border:1px solid #444;">Ctrl+V</kbd></td><td style="color:#ccc;">Paste Node</td></tr>
             <tr style="border-bottom:1px solid #333;"><td style="padding:10px;"><kbd style="background:#222; padding:3px 8px; border:1px solid #444;">Delete</kbd></td><td style="color:#ccc;">Delete Node</td></tr>
             <tr style="border-bottom:1px solid #333;"><td style="padding:10px;"><kbd style="background:#222; padding:3px 8px; border:1px solid #444;">Mouse Wheel</kbd></td><td style="color:#ccc;">Zoom In/Out</td></tr>
+            <tr style="border-bottom:1px solid #333;"><td style="padding:10px;"><kbd style="background:#222; padding:3px 8px; border:1px solid #444;">WASD / Arrows</kbd></td><td style="color:#ccc;">Pan Canvas</td></tr>
             <tr style="border-bottom:1px solid #333;"><td style="padding:10px;"><kbd style="background:#222; padding:3px 8px; border:1px solid #444;">Click + Drag</kbd></td><td style="color:#ccc;">Pan Canvas</td></tr>
             <tr><td style="padding:10px;"><kbd style="background:#222; padding:3px 8px; border:1px solid #444;">Right Click</kbd></td><td style="color:#ccc;">Context Menu</td></tr>
         </table>

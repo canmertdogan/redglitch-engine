@@ -126,7 +126,7 @@ export class PermissionGate {
             return true;
         }
 
-        const response = await this._enqueueModal(() => this._showConfirmationModal(toolName, safeArgs));
+        const response = await this._enqueueModal(async () => await this._showConfirmationModal(toolName, safeArgs));
         if (response === 'always') {
             this.alwaysAllowSession.add(toolName);
             this._saveAlwaysAllowSession();
@@ -181,19 +181,46 @@ export class PermissionGate {
     /**
      * Show the modal UI with IRAB/Retro theme and Diff view support.
      */
-    _showConfirmationModal(toolName, args) {
+    async _showConfirmationModal(toolName, args) {
+        let originalContent = null;
+        const filePath = args.path || args.file || args.filePath;
+        
+        // Try to fetch original content if it's a file write
+        if (filePath && (toolName === 'fs.write' || toolName.includes('save'))) {
+            try {
+                const res = await fetch(`/api/ide/read?file=${encodeURIComponent(filePath)}`);
+                if (res.ok) originalContent = await res.text();
+            } catch (e) {}
+        }
+
         return new Promise((resolve) => {
             let diffHtml = '';
-            if (args.code || args.content || args.js) {
-                let code = args.code || args.content || args.js;
-                if (typeof code !== 'string') code = JSON.stringify(code, null, 2);
+            const proposedCode = args.code || args.content || args.js || (typeof args === 'string' ? args : null);
+
+            if (proposedCode) {
+                let code = typeof proposedCode === 'string' ? proposedCode : JSON.stringify(proposedCode, null, 2);
                 
-                diffHtml = `
-                    <div class="ai-diff-container">
-                        <div class="ai-diff-label">PROPOSED CHANGES:</div>
-                        <pre class="ai-code-preview">${this._escapeHtml(code.substring(0, 500))}${code.length > 500 ? '...' : ''}</pre>
-                    </div>
-                `;
+                if (originalContent !== null) {
+                    diffHtml = `
+                        <div class="ai-diff-container side-by-side">
+                            <div class="ai-diff-pane">
+                                <div class="ai-diff-label">ORIGINAL (${filePath})</div>
+                                <pre class="ai-code-preview original">${this._escapeHtml(originalContent.substring(0, 1000))}${originalContent.length > 1000 ? '...' : ''}</pre>
+                            </div>
+                            <div class="ai-diff-pane">
+                                <div class="ai-diff-label proposed">PROPOSED CHANGES</div>
+                                <pre class="ai-code-preview proposed">${this._escapeHtml(code.substring(0, 1000))}${code.length > 1000 ? '...' : ''}</pre>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    diffHtml = `
+                        <div class="ai-diff-container">
+                            <div class="ai-diff-label proposed">PROPOSED CHANGES:</div>
+                            <pre class="ai-code-preview proposed">${this._escapeHtml(code.substring(0, 1000))}${code.length > 1000 ? '...' : ''}</pre>
+                        </div>
+                    `;
+                }
             }
 
             const modal = document.createElement('div');
@@ -275,7 +302,7 @@ export class PermissionGate {
                 }
                 .ai-permission-content.irab-styled {
                     background: #080c18; border: 2px solid #f1c40f; padding: 0;
-                    width: 90%; max-width: 550px; color: #cfd8dc; 
+                    width: 95%; max-width: 900px; color: #cfd8dc; 
                     box-shadow: 0 0 30px rgba(241, 196, 15, 0.2);
                     display: flex; flex-direction: column;
                     max-height: 95vh; overflow: hidden;
@@ -298,12 +325,21 @@ export class PermissionGate {
                 .ai-action-summary { font-size: 1.3em; margin-bottom: 15px; border-bottom: 1px solid #1f2b42; padding-bottom: 10px; }
                 .ai-permission-details pre {
                     background: #000; padding: 12px; border: 1px solid #1f2b42;
-                    max-height: 250px; overflow-y: auto; color: #2ecc71; font-size: 14px;
+                    max-height: 400px; overflow-y: auto; color: #2ecc71; font-size: 14px;
                     white-space: pre-wrap; word-break: break-all;
                 }
                 .ai-diff-container { margin-bottom: 15px; }
-                .ai-diff-label { font-size: 0.9em; color: #f1c40f; margin-bottom: 5px; }
-                .ai-code-preview { border-left: 3px solid #2ecc71 !important; }
+                .ai-diff-container.side-by-side {
+                    display: flex; gap: 10px;
+                }
+                .ai-diff-pane {
+                    flex: 1; min-width: 0;
+                }
+                .ai-diff-label { font-size: 0.9em; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+                .ai-diff-label.proposed { color: #f1c40f; }
+                .ai-code-preview { border-left: 3px solid #333 !important; }
+                .ai-code-preview.original { border-left: 3px solid #e74c3c !important; opacity: 0.7; }
+                .ai-code-preview.proposed { border-left: 3px solid #2ecc71 !important; }
                 .ai-permission-warning {
                     margin-top: 15px; color: #e74c3c; font-size: 0.9em; text-align: center;
                     background: rgba(231, 76, 60, 0.1); padding: 8px; border: 1px dashed #e74c3c;

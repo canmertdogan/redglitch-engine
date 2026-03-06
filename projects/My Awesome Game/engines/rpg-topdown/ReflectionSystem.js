@@ -11,6 +11,7 @@ export class ReflectionSystem {
 
     generateSchema() {
         this.definitions = [];
+        if (!this.game) return this.definitions;
         
         // 1. Core Engine API
         this.reflectClass("Engine", this.game, [

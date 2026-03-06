@@ -44,18 +44,17 @@ export class StudioBridge {
             // PREVENT LOOPS: Only process if this bridge is in the window meant to handle this namespace
             const methodParts = request.method.split('.');
             if (methodParts.length < 2) return;
-            
+
             const [ns, method] = methodParts;
-            
+
             if (ns === this.namespace && this.tools.has(method)) {
-                // Check if we are in the right window (Source check to prevent double-execution across iframes)
-                // If the event came from our own local emit, ignore it if we are already processing
+                // Ignore our own events (local echoes from the same instance)
                 if (event.source === this.eventBus.getSource()) {
-                    // console.log(`[StudioBridge:${this.namespace}] Ignoring local echo.`);
-                    // return;
+                    return;
                 }
 
                 console.log(`%c[StudioBridge:${this.namespace}]%c Executing AI command: ${method}`, 'background: #2ecc71; color: #000; padding: 2px 5px;', '', request.params);
+
                 
                 try {
                     const tool = this.tools.get(method);
