@@ -177,6 +177,10 @@ const Pf3dEditor = (() => {
         if (typeof BlockTools !== 'undefined') {
             BlockTools.init(_scene, _camera, PALETTE);
         }
+        // Wire PathEditor3D (Phase 54)
+        if (typeof PathEditor3D !== 'undefined') {
+            PathEditor3D.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'path'));
+        }
     }
 
     function _resizeRenderer() {
@@ -191,8 +195,13 @@ const Pf3dEditor = (() => {
 
     function _startRenderLoop() {
         if (_rafId) return;
+        let _lastTime = performance.now();
         const tick = () => {
             _rafId = requestAnimationFrame(tick);
+            const now = performance.now();
+            const dt  = Math.min((now - _lastTime) / 1000, 0.1);
+            _lastTime = now;
+            if (typeof PathEditor3D !== 'undefined') PathEditor3D.update(dt);
             _renderer.render(_scene, _camera);
         };
         tick();
@@ -270,6 +279,8 @@ const Pf3dEditor = (() => {
             } else if (_ghostMesh) {
                 _ghostMesh.visible = false;
             }
+            // PathEditor3D ghost waypoint
+            if (typeof PathEditor3D !== 'undefined') PathEditor3D.handleMouseMove(nx, ny);
         }
 
         if (!_drag.active) return;
@@ -364,6 +375,11 @@ const Pf3dEditor = (() => {
             if (hit) _placeEntity(hit);
         } else if (_activeTool === 'paint') {
             _doPaintClick(nx, ny);
+        } else if (_activeTool === 'path') {
+            // Waypoint placement for PathEditor3D
+            if (typeof PathEditor3D !== 'undefined') {
+                PathEditor3D.handleClick(nx, ny, e.shiftKey);
+            }
         }
     }
 
@@ -1007,6 +1023,8 @@ const Pf3dEditor = (() => {
         _pushUndo();
         _state.objects  = [];
         _state.entities = [];
+        if (typeof PathEditor3D !== 'undefined') PathEditor3D.destroy();
+        if (typeof PathEditor3D !== 'undefined') PathEditor3D.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'path'));
         _rebuildScene3D();
         _rebuildHierarchy();
         _updateStatusBar();
@@ -1361,7 +1379,75 @@ const Pf3dEditor = (() => {
         if (newObjs) { newObjs.forEach(o => _addObjectMesh(o)); _rebuildHierarchy(); _markDirty(); }
     }
 
-    // Run on DOMContentLoaded
+    // ── Path Editor (Phase 54) ────────────────────────────────────────────────
+    let _pathPreviewing = false;
+
+    function pathStartSelected() {
+        if (!_selectedId || typeof PathEditor3D === 'undefined') return;
+        setTool('path');
+        PathEditor3D.startPath(_selectedId);
+        _pathStatusMsg('Placing waypoints. Click = add, Shift+Click = remove last. Click "Done" when finished.');
+    }
+    function pathFinalize() {
+        if (typeof PathEditor3D !== 'undefined') PathEditor3D.finalizePath();
+        setTool('select');
+        _pathStatusMsg('Path finalised.');
+    }
+    function pathCancel() {
+        if (typeof PathEditor3D !== 'undefined') PathEditor3D.cancelPath();
+        setTool('select');
+        _pathStatusMsg('Path editing cancelled.');
+    }
+    function setPathMotionType(type) {
+        if (!_selectedId || typeof PathEditor3D === 'undefined') return;
+        document.querySelectorAll('.entity-item[data-motion]').forEach(el =>
+            el.classList.toggle('active', el.dataset.motion === type));
+        PathEditor3D.setMotionType(_selectedId, type, _readPathConfig(type));
+        _pathStatusMsg('Motion type: ' + type);
+    }
+    function pathApplyConfig() {
+        if (!_selectedId || typeof PathEditor3D === 'undefined') return;
+        const typeEl = document.querySelector('.entity-item[data-motion].active');
+        const type   = typeEl ? typeEl.dataset.motion : 'spline';
+        PathEditor3D.setMotionType(_selectedId, type, _readPathConfig(type));
+        PathEditor3D.setLoopMode(_selectedId, document.getElementById('path-loop').value);
+        _pathStatusMsg('Config applied.');
+    }
+    function _readPathConfig(type) {
+        if (type === 'spline')   return { speed: parseFloat(document.getElementById('path-speed').value) || 3 };
+        if (type === 'pendulum') return {
+            arcAngle: parseFloat(document.getElementById('path-arc').value)        || 60,
+            radius:   parseFloat(document.getElementById('path-radius').value)     || 4,
+            speed:    parseFloat(document.getElementById('path-pend-speed').value) || 1,
+        };
+        if (type === 'rotate')   return {
+            axis: document.getElementById('path-rot-axis').value || 'y',
+            rpm:  parseFloat(document.getElementById('path-rpm').value) || 1,
+        };
+        if (type === 'elevator') return { speed: parseFloat(document.getElementById('path-speed').value) || 3, stops: [] };
+        return {};
+    }
+    function pathPreviewToggle() {
+        if (typeof PathEditor3D === 'undefined') return;
+        _pathPreviewing = !_pathPreviewing;
+        const btn = document.getElementById('path-preview-btn');
+        if (_pathPreviewing) {
+            PathEditor3D.previewStart();
+            if (btn) btn.textContent = '⏹ Stop';
+        } else {
+            PathEditor3D.previewStop();
+            if (btn) btn.textContent = '▶ Preview';
+        }
+    }
+    function pathRemoveSelected() {
+        if (!_selectedId || typeof PathEditor3D === 'undefined') return;
+        PathEditor3D.removePath(_selectedId);
+        _pathStatusMsg('Path removed.');
+    }
+    function _pathStatusMsg(msg) {
+        const el = document.getElementById('path-status');
+        if (el) el.textContent = msg;
+    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -1396,5 +1482,8 @@ const Pf3dEditor = (() => {
         setPropPos, setPropScale, setPropRot, setPropColor,
         // Hierarchy (called from inline HTML)
         _selectById, _toggleVisibility, collapseHierarchy,
+        // Path Editor (Phase 54)
+        pathStartSelected, pathFinalize, pathCancel,
+        setPathMotionType, pathApplyConfig, pathPreviewToggle, pathRemoveSelected,
     };
 })();

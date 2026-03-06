@@ -388,6 +388,7 @@
         <div class="panel-tabs">
             <div class="panel-tab active" data-tab="geometry" onclick="Pf3dEditor.showTab('geometry')">GEO</div>
             <div class="panel-tab"        data-tab="platforms" onclick="Pf3dEditor.showTab('platforms')">PLAT</div>
+            <div class="panel-tab"        data-tab="paths"     onclick="Pf3dEditor.showTab('paths')">PATH</div>
             <div class="panel-tab"        data-tab="entities"  onclick="Pf3dEditor.showTab('entities')">ENT</div>
             <div class="panel-tab"        data-tab="hazards"   onclick="Pf3dEditor.showTab('hazards')">HAZ</div>
             <div class="panel-tab"        data-tab="visual"    onclick="Pf3dEditor.showTab('visual')">VIS</div>
@@ -498,6 +499,73 @@
                     <option value="one-shot">One-Shot</option>
                 </select>
             </div>
+            <div style="margin-top:6px;display:flex;gap:4px">
+                <button class="btn" onclick="Pf3dEditor.pathStartSelected()" title="Edit path for selected moving platform">✏️ Edit Path</button>
+                <button class="btn" onclick="Pf3dEditor.pathFinalize()" title="Finish placing waypoints">✔ Done</button>
+                <button class="btn" onclick="Pf3dEditor.pathCancel()" title="Cancel path editing">✕</button>
+            </div>
+        </div>
+
+        <!-- PATH TAB -->
+        <div class="panel-body" id="tab-paths">
+            <div class="section-header">Motion Type</div>
+            <div class="entity-list">
+                <div class="entity-item active" data-motion="spline"   onclick="Pf3dEditor.setPathMotionType('spline')">
+                    <span class="entity-icon"><i class="fas fa-bezier-curve"></i></span>
+                    <span class="entity-name">Spline Path</span>
+                    <span class="entity-badge">WAYPTS</span>
+                </div>
+                <div class="entity-item" data-motion="pendulum" onclick="Pf3dEditor.setPathMotionType('pendulum')">
+                    <span class="entity-icon"><i class="fas fa-clock"></i></span>
+                    <span class="entity-name">Pendulum</span>
+                    <span class="entity-badge">ARC</span>
+                </div>
+                <div class="entity-item" data-motion="rotate"   onclick="Pf3dEditor.setPathMotionType('rotate')">
+                    <span class="entity-icon"><i class="fas fa-sync"></i></span>
+                    <span class="entity-name">Rotating</span>
+                    <span class="entity-badge">RPM</span>
+                </div>
+                <div class="entity-item" data-motion="elevator" onclick="Pf3dEditor.setPathMotionType('elevator')">
+                    <span class="entity-icon"><i class="fas fa-arrows-alt-v"></i></span>
+                    <span class="entity-name">Elevator</span>
+                    <span class="entity-badge">STOPS</span>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Spline Settings</div>
+            <div class="field-row"><label>Speed</label><input type="number" id="path-speed" value="3" min="0.5" max="30" step="0.5"></div>
+            <div class="field-row">
+                <label>Loop</label>
+                <select id="path-loop">
+                    <option value="ping-pong" selected>Ping-Pong</option>
+                    <option value="loop">Loop</option>
+                    <option value="one-shot">One-Shot</option>
+                </select>
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Pendulum Settings</div>
+            <div class="field-row"><label>Arc °</label><input type="number" id="path-arc" value="60" min="5" max="170" step="5"></div>
+            <div class="field-row"><label>Radius</label><input type="number" id="path-radius" value="4" min="1" max="20" step="0.5"></div>
+            <div class="field-row"><label>Speed</label><input type="number" id="path-pend-speed" value="1" min="0.1" max="10" step="0.1"></div>
+
+            <div class="section-header" style="margin-top:6px">Rotate Settings</div>
+            <div class="field-row">
+                <label>Axis</label>
+                <select id="path-rot-axis">
+                    <option value="y" selected>Y (up)</option>
+                    <option value="x">X (roll)</option>
+                    <option value="z">Z (pitch)</option>
+                </select>
+            </div>
+            <div class="field-row"><label>RPM</label><input type="number" id="path-rpm" value="1" min="0.1" max="60" step="0.1"></div>
+
+            <div class="section-header" style="margin-top:6px">Actions</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <button class="btn" onclick="Pf3dEditor.pathApplyConfig()" title="Apply settings to selected path">Apply</button>
+                <button class="btn" onclick="Pf3dEditor.pathPreviewToggle()" id="path-preview-btn">▶ Preview</button>
+                <button class="btn" onclick="Pf3dEditor.pathRemoveSelected()" title="Remove path from selected platform">🗑 Remove</button>
+            </div>
+            <div id="path-status" style="margin-top:6px;font-size:11px;color:#888">No path selected.</div>
         </div>
 
         <!-- ENTITIES TAB -->
@@ -802,6 +870,7 @@
 <!-- ── SCRIPTS ───────────────────────────────────────────────────────────────── -->
 <script src="lib/three/three.module.js" type="module"></script>
 <script src="platformer3d_editor/BlockTools.js"></script>
+<script src="platformer3d_editor/PathEditor3D.js"></script>
 <script src="platformer3d_editor.js"></script>
 
 </body>
