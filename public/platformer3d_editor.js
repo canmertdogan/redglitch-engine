@@ -172,6 +172,11 @@ const Pf3dEditor = (() => {
         _scene.add(_ghostMesh);
 
         _startRenderLoop();
+
+        // Wire BlockTools (Phase 53) after THREE scene is ready
+        if (typeof BlockTools !== 'undefined') {
+            BlockTools.init(_scene, _camera, PALETTE);
+        }
     }
 
     function _resizeRenderer() {
@@ -222,9 +227,22 @@ const Pf3dEditor = (() => {
         window.addEventListener('keydown', _onKeyDown);
     }
 
+    let _gizmoAxisDragging = null;  // active gizmo axis during drag
+
     function _onMouseDown(e) {
         e.preventDefault();
         _drag = { active: true, button: e.button, startX: e.clientX, startY: e.clientY, curX: e.clientX, curY: e.clientY };
+
+        // Check gizmo hit on LMB for move/rotate/scale tools
+        if (e.button === 0 && ['move','rotate','scale'].includes(_activeTool) && typeof BlockTools !== 'undefined') {
+            const canvas = document.getElementById('viewport-canvas');
+            const rect   = canvas.getBoundingClientRect();
+            const nx     = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+            const ny     = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+            _raycaster3.setFromCamera({ x: nx, y: ny }, _camera);
+            const hit = BlockTools.hitGizmo(_raycaster3);
+            if (hit) { _gizmoAxisDragging = hit.axis; }
+        }
     }
 
     function _onMouseMove(e) {
@@ -275,17 +293,50 @@ const Pf3dEditor = (() => {
             _orbitCenter.z -= right.z * dx * panSpeed;
             _orbitCenter.y += dy * panSpeed;
             _updateOrbitCamera();
+        } else if (_drag.button === 0 && _gizmoAxisDragging && _selectedId && typeof BlockTools !== 'undefined') {
+            // Gizmo drag → transform selected object
+            const screenDelta = (_gizmoAxisDragging === 'y') ? -dy : dx;
+            BlockTools.applyGizmoDrag(_selectedId, _gizmoAxisDragging, screenDelta / 200, _activeTool, _state, _meshMap);
+            _markDirty();
         } else if (_drag.button === 0 && _activeTool === 'place') {
             // LMB drag with place tool → stamp blocks
             if (hit) _placeSingleBlock(hit);
+        } else if (_drag.button === 0 && _activeTool === 'select' && typeof BlockTools !== 'undefined') {
+            // Box select drag
+            if (!BlockTools.isBoxSelecting() && (Math.abs(e.clientX - _drag.startX) + Math.abs(e.clientY - _drag.startY)) > 6) {
+                BlockTools.startBoxSelect(e.clientX - document.getElementById('viewport-canvas').getBoundingClientRect().left,
+                                          e.clientY - document.getElementById('viewport-canvas').getBoundingClientRect().top);
+            }
+            if (BlockTools.isBoxSelecting()) {
+                BlockTools.updateBoxSelect(e.clientX - document.getElementById('viewport-canvas').getBoundingClientRect().left,
+                                           e.clientY - document.getElementById('viewport-canvas').getBoundingClientRect().top);
+            }
         }
     }
 
     function _onMouseUp(e) {
         if (!_drag.active) { _drag.active = false; return; }
         const moved = Math.abs(e.clientX - _drag.startX) + Math.abs(e.clientY - _drag.startY);
-        _drag.active = false;
 
+        // End gizmo drag
+        if (_gizmoAxisDragging) { _gizmoAxisDragging = null; _drag.active = false; return; }
+
+        // End box select
+        if (typeof BlockTools !== 'undefined' && BlockTools.isBoxSelecting()) {
+            const canvas = document.getElementById('viewport-canvas');
+            const rect   = canvas.getBoundingClientRect();
+            const nx0 = ((_drag.startX - rect.left) / rect.width)  * 2 - 1;
+            const ny0 = -((_drag.startY - rect.top)  / rect.height) * 2 + 1;
+            const nx1 = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+            const ny1 = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+            BlockTools.boxSelectObjects(nx0, ny0, nx1, ny1, _state, _meshMap, _camera);
+            BlockTools.endBoxSelect();
+            _drag.active = false;
+            _rebuildHierarchy();
+            return;
+        }
+
+        _drag.active = false;
         if (e.button !== 0 || moved > 4) return;  // ignore RMB/MMB and drags
 
         const canvas = document.getElementById('viewport-canvas');
@@ -295,7 +346,14 @@ const Pf3dEditor = (() => {
         _raycaster3.setFromCamera({ x: nx, y: ny }, _camera);
 
         if (_activeTool === 'select') {
-            _doSelectClick(nx, ny);
+            // Shift-click → multi-select
+            if (e.shiftKey && typeof BlockTools !== 'undefined') {
+                _doMultiSelectClick(nx, ny);
+            } else {
+                _doSelectClick(nx, ny);
+            }
+        } else if (_activeTool === 'move' || _activeTool === 'rotate' || _activeTool === 'scale') {
+            _doSelectClick(nx, ny);  // select first, then gizmo shows on next mousedown
         } else if (_activeTool === 'place') {
             const hit = new THREE.Vector3();
             _raycaster3.ray.intersectPlane(_placementPlane, hit);
@@ -357,6 +415,10 @@ const Pf3dEditor = (() => {
         if (btn) btn.classList.add('active');
         document.getElementById('active-tool-label').textContent = tool.toUpperCase();
         if (_ghostMesh) _ghostMesh.visible = (tool === 'place');
+        // Hide gizmo when switching away from transform tools
+        if (!['move','rotate','scale'].includes(tool) && typeof BlockTools !== 'undefined') {
+            BlockTools.hideGizmo();
+        }
     }
 
     function setSnap(val) {
@@ -416,13 +478,29 @@ const Pf3dEditor = (() => {
     // ─────────────────────────────────────────────────────────────────────────
 
     function _placeSingleBlock(worldHit) {
+        _pushUndo();
+        // Delegate to BlockTools for geometry/physics/stacking
+        if (typeof BlockTools !== 'undefined') {
+            const record = BlockTools.placeBlock(
+                worldHit,
+                _state,
+                { blockType: _activeBlockType, platType: _activePlatType, blockDim: _blockDim, colorIdx: _blockColorIdx, snapSize: _state.snapSize },
+                _meshMap,
+                _genId
+            );
+            _state.dirty = true;
+            _markDirty();
+            _rebuildHierarchy();
+            _updateStatusBar();
+            return record;
+        }
+
+        // Fallback: scaffold placement
         const snap = _state.snapSize;
         const sx   = snap > 0 ? Math.round(worldHit.x / snap) * snap : worldHit.x;
         const sz   = snap > 0 ? Math.round(worldHit.z / snap) * snap : worldHit.z;
         const sy   = _blockDim.h / 2;
-
-        _pushUndo();
-        const id = _genId('obj');
+        const id   = _genId('obj');
         _state.objects.push({
             id, type: 'platform', subtype: _activePlatType,
             blockType: _activeBlockType,
@@ -476,6 +554,23 @@ const Pf3dEditor = (() => {
         _selectById(id, group);
     }
 
+    function _doMultiSelectClick(nx, ny) {
+        _raycaster3.setFromCamera({ x: nx, y: ny }, _camera);
+        const clickable = [];
+        _meshMap.forEach(mesh => clickable.push(mesh));
+        const hits = _raycaster3.intersectObjects(clickable, true);
+        if (!hits.length) return;
+        let hit = hits[0].object;
+        while (hit && !hit.userData.id) hit = hit.parent;
+        if (!hit || !hit.userData.id) return;
+        if (typeof BlockTools !== 'undefined') {
+            BlockTools.toggleMultiSelect(hit.userData.id, _meshMap);
+        }
+        document.querySelectorAll('.hier-item').forEach(el => {
+            if (el.dataset.id === hit.userData.id) el.classList.toggle('selected');
+        });
+    }
+
     function _doPaintClick(nx, ny) {
         _raycaster3.setFromCamera({ x: nx, y: ny }, _camera);
         const meshes = [];
@@ -510,6 +605,12 @@ const Pf3dEditor = (() => {
         document.querySelectorAll('.hier-item').forEach(el => {
             el.classList.toggle('selected', el.dataset.id === id);
         });
+
+        // Show gizmo for object types when move/rotate/scale tool active
+        if (group === 'object' && ['move','rotate','scale'].includes(_activeTool) && typeof BlockTools !== 'undefined') {
+            const obj = _state.objects.find(o => o.id === id);
+            if (obj) BlockTools.showGizmo(obj.pos, _activeTool);
+        }
     }
 
     function deselectAll() {
@@ -518,11 +619,17 @@ const Pf3dEditor = (() => {
         _meshMap.forEach(mesh => mesh.material?.emissive?.setHex(0x000000));
         document.querySelectorAll('.hier-item').forEach(el => el.classList.remove('selected'));
         document.getElementById('props-body').innerHTML = '<div id="props-empty">No object selected</div>';
+        if (typeof BlockTools !== 'undefined') { BlockTools.hideGizmo(); BlockTools.clearMultiSelection(); }
     }
 
     function selectAll() {
-        // stub — selects last object for now; full multi-select in Phase 53
-        if (_state.objects.length > 0) _selectById(_state.objects[_state.objects.length - 1].id, 'object');
+        if (!_state.objects.length) return;
+        _state.objects.forEach(o => {
+            if (typeof BlockTools !== 'undefined') BlockTools.addToSelection(o.id);
+            const mesh = _meshMap.get(o.id);
+            if (mesh?.material?.emissive) mesh.material.emissive.setHex(0x1a4a28);
+        });
+        _rebuildHierarchy();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -627,13 +734,18 @@ const Pf3dEditor = (() => {
     // ─────────────────────────────────────────────────────────────────────────
 
     function _addObjectMesh(obj) {
-        let geo;
-        switch (obj.blockType || 'box') {
-            case 'cylinder': geo = new THREE.CylinderGeometry((obj.scale.x || 2) / 2, (obj.scale.x || 2) / 2, obj.scale.y || 1, 8); break;
-            default:         geo = new THREE.BoxGeometry(obj.scale.x || 2, obj.scale.y || 1, obj.scale.z || 2); break;
+        let geo, mat;
+        if (typeof BlockTools !== 'undefined') {
+            geo = BlockTools.buildGeometry(obj.blockType || 'box', obj.scale.x || 2, obj.scale.y || 1, obj.scale.z || 2);
+            mat = BlockTools.buildMaterial(obj.colorIdx ?? 12, _state.wireframe);
+        } else {
+            const color = PALETTE[obj.colorIdx ?? 12];
+            switch (obj.blockType || 'box') {
+                case 'cylinder': geo = new THREE.CylinderGeometry((obj.scale.x || 2) / 2, (obj.scale.x || 2) / 2, obj.scale.y || 1, 8); break;
+                default:         geo = new THREE.BoxGeometry(obj.scale.x || 2, obj.scale.y || 1, obj.scale.z || 2); break;
+            }
+            mat = new THREE.MeshLambertMaterial({ color, flatShading: true });
         }
-        const color = PALETTE[obj.colorIdx ?? 12];
-        const mat  = new THREE.MeshLambertMaterial({ color, flatShading: true });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(obj.pos.x, obj.pos.y, obj.pos.z);
         if (obj.rot) mesh.rotation.set(obj.rot.x, obj.rot.y, obj.rot.z);
@@ -1211,9 +1323,43 @@ const Pf3dEditor = (() => {
         return cols;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PUBLIC API
-    // ─────────────────────────────────────────────────────────────────────────
+    // Mirror & prefab bridge functions
+    function mirrorX() {
+        if (typeof BlockTools === 'undefined') return;
+        const ids = BlockTools.getMultiSelected();
+        if (!ids.length && _selectedId) ids.push(_selectedId);
+        if (!ids.length) return;
+        const pivot = { x: 0, y: 0, z: 0 };
+        const newObjs = BlockTools.mirrorSelection('x', pivot, ids, _state, _meshMap, _genId.bind(null, 'obj'));
+        if (newObjs) { newObjs.forEach(o => _addObjectMesh(o)); _rebuildHierarchy(); _markDirty(); }
+    }
+    function mirrorZ() {
+        if (typeof BlockTools === 'undefined') return;
+        const ids = BlockTools.getMultiSelected();
+        if (!ids.length && _selectedId) ids.push(_selectedId);
+        if (!ids.length) return;
+        const pivot = { x: 0, y: 0, z: 0 };
+        const newObjs = BlockTools.mirrorSelection('z', pivot, ids, _state, _meshMap, _genId.bind(null, 'obj'));
+        if (newObjs) { newObjs.forEach(o => _addObjectMesh(o)); _rebuildHierarchy(); _markDirty(); }
+    }
+    function saveSelectionAsPrefab() {
+        if (typeof BlockTools === 'undefined') return;
+        const name = prompt('Prefab name:');
+        if (!name) return;
+        const ids = BlockTools.getMultiSelected();
+        if (!ids.length && _selectedId) ids.push(_selectedId);
+        if (!ids.length) { alert('No objects selected.'); return; }
+        BlockTools.savePrefab(name, ids, _state);
+    }
+    function refreshPrefabList() {
+        if (typeof BlockTools !== 'undefined') BlockTools._populatePrefabList();
+    }
+    function stampPrefabAtOrigin(name) {
+        if (typeof BlockTools === 'undefined') return;
+        _pushUndo();
+        const newObjs = BlockTools.stampPrefab(name, { x: 0, y: 0, z: 0 }, _state, _meshMap, _genId.bind(null, 'obj'));
+        if (newObjs) { newObjs.forEach(o => _addObjectMesh(o)); _rebuildHierarchy(); _markDirty(); }
+    }
 
     // Run on DOMContentLoaded
     if (document.readyState === 'loading') {
@@ -1230,6 +1376,8 @@ const Pf3dEditor = (() => {
         // Edit
         undo, redo, deleteSelection, deleteById,
         copySelection, pasteSelection, selectAll, deselectAll,
+        // Mirror & prefab
+        mirrorX, mirrorZ, saveSelectionAsPrefab, refreshPrefabList, stampPrefabAtOrigin,
         // View
         toggleGrid, toggleWireframe, toggleShadows,
         resetCamera, frameSelected, framSelected,
