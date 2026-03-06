@@ -362,7 +362,7 @@ class FPSGame extends Engine3DAdapter {
 
     // ── Engine3DAdapter hooks ─────────────────────────────────────────────────
 
-    onLevelLoaded(level) {
+    async onLevelLoaded(level) {
         console.log(`[FPSGame] onLevelLoaded: "${level.name}"`);
         this._levelId      = level.id ?? level.name ?? null;
         this._currentLevel = level;
