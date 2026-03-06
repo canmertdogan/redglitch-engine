@@ -5,7 +5,8 @@
  * No texture sheets. Flat-shaded MeshLambertMaterial throughout.
  */
 
-import * as THREE from 'three';
+import * as _THREE_MOD from '../../../lib/three/three.module.js';
+const THREE = (typeof globalThis !== 'undefined' && globalThis.THREE) || _THREE_MOD;
 
 // ─── Geometry cache (shared across all instances) ─────────────────────────────
 const GEO_CUBE   = new THREE.BoxGeometry(1, 1, 1);
@@ -15,7 +16,7 @@ const _v3 = new THREE.Vector3();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function mkMat(color) {
-    return new THREE.MeshLambertMaterial({ color, flatShading: true });
+    return new THREE.MeshPhongMaterial({ color, shininess: 0, flatShading: true });
 }
 
 function rnd(min, max) { return min + Math.random() * (max - min); }
