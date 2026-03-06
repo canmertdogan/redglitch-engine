@@ -104,23 +104,82 @@
             scene.add(this._group);
 
             this._blockGeo = new THREE.BoxGeometry(1, 1, 1);
+
+            // ── TextureAtlas3D (optional) ──────────────────────────────────
+            this._atlas          = null;
+            this._tilesetEnabled = false;
+
             this._buildAllMeshes();
         }
 
         _buildAllMeshes() {
+            // Remove existing InstancedMeshes from group
+            for (const im of this._meshes.values()) {
+                this._group.remove(im);
+                im.geometry.dispose();
+            }
+            this._meshes.clear();
+            this._counts.clear();
+
             for (const bt of BLOCK_TYPES) {
-                const mat = new this._THREE.MeshPhongMaterial({
-                    color: new this._THREE.Color(bt.color),
-                    flatShading: true,
-                    shininess: 0,
-                });
-                const im = new this._THREE.InstancedMesh(this._blockGeo, mat, this._MAX_INSTANCES);
+                // When atlas is enabled, create a separate BoxGeometry per block type
+                // so we can bake atlas UVs without affecting other block types.
+                const geo = this._tilesetEnabled && this._atlas
+                    ? new this._THREE.BoxGeometry(1, 1, 1)
+                    : this._blockGeo;
+
+                if (this._tilesetEnabled && this._atlas) {
+                    // Map topdown3d block id → atlas UPPERCASE block type string
+                    const atlasType = bt.id.toUpperCase();
+                    this._atlas.applyBlockUVs(geo, atlasType);
+                }
+
+                const mat = this._tilesetEnabled && this._atlas
+                    ? this._atlas.getMaterial(this._THREE)
+                    : new this._THREE.MeshPhongMaterial({
+                        color: new this._THREE.Color(bt.color),
+                        flatShading: true,
+                        shininess: 0,
+                    });
+
+                const im = new this._THREE.InstancedMesh(geo, mat, this._MAX_INSTANCES);
                 im.count = 0;
                 im.name  = `voxel_${bt.id}`;
                 im.userData.blockType = bt.id;
                 this._group.add(im);
                 this._meshes.set(bt.id, im);
                 this._counts.set(bt.id, 0);
+            }
+        }
+
+        /**
+         * Load TextureAtlas3D and rebuild all InstancedMeshes with atlas materials.
+         * @param {boolean} val
+         * @param {object}  [THREE_in]  fallback THREE module reference
+         */
+        async setTilesetEnabled(val, THREE_in) {
+            const T = THREE_in || this._THREE;
+            this._tilesetEnabled = !!val;
+            if (this._tilesetEnabled && !this._atlas) {
+                try {
+                    const { default: TextureAtlas3D } = await import('/engines/shared/TextureAtlas3D.js');
+                    this._atlas = new TextureAtlas3D();
+                    await this._atlas.loadAsync(T);
+                } catch (e) {
+                    console.warn('[VoxelTerrainPainter] TextureAtlas3D load failed:', e);
+                    this._tilesetEnabled = false;
+                    return;
+                }
+            }
+            if (!this._tilesetEnabled) this._atlas = null;
+            // Rebuild InstancedMeshes with new material mode
+            this._buildAllMeshes();
+            // Re-place all existing voxels into the new meshes
+            this._counts.forEach((_, id) => this._counts.set(id, 0));
+            this._meshes.forEach(im => { im.count = 0; });
+            for (const [key, blockTypeId] of this._voxels) {
+                const [x, y, z] = key.split(',').map(Number);
+                this._addToMesh(blockTypeId, x, y, z);
             }
         }
 
@@ -829,8 +888,12 @@
             if (json.terrain) plugin.loadTerrainData(json.terrain);
         };
 
-        // Expose for debugging
+        // Expose atlas toggle on the editor API
+        const setTileset = (val) => plugin.voxel.setTilesetEnabled(val, ed.THREE);
         window.__topdown3dTerrainTools = plugin;
+        window.__topdown3dTerrainTools.setTilesetEnabled = setTileset;
+        if (ed && typeof ed === 'object') ed.setTilesetEnabled = setTileset;
+
         window.__blockTypes = BLOCK_TYPES;
         window.__defaultPalette256 = DEFAULT_256_PALETTE;
     }

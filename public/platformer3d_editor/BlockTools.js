@@ -68,6 +68,63 @@ window.BlockTools = (() => {
     let _camera  = null;
     let _palette = null;
 
+    // ─── TextureAtlas3D (optional) ───────────────────────────────────────────
+    let _tilesetEnabled = false;
+    let _atlas          = null;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TILESET
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Enable or disable atlas tileset mode. When enabled, all new block meshes
+     * use the shared atlas material + UV-baked BoxGeometry.
+     * @param {boolean} val
+     */
+    async function setTilesetEnabled(val) {
+        _tilesetEnabled = !!val;
+        if (_tilesetEnabled && !_atlas) {
+            try {
+                const { default: TextureAtlas3D } = await import('/engines/shared/TextureAtlas3D.js');
+                _atlas = new TextureAtlas3D();
+                await _atlas.loadAsync(THREE);
+            } catch (e) {
+                console.warn('[BlockTools] TextureAtlas3D load failed:', e);
+                _tilesetEnabled = false;
+                return;
+            }
+        }
+        if (!_tilesetEnabled) _atlas = null;
+        // Update button state if present
+        const btn = document.getElementById('btn-atlas');
+        if (btn) btn.classList.toggle('active', _tilesetEnabled);
+        // Rebuild existing meshes in the scene
+        if (_scene) {
+            _scene.traverse(obj => {
+                if (!obj.isMesh || !obj.userData?.id) return;
+                const platType = obj.userData?.platType || 'flat';
+                const atlasType = _PLAT_TO_ATLAS[platType] || 'flat';
+                if (_tilesetEnabled && _atlas) {
+                    // Re-apply atlas UV to existing BoxGeometry if applicable
+                    if (obj.geometry?.type === 'BoxGeometry') {
+                        _atlas.applyBlockUVs(obj.geometry, atlasType);
+                    }
+                    obj.material = _atlas.getMaterial(THREE);
+                } else {
+                    const colorIdx = obj.userData?.colorIdx ?? 12;
+                    obj.material = buildMaterial(colorIdx);
+                }
+            });
+        }
+    }
+
+    /** Platformer platType → atlas block type string */
+    const _PLAT_TO_ATLAS = {
+        flat: 'flat', slope: 'flat', moving: 'moving',
+        bouncy: 'bouncy', icy: 'icy', lava: 'lava_pf', crate: 'crate_pf',
+        falling: 'flat',
+    };
+
     // ─────────────────────────────────────────────────────────────────────────
     // INIT
     // ─────────────────────────────────────────────────────────────────────────
@@ -296,14 +353,23 @@ window.BlockTools = (() => {
     function _addMesh(obj, meshMap) {
         if (!_scene) return;
         const geo  = buildGeometry(obj.blockType || 'box', obj.scale.x || 2, obj.scale.y || 1, obj.scale.z || 2);
-        const mat  = buildMaterial(obj.colorIdx);
+        let mat;
+        if (_tilesetEnabled && _atlas && obj.blockType === 'box') {
+            const atlasType = _PLAT_TO_ATLAS[obj.subtype || obj.platType || 'flat'] || 'flat';
+            _atlas.applyBlockUVs(geo, atlasType);
+            mat = _atlas.getMaterial(THREE);
+        } else {
+            mat = buildMaterial(obj.colorIdx);
+        }
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(obj.pos.x, obj.pos.y, obj.pos.z);
         if (obj.rot) mesh.rotation.set(obj.rot.x, obj.rot.y, obj.rot.z);
         mesh.castShadow    = true;
         mesh.receiveShadow = true;
-        mesh.userData.id    = obj.id;
-        mesh.userData.group = 'object';
+        mesh.userData.id       = obj.id;
+        mesh.userData.group    = 'object';
+        mesh.userData.platType = obj.subtype || obj.platType || 'flat';
+        mesh.userData.colorIdx = obj.colorIdx ?? 12;
         _scene.add(mesh);
         meshMap.set(obj.id, mesh);
     }
@@ -670,5 +736,8 @@ window.BlockTools = (() => {
         savePrefab, stampPrefab, stampPrefabAtOrigin, deletePrefab, listPrefabs,
         // Physics meta
         getPhysics, getDefaultColorIdx,
+        // Tileset
+        setTilesetEnabled,
+        get _tilesetEnabled() { return _tilesetEnabled; },
     };
 })();

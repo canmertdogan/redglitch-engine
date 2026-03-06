@@ -372,6 +372,7 @@
     <button class="tool-btn" title="Frame Selected (F)" onclick="Pf3dEditor.frameSelected()"><i class="fas fa-compress-arrows-alt"></i></button>
     <button class="tool-btn" title="Toggle Grid (G)"    onclick="Pf3dEditor.toggleGrid()"><i class="fas fa-th"></i></button>
     <button class="tool-btn" title="Toggle Wireframe (W)" id="btn-wireframe" onclick="Pf3dEditor.toggleWireframe()"><i class="fas fa-border-all"></i></button>
+    <button class="toolbar-btn" id="btn-atlas" onclick="BlockTools?.setTilesetEnabled?.(this.classList.toggle('active'))" title="Toggle Atlas Tileset">🧱 TILESET</button>
 
     <div class="tool-sep"></div>
     <button class="tool-btn" title="Test Play (F5)"    onclick="Pf3dEditor.testPlay()" style="background:#0e2218;border-color:var(--accent)"><i class="fas fa-play" style="color:var(--accent)"></i></button>

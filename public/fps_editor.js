@@ -516,7 +516,21 @@ const FPSEditor = (() => {
 
         const cs = _state.cellSize;
 
-        if (typeof BrushTools !== 'undefined') {
+        if (_tilesetEnabled && _atlas) {
+            // ── Atlas tileset path: per-block BoxGeometry with atlas UVs ─────────
+            for (const key in _state.voxelGrid) {
+                const [gx, gy, gz] = key.split(',').map(Number);
+                const cell      = _state.voxelGrid[key];
+                const blockType = cell.type || _activeBlock || 'floor';
+                const geo = new THREE.BoxGeometry(cs, cs, cs);
+                _atlas.applyBlockUVs(geo, blockType);
+                const mat  = _atlas.getMaterial(THREE);
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(gx * cs + cs / 2, gy * cs + cs / 2, gz * cs + cs / 2);
+                mesh.userData.blockType = blockType;
+                group.add(mesh);
+            }
+        } else if (typeof BrushTools !== 'undefined') {
             // ── Greedy mesh path (Phase 37) ───────────────────────────────────
             const groups = BrushTools.buildGreedyMesh(_state.voxelGrid, cs);
             const meshes = BrushTools.buildThreeGeometries(groups, THREE);
@@ -1367,6 +1381,8 @@ const FPSEditor = (() => {
         undo, redo, selectAll, deleteSelected,
         testPlay, buildNavmesh, validateMap, clearMap,
         markDirty,
+        setTilesetEnabled,
+        get _tilesetEnabled() { return _tilesetEnabled; },
     };
 
 })();
