@@ -54,6 +54,7 @@ const FPSEditor = (() => {
     let _shading      = 'shaded';
     let _showGrid     = true;
     let _selection    = null;
+    let _activeY      = 0;          // current edit layer (Y axis)
 
     // ── rect-stamp drag state ────────────────────────────────────────────────
     // Set on mousedown when drawMode === 'rect'; cleared on mouseup.
@@ -132,17 +133,25 @@ const FPSEditor = (() => {
         ctx.beginPath(); ctx.moveTo(_pan2d.x, 0); ctx.lineTo(_pan2d.x, H); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, _pan2d.y); ctx.lineTo(W, _pan2d.y); ctx.stroke();
 
-        // blocks
+        // blocks — show active layer at full opacity, other Y layers as ghost
         for (const key in _state.voxelGrid) {
             const [gx, gy, gz] = key.split(',').map(Number);
-            if (gy !== 0) continue;   // only show ground-level in floor plan
             const cell = _state.voxelGrid[key];
             const px = _pan2d.x + gx * cs;
-            const py = _pan2d.y + gz * cs;   // z is depth in 2D view
-            ctx.fillStyle = cell.color || BLOCK_COLORS[cell.type] || '#666';
-            ctx.fillRect(px, py, cs - 0.5, cs - 0.5);
-            if (_showGrid) {
-                ctx.strokeStyle = 'rgba(0,0,0,.3)';
+            const py = _pan2d.y + gz * cs;
+            if (gy === _activeY) {
+                ctx.fillStyle = cell.color || BLOCK_COLORS[cell.type] || '#666';
+                ctx.fillRect(px, py, cs - 0.5, cs - 0.5);
+                if (_showGrid) {
+                    ctx.strokeStyle = 'rgba(0,0,0,.3)';
+                    ctx.lineWidth = 0.5;
+                    ctx.strokeRect(px, py, cs - 0.5, cs - 0.5);
+                }
+            } else {
+                // ghost: dim the block to indicate another Y layer
+                ctx.fillStyle = (cell.color || '#666') + '30';
+                ctx.fillRect(px, py, cs - 0.5, cs - 0.5);
+                ctx.strokeStyle = 'rgba(255,255,255,.08)';
                 ctx.lineWidth = 0.5;
                 ctx.strokeRect(px, py, cs - 0.5, cs - 0.5);
             }
@@ -263,7 +272,7 @@ const FPSEditor = (() => {
         const wx = (cx - _pan2d.x) / _zoom2d;
         const wz = (cy - _pan2d.y) / _zoom2d;
         document.getElementById('tool-coords').textContent =
-            `X: ${wx.toFixed(2)}   Y: ${_state.floorY.toFixed(2)}   Z: ${wz.toFixed(2)}`;
+            `X: ${wx.toFixed(2)}   Y: ${_activeY}   Z: ${wz.toFixed(2)}`;
 
         // track hovered voxel key for LightEditor emissive tool (Phase 39)
         if (typeof LightEditor !== 'undefined') {
@@ -295,9 +304,9 @@ const FPSEditor = (() => {
             const prev = _snapshot();
             let changes;
             if (er) {
-                changes = BrushTools.rectErase(_state.voxelGrid, gx0, gz0, gx1, gz1, 0);
+                changes = BrushTools.rectErase(_state.voxelGrid, gx0, gz0, gx1, gz1, _activeY);
             } else {
-                changes = BrushTools.rectStamp(_state.voxelGrid, gx0, gz0, gx1, gz1, 0, _activeBlock, _activeColor);
+                changes = BrushTools.rectStamp(_state.voxelGrid, gx0, gz0, gx1, gz1, _activeY, _activeBlock, _activeColor);
             }
             if (changes.length) { _pushUndo(prev); markDirty(); _updateBlockCount(); _rebuild3d(); }
             _rectDrag = null;
@@ -335,7 +344,7 @@ const FPSEditor = (() => {
 
     function _applyTool2d(cx, cy, isErase) {
         const { gx, gz, rawX, rawZ } = _screenToGrid(cx, cy);
-        const gy  = 0;
+        const gy  = _activeY;
         const grid = _state.voxelGrid;
 
         if (_activeTool === 'draw-room' || _activeTool === 'corridor') {
@@ -390,6 +399,8 @@ const FPSEditor = (() => {
     let _raf3d  = null;
     let _drag3d = null;
     let _orbitState = { theta: 0.6, phi: 1.1, radius: 20, target: { x: 0, y: 0, z: 0 } };
+    let _canvas3dHovered = false;   // true while pointer is over the 3D viewport
+    const _keysDown = new Set();    // tracks WASD/QE while canvas hovered
 
     function _init3d() {
         const canvas = document.getElementById('canvas-3d');
@@ -441,6 +452,8 @@ const FPSEditor = (() => {
         canvas.addEventListener('pointerup',   _on3dUp);
         canvas.addEventListener('wheel',       _on3dWheel, { passive: false });
         canvas.addEventListener('contextmenu', e => e.preventDefault());
+        canvas.addEventListener('pointerenter', () => { _canvas3dHovered = true; });
+        canvas.addEventListener('pointerleave', () => { _canvas3dHovered = false; _keysDown.clear(); });
 
         _rebuild3d();
         _loop3d();
@@ -465,6 +478,21 @@ const FPSEditor = (() => {
     function _loop3d() {
         _raf3d = requestAnimationFrame(_loop3d);
         if (!_three) return;
+
+        // WASD fly-cam: move orbit target in XZ based on camera facing direction
+        if (_canvas3dHovered && _keysDown.size) {
+            const speed = _orbitState.radius * 0.025;
+            const fwdX  =  Math.sin(_orbitState.theta);
+            const fwdZ  =  Math.cos(_orbitState.theta);
+            if (_keysDown.has('w')) { _orbitState.target.x -= fwdX * speed; _orbitState.target.z -= fwdZ * speed; }
+            if (_keysDown.has('s')) { _orbitState.target.x += fwdX * speed; _orbitState.target.z += fwdZ * speed; }
+            if (_keysDown.has('a')) { _orbitState.target.x -= fwdZ * speed; _orbitState.target.z += fwdX * speed; }
+            if (_keysDown.has('d')) { _orbitState.target.x += fwdZ * speed; _orbitState.target.z -= fwdX * speed; }
+            if (_keysDown.has('q') || _keysDown.has(' '))  _orbitState.target.y += speed;
+            if (_keysDown.has('e') || _keysDown.has('Control')) _orbitState.target.y -= speed;
+            _setCam3dFromOrbit();
+        }
+
         _three.renderer.render(_three.scene, _three.camera);
         _updateCamInfo();
     }
@@ -660,6 +688,12 @@ const FPSEditor = (() => {
     function setCellSize(v) { _state.cellSize = parseFloat(v); markDirty(); }
     function setCeilingHeight(v) { _state.ceilingH = v; markDirty(); _rebuild3d(); }
     function setFloorY(v) { _state.floorY  = v; markDirty(); _rebuild3d(); }
+
+    function setActiveY(v) {
+        _activeY = Math.max(-20, Math.min(20, Math.round(v)));
+        const el = document.getElementById('active-y-display');
+        if (el) el.textContent = _activeY;
+    }
 
     /** Called by ColorPalette.onColorSelected callback — keeps _activeColor in sync. */
     function setActiveColor(hex) {
@@ -1069,8 +1103,23 @@ const FPSEditor = (() => {
 
     // ── keyboard shortcuts ───────────────────────────────────────────────────
     function _initKeyboard() {
+        const FLY_KEYS = new Set(['w','a','s','d','q','e',' ']);
+
         document.addEventListener('keydown', e => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            // WASD/QE fly-cam — consume key if 3D viewport is hovered
+            if (_canvas3dHovered && !e.ctrlKey && !e.metaKey && FLY_KEYS.has(e.key.toLowerCase())) {
+                e.preventDefault();
+                _keysDown.add(e.key.toLowerCase());
+                return;
+            }
+            // PageUp/PageDown (or [ / ] ) change active Y layer from anywhere
+            if (!e.ctrlKey && !e.metaKey) {
+                if (e.key === 'PageUp'   || e.key === ']') { e.preventDefault(); setActiveY(_activeY + 1); return; }
+                if (e.key === 'PageDown' || e.key === '[') { e.preventDefault(); setActiveY(_activeY - 1); return; }
+            }
+
             if (e.ctrlKey || e.metaKey) {
                 if (e.key === 'z') { e.preventDefault(); undo(); }
                 if (e.key === 'y') { e.preventDefault(); redo(); }
@@ -1091,6 +1140,10 @@ const FPSEditor = (() => {
                 if (e.key === 'F5') { e.preventDefault(); testPlay(); }
                 if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
             }
+        });
+
+        document.addEventListener('keyup', e => {
+            _keysDown.delete(e.key.toLowerCase());
         });
     }
 
@@ -1240,7 +1293,7 @@ const FPSEditor = (() => {
     // public exports
     return {
         switchTab, setTool, setSnap,
-        selectBlock, setDrawMode, setCellSize, setCeilingHeight, setFloorY,
+        selectBlock, setDrawMode, setCellSize, setCeilingHeight, setFloorY, setActiveY,
         setActiveColor, setShading, toggleGrid, toggleWireframe, resetCam, setView,
         zoom2d, fitView2d,
         selectEntity, addTrigger,
