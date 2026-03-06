@@ -12,7 +12,9 @@ export const EventBus = {
     // For compatibility with code expecting a direct object
     on: (...args) => window.KetebeEventBus?.on(...args),
     emit: (...args) => window.KetebeEventBus?.emit(...args),
-    off: (...args) => window.KetebeEventBus?.off(...args)
+    off: (...args) => window.KetebeEventBus?.off(...args),
+    getSource: (...args) => window.KetebeEventBus?.getSource(...args),
+    once: (...args) => window.KetebeEventBus?.once(...args)
 };
 
 export const SharedProjectState = {

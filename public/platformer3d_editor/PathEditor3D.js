@@ -47,8 +47,8 @@ window.PathEditor3D = (function () {
 
     // ── Geometry helpers ──────────────────────────────────────────────────────
     const WP_GEO  = () => new THREE.SphereGeometry(0.22, 8, 8);
-    const WP_MAT  = () => new THREE.MeshLambertMaterial({ color: 0x00ff88, flatShading: true });
-    const WP_MAT_SEL = () => new THREE.MeshLambertMaterial({ color: 0xffff00, flatShading: true });
+    const WP_MAT  = () => new THREE.MeshPhongMaterial({ color: 0x00ff88, flatShading: true });
+    const WP_MAT_SEL = () => new THREE.MeshPhongMaterial({ color: 0xffff00, flatShading: true });
 
     function _wpMesh(pos) {
         const m = new THREE.Mesh(WP_GEO(), WP_MAT());
@@ -108,7 +108,7 @@ window.PathEditor3D = (function () {
         const cfg = rec.config;
         const pivot = new THREE.Mesh(
             new THREE.SphereGeometry(0.3, 8, 8),
-            new THREE.MeshLambertMaterial({ color: 0xff8800, flatShading: true })
+            new THREE.MeshPhongMaterial({ color: 0xff8800, flatShading: true })
         );
         pivot.position.set(cfg.pivotX || 0, cfg.pivotY || 5, cfg.pivotZ || 0);
 
@@ -154,7 +154,7 @@ window.PathEditor3D = (function () {
         stops.forEach((stop, i) => {
             const m = new THREE.Mesh(
                 new THREE.BoxGeometry(0.4, 0.2, 0.4),
-                new THREE.MeshLambertMaterial({ color: 0x88aaff, flatShading: true })
+                new THREE.MeshPhongMaterial({ color: 0x88aaff, flatShading: true })
             );
             m.position.set(stop.x || 0, stop.y || i * 3, stop.z || 0);
             group.add(m);
@@ -185,7 +185,7 @@ window.PathEditor3D = (function () {
         if (_ghostWp) return;
         _ghostWp = new THREE.Mesh(
             new THREE.SphereGeometry(0.22, 8, 8),
-            new THREE.MeshLambertMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.5, flatShading: true })
+            new THREE.MeshPhongMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.5, flatShading: true })
         );
         _ghostWp.visible = false;
         _scene.add(_ghostWp);

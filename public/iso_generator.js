@@ -340,4 +340,5 @@ class IsoGenerator {
     }
 }
 
-window.IsoGenerator = IsoGenerator;
+// Works in both browser (window) and Web Worker (self) contexts
+(typeof window !== 'undefined' ? window : self).IsoGenerator = IsoGenerator;

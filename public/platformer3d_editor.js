@@ -166,7 +166,7 @@ const Pf3dEditor = (() => {
         // Ghost mesh (placement preview)
         _ghostMesh = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, 1),
-            new THREE.MeshLambertMaterial({ color: 0x27ae60, transparent: true, opacity: 0.55, flatShading: true })
+            new THREE.MeshPhongMaterial({ color: 0x27ae60, transparent: true, opacity: 0.55, flatShading: true })
         );
         _ghostMesh.visible = false;
         _scene.add(_ghostMesh);
@@ -765,7 +765,7 @@ const Pf3dEditor = (() => {
                 case 'cylinder': geo = new THREE.CylinderGeometry((obj.scale.x || 2) / 2, (obj.scale.x || 2) / 2, obj.scale.y || 1, 8); break;
                 default:         geo = new THREE.BoxGeometry(obj.scale.x || 2, obj.scale.y || 1, obj.scale.z || 2); break;
             }
-            mat = new THREE.MeshLambertMaterial({ color, flatShading: true });
+            mat = new THREE.MeshPhongMaterial({ color, flatShading: true });
         }
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(obj.pos.x, obj.pos.y, obj.pos.z);
@@ -781,7 +781,7 @@ const Pf3dEditor = (() => {
     function _addEntityMesh(en) {
         const color = _entityColor(en.type);
         const geo   = _entityGeo(en.type);
-        const mat   = new THREE.MeshLambertMaterial({ color, flatShading: true });
+        const mat   = new THREE.MeshPhongMaterial({ color, flatShading: true });
         const mesh  = new THREE.Mesh(geo, mat);
         mesh.position.set(en.pos.x, en.pos.y + 0.5, en.pos.z);
         mesh.userData.id    = en.id;

@@ -63,7 +63,7 @@ window.HazardEditor = (function () {
 
     function _hazardMesh(type, cfg) {
         const color = HAZARD_COLORS[type] || 0xff0000;
-        const mat   = new THREE.MeshLambertMaterial({ color, flatShading: true });
+        const mat   = new THREE.MeshPhongMaterial({ color, flatShading: true });
 
         if (type === 'spike') {
             const geo = new THREE.ConeGeometry(0.25, 0.9, 4);
@@ -83,9 +83,9 @@ window.HazardEditor = (function () {
         }
         if (type === 'fire-jet') {
             const group = new THREE.Group();
-            const base  = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.5, 8), new THREE.MeshLambertMaterial({ color: 0x885522, flatShading: true }));
+            const base  = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.5, 8), new THREE.MeshPhongMaterial({ color: 0x885522, flatShading: true }));
             group.add(base);
-            const flame = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 6), new THREE.MeshLambertMaterial({ color: 0xff6600, flatShading: true, transparent: true, opacity: 0.85 }));
+            const flame = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 6), new THREE.MeshPhongMaterial({ color: 0xff6600, flatShading: true, transparent: true, opacity: 0.85 }));
             flame.position.y = 0.6;
             flame.userData.isFlame = true;
             group.add(flame);
@@ -96,7 +96,7 @@ window.HazardEditor = (function () {
             const body  = new THREE.Mesh(new THREE.BoxGeometry(cfg.w || 2, cfg.h || 1.5, cfg.d || 2), mat);
             group.add(body);
             // Downward arrow hint
-            const arr   = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 4), new THREE.MeshLambertMaterial({ color: 0xffaa00, flatShading: true }));
+            const arr   = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 4), new THREE.MeshPhongMaterial({ color: 0xffaa00, flatShading: true }));
             arr.position.y = -(cfg.h || 1.5) / 2 - 0.35;
             arr.rotation.z = Math.PI;
             group.add(arr);
@@ -104,9 +104,9 @@ window.HazardEditor = (function () {
         }
         if (type === 'laser') {
             const group = new THREE.Group();
-            const emitter = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.4, 8), new THREE.MeshLambertMaterial({ color: 0x222222, flatShading: true }));
+            const emitter = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.4, 8), new THREE.MeshPhongMaterial({ color: 0x222222, flatShading: true }));
             group.add(emitter);
-            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, cfg.range || 6, 6), new THREE.MeshLambertMaterial({ color: 0xff0044, flatShading: true, transparent: true, opacity: 0.75 }));
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, cfg.range || 6, 6), new THREE.MeshPhongMaterial({ color: 0xff0044, flatShading: true, transparent: true, opacity: 0.75 }));
             beam.position.y = (cfg.range || 6) / 2 + 0.2;
             beam.userData.isBeam = true;
             group.add(beam);
@@ -123,7 +123,7 @@ window.HazardEditor = (function () {
         const mesh = new THREE.Mesh(geo, mat);
         // Solid face tint
         const solid = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
-            new THREE.MeshLambertMaterial({ color: 0x0066cc, transparent: true, opacity: 0.12, flatShading: true }));
+            new THREE.MeshPhongMaterial({ color: 0x0066cc, transparent: true, opacity: 0.12, flatShading: true }));
         const g = new THREE.Group();
         g.add(mesh); g.add(solid);
         return g;
@@ -131,7 +131,7 @@ window.HazardEditor = (function () {
 
     function _collectibleMesh(type) {
         const color = COLLECTIBLE_COLORS[type] || 0xffcc00;
-        const mat   = new THREE.MeshLambertMaterial({ color, flatShading: true });
+        const mat   = new THREE.MeshPhongMaterial({ color, flatShading: true });
         if (type === 'coin') return new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.1, 12), mat);
         if (type === 'star') return new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), mat);
         if (type === 'key')  return new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.07, 6, 12), mat);
@@ -142,10 +142,10 @@ window.HazardEditor = (function () {
     function _checkpointMesh(yaw) {
         const group = new THREE.Group();
         const pole  = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.4, 6),
-            new THREE.MeshLambertMaterial({ color: 0x888888, flatShading: true }));
+            new THREE.MeshPhongMaterial({ color: 0x888888, flatShading: true }));
         group.add(pole);
         const flag  = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.05),
-            new THREE.MeshLambertMaterial({ color: 0x00ff88, flatShading: true }));
+            new THREE.MeshPhongMaterial({ color: 0x00ff88, flatShading: true }));
         flag.position.set(0.35, 1.1, 0);
         group.add(flag);
         group.rotation.y = yaw || 0;

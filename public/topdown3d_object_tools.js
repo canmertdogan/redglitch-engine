@@ -54,8 +54,8 @@
                 const group = new THREE.Group();
                 const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 1.5, 5);
                 const crownGeo = new THREE.ConeGeometry(1.0, 2.5, 5);
-                const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d4037, flatShading: true });
-                const crownMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32, flatShading: true });
+                const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5d4037, flatShading: true });
+                const crownMat = new THREE.MeshPhongMaterial({ color: 0x2e7d32, flatShading: true });
                 const trunk = new THREE.Mesh(trunkGeo, trunkMat);
                 const crown = new THREE.Mesh(crownGeo, crownMat);
                 trunk.position.y = 0.75;
@@ -83,7 +83,7 @@
             default:
                 geo = new THREE.BoxGeometry(1, 1, 1);
         }
-        const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(color), flatShading: true });
+        const mat = new THREE.MeshPhongMaterial({ color: new THREE.Color(color), flatShading: true });
         return new THREE.Mesh(geo, mat);
     }
 
