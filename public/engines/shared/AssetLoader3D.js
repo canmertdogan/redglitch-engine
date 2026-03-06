@@ -26,6 +26,7 @@
 import * as THREE                from '/lib/three/three.module.js';
 import { GLTFLoader }            from '/lib/three/loaders/GLTFLoader.js';
 import { applyFlatShading }      from '/engines/shared/Renderer3D.js';
+import FacetTool                 from '/engines/shared/FacetTool.js';
 
 // ── LRU Cache ────────────────────────────────────────────────────────────────
 
@@ -220,6 +221,92 @@ class AssetLoader3D {
      */
     fetchAsset(projectName, assetName) {
         return fetch(`/api/assets3d/${encodeURIComponent(projectName)}/${encodeURIComponent(assetName)}`);
+    }
+
+    // ── GLTF import (FacetTool pipeline) ─────────────────────────────────────
+
+    /**
+     * Import a GLTF/GLB File, run the FacetTool facet pipeline (flat-shade +
+     * palette colour snap), persist the result to `projects/{projectName}/assets3d/`
+     * via POST `/api/assets3d/{projectName}`, and return asset metadata.
+     *
+     * @param {string} projectName  Ketebe project name (used for storage path)
+     * @param {File}   file         GLB/GLTF File from an <input type="file">
+     * @param {object} [opts]
+     * @param {boolean} [opts.remapColors=true]  Snap colours to project palette
+     * @returns {Promise<{ name:string, url:string, meshCount:number }>}
+     */
+    async importGLTF(projectName, file, opts = {}) {
+        const paletteColors = this.palette
+            ? Array.from({ length: 256 }, (_, i) => this.palette.getColor(i))
+            : null;
+
+        let result;
+        try {
+            result = await FacetTool.facetFile(file, paletteColors, {
+                remapColors: opts.remapColors ?? true,
+                flatShading: true,
+            });
+        } catch (err) {
+            console.warn('[AssetLoader3D] importGLTF FacetTool failed:', err.message);
+            throw err;
+        }
+
+        // Re-read the original file bytes for persistence (we store the raw GLB)
+        const arrayBuffer = await file.arrayBuffer();
+        const assetName   = file.name;
+
+        const url = `/api/assets3d/${encodeURIComponent(projectName)}`;
+        const formData = new FormData();
+        formData.append('file', new Blob([arrayBuffer], { type: 'model/gltf-binary' }), assetName);
+
+        try {
+            const res = await fetch(url, { method: 'POST', body: formData });
+            if (!res.ok) {
+                console.warn(`[AssetLoader3D] importGLTF upload failed: HTTP ${res.status}`);
+            }
+        } catch (err) {
+            console.warn('[AssetLoader3D] importGLTF upload error:', err.message);
+        }
+
+        const meta = {
+            name:      assetName,
+            url:       `${url}/${encodeURIComponent(assetName)}`,
+            meshCount: result.meshes.length,
+            scene:     result.scene,
+        };
+
+        // Cache the processed scene for immediate re-use
+        this._cache.set('gltf:' + meta.url, {
+            scene:      result.scene,
+            animations: [],
+        });
+
+        return meta;
+    }
+
+    /**
+     * Fetch the list of 3D assets stored for a project.
+     * @param {string} projectName
+     * @returns {Promise<string[]>}  Array of asset filenames
+     */
+    async listAssets3D(projectName) {
+        const url = `/api/assets3d/${encodeURIComponent(projectName)}`;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            // Server may return { gltf:[], vox:[], pal:[] } or a flat array
+            if (Array.isArray(data)) return data;
+            return [
+                ...(data.gltf ?? []),
+                ...(data.vox  ?? []),
+                ...(data.pal  ?? []),
+            ];
+        } catch (err) {
+            console.warn('[AssetLoader3D] listAssets3D failed:', err.message);
+            return [];
+        }
     }
 
     // ── Cache management ──────────────────────────────────────────────────────
