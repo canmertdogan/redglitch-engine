@@ -181,6 +181,10 @@ const Pf3dEditor = (() => {
         if (typeof PathEditor3D !== 'undefined') {
             PathEditor3D.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'path'));
         }
+        // Wire HazardEditor (Phase 55)
+        if (typeof HazardEditor !== 'undefined') {
+            HazardEditor.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'haz'));
+        }
     }
 
     function _resizeRenderer() {
@@ -202,6 +206,7 @@ const Pf3dEditor = (() => {
             const dt  = Math.min((now - _lastTime) / 1000, 0.1);
             _lastTime = now;
             if (typeof PathEditor3D !== 'undefined') PathEditor3D.update(dt);
+            if (typeof HazardEditor !== 'undefined') HazardEditor.update(dt);
             _renderer.render(_scene, _camera);
         };
         tick();
@@ -1025,6 +1030,8 @@ const Pf3dEditor = (() => {
         _state.entities = [];
         if (typeof PathEditor3D !== 'undefined') PathEditor3D.destroy();
         if (typeof PathEditor3D !== 'undefined') PathEditor3D.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'path'));
+        if (typeof HazardEditor !== 'undefined') HazardEditor.destroy();
+        if (typeof HazardEditor !== 'undefined') HazardEditor.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'haz'));
         _rebuildScene3D();
         _rebuildHierarchy();
         _updateStatusBar();
@@ -1448,6 +1455,81 @@ const Pf3dEditor = (() => {
         const el = document.getElementById('path-status');
         if (el) el.textContent = msg;
     }
+
+    // ── Hazard / Collectible / Checkpoint API (Phase 55) ──────────────────────
+    let _activeHazardType     = 'spike';
+    let _activeCollectibleType = 'coin';
+
+    function selectHazardType(type) {
+        _activeHazardType = type;
+        document.querySelectorAll('.entity-item[data-haz]').forEach(el =>
+            el.classList.toggle('active', el.dataset.haz === type));
+    }
+
+    function selectCollectibleType(type) {
+        _activeCollectibleType = type;
+        document.querySelectorAll('.entity-item[data-col]').forEach(el =>
+            el.classList.toggle('active', el.dataset.col === type));
+    }
+
+    function _readHazardConfig() {
+        return {
+            period:    parseFloat(document.getElementById('haz-period')?.value) || 2,
+            offset:    parseFloat(document.getElementById('haz-offset')?.value) || 0,
+            dutyCycle: parseFloat(document.getElementById('haz-duty')?.value)   || 0.5,
+        };
+    }
+
+    function hazardPlace() {
+        if (typeof HazardEditor === 'undefined') return;
+        _pushUndo();
+        const pos = { x: 0, y: 0.5, z: 0 };
+        HazardEditor.placeHazard(pos, _activeHazardType, _readHazardConfig());
+        _setStatus('Placed hazard: ' + _activeHazardType);
+    }
+
+    function hazardApplyTiming() {
+        if (!_selectedId || typeof HazardEditor === 'undefined') return;
+        const cfg = _readHazardConfig();
+        HazardEditor.setHazardTiming(_selectedId, cfg.period, cfg.offset, cfg.dutyCycle);
+        _setStatus('Timing applied.');
+    }
+
+    function triggerPlace() {
+        if (typeof HazardEditor === 'undefined') return;
+        _pushUndo();
+        const pos  = { x: 0, y: 1, z: 0 };
+        const size = {
+            w: parseFloat(document.getElementById('trg-w')?.value) || 2,
+            h: parseFloat(document.getElementById('trg-h')?.value) || 2,
+            d: parseFloat(document.getElementById('trg-d')?.value) || 2,
+        };
+        const event = document.getElementById('trg-event')?.value || 'spawn-enemy';
+        HazardEditor.placeTrigger(pos, size, event);
+        _setStatus('Placed trigger: ' + event);
+    }
+
+    function collectiblePlace() {
+        if (typeof HazardEditor === 'undefined') return;
+        _pushUndo();
+        const pos     = { x: 0, y: 0, z: 0 };
+        const pattern = document.getElementById('col-pattern')?.value || 'single';
+        const count   = parseInt(document.getElementById('col-count')?.value) || 8;
+        const radius  = parseFloat(document.getElementById('col-radius')?.value) || 3;
+        HazardEditor.placePattern(pos, pattern, _activeCollectibleType, { count, radius });
+        _setStatus(`Placed ${pattern} pattern (${_activeCollectibleType})`);
+    }
+
+    function checkpointPlace() {
+        if (typeof HazardEditor === 'undefined') return;
+        _pushUndo();
+        const pos = { x: 0, y: 0, z: 0 };
+        const yaw = (parseFloat(document.getElementById('chk-yaw')?.value) || 0) * Math.PI / 180;
+        HazardEditor.placeCheckpoint(pos, yaw);
+        _setStatus('Placed checkpoint.');
+    }
+
+    // Run on DOMContentLoaded
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -1485,5 +1567,8 @@ const Pf3dEditor = (() => {
         // Path Editor (Phase 54)
         pathStartSelected, pathFinalize, pathCancel,
         setPathMotionType, pathApplyConfig, pathPreviewToggle, pathRemoveSelected,
+        // Hazard / Collectible / Checkpoint (Phase 55)
+        selectHazardType, selectCollectibleType,
+        hazardPlace, hazardApplyTiming, triggerPlace, collectiblePlace, checkpointPlace,
     };
 })();
