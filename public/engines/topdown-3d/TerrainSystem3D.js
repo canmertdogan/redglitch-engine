@@ -177,6 +177,147 @@ export default class TerrainSystem3D {
         }
     }
 
+    // ── TextureAtlas3D ────────────────────────────────────────────────────────
+
+    // Map BlockType integer → atlas block type name string
+    static get ATLAS_BLOCK_NAMES() {
+        return { 1:'GRASS', 2:'DIRT', 3:'STONE', 4:'SAND', 5:'WOOD', 6:'WATER', 7:'LAVA', 8:'SNOW' };
+    }
+
+    /**
+     * Load TextureAtlas3D and switch all voxel chunks to per-face atlas rendering.
+     * @param {object} THREE_in  THREE module reference
+     */
+    async enableTileset(THREE_in) {
+        const T = THREE_in || THREE;
+        const { default: TextureAtlas3D } = await import('/engines/shared/TextureAtlas3D.js');
+        this._atlas = new TextureAtlas3D();
+        await this._atlas.loadAsync(T);
+        this._tilesetEnabled = true;
+        // Rebuild all existing chunks with atlas face geometry
+        for (const [key, data] of this._chunks) {
+            const [cx, cy, cz] = key.split(',').map(Number);
+            this._buildChunkMesh(cx, cy, cz, key, data);
+        }
+    }
+
+    /** Restore solid-color vertex-colored greedy mesh. */
+    disableTileset() {
+        this._tilesetEnabled = false;
+        this._atlas          = null;
+        for (const [key, data] of this._chunks) {
+            const [cx, cy, cz] = key.split(',').map(Number);
+            this._buildChunkMesh(cx, cy, cz, key, data);
+        }
+    }
+
+    /** @returns {boolean} */
+    isTilesetEnabled() { return this._tilesetEnabled; }
+
+    /**
+     * Build a per-face quad mesh for a chunk using the atlas texture.
+     * Unlike greedy meshing, each 1×1 face gets its own UVs from the atlas.
+     * All faces in the chunk are merged into a single BufferGeometry.
+     * @private
+     */
+    _buildAtlasFaceMesh(cx, cy, cz, key, data) {
+        const oldMesh = this._chunkMeshes.get(key);
+        if (oldMesh) {
+            this.scene.remove(oldMesh);
+            oldMesh.geometry.dispose();
+        }
+
+        const NAMES = TerrainSystem3D.ATLAS_BLOCK_NAMES;
+        const FACES = [
+            { dir: [1,0,0],  uDir: [0,0,1],  vDir: [0,1,0], face: 'side'   },  // +X
+            { dir: [-1,0,0], uDir: [0,0,-1], vDir: [0,1,0], face: 'side'   },  // -X
+            { dir: [0,1,0],  uDir: [1,0,0],  vDir: [0,0,1], face: 'top'    },  // +Y
+            { dir: [0,-1,0], uDir: [1,0,0],  vDir: [0,0,-1],face: 'bottom' },  // -Y
+            { dir: [0,0,1],  uDir: [-1,0,0], vDir: [0,1,0], face: 'side'   },  // +Z
+            { dir: [0,0,-1], uDir: [1,0,0],  vDir: [0,1,0], face: 'side'   },  // -Z
+        ];
+
+        const positions = [];
+        const normals   = [];
+        const uvs       = [];
+        const indices   = [];
+        let vi = 0;
+
+        for (let bx = 0; bx < CHUNK_SIZE; bx++) {
+            for (let by = 0; by < CHUNK_SIZE; by++) {
+                for (let bz = 0; bz < CHUNK_SIZE; bz++) {
+                    const type = data[_chunkIdx(bx, by, bz)];
+                    if (type === BlockType.AIR) continue;
+                    const atlasName = NAMES[type] || 'STONE';
+
+                    const wx = cx * CHUNK_SIZE + bx;
+                    const wy = cy * CHUNK_SIZE + by;
+                    const wz = cz * CHUNK_SIZE + bz;
+
+                    for (const { dir, uDir, vDir, face } of FACES) {
+                        const [nx, ny, nz] = dir;
+                        const nbx = bx + nx, nby = by + ny, nbz = bz + nz;
+                        let neighbourAir = true;
+                        if (nbx >= 0 && nbx < CHUNK_SIZE &&
+                            nby >= 0 && nby < CHUNK_SIZE &&
+                            nbz >= 0 && nbz < CHUNK_SIZE) {
+                            neighbourAir = data[_chunkIdx(nbx, nby, nbz)] === BlockType.AIR;
+                        }
+                        if (!neighbourAir) continue;
+
+                        const cfg  = this._atlas._config?.blocks?.[atlasName];
+                        const tile = face === 'top' ? cfg?.top : face === 'bottom' ? cfg?.bottom : cfg?.side;
+                        const rect = this._atlas.getUVRect(tile || null);
+
+                        const [ux, uy, uz] = uDir;
+                        const [vx, vy, vz] = vDir;
+                        const bpx = wx + (nx > 0 ? 1 : 0);
+                        const bpy = wy + (ny > 0 ? 1 : 0);
+                        const bpz = wz + (nz > 0 ? 1 : 0);
+
+                        const corners = [
+                            [bpx,          bpy,          bpz          ],
+                            [bpx + ux,     bpy + uy,     bpz + uz     ],
+                            [bpx + ux + vx,bpy + uy + vy,bpz + uz + vz],
+                            [bpx + vx,     bpy + vy,     bpz + vz     ],
+                        ];
+                        const uvCorners = [
+                            [rect.u0, rect.v0],
+                            [rect.u1, rect.v0],
+                            [rect.u1, rect.v1],
+                            [rect.u0, rect.v1],
+                        ];
+
+                        for (let i = 0; i < 4; i++) {
+                            positions.push(...corners[i]);
+                            normals.push(nx, ny, nz);
+                            uvs.push(...uvCorners[i]);
+                        }
+                        indices.push(vi, vi+1, vi+2, vi, vi+2, vi+3);
+                        vi += 4;
+                    }
+                }
+            }
+        }
+
+        if (positions.length === 0) return;
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('normal',   new THREE.Float32BufferAttribute(normals,   3));
+        geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs,       2));
+        geo.setIndex(indices);
+
+        const mat  = this._atlas.getMaterial(THREE);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow    = true;
+        mesh.receiveShadow = true;
+        mesh.name          = `chunk_atlas_${key}`;
+
+        this.scene.add(mesh);
+        this._chunkMeshes.set(key, mesh);
+    }
+
     /**
      * dispose() — remove all terrain meshes and free GPU memory.
      */
