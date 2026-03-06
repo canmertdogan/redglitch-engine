@@ -20,15 +20,18 @@
     'use strict';
 
     // ── 1. Acquire THREE ─────────────────────────────────────────────────────
+    // Always prefer the module version (matches OrbitControls); fall back to
+    // UMD global (window.THREE set by three.min.js) only if module import fails.
     let THREE;
     try {
-        // Engine import-map alias
-        ({ default: THREE } = await import('/lib/three/three.module.js'));
+        THREE = await import('/lib/three/three.module.js');
     } catch (_) {
         try {
-            ({ default: THREE } = await import('/lib/three.module.js'));
+            THREE = await import('/lib/three.module.js');
         } catch (__) {
-            ({ default: THREE } = await import('https://unpkg.com/three@0.154.0/build/three.module.js'));
+            // Last resort: UMD global from three.min.js script tag
+            THREE = window.THREE;
+            if (!THREE) console.error('[topdown3d_editor] THREE.js unavailable');
         }
     }
 
@@ -36,11 +39,7 @@
     try {
         ({ OrbitControls } = await import('/lib/three/addons/controls/OrbitControls.js'));
     } catch (_) {
-        try {
-            ({ OrbitControls } = await import('https://unpkg.com/three@0.154.0/examples/jsm/controls/OrbitControls.js'));
-        } catch (__) {
-            OrbitControls = null; // orbit disabled; pan/zoom still done below
-        }
+        OrbitControls = null; // orbit disabled; mouse pan/zoom still works
     }
 
     // ── 2. Globals ────────────────────────────────────────────────────────────
