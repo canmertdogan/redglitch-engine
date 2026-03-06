@@ -107,6 +107,10 @@ export default class WorldGeometry {
 
         // Collision objects list for raycasting (rebuilt after load)
         this._colMeshes      = [];
+
+        // ── TextureAtlas3D (optional) ──────────────────────────────────────
+        this._atlas          = null;
+        this._tilesetEnabled = false;
     }
 
     // ── Loading ───────────────────────────────────────────────────────────────
@@ -283,13 +287,20 @@ export default class WorldGeometry {
         this._addBoxCollider(-size / 2, h / 2, 0, 0.2, h, size, 'concrete');
 
         // Visual floor plane
-        const floorGeo  = new THREE_mod.PlaneGeometry(size, size);
-        const floorMat  = new THREE_mod.MeshLambertMaterial({ color: 0x555566 });
-        const floorMesh = new THREE_mod.Mesh(floorGeo, floorMat);
-        floorMesh.rotation.x = -Math.PI / 2;
-        floorMesh.name = 'proc_floor';
-        this._scene.add(floorMesh);
-        this._colMeshes.push(floorMesh);
+        if (this._tilesetEnabled && this._atlas) {
+            const mesh = this._buildAtlasBlockMesh('floor', 0, -0.1, 0, size, 0.2, size, THREE_mod);
+            mesh.name = 'proc_block_floor';
+            this._scene.add(mesh);
+            this._colMeshes.push(mesh);
+        } else {
+            const floorGeo  = new THREE_mod.PlaneGeometry(size, size);
+            const floorMat  = new THREE_mod.MeshLambertMaterial({ color: 0x555566 });
+            const floorMesh = new THREE_mod.Mesh(floorGeo, floorMat);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.name = 'proc_floor';
+            this._scene.add(floorMesh);
+            this._colMeshes.push(floorMesh);
+        }
 
         // Ambient light if nothing in scene
         const hasLight = this._scene.children.some(c => c.isLight);
@@ -572,6 +583,77 @@ export default class WorldGeometry {
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
+
+    // ── TextureAtlas3D ────────────────────────────────────────────────────────
+
+    /**
+     * Load TextureAtlas3D and switch all block visuals to atlas mode.
+     * @param {object} THREE_in  THREE module reference (falls back to imported THREE)
+     */
+    async enableTileset(THREE_in) {
+        const T = THREE_in || THREE;
+        const { default: TextureAtlas3D } = await import('/engines/shared/TextureAtlas3D.js');
+        this._atlas = new TextureAtlas3D();
+        await this._atlas.loadAsync(T);
+        this._tilesetEnabled = true;
+        this._rebuildAtlasVisuals(T);
+    }
+
+    /** Restore solid-color mode. */
+    disableTileset() {
+        this._tilesetEnabled = false;
+        this._atlas          = null;
+        this._rebuildAtlasVisuals(THREE);
+    }
+
+    /** @returns {boolean} */
+    isTilesetEnabled() { return this._tilesetEnabled; }
+
+    /**
+     * Remove any proc_ atlas meshes and rebuild with current tileset state.
+     * @private
+     */
+    _rebuildAtlasVisuals(T = THREE) {
+        // Remove previously added atlas/proc block meshes
+        const toRemove = this._scene.children.filter(
+            c => c.name?.startsWith('proc_block_')
+        );
+        for (const obj of toRemove) {
+            this._scene.remove(obj);
+            obj.geometry?.dispose();
+        }
+        if (this._tilesetEnabled && this._atlas) {
+            this._addAtlasFloorMesh(T);
+        }
+    }
+
+    /**
+     * Build a box mesh for a named FPS block type using atlas UVs or solid color.
+     * @param {string} type  'floor'|'wall'|'ceiling'|'crate'|'door'|'window'
+     * @param {number} cx,cy,cz  center position
+     * @param {number} w,h,d     dimensions
+     * @param {object} T         THREE module
+     * @returns {THREE.Mesh}
+     */
+    _buildAtlasBlockMesh(type, cx, cy, cz, w, h, d, T = THREE) {
+        const geo = new T.BoxGeometry(w, h, d);
+        this._atlas.applyBlockUVs(geo, type);
+        const mat  = this._atlas.getMaterial(T);
+        const mesh = new T.Mesh(geo, mat);
+        mesh.position.set(cx, cy, cz);
+        mesh.castShadow    = true;
+        mesh.receiveShadow = true;
+        return mesh;
+    }
+
+    /** Add an atlas floor mesh for the procedural room. @private */
+    _addAtlasFloorMesh(T = THREE) {
+        const size = 20;  // matches default roomSize
+        const mesh = this._buildAtlasBlockMesh('floor', 0, -0.1, 0, size, 0.2, size, T);
+        mesh.name = 'proc_block_floor';
+        this._scene.add(mesh);
+        this._colMeshes.push(mesh);
+    }
 
     /**
      * Get the AABB of the loaded level geometry.

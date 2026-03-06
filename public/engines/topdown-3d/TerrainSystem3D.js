@@ -93,6 +93,10 @@ export default class TerrainSystem3D {
         // ── Mode ──────────────────────────────────────────────────────────
         this._mode = 'voxel';  // 'voxel' | 'lowpoly'
 
+        // ── TextureAtlas3D (optional) ──────────────────────────────────────
+        this._atlas          = null;
+        this._tilesetEnabled = false;
+
         // ── Voxel state ───────────────────────────────────────────────────
         /** @type {Map<string, Uint8Array>} chunkKey → block data */
         this._chunks      = new Map();

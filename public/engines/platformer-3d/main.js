@@ -124,10 +124,69 @@ class Platformer3DGame extends Engine3DAdapter {
         this.onLifeLost     = null;
         this.onGameOver     = null;
         this.onLevelComplete= null;
+
+        // ── TextureAtlas3D (optional) ─────────────────────────────────────
+        this._atlas          = null;
+        this._tilesetEnabled = false;
     }
 
     // ── Engine type ───────────────────────────────────────────────────────────
     get engineType3D() { return 'platformer-3d'; }
+
+    // ── TextureAtlas3D ────────────────────────────────────────────────────────
+
+    /**
+     * Load TextureAtlas3D and enable atlas mode for block meshes.
+     * @param {object} [THREE_in]  THREE module reference
+     */
+    async enableTileset(THREE_in) {
+        const T = THREE_in || (typeof THREE !== 'undefined' ? THREE : null);
+        if (!T) { console.warn('[Platformer3D] enableTileset: THREE not available'); return; }
+        const { default: TextureAtlas3D } = await import('/engines/shared/TextureAtlas3D.js');
+        this._atlas = new TextureAtlas3D();
+        await this._atlas.loadAsync(T);
+        this._tilesetEnabled = true;
+        console.log('[Platformer3D] Tileset enabled');
+    }
+
+    /** Revert block meshes to solid-color mode. */
+    disableTileset() {
+        this._tilesetEnabled = false;
+        this._atlas          = null;
+        console.log('[Platformer3D] Tileset disabled');
+    }
+
+    /** @returns {boolean} */
+    isTilesetEnabled() { return this._tilesetEnabled; }
+
+    /**
+     * Build a BoxGeometry mesh for a platformer block type with atlas UVs or a solid fallback.
+     * Platformer platform type → atlas block type mapping:
+     *   flat/slope → 'flat', moving → 'moving', bouncy → 'bouncy',
+     *   icy → 'icy', lava → 'lava_pf', crate → 'crate_pf'
+     * @param {string} platType  'flat'|'slope'|'moving'|'bouncy'|'icy'|'lava'|'crate'
+     * @param {number} w,h,d  dimensions in metres
+     * @param {object} [T]    THREE module
+     * @returns {THREE.Mesh}
+     */
+    buildAtlasBlockMesh(platType, w, h, d, T) {
+        T = T || (typeof THREE !== 'undefined' ? THREE : null);
+        if (!T) return null;
+        const atlasType = { flat:'flat', slope:'flat', moving:'moving',
+                            bouncy:'bouncy', icy:'icy', lava:'lava_pf', crate:'crate_pf' }[platType] || 'flat';
+        const geo = new T.BoxGeometry(w, h, d);
+        let mat;
+        if (this._tilesetEnabled && this._atlas) {
+            this._atlas.applyBlockUVs(geo, atlasType);
+            mat = this._atlas.getMaterial(T);
+        } else {
+            mat = new T.MeshLambertMaterial({ color: 0x888888, flatShading: true });
+        }
+        const mesh = new T.Mesh(geo, mat);
+        mesh.castShadow    = true;
+        mesh.receiveShadow = true;
+        return mesh;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Initialization
