@@ -184,11 +184,21 @@
         .wizard-content > div.active { display: block; animation: fadeIn 0.3s; }
         
         .engine-selection { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-        .engine-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .engine-selection.six-col { grid-template-columns: repeat(3, 1fr); }
+        .engine-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; text-align: center; position: relative; }
         .engine-card:hover { border-color: var(--accent); background: rgba(241, 196, 15, 0.05); }
         .engine-card.selected { border-color: var(--accent); background: rgba(241, 196, 15, 0.1); box-shadow: 0 0 20px rgba(241, 196, 15, 0.3); }
         .engine-card i { font-size: 48px; color: #666; margin-bottom: 15px; display: block; }
         .engine-card.selected i { color: var(--accent); }
+        .engine-card-badge { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 1px; }
+        .badge-2d  { background: #1a3a1a; color: #44dd88; border: 1px solid #2a5a2a; }
+        .badge-3d  { background: #1a1a3a; color: #4488ff; border: 1px solid #2a2a5a; }
+        .quality-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+        .quality-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 12px 8px; cursor: pointer; text-align: center; transition: all 0.2s; border-radius: 4px; }
+        .quality-card:hover { border-color: #4488ff; }
+        .quality-card.selected { border-color: #4488ff; background: rgba(68,136,255,0.1); }
+        .quality-card-title { font-size: 13px; color: #fff; font-weight: bold; }
+        .quality-card-desc  { font-size: 11px; color: #666; margin-top: 4px; line-height: 1.3; }
         .engine-card-title { font-size: 20px; color: #fff; margin-bottom: 8px; }
         .engine-card-desc { font-size: 14px; color: #888; line-height: 1.4; }
         
@@ -323,10 +333,14 @@
                     </div>
                     <div class="wizard-step" data-step="3">
                         <div class="wizard-step-circle">3</div>
-                        <div class="wizard-step-label">Template</div>
+                        <div class="wizard-step-label">Quality</div>
                     </div>
                     <div class="wizard-step" data-step="4">
                         <div class="wizard-step-circle">4</div>
+                        <div class="wizard-step-label">Template</div>
+                    </div>
+                    <div class="wizard-step" data-step="5">
+                        <div class="wizard-step-circle">5</div>
                         <div class="wizard-step-label">Create</div>
                     </div>
                 </div>
@@ -350,28 +364,93 @@
                     <!-- Step 2: Engine Type -->
                     <div class="wizard-page" data-page="2">
                         <h2 style="color:var(--accent); margin-top:0;">Select Engine Type</h2>
-                        <p style="color:#888; margin-bottom: 20px;">Choose the type of game you want to create.</p>
-                        <div class="engine-selection">
+                        <p style="color:#888; margin-bottom: 12px;">Choose the type of game you want to create.</p>
+                        <p style="color:#4488ff; font-size:12px; margin-bottom:16px; letter-spacing:1px;">── 2D ENGINES ──────────────────────</p>
+                        <div class="engine-selection six-col" style="margin-bottom:20px;">
                             <div class="engine-card" onclick="Wizard.selectEngine('rpg-topdown')">
+                                <span class="engine-card-badge badge-2d">2D</span>
                                 <i class="fas fa-map"></i>
                                 <div class="engine-card-title">RPG Top-Down</div>
                                 <div class="engine-card-desc">Classic 2D RPG with exploration, quests, and dialogue</div>
                             </div>
                             <div class="engine-card" onclick="Wizard.selectEngine('platformer-2d')">
+                                <span class="engine-card-badge badge-2d">2D</span>
                                 <i class="fas fa-running"></i>
                                 <div class="engine-card-title">Platformer 2D</div>
                                 <div class="engine-card-desc">Side-scrolling action with physics and jumping</div>
                             </div>
                             <div class="engine-card" onclick="Wizard.selectEngine('iso-pixel')">
+                                <span class="engine-card-badge badge-2d">2D</span>
                                 <i class="fas fa-cubes"></i>
                                 <div class="engine-card-title">Isometric</div>
                                 <div class="engine-card-desc">3D-style isometric world with pixel art</div>
                             </div>
                         </div>
+                        <p style="color:#4488ff; font-size:12px; margin-bottom:16px; letter-spacing:1px;">── 3D ENGINES ──────────────────────</p>
+                        <div class="engine-selection six-col">
+                            <div class="engine-card" onclick="Wizard.selectEngine('topdown-3d')">
+                                <span class="engine-card-badge badge-3d">3D</span>
+                                <i class="fas fa-street-view"></i>
+                                <div class="engine-card-title">Top-Down 3D</div>
+                                <div class="engine-card-desc">Low-poly 3D RPG/adventure with overhead camera and physics</div>
+                            </div>
+                            <div class="engine-card" onclick="Wizard.selectEngine('fps-3d')">
+                                <span class="engine-card-badge badge-3d">3D</span>
+                                <i class="fas fa-crosshairs"></i>
+                                <div class="engine-card-title">FPS / First Person</div>
+                                <div class="engine-card-desc">First-person shooter or explorer with voxel world editor</div>
+                            </div>
+                            <div class="engine-card" onclick="Wizard.selectEngine('platformer-3d')">
+                                <span class="engine-card-badge badge-3d">3D</span>
+                                <i class="fas fa-layer-group"></i>
+                                <div class="engine-card-title">Platformer 3D</div>
+                                <div class="engine-card-desc">Low-poly 3D platformer with grapple, dash, wall-jump</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Step 3: Template -->
+                    <!-- Step 3: 3D Quality Settings (shown for 3D engines) -->
                     <div class="wizard-page" data-page="3">
+                        <h2 style="color:var(--accent); margin-top:0;">Render Quality</h2>
+                        <div id="quality-3d-section">
+                            <p style="color:#888; margin-bottom:12px;">Select the visual quality level for your 3D project. Lower = better performance on older hardware.</p>
+                            <div class="quality-grid" id="quality-grid">
+                                <div class="quality-card" onclick="Wizard.selectQuality('low')">
+                                    <div class="quality-card-title">Low</div>
+                                    <div class="quality-card-desc">No shadows<br>Simple fog<br>60fps mobile</div>
+                                </div>
+                                <div class="quality-card selected" onclick="Wizard.selectQuality('medium')">
+                                    <div class="quality-card-title">Medium ★</div>
+                                    <div class="quality-card-desc">Soft shadows<br>Standard fog<br>Recommended</div>
+                                </div>
+                                <div class="quality-card" onclick="Wizard.selectQuality('high')">
+                                    <div class="quality-card-title">High</div>
+                                    <div class="quality-card-desc">Sharp shadows<br>PCF filtering<br>Desktop</div>
+                                </div>
+                                <div class="quality-card" onclick="Wizard.selectQuality('ultra')">
+                                    <div class="quality-card-title">Ultra</div>
+                                    <div class="quality-card-desc">PCSS shadows<br>Full effects<br>High-end GPU</div>
+                                </div>
+                            </div>
+                            <div style="margin-top:18px; display:flex; gap:20px; flex-wrap:wrap;">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#ccc; font-size:14px;">
+                                    <input type="checkbox" id="opt-physics3d" checked style="width:16px; height:16px; accent-color:#4488ff;">
+                                    Enable 3D Physics (cannon-es)
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#ccc; font-size:14px;">
+                                    <input type="checkbox" id="opt-shadows" checked style="width:16px; height:16px; accent-color:#4488ff;">
+                                    Cast Shadows
+                                </label>
+                            </div>
+                        </div>
+                        <div id="quality-2d-section" style="display:none;">
+                            <p style="color:#888;">2D engines use a fixed rendering pipeline. No quality settings required.</p>
+                            <p style="color:#555; font-size:13px; margin-top:20px;"><i class="fas fa-check-circle" style="color:#44dd88"></i> Proceed to select a template.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Template -->
+                    <div class="wizard-page" data-page="4">
                         <h2 style="color:var(--accent); margin-top:0;">Choose Template</h2>
                         <p style="color:#888; margin-bottom: 20px;">Start with a template or create from scratch.</p>
                         <div class="template-selection">
@@ -386,21 +465,25 @@
                         </div>
                     </div>
 
-                    <!-- Step 4: Confirmation -->
-                    <div class="wizard-page" data-page="4">
+                    <!-- Step 5: Confirmation -->
+                    <div class="wizard-page" data-page="5">
                         <h2 style="color:var(--accent); margin-top:0;">Ready to Create</h2>
                         <div style="background:rgba(0,0,0,0.5); border:1px solid #1f2b42; padding:20px; margin:20px 0;">
-                            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                            <div style="margin-bottom:12px; display:flex; justify-content:space-between;">
                                 <span style="color:#888;">Project Name:</span>
                                 <span style="color:#fff; font-weight:bold;" id="confirm-name">-</span>
                             </div>
-                            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                            <div style="margin-bottom:12px; display:flex; justify-content:space-between;">
                                 <span style="color:#888;">Author:</span>
                                 <span style="color:#fff;" id="confirm-author">-</span>
                             </div>
-                            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                            <div style="margin-bottom:12px; display:flex; justify-content:space-between;">
                                 <span style="color:#888;">Engine Type:</span>
                                 <span style="color:var(--accent); font-weight:bold;" id="confirm-engine">-</span>
+                            </div>
+                            <div style="margin-bottom:12px; display:flex; justify-content:space-between;" id="confirm-quality-row">
+                                <span style="color:#888;">Render Quality:</span>
+                                <span style="color:#4488ff;" id="confirm-quality">-</span>
                             </div>
                             <div style="display:flex; justify-content:space-between;">
                                 <span style="color:#888;">Template:</span>
@@ -887,9 +970,12 @@
 
         function getEngineIcon(engineType) {
             const icons = {
-                'rpg-topdown': 'fas fa-map',
+                'rpg-topdown':   'fas fa-map',
                 'platformer-2d': 'fas fa-running',
-                'iso-pixel': 'fas fa-cubes'
+                'iso-pixel':     'fas fa-cubes',
+                'topdown-3d':    'fas fa-street-view',
+                'fps-3d':        'fas fa-crosshairs',
+                'platformer-3d': 'fas fa-layer-group',
             };
             return icons[engineType] || 'fas fa-gamepad';
         }
@@ -933,22 +1019,40 @@
         // --- PROJECT WIZARD ---
         const Wizard = {
             currentStep: 1,
+            TOTAL_STEPS: 5,
+            IS_3D_ENGINE: ['topdown-3d', 'fps-3d', 'platformer-3d'],
             data: {
                 name: '',
                 author: '',
                 engineType: 'rpg-topdown',
-                template: 'blank'
+                template: 'blank',
+                renderQuality: 'medium',
+                physics3D: true,
+                shadowQuality: true,
             },
             
             init() {
                 const savedAuthor = localStorage.getItem('ketebe_username') || '';
                 document.getElementById('wizard-author').value = savedAuthor;
             },
+
+            is3D() { return this.IS_3D_ENGINE.includes(this.data.engineType); },
             
             selectEngine(type) {
                 this.data.engineType = type;
                 document.querySelectorAll('.engine-card').forEach(el => el.classList.remove('selected'));
                 event.target.closest('.engine-card').classList.add('selected');
+                // Show/hide quality section on step 3
+                const q3d = document.getElementById('quality-3d-section');
+                const q2d = document.getElementById('quality-2d-section');
+                if (q3d) q3d.style.display = this.is3D() ? '' : 'none';
+                if (q2d) q2d.style.display = this.is3D() ? 'none' : '';
+            },
+
+            selectQuality(level) {
+                this.data.renderQuality = level;
+                document.querySelectorAll('.quality-card').forEach(el => el.classList.remove('selected'));
+                event.target.closest('.quality-card').classList.add('selected');
             },
             
             selectTemplate(type) {
@@ -958,18 +1062,15 @@
             },
             
             next() {
-                // Validate current step
                 if (this.currentStep === 1) {
-                    const name = document.getElementById('wizard-proj-name').value.trim();
-                    if (!name) {
-                        showToast('⚠️ Please enter a project name', 'warning');
-                        return;
-                    }
-                    this.data.name = name;
+                    this.data.name = document.getElementById('wizard-proj-name').value.trim();
                     this.data.author = document.getElementById('wizard-author').value.trim();
+                    if (!this.data.name) { showToast('⚠️ Please enter a project name', 'warning'); return; }
                 }
-                
-                if (this.currentStep < 4) {
+                if (this.currentStep === 2 && !this.data.engineType) {
+                    showToast('⚠️ Please select an engine type', 'warning'); return;
+                }
+                if (this.currentStep < this.TOTAL_STEPS) {
                     this.currentStep++;
                     this.updateUI();
                 }
@@ -994,31 +1095,61 @@
                 // Update pages
                 document.querySelectorAll('.wizard-page').forEach(page => {
                     page.classList.remove('active');
-                    if (parseInt(page.dataset.page) === this.currentStep) {
-                        page.classList.add('active');
-                    }
+                    if (parseInt(page.dataset.page) === this.currentStep) page.classList.add('active');
                 });
+
+                // Sync quality section visibility when arriving at step 3
+                if (this.currentStep === 3) {
+                    const q3d = document.getElementById('quality-3d-section');
+                    const q2d = document.getElementById('quality-2d-section');
+                    if (q3d) q3d.style.display = this.is3D() ? '' : 'none';
+                    if (q2d) q2d.style.display = this.is3D() ? 'none' : '';
+                }
                 
                 // Update buttons
                 document.getElementById('wizard-prev-btn').style.display = this.currentStep > 1 ? 'block' : 'none';
-                document.getElementById('wizard-next-btn').style.display = this.currentStep < 4 ? 'block' : 'none';
-                document.getElementById('wizard-create-btn').style.display = this.currentStep === 4 ? 'block' : 'none';
+                document.getElementById('wizard-next-btn').style.display = this.currentStep < this.TOTAL_STEPS ? 'block' : 'none';
+                document.getElementById('wizard-create-btn').style.display = this.currentStep === this.TOTAL_STEPS ? 'block' : 'none';
                 
-                // Update confirmation
-                if (this.currentStep === 4) {
-                    document.getElementById('confirm-name').textContent = this.data.name;
-                    document.getElementById('confirm-author').textContent = this.data.author || 'Anonymous';
-                    document.getElementById('confirm-engine').textContent = this.data.engineType.replace('-', ' ').toUpperCase();
+                // Update confirmation on final step
+                if (this.currentStep === this.TOTAL_STEPS) {
+                    // Collect 3D options from checkboxes
+                    if (this.is3D()) {
+                        this.data.physics3D      = document.getElementById('opt-physics3d')?.checked ?? true;
+                        this.data.shadowQuality  = document.getElementById('opt-shadows')?.checked ?? true;
+                    }
+                    document.getElementById('confirm-name').textContent     = this.data.name;
+                    document.getElementById('confirm-author').textContent   = this.data.author || 'Anonymous';
+                    document.getElementById('confirm-engine').textContent   = this.data.engineType.toUpperCase().replace(/-/g, ' ');
                     document.getElementById('confirm-template').textContent = this.data.template === 'blank' ? 'Blank Project' : 'Demo Project';
+                    const qRow = document.getElementById('confirm-quality-row');
+                    const qVal = document.getElementById('confirm-quality');
+                    if (this.is3D()) {
+                        if (qRow) qRow.style.display = 'flex';
+                        if (qVal) qVal.textContent = this.data.renderQuality.toUpperCase() + (this.data.shadowQuality ? ' + Shadows' : '');
+                    } else {
+                        if (qRow) qRow.style.display = 'none';
+                    }
                 }
             },
             
             async create() {
                 try {
+                    const payload = {
+                        name:     this.data.name,
+                        author:   this.data.author || 'Anonymous',
+                        template: this.data.template,
+                        engineType: this.data.engineType,
+                    };
+                    if (this.is3D()) {
+                        payload.renderQuality  = this.data.renderQuality;
+                        payload.physics3D      = this.data.physics3D;
+                        payload.shadowQuality  = this.data.shadowQuality;
+                    }
                     const res = await fetch('/api/projects/create', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.data)
+                        body: JSON.stringify(payload)
                     });
                     
                     if (res.ok) {
@@ -1037,12 +1168,15 @@
             
             reset() {
                 this.currentStep = 1;
-                this.data = { name: '', author: '', engineType: 'rpg-topdown', template: 'blank' };
+                this.data = { name: '', author: '', engineType: 'rpg-topdown', template: 'blank', renderQuality: 'medium', physics3D: true, shadowQuality: true };
                 document.getElementById('wizard-proj-name').value = '';
                 document.querySelectorAll('.engine-card').forEach(el => el.classList.remove('selected'));
                 document.querySelectorAll('.template-card').forEach((el, i) => {
                     el.classList.remove('selected');
                     if (i === 0) el.classList.add('selected');
+                });
+                document.querySelectorAll('.quality-card').forEach((el, i) => {
+                    el.classList.toggle('selected', i === 1); // medium = index 1
                 });
                 this.updateUI();
             }
