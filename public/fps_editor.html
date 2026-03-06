@@ -355,6 +355,25 @@
 
         <!-- GEOMETRY PANEL -->
         <div class="panel-body active" id="tab-geo">
+            <div class="terrain-mode-row" style="display:flex;gap:4px;margin-bottom:8px;">
+                <div class="block-cell active" style="flex:1" id="fps-tmode-voxel" data-tmode="voxel" onclick="FPSEditor.setTerrainMode('voxel')">VOXEL</div>
+                <div class="block-cell" style="flex:1" id="fps-tmode-trimesh" data-tmode="trimesh" onclick="FPSEditor.setTerrainMode('trimesh')">TRI-MESH</div>
+            </div>
+            <div id="fps-trimesh-section" style="display:none">
+                <div class="section-header">Sculpt Tools</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="elevate"    onclick="FPSEditor.setSculptTool('elevate')">Elevate</div>
+                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="facet-paint" onclick="FPSEditor.setSculptTool('facet-paint')">Paint</div>
+                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="smooth"     onclick="FPSEditor.setSculptTool('smooth')">Smooth</div>
+                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="noise"      onclick="FPSEditor.setSculptTool('noise')">Noise</div>
+                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="flatten"    onclick="FPSEditor.setSculptTool('flatten')">Flatten</div>
+                </div>
+                <div class="field-row"><label>Brush R</label><input type="range" id="fps-brush-r" min="0.5" max="8" value="2" step="0.5" oninput="FPSEditor.setBrushRadius(+this.value)"><span id="fps-brush-r-val">2</span></div>
+                <div class="field-row"><label>Strength</label><input type="range" id="fps-brush-s" min="0.1" max="1" value="0.5" step="0.1" oninput="FPSEditor.setBrushStrength(+this.value)"><span id="fps-brush-s-val">0.5</span></div>
+                <button class="btn" style="width:100%;margin-top:4px" onclick="FPSEditor.generateLowPolyFloor()">Generate Low-poly Floor</button>
+                <div class="section-header" style="margin-top:8px">Tri-mesh Assets</div>
+                <div id="fps-trimesh-assets" style="font-size:0.75rem;color:#666;padding:4px">Drop .glb files here</div>
+            </div>
             <div class="section-header">Block Types</div>
             <div class="block-grid">
                 <div class="block-cell active" data-block="floor"   onclick="FPSEditor.selectBlock('floor')"><i class="fas fa-th"></i>Floor</div>

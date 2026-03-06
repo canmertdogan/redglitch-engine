@@ -38,6 +38,8 @@
     let OrbitControls;
     try {
         ({ OrbitControls } = await import('/lib/three/addons/controls/OrbitControls.js'));
+        let LowPolyTerrainGen = null;
+        try { ({ default: LowPolyTerrainGen } = await import('/engines/shared/LowPolyTerrainGen.js')); } catch(e) { console.warn('[topdown3d] LowPolyTerrainGen unavailable', e); }
     } catch (_) {
         OrbitControls = null; // orbit disabled; mouse pan/zoom still works
     }
@@ -112,7 +114,7 @@
     camera.position.set(0, 40, 40);
     camera.lookAt(0, 0, 0);
 
-    // Orbit controls
+    // Orbit controls — RMB: orbit, MMB: pan, Scroll: zoom (LMB reserved for tools)
     let controls = null;
     if (OrbitControls) {
         controls = new OrbitControls(camera, renderer.domElement);
@@ -122,7 +124,16 @@
         controls.minDistance = 5;
         controls.maxDistance = 200;
         controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        // RMB = orbit, MMB = dolly/zoom, LMB = pan (tools use LMB for placement)
+        controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
     }
+
+    // WASD fly-cam state
+    const _flyKeys = new Set(['w','a','s','d','q','e']);
+    const _keysHeld = new Set();
+    let _canvasHovered = false;
+    renderer.domElement.addEventListener('pointerenter', () => { _canvasHovered = true; });
+    renderer.domElement.addEventListener('pointerleave', () => { _canvasHovered = false; _keysHeld.clear(); });
 
     // ── 5. Grid ───────────────────────────────────────────────────────────────
     const gridHelper = new THREE.GridHelper(64, 64, 0x1a1a2e, 0x1a1a2e);
@@ -185,6 +196,19 @@
     // ── 11. Render loop ───────────────────────────────────────────────────────
     function animate() {
         requestAnimationFrame(animate);
+        // WASD fly-cam: nudge orbit target while keys held over canvas
+        if (_canvasHovered && _keysHeld.size && controls) {
+            const fwd = new THREE.Vector3();
+            camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+            const right = new THREE.Vector3().crossVectors(fwd, THREE.Object3D.DEFAULT_UP).normalize();
+            const speed = controls.target.distanceTo(camera.position) * 0.015;
+            if (_keysHeld.has('w')) controls.target.addScaledVector(fwd,   speed);
+            if (_keysHeld.has('s')) controls.target.addScaledVector(fwd,  -speed);
+            if (_keysHeld.has('a')) controls.target.addScaledVector(right, -speed);
+            if (_keysHeld.has('d')) controls.target.addScaledVector(right,  speed);
+            if (_keysHeld.has('q')) controls.target.y += speed;
+            if (_keysHeld.has('e')) controls.target.y -= speed;
+        }
         if (controls) controls.update();
         renderer.render(scene, camera);
     }
@@ -192,6 +216,7 @@
 
     // ── 12. Terrain mesh builder ──────────────────────────────────────────────
     let terrainMesh = null;
+    let lowPolyMesh = null;
     let wireframeMesh = null;
 
     function buildFlatTerrain(w, h, cellSize = 1) {
@@ -406,6 +431,45 @@
     }
 
     // ── 20. Level serialisation ───────────────────────────────────────────────
+    function serializeTrimesh(mesh) {
+        if (!mesh?.geometry) return null;
+        const pos = mesh.geometry.attributes.position;
+        const col = mesh.geometry.attributes.color;
+        return {
+            positions: pos ? Array.from(pos.array) : [],
+            colors: col ? Array.from(col.array) : [],
+            width: mesh.userData.trimeshWidth ?? 0,
+            height: mesh.userData.trimeshHeight ?? 0,
+        };
+    }
+
+    function generateLowPolyTerrain() {
+        if (!LowPolyTerrainGen) { console.warn('[topdown3d] LowPolyTerrainGen not loaded'); return; }
+        if (lowPolyMesh) { scene.remove(lowPolyMesh); lowPolyMesh.geometry?.dispose(); lowPolyMesh.material?.dispose(); lowPolyMesh = null; }
+        const heightMap = state.level?.terrain?.heightMap;
+        const w = state.level?.worldW ?? 32;
+        const h = state.level?.worldH ?? 32;
+        let elevGrid;
+        if (heightMap && heightMap.length === w * h) {
+            elevGrid = new Float32Array(heightMap);
+        } else {
+            elevGrid = new Float32Array(w * h);
+            for (let i = 0; i < elevGrid.length; i++) elevGrid[i] = Math.random() * 0.05;
+        }
+        const gen = new LowPolyTerrainGen();
+        const mesh = gen.generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        if (!mesh) return;
+        mesh.userData.isLowPolyFloor = true;
+        mesh.userData.trimeshWidth = w;
+        mesh.userData.trimeshHeight = h;
+        scene.add(mesh);
+        lowPolyMesh = mesh;
+    }
+
+    function setSculptTool(tool) { /* placeholder for TriSculptTools wiring */ console.log('[topdown3d] sculpt tool:', tool); }
+    function setBrushRadius(r)   { /* placeholder */ }
+    function setBrushStrength(s) { /* placeholder */ }
+
     function buildLevelJSON() {
         const lv = state.level;
         lv.bounds = { width: lv.worldW, height: lv.worldH };
@@ -413,6 +477,7 @@
             .map(e => e.data)
             .filter(d => d.type === 'unit');
         lv.lights = [...sceneLights.values()].map(e => e.data);
+        lv.trimesh = lowPolyMesh ? serializeTrimesh(lowPolyMesh) : null;
         return JSON.parse(JSON.stringify(lv));
     }
 
@@ -941,6 +1006,12 @@
     // ── 39. Keyboard shortcuts ─────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        // Fly-cam: WASD/QE consumed when hovering canvas (takes priority over tool shortcuts)
+        if (_canvasHovered && _flyKeys.has(e.key.toLowerCase()) && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            _keysHeld.add(e.key.toLowerCase());
+            return;
+        }
         if (e.ctrlKey || e.metaKey) {
             if (e.key === 's') { e.preventDefault(); saveLevel(); }
             if (e.key === 'z') { e.preventDefault(); undo(); }
@@ -962,6 +1033,7 @@
         if (e.key === 'F5') { e.preventDefault(); testPlay(); }
         if (e.key === 'Home') handleAction('frame-all');
     });
+    document.addEventListener('keyup', e => { _keysHeld.delete(e.key.toLowerCase()); });
 
     // ── 40. Viewport mouse interactions ───────────────────────────────────────
     let isDragging = false;
@@ -1112,6 +1184,20 @@
     document.getElementById('set-fog-far').value      = state.level.fogFar;
     document.getElementById('set-gravity').value      = state.level.physics.gravity[1];
 
+    // Hook terrain mode buttons to update voxel opacity and show/hide lowPolyMesh
+    document.querySelectorAll('[data-tmode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.tmode;
+            if (terrainMesh) {
+                terrainMesh.material.transparent = mode === 'lowpoly';
+                terrainMesh.material.opacity = mode === 'lowpoly' ? 0.35 : 1.0;
+                terrainMesh.material.needsUpdate = true;
+            }
+            if (mode === 'lowpoly' && !lowPolyMesh) generateLowPolyTerrain();
+            if (lowPolyMesh) lowPolyMesh.visible = mode === 'lowpoly';
+        });
+    });
+
     // Expose for debugging
     window.__topdown3dEditor = {
         state, scene, camera, renderer, THREE,
@@ -1120,6 +1206,11 @@
         addSceneObject, removeSceneObject,
         addSceneLight, removeSceneLight,
         getTerrainMesh: () => terrainMesh,
+        getLowPolyMesh: () => lowPolyMesh,
+        generateLowPolyTerrain,
+        setSculptTool,
+        setBrushRadius,
+        setBrushStrength,
         groundPos,
         pushUndo, undo, redo,
         markDirty, setStatus,

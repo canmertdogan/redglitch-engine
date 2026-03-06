@@ -68,6 +68,11 @@ const Pf3dEditor = (() => {
     let _renderer, _scene, _camera, _raycaster3, _gridHelper;
     let _rafId = null;
 
+    let _trimeshMode      = 'voxel';
+    let _lowPolyTerrain   = null;
+    let LowPolyTerrainGen = null;
+    import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
+
     // Orbit camera control state
     let _orbitCenter  = { x: 0, y: 0, z: 0 };
     let _orbitDist    = 30;
@@ -1210,6 +1215,43 @@ const Pf3dEditor = (() => {
 
     function saveLevelAs() { openModal('level-settings'); }
 
+    function saveLevelAs() { openModal('level-settings'); }
+
+    function setTerrainMode(mode) {
+        _trimeshMode = mode;
+        document.getElementById('p3d-tmode-voxel')?.classList.toggle('active', mode === 'voxel');
+        document.getElementById('p3d-tmode-trimesh')?.classList.toggle('active', mode === 'trimesh');
+        const sec = document.getElementById('p3d-trimesh-section');
+        if (sec) sec.style.display = mode === 'trimesh' ? '' : 'none';
+        if (mode === 'trimesh' && !_lowPolyTerrain) generateLowPolyTerrain();
+    }
+
+    function setSculptTool(tool) { console.log('[Platformer3DEditor] sculpt tool:', tool); }
+
+    function setBrushRadius(r) {
+        const span = document.getElementById('p3d-brush-r-val');
+        if (span) span.textContent = r;
+    }
+
+    function setBrushStrength(s) {
+        const span = document.getElementById('p3d-brush-s-val');
+        if (span) span.textContent = s;
+    }
+
+    function generateLowPolyTerrain() {
+        if (!LowPolyTerrainGen) { console.warn('[Platformer3DEditor] LowPolyTerrainGen not loaded'); return; }
+        if (!_scene) return;
+        if (_lowPolyTerrain) { _scene.remove(_lowPolyTerrain); _lowPolyTerrain.geometry?.dispose(); _lowPolyTerrain.material?.dispose(); _lowPolyTerrain = null; }
+        const w = 20, h = 20;
+        const elevGrid = new Float32Array(w * h);
+        for (let i = 0; i < elevGrid.length; i++) elevGrid[i] = Math.random() * 0.05;
+        const mesh = new LowPolyTerrainGen().generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        if (!mesh) return;
+        mesh.userData.isLowPolyFloor = true;
+        _scene.add(mesh);
+        _lowPolyTerrain = mesh;
+    }
+
     function exportLevel() {
         const payload = _buildLevelPayload();
         const json    = JSON.stringify(payload, null, 2);
@@ -1286,6 +1328,7 @@ const Pf3dEditor = (() => {
             entities: _state.entities
                 .filter(e => !['player-spawn', 'checkpoint', 'level-exit'].includes(e.type))
                 .map(e => ({ id: e.id, type: e.type, x: e.pos.x, y: e.pos.y, z: e.pos.z, ...e.props })),
+            trimesh: _lowPolyTerrain ? (() => { const pos = _lowPolyTerrain.geometry?.attributes?.position; const col = _lowPolyTerrain.geometry?.attributes?.color; return { positions: pos ? Array.from(pos.array) : [], colors: col ? Array.from(col.array) : [], width: 20, height: 20 }; })() : null,
         };
     }
 
@@ -1597,6 +1640,7 @@ const Pf3dEditor = (() => {
         // Level
         newLevel, openLevel, confirmOpen, loadLevel,
         saveLevel, saveLevelAs, exportLevel, importLevel,
+        setTerrainMode, setSculptTool, setBrushRadius, setBrushStrength, generateLowPolyTerrain,
         generateFloor, clearLevel, confirmClear,
         showLevelSettings, applyLevelSettings, setSkybox, showMusicPicker,
         // Test

@@ -221,6 +221,22 @@
             position: absolute; bottom: 10px; left: 10px;
             font-size: 0.8rem; color: #555; letter-spacing: 1px;
         }
+        /* nav controls help overlay */
+        #nav-hint {
+            position: absolute; bottom: 36px; left: 10px;
+            background: rgba(8,8,20,0.88); border: 1px solid #333; border-radius: 4px;
+            padding: 7px 10px; font-size: 0.72rem; color: #aaa; line-height: 1.7;
+            pointer-events: auto; z-index: 20; min-width: 230px;
+        }
+        #nav-hint .nav-row { display: flex; gap: 8px; align-items: center; }
+        #nav-hint .nav-key { background: #1a1a2e; border: 1px solid #444; border-radius: 3px;
+            padding: 1px 5px; font-family: monospace; color: #7eb8f7; font-size: 0.7rem; white-space: nowrap; }
+        #nav-hint-close { float: right; cursor: pointer; color: #555; margin-left: 8px; font-size: 0.85rem; }
+        #nav-hint-close:hover { color: #fff; }
+        #nav-hint-toggle { position: absolute; bottom: 10px; left: 130px;
+            background: rgba(8,8,20,0.75); border: 1px solid #333; border-radius: 3px;
+            padding: 2px 7px; font-size: 0.68rem; color: #555; cursor: pointer; z-index: 20; }
+        #nav-hint-toggle:hover { color: #aaa; }
         /* zoom controls */
         #zoom-controls {
             position: absolute; bottom: 10px; right: 10px;
@@ -446,15 +462,33 @@
 
             <!-- Low-poly section (shown in lowpoly mode) -->
             <div id="lowpoly-section" style="display:none">
-                <div class="section-header">FACE PAINT</div>
-                <div class="field-row" style="font-size:0.82rem;color:#666;padding:4px 0;line-height:1.3">
-                    Click a terrain face to paint it with the active palette color.
+                <div class="section-header">SCULPT TOOLS</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+                    <div class="terrain-mode-btn" style="flex:1 1 auto;font-size:0.7rem" data-sculpt="elevate"    onclick="window.__topdown3dEditor?.setSculptTool('elevate')">Elevate</div>
+                    <div class="terrain-mode-btn" style="flex:1 1 auto;font-size:0.7rem" data-sculpt="facet-paint" onclick="window.__topdown3dEditor?.setSculptTool('facet-paint')">Paint</div>
+                    <div class="terrain-mode-btn" style="flex:1 1 auto;font-size:0.7rem" data-sculpt="smooth"     onclick="window.__topdown3dEditor?.setSculptTool('smooth')">Smooth</div>
+                    <div class="terrain-mode-btn" style="flex:1 1 auto;font-size:0.7rem" data-sculpt="noise"      onclick="window.__topdown3dEditor?.setSculptTool('noise')">Noise</div>
+                    <div class="terrain-mode-btn" style="flex:1 1 auto;font-size:0.7rem" data-sculpt="flatten"    onclick="window.__topdown3dEditor?.setSculptTool('flatten')">Flatten</div>
+                </div>
+                <div class="field-row">
+                    <label>BRUSH R</label>
+                    <input type="range" id="lp-brush-r" min="0.5" max="8" value="2" step="0.5" oninput="window.__topdown3dEditor?.setBrushRadius(+this.value);document.getElementById('lp-brush-r-val').textContent=this.value">
+                    <span id="lp-brush-r-val" style="min-width:20px;text-align:right;color:var(--accent)">2</span>
+                </div>
+                <div class="field-row">
+                    <label>STRENGTH</label>
+                    <input type="range" id="lp-brush-s" min="0.1" max="1" value="0.5" step="0.1" oninput="window.__topdown3dEditor?.setBrushStrength(+this.value);document.getElementById('lp-brush-s-val').textContent=this.value">
+                    <span id="lp-brush-s-val" style="min-width:20px;text-align:right;color:var(--accent)">0.5</span>
                 </div>
                 <div class="field-row">
                     <label>RADIUS</label>
                     <input type="range" id="lp-radius" min="1" max="10" value="1">
                     <span id="lp-radius-val" style="min-width:20px;text-align:right;color:var(--accent)">1</span>
                 </div>
+                <button class="terrain-mode-btn" style="width:100%;margin-top:4px;font-size:0.75rem;cursor:pointer" onclick="window.__topdown3dEditor?.generateLowPolyTerrain()">GENERATE LOW-POLY</button>
+                <div class="section-header" style="margin-top:8px">TRI-MESH ASSETS</div>
+                <div id="trimesh-drop-zone" style="border:1px dashed #444;border-radius:3px;padding:8px;font-size:0.72rem;color:#666;text-align:center;margin-bottom:4px">Drop .glb files here</div>
+                <div id="trimesh-asset-list" style="font-size:0.72rem;color:#888"></div>
             </div>
 
             <!-- Shared brush settings -->
@@ -651,7 +685,19 @@
         <canvas id="three-canvas"></canvas>
         <div id="viewport-overlay">
             <div id="sel-rect"></div>
-            <div id="gizmo-legend">RMB: orbit · MMB: pan · Scroll: zoom</div>
+            <div id="gizmo-legend">RMB: orbit · MMB: pan · Scroll: zoom · WASD/QE: fly</div>
+            <!-- Nav controls help overlay -->
+            <div id="nav-hint">
+                <span id="nav-hint-close" onclick="document.getElementById('nav-hint').style.display='none';document.getElementById('nav-hint-toggle').style.display='block'">✕</span>
+                <div style="color:#7eb8f7;font-weight:bold;margin-bottom:4px;font-size:0.75rem">NAVIGATION</div>
+                <div class="nav-row"><span class="nav-key">RMB drag</span> Orbit / rotate camera</div>
+                <div class="nav-row"><span class="nav-key">MMB drag</span> Pan camera</div>
+                <div class="nav-row"><span class="nav-key">Scroll</span> Zoom in / out</div>
+                <div class="nav-row"><span class="nav-key">W A S D</span> Fly (while hovering canvas)</div>
+                <div class="nav-row"><span class="nav-key">Q / E</span> Move up / down</div>
+                <div class="nav-row"><span class="nav-key">Home</span> Frame all objects</div>
+            </div>
+            <div id="nav-hint-toggle" style="display:none" onclick="document.getElementById('nav-hint').style.display='block';this.style.display='none'">? nav</div>
             <div id="viewport-hud">
                 <div class="hud-badge mode-badge" id="hud-mode">SELECT</div>
                 <div class="hud-badge" id="hud-level">no level</div>

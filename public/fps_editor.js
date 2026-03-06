@@ -46,7 +46,10 @@ const FPSEditor = (() => {
         dirty:       false,
     };
 
-    let _activeTool   = 'draw-room';
+    let _trimeshMode  = 'voxel';
+    let _lowPolyFloor = null;
+    let LowPolyTerrainGen = null;
+    import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
     let _activeBlock  = 'floor';
     let _drawMode     = 'pencil';
     let _activeColor  = '#888888';  // kept in sync with ColorPalette.getActive()
@@ -952,6 +955,41 @@ const FPSEditor = (() => {
         return BrushTools.exportGreedyMesh(_state.voxelGrid, _state.cellSize);
     }
 
+    function setTerrainMode(mode) {
+        _trimeshMode = mode;
+        document.getElementById('fps-tmode-voxel')?.classList.toggle('active', mode === 'voxel');
+        document.getElementById('fps-tmode-trimesh')?.classList.toggle('active', mode === 'trimesh');
+        const sec = document.getElementById('fps-trimesh-section');
+        if (sec) sec.style.display = mode === 'trimesh' ? '' : 'none';
+        if (mode === 'trimesh' && !_lowPolyFloor) generateLowPolyFloor();
+    }
+
+    function setSculptTool(tool) { console.log('[FPSEditor] sculpt tool:', tool); }
+
+    function setBrushRadius(r) {
+        const span = document.getElementById('fps-brush-r-val');
+        if (span) span.textContent = r;
+    }
+
+    function setBrushStrength(s) {
+        const span = document.getElementById('fps-brush-s-val');
+        if (span) span.textContent = s;
+    }
+
+    function generateLowPolyFloor() {
+        if (!LowPolyTerrainGen) { console.warn('[FPSEditor] LowPolyTerrainGen not loaded'); return; }
+        if (!_three?.scene) return;
+        if (_lowPolyFloor) { _three.scene.remove(_lowPolyFloor); _lowPolyFloor.geometry?.dispose(); _lowPolyFloor.material?.dispose(); _lowPolyFloor = null; }
+        const w = 20, h = 20;
+        const elevGrid = new Float32Array(w * h);
+        for (let i = 0; i < elevGrid.length; i++) elevGrid[i] = Math.random() * 0.05;
+        const mesh = new LowPolyTerrainGen().generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        if (!mesh) return;
+        mesh.userData.isLowPolyFloor = true;
+        _three.scene.add(mesh);
+        _lowPolyFloor = mesh;
+    }
+
     function _buildMapData() {
         const palette = (typeof ColorPalette !== 'undefined')
             ? ColorPalette.toArray()
@@ -976,6 +1014,7 @@ const FPSEditor = (() => {
             voxelGrid:      _state.voxelGrid,
             entities:       _state.entities,
             triggers:       _state.triggers,
+            trimesh:        _lowPolyFloor ? (() => { const pos = _lowPolyFloor.geometry?.attributes?.position; const col = _lowPolyFloor.geometry?.attributes?.color; return { positions: pos ? Array.from(pos.array) : [], colors: col ? Array.from(col.array) : [], width: 20, height: 20 }; })() : null,
         };
     }
 
@@ -1300,6 +1339,7 @@ const FPSEditor = (() => {
         updateFog, updateLighting,
         randomizePalette, loadPalette, savePalette,
         newMap, openMap, saveMap, saveMapAs, exportMap, importMap, exportGreedyMeshData,
+        setTerrainMode, setSculptTool, setBrushRadius, setBrushStrength, generateLowPolyFloor,
         undo, redo, selectAll, deleteSelected,
         testPlay, buildNavmesh, validateMap, clearMap,
         markDirty,

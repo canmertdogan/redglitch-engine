@@ -396,6 +396,25 @@
 
         <!-- GEOMETRY TAB -->
         <div class="panel-body active" id="tab-geometry">
+            <div class="terrain-mode-row" style="display:flex;gap:4px;margin-bottom:8px;">
+                <div class="block-cell active" style="flex:1" id="p3d-tmode-voxel" data-tmode="voxel" onclick="Pf3dEditor.setTerrainMode('voxel')">VOXEL</div>
+                <div class="block-cell" style="flex:1" id="p3d-tmode-trimesh" data-tmode="trimesh" onclick="Pf3dEditor.setTerrainMode('trimesh')">TRI-MESH</div>
+            </div>
+            <div id="p3d-trimesh-section" style="display:none">
+                <div class="section-header">Sculpt Tools</div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+                    <div class="block-cell" data-sculpt="elevate"    onclick="Pf3dEditor.setSculptTool('elevate')">Elevate</div>
+                    <div class="block-cell" data-sculpt="facet-paint" onclick="Pf3dEditor.setSculptTool('facet-paint')">Paint</div>
+                    <div class="block-cell" data-sculpt="smooth"     onclick="Pf3dEditor.setSculptTool('smooth')">Smooth</div>
+                    <div class="block-cell" data-sculpt="noise"      onclick="Pf3dEditor.setSculptTool('noise')">Noise</div>
+                    <div class="block-cell" data-sculpt="flatten"    onclick="Pf3dEditor.setSculptTool('flatten')">Flatten</div>
+                </div>
+                <div class="field-row"><label>Brush R</label><input type="range" id="p3d-brush-r" min="0.5" max="8" value="2" step="0.5" oninput="Pf3dEditor.setBrushRadius(+this.value)"><span id="p3d-brush-r-val">2</span></div>
+                <div class="field-row"><label>Strength</label><input type="range" id="p3d-brush-s" min="0.1" max="1" value="0.5" step="0.1" oninput="Pf3dEditor.setBrushStrength(+this.value)"><span id="p3d-brush-s-val">0.5</span></div>
+                <button class="btn" style="width:100%;margin-top:4px" onclick="Pf3dEditor.generateLowPolyTerrain()">Generate Low-poly Terrain</button>
+                <div class="section-header" style="margin-top:8px">Tri-mesh Assets</div>
+                <div id="p3d-trimesh-assets" style="font-size:0.75rem;color:#666;padding:4px">Drop .glb files here</div>
+            </div>
             <div class="section-header">Primitives</div>
             <div class="platform-list">
                 <div class="platform-item active" data-ptype="box"      onclick="Pf3dEditor.selectBlockType('box')"><i class="fas fa-cube"></i><br>Box</div>
