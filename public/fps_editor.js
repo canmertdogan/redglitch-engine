@@ -486,14 +486,14 @@ const FPSEditor = (() => {
         if (!_three) return;
 
         // WASD fly-cam: move orbit target in XZ based on camera facing direction
-        if (_canvas3dHovered && _keysDown.size) {
+        if ((_canvas3dHovered || _keysDown.has('arrowup') || _keysDown.has('arrowdown') || _keysDown.has('arrowleft') || _keysDown.has('arrowright')) && _keysDown.size) {
             const speed = _orbitState.radius * 0.025;
             const fwdX  =  Math.sin(_orbitState.theta);
             const fwdZ  =  Math.cos(_orbitState.theta);
-            if (_keysDown.has('w')) { _orbitState.target.x -= fwdX * speed; _orbitState.target.z -= fwdZ * speed; }
-            if (_keysDown.has('s')) { _orbitState.target.x += fwdX * speed; _orbitState.target.z += fwdZ * speed; }
-            if (_keysDown.has('a')) { _orbitState.target.x -= fwdZ * speed; _orbitState.target.z += fwdX * speed; }
-            if (_keysDown.has('d')) { _orbitState.target.x += fwdZ * speed; _orbitState.target.z -= fwdX * speed; }
+            if (_keysDown.has('w') || _keysDown.has('arrowup'))    { _orbitState.target.x -= fwdX * speed; _orbitState.target.z -= fwdZ * speed; }
+            if (_keysDown.has('s') || _keysDown.has('arrowdown'))  { _orbitState.target.x += fwdX * speed; _orbitState.target.z += fwdZ * speed; }
+            if (_keysDown.has('a') || _keysDown.has('arrowleft'))  { _orbitState.target.x -= fwdZ * speed; _orbitState.target.z += fwdX * speed; }
+            if (_keysDown.has('d') || _keysDown.has('arrowright')) { _orbitState.target.x += fwdZ * speed; _orbitState.target.z -= fwdX * speed; }
             if (_keysDown.has('q') || _keysDown.has(' '))  _orbitState.target.y += speed;
             if (_keysDown.has('e') || _keysDown.has('Control')) _orbitState.target.y -= speed;
             _setCam3dFromOrbit();
@@ -1180,13 +1180,19 @@ const FPSEditor = (() => {
 
     // ── keyboard shortcuts ───────────────────────────────────────────────────
     function _initKeyboard() {
-        const FLY_KEYS = new Set(['w','a','s','d','q','e',' ']);
+        const FLY_KEYS = new Set(['w','a','s','d','q','e',' ','arrowup','arrowdown','arrowleft','arrowright']);
 
         document.addEventListener('keydown', e => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
             // WASD/QE fly-cam — consume key if 3D viewport is hovered
             if (_canvas3dHovered && !e.ctrlKey && !e.metaKey && FLY_KEYS.has(e.key.toLowerCase())) {
+                e.preventDefault();
+                _keysDown.add(e.key.toLowerCase());
+                return;
+            }
+            // Arrow keys always navigate the 3D viewport (no hover required — no shortcut conflicts)
+            if (!e.ctrlKey && !e.metaKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
                 e.preventDefault();
                 _keysDown.add(e.key.toLowerCase());
                 return;
