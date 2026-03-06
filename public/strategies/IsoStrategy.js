@@ -366,36 +366,44 @@ class IsoStrategy {
         // Reuse render queue array (avoid allocation)
         this.renderQueue.length = 0;
 
-        // 1. Identify and add visible CHUNKS to the queue
-        const numChunksX = Math.ceil(map.width / this.chunkSize);
-        const numChunksY = Math.ceil(map.height / this.chunkSize);
-        
-        for (let cy = 0; cy < numChunksY; cy++) {
-            for (let cx = 0; cx < numChunksX; cx++) {
-                // Approximate screen position of chunk center
-                const sx = (cx * this.chunkSize - cy * this.chunkSize) * halfW;
-                const sy = (cx * this.chunkSize + cy * this.chunkSize) * halfH;
-                
-                // Culling (with padding for chunk height)
-                if (sx < vLeft - (this.chunkSize * dims.w) || sx > vRight + dims.w || 
-                    sy < vTop - (dims.h * 12) || sy > vBottom + (this.chunkSize * dims.h)) continue;
+        // Depth weight: z must dominate lateral position so elevated tiles always
+        // draw on top of lower tiles, regardless of chunk boundaries.
+        const zWeight = (map.width + map.height + 2);
 
-                const chunk = this.getChunk(cx, cy, map, config, tileset);
-                const screenX = (cx * this.chunkSize - cy * this.chunkSize) * halfW;
-                const screenY = (cx * this.chunkSize + cy * this.chunkSize) * halfH;
+        // 1. Add all visible tiles to the queue individually (correct z-ordering).
+        //    Per-tile rendering instead of chunk bitmaps fixes cross-chunk z glitches.
+        const layers  = map.layers  || [];
+        const zLayers = map.z       || [];
+        const shapes  = map.shapes  || [];
+        const mapW    = map.width;
+
+        for (let l = 0; l < layers.length; l++) {
+            const layer   = layers[l];
+            const zLayer  = zLayers[l];
+            const sLayer  = shapes[l];
+            for (let i = 0; i < layer.length; i++) {
+                const tid = layer[i];
+                if (tid === null || tid === undefined) continue;
+                const mx    = i % mapW;
+                const my    = Math.floor(i / mapW);
+                const z     = (zLayer && zLayer[i]) || 0;
+                const shape = (sLayer && sLayer[i]) || 0;
+
+                // Screen position for viewport culling
+                const sx = (mx - my) * halfW;
+                const sy = (mx + my) * halfH - z * dims.h;
+                if (sx < vLeft || sx > vRight || sy < vTop || sy > vBottom) continue;
 
                 this.renderQueue.push({
-                    type: 'chunk',
-                    img: chunk.canvas,
-                    x: screenX - chunk.originX,
-                    y: screenY - chunk.originY,
-                    depth: (cx * this.chunkSize + cy * this.chunkSize) // Basic chunk depth
+                    type: 'tile',
+                    tid, shape,
+                    sx, sy,
+                    depth: z * zWeight + (mx + my) + l * 0.001
                 });
             }
         }
 
         // 2. Add entities (player, decorations) to the queue
-        const mapW = map.width;
         const ents = state.entities || [];
         const lighting = map.lighting || [];
         const colShadow = 'rgba(10, 15, 40, 0.45)'; 
@@ -411,7 +419,7 @@ class IsoStrategy {
                 const isShad = lIdx >= 0 && lIdx < lighting.length && lighting[lIdx] === 1;
                 this.renderQueue.push({
                     type: 'd', data: d,
-                    depth: (d.x + d.y) + ((d.z||0) * 0.01) + 0.005,
+                    depth: (d.x + d.y) + ((d.z||0) * zWeight) + 0.5,
                     x: d.x, y: d.y, z: d.z||0,
                     tint: isShad ? colShadow : null
                 });
@@ -425,7 +433,7 @@ class IsoStrategy {
             const isShad = lIdx >= 0 && lIdx < lighting.length && lighting[lIdx] === 1;
             this.renderQueue.push({
                 type: 'e', data: e,
-                depth: (e.x + e.y) + ((e.z||0) * 0.01) + 0.005,
+                depth: (e.x + e.y) + ((e.z||0) * zWeight) + 0.5,
                 x: e.x, y: e.y, z: e.z||0,
                 tint: isShad ? colShadow : null
             });
@@ -439,8 +447,10 @@ class IsoStrategy {
         for (let i = 0; i < qLen; i++) {
             const item = this.renderQueue[i];
             
-            if (item.type === 'chunk') {
-                ctx.drawImage(item.img, item.x, item.y);
+            if (item.type === 'tile') {
+                const img = this.getTileImage(item.tid, item.shape, tileset, config);
+                ctx.drawImage(img, 0, item.shape * (dims.h * 2), dims.w, dims.h * 2,
+                              item.sx - halfW, item.sy, dims.w, dims.h * 2);
             } else {
                 const pos = this.project(item.x, item.y, item.z, dims);
                 
