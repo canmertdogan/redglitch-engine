@@ -161,6 +161,8 @@ function registerPixelTools() {
             map.layers = result.layers;
             map.z = result.z;
             map.shapes = result.shapes;
+            map.occlusionDirty = true;
+            if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
             state.activeLayer = 0;
             updateLayerList();
             render();
@@ -188,6 +190,8 @@ function registerPixelTools() {
             });
             map.layers = result.layers;
             map.z = result.z;
+            map.occlusionDirty = true;
+            if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
             render();
             return { success: true, message: 'Vegetation generated' };
         }
@@ -1147,6 +1151,10 @@ window.runGenerator = async () => {
     map.layers = result.layers;
     map.z = result.z;
     map.shapes = result.shapes;
+    map.occlusionDirty = true;
+    
+    // Flush chunk cache so new tile data is drawn
+    if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
     
     state.activeLayer = 0;
     updateLayerList();
@@ -1165,7 +1173,11 @@ window.runVegetation = async () => {
     // Update Map (Vegetation generator returns updated arrays)
     map.layers = result.layers;
     map.z = result.z;
+    map.occlusionDirty = true;
     // Shapes generally stay same for trees (blocks) but if we added ramps support later...
+    
+    // Flush chunk cache so new tile data is drawn
+    if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
     
     render();
     console.log("Vegetation generated.");
