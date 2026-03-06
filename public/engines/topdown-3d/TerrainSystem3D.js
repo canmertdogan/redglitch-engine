@@ -439,6 +439,12 @@ export default class TerrainSystem3D {
      * Produces one merged BufferGeometry per chunk (one draw call per chunk).
      */
     _buildChunkMesh(cx, cy, cz, key, data) {
+        // If atlas mode is active, delegate to per-face atlas renderer
+        if (this._tilesetEnabled && this._atlas) {
+            this._buildAtlasFaceMesh(cx, cy, cz, key, data);
+            return;
+        }
+
         // Remove old mesh
         const oldMesh = this._chunkMeshes.get(key);
         if (oldMesh) {

@@ -50,6 +50,8 @@ const FPSEditor = (() => {
     let _lowPolyFloor = null;
     let LowPolyTerrainGen = null;
     import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
+    let _tilesetEnabled = false;
+    let _atlas          = null;
     let _activeBlock  = 'floor';
     let _activeTool   = 'draw-room';
     let _drawMode     = 'pencil';
@@ -742,6 +744,27 @@ const FPSEditor = (() => {
 
     function toggleWireframe() {
         setShading(_shading === 'wireframe' ? 'shaded' : 'wireframe');
+    }
+
+    /**
+     * Toggle atlas tileset mode for the 3D preview.
+     * @param {boolean} val
+     */
+    async function setTilesetEnabled(val) {
+        _tilesetEnabled = !!val;
+        if (_tilesetEnabled && !_atlas && typeof THREE !== 'undefined') {
+            try {
+                const { default: TextureAtlas3D } = await import('/engines/shared/TextureAtlas3D.js');
+                _atlas = new TextureAtlas3D();
+                await _atlas.loadAsync(THREE);
+            } catch (e) {
+                console.warn('[FPSEditor] TextureAtlas3D load failed:', e);
+                _tilesetEnabled = false;
+            }
+        }
+        const btn = document.getElementById('btn-tileset');
+        if (btn) btn.classList.toggle('active', _tilesetEnabled);
+        _rebuild3d();
     }
 
     function resetCam() {
