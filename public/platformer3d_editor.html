@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ketebe PLATFORMER 3D MAP EDITOR</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <style>
+        :root {
+            --bg-root:    #040608;
+            --bg-panel:   #080c0a;
+            --bg-header:  #000000;
+            --bg-canvas:  #050806;
+            --bg-input:   #000;
+            --border:     #162418;
+            --accent:     #27ae60;
+            --accent2:    #2ecc71;
+            --text-main:  #e0ede4;
+            --text-muted: #556;
+        }
+        * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; font-size: 18px;
+            height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; image-rendering: pixelated;
+        }
+
+        /* ── MENUBAR ──────────────────────────────────────────────────── */
+        #menubar {
+            height: 36px; background: #000; display: flex; align-items: center;
+            border-bottom: 2px solid var(--border); z-index: 3000; flex-shrink: 0;
+        }
+        .menubar-title {
+            color: var(--accent); font-weight: bold; padding: 0 15px;
+            border-right: 2px solid var(--border); margin-right: 10px;
+            font-size: 1.2rem; letter-spacing: 2px; height: 100%;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; }
+        .menu-item { padding: 0 14px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover, .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+        .dropdown {
+            position: absolute; top: 100%; left: 0; background: #111;
+            border: 2px solid var(--border); display: none; flex-direction: column;
+            min-width: 200px; box-shadow: 8px 8px 0 rgba(0,0,0,.6); z-index: 4000;
+        }
+        .menu-item-root:hover .dropdown { display: flex; }
+        .drop-opt { padding: 7px 14px; cursor: pointer; color: #aaa; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .drop-opt:hover { background: #091a0e; color: #fff; border-left: 3px solid var(--accent); }
+        .drop-sep { height: 1px; background: #222; margin: 3px 0; }
+        .shortcut { font-size: 0.8rem; color: #555; margin-left: 16px; }
+        #menubar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; padding-right: 12px; }
+        #project-label { color: var(--accent); font-size: 0.95rem; letter-spacing: 1px; }
+        #unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); display: none; }
+
+        /* ── TOOLBAR ──────────────────────────────────────────────────── */
+        #toolbar {
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0;
+        }
+        .tool-btn {
+            background: #080c08; border: 1px solid #222; color: #888;
+            width: 34px; height: 34px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px; transition: background .1s, color .1s;
+        }
+        .tool-btn:hover  { background: #0c1e10; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+        .tool-label { color: #555; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; padding: 0 6px; }
+        #snap-select {
+            background: var(--bg-input); border: 1px solid #444; color: var(--accent);
+            padding: 4px 8px; font-family: inherit; font-size: 1rem;
+        }
+        #tool-coords { margin-left: auto; color: #555; font-size: 0.9rem; letter-spacing: 1px; padding-right: 12px; }
+        #active-tool-label { color: var(--accent); font-size: 0.9rem; letter-spacing: 2px; padding: 0 10px; text-transform: uppercase; }
+
+        /* ── LAYOUT ───────────────────────────────────────────────────── */
+        #layout { flex: 1; display: flex; overflow: hidden; position: relative; min-height: 0; }
+
+        /* ── LEFT SIDEBAR ─────────────────────────────────────────────── */
+        #sidebar-left {
+            width: 250px; background: var(--bg-panel); border-right: 2px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+        }
+        .panel-tabs { display: flex; border-bottom: 2px solid var(--border); }
+        .panel-tab {
+            flex: 1; padding: 7px 0; text-align: center; cursor: pointer;
+            color: #556; font-size: 0.65rem; letter-spacing: 1px;
+            border-right: 1px solid var(--border); transition: background .1s;
+            text-transform: uppercase;
+        }
+        .panel-tab:last-child { border-right: none; }
+        .panel-tab:hover { background: #0a120c; color: #888; }
+        .panel-tab.active { background: #0c180e; color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -2px; }
+        .panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px; display: none; }
+        .panel-body.active { display: block; }
+
+        /* Common panel elements */
+        .section-header {
+            color: var(--accent); font-size: 0.8rem; letter-spacing: 2px;
+            text-transform: uppercase; padding: 6px 2px 4px; border-bottom: 1px solid var(--border);
+            margin-bottom: 6px;
+        }
+        .field-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; gap: 6px; }
+        .field-row label { color: #778; font-size: 0.8rem; letter-spacing: 1px; flex-shrink: 0; }
+        .field-row input, .field-row select {
+            background: var(--bg-input); border: 1px solid #333; color: var(--text-main);
+            padding: 3px 6px; font-family: inherit; font-size: 0.85rem; width: 100px;
+        }
+        .field-row input:focus, .field-row select:focus { border-color: var(--accent); }
+
+        /* Platform type list */
+        .platform-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
+        .platform-item {
+            background: #0a1410; border: 1px solid #1c2e22; color: #99b; padding: 6px 5px;
+            cursor: pointer; border-radius: 2px; text-align: center; font-size: 0.75rem;
+            letter-spacing: 1px; text-transform: uppercase; transition: background .1s;
+        }
+        .platform-item:hover  { background: #0d1e14; border-color: var(--accent); color: var(--accent); }
+        .platform-item.active { background: #0e2218; border-color: var(--accent2); color: var(--accent2); }
+
+        /* Entity list */
+        .entity-list { margin-bottom: 8px; }
+        .entity-item {
+            display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+            background: #0a1410; border: 1px solid #1c2e22; margin-bottom: 3px;
+            cursor: pointer; border-radius: 2px; transition: background .1s;
+        }
+        .entity-item:hover  { background: #0d1e14; border-color: var(--accent); }
+        .entity-item.active { background: #0e2218; border-color: var(--accent2); color: var(--accent2); }
+        .entity-icon { width: 22px; text-align: center; color: var(--accent); }
+        .entity-name { flex: 1; font-size: 0.85rem; }
+        .entity-badge { font-size: 0.65rem; color: #668; letter-spacing: 1px; border: 1px solid #2a3e30; padding: 1px 4px; border-radius: 2px; }
+
+        /* Color swatch row */
+        .swatch-row { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 6px; }
+        .swatch {
+            width: 22px; height: 22px; border: 2px solid transparent; cursor: pointer;
+            border-radius: 2px; flex-shrink: 0;
+        }
+        .swatch.active  { border-color: var(--accent2); }
+        .swatch:hover   { border-color: var(--accent); }
+
+        /* ── VIEWPORT ─────────────────────────────────────────────────── */
+        #viewport-wrap {
+            flex: 1; position: relative; background: var(--bg-canvas); overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        #viewport-canvas {
+            flex: 1; display: block; width: 100%; height: 100%;
+        }
+        .viewport-label {
+            position: absolute; top: 8px; left: 12px;
+            color: #556; font-size: 0.8rem; letter-spacing: 1px; pointer-events: none; z-index: 10;
+        }
+        .viewport-label span { color: var(--accent); margin-right: 8px; }
+        #ghost-cursor {
+            position: absolute; pointer-events: none; z-index: 20;
+            display: none;
+        }
+        /* Grid overlay (canvas-drawn — label only) */
+        #snap-grid-label {
+            position: absolute; bottom: 10px; left: 12px;
+            color: #556; font-size: 0.75rem; letter-spacing: 1px; pointer-events: none; z-index: 10;
+        }
+
+        /* ── RIGHT SIDEBAR (Hierarchy + Properties) ───────────────────── */
+        #sidebar-right {
+            width: 230px; background: var(--bg-panel); border-left: 2px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+        }
+
+        /* Hierarchy panel */
+        #hierarchy-header {
+            padding: 8px 10px; background: #000; border-bottom: 1px solid var(--border);
+            color: var(--accent); font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        #hierarchy-header button {
+            background: none; border: 1px solid #333; color: #666; cursor: pointer;
+            padding: 1px 6px; font-family: inherit; font-size: 0.75rem;
+        }
+        #hierarchy-header button:hover { border-color: var(--accent); color: var(--accent); }
+        #hierarchy-list {
+            flex: 1; overflow-y: auto; font-size: 0.8rem;
+            max-height: 280px; border-bottom: 2px solid var(--border);
+        }
+        .hier-item {
+            padding: 5px 10px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+            border-bottom: 1px solid #0d1a10; color: #889;
+            transition: background .08s;
+        }
+        .hier-item:hover  { background: #0b1a0f; color: var(--text-main); }
+        .hier-item.selected { background: #0e2218; color: var(--accent2); border-left: 2px solid var(--accent); }
+        .hier-type { font-size: 0.65rem; color: #556; letter-spacing: 1px; margin-left: auto; }
+        .hier-vis {
+            background: none; border: none; color: #556; cursor: pointer; padding: 0 3px;
+            font-size: 0.75rem;
+        }
+        .hier-vis:hover { color: var(--accent); }
+
+        /* Properties panel */
+        #props-header {
+            padding: 8px 10px; background: #000; border-bottom: 1px solid var(--border);
+            color: var(--accent); font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase;
+        }
+        #props-body {
+            flex: 1; overflow-y: auto; padding: 8px;
+        }
+        .prop-row { display: flex; flex-direction: column; margin-bottom: 8px; }
+        .prop-row label { color: #668; font-size: 0.75rem; letter-spacing: 1px; margin-bottom: 2px; text-transform: uppercase; }
+        .prop-row input, .prop-row select, .prop-row textarea {
+            background: var(--bg-input); border: 1px solid #2a3e30; color: var(--text-main);
+            padding: 4px 7px; font-family: inherit; font-size: 0.85rem; width: 100%;
+        }
+        .prop-row input:focus, .prop-row select:focus, .prop-row textarea:focus { border-color: var(--accent); }
+        .prop-row textarea { resize: vertical; min-height: 40px; }
+        .prop-row-inline { display: flex; gap: 4px; }
+        .prop-row-inline input { flex: 1; }
+        #props-empty { color: #445; font-size: 0.85rem; letter-spacing: 1px; text-align: center; padding: 20px 10px; }
+
+        /* ── STATUS BAR ───────────────────────────────────────────────── */
+        #statusbar {
+            height: 26px; background: #000; border-top: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 12px; gap: 20px;
+            font-size: 0.75rem; letter-spacing: 1px; color: #556; flex-shrink: 0;
+        }
+        #statusbar span { color: #778; }
+        #status-objects, #status-entities { color: var(--accent); }
+
+        /* ── MODALS ───────────────────────────────────────────────────── */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.8);
+            z-index: 9000; display: flex; align-items: center; justify-content: center;
+            display: none;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: #080c08; border: 2px solid var(--border); min-width: 380px; max-width: 560px;
+            box-shadow: 16px 16px 0 rgba(0,0,0,.8);
+        }
+        .modal-hdr {
+            background: #000; padding: 10px 14px; color: var(--accent);
+            font-size: 1rem; letter-spacing: 2px; text-transform: uppercase;
+            border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-hdr button { background: none; border: none; color: #666; cursor: pointer; font-family: inherit; font-size: 1rem; }
+        .modal-hdr button:hover { color: var(--accent2); }
+        .modal-body { padding: 16px; }
+        .modal-footer { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+        .btn { background: #0e1e10; border: 1px solid #2a3e30; color: var(--text-main); padding: 6px 16px; cursor: pointer; font-family: inherit; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; }
+        .btn:hover { background: #122018; border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+        .btn-danger  { background: #2e0a0a; border-color: #883; color: #f88; }
+        .btn-danger:hover { background: #3e1010; color: #faa; }
+
+        /* Test overlay */
+        #test-overlay {
+            position: fixed; inset: 0; z-index: 8000; display: none;
+            background: #000; flex-direction: column;
+        }
+        #test-overlay.active { display: flex; }
+        #test-bar {
+            height: 36px; background: #0e2218; border-bottom: 2px solid var(--accent);
+            display: flex; align-items: center; padding: 0 12px; gap: 12px;
+            color: var(--accent); font-size: 0.9rem; letter-spacing: 2px;
+        }
+        #test-bar button { background: #c0392b; border: none; color: #fff; padding: 3px 12px; cursor: pointer; font-family: inherit; font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; }
+        #test-bar button:hover { background: #e74c3c; }
+        #test-iframe { flex: 1; border: none; }
+    </style>
+</head>
+<body>
+
+<!-- ── MENUBAR ─────────────────────────────────────────────────────────────── -->
+<div id="menubar">
+    <div class="menubar-title">
+        <i class="fas fa-star"></i> PLATFORMER 3D STUDIO
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">File</div>
+        <div class="dropdown">
+            <div class="drop-opt" onclick="Pf3dEditor.newLevel()">New Level <span class="shortcut">Ctrl+N</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.openLevel()">Open Level… <span class="shortcut">Ctrl+O</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" onclick="Pf3dEditor.saveLevel()">Save <span class="shortcut">Ctrl+S</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.saveLevelAs()">Save As… <span class="shortcut">Ctrl+Shift+S</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" onclick="Pf3dEditor.exportLevel()">Export .pf3d.json <span class="shortcut">Ctrl+E</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.importLevel()">Import .pf3d.json…</div>
+        </div>
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">Edit</div>
+        <div class="dropdown">
+            <div class="drop-opt" onclick="Pf3dEditor.undo()">Undo <span class="shortcut">Ctrl+Z</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.redo()">Redo <span class="shortcut">Ctrl+Y</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" onclick="Pf3dEditor.copySelection()">Copy Selection <span class="shortcut">Ctrl+C</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.pasteSelection()">Paste <span class="shortcut">Ctrl+V</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.deleteSelection()">Delete Selected <span class="shortcut">Del</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" onclick="Pf3dEditor.selectAll()">Select All <span class="shortcut">Ctrl+A</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.deselectAll()">Deselect <span class="shortcut">Esc</span></div>
+        </div>
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">View</div>
+        <div class="dropdown">
+            <div class="drop-opt" onclick="Pf3dEditor.toggleGrid()">Toggle Grid <span class="shortcut">G</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.toggleWireframe()">Toggle Wireframe <span class="shortcut">W</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.toggleShadows()">Toggle Shadows <span class="shortcut">Shift+S</span></div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" onclick="Pf3dEditor.resetCamera()">Reset Camera <span class="shortcut">Numpad 0</span></div>
+            <div class="drop-opt" onclick="Pf3dEditor.framSelected()">Frame Selected <span class="shortcut">F</span></div>
+        </div>
+    </div>
+
+    <div class="menu-item-root">
+        <div class="menu-item">Level</div>
+        <div class="dropdown">
+            <div class="drop-opt" onclick="Pf3dEditor.showLevelSettings()">Level Settings…</div>
+            <div class="drop-opt" onclick="Pf3dEditor.setSkybox()">Sky &amp; Lighting…</div>
+            <div class="drop-opt" onclick="Pf3dEditor.showMusicPicker()">Background Music…</div>
+            <div class="drop-sep"></div>
+            <div class="drop-opt" onclick="Pf3dEditor.generateFloor()">Generate Ground Plane</div>
+            <div class="drop-opt" onclick="Pf3dEditor.clearLevel()">Clear Level…</div>
+        </div>
+    </div>
+
+    <div id="menubar-right">
+        <div id="unsaved-dot" title="Unsaved changes"></div>
+        <div id="project-label">NO PROJECT</div>
+    </div>
+</div>
+
+<!-- ── TOOLBAR ─────────────────────────────────────────────────────────────── -->
+<div id="toolbar">
+    <span class="tool-label">TOOL</span>
+    <button class="tool-btn active" id="tool-select"       title="Select (S)"       onclick="Pf3dEditor.setTool('select')"><i class="fas fa-mouse-pointer"></i></button>
+    <button class="tool-btn"        id="tool-place"        title="Place Block (P)"  onclick="Pf3dEditor.setTool('place')"><i class="fas fa-cube"></i></button>
+    <button class="tool-btn"        id="tool-move"         title="Move Gizmo (G)"   onclick="Pf3dEditor.setTool('move')"><i class="fas fa-arrows-alt"></i></button>
+    <button class="tool-btn"        id="tool-rotate"       title="Rotate Gizmo (R)" onclick="Pf3dEditor.setTool('rotate')"><i class="fas fa-sync-alt"></i></button>
+    <button class="tool-btn"        id="tool-scale"        title="Scale Gizmo (E)"  onclick="Pf3dEditor.setTool('scale')"><i class="fas fa-expand-arrows-alt"></i></button>
+    <button class="tool-btn"        id="tool-entity"       title="Place Entity (N)" onclick="Pf3dEditor.setTool('entity')"><i class="fas fa-star"></i></button>
+    <button class="tool-btn"        id="tool-paint"        title="Paint Color (C)"  onclick="Pf3dEditor.setTool('paint')"><i class="fas fa-fill-drip"></i></button>
+
+    <div class="tool-sep"></div>
+    <span class="tool-label">SNAP</span>
+    <select id="snap-select" onchange="Pf3dEditor.setSnap(this.value)">
+        <option value="0">Off</option>
+        <option value="0.5">0.5 m</option>
+        <option value="1" selected>1 m</option>
+        <option value="2">2 m</option>
+        <option value="4">4 m</option>
+    </select>
+
+    <div class="tool-sep"></div>
+    <button class="tool-btn" title="Undo (Ctrl+Z)"     onclick="Pf3dEditor.undo()"><i class="fas fa-undo"></i></button>
+    <button class="tool-btn" title="Redo (Ctrl+Y)"     onclick="Pf3dEditor.redo()"><i class="fas fa-redo"></i></button>
+
+    <div class="tool-sep"></div>
+    <button class="tool-btn" title="Frame Selected (F)" onclick="Pf3dEditor.frameSelected()"><i class="fas fa-compress-arrows-alt"></i></button>
+    <button class="tool-btn" title="Toggle Grid (G)"    onclick="Pf3dEditor.toggleGrid()"><i class="fas fa-th"></i></button>
+    <button class="tool-btn" title="Toggle Wireframe (W)" id="btn-wireframe" onclick="Pf3dEditor.toggleWireframe()"><i class="fas fa-border-all"></i></button>
+
+    <div class="tool-sep"></div>
+    <button class="tool-btn" title="Test Play (F5)"    onclick="Pf3dEditor.testPlay()" style="background:#0e2218;border-color:var(--accent)"><i class="fas fa-play" style="color:var(--accent)"></i></button>
+
+    <div id="active-tool-label">SELECT</div>
+    <div id="tool-coords">X: 0.0 &nbsp; Y: 0.0 &nbsp; Z: 0.0</div>
+</div>
+
+<!-- ── MAIN LAYOUT ─────────────────────────────────────────────────────────── -->
+<div id="layout">
+
+    <!-- ── LEFT SIDEBAR ───────────────────────────────────────────────────── -->
+    <div id="sidebar-left">
+        <div class="panel-tabs">
+            <div class="panel-tab active" data-tab="geometry" onclick="Pf3dEditor.showTab('geometry')">GEO</div>
+            <div class="panel-tab"        data-tab="platforms" onclick="Pf3dEditor.showTab('platforms')">PLAT</div>
+            <div class="panel-tab"        data-tab="entities"  onclick="Pf3dEditor.showTab('entities')">ENT</div>
+            <div class="panel-tab"        data-tab="hazards"   onclick="Pf3dEditor.showTab('hazards')">HAZ</div>
+            <div class="panel-tab"        data-tab="visual"    onclick="Pf3dEditor.showTab('visual')">VIS</div>
+        </div>
+
+        <!-- GEOMETRY TAB -->
+        <div class="panel-body active" id="tab-geometry">
+            <div class="section-header">Primitives</div>
+            <div class="platform-list">
+                <div class="platform-item active" data-ptype="box"      onclick="Pf3dEditor.selectBlockType('box')"><i class="fas fa-cube"></i><br>Box</div>
+                <div class="platform-item"        data-ptype="slope"    onclick="Pf3dEditor.selectBlockType('slope')"><i class="fas fa-play"></i><br>Slope</div>
+                <div class="platform-item"        data-ptype="wedge"    onclick="Pf3dEditor.selectBlockType('wedge')"><i class="fas fa-caret-up"></i><br>Wedge</div>
+                <div class="platform-item"        data-ptype="cylinder" onclick="Pf3dEditor.selectBlockType('cylinder')"><i class="fas fa-circle"></i><br>Cylinder</div>
+                <div class="platform-item"        data-ptype="arch"     onclick="Pf3dEditor.selectBlockType('arch')"><i class="fas fa-monument"></i><br>Arch</div>
+                <div class="platform-item"        data-ptype="stairs"   onclick="Pf3dEditor.selectBlockType('stairs')"><i class="fas fa-grip-lines"></i><br>Stairs</div>
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Block Dimensions</div>
+            <div class="field-row">
+                <label>Width</label>
+                <input type="number" id="block-w" value="2" min="0.5" max="32" step="0.5"
+                    onchange="Pf3dEditor.setBlockDim('w', +this.value)">
+            </div>
+            <div class="field-row">
+                <label>Height</label>
+                <input type="number" id="block-h" value="1" min="0.25" max="16" step="0.25"
+                    onchange="Pf3dEditor.setBlockDim('h', +this.value)">
+            </div>
+            <div class="field-row">
+                <label>Depth</label>
+                <input type="number" id="block-d" value="2" min="0.5" max="32" step="0.5"
+                    onchange="Pf3dEditor.setBlockDim('d', +this.value)">
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Palette Color</div>
+            <div class="field-row">
+                <label>Index</label>
+                <input type="number" id="block-color-idx" value="12" min="0" max="255" step="1"
+                    onchange="Pf3dEditor.setBlockColorIdx(+this.value)">
+            </div>
+            <div id="color-swatch-preview" style="width:100%;height:22px;background:#888;border:1px solid #2a3e30;margin-bottom:6px;"></div>
+        </div>
+
+        <!-- PLATFORMS TAB -->
+        <div class="panel-body" id="tab-platforms">
+            <div class="section-header">Platform Type</div>
+            <div class="entity-list">
+                <div class="entity-item active" data-plat="flat"    onclick="Pf3dEditor.selectPlatType('flat')">
+                    <span class="entity-icon"><i class="fas fa-minus"></i></span>
+                    <span class="entity-name">Flat Platform</span>
+                    <span class="entity-badge">STATIC</span>
+                </div>
+                <div class="entity-item" data-plat="slope"   onclick="Pf3dEditor.selectPlatType('slope')">
+                    <span class="entity-icon"><i class="fas fa-angle-up"></i></span>
+                    <span class="entity-name">Slope</span>
+                    <span class="entity-badge">STATIC</span>
+                </div>
+                <div class="entity-item" data-plat="moving"  onclick="Pf3dEditor.selectPlatType('moving')">
+                    <span class="entity-icon"><i class="fas fa-arrows-alt-h"></i></span>
+                    <span class="entity-name">Moving Platform</span>
+                    <span class="entity-badge">DYNAMIC</span>
+                </div>
+                <div class="entity-item" data-plat="falling" onclick="Pf3dEditor.selectPlatType('falling')">
+                    <span class="entity-icon"><i class="fas fa-arrow-down"></i></span>
+                    <span class="entity-name">Falling Platform</span>
+                    <span class="entity-badge">DYNAMIC</span>
+                </div>
+                <div class="entity-item" data-plat="bouncy"  onclick="Pf3dEditor.selectPlatType('bouncy')">
+                    <span class="entity-icon"><i class="fas fa-expand-alt"></i></span>
+                    <span class="entity-name">Bounce Pad</span>
+                    <span class="entity-badge">TRIGGER</span>
+                </div>
+                <div class="entity-item" data-plat="icy"     onclick="Pf3dEditor.selectPlatType('icy')">
+                    <span class="entity-icon"><i class="fas fa-snowflake"></i></span>
+                    <span class="entity-name">Ice Platform</span>
+                    <span class="entity-badge">PHYSICS</span>
+                </div>
+                <div class="entity-item" data-plat="lava"    onclick="Pf3dEditor.selectPlatType('lava')">
+                    <span class="entity-icon"><i class="fas fa-fire"></i></span>
+                    <span class="entity-name">Lava Surface</span>
+                    <span class="entity-badge">DAMAGE</span>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Moving Platform</div>
+            <div class="field-row">
+                <label>Speed</label>
+                <input type="number" id="plat-speed" value="2" min="0.5" max="20" step="0.5">
+            </div>
+            <div class="field-row">
+                <label>Loop Mode</label>
+                <select id="plat-loop">
+                    <option value="ping-pong" selected>Ping-Pong</option>
+                    <option value="loop">Loop</option>
+                    <option value="one-shot">One-Shot</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- ENTITIES TAB -->
+        <div class="panel-body" id="tab-entities">
+            <div class="section-header">Player</div>
+            <div class="entity-list">
+                <div class="entity-item active" data-entity="player-spawn" onclick="Pf3dEditor.selectEntity('player-spawn')">
+                    <span class="entity-icon"><i class="fas fa-user"></i></span>
+                    <span class="entity-name">Player Spawn</span>
+                </div>
+                <div class="entity-item" data-entity="checkpoint" onclick="Pf3dEditor.selectEntity('checkpoint')">
+                    <span class="entity-icon"><i class="fas fa-flag"></i></span>
+                    <span class="entity-name">Checkpoint</span>
+                </div>
+                <div class="entity-item" data-entity="level-exit" onclick="Pf3dEditor.selectEntity('level-exit')">
+                    <span class="entity-icon"><i class="fas fa-door-open"></i></span>
+                    <span class="entity-name">Level Exit</span>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top:8px">Enemies</div>
+            <div class="entity-list">
+                <div class="entity-item" data-entity="walker"  onclick="Pf3dEditor.selectEntity('walker')">
+                    <span class="entity-icon"><i class="fas fa-walking"></i></span>
+                    <span class="entity-name">Walker</span>
+                    <span class="entity-badge">MELEE</span>
+                </div>
+                <div class="entity-item" data-entity="flyer"   onclick="Pf3dEditor.selectEntity('flyer')">
+                    <span class="entity-icon"><i class="fas fa-dove"></i></span>
+                    <span class="entity-name">Flyer</span>
+                    <span class="entity-badge">AIR</span>
+                </div>
+                <div class="entity-item" data-entity="shooter" onclick="Pf3dEditor.selectEntity('shooter')">
+                    <span class="entity-icon"><i class="fas fa-crosshairs"></i></span>
+                    <span class="entity-name">Shooter</span>
+                    <span class="entity-badge">RANGED</span>
+                </div>
+                <div class="entity-item" data-entity="boss"    onclick="Pf3dEditor.selectEntity('boss')">
+                    <span class="entity-icon"><i class="fas fa-dragon"></i></span>
+                    <span class="entity-name">Boss</span>
+                    <span class="entity-badge">BOSS</span>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top:8px">Collectibles</div>
+            <div class="entity-list">
+                <div class="entity-item" data-entity="coin"    onclick="Pf3dEditor.selectEntity('coin')">
+                    <span class="entity-icon" style="color:#f1c40f"><i class="fas fa-circle"></i></span>
+                    <span class="entity-name">Coin</span>
+                    <span class="entity-badge">+10</span>
+                </div>
+                <div class="entity-item" data-entity="star"    onclick="Pf3dEditor.selectEntity('star')">
+                    <span class="entity-icon" style="color:#f1c40f"><i class="fas fa-star"></i></span>
+                    <span class="entity-name">Star</span>
+                    <span class="entity-badge">+1000</span>
+                </div>
+                <div class="entity-item" data-entity="gem"     onclick="Pf3dEditor.selectEntity('gem')">
+                    <span class="entity-icon" style="color:#9b59b6"><i class="fas fa-gem"></i></span>
+                    <span class="entity-name">Gem</span>
+                    <span class="entity-badge">+200</span>
+                </div>
+                <div class="entity-item" data-entity="powerup" onclick="Pf3dEditor.selectEntity('powerup')">
+                    <span class="entity-icon" style="color:#e74c3c"><i class="fas fa-bolt"></i></span>
+                    <span class="entity-name">Power-Up</span>
+                    <span class="entity-badge">BUFF</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- HAZARDS TAB -->
+        <div class="panel-body" id="tab-hazards">
+            <div class="section-header">Instant Kill</div>
+            <div class="entity-list">
+                <div class="entity-item" data-entity="void-plane" onclick="Pf3dEditor.selectEntity('void-plane')">
+                    <span class="entity-icon" style="color:#c0392b"><i class="fas fa-skull"></i></span>
+                    <span class="entity-name">Void Plane</span>
+                    <span class="entity-badge">KILL</span>
+                </div>
+                <div class="entity-item" data-entity="lava-hazard" onclick="Pf3dEditor.selectEntity('lava-hazard')">
+                    <span class="entity-icon" style="color:#e74c3c"><i class="fas fa-fire"></i></span>
+                    <span class="entity-name">Lava Pool</span>
+                    <span class="entity-badge">KILL</span>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top:8px">Timed Hazards</div>
+            <div class="entity-list">
+                <div class="entity-item" data-entity="spike"    onclick="Pf3dEditor.selectEntity('spike')">
+                    <span class="entity-icon" style="color:#e67e22"><i class="fas fa-caret-up"></i></span>
+                    <span class="entity-name">Spike Floor</span>
+                    <span class="entity-badge">DMG</span>
+                </div>
+                <div class="entity-item" data-entity="fire-jet" onclick="Pf3dEditor.selectEntity('fire-jet')">
+                    <span class="entity-icon" style="color:#e67e22"><i class="fas fa-burn"></i></span>
+                    <span class="entity-name">Fire Jet</span>
+                    <span class="entity-badge">TIMED</span>
+                </div>
+                <div class="entity-item" data-entity="crusher"  onclick="Pf3dEditor.selectEntity('crusher')">
+                    <span class="entity-icon" style="color:#e67e22"><i class="fas fa-compress-alt"></i></span>
+                    <span class="entity-name">Crusher</span>
+                    <span class="entity-badge">MOVING</span>
+                </div>
+                <div class="entity-item" data-entity="laser"    onclick="Pf3dEditor.selectEntity('laser')">
+                    <span class="entity-icon" style="color:#e74c3c"><i class="fas fa-minus"></i></span>
+                    <span class="entity-name">Laser</span>
+                    <span class="entity-badge">ROTATE</span>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top:8px">Triggers</div>
+            <div class="entity-list">
+                <div class="entity-item" data-entity="trigger-zone" onclick="Pf3dEditor.selectEntity('trigger-zone')">
+                    <span class="entity-icon" style="color:#3498db"><i class="fas fa-vector-square"></i></span>
+                    <span class="entity-name">Trigger Zone</span>
+                    <span class="entity-badge">EVENT</span>
+                </div>
+                <div class="entity-item" data-entity="water-volume" onclick="Pf3dEditor.selectEntity('water-volume')">
+                    <span class="entity-icon" style="color:#3498db"><i class="fas fa-water"></i></span>
+                    <span class="entity-name">Water Volume</span>
+                    <span class="entity-badge">SWIM</span>
+                </div>
+            </div>
+
+            <div class="section-header" style="margin-top:8px">Timing</div>
+            <div class="field-row">
+                <label>Period (s)</label>
+                <input type="number" id="haz-period" value="2" min="0.5" max="30" step="0.25">
+            </div>
+            <div class="field-row">
+                <label>Offset (s)</label>
+                <input type="number" id="haz-offset" value="0" min="0" max="30" step="0.25">
+            </div>
+        </div>
+
+        <!-- VISUAL TAB -->
+        <div class="panel-body" id="tab-visual">
+            <div class="section-header">Sky</div>
+            <div class="field-row">
+                <label>Top Color</label>
+                <input type="number" id="sky-top" value="87" min="0" max="255" step="1"
+                    onchange="Pf3dEditor.setSkyTop(+this.value)">
+            </div>
+            <div class="field-row">
+                <label>Bottom Color</label>
+                <input type="number" id="sky-bottom" value="23" min="0" max="255" step="1"
+                    onchange="Pf3dEditor.setSkyBottom(+this.value)">
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Lighting</div>
+            <div class="field-row">
+                <label>Ambient</label>
+                <input type="number" id="light-ambient" value="50" min="0" max="100" step="5"
+                    onchange="Pf3dEditor.setAmbient(+this.value / 100)">
+            </div>
+            <div class="field-row">
+                <label>Sun Int.</label>
+                <input type="number" id="light-sun" value="100" min="0" max="200" step="5"
+                    onchange="Pf3dEditor.setSunIntensity(+this.value / 100)">
+            </div>
+            <div class="field-row">
+                <label>Sun X</label>
+                <input type="number" id="sun-x" value="50" min="-200" max="200" step="5"
+                    onchange="Pf3dEditor.setSunPos('x', +this.value)">
+            </div>
+            <div class="field-row">
+                <label>Sun Y</label>
+                <input type="number" id="sun-y" value="80" min="0" max="300" step="5"
+                    onchange="Pf3dEditor.setSunPos('y', +this.value)">
+            </div>
+            <div class="field-row">
+                <label>Sun Z</label>
+                <input type="number" id="sun-z" value="40" min="-200" max="200" step="5"
+                    onchange="Pf3dEditor.setSunPos('z', +this.value)">
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Fog</div>
+            <div class="field-row">
+                <label>Fog Near</label>
+                <input type="number" id="fog-near" value="30" min="0" max="200" step="5"
+                    onchange="Pf3dEditor.setFog('near', +this.value)">
+            </div>
+            <div class="field-row">
+                <label>Fog Far</label>
+                <input type="number" id="fog-far" value="120" min="10" max="500" step="10"
+                    onchange="Pf3dEditor.setFog('far', +this.value)">
+            </div>
+
+            <div class="section-header" style="margin-top:6px">Env VFX</div>
+            <div class="field-row">
+                <label>Zone Type</label>
+                <select id="env-zone-type">
+                    <option value="none" selected>None</option>
+                    <option value="magic">Magic Particles</option>
+                    <option value="snow">Snowfall</option>
+                    <option value="leaves">Falling Leaves</option>
+                </select>
+            </div>
+            <div class="field-row">
+                <label>Death Y</label>
+                <input type="number" id="death-y" value="-20" min="-200" max="-1" step="1"
+                    onchange="Pf3dEditor.setDeathY(+this.value)">
+            </div>
+        </div>
+    </div><!-- /sidebar-left -->
+
+    <!-- ── VIEWPORT ───────────────────────────────────────────────────────── -->
+    <div id="viewport-wrap">
+        <div class="viewport-label">
+            <span>PLATFORMER 3D</span>
+            — orbit: RMB drag · pan: MMB · zoom: wheel · place: LMB
+        </div>
+        <canvas id="viewport-canvas"></canvas>
+        <div id="ghost-cursor"></div>
+        <div id="snap-grid-label">SNAP: 1 m</div>
+    </div>
+
+    <!-- ── RIGHT SIDEBAR (Hierarchy + Properties) ─────────────────────────── -->
+    <div id="sidebar-right">
+        <div id="hierarchy-header">
+            SCENE
+            <button onclick="Pf3dEditor.collapseHierarchy()" title="Collapse all">−</button>
+        </div>
+        <div id="hierarchy-list">
+            <!-- populated by Pf3dEditor._rebuildHierarchy() -->
+        </div>
+
+        <div id="props-header">PROPERTIES</div>
+        <div id="props-body">
+            <div id="props-empty">No object selected</div>
+        </div>
+    </div>
+
+</div><!-- /layout -->
+
+<!-- ── STATUS BAR ──────────────────────────────────────────────────────────── -->
+<div id="statusbar">
+    <span>OBJECTS: <span id="status-objects">0</span></span>
+    <span>ENTITIES: <span id="status-entities">0</span></span>
+    <span id="status-msg" style="margin-left:auto;color:#556;">Ready</span>
+</div>
+
+<!-- ── TEST PLAY OVERLAY ────────────────────────────────────────────────────── -->
+<div id="test-overlay">
+    <div id="test-bar">
+        <i class="fas fa-gamepad"></i> TEST MODE — PLATFORMER 3D
+        <button onclick="Pf3dEditor.stopTest()"><i class="fas fa-stop"></i> STOP</button>
+    </div>
+    <iframe id="test-iframe" title="Test Play"></iframe>
+</div>
+
+<!-- ── LEVEL SETTINGS MODAL ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-level-settings">
+    <div class="modal-box">
+        <div class="modal-hdr">
+            LEVEL SETTINGS
+            <button onclick="Pf3dEditor.closeModal('level-settings')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-row"><label>Level ID</label>   <input type="text" id="lvl-id"   value="level01"></div>
+            <div class="field-row"><label>Level Name</label> <input type="text" id="lvl-name" value="New Level"></div>
+            <div class="field-row"><label>Project</label>    <input type="text" id="lvl-proj" value=""></div>
+            <div class="field-row"><label>Max Lives</label>  <input type="number" id="lvl-lives" value="3" min="1" max="99"></div>
+            <div class="field-row"><label>Time Limit</label> <input type="number" id="lvl-time" value="0" min="0" max="9999" step="30"><span style="color:#556;font-size:.8rem;margin-left:4px">(0=none)</span></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="Pf3dEditor.closeModal('level-settings')">Cancel</button>
+            <button class="btn btn-primary" onclick="Pf3dEditor.applyLevelSettings()">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── OPEN LEVEL MODAL ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-open">
+    <div class="modal-box">
+        <div class="modal-hdr">
+            OPEN LEVEL
+            <button onclick="Pf3dEditor.closeModal('open')"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-row"><label>Project</label>  <input type="text"  id="open-proj"  value="" placeholder="project name"></div>
+            <div class="field-row"><label>Level ID</label> <input type="text"  id="open-level" value="" placeholder="level01"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="Pf3dEditor.closeModal('open')">Cancel</button>
+            <button class="btn btn-primary" onclick="Pf3dEditor.confirmOpen()">Load</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── CLEAR LEVEL MODAL ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-clear">
+    <div class="modal-box">
+        <div class="modal-hdr">CLEAR LEVEL?<button onclick="Pf3dEditor.closeModal('clear')"><i class="fas fa-times"></i></button></div>
+        <div class="modal-body" style="color:#f88">All objects and entities will be permanently deleted.</div>
+        <div class="modal-footer">
+            <button class="btn" onclick="Pf3dEditor.closeModal('clear')">Cancel</button>
+            <button class="btn btn-danger" onclick="Pf3dEditor.confirmClear()">Clear Level</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── SCRIPTS ───────────────────────────────────────────────────────────────── -->
+<script src="lib/three/three.module.js" type="module"></script>
+<script src="platformer3d_editor.js"></script>
+
+</body>
+</html>
