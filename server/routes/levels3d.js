@@ -75,7 +75,31 @@ function validateLevel3D(raw) {
         };
     }
 
-    // Legacy schema normalisation for topdown-3d / platformer-3d
+    // platformer-3d: full schema pass-through (Phase 56)
+    if (raw.engineType === 'platformer-3d') {
+        return {
+            version:      raw.version    || LEVEL_SCHEMA_VERSION,
+            engineType:   'platformer-3d',
+            id:           typeof raw.id   === 'string' ? raw.id   : 'level01',
+            name:         typeof raw.name === 'string' ? raw.name : 'Untitled Level',
+            sky:          raw.sky          || { topColor: 87, bottomColor: 23 },
+            ambientLight: raw.ambientLight || { color: 0xffffff, intensity: 0.5 },
+            lights:       Array.isArray(raw.lights)       ? raw.lights       : [],
+            fog:          raw.fog          || { near: 40, far: 120 },
+            deathY:       typeof raw.deathY === 'number'  ? raw.deathY       : -20,
+            playerSpawn:  raw.playerSpawn  || { x: 0, y: 2, z: 0 },
+            levelExit:    raw.levelExit    || null,
+            platforms:    Array.isArray(raw.platforms)    ? raw.platforms    : [],
+            paths:        Array.isArray(raw.paths)        ? raw.paths        : [],
+            hazards:      Array.isArray(raw.hazards)      ? raw.hazards      : [],
+            triggers:     Array.isArray(raw.triggers)     ? raw.triggers     : [],
+            collectibles: Array.isArray(raw.collectibles) ? raw.collectibles : [],
+            checkpoints:  Array.isArray(raw.checkpoints)  ? raw.checkpoints  : [],
+            entities:     Array.isArray(raw.entities)     ? raw.entities     : [],
+        };
+    }
+
+    // Legacy schema normalisation for topdown-3d
     return {
         version:    raw.version    || LEVEL_SCHEMA_VERSION,
         engineType: raw.engineType || 'topdown-3d',

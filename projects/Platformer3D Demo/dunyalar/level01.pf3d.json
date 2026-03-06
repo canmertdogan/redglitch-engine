@@ -1,4 +1,5 @@
 {
+  "version": "2.0",
   "id": "level01",
   "name": "Starter Plains",
   "engineType": "platformer-3d",
@@ -8,29 +9,54 @@
     { "type": "directional", "color": 16777215, "intensity": 1.0,
       "position": { "x": 50, "y": 80, "z": 40 }, "castShadow": true }
   ],
+  "fog": { "near": 40, "far": 120 },
   "playerSpawn": { "x": 0, "y": 2, "z": 0 },
   "deathY": -20,
-  "checkpoints": [
-    { "id": "start", "x": 0, "y": 1, "z": 0 },
-    { "id": "cp1",   "x": 20, "y": 3, "z": -15 }
-  ],
   "levelExit": { "x": 40, "y": 2, "z": -30 },
   "platforms": [
-    { "type": "flat",  "x": 0,   "y": 0,  "z": 0,   "w": 20, "h": 1, "d": 20, "colorIdx": 12 },
-    { "type": "flat",  "x": 15,  "y": 2,  "z": -15, "w": 8,  "h": 1, "d": 8,  "colorIdx": 18 },
-    { "type": "flat",  "x": 30,  "y": 4,  "z": -20, "w": 8,  "h": 1, "d": 8,  "colorIdx": 25 },
-    { "type": "flat",  "x": 42,  "y": 2,  "z": -30, "w": 12, "h": 1, "d": 12, "colorIdx": 12 }
+    { "id": "plat-1", "type": "flat",  "blockType": "box", "x": 0,   "y": 0,  "z": 0,   "w": 20, "h": 1, "d": 20, "colorIdx": 12, "rot": {"x":0,"y":0,"z":0} },
+    { "id": "plat-2", "type": "flat",  "blockType": "box", "x": 15,  "y": 2,  "z": -15, "w": 8,  "h": 1, "d": 8,  "colorIdx": 18, "rot": {"x":0,"y":0,"z":0} },
+    { "id": "plat-3", "type": "flat",  "blockType": "box", "x": 30,  "y": 4,  "z": -20, "w": 8,  "h": 1, "d": 8,  "colorIdx": 25, "rot": {"x":0,"y":0,"z":0} },
+    { "id": "plat-4", "type": "flat",  "blockType": "box", "x": 42,  "y": 2,  "z": -30, "w": 12, "h": 1, "d": 12, "colorIdx": 12, "rot": {"x":0,"y":0,"z":0} },
+    { "id": "plat-5", "type": "moving","blockType": "box", "x": 22,  "y": 3,  "z": -17, "w": 4,  "h": 1, "d": 4,  "colorIdx": 30, "rot": {"x":0,"y":0,"z":0} }
+  ],
+  "paths": [
+    {
+      "id": "path-1",
+      "platformId": "plat-5",
+      "motionType": "spline",
+      "loopMode": "ping-pong",
+      "config": { "speed": 3 },
+      "waypoints": [
+        { "x": 22, "y": 3.5, "z": -17 },
+        { "x": 28, "y": 3.5, "z": -17 },
+        { "x": 28, "y": 3.5, "z": -22 }
+      ]
+    }
+  ],
+  "hazards": [
+    { "id": "haz-1", "type": "spike",    "pos": { "x": 10, "y": 0.5, "z": 5  }, "config": {} },
+    { "id": "haz-2", "type": "fire-jet", "pos": { "x": -5, "y": 0.5, "z": -5 }, "config": { "period": 2.5, "offset": 0, "dutyCycle": 0.4 } },
+    { "id": "haz-3", "type": "lava",     "pos": { "x": 0,  "y": 0.1, "z": -8 }, "config": { "w": 6, "d": 4 } }
+  ],
+  "triggers": [
+    { "id": "trg-1", "pos": { "x": 15, "y": 2.5, "z": -15 }, "size": { "w": 4, "h": 3, "d": 4 }, "event": "play-sound", "config": { "sound": "fanfare" } }
+  ],
+  "collectibles": [
+    { "id": "col-1",  "type": "coin",    "pos": { "x": 5,  "y": 1.5, "z": 0   }, "config": {} },
+    { "id": "col-2",  "type": "coin",    "pos": { "x": 8,  "y": 1.5, "z": 0   }, "config": {} },
+    { "id": "col-3",  "type": "coin",    "pos": { "x": 11, "y": 1.5, "z": 0   }, "config": {} },
+    { "id": "col-4",  "type": "coin",    "pos": { "x": 14, "y": 1.5, "z": 0   }, "config": {} },
+    { "id": "col-5",  "type": "coin",    "pos": { "x": 17, "y": 3.5, "z": -15 }, "config": {} },
+    { "id": "col-6",  "type": "star",    "pos": { "x": 20, "y": 4.5, "z": -15 }, "config": {} },
+    { "id": "col-7",  "type": "powerup", "pos": { "x": 30, "y": 5.5, "z": -20 }, "config": {} }
+  ],
+  "checkpoints": [
+    { "id": "chk-1", "pos": { "x": 0,  "y": 0, "z": 0  }, "yaw": 0 },
+    { "id": "chk-2", "pos": { "x": 20, "y": 3, "z": -15 }, "yaw": 3.14 }
   ],
   "entities": [
-    { "type": "coin",   "x":  5, "y": 2, "z":  0 },
-    { "type": "coin",   "x":  8, "y": 2, "z":  0 },
-    { "type": "coin",   "x": 11, "y": 2, "z":  0 },
-    { "type": "coin",   "x": 14, "y": 2, "z":  0 },
-    { "type": "coin",   "x": 17, "y": 4, "z": -15 },
-    { "type": "star",   "x": 20, "y": 5, "z": -15 },
-    { "type": "powerup","x": 30, "y": 6, "z": -20 },
-    { "type": "walker", "x": 12, "y": 2, "z":  0, "patrol": [{"x":8,"y":1,"z":0},{"x":16,"y":1,"z":0}] },
-    { "type": "flyer",  "x": 30, "y": 5, "z": -20 },
-    { "type": "coin_trail_arc", "x": 0, "y": 1, "z": -8, "length": 5 }
+    { "id": "ent-1", "type": "walker", "x": 12, "y": 2, "z":  0, "patrol": [{"x":8,"y":1,"z":0},{"x":16,"y":1,"z":0}] },
+    { "id": "ent-2", "type": "flyer",  "x": 30, "y": 5, "z": -20 }
   ]
 }

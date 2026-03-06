@@ -323,17 +323,45 @@ class Platformer3DGame extends Engine3DAdapter {
         this.collectibles?.clear?.();
         this.collectibles?.resetScore?.();
 
+        // v2.0: checkpoints[] array takes precedence over embedded entities
         if (this.checkpoints) {
-            this.checkpoints.spawnFromLevelData(data);
-            // Sync death plane to checkpoint system
+            // Merge v2.0 checkpoints[] into the data structure expected by spawnFromLevelData
+            if (Array.isArray(data.checkpoints) && data.checkpoints.length > 0) {
+                const merged = { ...data };
+                // Convert {id, pos:{x,y,z}, yaw} → {id, x, y, z}
+                merged.checkpoints = data.checkpoints.map(cp => ({
+                    id: cp.id,
+                    x: cp.pos?.x ?? cp.x ?? 0,
+                    y: cp.pos?.y ?? cp.y ?? 0,
+                    z: cp.pos?.z ?? cp.z ?? 0,
+                    yaw: cp.yaw || 0,
+                }));
+                this.checkpoints.spawnFromLevelData(merged);
+            } else {
+                this.checkpoints.spawnFromLevelData(data);
+            }
             this._deathY = this.checkpoints.deathY;
-        } else if (data.checkpoints?.length) {
-            // Fallback if checkpoints system not yet init
         }
 
-        // Spawn collectibles from entity list
-        if (this.collectibles && data.entities?.length) {
-            this.collectibles.spawnFromLevelData(data.entities);
+        // Spawn collectibles — v2.0 uses collectibles[], legacy uses entities[]
+        if (this.collectibles) {
+            const colEntities = [];
+            // v2.0 collectibles[]
+            if (Array.isArray(data.collectibles)) {
+                data.collectibles.forEach(c => colEntities.push({
+                    type: c.type || 'coin',
+                    x: c.pos?.x ?? c.x ?? 0,
+                    y: c.pos?.y ?? c.y ?? 0,
+                    z: c.pos?.z ?? c.z ?? 0,
+                    ...c.config,
+                }));
+            }
+            // Legacy entities[] (coins/stars/powerups that aren't enemies)
+            if (Array.isArray(data.entities)) {
+                const collectibleTypes = new Set(['coin', 'star', 'key', 'powerup', 'coin_trail_arc']);
+                data.entities.filter(e => collectibleTypes.has(e.type)).forEach(e => colEntities.push(e));
+            }
+            if (colEntities.length) this.collectibles.spawnFromLevelData(colEntities);
         }
 
         // Spawn enemies from entity list

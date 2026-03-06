@@ -1128,7 +1128,7 @@ const Pf3dEditor = (() => {
         _state.project   = project  || _state.project;
         _state.levelId   = levelId  || data.id  || _state.levelId;
         _state.levelName = data.name || _state.levelName;
-        _state.objects   = data.platforms?.map(p => ({
+        _state.objects   = (data.platforms || []).map(p => ({
             id: p.id || _genId('obj'),
             type: 'platform', subtype: p.type || 'flat',
             blockType: p.blockType || 'box',
@@ -1136,29 +1136,52 @@ const Pf3dEditor = (() => {
             rot:   p.rot   || { x: 0, y: 0, z: 0 },
             scale: { x: p.w || 2, y: p.h || 1, z: p.d || 2 },
             colorIdx: p.colorIdx ?? 12,
-            props: { platType: p.type || 'flat' },
-        })) || [];
-        _state.entities = data.entities?.map(e => ({
+            props: { platType: p.type || 'flat', friction: p.friction, restitution: p.restitution, damage: p.damage, tag: p.tag },
+        }));
+        _state.entities = (data.entities || []).map(e => ({
             id:   e.id   || _genId('ent'),
             type: e.type,
             pos:  { x: e.x || 0, y: e.y || 0, z: e.z || 0 },
             props: e,
-        })) || [];
-        // Checkpoints as entities
-        (data.checkpoints || []).forEach(cp => {
-            _state.entities.push({ id: cp.id || _genId('ent'), type: 'checkpoint', pos: { x: cp.x || 0, y: cp.y || 0, z: cp.z || 0 }, props: cp });
-        });
+        }));
         if (data.playerSpawn) {
             const sp = data.playerSpawn;
-            const existing = _state.entities.find(e => e.type === 'player-spawn');
-            if (!existing) _state.entities.push({ id: _genId('ent'), type: 'player-spawn', pos: { x: sp.x, y: sp.y, z: sp.z }, props: {} });
+            if (!_state.entities.find(e => e.type === 'player-spawn')) {
+                _state.entities.push({ id: _genId('ent'), type: 'player-spawn', pos: { x: sp.x || 0, y: sp.y || 0, z: sp.z || 0 }, props: {} });
+            }
         }
         if (data.levelExit) {
             const ex = data.levelExit;
-            _state.entities.push({ id: _genId('ent'), type: 'level-exit', pos: { x: ex.x, y: ex.y, z: ex.z }, props: {} });
+            _state.entities.push({ id: _genId('ent'), type: 'level-exit', pos: { x: ex.x || 0, y: ex.y || 0, z: ex.z || 0 }, props: {} });
         }
         if (data.sky)     { _state.skyTop = data.sky.topColor ?? 87; _state.skyBottom = data.sky.bottomColor ?? 23; }
         if (data.deathY !== undefined) _state.deathY = data.deathY;
+        if (data.fog)     { _state.fog.near = data.fog.near ?? 40; _state.fog.far = data.fog.far ?? 120; }
+        if (data.ambientLight?.intensity !== undefined) _state.ambient = data.ambientLight.intensity;
+        if (data.lights?.length > 0) {
+            const sun = data.lights.find(l => l.type === 'directional');
+            if (sun) {
+                _state.sunIntensity = sun.intensity ?? 1;
+                if (sun.position) _state.sunPos = { ...sun.position };
+            }
+        }
+
+        // Restore PathEditor3D paths (Phase 54)
+        if (typeof PathEditor3D !== 'undefined') {
+            PathEditor3D.destroy();
+            PathEditor3D.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'path'));
+            if (Array.isArray(data.paths) && data.paths.length) {
+                PathEditor3D.loadPaths(data.paths);
+            }
+        }
+
+        // Restore HazardEditor data (Phase 55)
+        if (typeof HazardEditor !== 'undefined') {
+            HazardEditor.destroy();
+            HazardEditor.init(_scene, _camera, _raycaster3, _state, _meshMap, _genId.bind(null, 'haz'));
+            HazardEditor.loadHazards(data);
+        }
+
         _undoStack = []; _redoStack = [];
         _rebuildScene3D();
         _rebuildHierarchy();
@@ -1220,28 +1243,48 @@ const Pf3dEditor = (() => {
     }
 
     function _buildLevelPayload() {
+        // Collect path data from PathEditor3D
+        const paths = (typeof PathEditor3D !== 'undefined') ? PathEditor3D.getPathsForLevel() : [];
+
+        // Collect hazard/collectible/checkpoint/trigger data from HazardEditor
+        const hazards      = (typeof HazardEditor !== 'undefined') ? HazardEditor.getHazardsForLevel()      : [];
+        const triggers     = (typeof HazardEditor !== 'undefined') ? HazardEditor.getTriggersForLevel()     : [];
+        const collectibles = (typeof HazardEditor !== 'undefined') ? HazardEditor.getCollectiblesForLevel() : [];
+        // Merge checkpoints: HazardEditor has placed flags; _state.entities has 'checkpoint' entries from legacy load
+        const hazEdCheckpoints = (typeof HazardEditor !== 'undefined') ? HazardEditor.getCheckpointsForLevel() : [];
+        const stateCheckpoints = _state.entities.filter(e => e.type === 'checkpoint').map(e => ({
+            id: e.id, pos: { x: e.pos.x, y: e.pos.y, z: e.pos.z }, yaw: e.props?.yaw || 0,
+        }));
+        const checkpoints = [...hazEdCheckpoints, ...stateCheckpoints];
+
         return {
-            id:       _state.levelId,
-            name:     _state.levelName,
+            version:    '2.0',
+            id:         _state.levelId,
+            name:       _state.levelName,
             engineType: 'platformer-3d',
-            sky:      { topColor: _state.skyTop, bottomColor: _state.skyBottom },
-            ambientLight: { color: 16777215, intensity: _state.ambient },
-            lights:   [{ type: 'directional', color: 16777215, intensity: _state.sunIntensity,
-                         position: { ..._state.sunPos }, castShadow: true }],
-            fog:      { near: _state.fog.near, far: _state.fog.far },
-            deathY:   _state.deathY,
-            playerSpawn: (() => { const e = _state.entities.find(e => e.type === 'player-spawn'); return e ? e.pos : { x:0, y:2, z:0 }; })(),
+            sky:        { topColor: _state.skyTop, bottomColor: _state.skyBottom },
+            ambientLight: { color: 0xffffff, intensity: _state.ambient },
+            lights:     [{ type: 'directional', color: 0xffffff, intensity: _state.sunIntensity,
+                           position: { ..._state.sunPos }, castShadow: true }],
+            fog:        { near: _state.fog.near, far: _state.fog.far },
+            deathY:     _state.deathY,
+            playerSpawn: (() => { const e = _state.entities.find(e => e.type === 'player-spawn'); return e ? e.pos : { x: 0, y: 2, z: 0 }; })(),
             levelExit:   (() => { const e = _state.entities.find(e => e.type === 'level-exit');  return e ? e.pos : null; })(),
-            checkpoints: _state.entities.filter(e => e.type === 'checkpoint').map(e => ({ id: e.id, ...e.pos })),
             platforms:   _state.objects.map(o => ({
                 id: o.id, type: o.subtype, blockType: o.blockType || 'box',
                 x: o.pos.x, y: o.pos.y - (o.scale.y || 1) / 2,
                 w: o.scale.x, h: o.scale.y, d: o.scale.z,
                 colorIdx: o.colorIdx,
+                rot: o.rot,
                 ...(o.props || {}),
             })),
+            paths,
+            hazards,
+            triggers,
+            collectibles,
+            checkpoints,
             entities: _state.entities
-                .filter(e => !['player-spawn','checkpoint','level-exit'].includes(e.type))
+                .filter(e => !['player-spawn', 'checkpoint', 'level-exit'].includes(e.type))
                 .map(e => ({ id: e.id, type: e.type, x: e.pos.x, y: e.pos.y, z: e.pos.z, ...e.props })),
         };
     }
