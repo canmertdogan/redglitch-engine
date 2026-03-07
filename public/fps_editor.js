@@ -404,6 +404,9 @@ const FPSEditor = (() => {
     let _three  = null;   // { scene, camera, renderer, orbitCtrl, meshGroup, dirLight, fog }
     let _raf3d  = null;
     let _drag3d = null;
+    let _drag3dMoved = 0;   // total pointer movement during current drag (px)
+    let _ghostMesh = null;  // wireframe block placed at hover position
+    let _show2d = false;    // whether the 2D floor plan panel is visible
     let _orbitState = { theta: 0.6, phi: 1.1, radius: 20, target: { x: 0, y: 0, z: 0 } };
     let _canvas3dHovered = false;   // true while pointer is over the 3D viewport
     const _keysDown = new Set();    // tracks WASD/QE while canvas hovered
@@ -459,7 +462,7 @@ const FPSEditor = (() => {
         canvas.addEventListener('wheel',       _on3dWheel, { passive: false });
         canvas.addEventListener('contextmenu', e => e.preventDefault());
         canvas.addEventListener('pointerenter', () => { _canvas3dHovered = true; });
-        canvas.addEventListener('pointerleave', () => { _canvas3dHovered = false; _keysDown.clear(); });
+        canvas.addEventListener('pointerleave', () => { _canvas3dHovered = false; _keysDown.clear(); if (_ghostMesh) _ghostMesh.visible = false; });
 
         _rebuild3d();
         _loop3d();
@@ -626,32 +629,138 @@ const FPSEditor = (() => {
     function _on3dDown(e) {
         e.preventDefault();
         _drag3d = { button: e.button, cx: e.clientX, cy: e.clientY, theta: _orbitState.theta, phi: _orbitState.phi, tx: _orbitState.target.x, tz: _orbitState.target.z };
+        _drag3dMoved = 0;
     }
 
     function _on3dMove(e) {
-        if (!_drag3d) return;
-        const dx = e.clientX - _drag3d.cx;
-        const dy = e.clientY - _drag3d.cy;
-        if (_drag3d.button === 2) {
-            // orbit
-            _orbitState.theta = _drag3d.theta - dx * 0.006;
-            _orbitState.phi   = Math.max(0.08, Math.min(Math.PI - 0.08, _drag3d.phi - dy * 0.006));
-        } else if (_drag3d.button === 1) {
-            // pan
-            const panSpeed = _orbitState.radius * 0.002;
-            _orbitState.target.x = _drag3d.tx - dx * panSpeed;
-            _orbitState.target.z = _drag3d.tz + dy * panSpeed;
+        if (_drag3d) {
+            const dx = e.clientX - _drag3d.cx;
+            const dy = e.clientY - _drag3d.cy;
+            _drag3dMoved = Math.sqrt(dx * dx + dy * dy);
+            if (_drag3d.button === 2) {
+                // orbit
+                _orbitState.theta = _drag3d.theta - dx * 0.006;
+                _orbitState.phi   = Math.max(0.08, Math.min(Math.PI - 0.08, _drag3d.phi - dy * 0.006));
+            } else if (_drag3d.button === 1) {
+                // pan
+                const panSpeed = _orbitState.radius * 0.002;
+                _orbitState.target.x = _drag3d.tx - dx * panSpeed;
+                _orbitState.target.z = _drag3d.tz + dy * panSpeed;
+            }
+            _setCam3dFromOrbit();
+            // hide ghost while dragging
+            if (_ghostMesh) _ghostMesh.visible = false;
+            return;
         }
-        _setCam3dFromOrbit();
+        // ghost preview when hovering without drag
+        _updateGhostMesh(e);
     }
 
-    function _on3dUp() { _drag3d = null; }
+    function _on3dUp(e) {
+        if (_drag3d && _drag3dMoved < 5) {
+            // treat as a click
+            const btn = _drag3d.button;
+            _drag3d = null;
+            if (_activeTool === 'draw-room' || _activeTool === 'corridor') {
+                if (btn === 0) _raycast3dAction(e, 'place');
+                else if (btn === 2) _raycast3dAction(e, 'erase');
+            } else if (_activeTool === 'erase') {
+                _raycast3dAction(e, 'erase');
+            }
+        } else {
+            _drag3d = null;
+        }
+    }
 
     function _on3dWheel(e) {
         e.preventDefault();
         _orbitState.radius *= e.deltaY < 0 ? 0.88 : 1.14;
         _orbitState.radius  = Math.max(0.5, Math.min(200, _orbitState.radius));
         _setCam3dFromOrbit();
+    }
+
+    function _raycast3dAction(e, mode) {
+        if (!_three || typeof THREE === 'undefined') return;
+        const canvas = document.getElementById('canvas-3d');
+        const rect = canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, _three.camera);
+        const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
+        if (!hits.length) return;
+        const hit = hits[0];
+        const cs = _state.cellSize;
+        let gx, gy, gz;
+        if (mode === 'place') {
+            gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
+            gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
+            gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
+            if (typeof BrushTools === 'undefined') return;
+            const prev = _snapshot();
+            const changes = BrushTools.paintBlock(_state.voxelGrid, gx, gy, gz, _activeColor);
+            const key = `${gx},${gy},${gz}`;
+            if (_state.voxelGrid[key]) _state.voxelGrid[key].type = _activeBlock;
+            if (changes.length) {
+                _pushUndo(prev);
+                markDirty();
+                _rebuild3d();
+                _updateBlockCount();
+            }
+        } else if (mode === 'erase') {
+            gx = Math.floor((hit.point.x - hit.face.normal.x * cs * 0.01) / cs);
+            gy = Math.floor((hit.point.y - hit.face.normal.y * cs * 0.01) / cs);
+            gz = Math.floor((hit.point.z - hit.face.normal.z * cs * 0.01) / cs);
+            const key = `${gx},${gy},${gz}`;
+            if (_state.voxelGrid[key]) {
+                const prev = _snapshot();
+                delete _state.voxelGrid[key];
+                _pushUndo(prev);
+                markDirty();
+                _rebuild3d();
+                _updateBlockCount();
+            }
+        }
+    }
+
+    function _updateGhostMesh(e) {
+        if (!_three || typeof THREE === 'undefined') return;
+        const showGhost = _activeTool === 'draw-room' || _activeTool === 'corridor';
+        if (!showGhost) {
+            if (_ghostMesh) _ghostMesh.visible = false;
+            return;
+        }
+        // lazy-create ghost mesh
+        if (!_ghostMesh) {
+            const cs = _state.cellSize;
+            _ghostMesh = new THREE.LineSegments(
+                new THREE.EdgesGeometry(new THREE.BoxGeometry(cs, cs, cs)),
+                new THREE.LineBasicMaterial({ color: 0xff6b35 })
+            );
+            _three.scene.add(_ghostMesh);
+        }
+        const canvas = document.getElementById('canvas-3d');
+        const rect = canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, _three.camera);
+        const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
+        if (!hits.length) {
+            _ghostMesh.visible = false;
+            return;
+        }
+        const hit = hits[0];
+        const cs = _state.cellSize;
+        const gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
+        const gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
+        const gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
+        _ghostMesh.position.set((gx + 0.5) * cs, (gy + 0.5) * cs, (gz + 0.5) * cs);
+        _ghostMesh.visible = true;
     }
 
     function _updateCamInfo() {
@@ -758,6 +867,22 @@ const FPSEditor = (() => {
 
     function toggleWireframe() {
         setShading(_shading === 'wireframe' ? 'shaded' : 'wireframe');
+    }
+
+    function toggle2d() {
+        _show2d = !_show2d;
+        const vp = document.getElementById('viewport-2d');
+        if (vp) vp.classList.toggle('viewport-2d-visible', _show2d);
+        const btn = document.getElementById('btn-toggle-2d');
+        if (btn) btn.classList.toggle('active', _show2d);
+        if (_three && _three.renderer) {
+            const canvas = document.getElementById('canvas-3d');
+            const w = canvas.parentElement.clientWidth;
+            const h = canvas.parentElement.clientHeight - 24;
+            _three.renderer.setSize(w, h);
+            _three.camera.aspect = w / h;
+            _three.camera.updateProjectionMatrix();
+        }
     }
 
     /**
@@ -1377,7 +1502,7 @@ const FPSEditor = (() => {
     return {
         switchTab, setTool, setSnap,
         selectBlock, setDrawMode, setCellSize, setCeilingHeight, setFloorY, setActiveY,
-        setActiveColor, setShading, toggleGrid, toggleWireframe, resetCam, setView,
+        setActiveColor, setShading, toggleGrid, toggleWireframe, toggle2d, resetCam, setView,
         zoom2d, fitView2d,
         selectEntity, addTrigger,
         updateFog, updateLighting,

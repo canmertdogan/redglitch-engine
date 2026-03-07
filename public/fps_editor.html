@@ -170,10 +170,10 @@
             flex: 1; display: flex; flex-direction: row; overflow: hidden; min-width: 0;
         }
 
-        /* 3D perspective viewport (left, ~60%) */
+        /* 3D perspective viewport (fills work area by default) */
         #viewport-3d {
-            flex: 0 0 60%; display: flex; flex-direction: column;
-            background: #0a0806; border-right: 2px solid var(--border); position: relative; min-width: 0;
+            flex: 1; display: flex; flex-direction: column;
+            background: #0a0806; position: relative; min-width: 0;
         }
         .viewport-label {
             height: 24px; background: #000; display: flex; align-items: center; padding: 0 10px;
@@ -204,10 +204,12 @@
             letter-spacing: 1px; pointer-events: none; line-height: 1.6;
         }
 
-        /* 2D floor plan viewport (right, ~40%) */
+        /* 2D floor plan viewport (hidden by default; togglable side panel) */
         #viewport-2d {
-            flex: 1; display: flex; flex-direction: column; background: #080604; position: relative; min-width: 0;
+            display: none; flex: 0 0 340px; flex-direction: column;
+            background: #080604; border-left: 2px solid var(--border); position: relative; min-width: 0;
         }
+        .viewport-2d-visible { display: flex !important; }
         #canvas-2d { width: 100%; flex: 1; display: block; background: #080604; cursor: crosshair; }
         #overlay-2d {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -569,7 +571,7 @@
 
         <!-- 3D Perspective Viewport -->
         <div id="viewport-3d">
-            <div class="viewport-label"><span>PERSPECTIVE</span> — orbit: RMB drag · pan: MMB · zoom: wheel · <span style="color:var(--accent2)">WASD / ↑↓←→</span>: fly · Q/E: up/down</div>
+            <div class="viewport-label"><span>PERSPECTIVE</span> — orbit: RMB drag · pan: MMB · zoom: wheel · <span style="color:var(--accent2)">WASD / ↑↓←→</span>: fly · Q/E: up/down · <span style="color:var(--accent)">LMB: place block · RMB click: erase</span></div>
             <canvas id="canvas-3d"></canvas>
             <div id="overlay-3d">
                 <div id="cam-info"></div>
@@ -578,6 +580,7 @@
                     <div class="vp-btn"        id="btn-wireframe" title="Wireframe" onclick="FPSEditor.setShading('wireframe')"><i class="fas fa-draw-polygon"></i></div>
                     <div class="vp-btn"        id="btn-solid"     title="Solid"     onclick="FPSEditor.setShading('solid')"><i class="fas fa-square"></i></div>
                     <div class="vp-btn"        id="btn-tileset"   title="Toggle Tileset Atlas" onclick="FPSEditor.setTilesetEnabled(!FPSEditor._tilesetEnabled)">🧱</div>
+                    <div class="vp-btn"        id="btn-toggle-2d" title="Toggle 2D Floor Plan" onclick="FPSEditor.toggle2d()">📐</div>
                 </div>
             </div>
         </div>
