@@ -1,8 +1,8 @@
 {
-  "name": "Platformer3D Demo",
+  "name": "Crystal Peaks",
   "author": "Ketebe Engine",
   "version": "1.0.0",
-  "description": "A demo third-person 3D platformer project showcasing the platformer-3d engine with low-poly voxel aesthetics.",
+  "description": "A breathtaking 3D platformer set among floating crystal mountains. Scale icy stepping stones, dodge fire-jets and lava, ride moving platforms across sky-high chasms, and reach the glittering summit in this showcase of the platformer-3d engine.",
   "engineType": "platformer-3d",
   "startLevel": "level01",
   "palette": "default",

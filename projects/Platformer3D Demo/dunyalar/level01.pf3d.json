@@ -1,62 +1,716 @@
 {
   "version": "2.0",
   "id": "level01",
-  "name": "Starter Plains",
+  "name": "Crystal Peaks",
   "engineType": "platformer-3d",
-  "sky": { "topColor": 87, "bottomColor": 23 },
-  "ambientLight": { "color": 16777215, "intensity": 0.5 },
+  "sky": {
+    "topColor": 150,
+    "bottomColor": 220
+  },
+  "ambientLight": {
+    "color": 14548991,
+    "intensity": 0.55
+  },
   "lights": [
-    { "type": "directional", "color": 16777215, "intensity": 1.0,
-      "position": { "x": 50, "y": 80, "z": 40 }, "castShadow": true }
+    {
+      "type": "directional",
+      "color": 16777215,
+      "intensity": 1.1,
+      "position": {
+        "x": 60,
+        "y": 100,
+        "z": 50
+      },
+      "castShadow": true
+    },
+    {
+      "type": "point",
+      "color": 8912895,
+      "intensity": 1.4,
+      "position": {
+        "x": 60,
+        "y": 26,
+        "z": -60
+      },
+      "distance": 30,
+      "decay": 2
+    }
   ],
-  "fog": { "near": 40, "far": 120 },
-  "playerSpawn": { "x": 0, "y": 2, "z": 0 },
-  "deathY": -20,
-  "levelExit": { "x": 40, "y": 2, "z": -30 },
+  "fog": {
+    "near": 60,
+    "far": 180
+  },
+  "playerSpawn": {
+    "x": 0,
+    "y": 2,
+    "z": 0
+  },
+  "deathY": -25,
+  "levelExit": {
+    "x": 60,
+    "y": 24,
+    "z": -60
+  },
   "platforms": [
-    { "id": "plat-1", "type": "flat",  "blockType": "box", "x": 0,   "y": 0,  "z": 0,   "w": 20, "h": 1, "d": 20, "colorIdx": 12, "rot": {"x":0,"y":0,"z":0} },
-    { "id": "plat-2", "type": "flat",  "blockType": "box", "x": 15,  "y": 2,  "z": -15, "w": 8,  "h": 1, "d": 8,  "colorIdx": 18, "rot": {"x":0,"y":0,"z":0} },
-    { "id": "plat-3", "type": "flat",  "blockType": "box", "x": 30,  "y": 4,  "z": -20, "w": 8,  "h": 1, "d": 8,  "colorIdx": 25, "rot": {"x":0,"y":0,"z":0} },
-    { "id": "plat-4", "type": "flat",  "blockType": "box", "x": 42,  "y": 2,  "z": -30, "w": 12, "h": 1, "d": 12, "colorIdx": 12, "rot": {"x":0,"y":0,"z":0} },
-    { "id": "plat-5", "type": "moving","blockType": "box", "x": 22,  "y": 3,  "z": -17, "w": 4,  "h": 1, "d": 4,  "colorIdx": 30, "rot": {"x":0,"y":0,"z":0} }
+    {
+      "id": "plat-start",
+      "type": "flat",
+      "blockType": "box",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 24,
+      "h": 1,
+      "d": 24,
+      "colorIdx": 175,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-02",
+      "type": "flat",
+      "blockType": "box",
+      "x": 20,
+      "y": 3,
+      "z": -10,
+      "w": 10,
+      "h": 1,
+      "d": 10,
+      "colorIdx": 205,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-03",
+      "type": "flat",
+      "blockType": "box",
+      "x": 30,
+      "y": 5,
+      "z": -18,
+      "w": 8,
+      "h": 1,
+      "d": 8,
+      "colorIdx": 207,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-04",
+      "type": "moving",
+      "blockType": "box",
+      "x": 38,
+      "y": 7,
+      "z": -24,
+      "w": 5,
+      "h": 1,
+      "d": 5,
+      "colorIdx": 232,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-05",
+      "type": "flat",
+      "blockType": "box",
+      "x": 44,
+      "y": 8,
+      "z": -30,
+      "w": 6,
+      "h": 1,
+      "d": 6,
+      "colorIdx": 208,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-06",
+      "type": "flat",
+      "blockType": "box",
+      "x": 48,
+      "y": 9,
+      "z": -36,
+      "w": 4,
+      "h": 1,
+      "d": 4,
+      "colorIdx": 235,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-07",
+      "type": "flat",
+      "blockType": "box",
+      "x": 50,
+      "y": 10,
+      "z": -40,
+      "w": 4,
+      "h": 1,
+      "d": 4,
+      "colorIdx": 210,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-08",
+      "type": "moving",
+      "blockType": "box",
+      "x": 52,
+      "y": 12,
+      "z": -43,
+      "w": 4,
+      "h": 1,
+      "d": 4,
+      "colorIdx": 240,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-09",
+      "type": "flat",
+      "blockType": "box",
+      "x": 55,
+      "y": 13,
+      "z": -46,
+      "w": 6,
+      "h": 1,
+      "d": 6,
+      "colorIdx": 70,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-10",
+      "type": "flat",
+      "blockType": "box",
+      "x": 58,
+      "y": 14,
+      "z": -49,
+      "w": 4,
+      "h": 1,
+      "d": 4,
+      "colorIdx": 212,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-11",
+      "type": "flat",
+      "blockType": "box",
+      "x": 60,
+      "y": 15,
+      "z": -52,
+      "w": 4,
+      "h": 1,
+      "d": 4,
+      "colorIdx": 236,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-12",
+      "type": "moving",
+      "blockType": "box",
+      "x": 60,
+      "y": 17,
+      "z": -55,
+      "w": 5,
+      "h": 1,
+      "d": 5,
+      "colorIdx": 203,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-13",
+      "type": "flat",
+      "blockType": "box",
+      "x": 58,
+      "y": 18,
+      "z": -58,
+      "w": 4,
+      "h": 1,
+      "d": 4,
+      "colorIdx": 178,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-14",
+      "type": "flat",
+      "blockType": "box",
+      "x": 12,
+      "y": 4,
+      "z": -8,
+      "w": 5,
+      "h": 1,
+      "d": 5,
+      "colorIdx": 65,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-15",
+      "type": "slope",
+      "blockType": "box",
+      "x": 25,
+      "y": 4,
+      "z": -14,
+      "w": 6,
+      "h": 1,
+      "d": 6,
+      "colorIdx": 74,
+      "rot": {
+        "x": 0,
+        "y": 0.3,
+        "z": 0
+      }
+    },
+    {
+      "id": "plat-summit",
+      "type": "flat",
+      "blockType": "box",
+      "x": 60,
+      "y": 22,
+      "z": -60,
+      "w": 16,
+      "h": 1,
+      "d": 16,
+      "colorIdx": 243,
+      "rot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    }
   ],
   "paths": [
     {
-      "id": "path-1",
-      "platformId": "plat-5",
+      "id": "path-horiz",
+      "platformId": "plat-04",
       "motionType": "spline",
       "loopMode": "ping-pong",
-      "config": { "speed": 3 },
+      "config": {
+        "speed": 3.5
+      },
       "waypoints": [
-        { "x": 22, "y": 3.5, "z": -17 },
-        { "x": 28, "y": 3.5, "z": -17 },
-        { "x": 28, "y": 3.5, "z": -22 }
+        {
+          "x": 34,
+          "y": 7.5,
+          "z": -24
+        },
+        {
+          "x": 42,
+          "y": 7.5,
+          "z": -24
+        }
+      ]
+    },
+    {
+      "id": "path-vert",
+      "platformId": "plat-08",
+      "motionType": "spline",
+      "loopMode": "ping-pong",
+      "config": {
+        "speed": 2.5
+      },
+      "waypoints": [
+        {
+          "x": 52,
+          "y": 11,
+          "z": -43
+        },
+        {
+          "x": 52,
+          "y": 15,
+          "z": -43
+        }
+      ]
+    },
+    {
+      "id": "path-diag",
+      "platformId": "plat-12",
+      "motionType": "spline",
+      "loopMode": "ping-pong",
+      "config": {
+        "speed": 4.0
+      },
+      "waypoints": [
+        {
+          "x": 56,
+          "y": 17,
+          "z": -52
+        },
+        {
+          "x": 64,
+          "y": 17,
+          "z": -58
+        }
       ]
     }
   ],
   "hazards": [
-    { "id": "haz-1", "type": "spike",    "pos": { "x": 10, "y": 0.5, "z": 5  }, "config": {} },
-    { "id": "haz-2", "type": "fire-jet", "pos": { "x": -5, "y": 0.5, "z": -5 }, "config": { "period": 2.5, "offset": 0, "dutyCycle": 0.4 } },
-    { "id": "haz-3", "type": "lava",     "pos": { "x": 0,  "y": 0.1, "z": -8 }, "config": { "w": 6, "d": 4 } }
+    {
+      "id": "haz-fire-01",
+      "type": "fire-jet",
+      "pos": {
+        "x": 30,
+        "y": 5.5,
+        "z": -18
+      },
+      "config": {
+        "period": 2.5,
+        "offset": 0,
+        "dutyCycle": 0.4
+      }
+    },
+    {
+      "id": "haz-fire-02",
+      "type": "fire-jet",
+      "pos": {
+        "x": 44,
+        "y": 8.5,
+        "z": -30
+      },
+      "config": {
+        "period": 2.0,
+        "offset": 1.2,
+        "dutyCycle": 0.35
+      }
+    },
+    {
+      "id": "haz-lava-01",
+      "type": "lava",
+      "pos": {
+        "x": 14,
+        "y": 0.1,
+        "z": -4
+      },
+      "config": {
+        "w": 8,
+        "d": 5
+      }
+    },
+    {
+      "id": "haz-spike-01",
+      "type": "spike",
+      "pos": {
+        "x": 48,
+        "y": 9.5,
+        "z": -36
+      },
+      "config": {}
+    }
   ],
   "triggers": [
-    { "id": "trg-1", "pos": { "x": 15, "y": 2.5, "z": -15 }, "size": { "w": 4, "h": 3, "d": 4 }, "event": "play-sound", "config": { "sound": "fanfare" } }
+    {
+      "id": "trg-checkpoint-mid",
+      "pos": {
+        "x": 44,
+        "y": 9.5,
+        "z": -30
+      },
+      "size": {
+        "w": 4,
+        "h": 4,
+        "d": 4
+      },
+      "event": "play-sound",
+      "config": {
+        "sound": "checkpoint"
+      }
+    },
+    {
+      "id": "trg-summit-fanfare",
+      "pos": {
+        "x": 60,
+        "y": 23.5,
+        "z": -60
+      },
+      "size": {
+        "w": 10,
+        "h": 4,
+        "d": 10
+      },
+      "event": "play-sound",
+      "config": {
+        "sound": "fanfare"
+      }
+    },
+    {
+      "id": "trg-crystal-cave",
+      "pos": {
+        "x": 12,
+        "y": 5.5,
+        "z": -8
+      },
+      "size": {
+        "w": 4,
+        "h": 3,
+        "d": 4
+      },
+      "event": "play-sound",
+      "config": {
+        "sound": "shimmer"
+      }
+    },
+    {
+      "id": "trg-wind-gust",
+      "pos": {
+        "x": 52,
+        "y": 13.5,
+        "z": -44
+      },
+      "size": {
+        "w": 4,
+        "h": 3,
+        "d": 4
+      },
+      "event": "wind-gust",
+      "config": {
+        "direction": [
+          1,
+          0.3,
+          0
+        ],
+        "strength": 8
+      }
+    }
   ],
   "collectibles": [
-    { "id": "col-1",  "type": "coin",    "pos": { "x": 5,  "y": 1.5, "z": 0   }, "config": {} },
-    { "id": "col-2",  "type": "coin",    "pos": { "x": 8,  "y": 1.5, "z": 0   }, "config": {} },
-    { "id": "col-3",  "type": "coin",    "pos": { "x": 11, "y": 1.5, "z": 0   }, "config": {} },
-    { "id": "col-4",  "type": "coin",    "pos": { "x": 14, "y": 1.5, "z": 0   }, "config": {} },
-    { "id": "col-5",  "type": "coin",    "pos": { "x": 17, "y": 3.5, "z": -15 }, "config": {} },
-    { "id": "col-6",  "type": "star",    "pos": { "x": 20, "y": 4.5, "z": -15 }, "config": {} },
-    { "id": "col-7",  "type": "powerup", "pos": { "x": 30, "y": 5.5, "z": -20 }, "config": {} }
+    {
+      "id": "col-coin-01",
+      "type": "coin",
+      "pos": {
+        "x": 5,
+        "y": 1.5,
+        "z": 4
+      },
+      "config": {}
+    },
+    {
+      "id": "col-coin-02",
+      "type": "coin",
+      "pos": {
+        "x": -4,
+        "y": 1.5,
+        "z": -4
+      },
+      "config": {}
+    },
+    {
+      "id": "col-coin-03",
+      "type": "coin",
+      "pos": {
+        "x": 20,
+        "y": 4.5,
+        "z": -10
+      },
+      "config": {}
+    },
+    {
+      "id": "col-coin-04",
+      "type": "coin",
+      "pos": {
+        "x": 30,
+        "y": 6.5,
+        "z": -18
+      },
+      "config": {}
+    },
+    {
+      "id": "col-coin-05",
+      "type": "coin",
+      "pos": {
+        "x": 44,
+        "y": 9.5,
+        "z": -30
+      },
+      "config": {}
+    },
+    {
+      "id": "col-coin-06",
+      "type": "coin",
+      "pos": {
+        "x": 50,
+        "y": 10.5,
+        "z": -40
+      },
+      "config": {}
+    },
+    {
+      "id": "col-coin-07",
+      "type": "coin",
+      "pos": {
+        "x": 55,
+        "y": 14.5,
+        "z": -46
+      },
+      "config": {}
+    },
+    {
+      "id": "col-coin-08",
+      "type": "coin",
+      "pos": {
+        "x": 60,
+        "y": 16.5,
+        "z": -52
+      },
+      "config": {}
+    },
+    {
+      "id": "col-star-01",
+      "type": "star",
+      "pos": {
+        "x": 12,
+        "y": 6.5,
+        "z": -8
+      },
+      "config": {}
+    },
+    {
+      "id": "col-star-02",
+      "type": "star",
+      "pos": {
+        "x": 58,
+        "y": 15.5,
+        "z": -49
+      },
+      "config": {}
+    },
+    {
+      "id": "col-powerup-01",
+      "type": "powerup",
+      "pos": {
+        "x": 60,
+        "y": 24.5,
+        "z": -60
+      },
+      "config": {}
+    }
   ],
   "checkpoints": [
-    { "id": "chk-1", "pos": { "x": 0,  "y": 0, "z": 0  }, "yaw": 0 },
-    { "id": "chk-2", "pos": { "x": 20, "y": 3, "z": -15 }, "yaw": 3.14 }
+    {
+      "id": "chk-start",
+      "pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "yaw": 0
+    },
+    {
+      "id": "chk-mid",
+      "pos": {
+        "x": 44,
+        "y": 8,
+        "z": -30
+      },
+      "yaw": 225
+    },
+    {
+      "id": "chk-summit-approach",
+      "pos": {
+        "x": 58,
+        "y": 18,
+        "z": -58
+      },
+      "yaw": 225
+    }
   ],
   "entities": [
-    { "id": "ent-1", "type": "walker", "x": 12, "y": 2, "z":  0, "patrol": [{"x":8,"y":1,"z":0},{"x":16,"y":1,"z":0}] },
-    { "id": "ent-2", "type": "flyer",  "x": 30, "y": 5, "z": -20 }
+    {
+      "id": "ent-walker-01",
+      "type": "walker",
+      "x": 20,
+      "y": 4,
+      "z": -10,
+      "patrol": [
+        {
+          "x": 16,
+          "y": 3,
+          "z": -10
+        },
+        {
+          "x": 24,
+          "y": 3,
+          "z": -10
+        }
+      ]
+    },
+    {
+      "id": "ent-walker-02",
+      "type": "walker",
+      "x": 55,
+      "y": 14,
+      "z": -46,
+      "patrol": [
+        {
+          "x": 52,
+          "y": 13,
+          "z": -46
+        },
+        {
+          "x": 58,
+          "y": 13,
+          "z": -46
+        }
+      ]
+    },
+    {
+      "id": "ent-flyer-01",
+      "type": "flyer",
+      "x": 35,
+      "y": 10,
+      "z": -22
+    },
+    {
+      "id": "ent-flyer-02",
+      "type": "flyer",
+      "x": 58,
+      "y": 18,
+      "z": -50
+    }
   ]
 }
