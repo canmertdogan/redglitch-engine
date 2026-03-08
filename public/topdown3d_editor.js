@@ -1160,9 +1160,10 @@
             capabilities: ['level-editor', 'terrain', 'navmesh', 'entities', 'lights'],
         });
     }
-    if (window.opener?.KetebeProjectState) {
-        projectState = window.opener.KetebeProjectState;
-        const pn = projectState.currentProject;
+    const _ps = window.opener?.KetebeProjectState ?? window.parent?.KetebeProjectState ?? null;
+    if (_ps) {
+        projectState = _ps;
+        const pn = projectState.currentProject ?? projectState.get?.('projectName');
         if (pn) {
             state.projectName = pn;
             document.getElementById('project-label').textContent = pn;
@@ -1215,6 +1216,91 @@
         pushUndo, undo, redo,
         markDirty, setStatus,
         cursorMesh,
+    };
+
+    // URL param auto-load (?project=NAME&level=ID)
+    (async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlProject = urlParams.get('project');
+        const urlLevel   = urlParams.get('level');
+        if (urlProject) {
+            state.projectName = urlProject;
+            const lbl = document.getElementById('project-label');
+            if (lbl) lbl.textContent = urlProject;
+            if (urlLevel) {
+                await loadLevel(urlProject, urlLevel);
+            } else {
+                try {
+                    const r = await fetch('/api/projects');
+                    if (r.ok) {
+                        const projects = await r.json();
+                        const found = projects.find(p => p.name === urlProject);
+                        if (found?.startLevel) await loadLevel(urlProject, found.startLevel);
+                    }
+                } catch(_) {}
+            }
+        }
+    })();
+
+    // Browse functions
+    async function _td3dOpenBrowse() {
+        const modal = document.getElementById('modal-browse');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const list = document.getElementById('browse-list');
+        list.innerHTML = '<div style="color:#666; padding:20px; text-align:center;">Loading...</div>';
+        try {
+            const res = await fetch('/api/projects');
+            if (!res.ok) throw new Error('Failed to fetch projects');
+            const projects = await res.json();
+            const items = [];
+            for (const proj of projects) {
+                try {
+                    const lr = await fetch(`/api/levels3d/${encodeURIComponent(proj.name)}`);
+                    if (!lr.ok) continue;
+                    const { levels } = await lr.json();
+                    const matching = levels.filter(l => l.engineType === 'topdown-3d');
+                    if (!matching.length) continue;
+                    items.push({ proj, levels: matching });
+                } catch(_) {}
+            }
+            if (!items.length) {
+                list.innerHTML = '<div style="color:#666; padding:20px; text-align:center;">No topdown-3d levels found.</div>';
+                return;
+            }
+            list.innerHTML = items.map(({ proj, levels }) => `
+                <div style="margin-bottom:14px;">
+                    <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${proj.name}</div>
+                    ${levels.map(l => `
+                        <div style="padding:8px 12px; background:#150f0a; border:1px solid #222; margin-bottom:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
+                             onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#222'"
+                             onclick="window.Topdown3DEditor.browseLoad('${proj.name.replace(/'/g, "\\'")}', '${l.id}')">
+                            <span style="color:#ccc;">${l.name || l.id}</span>
+                            <span style="color:#555; font-size:0.75rem;">${l.id}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        } catch(e) {
+            list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${e.message}</div>`;
+        }
+    }
+
+    function _td3dCloseBrowse() {
+        const modal = document.getElementById('modal-browse');
+        if (modal) modal.style.display = 'none';
+    }
+
+    async function _td3dBrowseLoad(project, levelId) {
+        _td3dCloseBrowse();
+        await loadLevel(project, levelId);
+    }
+
+    // Public API namespace
+    window.Topdown3DEditor = {
+        openBrowse: _td3dOpenBrowse,
+        closeBrowse: _td3dCloseBrowse,
+        browseLoad: _td3dBrowseLoad,
     };
 
 })();

@@ -1454,6 +1454,7 @@
                 const data = await res.json();
                 const projName = data.name;
                 console.log("[Studio] Active Project:", projName);
+                window._ketebeActiveProject = projName;
                 
                 // Update Status Bar
                 document.getElementById('sb-project-name').innerText = formatProjectName(projName);
@@ -2008,7 +2009,7 @@
                         </div>
                     </div>
                     <div class="window-content">
-                        <iframe id="frame-${tool.id}" src="${tool.src}"></iframe>
+                        <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['topdown3d_studio', 'fps_studio', 'platformer3d_studio']; return (proj3dIds.includes(tool.id) && window._ketebeActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._ketebeActiveProject) : tool.src; })()}"></iframe>
                     </div>
                 `;
                 win.onmousedown = () => focusWindow(winId);

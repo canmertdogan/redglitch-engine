@@ -338,6 +338,8 @@
     <div class="tool-sep"></div>
     <button class="tool-btn" title="Test Play (F5)" onclick="FPSEditor.testPlay()"><i class="fas fa-play"></i></button>
 
+    <div class="tool-sep"></div>
+    <button class="toolbar-btn" onclick="FPSEditor.openBrowse()" title="Browse projects"><i class="fas fa-folder-open"></i> BROWSE</button>
     <div id="tool-coords">X: 0.00 &nbsp; Y: 0.00 &nbsp; Z: 0.00</div>
 </div>
 
@@ -626,5 +628,14 @@
 <script src="fps_editor/EntitySpawner.js"></script>
 <script src="fps_editor/MapExporter.js"></script>
 <script src="fps_editor.js"></script>
+<div id="modal-browse" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="background:#0e0a08; border:2px solid #333; width:560px; max-height:75vh; display:flex; flex-direction:column; font-family:inherit;">
+    <div style="padding:10px 14px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center; color:#ff6b35; font-size:0.85rem; letter-spacing:2px; text-transform:uppercase;">
+      <span>📂 BROWSE PROJECTS</span>
+      <span style="cursor:pointer; color:#666;" onclick="FPSEditor.closeBrowse()">✕</span>
+    </div>
+    <div id="browse-list" style="flex:1; overflow-y:auto; padding:12px;"></div>
+  </div>
+</div>
 </body>
 </html>

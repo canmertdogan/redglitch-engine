@@ -1427,6 +1427,75 @@ const FPSEditor = (() => {
             });
         }
 
+    async function loadFromAPI(project, levelId) {
+        try {
+            const res = await fetch(`/api/levels3d/${encodeURIComponent(project)}/${encodeURIComponent(levelId)}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            _state.project = project;
+            const lbl = document.getElementById('project-label');
+            if (lbl) lbl.textContent = project;
+            const inp = document.getElementById('map-project');
+            if (inp) inp.value = project;
+            _loadMapData(data);
+        } catch(e) {
+            alert(`Load failed: ${e.message}`);
+        }
+    }
+
+    async function openBrowse() {
+        const modal = document.getElementById('modal-browse');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        const list = document.getElementById('browse-list');
+        list.innerHTML = '<div style="color:#666; padding:20px; text-align:center;">Loading...</div>';
+        try {
+            const res = await fetch('/api/projects');
+            if (!res.ok) throw new Error('Failed to fetch projects');
+            const projects = await res.json();
+            const items = [];
+            for (const proj of projects) {
+                try {
+                    const lr = await fetch(`/api/levels3d/${encodeURIComponent(proj.name)}`);
+                    if (!lr.ok) continue;
+                    const { levels } = await lr.json();
+                    const matching = levels.filter(l => l.engineType === 'fps-3d');
+                    if (!matching.length) continue;
+                    items.push({ proj, levels: matching });
+                } catch(_) {}
+            }
+            if (!items.length) {
+                list.innerHTML = '<div style="color:#666; padding:20px; text-align:center;">No fps-3d levels found.</div>';
+                return;
+            }
+            list.innerHTML = items.map(({ proj, levels }) => `
+                <div style="margin-bottom:14px;">
+                    <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${proj.name}</div>
+                    ${levels.map(l => `
+                        <div style="padding:8px 12px; background:#150f0a; border:1px solid #222; margin-bottom:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
+                             onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#222'"
+                             onclick="FPSEditor.browseLoad('${proj.name.replace(/'/g, "\\'")}', '${l.id}')">
+                            <span style="color:#ccc;">${l.name || l.id}</span>
+                            <span style="color:#555; font-size:0.75rem;">${l.id}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        } catch(e) {
+            list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${e.message}</div>`;
+        }
+    }
+
+    function closeBrowse() {
+        const modal = document.getElementById('modal-browse');
+        if (modal) modal.style.display = 'none';
+    }
+
+    async function browseLoad(project, levelId) {
+        closeBrowse();
+        await loadFromAPI(project, levelId);
+    }
+
         // read project from URL param ?project=NAME
         const params  = new URLSearchParams(window.location.search);
         const project = params.get('project') || '';
@@ -1434,6 +1503,22 @@ const FPSEditor = (() => {
             _state.project = project;
             document.getElementById('project-label').textContent = project;
             document.getElementById('map-project').value = project;
+        }
+
+        // auto-load startLevel when ?project= is present
+        if (project) {
+            (async () => {
+                try {
+                    const pres = await fetch('/api/projects');
+                    if (pres.ok) {
+                        const projs = await pres.json();
+                        const found = projs.find(p => p.name === project);
+                        if (found?.startLevel) {
+                            await loadFromAPI(project, found.startLevel);
+                        }
+                    }
+                } catch(_) {}
+            })();
         }
 
         // Init light editor (Phase 39)
@@ -1508,6 +1593,7 @@ const FPSEditor = (() => {
         updateFog, updateLighting,
         randomizePalette, loadPalette, savePalette,
         newMap, openMap, saveMap, saveMapAs, exportMap, importMap, exportGreedyMeshData,
+        loadFromAPI, openBrowse, closeBrowse, browseLoad,
         setTerrainMode, setSculptTool, setBrushRadius, setBrushStrength, generateLowPolyFloor,
         undo, redo, selectAll, deleteSelected,
         testPlay, buildNavmesh, validateMap, clearMap,
