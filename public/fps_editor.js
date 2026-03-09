@@ -106,15 +106,21 @@ const FPSEditor = (() => {
         _c2d.addEventListener('wheel',       _on2dWheel, { passive: false });
         _c2d.addEventListener('contextmenu', e => e.preventDefault());
 
-        // centre the grid
-        _pan2d.x = _c2d.width  / 2;
-        _pan2d.y = _c2d.height / 2;
+        // centre the grid — defer so panel has a real size when visible
+        requestAnimationFrame(() => {
+            _resize2d();
+            _pan2d.x = _c2d.width  / 2;
+            _pan2d.y = _c2d.height / 2;
+        });
     }
 
     function _resize2d() {
         const vp = document.getElementById('viewport-2d');
-        _c2d.width  = vp.clientWidth;
-        _c2d.height = vp.clientHeight - 24;   // minus viewport-label
+        const w = vp.clientWidth;
+        const h = vp.clientHeight - 24;   // minus viewport-label
+        if (w < 1 || h < 1) return;       // panel hidden — skip to avoid 0-size canvas
+        _c2d.width  = w;
+        _c2d.height = h;
     }
 
     function _draw2d() {
@@ -410,7 +416,7 @@ const FPSEditor = (() => {
     let _drag3d = null;
     let _drag3dMoved = 0;   // total pointer movement during current drag (px)
     let _ghostMesh = null;  // wireframe block placed at hover position
-    let _show2d = false;    // whether the 2D floor plan panel is visible
+    let _show2d = true;     // whether the 2D floor plan panel is visible
     let _orbitState = { theta: 0.6, phi: 1.1, radius: 20, target: { x: 0, y: 0, z: 0 } };
     let _canvas3dHovered = false;   // true while pointer is over the 3D viewport
     const _keysDown = new Set();    // tracks WASD/QE while canvas hovered
@@ -708,6 +714,24 @@ const FPSEditor = (() => {
         _setCam3dFromOrbit();
     }
 
+    /** Raycast against the Y=gy flat ground plane, returns world { x, y, z } or null. */
+    function _raycastGroundPlane(e, gy) {
+        if (!_three || typeof THREE === 'undefined') return null;
+        const canvas = document.getElementById('canvas-3d');
+        const rect   = canvas.getBoundingClientRect();
+        const mouse  = new THREE.Vector2(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, _three.camera);
+        const planeY    = (gy || 0) * _state.cellSize;
+        const plane     = new THREE.Plane(new THREE.Vector3(0, 1, 0), -planeY);
+        const target    = new THREE.Vector3();
+        const ok = raycaster.ray.intersectPlane(plane, target);
+        return ok ? target : null;
+    }
+
     function _raycast3dAction(e, mode) {
         if (!_three || typeof THREE === 'undefined') return;
         const canvas = document.getElementById('canvas-3d');
@@ -719,19 +743,27 @@ const FPSEditor = (() => {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(mouse, _three.camera);
         const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
-        if (!hits.length) return;
-        const hit = hits[0];
-        const cs = _state.cellSize;
-        let gx, gy, gz;
+        const cs   = _state.cellSize;
+
         if (mode === 'place') {
-            gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
-            gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
-            gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
+            let gx, gy, gz;
+            if (hits.length) {
+                // Place adjacent to hit face
+                const hit = hits[0];
+                gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
+                gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
+                gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
+            } else {
+                // Fallback: hit the current Y-layer floor plane
+                const pt = _raycastGroundPlane(e, _activeY);
+                if (!pt) return;
+                gx = Math.floor(pt.x / cs);
+                gy = _activeY;
+                gz = Math.floor(pt.z / cs);
+            }
             if (typeof BrushTools === 'undefined') return;
-            const prev = _snapshot();
-            const changes = BrushTools.paintBlock(_state.voxelGrid, gx, gy, gz, _activeColor);
-            const key = `${gx},${gy},${gz}`;
-            if (_state.voxelGrid[key]) _state.voxelGrid[key].type = _activeBlock;
+            const prev    = _snapshot();
+            const changes = BrushTools.pencil(_state.voxelGrid, gx, gy, gz, _activeBlock, _activeColor);
             if (changes.length) {
                 _pushUndo(prev);
                 markDirty();
@@ -739,9 +771,11 @@ const FPSEditor = (() => {
                 _updateBlockCount();
             }
         } else if (mode === 'erase') {
-            gx = Math.floor((hit.point.x - hit.face.normal.x * cs * 0.01) / cs);
-            gy = Math.floor((hit.point.y - hit.face.normal.y * cs * 0.01) / cs);
-            gz = Math.floor((hit.point.z - hit.face.normal.z * cs * 0.01) / cs);
+            if (!hits.length) return;
+            const hit = hits[0];
+            const gx  = Math.floor((hit.point.x - hit.face.normal.x * cs * 0.01) / cs);
+            const gy  = Math.floor((hit.point.y - hit.face.normal.y * cs * 0.01) / cs);
+            const gz  = Math.floor((hit.point.z - hit.face.normal.z * cs * 0.01) / cs);
             const key = `${gx},${gy},${gz}`;
             if (_state.voxelGrid[key]) {
                 const prev = _snapshot();
@@ -779,15 +813,25 @@ const FPSEditor = (() => {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(mouse, _three.camera);
         const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
-        if (!hits.length) {
-            _ghostMesh.visible = false;
-            return;
-        }
-        const hit = hits[0];
         const cs = _state.cellSize;
-        const gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
-        const gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
-        const gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
+        let gx, gy, gz;
+        if (hits.length) {
+            const hit = hits[0];
+            gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
+            gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
+            gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
+        } else {
+            // Fall back to floor plane so ghost always shows where block would go
+            const plane  = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(_activeY * cs));
+            const target = new THREE.Vector3();
+            if (!raycaster.ray.intersectPlane(plane, target)) {
+                _ghostMesh.visible = false;
+                return;
+            }
+            gx = Math.floor(target.x / cs);
+            gy = _activeY;
+            gz = Math.floor(target.z / cs);
+        }
         _ghostMesh.position.set((gx + 0.5) * cs, (gy + 0.5) * cs, (gz + 0.5) * cs);
         _ghostMesh.visible = true;
     }
@@ -1443,6 +1487,12 @@ const FPSEditor = (() => {
         _initKeyboard();
         _initResize();
         _animate();
+
+        // Show 2D floor plan by default so users can draw immediately
+        const vp2d = document.getElementById('viewport-2d');
+        if (vp2d) vp2d.classList.add('viewport-2d-visible');
+        const btn2d = document.getElementById('btn-toggle-2d');
+        if (btn2d) btn2d.classList.add('active');
 
         // Init 256-color palette (Phase 38)
         if (typeof ColorPalette !== 'undefined') {
