@@ -218,6 +218,10 @@
     let terrainMesh = null;
     let lowPolyMesh = null;
     let wireframeMesh = null;
+    let _sculptTool     = 'raise';
+    let _sculptRadius   = 4;
+    let _sculptStrength = 0.06;
+    let _sculpting      = false;
 
     function buildFlatTerrain(w, h, cellSize = 1) {
         if (terrainMesh) { scene.remove(terrainMesh); terrainMesh.geometry.dispose(); }
@@ -466,9 +470,35 @@
         lowPolyMesh = mesh;
     }
 
-    function setSculptTool(tool) { /* placeholder for TriSculptTools wiring */ console.log('[topdown3d] sculpt tool:', tool); }
-    function setBrushRadius(r)   { /* placeholder */ }
-    function setBrushStrength(s) { /* placeholder */ }
+    function setSculptTool(tool) {
+        _sculptTool = tool;
+        document.querySelectorAll('[data-sculpt]').forEach(b =>
+            b.classList.toggle('active', b.dataset.sculpt === tool));
+    }
+    function setBrushRadius(r)   { _sculptRadius = parseFloat(r); }
+    function setBrushStrength(s) { _sculptStrength = parseFloat(s) * 0.01; }
+
+    function _sculptAt(hitPoint) {
+        if (!lowPolyMesh) return;
+        const pos = lowPolyMesh.geometry.attributes.position;
+        const r = _sculptRadius, str = _sculptStrength;
+        const invMat = lowPolyMesh.matrixWorld.clone().invert();
+        const localHit = hitPoint.clone().applyMatrix4(invMat);
+        let changed = false;
+        for (let i = 0; i < pos.count; i++) {
+            const vx = pos.getX(i), vz = pos.getZ(i);
+            const dist = Math.sqrt((vx - localHit.x) ** 2 + (vz - localHit.z) ** 2);
+            if (dist < r) {
+                const falloff = (1 - dist / r) ** 2;
+                let dy = str * falloff;
+                if (_sculptTool === 'lower') dy = -dy;
+                else if (_sculptTool === 'flat') dy = (0 - pos.getY(i)) * falloff * str * 5;
+                pos.setY(i, pos.getY(i) + dy);
+                changed = true;
+            }
+        }
+        if (changed) { pos.needsUpdate = true; lowPolyMesh.geometry.computeVertexNormals(); }
+    }
 
     function buildLevelJSON() {
         const lv = state.level;
@@ -1041,6 +1071,12 @@
     let selRectDiv = document.getElementById('sel-rect');
 
     canvas.addEventListener('mousemove', e => {
+        // Sculpting when in lowpoly mode + dragging
+        if (_sculpting && isDragging && lowPolyMesh) {
+            const pos = groundPos(e);
+            if (pos) _sculptAt(pos);
+            return;
+        }
         const pos = groundPos(e);
         if (pos) {
             const cx = Math.round(pos.x * 2) / 2;
@@ -1075,9 +1111,17 @@
         isDragging = true;
         const rect = canvas.getBoundingClientRect();
         dragStart  = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        // Sculpting when in lowpoly mode
+        const curMode = document.querySelector('[data-tmode].active')?.dataset?.tmode;
+        if (curMode === 'lowpoly' && lowPolyMesh) {
+            _sculpting = true;
+            const pos = groundPos(e);
+            if (pos) _sculptAt(pos);
+        }
     });
 
     canvas.addEventListener('mouseup', e => {
+        _sculpting = false;
         if (e.button !== 0) { isDragging = false; selRectDiv.style.display = 'none'; return; }
         const rect = canvas.getBoundingClientRect();
         const dx = Math.abs(e.clientX - rect.left - (dragStart?.x ?? 0));

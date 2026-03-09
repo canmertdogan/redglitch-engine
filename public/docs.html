@@ -157,29 +157,69 @@
         
         <div class="nav-list">
             <div class="nav-group">
+        <div class="nav-list">
+            <div class="nav-group">
                 <div class="nav-title">INITIATION</div>
                 <a href="#welcome" class="nav-item active"><i class="fas fa-star"></i> Welcome</a>
                 <a href="#getting-started" class="nav-item"><i class="fas fa-play"></i> Quick Start</a>
-                <a href="#project-structure" class="nav-item"><i class="fas fa-folder-tree"></i> Structure</a>
+                <a href="#project-structure" class="nav-item"><i class="fas fa-folder-tree"></i> Project Structure</a>
+                <a href="#ketebe-json" class="nav-item"><i class="fas fa-file-code"></i> ketebe.json</a>
             </div>
 
             <div class="nav-group">
-                <div class="nav-title">WORKBENCH</div>
+                <div class="nav-title">2D WORKBENCH</div>
                 <a href="#tool-dashboard" class="nav-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                <a href="#tool-map" class="nav-item"><i class="fas fa-map"></i> Map Editor</a>
-                <a href="#tool-prefab" class="nav-item"><i class="fas fa-cubes"></i> Prefabs</a>
-                <a href="#tool-script" class="nav-item"><i class="fas fa-code"></i> Scripting</a>
-                <a href="#tool-logic" class="nav-item"><i class="fas fa-project-diagram"></i> Logic Graphs</a>
+                <a href="#tool-map" class="nav-item"><i class="fas fa-map"></i> Level Editor</a>
+                <a href="#tool-iso" class="nav-item"><i class="fas fa-cube"></i> IsoPixel Studio</a>
+                <a href="#tool-platformer" class="nav-item"><i class="fas fa-running"></i> Platformer Studio</a>
+                <a href="#tool-prefab" class="nav-item"><i class="fas fa-cubes"></i> Prefab Builder</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">3D STUDIOS</div>
+                <a href="#3d-fps-editor" class="nav-item"><i class="fas fa-crosshairs"></i> FPS-3D Studio</a>
+                <a href="#3d-topdown-editor" class="nav-item"><i class="fas fa-eye"></i> Topdown-3D Studio</a>
+                <a href="#3d-platformer-editor" class="nav-item"><i class="fas fa-layer-group"></i> Platformer-3D Studio</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">ENTITIES &amp; LOGIC</div>
+                <a href="#tool-npc" class="nav-item"><i class="fas fa-user"></i> NPC Editor</a>
                 <a href="#tool-behavior" class="nav-item"><i class="fas fa-brain"></i> AI Behavior</a>
-                <a href="#tool-ui" class="nav-item"><i class="fas fa-layer-group"></i> UI Designer</a>
+                <a href="#tool-logic" class="nav-item"><i class="fas fa-project-diagram"></i> Logic Graphs</a>
+                <a href="#tool-script" class="nav-item"><i class="fas fa-code"></i> Script Editor</a>
+                <a href="#tool-quests" class="nav-item"><i class="fas fa-scroll"></i> Quest Designer</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">ASSETS</div>
+                <a href="#tool-pixel" class="nav-item"><i class="fas fa-palette"></i> Pixel Art Editor</a>
+                <a href="#tool-daw" class="nav-item"><i class="fas fa-music"></i> Audio Studio</a>
+                <a href="#tool-assets" class="nav-item"><i class="fas fa-archive"></i> Asset Manager</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">3D ENGINE ARCH</div>
+                <a href="#3d-foundation" class="nav-item"><i class="fas fa-server"></i> Foundation &amp; Shared</a>
+                <a href="#3d-topdown-engine" class="nav-item"><i class="fas fa-chess-board"></i> Topdown-3D Engine</a>
+                <a href="#3d-fps-engine" class="nav-item"><i class="fas fa-gun"></i> FPS-3D Engine</a>
+                <a href="#3d-platformer-engine" class="nav-item"><i class="fas fa-gamepad"></i> Platformer-3D Engine</a>
+                <a href="#3d-tileset" class="nav-item"><i class="fas fa-th"></i> Tileset Atlas</a>
+                <a href="#3d-trimesh" class="nav-item"><i class="fas fa-draw-polygon"></i> Tri-mesh / Low-poly</a>
             </div>
 
             <div class="nav-group">
                 <div class="nav-title">SYSTEMS</div>
-                <a href="#sys-input" class="nav-item"><i class="fas fa-gamepad"></i> Input</a>
-                <a href="#sys-audio" class="nav-item"><i class="fas fa-music"></i> Audio</a>
-                <a href="#sys-save" class="nav-item"><i class="fas fa-save"></i> Save/Load</a>
+                <a href="#sys-input" class="nav-item"><i class="fas fa-gamepad"></i> Input System</a>
+                <a href="#sys-audio" class="nav-item"><i class="fas fa-volume-up"></i> Audio System</a>
+                <a href="#sys-save" class="nav-item"><i class="fas fa-save"></i> Save / Load</a>
                 <a href="#sys-campaign" class="nav-item"><i class="fas fa-flag"></i> Campaign</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">SERVER &amp; BUILD</div>
+                <a href="#server-api" class="nav-item"><i class="fas fa-server"></i> Server API</a>
+                <a href="#build-system" class="nav-item"><i class="fas fa-hammer"></i> Build System</a>
             </div>
 
             <div class="nav-group">
@@ -197,217 +237,1063 @@
             <!-- WELCOME -->
             <section id="welcome" class="active">
                 <h1><i class="fas fa-book-open"></i> Welcome to Ketebe</h1>
-                <p><b>Ketebe Engine (v7.0)</b> is a hyper-advanced retro development kit. It fuses the soul of 16-bit classics with modern web architecture.</p>
-                
+                <p><b>Ketebe Engine</b> is a multi-platform game development studio built with Electron. It lets you build 2D and 3D games and export them to Windows desktop, Android, and web — all without leaving the studio.</p>
+
                 <div class="note">
                     <i class="fas fa-info-circle"></i>
-                    <div>
-                        <strong>Philosophy:</strong> "Visual where possible, Code where necessary." Every tool writes plain JSON/JS.
-                    </div>
+                    <div><strong>Philosophy:</strong> "Visual where possible, code where necessary." Every tool writes plain JSON or ES module JS. No proprietary binary formats.</div>
                 </div>
 
-                <h3>Key Features</h3>
+                <h2>Engine Types</h2>
+                <table>
+                    <tr><th>Engine ID</th><th>Style</th><th>Renderer</th><th>Use Case</th></tr>
+                    <tr><td><code>rpg-topdown</code></td><td>2D top-down</td><td>Canvas 2D</td><td>RPG, adventure, Zelda-like</td></tr>
+                    <tr><td><code>platformer-2d</code></td><td>2D side-scroll</td><td>Canvas 2D</td><td>Platformer, action side-scroller</td></tr>
+                    <tr><td><code>iso-pixel</code></td><td>2.5D isometric</td><td>Canvas 2D</td><td>Isometric strategy, city builder</td></tr>
+                    <tr><td><code>topdown-3d</code></td><td>3D top-down</td><td>Three.js WebGL</td><td>RTS, strategy, ARPG</td></tr>
+                    <tr><td><code>fps-3d</code></td><td>3D first-person</td><td>Three.js WebGL</td><td>FPS, dungeon crawler</td></tr>
+                    <tr><td><code>platformer-3d</code></td><td>3D third-person</td><td>Three.js WebGL</td><td>3D platformer, adventure</td></tr>
+                </table>
+
+                <h2>Tech Stack</h2>
                 <ul>
-                    <li><b>Hybrid Core:</b> HTML5 Canvas rendering with classic game loop.</li>
-                    <li><b>Hot Reload:</b> Modify assets and code while the game runs.</li>
-                    <li><b>Universal Build:</b> Export to Windows, Android, and Web instantly.</li>
+                    <li><b>Electron</b> — desktop wrapper and studio shell</li>
+                    <li><b>Express.js</b> — embedded web server for file I/O and API</li>
+                    <li><b>Three.js r158+</b> — WebGL renderer for 3D engines</li>
+                    <li><b>cannon-es</b> — rigid-body physics for 3D engines (pure JS, no WASM)</li>
+                    <li><b>Capacitor</b> — Android packaging</li>
                 </ul>
+
+                <h2>Visual Style</h2>
+                <p>All 3D engines use a <b>low-poly + voxel</b> aesthetic: flat-shaded geometry, palette-driven colors, no photo-realistic textures. Optional Minecraft-style texture atlases (TextureAtlas3D) are supported as an opt-in feature.</p>
             </section>
 
-            <!-- GETTING STARTED -->
+            <!-- QUICK START -->
             <section id="getting-started">
                 <h1><i class="fas fa-bolt"></i> Quick Start</h1>
-                <p>Initiate your first protocol sequence.</p>
 
-                <h2>1. Genesis</h2>
+                <h2>1. Install &amp; Launch</h2>
+                <pre><code>npm install
+npm start          # launches Electron studio</code></pre>
+
+                <h2>2. Create a Project</h2>
                 <ol>
-                    <li>Open <b>Dashboard</b>.</li>
-                    <li>Select <b>NEW PROJECT</b>.</li>
-                    <li>Input designation (Name) and Architecture (Template).</li>
-                    <li>Execute.</li>
+                    <li>Click <b>NEW PROJECT</b> on the dashboard.</li>
+                    <li>Enter a project name and pick an engine type.</li>
+                    <li>A folder is created in <code>projects/YourProjectName/</code>.</li>
                 </ol>
 
-                <h2>2. World Building</h2>
-                <ol>
-                    <li>Launch <b>Map Editor</b>.</li>
-                    <li>Paint terrain on "Ground" layer.</li>
-                    <li>Paint red tiles on "Collision" layer to define barriers.</li>
-                    <li>Save as <code>level1.json</code>.</li>
-                </ol>
+                <h2>3. Open the Right Editor</h2>
+                <p>From the dashboard, select your project and click the editor button. The studio opens the editor matching the <code>engineType</code> in <code>ketebe.json</code>.</p>
 
-                <h2>3. Execution</h2>
-                <p>Return to Dashboard and initiate <b>RUN GAME</b>. Use <span class="key-badge">WASD</span> to traverse.</p>
+                <h2>4. Design &amp; Playtest</h2>
+                <p>Build your level, then click <b>▶ PLAYTEST</b> to launch in a preview window. Logs route back to the editor console automatically.</p>
+
+                <h2>5. Build for Distribution</h2>
+                <pre><code># All platforms
+npm run build:game "ProjectName"
+
+# Electron only
+npm run build:game "ProjectName" electron
+
+# Android only
+npm run build:game "ProjectName" android</code></pre>
+
+                <div class="note">
+                    <i class="fas fa-info-circle"></i>
+                    <div>Output is written to <code>dist/game/</code>. For Electron builds, a packaged <code>.exe</code> is in <code>dist/game/release/</code>.</div>
+                </div>
             </section>
 
             <!-- PROJECT STRUCTURE -->
             <section id="project-structure">
                 <h1><i class="fas fa-folder-open"></i> Project Structure</h1>
-                <p>Standardized directory layout for optimal engine parsing.</p>
-
-                <pre>
-MyProject/
-├── dunyalar/               # Maps (.json)
-│   └── definitions/        # Database files
-│       ├── items.json      # Item stats
-│       └── enemies.json    # Enemy stats
+                <pre><code>MyProject/
+├── ketebe.json            # Engine config (required)
+├── dunyalar/              # Level files
+│   ├── level01.json       # 2D/3D level data
+│   ├── level01.pf3d.json  # Platformer-3D levels
+│   └── definitions/       # Game data tables
+│       ├── items.json
+│       ├── enemies.json
+│       ├── npcs.json
+│       └── campaign.json
 ├── data/
-│   ├── logic/              # Visual Scripts
-│   ├── brains/             # AI Behaviors
-│   └── saves/              # Player Save files
-├── public/
-│   ├── sprite-art/         # Raw images
-│   └── muzikler/           # Audio files
-└── package.json            # Manifest</pre>
+│   ├── logic/             # JS logic scripts
+│   ├── brains/            # AI behavior JSON
+│   └── saves/             # Player saves (runtime)
+├── assets/                # 2D sprites &amp; images
+├── assets3d/              # 3D models (.glb, .vox)
+├── muzikler/              # Audio files (.mp3, .ogg)
+└── sprite-art/            # Raw pixel art source</code></pre>
 
                 <div class="note warn">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <div>
-                        <strong>Warning:</strong> Core directory names are hardcoded into the kernel. Do not rename.
-                    </div>
+                    <div><strong>Warning:</strong> Do not rename <code>dunyalar/</code>, <code>data/</code>, or <code>muzikler/</code> — these paths are hardcoded in the engine.</div>
                 </div>
             </section>
 
-            <!-- MAP EDITOR -->
-            <section id="tool-map">
-                <h1><i class="fas fa-map"></i> Map Editor</h1>
-                <p>The primary spatial construction tool.</p>
+            <!-- KETEBE.JSON -->
+            <section id="ketebe-json">
+                <h1><i class="fas fa-file-code"></i> ketebe.json Reference</h1>
+                <p>Every project has a <code>ketebe.json</code> at its root defining engine type and settings.</p>
 
-                <h3>Layer Stack</h3>
-                <ul>
-                    <li><b>Ground:</b> Base terrain.</li>
-                    <li><b>Decoration:</b> Objects (rocks, flowers).</li>
-                    <li><b>Collision:</b> Physics barriers.</li>
-                    <li><b>Entities:</b> Actor spawn points.</li>
-                    <li><b>Above:</b> Foreground elements (tree tops).</li>
-                </ul>
-            </section>
+                <h2>Example</h2>
+                <pre><code>{
+  "name": "Crystal Peaks",
+  "author": "YourName",
+  "version": "1.0.0",
+  "description": "A 3D platformer adventure",
+  "engineType": "platformer-3d",
+  "startLevel": "level01",
+  "renderQuality": "high",
+  "physics3D": true,
+  "shadowQuality": true
+}</code></pre>
 
-            <!-- PREFAB EDITOR -->
-            <section id="tool-prefab">
-                <h1><i class="fas fa-cubes"></i> Prefab Editor</h1>
-                <p>Blueprints for Game Objects. Define once, spawn anywhere.</p>
-
-                <h3>Components</h3>
+                <h2>All Fields</h2>
                 <table>
-                    <tr><th>ID</th><th>Function</th></tr>
-                    <tr><td><b>Sprite</b></td><td>Visual rendering.</td></tr>
-                    <tr><td><b>Transform</b></td><td>Spatial coordinates & bbox.</td></tr>
-                    <tr><td><b>Stats</b></td><td>HP, Speed, Atk.</td></tr>
-                    <tr><td><b>Brain</b></td><td>AI controller.</td></tr>
+                    <tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
+                    <tr><td><code>name</code></td><td>string</td><td>required</td><td>Project display name</td></tr>
+                    <tr><td><code>author</code></td><td>string</td><td>""</td><td>Creator name</td></tr>
+                    <tr><td><code>version</code></td><td>string</td><td>"1.0.0"</td><td>Semver project version</td></tr>
+                    <tr><td><code>description</code></td><td>string</td><td>""</td><td>Short description</td></tr>
+                    <tr><td><code>engineType</code></td><td>string</td><td>required</td><td>One of: <code>rpg-topdown</code>, <code>platformer-2d</code>, <code>iso-pixel</code>, <code>topdown-3d</code>, <code>fps-3d</code>, <code>platformer-3d</code></td></tr>
+                    <tr><td><code>startLevel</code></td><td>string</td><td>"level01"</td><td>Filename (no extension) of the first level to load</td></tr>
+                    <tr><td><code>renderQuality</code></td><td>string</td><td>"medium"</td><td><code>low</code> / <code>medium</code> / <code>high</code> / <code>ultra</code>. Affects shadows, particles, outline pass</td></tr>
+                    <tr><td><code>physics3D</code></td><td>boolean</td><td>false</td><td>Enable cannon-es physics simulation (3D engines)</td></tr>
+                    <tr><td><code>shadowQuality</code></td><td>boolean</td><td>false</td><td>Enable Three.js shadow maps</td></tr>
+                    <tr><td><code>tilesetEnabled</code></td><td>boolean</td><td>false</td><td>Enable texture atlas (Minecraft-style UV blocks)</td></tr>
+                    <tr><td><code>playerTeam</code></td><td>number</td><td>0</td><td>Team index of the player (topdown-3d)</td></tr>
+                    <tr><td><code>worldW</code> / <code>worldH</code></td><td>number</td><td>24</td><td>Terrain grid dimensions (topdown-3d)</td></tr>
+                    <tr><td><code>maxLives</code></td><td>number</td><td>3</td><td>Player lives (platformer-3d)</td></tr>
+                    <tr><td><code>startCoins</code></td><td>number</td><td>0</td><td>Starting coin count (platformer-3d)</td></tr>
                 </table>
-            </section>
-
-            <!-- SCRIPTING -->
-            <section id="tool-script">
-                <h1><i class="fas fa-code"></i> Scripting</h1>
-                <p>Logic implementation via ES6 Modules.</p>
-
-                <h3>Syntax Example</h3>
-                <pre>
-export async function runLogic(entity, game, ui) {
-    game.log("Script init...");
-    
-    // Move entity
-    await entity.walkTo(100, 200);
-    
-    // Audio trigger
-    game.audio.play('beep');
-    
-    // UI Interaction
-    game.dialogueSystem.start('welcome');
-}</pre>
-            </section>
-
-            <!-- UI DESIGNER -->
-            <section id="tool-ui">
-                <h1><i class="fas fa-layer-group"></i> UI Designer</h1>
-                <p>Interface layout tool for HUDs and Menus.</p>
-                <p>Supports anchoring, scaling, and data-binding to player variables.</p>
             </section>
 
             <!-- DASHBOARD -->
             <section id="tool-dashboard">
                 <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
-                <p>The OS shell. Provides project management, system config, and tool access.</p>
+                <p>The main studio launcher. Opens via <code>npm start</code> or from the Electron window.</p>
+                <ul>
+                    <li><b>Project List</b> — all projects in <code>projects/</code> are listed with engine type badges.</li>
+                    <li><b>New Project</b> — creates folder + <code>ketebe.json</code> + blank level.</li>
+                    <li><b>Open Editor</b> — launches the matching editor iframe for the selected project.</li>
+                    <li><b>Build</b> — triggers <code>npm run build:game</code> for the active project.</li>
+                    <li><b>Playtest</b> — opens the game in a preview window with DevTools linked.</li>
+                </ul>
+            </section>
+
+            <!-- 2D LEVEL EDITOR -->
+            <section id="tool-map">
+                <h1><i class="fas fa-map"></i> Level Editor (2D)</h1>
+                <p>The primary spatial construction tool for <code>rpg-topdown</code> and related 2D engines.</p>
+
+                <h2>Layer Stack</h2>
+                <table>
+                    <tr><th>Layer</th><th>Purpose</th></tr>
+                    <tr><td><b>Ground</b></td><td>Base terrain tiles</td></tr>
+                    <tr><td><b>Decoration</b></td><td>Props, rocks, flowers — no collision</td></tr>
+                    <tr><td><b>Collision</b></td><td>Physics barriers (red = blocked)</td></tr>
+                    <tr><td><b>Entities</b></td><td>Actor spawn points (NPCs, enemies, items)</td></tr>
+                    <tr><td><b>Above</b></td><td>Foreground elements rendered over the player (tree tops, roofs)</td></tr>
+                </table>
+
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <tr><th>Key</th><th>Action</th></tr>
+                    <tr><td><span class="key-badge">B</span></td><td>Brush tool (paint tiles)</td></tr>
+                    <tr><td><span class="key-badge">E</span></td><td>Eraser tool</td></tr>
+                    <tr><td><span class="key-badge">F</span></td><td>Fill / flood-fill</td></tr>
+                    <tr><td><span class="key-badge">S</span></td><td>Selection tool</td></tr>
+                    <tr><td><span class="key-badge">Ctrl+S</span></td><td>Save level</td></tr>
+                    <tr><td><span class="key-badge">Ctrl+Z</span></td><td>Undo</td></tr>
+                    <tr><td><span class="key-badge">G</span></td><td>Toggle grid overlay</td></tr>
+                    <tr><td><span class="key-badge">Tab</span></td><td>Cycle layers</td></tr>
+                </table>
+            </section>
+
+            <!-- ISOPIXEL STUDIO -->
+            <section id="tool-iso">
+                <h1><i class="fas fa-cube"></i> IsoPixel Studio</h1>
+                <p>A specialized isometric 2.5D editor for creating detailed pixel art worlds with depth. Engine type: <code>iso-pixel</code>.</p>
+
+                <h2>Core Features</h2>
+                <ul>
+                    <li><b>Isometric Grid:</b> True isometric perspective — tiles are 2:1 diamonds.</li>
+                    <li><b>Elevation Stacking:</b> Place blocks at different Z heights to build 3D-looking structures.</li>
+                    <li><b>Depth Sorting:</b> Per-tile depth sort using <code>z*(W+H+2)+(x+y)</code> formula — no z-fighting on elevated tiles.</li>
+                    <li><b>Foliage Generator:</b> Procedural grass, trees, and bushes with configurable density.</li>
+                    <li><b>NPC &amp; Path Placement:</b> Isometric character sprites with path-following support.</li>
+                    <li><b>Day/Night Preview:</b> Dynamic lighting preview using palette shift.</li>
+                </ul>
+
+                <h2>Canvas Navigation</h2>
+                <table>
+                    <tr><th>Input</th><th>Action</th></tr>
+                    <tr><td>Mouse Wheel</td><td>Zoom in/out</td></tr>
+                    <tr><td>Middle-click drag</td><td>Pan canvas</td></tr>
+                    <tr><td><span class="key-badge">Space</span> + drag</td><td>Pan canvas</td></tr>
+                    <tr><td>Right-click</td><td>Erase block</td></tr>
+                </table>
+
+                <h2>Open Tool</h2>
+                <p>AI command: <code>[[openTool:iso_studio]]</code></p>
+            </section>
+
+            <!-- PLATFORMER STUDIO 2D -->
+            <section id="tool-platformer">
+                <h1><i class="fas fa-running"></i> Platformer Studio (2D)</h1>
+                <p>High-performance 2D side-scrolling level editor. Engine type: <code>platformer-2d</code>.</p>
+
+                <h2>Smart Generator</h2>
+                <p>The <b>JumpSimulator</b> validates all procedurally generated parkour sections before inserting them, guaranteeing every gap and platform is reachable at the configured jump height.</p>
+
+                <h2>Theme Strategies</h2>
+                <table>
+                    <tr><th>Theme</th><th>Style</th></tr>
+                    <tr><td><code>Flow</code></td><td>Gentle curves, momentum-focused design</td></tr>
+                    <tr><td><code>Spire</code></td><td>Vertical tower ascent</td></tr>
+                    <tr><td><code>Abyss</code></td><td>Descending cave with hazards</td></tr>
+                    <tr><td><code>Gauntlet</code></td><td>Dense obstacle course</td></tr>
+                    <tr><td><code>Clockwork</code></td><td>Mechanical moving platforms</td></tr>
+                </table>
+
+                <h2>Physics Features</h2>
+                <ul>
+                    <li>Native 45° slope support</li>
+                    <li>One-way platforms (pass through from below)</li>
+                    <li>Moving platforms with defined paths</li>
+                    <li>Chunk-based rendering for large levels</li>
+                </ul>
+
+                <h2>AI Command</h2>
+                <p><code>[[openTool:platformer_studio]]</code> or <code>[[generateParkour:theme,difficulty]]</code></p>
+            </section>
+
+            <!-- PREFAB BUILDER -->
+            <section id="tool-prefab">
+                <h1><i class="fas fa-cubes"></i> Prefab Builder</h1>
+                <p>Blueprints for Game Objects. Define a prefab once, spawn it anywhere in any level.</p>
+
+                <h2>Components</h2>
+                <table>
+                    <tr><th>Component</th><th>Function</th></tr>
+                    <tr><td><b>Sprite</b></td><td>Visual rendering — spritesheet, animation frames, scale</td></tr>
+                    <tr><td><b>Transform</b></td><td>Spatial coordinates, bounding box, pivot</td></tr>
+                    <tr><td><b>Stats</b></td><td>HP, Speed, Attack, Defense</td></tr>
+                    <tr><td><b>Brain</b></td><td>AI controller — references a brain JSON from <code>data/brains/</code></td></tr>
+                    <tr><td><b>Collider</b></td><td>Physics shape (rect, circle)</td></tr>
+                    <tr><td><b>Inventory</b></td><td>Item slots and loot table</td></tr>
+                </table>
+            </section>
+
+            <!-- NPC EDITOR -->
+            <section id="tool-npc">
+                <h1><i class="fas fa-user"></i> NPC Editor</h1>
+                <p>Create and configure non-player characters — visuals, dialogue, AI, and spawning.</p>
+                <h2>Key Panels</h2>
+                <ul>
+                    <li><b>Visual Assignment</b> — select sprite, animation set, and palette</li>
+                    <li><b>Dialogue Linking</b> — connect NPCs to conversation trees</li>
+                    <li><b>Stats</b> — HP, speed, faction, aggro radius</li>
+                    <li><b>Spawn Logic</b> — define conditions (time, flag, proximity)</li>
+                    <li><b>Patrol Path</b> — click waypoints on the map</li>
+                </ul>
+                <p>AI command: <code>[[openTool:npc]]</code></p>
+            </section>
+
+            <!-- AI BEHAVIOR -->
+            <section id="tool-behavior">
+                <h1><i class="fas fa-brain"></i> AI Behavior Editor</h1>
+                <p>Design AI "brains" using a behavior tree / state machine editor. Saved to <code>data/brains/*.json</code>.</p>
+
+                <h2>Node Types</h2>
+                <table>
+                    <tr><th>Node</th><th>Description</th></tr>
+                    <tr><td><code>Selector</code></td><td>Tries children in order until one succeeds</td></tr>
+                    <tr><td><code>Sequence</code></td><td>Runs children in order; stops on failure</td></tr>
+                    <tr><td><code>Condition</code></td><td>Tests a game variable or sensor value</td></tr>
+                    <tr><td><code>Action</code></td><td>Performs a game action (move, attack, play_sound)</td></tr>
+                    <tr><td><code>Wait</code></td><td>Delays execution for N seconds</td></tr>
+                    <tr><td><code>Inverter</code></td><td>Flips success/failure of child</td></tr>
+                </table>
+
+                <h2>States (3D engines)</h2>
+                <p>3D enemies use an FSM with these states:</p>
+                <ul>
+                    <li><b>Patrol</b> → cycles through waypoints</li>
+                    <li><b>Alert</b> → heard a sound, searching</li>
+                    <li><b>Chase</b> → player in sight, closing distance</li>
+                    <li><b>Attack</b> → within attack range, firing/striking</li>
+                    <li><b>Cover</b> → seeking a cover point while reloading</li>
+                </ul>
+                <p>AI command: <code>[[openTool:behavior]]</code></p>
             </section>
 
             <!-- LOGIC GRAPHS -->
             <section id="tool-logic">
                 <h1><i class="fas fa-project-diagram"></i> Logic Graphs</h1>
-                <p>Node-based visual scripting for event chains.</p>
-                <p><b>Nodes:</b> Events, Actions, Conditions, Variables.</p>
+                <p>Node-based visual scripting for event chains and game logic.</p>
+
+                <h2>Node Categories</h2>
+                <ul>
+                    <li><b>Events:</b> OnStart, OnCollide, OnTrigger, OnDialogueEnd</li>
+                    <li><b>Actions:</b> LoadLevel, PlaySound, SpawnEntity, ShowDialogue, SetVariable</li>
+                    <li><b>Conditions:</b> HasFlag, CompareVariable, PlayerHP</li>
+                    <li><b>Flow:</b> Delay, Branch, Sequence, Loop</li>
+                </ul>
+                <p>AI command: <code>[[openTool:logic]]</code></p>
             </section>
 
-            <!-- AI BEHAVIOR -->
-            <section id="tool-behavior">
-                <h1><i class="fas fa-brain"></i> AI Behavior</h1>
-                <p>Behavior Tree editor for autonomous agents.</p>
-                <p><b>Structure:</b> Root -> Selector -> Sequence -> Task.</p>
-            </section>
+            <!-- SCRIPT EDITOR -->
+            <section id="tool-script">
+                <h1><i class="fas fa-code"></i> Script Editor</h1>
+                <p>Full-featured Monaco-based code editor for writing game logic in ES6 JavaScript. Scripts live in <code>data/logic/</code> and are served by <code>/api/logic/js/:name</code>.</p>
 
-            <!-- INPUT SYSTEM -->
-            <section id="sys-input">
-                <h1><i class="fas fa-gamepad"></i> Input System</h1>
-                <p>Action-based input abstraction.</p>
+                <h2>Script API</h2>
+                <pre><code>export async function runLogic(entity, game, ui) {
+    game.log('Script running...');
+
+    // Walk entity to a position
+    await entity.walkTo(100, 200);
+
+    // Play a sound
+    game.audio.play('explosion');
+
+    // Show dialogue
+    game.dialogueSystem.start('boss_intro');
+
+    // Read/write flags
+    game.setFlag('boss_defeated', true);
+    if (game.getFlag('key_found')) {
+        game.loadLevel('castle_interior');
+    }
+}</code></pre>
+
+                <h2>Entity API</h2>
                 <table>
-                    <tr><th>Action</th><th>Key</th><th>Pad</th></tr>
-                    <tr><td>Move</td><td><span class="key-badge">WASD</span></td><td>L-Stick</td></tr>
-                    <tr><td>Interact</td><td><span class="key-badge">E</span></td><td>A / X</td></tr>
-                    <tr><td>Sprint</td><td><span class="key-badge">SHIFT</span></td><td>R-Trig</td></tr>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>entity.walkTo(x, y)</code></td><td>Pathfind to position (awaitable)</td></tr>
+                    <tr><td><code>entity.faceDirection(angle)</code></td><td>Rotate entity</td></tr>
+                    <tr><td><code>entity.setAnimation(name)</code></td><td>Play animation</td></tr>
+                    <tr><td><code>entity.stats.hp</code></td><td>Current health</td></tr>
+                    <tr><td><code>entity.inventory.add(itemId)</code></td><td>Add item to inventory</td></tr>
+                </table>
+                <p>AI command: <code>[[openTool:script]]</code></p>
+            </section>
+
+            <!-- QUEST DESIGNER -->
+            <section id="tool-quests">
+                <h1><i class="fas fa-scroll"></i> Quest Designer</h1>
+                <p>Create structured story objectives, rewards, and branching narratives.</p>
+                <h2>Quest Schema</h2>
+                <pre><code>{
+  "id": "find_artifact",
+  "name": "The Lost Artifact",
+  "steps": [
+    { "id": "step1", "desc": "Find the cave", "type": "reach", "target": "cave_entrance" },
+    { "id": "step2", "desc": "Defeat the guardian", "type": "kill", "target": "guardian_boss" },
+    { "id": "step3", "desc": "Retrieve the artifact", "type": "pickup", "item": "ancient_artifact" }
+  ],
+  "rewards": { "xp": 500, "items": ["health_potion"], "flags": ["artifact_found"] },
+  "nextQuest": "return_to_elder"
+}</code></pre>
+                <p>AI command: <code>[[openTool:quests]]</code></p>
+            </section>
+
+            <!-- PIXEL ART EDITOR -->
+            <section id="tool-pixel">
+                <h1><i class="fas fa-palette"></i> Pixel Art Editor</h1>
+                <p>Create and edit pixel art sprites directly in-studio. Saved to <code>assets/sprite-art/</code>.</p>
+                <h2>Features</h2>
+                <ul>
+                    <li><b>Grid Editing:</b> Precision pixel placement with zoom up to 32x</li>
+                    <li><b>Palette Management:</b> Create, save, and share color palettes</li>
+                    <li><b>Sprite Slicing:</b> Prepare spritesheets (frame width/height, spacing)</li>
+                    <li><b>Animation Preview:</b> Play back frame sequences in real time</li>
+                    <li><b>Onion Skinning:</b> Ghost-overlay of adjacent frames for animation</li>
+                    <li><b>Layers:</b> Non-destructive layer stack per sprite</li>
+                </ul>
+                <p>AI command: <code>[[openTool:pixel]]</code></p>
+            </section>
+
+            <!-- AUDIO STUDIO -->
+            <section id="tool-daw">
+                <h1><i class="fas fa-music"></i> Audio Studio (DAW)</h1>
+                <p>Manage sound effects and music. Audio files live in <code>muzikler/</code>.</p>
+                <h2>Features</h2>
+                <ul>
+                    <li><b>Sound Management:</b> Upload and categorize .mp3/.ogg files</li>
+                    <li><b>Loop Points:</b> Define loop-start and loop-end sample positions</li>
+                    <li><b>Mixers:</b> Separate volume channels for BGM, SFX, Voice, Ambient</li>
+                    <li><b>Trigger Preview:</b> Test how audio plays in-engine with reverb zones</li>
+                </ul>
+                <p>AI command: <code>[[openTool:daw]]</code></p>
+            </section>
+
+            <!-- ASSET MANAGER -->
+            <section id="tool-assets">
+                <h1><i class="fas fa-archive"></i> Asset Manager</h1>
+                <p>Central file browser for organizing, previewing, and managing all project resources.</p>
+                <h2>Features</h2>
+                <ul>
+                    <li><b>File Organization:</b> Folder-based management of sprites, sounds, data, and 3D models</li>
+                    <li><b>Dependency Tracking:</b> Maps how files reference each other (which levels use which sprites)</li>
+                    <li><b>Metadata Viewer:</b> File sizes, modification dates, engine-specific tags</li>
+                    <li><b>Preview:</b> Inline sprite preview, audio playback, JSON viewer</li>
+                    <li><b>Import:</b> Drag-and-drop files into the project</li>
+                </ul>
+                <p>AI command: <code>[[openTool:assets]]</code></p>
+            </section>
+
+            <!-- ─────────────────────────────────────────── -->
+            <!-- 3D STUDIO SECTIONS                         -->
+            <!-- ─────────────────────────────────────────── -->
+
+            <!-- FPS-3D STUDIO -->
+            <section id="3d-fps-editor">
+                <h1><i class="fas fa-crosshairs"></i> FPS-3D Studio</h1>
+                <p>Map editor for <code>fps-3d</code> projects. Files: <code>public/fps_editor.html</code> + <code>public/fps_editor.js</code>. Output: <code>projects/&lt;Name&gt;/dunyalar/&lt;level&gt;.json</code>.</p>
+
+                <h2>Viewport Controls</h2>
+                <table>
+                    <tr><th>Input</th><th>Action</th></tr>
+                    <tr><td>RMB drag</td><td>Orbit camera</td></tr>
+                    <tr><td>MMB drag</td><td>Pan camera</td></tr>
+                    <tr><td>Mouse wheel</td><td>Zoom</td></tr>
+                    <tr><td><span class="key-badge">↑ ↓ ← →</span></td><td>Fly camera (always active)</td></tr>
+                    <tr><td><span class="key-badge">WASD</span></td><td>Fly camera (hover canvas)</td></tr>
+                    <tr><td>LMB click</td><td>Place block (voxel mode)</td></tr>
+                    <tr><td>RMB click</td><td>Erase block (voxel mode)</td></tr>
+                    <tr><td>LMB drag (tri-mesh)</td><td>Sculpt terrain</td></tr>
+                </table>
+
+                <h2>Toolbar Buttons</h2>
+                <table>
+                    <tr><th>Button</th><th>Function</th></tr>
+                    <tr><td>📐</td><td>Toggle 2D floor plan overlay panel</td></tr>
+                    <tr><td>🧱 TILESET</td><td>Toggle texture atlas (UV blocks)</td></tr>
+                    <tr><td>📂 BROWSE</td><td>Open project browser to load a level</td></tr>
+                    <tr><td>▶ PLAY</td><td>Launch game preview in new window</td></tr>
+                    <tr><td>💾 SAVE</td><td>Save level to disk</td></tr>
+                </table>
+
+                <h2>Panel: GEO (Geometry)</h2>
+                <p>Switch between <b>VOXEL</b> mode and <b>TRI-MESH</b> mode.</p>
+                <ul>
+                    <li><b>Voxel:</b> Click floor plan or 3D viewport to place/erase blocks. Block types: floor, wall, ceiling, crate, door, window.</li>
+                    <li><b>Tri-mesh:</b> LMB drag on the 3D mesh to sculpt terrain. Sculpt tools: Raise, Lower, Flat. Brush radius and strength sliders.</li>
+                </ul>
+
+                <h2>Panel: ENT (Enemies)</h2>
+                <table>
+                    <tr><th>Archetype</th><th>HP</th><th>Speed</th><th>FOV</th><th>Range</th></tr>
+                    <tr><td>Guard</td><td>80</td><td>2.5 m/s</td><td>110°</td><td>14 m</td></tr>
+                    <tr><td>Sniper</td><td>55</td><td>1.5 m/s</td><td>60°</td><td>22 m</td></tr>
+                    <tr><td>Berserker</td><td>160</td><td>4.5 m/s</td><td>180°</td><td>10 m</td></tr>
+                    <tr><td>Patrol</td><td>60</td><td>2.0 m/s</td><td>90°</td><td>12 m</td></tr>
+                </table>
+
+                <h2>Panel: TRG (Triggers)</h2>
+                <table>
+                    <tr><th>Type</th><th>Subtype</th><th>Effect</th></tr>
+                    <tr><td>pickup</td><td>health</td><td>Restore player HP</td></tr>
+                    <tr><td>pickup</td><td>ammo</td><td>Restore ammo</td></tr>
+                    <tr><td>pickup</td><td>weapon</td><td>Grant weapon</td></tr>
+                    <tr><td>levelEnd</td><td>—</td><td>Load next level</td></tr>
+                </table>
+
+                <h2>Level JSON Schema</h2>
+                <pre><code>{
+  "version": 2,
+  "mapName": "facility_01",
+  "engineType": "fps-3d",
+  "cellSize": 1,
+  "ceilingH": 3,
+  "roomSize": 30,
+  "playerSpawn": { "x": 0, "y": 1.8, "z": 0 },
+  "gltfUrl": "",                       // optional: "assets3d/level.glb"
+  "voxelGrid": { "0,0,0": { "type": "floor", "color": "#888" } },
+  "enemies": [ { "id": "e1", "position": [4,0,-6], "patrol": [...], "properties": {...} } ],
+  "coverPoints": [ { "id": "cp1", "position": [2,0,-3], "normal": [0,0,1] } ],
+  "triggers": [ { "id": "t1", "type": "pickup", "subtype": "health", "position": [0,0.5,0] } ],
+  "lights": [ { "type": "ambient", "color": "#303040", "intensity": 0.5 } ],
+  "trimesh": null
+}</code></pre>
+
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <tr><th>Key</th><th>Action</th></tr>
+                    <tr><td><span class="key-badge">Ctrl+S</span></td><td>Save level</td></tr>
+                    <tr><td><span class="key-badge">Ctrl+Z</span></td><td>Undo</td></tr>
+                    <tr><td><span class="key-badge">W</span></td><td>Toggle wireframe (voxel mode)</td></tr>
+                    <tr><td><span class="key-badge">G</span></td><td>Toggle grid</td></tr>
+                    <tr><td><span class="key-badge">1-5</span></td><td>Switch editor panels</td></tr>
+                    <tr><td><span class="key-badge">F5</span></td><td>Playtest</td></tr>
                 </table>
             </section>
 
-            <!-- AUDIO SYSTEM -->
-            <section id="sys-audio">
-                <h1><i class="fas fa-music"></i> Audio System</h1>
-                <p>Web Audio API wrapper with spatial support.</p>
+            <!-- TOPDOWN-3D STUDIO -->
+            <section id="3d-topdown-editor">
+                <h1><i class="fas fa-eye"></i> Topdown-3D Studio</h1>
+                <p>Map editor for <code>topdown-3d</code> projects. Files: <code>topdown3d_editor.html/js</code>. Output: <code>dunyalar/*.json</code>.</p>
+
+                <h2>Viewport Controls</h2>
+                <table>
+                    <tr><th>Input</th><th>Action</th></tr>
+                    <tr><td>RMB drag</td><td>Orbit camera</td></tr>
+                    <tr><td>MMB drag</td><td>Pan</td></tr>
+                    <tr><td>Mouse wheel</td><td>Zoom</td></tr>
+                    <tr><td><span class="key-badge">Space</span></td><td>Toggle top-down / perspective camera</td></tr>
+                    <tr><td><span class="key-badge">WASD</span></td><td>Fly cam (hover canvas)</td></tr>
+                    <tr><td>LMB (voxel mode)</td><td>Paint block / raise terrain</td></tr>
+                    <tr><td>LMB drag (lowpoly mode)</td><td>Sculpt terrain</td></tr>
+                </table>
+
+                <h2>Panel: Terrain</h2>
+                <table>
+                    <tr><th>Setting</th><th>Description</th></tr>
+                    <tr><td>Mode</td><td><code>voxel</code> — block-style; <code>lowpoly</code> — triangulated height mesh</td></tr>
+                    <tr><td>Grid W / Grid D</td><td>Terrain cell count (X and Z axes)</td></tr>
+                    <tr><td>Cell Size</td><td>World-space width per cell (metres)</td></tr>
+                    <tr><td>Raise / Lower brush</td><td>Left-click = raise, right-click = lower (lowpoly mode)</td></tr>
+                    <tr><td>Face color</td><td>Click palette swatch then paint triangles (lowpoly mode)</td></tr>
+                </table>
+
+                <h2>Entity Types</h2>
+                <table>
+                    <tr><th>Type</th><th>Team</th><th>Notes</th></tr>
+                    <tr><td>hero</td><td>0 (player)</td><td>Controllable; abilities enabled</td></tr>
+                    <tr><td>archer</td><td>1 (enemy)</td><td>Ranged; patrols by default</td></tr>
+                    <tr><td>grunt</td><td>1 (enemy)</td><td>Melee; charges on sight</td></tr>
+                    <tr><td>mage</td><td>1 (enemy)</td><td>Spell-casting; holds position</td></tr>
+                    <tr><td>boss</td><td>1 (enemy)</td><td>High HP; unique abilities</td></tr>
+                </table>
+
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <tr><th>Key</th><th>Action</th></tr>
+                    <tr><td><span class="key-badge">G</span></td><td>Raise terrain brush</td></tr>
+                    <tr><td><span class="key-badge">H</span></td><td>Lower terrain brush</td></tr>
+                    <tr><td><span class="key-badge">E</span></td><td>Entity placement mode</td></tr>
+                    <tr><td><span class="key-badge">Del</span></td><td>Remove selected entity</td></tr>
+                    <tr><td><span class="key-badge">F</span></td><td>Frame camera on selection</td></tr>
+                    <tr><td><span class="key-badge">Ctrl+S</span></td><td>Save level</td></tr>
+                    <tr><td><span class="key-badge">Ctrl+Z / Y</span></td><td>Undo / Redo</td></tr>
+                    <tr><td><span class="key-badge">W</span></td><td>Toggle wireframe</td></tr>
+                    <tr><td><span class="key-badge">N</span></td><td>Toggle NavMesh overlay</td></tr>
+                </table>
+
+                <h2>Level JSON Schema</h2>
+                <pre><code>{
+  "id": "valley_01", "name": "Valley of Ancients", "engineType": "topdown-3d",
+  "terrain": {
+    "mode": "lowpoly", "gridW": 24, "gridD": 24, "cellSize": 2,
+    "elevation": [/* W*D floats */],
+    "faceColors": [/* 2*(W-1)*(D-1) palette indices */],
+    "waterLevel": -0.2,
+    "foliage": [{ "type": "tree", "x": 0, "y": 0, "z": 0, "scale": 1 }]
+  },
+  "entities": [{ "id": "hero_01", "type": "hero", "team": 0, "position": [0,0,0],
+    "stats": { "hp": 100, "maxHp": 100, "speed": 3.5, "damage": 12 }, "abilities": [] }],
+  "lights": [ { "type": "ambient", "color": "#ffffff", "intensity": 0.4 },
+              { "type": "directional", "color": "#fffbe8", "intensity": 0.9,
+                "position": [20,40,20], "castShadow": true } ],
+  "skybox": { "type": "gradient", "topColor": "#3a6ea5", "bottomColor": "#c9e4f0" },
+  "fog": { "type": "linear", "color": "#c9e4f0", "near": 30, "far": 80 },
+  "physics": { "gravity": [0,-9.8,0], "fixedStep": 0.016 },
+  "trimesh": null
+}</code></pre>
+            </section>
+
+            <!-- PLATFORMER-3D STUDIO -->
+            <section id="3d-platformer-editor">
+                <h1><i class="fas fa-layer-group"></i> Platformer-3D Studio</h1>
+                <p>Map editor for <code>platformer-3d</code> projects. Files: <code>platformer3d_editor.html/js</code>. Output: <code>dunyalar/*.pf3d.json</code> (schema v2.0). <b>Auto-saves on every change.</b></p>
+
+                <h2>Viewport Controls</h2>
+                <table>
+                    <tr><th>Input</th><th>Action</th></tr>
+                    <tr><td>RMB drag</td><td>Orbit camera</td></tr>
+                    <tr><td>MMB drag</td><td>Pan</td></tr>
+                    <tr><td>Mouse wheel</td><td>Zoom</td></tr>
+                    <tr><td><span class="key-badge">WASD</span></td><td>Fly cam (hover canvas)</td></tr>
+                    <tr><td><span class="key-badge">Q / E</span></td><td>Fly up / down</td></tr>
+                    <tr><td>LMB click</td><td>Place platform (voxel mode)</td></tr>
+                    <tr><td>LMB drag (tri-mesh)</td><td>Sculpt terrain</td></tr>
+                </table>
+
+                <h2>Platform Palette</h2>
+                <table>
+                    <tr><th>Index</th><th>Name</th><th>Hex</th></tr>
+                    <tr><td>0</td><td>Stone</td><td><code>#808080</code></td></tr>
+                    <tr><td>1</td><td>Wood</td><td><code>#8B5E3C</code></td></tr>
+                    <tr><td>2</td><td>Grass</td><td><code>#4CAF50</code></td></tr>
+                    <tr><td>3</td><td>Lava</td><td><code>#FF5722</code></td></tr>
+                    <tr><td>4</td><td>Water</td><td><code>#2196F3</code></td></tr>
+                    <tr><td>5</td><td>Snow</td><td><code>#E0F0FF</code></td></tr>
+                    <tr><td>6</td><td>Sand</td><td><code>#F5DEB3</code></td></tr>
+                    <tr><td>7</td><td>Metal</td><td><code>#B0BEC5</code></td></tr>
+                </table>
+
+                <h2>Level JSON Schema (v2.0)</h2>
+                <pre><code>{
+  "_schema": "ketebe.platformer3d.level.v2.0",
+  "spawnPoint": [0, 1, 0], "gravity": -20, "ambientColor": "#6080a0",
+  "platforms": [{ "position": [0,0,0], "size": [6,0.5,6], "paletteIndex": 2 }],
+  "collectibles": [{ "id": "c1", "type": "coin", "position": [2,1,0], "value": 10 }],
+  "checkpoints": [{ "id": "cp1", "position": [8,1,0], "radius": 1.5 }],
+  "enemies": [{ "id": "e1", "position": [4,1,0], "patrol": [[2,1,0],[6,1,0]], "speed": 1.5, "hp": 40 }],
+  "goal": { "position": [20, 1, 0], "radius": 2 },
+  "trimesh": null
+}</code></pre>
+            </section>
+
+            <!-- ─────────────────────────────────────────── -->
+            <!-- 3D ENGINE ARCHITECTURE                      -->
+            <!-- ─────────────────────────────────────────── -->
+
+            <!-- FOUNDATION -->
+            <section id="3d-foundation">
+                <h1><i class="fas fa-server"></i> 3D Engine Foundation</h1>
+                <p>All three 3D engines are built on a shared foundation in <code>public/engines/shared/</code>.</p>
+
+                <h2>Shared Module Index</h2>
+                <table>
+                    <tr><th>Module</th><th>Type</th><th>Purpose</th></tr>
+                    <tr><td><code>Engine3DBase.js</code></td><td>ES module</td><td>Base class for all 3D engines; init/update/destroy lifecycle</td></tr>
+                    <tr><td><code>Renderer3D.js</code></td><td>ES module</td><td>WebGLRenderer setup, OutlinePass, cel-quantize post-processing</td></tr>
+                    <tr><td><code>Camera3DController.js</code></td><td>ES module</td><td>Orbit, follow, fly camera modes</td></tr>
+                    <tr><td><code>Physics3DWorld.js</code></td><td>ES module</td><td>cannon-es world wrapper; STATIC/DYNAMIC/KINEMATIC body factory</td></tr>
+                    <tr><td><code>AssetLoader3D.js</code></td><td>ES module</td><td>GLTFLoader, TextureLoader, AudioLoader with cache</td></tr>
+                    <tr><td><code>Input3D.js</code></td><td>ES module</td><td>Keyboard + gamepad action bindings; Pointer Lock API</td></tr>
+                    <tr><td><code>AudioSpatial3D.js</code></td><td>ES module</td><td>Web Audio API spatial sound (PannerNode, HRTF, Doppler)</td></tr>
+                    <tr><td><code>Raycast3D.js</code></td><td>ES module</td><td>Three.js + cannon-es dual raycast for hitscan</td></tr>
+                    <tr><td><code>Engine3DAdapter.js</code></td><td>ES module</td><td>Glue layer: binds Ketebe project API to 3D engine</td></tr>
+                    <tr><td><code>CrossEngineSerializer.js</code></td><td>Global script</td><td>Serializes entities/levels for campaign runtime</td></tr>
+                    <tr><td><code>Save3D.js</code></td><td>ES module</td><td>Schema-versioned save/load; schema = <code>ketebe.3d.save.v3</code></td></tr>
+                    <tr><td><code>VoxelPalette.js</code></td><td>ES module</td><td>8-color shared flat-shaded color palette for all 3D assets</td></tr>
+                    <tr><td><code>LayerMask.js</code></td><td>ES module</td><td>Bit-flag layer constants (TERRAIN=1, ENTITY=2, PROP=4…)</td></tr>
+                    <tr><td><code>CollisionGroups.js</code></td><td>ES module</td><td>cannon-es collision filter groups and masks</td></tr>
+                    <tr><td><code>LowPolyTerrainGen.js</code></td><td>ES module</td><td>Generates BufferGeometry from elevation float arrays</td></tr>
+                    <tr><td><code>TriMeshRenderer3D.js</code></td><td>ES module</td><td>Renders tri-mesh geometry with flat shading</td></tr>
+                    <tr><td><code>HybridScene3D.js</code></td><td>ES module</td><td>Manages co-existing voxel + tri-mesh layers</td></tr>
+                    <tr><td><code>TextureAtlas3D.js</code></td><td>ES module</td><td>Minecraft-style UV atlas for block faces (opt-in)</td></tr>
+                    <tr><td><code>PhysicsDebugRenderer.js</code></td><td>ES module</td><td>Wireframe overlay for cannon-es physics bodies</td></tr>
+                    <tr><td><code>PaletteManager.js</code></td><td>ES module</td><td>Loads/manages per-project <code>.pal.json</code> palette files</td></tr>
+                </table>
+
+                <h2>Rendering Pipeline</h2>
+                <pre><code>WebGLRenderer (Three.js r158+)
+  └─ EffectComposer
+      ├─ RenderPass           (main scene)
+      ├─ OutlinePass          (selected/highlighted objects)
+      └─ ShaderPass           (CelQuantize — posterize to palette colors)</code></pre>
+
+                <h2>Three.js Import Pattern</h2>
+                <p>All shared modules use this dual-import pattern to avoid "multiple instances" warnings when editors load <code>three.min.js</code> as UMD while engines use <code>three.module.js</code> as ES module:</p>
+                <pre><code>import * as _THREE_MOD from '/lib/three/three.module.js';
+const THREE = (typeof globalThis !== 'undefined' &amp;&amp; globalThis.THREE) || _THREE_MOD;</code></pre>
+
+                <h2>MeshPhongMaterial Convention</h2>
+                <div class="note">
+                    <i class="fas fa-info-circle"></i>
+                    <div>All 3D engines use <code>MeshPhongMaterial({ shininess: 0, flatShading: true })</code> — NOT MeshLambertMaterial. Lambert does not support <code>flatShading</code> on Three.js r128+.</div>
+                </div>
+            </section>
+
+            <!-- TOPDOWN-3D ENGINE -->
+            <section id="3d-topdown-engine">
+                <h1><i class="fas fa-chess-board"></i> Topdown-3D Engine</h1>
+                <p>Entry: <code>public/engines/topdown-3d/main.js</code> — Class: <code>TopDownGame</code></p>
+                <p>Camera: Top-down perspective with zoom (scroll wheel) and edge-scroll pan.</p>
+
+                <h2>Systems</h2>
+                <table>
+                    <tr><th>System</th><th>Responsibility</th></tr>
+                    <tr><td><code>TerrainSystem3D</code></td><td>Builds low-poly or voxel mesh from level elevation + palette. Atlas mode disables greedy meshing for per-face UV.</td></tr>
+                    <tr><td><code>UnitSystem3D</code></td><td>Spawns, moves, and animates hero/enemy units</td></tr>
+                    <tr><td><code>FogOfWar3D</code></td><td>Per-cell visibility mask updated each tick — 3 states: hidden, explored, visible</td></tr>
+                    <tr><td><code>PathfinderSystem3D</code></td><td>A* grid pathfinding; NavMesh baked offline in editor</td></tr>
+                    <tr><td><code>AbilitySystem3D</code></td><td>Cooldown-tracked ability activation; targeting: single, area, projectile</td></tr>
+                    <tr><td><code>CameraController3D</code></td><td>Pan, zoom, edge-scroll with smooth lerp</td></tr>
+                    <tr><td><code>MiniMap3D</code></td><td>Canvas-based overhead minimap updated each frame</td></tr>
+                    <tr><td><code>UISystem3D</code></td><td>Health bars, selection rings, action queue HUD</td></tr>
+                    <tr><td><code>VFXSystem3D</code></td><td>Cube/diamond particle emitters for spells and impacts</td></tr>
+                </table>
+
+                <h2>Terrain Palette (VoxelPalette)</h2>
+                <table>
+                    <tr><th>Index</th><th>Name</th><th>Color</th></tr>
+                    <tr><td>0</td><td>Stone</td><td>Gray</td></tr>
+                    <tr><td>1</td><td>Dirt</td><td>Brown</td></tr>
+                    <tr><td>2</td><td>Grass</td><td>Green</td></tr>
+                    <tr><td>3</td><td>Sand</td><td>Tan</td></tr>
+                    <tr><td>4</td><td>Water</td><td>Blue</td></tr>
+                    <tr><td>5</td><td>Snow</td><td>White</td></tr>
+                </table>
+            </section>
+
+            <!-- FPS-3D ENGINE -->
+            <section id="3d-fps-engine">
+                <h1><i class="fas fa-gun"></i> FPS-3D Engine</h1>
+                <p>Entry: <code>public/engines/fps-3d/main.js</code> — Class: <code>FPSGame</code></p>
+                <p>Camera: First-person perspective, Pointer Lock API for mouse look.</p>
+
+                <h2>Systems</h2>
+                <table>
+                    <tr><th>System</th><th>Responsibility</th></tr>
+                    <tr><td><code>FPSController</code></td><td>Pointer-lock mouse look, WASD movement, jump, crouch</td></tr>
+                    <tr><td><code>WorldGeometry</code></td><td>Loads GLTF level or builds procedural box. Priority: <code>gltfUrl</code> &gt; procedural.</td></tr>
+                    <tr><td><code>WeaponSystem</code></td><td>Weapon state machine — idle → aim → fire → reload</td></tr>
+                    <tr><td><code>EnemyAI</code></td><td>Patrol → Alert → Chase → Attack → Cover FSM per enemy</td></tr>
+                    <tr><td><code>DecalSystem</code></td><td>Bullet-hole and impact decal placement on surfaces</td></tr>
+                    <tr><td><code>RaycastSystem</code></td><td>Hitscan via cannon-es + Three.js dual check</td></tr>
+                    <tr><td><code>HUDRenderer3D</code></td><td>Health/ammo overlay on a 2D canvas layer</td></tr>
+                </table>
+
+                <h2>Enemy Property Reference</h2>
+                <table>
+                    <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+                    <tr><td><code>hp / maxHp</code></td><td>number</td><td>Health</td></tr>
+                    <tr><td><code>speed</code></td><td>number</td><td>Movement speed (m/s)</td></tr>
+                    <tr><td><code>viewAngle</code></td><td>number</td><td>Sight cone (degrees)</td></tr>
+                    <tr><td><code>viewRange</code></td><td>number</td><td>Sight distance (m)</td></tr>
+                    <tr><td><code>alertRange</code></td><td>number</td><td>Proximity/hearing detection radius (m)</td></tr>
+                    <tr><td><code>attackRange</code></td><td>number</td><td>Strike distance (m)</td></tr>
+                    <tr><td><code>attackDamage</code></td><td>number</td><td>Damage per hit</td></tr>
+                    <tr><td><code>attackRate</code></td><td>number</td><td>Attacks per second</td></tr>
+                    <tr><td><code>paletteIndex</code></td><td>number</td><td>VoxelPalette index for model tint</td></tr>
+                    <tr><td><code>modelUrl</code></td><td>string</td><td>Optional GLTF override</td></tr>
+                </table>
+
+                <div class="note warn">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div><strong>Android note:</strong> Pointer Lock API is not available in all Capacitor WebViews. The FPS engine falls back to virtual joystick look mode on mobile.</div>
+                </div>
+            </section>
+
+            <!-- PLATFORMER-3D ENGINE -->
+            <section id="3d-platformer-engine">
+                <h1><i class="fas fa-gamepad"></i> Platformer-3D Engine</h1>
+                <p>Entry: <code>public/engines/platformer-3d/main.js</code> — Class: <code>Platformer3DGame</code></p>
+                <p>Camera: Third-person orbit rig locked behind player with collision-aware zoom.</p>
+
+                <h2>Systems</h2>
+                <table>
+                    <tr><th>System</th><th>Responsibility</th></tr>
+                    <tr><td><code>PlatformSpawner</code></td><td>Instantiates platform meshes + cannon-es box bodies from level JSON</td></tr>
+                    <tr><td><code>CollectibleSystem3D</code></td><td>Coin/gem pickup detection; persists collected IDs via Save3D</td></tr>
+                    <tr><td><code>CheckpointSystem3D</code></td><td>Sphere-trigger checkpoints; updates respawn position</td></tr>
+                    <tr><td><code>EnemyPatroller3D</code></td><td>Patrol-path enemies with edge-reversal AI</td></tr>
+                    <tr><td><code>CameraRig3D</code></td><td>Orbit camera with collision zoom</td></tr>
+                    <tr><td><code>HUDPlatformer3D</code></td><td>Coin counter, HP bar, checkpoint indicator</td></tr>
+                </table>
+
+                <h2>Physics Constants</h2>
+                <table>
+                    <tr><th>Constant</th><th>Default</th><th>Description</th></tr>
+                    <tr><td><code>gravity</code></td><td>-20 m/s²</td><td>Vertical acceleration</td></tr>
+                    <tr><td><code>jumpForce</code></td><td>8 m/s</td><td>Initial jump velocity</td></tr>
+                    <tr><td><code>coyoteTime</code></td><td>0.12 s</td><td>Grace window after walking off a ledge</td></tr>
+                    <tr><td><code>maxFallSpeed</code></td><td>-30 m/s</td><td>Terminal velocity</td></tr>
+                </table>
+
+                <h2>Collectible Persistence</h2>
+                <p>Collected IDs are stored in the save via <code>Save3D.js</code>. On level reload, <code>CollectibleSystem3D.markCollected(id)</code> disables the pickup trigger per saved ID. Items still render (cosmetic quirk by design) but cannot be re-collected.</p>
+            </section>
+
+            <!-- TILESET ATLAS SYSTEM -->
+            <section id="3d-tileset">
+                <h1><i class="fas fa-th"></i> Tileset Atlas System</h1>
+                <p>Optional Minecraft-style UV texturing for all 3D engines. Module: <code>public/engines/shared/TextureAtlas3D.js</code>. Purely opt-in — solid palette colors remain the default.</p>
+
+                <h2>Enable / Disable</h2>
                 <ul>
-                    <li><b>Spatial 3D:</b> Position-based panning/volume.</li>
-                    <li><b>Mixer:</b> Grouped volume control (SFX, BGM).</li>
+                    <li>In any 3D editor: click the <b>🧱 TILESET</b> button in the toolbar.</li>
+                    <li>In <code>ketebe.json</code>: set <code>"tilesetEnabled": true</code>.</li>
+                    <li>In code: call <code>engine.enableTileset()</code> / <code>engine.disableTileset()</code>.</li>
+                </ul>
+
+                <h2>TextureAtlas3D API</h2>
+                <pre><code>import TextureAtlas3D from '/engines/shared/TextureAtlas3D.js';
+
+const atlas = new TextureAtlas3D();     // uses procedural default
+await atlas.loadAsync(THREE);
+
+const mat = atlas.getMaterial(THREE);   // one shared MeshStandardMaterial
+atlas.applyBlockUVs(boxGeo, 'GRASS');   // write UV for all 6 faces of a BoxGeometry</code></pre>
+
+                <table>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>loadAsync(THREE)</code></td><td>Load atlas texture + config. Must await before use.</td></tr>
+                    <tr><td><code>getMaterial(THREE)</code></td><td>Returns the cached MeshStandardMaterial for the atlas</td></tr>
+                    <tr><td><code>applyBlockUVs(geo, blockType)</code></td><td>Writes UV attribute on any 6-face BufferGeometry</td></tr>
+                    <tr><td><code>getUVRect(tileIndex)</code></td><td>Returns <code>{u0,v0,u1,v1}</code> for tile at given atlas index</td></tr>
+                    <tr><td><code>generateDefaultCanvas()</code></td><td>Static. Draws 256×256 procedural pixel-art atlas in memory.</td></tr>
+                </table>
+
+                <h2>Default Atlas Tile Layout (row 0, 16×16 tiles)</h2>
+                <table>
+                    <tr><th>Index</th><th>Tile Name</th><th>Index</th><th>Tile Name</th></tr>
+                    <tr><td>0</td><td>grass_top</td><td>8</td><td>snow</td></tr>
+                    <tr><td>1</td><td>grass_side</td><td>9</td><td>ice</td></tr>
+                    <tr><td>2</td><td>dirt</td><td>10</td><td>glass</td></tr>
+                    <tr><td>3</td><td>stone</td><td>11</td><td>brick</td></tr>
+                    <tr><td>4</td><td>sand</td><td>12</td><td>concrete</td></tr>
+                    <tr><td>5</td><td>wood_plank</td><td>13</td><td>metal</td></tr>
+                    <tr><td>6</td><td>water</td><td>14</td><td>crate</td></tr>
+                    <tr><td>7</td><td>lava</td><td>15</td><td>bouncy</td></tr>
+                </table>
+
+                <h2>block_atlas_default.json Format</h2>
+                <pre><code>{
+  "tileSize": 16, "atlasWidth": 256, "atlasHeight": 256,
+  "blocks": {
+    "GRASS": { "top": 0, "side": 1, "bottom": 2 },
+    "DIRT":  { "all": 2 },
+    "STONE": { "all": 3 },
+    "WATER": { "all": 6 }
+  }
+}</code></pre>
+            </section>
+
+            <!-- TRI-MESH / LOW-POLY -->
+            <section id="3d-trimesh">
+                <h1><i class="fas fa-draw-polygon"></i> Tri-mesh / Low-poly Terrain</h1>
+                <p>All three 3D editors support a <b>TRI-MESH</b> layer mode alongside the standard VOXEL mode. Both layers can co-exist in the same level.</p>
+
+                <h2>Mode Toggle</h2>
+                <p>In any 3D editor, open the GEO panel and click <b>VOXEL</b> or <b>TRI-MESH</b>. Switching to TRI-MESH generates a flat low-poly mesh that can be sculpted.</p>
+
+                <h2>Sculpt Tools</h2>
+                <table>
+                    <tr><th>Tool</th><th>LMB Drag Effect</th></tr>
+                    <tr><td>Raise</td><td>Push vertices upward within brush radius</td></tr>
+                    <tr><td>Lower</td><td>Pull vertices downward</td></tr>
+                    <tr><td>Flat</td><td>Flatten vertices toward Y=0</td></tr>
+                </table>
+
+                <p>Brush radius and strength are adjustable via sliders. All sculpt tools use a <b>squared falloff</b> (smooth brush feel).</p>
+
+                <h2>Dual-Layer Export</h2>
+                <p>When saved, levels bundle BOTH layers: raw voxel grid + tri-mesh vertex/color data. At build time, voxel data is baked to GLTF via greedy meshing; tri-mesh geometry is included as-is. Both are merged into a single optimized scene GLTF.</p>
+
+                <h2>LowPolyTerrainGen API</h2>
+                <pre><code>import LowPolyTerrainGen from '/engines/shared/LowPolyTerrainGen.js';
+
+const gen = new LowPolyTerrainGen();
+const elevGrid = new Float32Array(20 * 20); // W*H elevation floats
+const mesh = gen.generate(elevGrid, 20, 20, { tileSize: 1, maxHeight: 4 });
+scene.add(mesh);</code></pre>
+
+                <h2>Related Modules</h2>
+                <ul>
+                    <li><code>TriMeshRenderer3D.js</code> — flat-shaded tri-mesh render pass</li>
+                    <li><code>HybridScene3D.js</code> — manages voxel+trimesh in one Three.js scene</li>
+                    <li><code>LowPolyTerrainGen.js</code> — BufferGeometry generator from elevation data</li>
                 </ul>
             </section>
 
-            <!-- SAVE SYSTEM -->
+            <!-- ─────────────────────────────────────────── -->
+            <!-- SYSTEMS                                      -->
+            <!-- ─────────────────────────────────────────── -->
+
+            <section id="sys-input">
+                <h1><i class="fas fa-gamepad"></i> Input System</h1>
+                <p>Action-based input abstraction supporting keyboard, mouse, and gamepad.</p>
+
+                <h2>Default Action Bindings</h2>
+                <table>
+                    <tr><th>Action</th><th>Keyboard</th><th>Gamepad</th></tr>
+                    <tr><td>Move</td><td><span class="key-badge">WASD</span> / <span class="key-badge">↑↓←→</span></td><td>Left Stick</td></tr>
+                    <tr><td>Interact</td><td><span class="key-badge">E</span></td><td>A / X</td></tr>
+                    <tr><td>Sprint</td><td><span class="key-badge">Shift</span></td><td>Right Trigger</td></tr>
+                    <tr><td>Jump</td><td><span class="key-badge">Space</span></td><td>A / X</td></tr>
+                    <tr><td>Attack</td><td><span class="key-badge">LMB</span></td><td>Right Bumper</td></tr>
+                    <tr><td>Dodge</td><td><span class="key-badge">Q</span></td><td>Left Bumper</td></tr>
+                    <tr><td>Map</td><td><span class="key-badge">M</span></td><td>Select / Back</td></tr>
+                    <tr><td>Pause</td><td><span class="key-badge">Esc</span></td><td>Start</td></tr>
+                </table>
+
+                <h2>FPS Pointer Lock</h2>
+                <p>FPS-3D uses the Pointer Lock API (<code>canvas.requestPointerLock()</code>) for unlimited mouse-look. Click the canvas to lock. <span class="key-badge">Esc</span> releases the lock.</p>
+                <div class="note warn">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>Pointer Lock is unavailable in some Capacitor WebViews. FPS engine falls back to virtual joystick on Android.</div>
+                </div>
+            </section>
+
+            <section id="sys-audio">
+                <h1><i class="fas fa-volume-up"></i> Audio System</h1>
+                <p>Web Audio API wrapper via <code>AudioSpatial3D.js</code> (3D engines) or the 2D engine audio layer.</p>
+                <h2>Features</h2>
+                <ul>
+                    <li><b>Spatial 3D:</b> Position-based panning using PannerNode + HRTF model</li>
+                    <li><b>Reverb Zones:</b> AudioListener + ConvolverNode per zone (caves = long reverb, open = dry)</li>
+                    <li><b>Doppler Effect:</b> Auto-calculated from source velocity vector</li>
+                    <li><b>Mixer Channels:</b> BGM, SFX, Voice, Ambient — independent volume controls</li>
+                    <li><b>Loop Points:</b> Custom loop-start and loop-end sample positions for music</li>
+                </ul>
+                <h2>API</h2>
+                <pre><code>game.audio.play('explosion');             // one-shot SFX
+game.audio.playAt('distant_thunder', x, y, z);  // spatial 3D
+game.audio.playMusic('dungeon_theme');    // loops continuously
+game.audio.setVolume('sfx', 0.8);        // channel volume 0-1
+game.audio.stop('dungeon_theme');         // stop a track</code></pre>
+            </section>
+
             <section id="sys-save">
-                <h1><i class="fas fa-save"></i> Save/Load</h1>
-                <p>Automatic serialization of Player State and Inventory.</p>
-                <p>Storage Path: <code>data/saves/</code></p>
+                <h1><i class="fas fa-save"></i> Save / Load System</h1>
+
+                <h2>3D Save Format (Save3D.js)</h2>
+                <p>Schema: <code>ketebe.3d.save.v3</code>. Saves are stored at <code>/api/save/:username/:slot</code>.</p>
+                <pre><code>import { serializeSavePayload3D, deserializeSavePayload3D,
+         serialize3DPlayerState, isSave3D } from '../shared/Save3D.js';
+
+// Save
+const payload = serializeSavePayload3D('fps-3d', {
+  level: 'facility_01',
+  player: serialize3DPlayerState(playerMesh, { hp: 80, ammo: 30 }),
+  flags: { bossDefeated: true },
+});
+await fetch(`/api/save/player1/slot1`, { method: 'POST', body: JSON.stringify(payload) });
+
+// Load
+const raw = await fetch(`/api/save/player1/slot1`).then(r => r.json());
+const data = deserializeSavePayload3D(raw, 'fps-3d');
+if (!data) throw new Error('Save mismatch or corrupt');</code></pre>
+
+                <h2>Save File Names</h2>
+                <p>Saves are stored as <code>{username}_{slot}.json</code> in the <code>saves/</code> directory (or Electron userData in packaged builds). Profiles stored as <code>profile_{username}.json</code>.</p>
+
+                <h2>2D Engine Saves</h2>
+                <p>2D engines use the same <code>/api/save</code> endpoint but write plain objects without the <code>_schema</code> field. Use <code>isSave2D(raw)</code> to distinguish.</p>
             </section>
 
-            <!-- CAMPAIGN SYSTEM -->
             <section id="sys-campaign">
-                <h1><i class="fas fa-flag"></i> Campaign</h1>
-                <p>Linear progression manager. Links Levels and Cutscenes.</p>
+                <h1><i class="fas fa-flag"></i> Campaign System</h1>
+                <p>Linear progression manager linking levels, cutscenes, and flags. Defined in <code>dunyalar/definitions/campaign.json</code>.</p>
+                <pre><code>{
+  "id": "main_campaign",
+  "levels": ["tutorial", "level_01", "level_02", "boss_arena"],
+  "cutscenes": { "before_boss_arena": "intro_cutscene" },
+  "completionFlags": { "level_01": "level1_done" }
+}</code></pre>
+                <p>The <code>CrossEngineSerializer.js</code> module serializes campaign state between level transitions so quests, flags, and inventory persist.</p>
             </section>
 
-            <!-- CORE API -->
+            <!-- ─────────────────────────────────────────── -->
+            <!-- SERVER & BUILD                              -->
+            <!-- ─────────────────────────────────────────── -->
+
+            <section id="server-api">
+                <h1><i class="fas fa-server"></i> Server API</h1>
+                <p>Express.js server running on port <b>3000</b>. Start with <code>npm run server</code>. Electron embeds it automatically.</p>
+
+                <h2>Endpoints</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/projects</code></td><td>List all projects in <code>projects/</code></td></tr>
+                    <tr><td>GET</td><td><code>/api/projects/current</code></td><td>Active project name</td></tr>
+                    <tr><td>POST</td><td><code>/api/projects/switch</code></td><td>Set active project <code>{ name }</code></td></tr>
+                    <tr><td>GET</td><td><code>/api/levels3d/:project</code></td><td>List all 3D levels for a project</td></tr>
+                    <tr><td>GET</td><td><code>/api/levels3d/:project/:level</code></td><td>Read a 3D level JSON</td></tr>
+                    <tr><td>POST</td><td><code>/api/levels3d/:project/:level</code></td><td>Save a 3D level JSON</td></tr>
+                    <tr><td>GET</td><td><code>/api/save/:username/:slot</code></td><td>Read save slot</td></tr>
+                    <tr><td>POST</td><td><code>/api/save/:username/:slot</code></td><td>Write save slot</td></tr>
+                    <tr><td>GET</td><td><code>/api/logic/:name</code></td><td>Read logic JSON from <code>data/logic/</code></td></tr>
+                    <tr><td>GET</td><td><code>/api/logic/js/:name</code></td><td>Serve JS logic module</td></tr>
+                    <tr><td>GET</td><td><code>/api/brains/list</code></td><td>List available AI brains</td></tr>
+                    <tr><td>GET</td><td><code>/api/project-file</code></td><td>Read a project file by path query param</td></tr>
+                </table>
+
+                <h2>Electron vs Web Mode</h2>
+                <p>The server auto-detects Electron and stores saves in <code>electronApp.getPath('userData')</code>. In non-Electron mode (web server), saves are stored in the local <code>saves/</code> directory.</p>
+            </section>
+
+            <section id="build-system">
+                <h1><i class="fas fa-hammer"></i> Build System</h1>
+
+                <h2>Commands</h2>
+                <table>
+                    <tr><th>Command</th><th>Output</th></tr>
+                    <tr><td><code>npm start</code></td><td>Launch Electron studio (dev mode)</td></tr>
+                    <tr><td><code>npm run server</code></td><td>Web server only on port 3000</td></tr>
+                    <tr><td><code>npm run build:game "Name"</code></td><td>Build for all platforms → <code>dist/game/</code></td></tr>
+                    <tr><td><code>npm run build:game "Name" electron</code></td><td>Electron desktop only</td></tr>
+                    <tr><td><code>npm run build:game "Name" android</code></td><td>Android via Capacitor</td></tr>
+                    <tr><td><code>npm run dist</code></td><td>Package Electron app as installer</td></tr>
+                </table>
+
+                <h2>Output Structure</h2>
+                <pre><code>dist/game/
+├── public/            # Bundled game assets
+│   ├── engines/       # Runtime engines
+│   ├── base_game/     # Sprites, logic
+│   ├── assets3d/      # 3D models (.glb)
+│   └── dunyalar/      # Level files
+├── server.js          # Embedded Express server
+├── main.js            # Electron entry point
+└── release/           # Packaged .exe (Electron)</code></pre>
+
+                <h2>3D Build Steps</h2>
+                <ol>
+                    <li>Copy <code>assets3d/</code> → <code>dist/game/public/assets3d/</code></li>
+                    <li>Copy <code>*.pal.json</code> palette files</li>
+                    <li>Bake <code>.vox</code> → <code>.glb</code> via greedy mesh algorithm</li>
+                    <li>Remove raw <code>.vox</code> sources from dist</li>
+                </ol>
+
+                <h2>Android (Capacitor)</h2>
+                <p><code>capacitor.config.ts</code> points <code>webDir</code> to <code>public/</code>. Build process temporarily swaps the config path, syncs with Capacitor, then restores. Run <code>npx cap open android</code> to open Android Studio after build.</p>
+            </section>
+
+            <!-- ─────────────────────────────────────────── -->
+            <!-- CORE API                                     -->
+            <!-- ─────────────────────────────────────────── -->
+
             <section id="api-game">
                 <h1><i class="fas fa-cogs"></i> Game Object</h1>
-                <p>Global instance: <code>window.game</code></p>
-                <ul>
-                    <li><code>game.loadLevel(id)</code></li>
-                    <li><code>game.playSound(id)</code></li>
-                    <li><code>game.spawnParticle(x, y, ...)</code></li>
-                    <li><code>game.player</code> (The Avatar)</li>
-                </ul>
+                <p>Global instance accessible as <code>window.game</code> from scripts and logic.</p>
+                <h2>Core Methods</h2>
+                <table>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>game.loadLevel(id)</code></td><td>Load a level by filename ID</td></tr>
+                    <tr><td><code>game.playSound(id)</code></td><td>Play a sound effect</td></tr>
+                    <tr><td><code>game.spawnEntity(type, x, y)</code></td><td>Spawn entity at position</td></tr>
+                    <tr><td><code>game.spawnParticle(x, y, ...)</code></td><td>Trigger particle effect</td></tr>
+                    <tr><td><code>game.setFlag(name, value)</code></td><td>Set a game flag</td></tr>
+                    <tr><td><code>game.getFlag(name)</code></td><td>Read a flag value</td></tr>
+                    <tr><td><code>game.log(msg)</code></td><td>Log to in-editor console</td></tr>
+                    <tr><td><code>game.player</code></td><td>Reference to the player entity</td></tr>
+                    <tr><td><code>game.dialogueSystem.start(id)</code></td><td>Start a dialogue tree</td></tr>
+                    <tr><td><code>game.audio.play(id)</code></td><td>Play audio (see Audio System)</td></tr>
+                </table>
             </section>
 
-            <!-- DEBUG CONSOLE -->
             <section id="api-console">
-                <h1><i class="fas fa-terminal"></i> Console</h1>
-                <p>Access via <span class="key-badge">~</span> key.</p>
-                <pre>
-> god        // Invincibility
-> noclip     // Ghost mode
-> speed 500  // Set velocity
-> give potion_hp</pre>
+                <h1><i class="fas fa-terminal"></i> Debug Console</h1>
+                <p>Open via <span class="key-badge">~</span> key in-game, or from <b>View → DevTools</b> in Electron.</p>
+                <h2>Commands</h2>
+                <pre><code>god         // Toggle invincibility
+noclip      // Toggle ghost mode
+speed 500   // Set player speed
+give potion_hp         // Add item to inventory
+teleport 100 0 200     // Warp to coordinates
+fps                    // Toggle FPS counter overlay
+timescale 0.5          // Slow motion (0.1 – 3.0)
+reload                 // Reload current level
+nextlevel              // Skip to next campaign level</code></pre>
+                <h2>Console Routing</h2>
+                <p>When a game is launched from the editor, all <code>console.log</code> output is routed back to the editor's built-in console panel via <code>window.opener.postMessage()</code>. Full async log preservation without circular reference issues.</p>
             </section>
 
         </div>
     </main>
 
     <script>
-        // Navigation Logic
         const links = document.querySelectorAll('.nav-item');
         const sections = document.querySelectorAll('section');
 
@@ -425,7 +1311,6 @@ export async function runLogic(entity, game, ui) {
             });
         });
 
-        // Filter
         window.filterNav = (term) => {
             term = term.toLowerCase();
             links.forEach(l => {
@@ -433,14 +1318,12 @@ export async function runLogic(entity, game, ui) {
                 const visible = txt.includes(term);
                 l.style.display = visible ? 'flex' : 'none';
             });
-            // Hide empty groups
             document.querySelectorAll('.nav-group').forEach(g => {
                 const visChildren = Array.from(g.querySelectorAll('.nav-item')).filter(i => i.style.display !== 'none');
                 g.style.display = visChildren.length > 0 ? 'block' : 'none';
             });
         };
 
-        // Deep linking
         const hash = window.location.hash.substring(1);
         if(hash && document.getElementById(hash)) {
             activateSection(hash);

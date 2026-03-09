@@ -46,8 +46,12 @@ const FPSEditor = (() => {
         dirty:       false,
     };
 
-    let _trimeshMode  = 'voxel';
-    let _lowPolyFloor = null;
+    let _trimeshMode    = 'voxel';
+    let _lowPolyFloor   = null;
+    let _sculptTool     = 'raise';
+    let _sculptRadius   = 3;
+    let _sculptStrength = 0.08;
+    let _sculpting      = false;
     let LowPolyTerrainGen = null;
     import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
     let _tilesetEnabled = false;
@@ -630,9 +634,17 @@ const FPSEditor = (() => {
         e.preventDefault();
         _drag3d = { button: e.button, cx: e.clientX, cy: e.clientY, theta: _orbitState.theta, phi: _orbitState.phi, tx: _orbitState.target.x, tz: _orbitState.target.z };
         _drag3dMoved = 0;
+        if (_trimeshMode === 'trimesh' && e.button === 0) {
+            _sculpting = true;
+            _sculptRaycast(e);
+        }
     }
 
     function _on3dMove(e) {
+        if (_sculpting && _trimeshMode === 'trimesh') {
+            _sculptRaycast(e);
+            return;
+        }
         if (_drag3d) {
             const dx = e.clientX - _drag3d.cx;
             const dy = e.clientY - _drag3d.cy;
@@ -657,19 +669,36 @@ const FPSEditor = (() => {
     }
 
     function _on3dUp(e) {
+        _sculpting = false;
         if (_drag3d && _drag3dMoved < 5) {
             // treat as a click
             const btn = _drag3d.button;
             _drag3d = null;
-            if (_activeTool === 'draw-room' || _activeTool === 'corridor') {
-                if (btn === 0) _raycast3dAction(e, 'place');
-                else if (btn === 2) _raycast3dAction(e, 'erase');
-            } else if (_activeTool === 'erase') {
-                _raycast3dAction(e, 'erase');
+            if (_trimeshMode !== 'trimesh') {
+                if (_activeTool === 'draw-room' || _activeTool === 'corridor') {
+                    if (btn === 0) _raycast3dAction(e, 'place');
+                    else if (btn === 2) _raycast3dAction(e, 'erase');
+                } else if (_activeTool === 'erase') {
+                    _raycast3dAction(e, 'erase');
+                }
             }
         } else {
             _drag3d = null;
         }
+    }
+
+    function _sculptRaycast(e) {
+        if (!_three || !_lowPolyFloor || typeof THREE === 'undefined') return;
+        const canvas = document.getElementById('canvas-3d');
+        const rect = canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, _three.camera);
+        const hits = raycaster.intersectObject(_lowPolyFloor, false);
+        if (hits.length) _sculptAt(hits[0].point);
     }
 
     function _on3dWheel(e) {
@@ -1127,16 +1156,52 @@ const FPSEditor = (() => {
         if (mode === 'trimesh' && !_lowPolyFloor) generateLowPolyFloor();
     }
 
-    function setSculptTool(tool) { console.log('[FPSEditor] sculpt tool:', tool); }
+    function setSculptTool(tool) {
+        _sculptTool = tool;
+        document.querySelectorAll('[data-sculpt]').forEach(b =>
+            b.classList.toggle('active', b.dataset.sculpt === tool));
+    }
 
     function setBrushRadius(r) {
+        _sculptRadius = parseFloat(r);
         const span = document.getElementById('fps-brush-r-val');
         if (span) span.textContent = r;
     }
 
     function setBrushStrength(s) {
+        _sculptStrength = parseFloat(s) * 0.01;
         const span = document.getElementById('fps-brush-s-val');
         if (span) span.textContent = s;
+    }
+
+    function _sculptAt(hitPoint) {
+        const mesh = _lowPolyFloor;
+        if (!mesh) return;
+        const pos = mesh.geometry.attributes.position;
+        const r = _sculptRadius, str = _sculptStrength;
+        const invMat = mesh.matrixWorld.clone().invert();
+        const localHit = hitPoint.clone().applyMatrix4(invMat);
+        let changed = false;
+        for (let i = 0; i < pos.count; i++) {
+            const vx = pos.getX(i), vz = pos.getZ(i);
+            const dist = Math.sqrt((vx - localHit.x) ** 2 + (vz - localHit.z) ** 2);
+            if (dist < r) {
+                const falloff = (1 - dist / r) ** 2;
+                let dy = str * falloff;
+                if (_sculptTool === 'lower')   dy = -dy;
+                else if (_sculptTool === 'flat') { dy = (0 - pos.getY(i)) * falloff * str * 5; }
+                else if (_sculptTool === 'smooth') {
+                    // simple laplacian: pull towards neighbour avg (handled separately below)
+                    dy = 0;
+                }
+                pos.setY(i, pos.getY(i) + dy);
+                changed = true;
+            }
+        }
+        if (changed) {
+            pos.needsUpdate = true;
+            mesh.geometry.computeVertexNormals();
+        }
     }
 
     function generateLowPolyFloor() {

@@ -70,6 +70,10 @@ const Pf3dEditor = (() => {
 
     let _trimeshMode      = 'voxel';
     let _lowPolyTerrain   = null;
+    let _sculptTool       = 'raise';
+    let _sculptRadius     = 3;
+    let _sculptStrength   = 0.08;
+    let _sculpting        = false;
     let LowPolyTerrainGen = null;
     import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
 
@@ -274,6 +278,13 @@ const Pf3dEditor = (() => {
         e.preventDefault();
         _drag = { active: true, button: e.button, startX: e.clientX, startY: e.clientY, curX: e.clientX, curY: e.clientY };
 
+        // Sculpting in trimesh mode
+        if (_trimeshMode === 'trimesh' && e.button === 0) {
+            _sculpting = true;
+            _sculptRaycast(e);
+            return;
+        }
+
         // Check gizmo hit on LMB for move/rotate/scale tools
         if (e.button === 0 && ['move','rotate','scale'].includes(_activeTool) && typeof BlockTools !== 'undefined') {
             const canvas = document.getElementById('viewport-canvas');
@@ -287,6 +298,12 @@ const Pf3dEditor = (() => {
     }
 
     function _onMouseMove(e) {
+        // Sculpting in trimesh mode
+        if (_sculpting && _trimeshMode === 'trimesh') {
+            _sculptRaycast(e);
+            return;
+        }
+
         const canvas = document.getElementById('viewport-canvas');
         const rect   = canvas.getBoundingClientRect();
         const nx     = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
@@ -358,6 +375,7 @@ const Pf3dEditor = (() => {
     }
 
     function _onMouseUp(e) {
+        _sculpting = false;
         if (!_drag.active) { _drag.active = false; return; }
         const moved = Math.abs(e.clientX - _drag.startX) + Math.abs(e.clientY - _drag.startY);
 
@@ -1254,16 +1272,57 @@ const Pf3dEditor = (() => {
         if (mode === 'trimesh' && !_lowPolyTerrain) generateLowPolyTerrain();
     }
 
-    function setSculptTool(tool) { console.log('[Platformer3DEditor] sculpt tool:', tool); }
+    function setSculptTool(tool) {
+        _sculptTool = tool;
+        document.querySelectorAll('[data-sculpt]').forEach(b =>
+            b.classList.toggle('active', b.dataset.sculpt === tool));
+    }
 
     function setBrushRadius(r) {
+        _sculptRadius = parseFloat(r);
         const span = document.getElementById('p3d-brush-r-val');
         if (span) span.textContent = r;
     }
 
     function setBrushStrength(s) {
+        _sculptStrength = parseFloat(s) * 0.01;
         const span = document.getElementById('p3d-brush-s-val');
         if (span) span.textContent = s;
+    }
+
+    function _sculptAt(hitPoint) {
+        const mesh = _lowPolyTerrain;
+        if (!mesh) return;
+        const pos = mesh.geometry.attributes.position;
+        const r = _sculptRadius, str = _sculptStrength;
+        const invMat = mesh.matrixWorld.clone().invert();
+        const localHit = hitPoint.clone().applyMatrix4(invMat);
+        let changed = false;
+        for (let i = 0; i < pos.count; i++) {
+            const vx = pos.getX(i), vz = pos.getZ(i);
+            const dist = Math.sqrt((vx - localHit.x) ** 2 + (vz - localHit.z) ** 2);
+            if (dist < r) {
+                const falloff = (1 - dist / r) ** 2;
+                let dy = str * falloff;
+                if (_sculptTool === 'lower') dy = -dy;
+                else if (_sculptTool === 'flat') dy = (0 - pos.getY(i)) * falloff * str * 5;
+                pos.setY(i, pos.getY(i) + dy);
+                changed = true;
+            }
+        }
+        if (changed) { pos.needsUpdate = true; mesh.geometry.computeVertexNormals(); }
+    }
+
+    function _sculptRaycast(e) {
+        if (!_lowPolyTerrain || typeof THREE === 'undefined') return;
+        const canvas = document.getElementById('viewport-canvas');
+        const rect = canvas.getBoundingClientRect();
+        const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        const ray = new THREE.Raycaster();
+        ray.setFromCamera({ x: nx, y: ny }, _camera);
+        const hits = ray.intersectObject(_lowPolyTerrain, false);
+        if (hits.length) _sculptAt(hits[0].point);
     }
 
     function generateLowPolyTerrain() {
