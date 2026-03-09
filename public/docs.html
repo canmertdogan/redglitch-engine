@@ -157,8 +157,6 @@
         
         <div class="nav-list">
             <div class="nav-group">
-        <div class="nav-list">
-            <div class="nav-group">
                 <div class="nav-title">INITIATION</div>
                 <a href="#welcome" class="nav-item active"><i class="fas fa-star"></i> Welcome</a>
                 <a href="#getting-started" class="nav-item"><i class="fas fa-play"></i> Quick Start</a>
@@ -185,17 +183,35 @@
             <div class="nav-group">
                 <div class="nav-title">ENTITIES &amp; LOGIC</div>
                 <a href="#tool-npc" class="nav-item"><i class="fas fa-user"></i> NPC Editor</a>
+                <a href="#tool-enemy" class="nav-item"><i class="fas fa-skull"></i> Villain Studio</a>
+                <a href="#tool-character" class="nav-item"><i class="fas fa-user-shield"></i> Hero Studio</a>
                 <a href="#tool-behavior" class="nav-item"><i class="fas fa-brain"></i> AI Behavior</a>
+                <a href="#tool-dialogue" class="nav-item"><i class="fas fa-comments"></i> Dialogue Studio</a>
                 <a href="#tool-logic" class="nav-item"><i class="fas fa-project-diagram"></i> Logic Graphs</a>
                 <a href="#tool-script" class="nav-item"><i class="fas fa-code"></i> Script Editor</a>
                 <a href="#tool-quests" class="nav-item"><i class="fas fa-scroll"></i> Quest Designer</a>
+                <a href="#tool-achievements" class="nav-item"><i class="fas fa-trophy"></i> Achievement Studio</a>
+                <a href="#tool-campaign" class="nav-item"><i class="fas fa-map-signs"></i> Campaign Studio</a>
+                <a href="#tool-cutscene" class="nav-item"><i class="fas fa-film"></i> Cutscene Studio</a>
+                <a href="#tool-skills" class="nav-item"><i class="fas fa-bolt"></i> Skill Studio</a>
+                <a href="#tool-items" class="nav-item"><i class="fas fa-gem"></i> Item Studio</a>
+                <a href="#tool-database" class="nav-item"><i class="fas fa-table"></i> Data Tables</a>
             </div>
 
             <div class="nav-group">
                 <div class="nav-title">ASSETS</div>
                 <a href="#tool-pixel" class="nav-item"><i class="fas fa-palette"></i> Pixel Art Editor</a>
+                <a href="#tool-fx" class="nav-item"><i class="fas fa-magic"></i> FX Master Pro</a>
+                <a href="#tool-shader" class="nav-item"><i class="fas fa-adjust"></i> Shader Lab</a>
                 <a href="#tool-daw" class="nav-item"><i class="fas fa-music"></i> Audio Studio</a>
                 <a href="#tool-assets" class="nav-item"><i class="fas fa-archive"></i> Asset Manager</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">UI &amp; WORLD</div>
+                <a href="#tool-menu" class="nav-item"><i class="fas fa-window-restore"></i> UI Studio</a>
+                <a href="#tool-localization" class="nav-item"><i class="fas fa-globe"></i> Localization</a>
+                <a href="#tool-input" class="nav-item"><i class="fas fa-keyboard"></i> Input Bindings</a>
             </div>
 
             <div class="nav-group">
@@ -1288,6 +1304,428 @@ reload                 // Reload current level
 nextlevel              // Skip to next campaign level</code></pre>
                 <h2>Console Routing</h2>
                 <p>When a game is launched from the editor, all <code>console.log</code> output is routed back to the editor's built-in console panel via <code>window.opener.postMessage()</code>. Full async log preservation without circular reference issues.</p>
+            </section>
+
+            <!-- ======================================================= -->
+            <!--  ENTITIES & LOGIC TOOLS                                 -->
+            <!-- ======================================================= -->
+
+            <section id="tool-enemy">
+                <h1><i class="fas fa-skull"></i> Villain Studio (Enemy Editor)</h1>
+                <p><b>File:</b> <code>enemy_editor.html / enemy_editor.js</code></p>
+                <p>Villain Studio is the enemy data authoring tool. Define any hostile character — hit points, movement speed, attack patterns, drop tables, animations, and which AI brain drives it.</p>
+                <h2>Interface Panels</h2>
+                <table>
+                    <tr><th>Panel</th><th>Purpose</th></tr>
+                    <tr><td>Enemy List (left)</td><td>All enemies in the project. Click to select/edit. <kbd>+</kbd> adds a new entry.</td></tr>
+                    <tr><td>Properties (center)</td><td>Core fields: ID, display name, HP, speed, attack damage, drop table, brain assignment.</td></tr>
+                    <tr><td>Animation Preview (right)</td><td>Live canvas showing the sprite animations for the selected enemy (idle, walk, attack, hurt, death).</td></tr>
+                    <tr><td>Behavior Modal</td><td>Assign a Brain (AI logic file) from the project's <code>data/brains/</code> directory.</td></tr>
+                </table>
+                <h2>Enemy Data Fields</h2>
+                <pre><code>{
+  "id": "goblin_warrior",
+  "name": "Goblin Warrior",
+  "hp": 40,
+  "speed": 80,
+  "attackDamage": 8,
+  "attackRange": 32,
+  "detectionRange": 200,
+  "brain": "patrol_attack",
+  "drops": [{"item": "gold_coin", "chance": 0.5}],
+  "sprites": {
+    "idle":   "goblin_idle",
+    "walk":   "goblin_walk",
+    "attack": "goblin_attack",
+    "hurt":   "goblin_hurt",
+    "death":  "goblin_death"
+  }
+}</code></pre>
+                <h2>EventBus Integration</h2>
+                <p>Listens on <code>skill:updated</code> and <code>behavior:updated</code> — when skills or brains are edited in other tools, the enemy preview automatically updates. Broadcasts <code>enemy:updated</code> on save so NPC Editor and Campaign Studio stay in sync.</p>
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <tr><th>Key</th><th>Action</th></tr>
+                    <tr><td>Ctrl+S</td><td>Save to server</td></tr>
+                    <tr><td>Ctrl+Z</td><td>Undo last change</td></tr>
+                    <tr><td>Del</td><td>Delete selected enemy</td></tr>
+                </table>
+            </section>
+
+            <section id="tool-character">
+                <h1><i class="fas fa-user-shield"></i> Hero Studio (Character Editor)</h1>
+                <p><b>File:</b> <code>character_editor.html / character_editor.js</code></p>
+                <p>Hero Studio defines the player character template — base stats, sprite composition (head + body layers), physics config (jump force, segment count), and a live simulation panel.</p>
+                <h2>Configuration Sections</h2>
+                <table>
+                    <tr><th>Section</th><th>Fields</th></tr>
+                    <tr><td>Identity</td><td>Character name, class, description</td></tr>
+                    <tr><td>Attributes</td><td>HP, Stamina, Mana, Speed, Jump Force</td></tr>
+                    <tr><td>Sprites</td><td>Head sprite key, Body sprite key, Glow color</td></tr>
+                    <tr><td>Physics</td><td>Collision segments, spacing; used for ragdoll/chain physics on the character body</td></tr>
+                </table>
+                <h2>Panels</h2>
+                <ul>
+                    <li><b>SECTIONS</b> sidebar — switches between Identity / Attributes / Sprites / Physics panes</li>
+                    <li><b>CONFIGURATION</b> — the active form for editing fields</li>
+                    <li><b>SIMULATION</b> — live canvas renders the character with physics, showing glow and sprite layering in real time</li>
+                </ul>
+                <h2>Output</h2>
+                <p>Saves to <code>data/character.json</code> in the project. The RPG-topdown engine loads this at game start to initialize the player entity.</p>
+            </section>
+
+            <section id="tool-dialogue">
+                <h1><i class="fas fa-comments"></i> Dialogue Studio v3.0</h1>
+                <p><b>File:</b> <code>dialogue_editor.html / dialogue_editor.js</code></p>
+                <p>Dialogue Studio is a node-based conversation authoring tool. Create branching dialogue trees used by NPCs during runtime. Each script maps to a JSON conversation file loaded by the RPG engine's <b>Dialogue System</b>.</p>
+                <h2>Interface Layout</h2>
+                <table>
+                    <tr><th>Panel</th><th>Description</th></tr>
+                    <tr><td>SCRIPTS (left sidebar)</td><td>List of all conversation scripts in the project. Each has a unique <code>SCRIPT_ID</code>.</td></tr>
+                    <tr><td>ACTORS (left bottom)</td><td>Character roster — defines which actors can speak in dialogues. Synced from NPC Editor via <kbd>Sync Actors</kbd>.</td></tr>
+                    <tr><td>Center Canvas</td><td>Node graph. Drag nodes to rearrange. Each node represents one line of dialogue.</td></tr>
+                    <tr><td>Node Inspector (right)</td><td>Edit the selected node: speaker, text, conditions, choices, events to fire.</td></tr>
+                </table>
+                <h2>Node Types</h2>
+                <table>
+                    <tr><th>Type</th><th>Purpose</th></tr>
+                    <tr><td>SPEAK</td><td>NPC or player speaks a line. Text supports <code>{name}</code> variable substitution.</td></tr>
+                    <tr><td>CHOICE</td><td>Presents player options. Each branch connects to a different child node.</td></tr>
+                    <tr><td>EVENT</td><td>Fires a game logic event (e.g., <code>give_item</code>, <code>start_quest</code>) without displaying text.</td></tr>
+                    <tr><td>CONDITION</td><td>Branches based on a game variable or flag (e.g., <code>hasItem("key")</code>).</td></tr>
+                    <tr><td>END</td><td>Terminates the conversation. Can set a follow-up script to auto-play.</td></tr>
+                </table>
+                <h2>Script Data Format</h2>
+                <pre><code>{
+  "id": "INNKEEPER_WELCOME",
+  "actors": ["innkeeper_bram"],
+  "nodes": [
+    { "id": "n1", "type": "SPEAK", "actor": "innkeeper_bram",
+      "text": "Welcome, traveler! Need a room?", "next": "n2" },
+    { "id": "n2", "type": "CHOICE", "choices": [
+        { "text": "Yes, one night.",  "next": "n3" },
+        { "text": "Just passing through.", "next": "n4" }
+    ]},
+    { "id": "n3", "type": "EVENT", "event": "charge_gold", "amount": 10, "next": "n5" },
+    { "id": "n4", "type": "END" },
+    { "id": "n5", "type": "SPEAK", "actor": "innkeeper_bram",
+      "text": "Excellent! Rest well.", "next": null }
+  ]
+}</code></pre>
+                <h2>Localization</h2>
+                <p>All dialogue text is automatically extracted by the Localization Studio when you click <b>Sync Dialogues</b>. Keys are generated as <code>DIALOGUE_{SCRIPT_ID}_{NODE_ID}</code>.</p>
+            </section>
+
+            <section id="tool-achievements">
+                <h1><i class="fas fa-trophy"></i> Achievement Studio Pro v2.1</h1>
+                <p><b>File:</b> <code>achievements_editor.html / achievements_editor.js</code></p>
+                <p>Define trophies and milestones awarded during gameplay. Each achievement has unlock conditions evaluated by the runtime against quest flags, stat thresholds, or custom logic events.</p>
+                <h2>Interface</h2>
+                <table>
+                    <tr><th>Panel</th><th>Description</th></tr>
+                    <tr><td>DATABASE (left)</td><td>All achievements in the project. Color-coded by rarity.</td></tr>
+                    <tr><td>Achievement Properties (center)</td><td>All fields for the selected achievement (see table below).</td></tr>
+                    <tr><td>Preview (top right)</td><td>Live preview of the achievement popup as it will appear in-game.</td></tr>
+                </table>
+                <h2>Achievement Fields</h2>
+                <table>
+                    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+                    <tr><td>Unique ID</td><td>string</td><td>Machine-readable key, e.g. <code>first_kill</code></td></tr>
+                    <tr><td>Display Title</td><td>string</td><td>Shown in achievement popup and menu</td></tr>
+                    <tr><td>Description</td><td>string</td><td>Short text explaining how to unlock</td></tr>
+                    <tr><td>Icon</td><td>sprite key</td><td>32×32 icon displayed in popup and achievement list</td></tr>
+                    <tr><td>Rarity</td><td>enum</td><td>COMMON / UNCOMMON / RARE / LEGENDARY</td></tr>
+                    <tr><td>Points</td><td>number</td><td>Gamerscore-style points (optional)</td></tr>
+                    <tr><td>Condition</td><td>expression</td><td>Logic expression evaluated at runtime, e.g. <code>questComplete("main_quest")</code></td></tr>
+                    <tr><td>Secret</td><td>bool</td><td>Hidden from achievement list until unlocked</td></tr>
+                </table>
+                <h2>Runtime Integration</h2>
+                <p>The RPG-topdown engine evaluates all achievement conditions on quest completion and at level transitions. When unlocked, a toast popup appears and the event <code>achievement:unlocked</code> fires via EventBus.</p>
+            </section>
+
+            <section id="tool-skills">
+                <h1><i class="fas fa-bolt"></i> Skill Studio</h1>
+                <p><b>File:</b> <code>skill_editor.html / skill_editor.js</code></p>
+                <p>Define active and passive abilities for the player and NPCs. Each skill specifies costs, cooldown, range, sprite, linked FX effect, and the logic event triggered on use.</p>
+                <h2>Interface</h2>
+                <table>
+                    <tr><th>Panel</th><th>Description</th></tr>
+                    <tr><td>SPELLBOOK (left)</td><td>All skills in the project. Click to edit.</td></tr>
+                    <tr><td>Skill Form (center)</td><td>Identity, cost/cooldown, range/damage, sprite, linked FX.</td></tr>
+                    <tr><td>Preview (right)</td><td>Animated canvas showing the skill icon and FX loop.</td></tr>
+                </table>
+                <h2>Skill Data Fields</h2>
+                <pre><code>{
+  "id": "fireball",
+  "name": "Fireball",
+  "type": "active",          // active | passive | toggle
+  "manaCost": 20,
+  "cooldown": 1.5,           // seconds
+  "damage": 35,
+  "range": 300,
+  "aoe": 64,                 // area-of-effect radius px (0 = none)
+  "sprite": "icon_fireball",
+  "fx": "explosion_medium",  // links to FX Master effect
+  "onUse": "skill_fireball"  // logic event to fire
+}</code></pre>
+                <h2>EventBus Integration</h2>
+                <p>Listens on <code>fx:updated</code> — when an FX effect is edited, the skill preview automatically refreshes. Broadcasts <code>skill:updated</code> on save so Enemy Editor and Item Editor can react.</p>
+            </section>
+
+            <section id="tool-items">
+                <h1><i class="fas fa-gem"></i> Item Studio</h1>
+                <p><b>File:</b> <code>item_editor.html / item_editor.js</code></p>
+                <p>Create items for the game's inventory system — consumables, equipment, keys, quest items, and more. Define stats, stack sizes, sprites, and use-events.</p>
+                <h2>Interface</h2>
+                <table>
+                    <tr><th>Panel</th><th>Description</th></tr>
+                    <tr><td>INVENTORY (left)</td><td>All items in the project.</td></tr>
+                    <tr><td>Item Form (center)</td><td>Type, stack size, stats, description, sprite, events.</td></tr>
+                    <tr><td>Preview (right)</td><td>Live canvas with item sprite and hover tooltip preview.</td></tr>
+                </table>
+                <h2>Item Data Fields</h2>
+                <pre><code>{
+  "id": "health_potion",
+  "name": "Health Potion",
+  "type": "consumable",      // consumable | equipment | key | quest | misc
+  "description": "Restores 50 HP",
+  "stackSize": 10,
+  "weight": 0.3,
+  "value": 25,               // in-game currency value
+  "sprite": "item_potion_hp",
+  "stats": { "hp": 50 },
+  "onUse": "item_use_hp_potion",   // logic event
+  "equipSlot": null          // head | body | weapon | offhand | null
+}</code></pre>
+                <p>Clicking the sprite field opens Pixel Art Editor (in Studio mode) to create or edit the icon inline. Broadcasts <code>item:updated</code> on save for inventory/shop tools.</p>
+            </section>
+
+            <section id="tool-campaign">
+                <h1><i class="fas fa-map-signs"></i> Campaign Studio v7.0</h1>
+                <p><b>File:</b> <code>campaign_editor.html / campaign_editor.js</code></p>
+                <p>Campaign Studio organizes all game levels, cutscenes, and branches into a visual node graph. It is the "director" layer above individual level editors — defining game flow, world map navigation, and progression gates.</p>
+                <h2>Interface</h2>
+                <table>
+                    <tr><th>Panel / Feature</th><th>Description</th></tr>
+                    <tr><td>Level tree (left)</td><td>All levels by engine type (color-coded: RPG=red, Iso=blue, Platformer=green, FPS=purple)</td></tr>
+                    <tr><td>Campaign Graph (center)</td><td>Drag-and-drop canvas. Nodes = levels/cutscenes. Edges = transitions/conditions. Pan with middle mouse.</td></tr>
+                    <tr><td>Inspector (bottom panel)</td><td>Edit the selected node: level ID, unlock condition, cutscene before/after, next level override.</td></tr>
+                    <tr><td>Variable Manager</td><td>Global campaign variables (flags, counters) used in unlock conditions and dialogue events.</td></tr>
+                </table>
+                <h2>Node Types</h2>
+                <table>
+                    <tr><th>Node</th><th>Description</th></tr>
+                    <tr><td>Level</td><td>References a level file. Engine type shown by border color. Clicking opens the matching editor.</td></tr>
+                    <tr><td>Cutscene</td><td>A cinematic sequence between levels. Links to an <code>interactive_cutscene_editor</code> file.</td></tr>
+                    <tr><td>Branch</td><td>Conditional split based on a campaign variable.</td></tr>
+                    <tr><td>Hub</td><td>Free-roam world map node where the player chooses their next level.</td></tr>
+                </table>
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <tr><th>Key</th><th>Action</th></tr>
+                    <tr><td>Ctrl+S</td><td>Save campaign to server</td></tr>
+                    <tr><td>Ctrl+Z / Ctrl+Y</td><td>Undo / Redo</td></tr>
+                    <tr><td>Delete</td><td>Remove selected node</td></tr>
+                    <tr><td>Ctrl+D</td><td>Duplicate selected node</td></tr>
+                </table>
+                <h2>EventBus Integration</h2>
+                <p>Listens on <code>quest:updated</code> (to update level unlock conditions) and <code>cutscene:saved</code>. Broadcasts <code>campaign:saved</code> on save.</p>
+            </section>
+
+            <section id="tool-cutscene">
+                <h1><i class="fas fa-film"></i> Interactive Cutscene Studio</h1>
+                <p><b>File:</b> <code>interactive_cutscene_editor.html / interactive_cutscene_editor.js</code></p>
+                <p>Author cinematic sequences with full timeline control. Combine camera movements, dialogue overlays, character animations, music cues, and interactive prompts in a single synchronized timeline.</p>
+                <h2>Timeline Tracks</h2>
+                <table>
+                    <tr><th>Track Type</th><th>Description</th></tr>
+                    <tr><td>CAMERA</td><td>Keyframed position/rotation/zoom. Smooth Bezier interpolation.</td></tr>
+                    <tr><td>ACTOR</td><td>Sprite animation triggers for named actors (walk, emote, etc).</td></tr>
+                    <tr><td>DIALOGUE</td><td>Timed dialogue boxes — references a <code>Dialogue Studio</code> node ID.</td></tr>
+                    <tr><td>MUSIC</td><td>Fade in/out/crossfade audio tracks at given timestamps.</td></tr>
+                    <tr><td>FX</td><td>Trigger a particle effect at a screen position at a given time.</td></tr>
+                    <tr><td>WAIT</td><td>Pause the timeline for player input (button press or any key).</td></tr>
+                    <tr><td>EVENT</td><td>Fire a game logic event (gives items, sets flags, starts quests).</td></tr>
+                </table>
+                <h2>Output Format</h2>
+                <pre><code>{
+  "id": "intro_cutscene",
+  "duration": 12.5,
+  "tracks": [
+    { "type": "CAMERA", "keyframes": [
+        { "t": 0,   "x": 0,   "y": 0,   "z": -200, "zoom": 1.0 },
+        { "t": 3.0, "x": 100, "y": 50,  "z": -150, "zoom": 1.2 }
+    ]},
+    { "type": "DIALOGUE", "t": 1.5, "nodeId": "INTRO_N1" },
+    { "type": "MUSIC",    "t": 0,   "track": "theme_main", "fade": 1.0 },
+    { "type": "EVENT",    "t": 11.0, "event": "start_quest", "questId": "main_quest" }
+  ]
+}</code></pre>
+            </section>
+
+            <!-- ======================================================= -->
+            <!--  ASSETS                                                  -->
+            <!-- ======================================================= -->
+
+            <section id="tool-fx">
+                <h1><i class="fas fa-magic"></i> FX Master Pro</h1>
+                <p><b>File:</b> <code>fx_editor.html / fx_editor.js</code></p>
+                <p>Design real-time 2D particle effects — explosions, magic spells, fire, smoke, rain, and more. Fully GPU-accelerated Canvas2D renderer with live preview. Effects are saved as <code>data/fx/{name}.json</code> and used by skills, items, enemies, and cutscenes.</p>
+                <h2>Emitter Settings</h2>
+                <table>
+                    <tr><th>Parameter</th><th>Description</th></tr>
+                    <tr><td>Mode</td><td><b>Continuous</b> — emits forever at a given rate. <b>Burst</b> — fires a one-shot explosion of particles.</td></tr>
+                    <tr><td>Count / Rate</td><td>Number of particles per burst, or particles per second in continuous mode.</td></tr>
+                    <tr><td>Duration</td><td>Lifetime of the entire effect (Burst mode). Continuous runs until manually stopped.</td></tr>
+                </table>
+                <h2>Appearance Parameters</h2>
+                <table>
+                    <tr><th>Parameter</th><th>Range / Options</th></tr>
+                    <tr><td>Sprite</td><td>A sprite key from the project's sprite atlas, or <i>(None – Rect)</i> for solid rectangles.</td></tr>
+                    <tr><td>Blend Mode</td><td>Normal, Additive (Glow), Multiply (Dark)</td></tr>
+                    <tr><td>Start / End Color</td><td>Color picker — particles interpolate from start to end over their lifetime.</td></tr>
+                    <tr><td>Start / End Size</td><td>1–50 px. Particles scale over lifetime.</td></tr>
+                    <tr><td>Speed</td><td>10–500 px/s initial velocity magnitude.</td></tr>
+                    <tr><td>Spread</td><td>0–360°. Cone angle of emission direction.</td></tr>
+                    <tr><td>Gravity</td><td>−500 to +500. Vertical acceleration applied to particles.</td></tr>
+                    <tr><td>Drag</td><td>0–100. Velocity damping per frame.</td></tr>
+                    <tr><td>Life</td><td>0.1–10.0 seconds per-particle lifetime.</td></tr>
+                </table>
+                <h2>EventBus Integration</h2>
+                <p>Listens on <code>fx:requested</code> (other tools requesting preview). Broadcasts <code>fx:updated</code> on save, which refreshes Skill Studio preview automatically.</p>
+            </section>
+
+            <section id="tool-shader">
+                <h1><i class="fas fa-adjust"></i> Shader Lab Pro</h1>
+                <p><b>File:</b> <code>shader_editor.html / shader_editor.js</code></p>
+                <p>Write and preview custom GLSL fragment shaders. Used for post-processing effects, UI overlays, and special material shaders in 3D engines. Shaders saved as <code>data/shaders/{name}.glsl</code>.</p>
+                <h2>Interface Layout</h2>
+                <table>
+                    <tr><th>Panel</th><th>Description</th></tr>
+                    <tr><td>LIBRARY &amp; TEMPLATES (left)</td><td>Built-in shader templates: Color Grade, Pixelate, Scanlines, Vignette, Wave Distort, CRT, Chromatic Aberration, Blur, Bloom, Outline.</td></tr>
+                    <tr><td>GLSL Editor (center)</td><td>Full syntax-highlighted code editor. Real-time compilation error display.</td></tr>
+                    <tr><td>WebGL Preview (right)</td><td>Live WebGL canvas applying the shader. Preview texture: Helper / Grid / Noise.</td></tr>
+                    <tr><td>LIVE PARAMETERS (left bottom)</td><td>Auto-parsed uniform sliders. Any <code>uniform float</code> or <code>uniform vec3</code> generates an interactive control.</td></tr>
+                </table>
+                <h2>Uniform Auto-Parsing</h2>
+                <p>When the shader compiles, <code>parseUniforms(src)</code> scans the source for <code>uniform</code> declarations and renders matching controls:</p>
+                <pre><code>uniform float u_intensity;  // → slider 0.0 – 1.0
+uniform float u_pixelSize;  // → slider 1 – 32
+uniform vec3  u_tint;       // → RGB color picker</code></pre>
+                <h2>Shader Entry Points</h2>
+                <p>All shaders must define a <code>main()</code> entry using <code>gl_FragCoord</code>, <code>u_resolution</code>, <code>u_time</code>, and <code>u_texture</code>. The runtime injects these uniforms automatically.</p>
+                <h2>EventBus Integration</h2>
+                <p>Listens on <code>shader:requested</code>. Broadcasts <code>shader:updated</code> on save so 3D editors can hot-reload custom material shaders.</p>
+            </section>
+
+            <!-- ======================================================= -->
+            <!--  UI & WORLD TOOLS                                        -->
+            <!-- ======================================================= -->
+
+            <section id="tool-menu">
+                <h1><i class="fas fa-window-restore"></i> UI Studio</h1>
+                <p><b>File:</b> <code>menu_editor.html / menu_editor.js</code></p>
+                <p>Drag-and-drop in-game UI builder. Design HUD elements, menus, dialogue boxes, and inventory screens using a widget library. Output is a JSON layout consumed by the runtime UI Renderer.</p>
+                <h2>Widget Library</h2>
+                <table>
+                    <tr><th>Widget</th><th>Description</th></tr>
+                    <tr><td>Label</td><td>Static or dynamic text. Supports variable binding: <code>{{player.hp}}</code></td></tr>
+                    <tr><td>Button</td><td>Clickable with hover/press states. Fires a logic event on click.</td></tr>
+                    <tr><td>Image</td><td>Sprite or solid fill rectangle.</td></tr>
+                    <tr><td>Panel</td><td>Container with optional background. Supports flex/grid layout.</td></tr>
+                    <tr><td>HealthBar</td><td>Animated bar with fill color, border, and value binding.</td></tr>
+                    <tr><td>Inventory Grid</td><td>Item grid that auto-populates from the player's inventory.</td></tr>
+                    <tr><td>Minimap</td><td>Overhead map thumbnail rendered from level data.</td></tr>
+                    <tr><td>DialogueBox</td><td>Speaker portrait + text box with auto-scroll and choice buttons.</td></tr>
+                </table>
+                <h2>Layout Panels</h2>
+                <p>The editor uses a 3-panel layout: <b>WIDGETS</b> palette on the left, a live canvas preview in the center, and a <b>PROPERTIES</b> inspector on the right for the selected widget. Panels are collapsible.</p>
+                <h2>Output</h2>
+                <p>Saves to <code>data/ui/{screen_name}.json</code>. Screens are loaded by the runtime's <code>UIRenderer</code> class, which handles positioning, bindings, and event routing.</p>
+            </section>
+
+            <section id="tool-localization">
+                <h1><i class="fas fa-globe"></i> Localization Studio</h1>
+                <p><b>File:</b> <code>localization_editor.html / localization_editor.js</code></p>
+                <p>Professional multi-language translation management. All translatable strings from Dialogue Studio, UI screens, item/skill names, and quest text are gathered here into a centralized translation table.</p>
+                <h2>Interface</h2>
+                <table>
+                    <tr><th>Panel</th><th>Description</th></tr>
+                    <tr><td>Left panel</td><td>Language list. Add/remove languages. Active language highlighted.</td></tr>
+                    <tr><td>Translation table (center)</td><td>Spreadsheet view: rows = string keys, columns = languages. Inline editing.</td></tr>
+                    <tr><td>Toolbar</td><td><kbd>Add Key</kbd> <kbd>Add Language</kbd> <kbd>Import CSV</kbd> <kbd>Export CSV</kbd> <kbd>Save Project</kbd></td></tr>
+                </table>
+                <h2>Key Naming Conventions</h2>
+                <table>
+                    <tr><th>Source</th><th>Generated Key Format</th></tr>
+                    <tr><td>Dialogue line</td><td><code>DIALOGUE_{SCRIPT_ID}_{NODE_ID}</code></td></tr>
+                    <tr><td>Item name</td><td><code>ITEM_{item_id}_NAME</code></td></tr>
+                    <tr><td>Item description</td><td><code>ITEM_{item_id}_DESC</code></td></tr>
+                    <tr><td>Skill name</td><td><code>SKILL_{skill_id}_NAME</code></td></tr>
+                    <tr><td>Quest title</td><td><code>QUEST_{quest_id}_TITLE</code></td></tr>
+                    <tr><td>UI label</td><td><code>UI_{screen}_{widget_id}</code></td></tr>
+                </table>
+                <h2>Runtime Usage</h2>
+                <p>The game loads <code>data/localization.json</code> at startup. All text rendering calls pass through <code>i18n.t('KEY')</code> which returns the string for the active language, falling back to English.</p>
+                <h2>EventBus Integration</h2>
+                <p>Listens on <code>dialogue:*</code> events to detect new or changed strings. Broadcasts <code>localization:updated</code> on save.</p>
+                <h2>CSV Workflow</h2>
+                <pre><code>// Export for translators:
+key,en,tr,de,fr
+ITEM_HEALTH_POTION_NAME,Health Potion,Sağlık İksiri,Heiltrank,Potion de vie
+ITEM_HEALTH_POTION_DESC,Restores 50 HP,50 HP geri yükler,Stellt 50 HP wieder her,Restaure 50 PV
+
+// Import back after translation — merges new columns without overwriting existing.</code></pre>
+            </section>
+
+            <section id="tool-input">
+                <h1><i class="fas fa-keyboard"></i> Input Bindings Editor</h1>
+                <p><b>File:</b> <code>input_editor.html / input_editor.js</code></p>
+                <p>Define and customize all input actions for the game — keyboard keys, mouse buttons, and gamepad buttons. Saved as <code>data/input.json</code> and loaded by the engine's <b>Input System</b> at startup.</p>
+                <h2>Interface</h2>
+                <table>
+                    <tr><th>Panel</th><th>Description</th></tr>
+                    <tr><td>Action List</td><td>All named actions (e.g., <code>jump</code>, <code>attack</code>, <code>interact</code>). Click to expand and see/edit bindings.</td></tr>
+                    <tr><td>Binding Modal</td><td>Press any key or button to capture the new binding. Supports multi-binding (primary + alt).</td></tr>
+                    <tr><td>Add Action</td><td>Create a new named action with a descriptive label.</td></tr>
+                </table>
+                <h2>Data Format</h2>
+                <pre><code>{
+  "move_up":    { "keys": ["ArrowUp", "KeyW"],  "gamepad": 12 },
+  "move_down":  { "keys": ["ArrowDown", "KeyS"], "gamepad": 13 },
+  "move_left":  { "keys": ["ArrowLeft", "KeyA"], "gamepad": 14 },
+  "move_right": { "keys": ["ArrowRight", "KeyD"],"gamepad": 15 },
+  "jump":       { "keys": ["Space"],              "gamepad": 0  },
+  "attack":     { "keys": ["KeyZ", "MouseLeft"],  "gamepad": 2  },
+  "interact":   { "keys": ["KeyE"],               "gamepad": 1  }
+}</code></pre>
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <tr><th>Key</th><th>Action</th></tr>
+                    <tr><td>Ctrl+S</td><td>Save bindings to server</td></tr>
+                    <tr><td>Escape</td><td>Cancel binding capture</td></tr>
+                    <tr><td>Delete</td><td>Remove selected binding</td></tr>
+                </table>
+            </section>
+
+            <section id="tool-database">
+                <h1><i class="fas fa-table"></i> Data Tables Editor</h1>
+                <p><b>File:</b> <code>database_editor.html / database_editor.js</code></p>
+                <p>A spreadsheet-style editor for custom game data tables — shop inventories, loot tables, stat scaling curves, dialogue conditions, or any tabular data your game logic needs.</p>
+                <h2>Features</h2>
+                <ul>
+                    <li>Create named tables with custom column definitions (string, number, bool, reference)</li>
+                    <li>Inline cell editing — click any cell to edit</li>
+                    <li>Add/remove rows and columns at any position</li>
+                    <li>Import from CSV or JSON</li>
+                    <li>Export individual tables as JSON for use in logic scripts</li>
+                    <li>Reference columns link to IDs in other tables (e.g., item_id → items table)</li>
+                </ul>
+                <h2>Output</h2>
+                <p>Each table saves as <code>data/tables/{table_name}.json</code>. Access in logic scripts via:</p>
+                <pre><code>const table = ketebe.data.table('shop_items');
+const row = table.find(r => r.id === 'health_potion');
+// → { id: 'health_potion', price: 25, stock: 10, ... }</code></pre>
             </section>
 
         </div>
