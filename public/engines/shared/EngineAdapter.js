@@ -226,3 +226,4 @@ class EngineAdapter {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = EngineAdapter;
 }
+export default EngineAdapter;

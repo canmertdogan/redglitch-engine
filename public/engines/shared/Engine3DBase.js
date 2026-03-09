@@ -7,6 +7,8 @@
  * Visual style enforced: LOW-POLY + VOXEL, NO PBR, NO HDR, palette-indexed flat colors only.
  */
 
+import EngineAdapter from './EngineAdapter.js';
+
 // ── Logger Hook (mirrors rpg-topdown/main.js pattern) ───────────────────────
 (function _installLoggerHook3D() {
     if (typeof window === 'undefined' || window.__loggerHook3DInstalled) return;
@@ -262,3 +264,4 @@ function _disposeScene(scene) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Engine3DBase;
 }
+export default Engine3DBase;
