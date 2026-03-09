@@ -416,7 +416,7 @@ const FPSEditor = (() => {
     let _drag3d = null;
     let _drag3dMoved = 0;   // total pointer movement during current drag (px)
     let _ghostMesh = null;  // wireframe block placed at hover position
-    let _show2d = true;     // whether the 2D floor plan panel is visible
+    let _show2d = false;    // whether the 2D floor plan panel is visible (toggle with 📐)
     let _orbitState = { theta: 0.6, phi: 1.1, radius: 20, target: { x: 0, y: 0, z: 0 } };
     let _canvas3dHovered = false;   // true while pointer is over the 3D viewport
     const _keysDown = new Set();    // tracks WASD/QE while canvas hovered
@@ -1502,11 +1502,8 @@ const FPSEditor = (() => {
         _initResize();
         _animate();
 
-        // Show 2D floor plan by default so users can draw immediately
-        const vp2d = document.getElementById('viewport-2d');
-        if (vp2d) vp2d.classList.add('viewport-2d-visible');
-        const btn2d = document.getElementById('btn-toggle-2d');
-        if (btn2d) btn2d.classList.add('active');
+        // 2D floor plan starts hidden — press 📐 button or View → Floor Plan to show
+        // (no forced class add here; _show2d = false is the default)
 
         // Init 256-color palette (Phase 38)
         if (typeof ColorPalette !== 'undefined') {
