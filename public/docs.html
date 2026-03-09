@@ -236,6 +236,12 @@
                 <div class="nav-title">SERVER &amp; BUILD</div>
                 <a href="#server-api" class="nav-item"><i class="fas fa-server"></i> Server API</a>
                 <a href="#build-system" class="nav-item"><i class="fas fa-hammer"></i> Build System</a>
+                <a href="#api-game" class="nav-item"><i class="fas fa-cogs"></i> Game Object API</a>
+                <a href="#api-console" class="nav-item"><i class="fas fa-terminal"></i> Debug Console</a>
+                <a href="#sys-eventbus" class="nav-item"><i class="fas fa-broadcast-tower"></i> EventBus System</a>
+            </div>
+                <a href="#server-api" class="nav-item"><i class="fas fa-server"></i> Server API</a>
+                <a href="#build-system" class="nav-item"><i class="fas fa-hammer"></i> Build System</a>
             </div>
 
             <div class="nav-group">
@@ -1205,28 +1211,157 @@ if (!data) throw new Error('Save mismatch or corrupt');</code></pre>
             <!-- ─────────────────────────────────────────── -->
 
             <section id="server-api">
-                <h1><i class="fas fa-server"></i> Server API</h1>
-                <p>Express.js server running on port <b>3000</b>. Start with <code>npm run server</code>. Electron embeds it automatically.</p>
+                <h1><i class="fas fa-server"></i> Server API — Full Reference</h1>
+                <p>Express.js server on port <b>3000</b>. Start with <code>npm run server</code>; Electron embeds it automatically. All paths are relative to <code>http://localhost:3000</code>.</p>
 
-                <h2>Endpoints</h2>
+                <h2>Projects</h2>
                 <table>
-                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
-                    <tr><td>GET</td><td><code>/api/projects</code></td><td>List all projects in <code>projects/</code></td></tr>
-                    <tr><td>GET</td><td><code>/api/projects/current</code></td><td>Active project name</td></tr>
-                    <tr><td>POST</td><td><code>/api/projects/switch</code></td><td>Set active project <code>{ name }</code></td></tr>
-                    <tr><td>GET</td><td><code>/api/levels3d/:project</code></td><td>List all 3D levels for a project</td></tr>
-                    <tr><td>GET</td><td><code>/api/levels3d/:project/:level</code></td><td>Read a 3D level JSON</td></tr>
-                    <tr><td>POST</td><td><code>/api/levels3d/:project/:level</code></td><td>Save a 3D level JSON</td></tr>
-                    <tr><td>GET</td><td><code>/api/save/:username/:slot</code></td><td>Read save slot</td></tr>
-                    <tr><td>POST</td><td><code>/api/save/:username/:slot</code></td><td>Write save slot</td></tr>
-                    <tr><td>GET</td><td><code>/api/logic/:name</code></td><td>Read logic JSON from <code>data/logic/</code></td></tr>
-                    <tr><td>GET</td><td><code>/api/logic/js/:name</code></td><td>Serve JS logic module</td></tr>
-                    <tr><td>GET</td><td><code>/api/brains/list</code></td><td>List available AI brains</td></tr>
-                    <tr><td>GET</td><td><code>/api/project-file</code></td><td>Read a project file by path query param</td></tr>
+                    <tr><th>Method</th><th>Route</th><th>Body / Query</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/projects</code></td><td>—</td><td>List all project directories</td></tr>
+                    <tr><td>POST</td><td><code>/api/projects</code></td><td><code>{ name, engine }</code></td><td>Create a new project from template</td></tr>
+                    <tr><td>GET</td><td><code>/api/projects/current</code></td><td>—</td><td>Return active project name</td></tr>
+                    <tr><td>POST</td><td><code>/api/projects/switch</code></td><td><code>{ name }</code></td><td>Set the active project</td></tr>
+                    <tr><td>POST</td><td><code>/api/projects/create</code></td><td><code>{ name, engine, template }</code></td><td>Create project from named template</td></tr>
+                    <tr><td>DELETE</td><td><code>/api/projects/:name</code></td><td>—</td><td>Delete a project</td></tr>
+                    <tr><td>POST</td><td><code>/api/projects/reveal</code></td><td><code>{ name }</code></td><td>Open project folder in system file manager</td></tr>
+                    <tr><td>POST</td><td><code>/api/projects/explore</code></td><td><code>{ path }</code></td><td>Browse arbitrary project-relative path</td></tr>
+                    <tr><td>GET</td><td><code>/api/templates</code></td><td>—</td><td>List available project templates</td></tr>
+                    <tr><td>GET</td><td><code>/api/project-file</code></td><td><code>?path=relative/path</code></td><td>Read any project file by path</td></tr>
+                    <tr><td>POST</td><td><code>/api/project-file</code></td><td><code>{ path, content }</code></td><td>Write any project file by path</td></tr>
                 </table>
 
+                <h2>Levels (2D)</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>POST</td><td><code>/api/save-level</code></td><td>Save a 2D level JSON <code>{ filename, data }</code></td></tr>
+                    <tr><td>DELETE</td><td><code>/api/delete-level</code></td><td>Delete a level <code>{ filename }</code></td></tr>
+                    <tr><td>GET</td><td><code>/api/levels/:filename</code></td><td>Read a named level file</td></tr>
+                    <tr><td>POST</td><td><code>/api/levels/:filename</code></td><td>Write a named level file</td></tr>
+                    <tr><td>DELETE</td><td><code>/api/levels/:filename</code></td><td>Delete a named level file</td></tr>
+                    <tr><td>GET</td><td><code>/api/platformer-levels/:project</code></td><td>List platformer levels for project</td></tr>
+                    <tr><td>GET</td><td><code>/api/levels/by-engine/:engineType</code></td><td>List all levels matching engine type</td></tr>
+                    <tr><td>GET</td><td><code>/api/files/:dir</code></td><td>List files in a project sub-directory</td></tr>
+                </table>
+
+                <h2>Levels (3D)</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/levels3d/:project</code></td><td>List 3D level files for a project</td></tr>
+                    <tr><td>GET</td><td><code>/api/levels3d/:project/:level</code></td><td>Read a 3D level JSON</td></tr>
+                    <tr><td>POST</td><td><code>/api/levels3d/:project/:level</code></td><td>Save a 3D level JSON</td></tr>
+                </table>
+
+                <h2>Save &amp; Profile</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/save/:username/:slot</code></td><td>Read a save slot (returns JSON or 404)</td></tr>
+                    <tr><td>POST</td><td><code>/api/save/:username/:slot</code></td><td>Write a save slot</td></tr>
+                    <tr><td>GET</td><td><code>/api/profile/:username</code></td><td>Read player profile</td></tr>
+                    <tr><td>POST</td><td><code>/api/profile/:username</code></td><td>Write player profile</td></tr>
+                    <tr><td>POST</td><td><code>/api/profiles/:username</code></td><td>Update player profile (alias)</td></tr>
+                    <tr><td>GET</td><td><code>/api/achievements/:username</code></td><td>Read unlocked achievements</td></tr>
+                    <tr><td>POST</td><td><code>/api/achievements/:username</code></td><td>Save unlocked achievements</td></tr>
+                    <tr><td>GET</td><td><code>/api/slots</code></td><td>List all save slots</td></tr>
+                    <tr><td>GET</td><td><code>/api/slots/:id</code></td><td>Read a slot by numeric ID</td></tr>
+                    <tr><td>POST</td><td><code>/api/slots/:id</code></td><td>Write a slot</td></tr>
+                    <tr><td>DELETE</td><td><code>/api/slots/:id</code></td><td>Delete a slot</td></tr>
+                </table>
+
+                <h2>Logic &amp; Brains</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/logic/:name</code></td><td>Read logic graph JSON from <code>data/logic/</code></td></tr>
+                    <tr><td>GET</td><td><code>/api/logic/js/:name</code></td><td>Serve JavaScript logic module</td></tr>
+                    <tr><td>GET</td><td><code>/api/logic/list</code></td><td>List all logic files</td></tr>
+                    <tr><td>POST</td><td><code>/api/logic/save</code></td><td>Save a logic graph <code>{ name, data }</code></td></tr>
+                    <tr><td>POST</td><td><code>/api/logic/:name</code></td><td>Write a specific logic file</td></tr>
+                    <tr><td>GET</td><td><code>/api/brains/list</code></td><td>List all AI brain definitions</td></tr>
+                    <tr><td>GET</td><td><code>/api/brains/:name</code></td><td>Read a brain JSON</td></tr>
+                    <tr><td>GET</td><td><code>/api/brains/js/:name</code></td><td>Serve JavaScript brain module</td></tr>
+                    <tr><td>POST</td><td><code>/api/brains/save</code></td><td>Save a brain definition</td></tr>
+                    <tr><td>GET</td><td><code>/api/abilities</code></td><td>List abilities</td></tr>
+                    <tr><td>POST</td><td><code>/api/abilities</code></td><td>Save abilities</td></tr>
+                </table>
+
+                <h2>Game Data</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/quests</code></td><td>Read quest definitions</td></tr>
+                    <tr><td>POST</td><td><code>/api/quests</code></td><td>Save quest definitions</td></tr>
+                    <tr><td>GET</td><td><code>/api/npcs</code></td><td>Read NPC definitions</td></tr>
+                    <tr><td>GET</td><td><code>/api/items</code></td><td>Read item definitions</td></tr>
+                    <tr><td>POST</td><td><code>/api/enemy-defs</code></td><td>Save enemy definitions</td></tr>
+                    <tr><td>POST</td><td><code>/api/npc-defs</code></td><td>Save NPC definitions</td></tr>
+                    <tr><td>POST</td><td><code>/api/skill-defs</code></td><td>Save skill definitions</td></tr>
+                    <tr><td>POST</td><td><code>/api/item-defs</code></td><td>Save item definitions</td></tr>
+                    <tr><td>GET</td><td><code>/api/fx/list</code></td><td>List all FX effect files</td></tr>
+                    <tr><td>GET</td><td><code>/api/fx/:name</code></td><td>Read an FX effect JSON</td></tr>
+                    <tr><td>POST</td><td><code>/api/fx/save</code></td><td>Save an FX effect JSON</td></tr>
+                </table>
+
+                <h2>Cutscenes &amp; Dialogues</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/cutscenes/list</code></td><td>List all cutscene files</td></tr>
+                    <tr><td>GET</td><td><code>/api/cutscenes/:id</code></td><td>Read a cutscene JSON</td></tr>
+                    <tr><td>POST</td><td><code>/api/cutscenes/:id</code></td><td>Save a cutscene</td></tr>
+                    <tr><td>DELETE</td><td><code>/api/cutscenes/:id</code></td><td>Delete a cutscene</td></tr>
+                    <tr><td>GET</td><td><code>/api/dialogues</code></td><td>Read all dialogue scripts</td></tr>
+                    <tr><td>POST</td><td><code>/api/dialogues</code></td><td>Save dialogue scripts</td></tr>
+                </table>
+
+                <h2>Campaigns</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/campaigns/list</code></td><td>List all campaigns</td></tr>
+                    <tr><td>GET</td><td><code>/api/campaigns</code></td><td>Get campaigns (full objects)</td></tr>
+                    <tr><td>GET</td><td><code>/api/campaigns/:name</code></td><td>Read a specific campaign</td></tr>
+                    <tr><td>POST</td><td><code>/api/campaigns/:name</code></td><td>Save a campaign</td></tr>
+                    <tr><td>DELETE</td><td><code>/api/campaigns/:name</code></td><td>Delete a campaign</td></tr>
+                    <tr><td>POST</td><td><code>/api/campaign</code></td><td>Create or update campaign (legacy)</td></tr>
+                    <tr><td>GET</td><td><code>/api/campaign-state/:username</code></td><td>Read campaign progression for a player</td></tr>
+                    <tr><td>POST</td><td><code>/api/campaign-state/:username</code></td><td>Save campaign progression</td></tr>
+                </table>
+
+                <h2>Assets</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/assets</code></td><td>Get full asset manifest</td></tr>
+                    <tr><td>GET</td><td><code>/api/assets/list</code></td><td>List asset files with metadata</td></tr>
+                    <tr><td>POST</td><td><code>/api/assets/rebuild</code></td><td>Rebuild sprite atlas from source PNGs</td></tr>
+                    <tr><td>POST</td><td><code>/api/assets/upload</code></td><td>Upload a new asset file (multipart)</td></tr>
+                    <tr><td>POST</td><td><code>/api/save-spritesheet</code></td><td>Save a generated spritesheet PNG</td></tr>
+                    <tr><td>GET</td><td><code>/api/assets3d/:project</code></td><td>List 3D assets (.glb, .vox) for project</td></tr>
+                    <tr><td>GET</td><td><code>/api/assets3d/:project/:assetName</code></td><td>Download a specific 3D asset</td></tr>
+                </table>
+
+                <h2>IDE &amp; Build</h2>
+                <table>
+                    <tr><th>Method</th><th>Route</th><th>Description</th></tr>
+                    <tr><td>GET</td><td><code>/api/build/stream</code></td><td>SSE stream of live build log output</td></tr>
+                    <tr><td>POST</td><td><code>/api/build</code></td><td>Trigger a game build <code>{ project, target }</code></td></tr>
+                    <tr><td>POST</td><td><code>/api/build/clean</code></td><td>Clean the <code>dist/</code> directory</td></tr>
+                    <tr><td>GET</td><td><code>/api/git/status</code></td><td>Git status of the project</td></tr>
+                    <tr><td>POST</td><td><code>/api/git/add</code></td><td>Stage files</td></tr>
+                    <tr><td>POST</td><td><code>/api/git/commit</code></td><td>Create a commit <code>{ message }</code></td></tr>
+                    <tr><td>GET</td><td><code>/api/git/diff</code></td><td>Show unstaged diff</td></tr>
+                    <tr><td>GET</td><td><code>/api/system/status</code></td><td>Server health check</td></tr>
+                    <tr><td>GET</td><td><code>/api/system/stats</code></td><td>Memory, uptime, Node version</td></tr>
+                </table>
+
+                <h2>WebSocket — Real-time Events</h2>
+                <p>Connect to <code>ws://localhost:3000/ws</code>. The EventBus uses this to sync events across all open tool windows.</p>
+                <pre><code>// Message format (both send and receive):
+{
+  "type":      "enemy:updated",   // event name
+  "data":      { ... },           // payload
+  "timestamp": 1741546402000,     // Unix ms
+  "source":    "/enemy_editor_abc12"  // originating window
+}</code></pre>
+                <p>Any message you send over WS is re-broadcast to all other connected clients. Used by the EventBus <code>broadcastEvent()</code> method — you normally don't need to interact with it directly.</p>
+
                 <h2>Electron vs Web Mode</h2>
-                <p>The server auto-detects Electron and stores saves in <code>electronApp.getPath('userData')</code>. In non-Electron mode (web server), saves are stored in the local <code>saves/</code> directory.</p>
+                <p>The server auto-detects Electron via <code>process.versions.electron</code> and stores saves in <code>electronApp.getPath('userData')</code>. In web server mode, saves go to the local <code>saves/</code> directory. All route logic is identical — only the storage root differs.</p>
             </section>
 
             <section id="build-system">
@@ -1271,39 +1406,310 @@ if (!data) throw new Error('Save mismatch or corrupt');</code></pre>
             <!-- ─────────────────────────────────────────── -->
 
             <section id="api-game">
-                <h1><i class="fas fa-cogs"></i> Game Object</h1>
-                <p>Global instance accessible as <code>window.game</code> from scripts and logic.</p>
-                <h2>Core Methods</h2>
+                <h1><i class="fas fa-cogs"></i> Game Object — Runtime API</h1>
+                <p>The global <code>window.game</code> instance is the primary entry point for all in-game logic scripts. Available in logic graphs, brain scripts, and any JS file loaded by <code>/api/logic/</code>.</p>
+
+                <h2>World &amp; Level</h2>
+                <table>
+                    <tr><th>Method / Property</th><th>Description</th></tr>
+                    <tr><td><code>game.loadLevel(id)</code></td><td>Load a level by filename ID. Triggers save-state checkpoint.</td></tr>
+                    <tr><td><code>game.reloadLevel()</code></td><td>Restart the current level from the last checkpoint.</td></tr>
+                    <tr><td><code>game.currentLevel</code></td><td>The ID string of the active level.</td></tr>
+                    <tr><td><code>game.setFlag(name, val)</code></td><td>Set a persistent campaign flag (string, number, or bool).</td></tr>
+                    <tr><td><code>game.getFlag(name)</code></td><td>Read a campaign flag value.</td></tr>
+                    <tr><td><code>game.clearFlag(name)</code></td><td>Delete a campaign flag.</td></tr>
+                    <tr><td><code>game.setVar(name, val)</code></td><td>Set a session variable (lost on level reload).</td></tr>
+                    <tr><td><code>game.getVar(name)</code></td><td>Read a session variable.</td></tr>
+                </table>
+
+                <h2>Player</h2>
+                <table>
+                    <tr><th>Method / Property</th><th>Description</th></tr>
+                    <tr><td><code>game.player</code></td><td>Reference to the player entity object.</td></tr>
+                    <tr><td><code>game.player.x</code> / <code>.y</code></td><td>Current world position in pixels.</td></tr>
+                    <tr><td><code>game.player.hp</code> / <code>.maxHp</code></td><td>Current and maximum health.</td></tr>
+                    <tr><td><code>game.player.mana</code> / <code>.maxMana</code></td><td>Current and maximum mana.</td></tr>
+                    <tr><td><code>game.player.addItem(id, qty)</code></td><td>Add items to the player's inventory.</td></tr>
+                    <tr><td><code>game.player.hasItem(id)</code></td><td>Returns true if player has the item.</td></tr>
+                    <tr><td><code>game.player.removeItem(id, qty)</code></td><td>Remove items from inventory.</td></tr>
+                    <tr><td><code>game.player.teleport(x, y)</code></td><td>Instantly move player to world coordinates.</td></tr>
+                    <tr><td><code>game.player.heal(amount)</code></td><td>Restore HP, capped at maxHp.</td></tr>
+                    <tr><td><code>game.player.damage(amount, src)</code></td><td>Apply damage to the player.</td></tr>
+                </table>
+
+                <h2>Entities</h2>
                 <table>
                     <tr><th>Method</th><th>Description</th></tr>
-                    <tr><td><code>game.loadLevel(id)</code></td><td>Load a level by filename ID</td></tr>
-                    <tr><td><code>game.playSound(id)</code></td><td>Play a sound effect</td></tr>
-                    <tr><td><code>game.spawnEntity(type, x, y)</code></td><td>Spawn entity at position</td></tr>
-                    <tr><td><code>game.spawnParticle(x, y, ...)</code></td><td>Trigger particle effect</td></tr>
-                    <tr><td><code>game.setFlag(name, value)</code></td><td>Set a game flag</td></tr>
-                    <tr><td><code>game.getFlag(name)</code></td><td>Read a flag value</td></tr>
-                    <tr><td><code>game.log(msg)</code></td><td>Log to in-editor console</td></tr>
-                    <tr><td><code>game.player</code></td><td>Reference to the player entity</td></tr>
-                    <tr><td><code>game.dialogueSystem.start(id)</code></td><td>Start a dialogue tree</td></tr>
-                    <tr><td><code>game.audio.play(id)</code></td><td>Play audio (see Audio System)</td></tr>
+                    <tr><td><code>game.spawnEntity(type, x, y, props)</code></td><td>Spawn a named entity type at position. <code>props</code> merged into the instance.</td></tr>
+                    <tr><td><code>game.getEntitiesOfType(type)</code></td><td>Returns array of all living entities of a given type.</td></tr>
+                    <tr><td><code>game.getEntityById(id)</code></td><td>Find a specific entity by its instance ID.</td></tr>
+                    <tr><td><code>game.destroyEntity(entity)</code></td><td>Remove an entity from the world.</td></tr>
+                    <tr><td><code>game.spawnParticle(x, y, fxId, opts)</code></td><td>Trigger a named FX effect at coordinates.</td></tr>
+                </table>
+
+                <h2>Quests &amp; Achievements</h2>
+                <table>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>game.quest.start(id)</code></td><td>Begin a quest by ID.</td></tr>
+                    <tr><td><code>game.quest.complete(id)</code></td><td>Mark a quest as completed. Fires <code>quest:completed</code> event.</td></tr>
+                    <tr><td><code>game.quest.fail(id)</code></td><td>Fail a quest.</td></tr>
+                    <tr><td><code>game.quest.isActive(id)</code></td><td>Returns true if quest is in progress.</td></tr>
+                    <tr><td><code>game.quest.isDone(id)</code></td><td>Returns true if quest is completed.</td></tr>
+                    <tr><td><code>game.achievement.unlock(id)</code></td><td>Unlock an achievement by ID. Shows toast popup.</td></tr>
+                    <tr><td><code>game.achievement.isUnlocked(id)</code></td><td>Check if an achievement is already unlocked.</td></tr>
+                </table>
+
+                <h2>Dialogue &amp; Cutscenes</h2>
+                <table>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>game.dialogue.start(scriptId)</code></td><td>Start a dialogue script by its ID. Pauses game automatically.</td></tr>
+                    <tr><td><code>game.dialogue.isOpen()</code></td><td>Returns true if a dialogue is currently playing.</td></tr>
+                    <tr><td><code>game.cutscene.play(id)</code></td><td>Play a cutscene by ID. Disables player input during playback.</td></tr>
+                    <tr><td><code>game.cutscene.skip()</code></td><td>Skip to the end of the current cutscene.</td></tr>
+                </table>
+
+                <h2>Audio</h2>
+                <table>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>game.audio.play(id, opts)</code></td><td>Play a sound effect. <code>opts</code>: <code>{ volume, loop, pan }</code></td></tr>
+                    <tr><td><code>game.audio.stop(id)</code></td><td>Stop a looping sound.</td></tr>
+                    <tr><td><code>game.audio.playMusic(id, fadeIn)</code></td><td>Start background music with optional fade-in seconds.</td></tr>
+                    <tr><td><code>game.audio.stopMusic(fadeOut)</code></td><td>Stop music with optional fade-out.</td></tr>
+                    <tr><td><code>game.audio.setVolume(master, sfx, music)</code></td><td>Set independent volume levels (0.0 – 1.0).</td></tr>
+                </table>
+
+                <h2>Camera (3D Engines)</h2>
+                <table>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>game.camera.lookAt(x, y, z)</code></td><td>Instantly point camera at world coordinates.</td></tr>
+                    <tr><td><code>game.camera.moveTo(x, y, z, duration)</code></td><td>Smooth camera pan over <code>duration</code> seconds.</td></tr>
+                    <tr><td><code>game.camera.shake(intensity, duration)</code></td><td>Procedural camera shake effect.</td></tr>
+                    <tr><td><code>game.camera.setFOV(degrees)</code></td><td>Change field of view (3D engines only).</td></tr>
+                </table>
+
+                <h2>Utility</h2>
+                <table>
+                    <tr><th>Method</th><th>Description</th></tr>
+                    <tr><td><code>game.log(msg)</code></td><td>Print to the editor's debug console panel.</td></tr>
+                    <tr><td><code>game.warn(msg)</code></td><td>Print a warning (yellow) to the console.</td></tr>
+                    <tr><td><code>game.error(msg)</code></td><td>Print an error (red) to the console.</td></tr>
+                    <tr><td><code>game.wait(seconds)</code></td><td>Returns a Promise that resolves after the given time. Use with <code>await</code> in async logic scripts.</td></tr>
+                    <tr><td><code>game.data.table(name)</code></td><td>Access a Data Table by name. Returns array of row objects.</td></tr>
+                    <tr><td><code>game.timescale</code></td><td>Get/set simulation speed (1.0 = normal, 0.5 = half speed).</td></tr>
                 </table>
             </section>
 
             <section id="api-console">
                 <h1><i class="fas fa-terminal"></i> Debug Console</h1>
-                <p>Open via <span class="key-badge">~</span> key in-game, or from <b>View → DevTools</b> in Electron.</p>
-                <h2>Commands</h2>
-                <pre><code>god         // Toggle invincibility
-noclip      // Toggle ghost mode
-speed 500   // Set player speed
-give potion_hp         // Add item to inventory
-teleport 100 0 200     // Warp to coordinates
-fps                    // Toggle FPS counter overlay
-timescale 0.5          // Slow motion (0.1 – 3.0)
-reload                 // Reload current level
-nextlevel              // Skip to next campaign level</code></pre>
-                <h2>Console Routing</h2>
-                <p>When a game is launched from the editor, all <code>console.log</code> output is routed back to the editor's built-in console panel via <code>window.opener.postMessage()</code>. Full async log preservation without circular reference issues.</p>
+                <p>Open the in-game debug console via <span class="key-badge">~</span> (tilde) key. Available in all engines during development builds. In Electron, also use <b>View → Toggle DevTools</b> for the full browser console.</p>
+
+                <h2>Cheat / Debug Commands</h2>
+                <table>
+                    <tr><th>Command</th><th>Effect</th></tr>
+                    <tr><td><code>god</code></td><td>Toggle invincibility (player cannot take damage)</td></tr>
+                    <tr><td><code>noclip</code></td><td>Toggle ghost mode (walk through walls)</td></tr>
+                    <tr><td><code>speed &lt;n&gt;</code></td><td>Set player move speed, e.g. <code>speed 500</code></td></tr>
+                    <tr><td><code>give &lt;id&gt; [qty]</code></td><td>Add item to inventory, e.g. <code>give health_potion 5</code></td></tr>
+                    <tr><td><code>teleport &lt;x&gt; &lt;y&gt; [z]</code></td><td>Warp player to world coordinates</td></tr>
+                    <tr><td><code>kill</code></td><td>Kill the player (useful to test respawn logic)</td></tr>
+                    <tr><td><code>killall</code></td><td>Destroy all enemies in the current level</td></tr>
+                    <tr><td><code>spawn &lt;type&gt; [x] [y]</code></td><td>Spawn an entity at given coords (or player position)</td></tr>
+                    <tr><td><code>fps</code></td><td>Toggle FPS / draw-call overlay</td></tr>
+                    <tr><td><code>timescale &lt;n&gt;</code></td><td>Set simulation speed, e.g. <code>timescale 0.25</code> for quarter speed</td></tr>
+                    <tr><td><code>reload</code></td><td>Reload the current level from last checkpoint</td></tr>
+                    <tr><td><code>nextlevel</code></td><td>Skip to next level in the active campaign</td></tr>
+                    <tr><td><code>level &lt;id&gt;</code></td><td>Jump directly to a named level</td></tr>
+                    <tr><td><code>quest start &lt;id&gt;</code></td><td>Force-start a quest</td></tr>
+                    <tr><td><code>quest complete &lt;id&gt;</code></td><td>Force-complete a quest</td></tr>
+                    <tr><td><code>unlock &lt;achievementId&gt;</code></td><td>Unlock an achievement (triggers toast)</td></tr>
+                    <tr><td><code>flag &lt;name&gt; &lt;value&gt;</code></td><td>Set a campaign flag, e.g. <code>flag boss_dead 1</code></td></tr>
+                    <tr><td><code>flags</code></td><td>Dump all current flag values to console</td></tr>
+                    <tr><td><code>save</code></td><td>Force-save to slot 0</td></tr>
+                    <tr><td><code>nosave</code></td><td>Disable auto-saving for this session</td></tr>
+                    <tr><td><code>debug entities</code></td><td>Toggle entity hitbox/state visualisation overlay</td></tr>
+                    <tr><td><code>debug collision</code></td><td>Toggle collision geometry overlay</td></tr>
+                    <tr><td><code>debug nav</code></td><td>Toggle AI navigation grid overlay</td></tr>
+                    <tr><td><code>help</code></td><td>Print all available console commands</td></tr>
+                </table>
+
+                <h2>Scripting in the Console</h2>
+                <p>Any input that is not a known command is evaluated as JavaScript with access to <code>game</code>, <code>window</code>, and all globals. You can call any Game Object method directly:</p>
+                <pre><code>// Give the player max HP
+game.player.hp = game.player.maxHp;
+
+// Spawn three goblins in a row
+for (let i = 0; i &lt; 3; i++) game.spawnEntity('goblin', game.player.x + i*64, game.player.y);
+
+// Check all active flags
+Object.entries(game._flags).forEach(([k,v]) => console.log(k, '=', v));</code></pre>
+
+                <h2>Console Log Routing</h2>
+                <p>When a game is launched from the editor (<b>Play ▶</b>), all <code>console.log / warn / error</code> calls are intercepted by a hook that posts each message back to the editor window via <code>window.opener.postMessage()</code>. The editor's built-in <b>Console</b> panel listens for these messages and displays them in real time — no need to open a separate DevTools window. Circular references in log objects are safely handled before serialization.</p>
+
+                <h2>Error Overlay</h2>
+                <p>Uncaught errors during gameplay show a red overlay with the stack trace, filename, and line number. The overlay includes a <kbd>Dismiss</kbd> button and a <kbd>Reload Level</kbd> shortcut. This overlay is disabled in release builds.</p>
+            </section>
+
+            <!-- ======================================================= -->
+            <!--  EVENTBUS                                                -->
+            <!-- ======================================================= -->
+
+            <section id="sys-eventbus">
+                <h1><i class="fas fa-broadcast-tower"></i> EventBus — Cross-Tool Communication</h1>
+                <p><b>File:</b> <code>public/shared/EventBus.js</code> — Auto-instantiated as <code>window.KetebeEventBus</code></p>
+                <p>The EventBus is the backbone of all inter-tool communication in Ketebe. It operates on three channels simultaneously: <b>local listeners</b> within the same window, <b>cross-window postMessage</b> for iframes and popups, and <b>WebSocket broadcast</b> for real-time sync between multiple editor tabs.</p>
+
+                <h2>Core API</h2>
+                <table>
+                    <tr><th>Method</th><th>Signature</th><th>Description</th></tr>
+                    <tr><td><code>on()</code></td><td><code>(event, callback, opts)</code></td><td>Subscribe to an event. Returns a listener ID string. <code>opts.priority</code> (higher = first), <code>opts.once</code> (auto-unsubscribes).</td></tr>
+                    <tr><td><code>once()</code></td><td><code>(event, callback)</code></td><td>Subscribe for exactly one call, then auto-remove.</td></tr>
+                    <tr><td><code>off()</code></td><td><code>(event, idOrFn)</code></td><td>Unsubscribe by listener ID string, or by original callback function reference.</td></tr>
+                    <tr><td><code>emit()</code></td><td><code>(event, data)</code></td><td>Fire an event locally and broadcast it over WS + postMessage to all other windows.</td></tr>
+                    <tr><td><code>getHistory(filter)</code></td><td><code>(string|fn|null)</code></td><td>Return up to last 100 events. Filter by event name glob or predicate function.</td></tr>
+                    <tr><td><code>clearHistory()</code></td><td><code>()</code></td><td>Clear the event history ring buffer.</td></tr>
+                    <tr><td><code>getStatus()</code></td><td><code>()</code></td><td>Returns <code>{ isConnected, reconnectAttempts, listeners[], historySize }</code></td></tr>
+                </table>
+
+                <h2>Usage Examples</h2>
+                <pre><code>const bus = window.KetebeEventBus;
+
+// Subscribe to an event
+const listenerId = bus.on('enemy:updated', (event) => {
+    console.log('Enemy changed:', event.data.enemyId);
+});
+
+// Unsubscribe later
+bus.off('enemy:updated', listenerId);
+
+// Subscribe once (auto-removes after first call)
+bus.once('project:loaded', (event) => {
+    console.log('Project loaded:', event.data.name);
+});
+
+// Emit an event (goes to all tools)
+bus.emit('skill:updated', { skillId: 'fireball', action: 'updated' });
+
+// Wildcard listener — catches any event starting with 'asset:'
+bus.on('asset:*', (event) => {
+    console.log('Asset event:', event.type, event.data);
+});</code></pre>
+
+                <h2>Event Object Structure</h2>
+                <pre><code>{
+  "type":      "enemy:updated",            // event name
+  "data":      { "enemyId": "goblin_01" }, // payload (any shape)
+  "timestamp": 1741546402000,              // Unix ms when emitted
+  "source":    "/enemy_editor_abc12"       // originating window path+id
+}</code></pre>
+
+                <h2>Wildcard Patterns</h2>
+                <p>Event names support <code>*</code> as a glob wildcard. <code>*</code> alone matches everything; <code>asset:*</code> matches <code>asset:sprite:updated</code>, <code>asset:background:saved</code>, etc.</p>
+
+                <h2>Transport: WebSocket</h2>
+                <p>On load, EventBus connects to <code>ws://localhost:3000/ws</code>. Any event you emit is serialized to JSON and sent over the socket to all other connected windows. Events arriving from remote sources are deserialized and dispatched to local listeners — but <b>your own events are ignored</b> (checked by <code>source</code> ID) to prevent echo loops. On disconnect, it auto-reconnects with exponential backoff (max 5 attempts, up to 30 s delay).</p>
+
+                <h2>Transport: postMessage</h2>
+                <p>Every emitted event is also broadcast via <code>postMessage</code> to three targets: the parent window (if inside an iframe), all child iframes, and <code>window.opener</code> (if opened as a popup). The message is wrapped as <code>{ sourceType: 'ketebe-event', event: {...} }</code>. This is how the game window logs route back to the editor console.</p>
+
+                <h2>Full Event Catalog</h2>
+                <p>All events used across the Ketebe tool suite:</p>
+                <table>
+                    <tr><th>Event</th><th>Emitted By</th><th>Consumed By</th><th>Payload Fields</th></tr>
+                    <tr><td><code>project:loaded</code></td><td>Dashboard</td><td>All tools</td><td><code>name</code></td></tr>
+                    <tr><td><code>level:saved</code></td><td>Level Editor</td><td>Campaign Studio</td><td><code>filename, engineType</code></td></tr>
+                    <tr><td><code>level:open</code></td><td>Campaign Studio</td><td>All 3D Editors</td><td><code>levelId</code></td></tr>
+                    <tr><td><code>topdown3d:open-level</code></td><td>Dashboard</td><td>Topdown-3D Editor</td><td><code>levelId</code></td></tr>
+                    <tr><td><code>npc:updated</code></td><td>NPC Editor</td><td>Dialogue Studio</td><td><code>npcId, action</code></td></tr>
+                    <tr><td><code>npc:deleted</code></td><td>NPC Editor</td><td>Dialogue Studio</td><td><code>npcId</code></td></tr>
+                    <tr><td><code>enemy:updated</code></td><td>Villain Studio</td><td>Behavior Editor, Campaign</td><td><code>enemyId, action</code></td></tr>
+                    <tr><td><code>enemy:deleted</code></td><td>Villain Studio</td><td>Behavior Editor</td><td><code>enemyId</code></td></tr>
+                    <tr><td><code>enemy:load</code></td><td>Behavior Editor</td><td>Villain Studio</td><td><code>enemyId</code></td></tr>
+                    <tr><td><code>skill:updated</code></td><td>Skill Studio</td><td>Enemy Editor, Item Editor</td><td><code>skillId, action</code></td></tr>
+                    <tr><td><code>skill:load</code></td><td>Other tools</td><td>Skill Studio</td><td><code>skillId</code></td></tr>
+                    <tr><td><code>skill:audio:request</code></td><td>Skill Studio</td><td>DAW</td><td><code>skillId</code></td></tr>
+                    <tr><td><code>item:updated</code></td><td>Item Studio</td><td>Campaign, DB Editor</td><td><code>itemId, action</code></td></tr>
+                    <tr><td><code>item:load</code></td><td>Other tools</td><td>Item Studio</td><td><code>itemId</code></td></tr>
+                    <tr><td><code>fx:updated</code></td><td>FX Master</td><td>Skill Studio</td><td><code>fxId, action</code></td></tr>
+                    <tr><td><code>fx:request</code></td><td>Skill Studio</td><td>FX Master</td><td><code>fxId</code></td></tr>
+                    <tr><td><code>shader:updated</code></td><td>Shader Lab</td><td>3D Editors</td><td><code>shaderId, action</code></td></tr>
+                    <tr><td><code>shader:request</code></td><td>3D Editors</td><td>Shader Lab</td><td><code>shaderId</code></td></tr>
+                    <tr><td><code>dialogue:updated</code></td><td>Dialogue Studio</td><td>Localization, Campaign</td><td><code>scriptId, action</code></td></tr>
+                    <tr><td><code>dialogue:load</code></td><td>Other tools</td><td>Dialogue Studio</td><td><code>scriptId</code></td></tr>
+                    <tr><td><code>dialogue:*</code></td><td>(any dialogue event)</td><td>Localization Studio</td><td>varies</td></tr>
+                    <tr><td><code>quest:updated</code></td><td>Quest Designer</td><td>Campaign Studio</td><td><code>questId, action</code></td></tr>
+                    <tr><td><code>quest:load</code></td><td>Campaign Studio</td><td>Quest Designer</td><td><code>questId</code></td></tr>
+                    <tr><td><code>cutscene:saved</code></td><td>Cutscene Studio</td><td>Campaign Studio</td><td><code>cutsceneId</code></td></tr>
+                    <tr><td><code>cutscene:loaded</code></td><td>Cutscene Studio</td><td>Campaign Studio</td><td><code>cutsceneId</code></td></tr>
+                    <tr><td><code>cutscene:save</code></td><td>Campaign Studio</td><td>Cutscene Studio</td><td><code>cutsceneId</code></td></tr>
+                    <tr><td><code>cutscene:load</code></td><td>Campaign Studio</td><td>Cutscene Studio</td><td><code>cutsceneId</code></td></tr>
+                    <tr><td><code>campaign:load</code></td><td>Dashboard</td><td>Campaign Studio</td><td><code>name</code></td></tr>
+                    <tr><td><code>behavior:updated</code></td><td>Behavior Editor</td><td>Villain Studio</td><td><code>behaviorId, action</code></td></tr>
+                    <tr><td><code>behavior:request</code></td><td>Villain Studio</td><td>Behavior Editor</td><td><code>behaviorId</code></td></tr>
+                    <tr><td><code>character:updated</code></td><td>Hero Studio</td><td>Other tools</td><td><code>characterId, action</code></td></tr>
+                    <tr><td><code>character:loaded</code></td><td>Hero Studio</td><td>Other tools</td><td><code>characterId</code></td></tr>
+                    <tr><td><code>character:new</code></td><td>Hero Studio</td><td>Dashboard</td><td><code>characterId</code></td></tr>
+                    <tr><td><code>character:deleted</code></td><td>Hero Studio</td><td>Dashboard</td><td><code>characterId</code></td></tr>
+                    <tr><td><code>character:load</code></td><td>Other tools</td><td>Hero Studio</td><td><code>characterId</code></td></tr>
+                    <tr><td><code>achievements:updated</code></td><td>Achievement Studio</td><td>Campaign, Runtime</td><td>full achievements array</td></tr>
+                    <tr><td><code>audio:request</code></td><td>Various tools</td><td>DAW</td><td><code>trackId</code></td></tr>
+                    <tr><td><code>asset:*</code></td><td>Asset Manager</td><td>All tools</td><td><code>type, path</code></td></tr>
+                    <tr><td><code>asset:sprite:*</code></td><td>Pixel Art Editor</td><td>All tools</td><td><code>spriteKey, action</code></td></tr>
+                    <tr><td><code>sprite:request</code></td><td>Item/Skill editors</td><td>Pixel Art Editor</td><td><code>spriteKey</code></td></tr>
+                    <tr><td><code>background:request</code></td><td>Level Editor</td><td>Background Editor</td><td><code>bgId</code></td></tr>
+                    <tr><td><code>script:request</code></td><td>Various tools</td><td>IDE</td><td><code>scriptName</code></td></tr>
+                    <tr><td><code>ui:request</code></td><td>Various tools</td><td>UI Studio</td><td><code>screenId</code></td></tr>
+                    <tr><td><code>prefab:*</code></td><td>Prefab Builder</td><td>Level Editor, 3D Editors</td><td><code>prefabId, action</code></td></tr>
+                    <tr><td><code>algorithm:request</code></td><td>Logic tools</td><td>Algorithm Editor</td><td><code>algorithmId</code></td></tr>
+                    <tr><td><code>vsl:node_exec</code></td><td>VSL runtime</td><td>Algorithm Editor</td><td><code>nodeId, value</code></td></tr>
+                    <tr><td><code>vsl:value_update</code></td><td>VSL runtime</td><td>Algorithm Editor</td><td><code>nodeId, value</code></td></tr>
+                    <tr><td><code>editor:opened</code></td><td>Any editor</td><td>Dashboard</td><td><code>editorType</code></td></tr>
+                    <tr><td><code>studio:visual:clear</code></td><td>Topdown-3D</td><td>Topdown-3D</td><td>—</td></tr>
+                    <tr><td><code>studio:visual:ghost</code></td><td>Topdown-3D</td><td>Topdown-3D</td><td><code>position, rotation</code></td></tr>
+                    <tr><td><code>ai:command</code></td><td>AI Assistant</td><td>IDE, Logic editors</td><td><code>command, args</code></td></tr>
+                    <tr><td><code>ai:inject-code</code></td><td>AI Assistant</td><td>IDE</td><td><code>code</code></td></tr>
+                    <tr><td><code>ai:suggestion</code></td><td>AI backend</td><td>AI Assistant UI</td><td><code>text</code></td></tr>
+                    <tr><td><code>ai:thought</code></td><td>AI backend</td><td>AI Assistant UI</td><td><code>text</code></td></tr>
+                    <tr><td><code>system:websocket:connected</code></td><td>EventBus internals</td><td>Status bars</td><td>—</td></tr>
+                    <tr><td><code>system:websocket:disconnected</code></td><td>EventBus internals</td><td>Status bars</td><td>—</td></tr>
+                    <tr><td><code>system:websocket:error</code></td><td>EventBus internals</td><td>Status bars</td><td><code>error</code></td></tr>
+                </table>
+
+                <h2>Writing a Tool Integration</h2>
+                <p>Follow this boilerplate pattern when integrating a new tool with the EventBus:</p>
+                <pre><code>// At top of your tool's JS file
+let eventBus, projectState, assetManager;
+
+function initializeIntegration() {
+    eventBus     = window.KetebeEventBus;
+    projectState = window.KetebeProjectState;
+    assetManager = window.KetebeAssetManager;
+
+    if (!eventBus) return;
+
+    // Listen for events from other tools
+    eventBus.on('some:event', (event) => {
+        console.log('[MyTool] Received:', event.data);
+        handleUpdate(event.data);
+    });
+
+    console.log('[MyTool] EventBus connected');
+}
+
+// Call during DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeIntegration();
+});
+
+// Broadcast changes to other tools
+function broadcastMyUpdate(item, action = 'updated') {
+    if (!eventBus) return;
+    eventBus.emit('mytool:updated', {
+        itemId: item.id,
+        action,
+        source: 'my_editor'
+    });
+}</code></pre>
             </section>
 
             <!-- ======================================================= -->
