@@ -1158,7 +1158,10 @@ const FPSEditor = (() => {
         const input = document.createElement('input');
         input.type   = 'file';
         input.accept = '.json,.fpsmap.json';
+        input.style.display = 'none';
+        document.body.appendChild(input);
         input.onchange = e => {
+            document.body.removeChild(input);
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -1171,6 +1174,14 @@ const FPSEditor = (() => {
             };
             reader.readAsText(file);
         };
+        // Remove from DOM if user cancels (focus returns to window)
+        const _onFocus = () => {
+            window.removeEventListener('focus', _onFocus);
+            setTimeout(() => {
+                if (input.parentNode) document.body.removeChild(input);
+            }, 500);
+        };
+        window.addEventListener('focus', _onFocus);
         input.click();
     }
 
@@ -1347,8 +1358,11 @@ const FPSEditor = (() => {
         const a    = document.createElement('a');
         a.href     = url;
         a.download = filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
 
     // ── build / validate ─────────────────────────────────────────────────────
@@ -1568,6 +1582,26 @@ const FPSEditor = (() => {
             const res = await fetch('/api/projects');
             if (!res.ok) throw new Error('Failed to fetch projects');
             const projects = await res.json();
+
+            // ── new level creation form ──────────────────────────────────────
+            const projectOpts = projects.map(p =>
+                `<option value="${p.name.replace(/"/g,'&quot;')}">${p.name}</option>`
+            ).join('');
+            const newSection = `
+                <div style="margin-bottom:16px; padding:10px; border:1px solid #2e2418; background:#0a0704;">
+                    <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:8px; text-transform:uppercase;">＋ Create New FPS Level</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <select id="browse-proj-sel" style="flex:1; min-width:120px; background:#111; color:#ccc; border:1px solid #333; padding:5px 8px; font-family:inherit; font-size:0.9rem;">
+                            ${projectOpts || '<option value="">No projects</option>'}
+                        </select>
+                        <input id="browse-level-name" type="text" placeholder="level name…"
+                            style="flex:2; min-width:120px; background:#111; color:#ccc; border:1px solid #333; padding:5px 8px; font-family:inherit; font-size:0.9rem;" />
+                        <button onclick="FPSEditor.browseCreate()" style="background:#ff6b35; color:#000; border:none; padding:5px 12px; cursor:pointer; font-family:inherit; font-size:0.9rem; white-space:nowrap;">CREATE</button>
+                    </div>
+                </div>
+            `;
+
+            // ── existing fps-3d levels ──────────────────────────────────────
             const items = [];
             for (const proj of projects) {
                 try {
@@ -1579,23 +1613,29 @@ const FPSEditor = (() => {
                     items.push({ proj, levels: matching });
                 } catch(_) {}
             }
-            if (!items.length) {
-                list.innerHTML = '<div style="color:#666; padding:20px; text-align:center;">No fps-3d levels found.</div>';
-                return;
-            }
-            list.innerHTML = items.map(({ proj, levels }) => `
-                <div style="margin-bottom:14px;">
-                    <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${proj.name}</div>
-                    ${levels.map(l => `
-                        <div style="padding:8px 12px; background:#150f0a; border:1px solid #222; margin-bottom:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
-                             onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#222'"
-                             onclick="FPSEditor.browseLoad('${proj.name.replace(/'/g, "\\'")}', '${l.id}')">
-                            <span style="color:#ccc;">${l.name || l.id}</span>
-                            <span style="color:#555; font-size:0.75rem;">${l.id}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `).join('');
+
+            const existingSection = items.length === 0
+                ? '<div style="color:#444; padding:10px 0; font-size:0.85rem; text-align:center;">No saved FPS levels yet — create one above.</div>'
+                : items.map(({ proj, levels }) => `
+                    <div style="margin-bottom:14px;">
+                        <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${proj.name}</div>
+                        ${levels.map(l => `
+                            <div style="padding:8px 12px; background:#150f0a; border:1px solid #222; margin-bottom:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
+                                 onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#222'"
+                                 onclick="FPSEditor.browseLoad('${proj.name.replace(/'/g, "\\'")}', '${l.id}')">
+                                <span style="color:#ccc;">${l.name || l.id}</span>
+                                <span style="color:#555; font-size:0.75rem;">${l.id}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('');
+
+            list.innerHTML = newSection + existingSection;
+
+            // Pre-select current project if set
+            const sel = document.getElementById('browse-proj-sel');
+            if (sel && _state.project) sel.value = _state.project;
+
         } catch(e) {
             list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${e.message}</div>`;
         }
@@ -1609,6 +1649,27 @@ const FPSEditor = (() => {
     async function browseLoad(project, levelId) {
         closeBrowse();
         await loadFromAPI(project, levelId);
+    }
+
+    function browseCreate() {
+        const projSel = document.getElementById('browse-proj-sel');
+        const nameIn  = document.getElementById('browse-level-name');
+        if (!projSel || !nameIn) return;
+        const project = projSel.value.trim();
+        const name    = nameIn.value.trim();
+        if (!project) { alert('Select a project first.'); return; }
+        if (!name)    { alert('Enter a level name.'); return; }
+        closeBrowse();
+        // Start fresh map with the selected project + name
+        newMap();
+        _state.project  = project;
+        _state.mapName  = name;
+        const lbl = document.getElementById('project-label');
+        if (lbl) lbl.textContent = project;
+        const projInp = document.getElementById('map-project');
+        if (projInp) projInp.value = project;
+        const nameInp = document.getElementById('map-name');
+        if (nameInp) nameInp.value = name;
     }
 
         // read project from URL param ?project=NAME
@@ -1708,7 +1769,7 @@ const FPSEditor = (() => {
         updateFog, updateLighting,
         randomizePalette, loadPalette, savePalette,
         newMap, openMap, saveMap, saveMapAs, exportMap, importMap, exportGreedyMeshData,
-        loadFromAPI, openBrowse, closeBrowse, browseLoad,
+        loadFromAPI, openBrowse, closeBrowse, browseLoad, browseCreate,
         setTerrainMode, setSculptTool, setBrushRadius, setBrushStrength, generateLowPolyFloor,
         undo, redo, selectAll, deleteSelected,
         testPlay, buildNavmesh, validateMap, clearMap,
