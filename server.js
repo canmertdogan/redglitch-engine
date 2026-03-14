@@ -32,6 +32,7 @@ const systemRouter = require('./server/routes/system');
 const ideRouter = require('./server/routes/ide');
 const gitRouter = require('./server/routes/git');
 const buildRouter = require('./server/routes/build');
+const test3dRouter = require('./server/routes/test-3d');
 
 // Import WebSocket setup
 const setupWebSocket = require('./server/websocket');
@@ -177,6 +178,7 @@ app.use('/api', campaignsRouter);
 app.use('/api/ide', ideRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/build', buildRouter);
+app.use('/api/test', test3dRouter);
 
 // ── /api/project-file — generic project-relative file read/write ─────────────
 // Used by topdown3d_editor.js and terrain_tools.js to save arbitrary
