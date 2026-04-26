@@ -72,10 +72,57 @@ window.AchievementSystem = class AchievementSystem {
         const matches = this.definitions.filter(a => a.trigger === triggerCode);
         
         for (const ach of matches) {
+            // Check Prerequisites
+            if (ach.prereq && !this.unlocked.includes(ach.prereq)) continue;
+
             if (!this.unlocked.includes(ach.id)) {
                 this.unlocked.push(ach.id);
+                this.grantReward(ach);
                 await this.saveProgress();
                 this.showToast(ach);
+            }
+        }
+    }
+
+    grantReward(ach) {
+        if (!ach.rewardType || ach.rewardType === 'NONE') return;
+        
+        const game = window.game;
+        if (!game || !game.player) return;
+
+        const val = ach.rewardValue;
+
+        if (ach.rewardType === 'XP') {
+            const amount = parseInt(val) || 0;
+            if (!game.player.xp) game.player.xp = 0;
+            game.player.xp += amount;
+            if(game.fx) game.fx.popText(game.player.x, game.player.y, `+${amount} XP`, '#f1c40f');
+        }
+        else if (ach.rewardType === 'STAT') {
+            // value format: "statName:amount" or just assume stat name in type?
+            // Editor allows "STAT" type and "Value".
+            // Let's assume Value is "hp:10" or just "hp".
+            // Simplified: We assume value is the amount, but which stat?
+            // The editor only has one value field. 
+            // Implementation: Value should be "hp 10"
+            const parts = val.split(' ');
+            if (parts.length === 2) {
+                const stat = parts[0];
+                const amount = parseInt(parts[1]);
+                if (game.player[stat] !== undefined) {
+                    game.player[stat] += amount;
+                    if (stat.includes('max')) game.player[stat.replace('max','').toLowerCase()] += amount; // Heal if max increased
+                    if(game.fx) game.fx.popText(game.player.x, game.player.y, `+${amount} ${stat.toUpperCase()}`, '#2ecc71');
+                }
+            }
+        }
+        else if (ach.rewardType === 'ITEM') {
+            const itemId = val;
+            const def = game.itemDefs.find(i => i.id === itemId);
+            if (def) {
+                game.inventory.push({...def});
+                if(game.updateInventoryHUD) game.updateInventoryHUD();
+                if(game.fx) game.fx.popText(game.player.x, game.player.y, `GOT ${def.name}`, '#fff');
             }
         }
     }

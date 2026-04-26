@@ -226,4 +226,11 @@ class EngineAdapter {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = EngineAdapter;
 }
+
+// Make available globally for browser context
+if (typeof window !== 'undefined') {
+    window.EngineAdapter = EngineAdapter;
+}
+
+// ES6 export for modern module imports
 export default EngineAdapter;

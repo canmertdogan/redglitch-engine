@@ -6,7 +6,10 @@
 
 class PlatformerTrigger extends PlatformerEntity {
     constructor(x, y, config = {}) {
-        super(x * 32, y * 32, config.w || 32, config.h || 32);
+        const ts = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+        const w = config.w || ts;
+        const h = config.h || ts;
+        super(x, y, w, h);
         this.targetId = config.targetId || null;
         this.action = config.action || 'toggle';
         this.triggerType = config.triggerType || 'switch'; // 'switch', 'pressure_plate', 'zone'

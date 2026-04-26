@@ -3,6 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
+const safeFs = require('../utils/safeFs');
 
 function isSafeId(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);

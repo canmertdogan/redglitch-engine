@@ -34,9 +34,11 @@ async function loadModel(config) {
         env.allowRemoteModels = true;
         env.useBrowserCache = true;
         env.backends.onnx.wasm.wasmPaths = '/lib/transformers/';
+        env.backends.onnx.wasm.proxy = false;
 
         if (backend !== 'webgpu') {
-            env.backends.onnx.wasm.numThreads = config.wasmThreads || 4;
+            // Force single-thread WASM to avoid browser Worker bootstrap failures in Electron.
+            env.backends.onnx.wasm.numThreads = 1;
             env.backends.onnx.wasm.simd = config.wasmSimd !== false;
         }
 

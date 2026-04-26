@@ -53,7 +53,13 @@ class KaiChatUIController {
                 loading.style.display = 'none';
                 this.loadingShown = false;
                 this.loadingInProgress = false;
-            }, 800);
+                
+                // Restore focus to input
+                const input = document.getElementById('ai-chat-input');
+                if (input) {
+                    input.focus();
+                }
+            }, 300); // Reduced from 800ms to 300ms
         }
     }
     
@@ -537,6 +543,7 @@ class KaiChatUIController {
             if (!this.isInitialized) {
                 this.initialize().catch(err => console.error('Kai: Init Failed', err));
             }
+            input.focus(); // Restore focus even on error
             return;
         }
 
@@ -577,6 +584,9 @@ class KaiChatUIController {
             this.setAvatarState('error');
             this.playSound('error');
             this.addMessage('error', `>> EXCEPTION: ${error.message}`);
+        } finally {
+            // Always restore focus after processing
+            input.focus();
         }
     }
 

@@ -63,6 +63,9 @@ const paletteGrid = document.getElementById('palette-grid');
 const previewCanvas = document.getElementById('selected-tile-preview');
 const prCtx = previewCanvas.getContext('2d');
 let tileset = new Image();
+const PLAYTEST_WINDOW_NAME = 'ketebe_topdown_playtest';
+let playtestWindowRef = null;
+let playtestLaunchLocked = false;
 
 // --- INIT ---
 function updateProgress(percent, text) {
@@ -1580,8 +1583,26 @@ function toggleLevelWindow() {
 }
 
 function playtest() {
-    localStorage.setItem('temp_playtest', JSON.stringify(map));
-    window.open('index.html?playtest=true', '_blank');
+    if (playtestLaunchLocked) return;
+    playtestLaunchLocked = true;
+    setTimeout(() => { playtestLaunchLocked = false; }, 350);
+
+    const serializedMap = JSON.stringify(map);
+    const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    localStorage.setItem('ketebe_test_map', serializedMap);
+    localStorage.setItem('temp_playtest', serializedMap); // Backward compatibility
+    localStorage.setItem('ketebe_test_session', sessionId);
+
+    const playtestUrl = `index.html?engine=rpg-topdown&playtest=true&session=${encodeURIComponent(sessionId)}&ts=${Date.now()}`;
+    playtestWindowRef = window.open(playtestUrl, PLAYTEST_WINDOW_NAME);
+
+    if (playtestWindowRef) {
+        playtestWindowRef.focus();
+    } else {
+        playtestLaunchLocked = false;
+        alert("Playtest window was blocked. Please allow popups for this site.");
+    }
 }
 
 function loadMapData(data) { 

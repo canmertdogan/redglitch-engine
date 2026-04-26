@@ -139,36 +139,41 @@ class PlatformerGame {
         
         this.resize();
 
-        // --- PHASE 7: Playtest Mode Detection ---
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('playtest') === 'true') {
-            console.log('[PlatformerEngine] Playtest mode active. Loading local data...');
-            const rawData = localStorage.getItem('temp_playtest_platformer');
-            if (rawData) {
-                try {
-                    const levelData = JSON.parse(rawData);
-                    await this.loadLevelFromData(levelData);
-                } catch (e) {
-                    console.error('Failed to parse playtest data:', e);
-                }
-            }
-        }
     }
 
     async loadLevel(levelId, levelPath = null) {
-        this.currentLevelId = levelId;
+        const cleanLevelId = String(levelId || 'level').replace(/\.json$/i, '');
+        this.currentLevelId = cleanLevelId;
         this.levelComplete = false;
-        try {
-            const path = levelPath || `dunyalar/platformer/${levelId}.json`;
-            const res = await fetch(path);
-            if(res.ok) {
-                this.map = await res.json();
-            } else {
-                this.map = this._createFallbackLevel();
+
+        const paths = levelPath
+            ? [levelPath]
+            : [
+                `dunyalar/platformer/${cleanLevelId}.json`,
+                `dunyalar/${cleanLevelId}.json`,
+            ];
+
+        let loaded = null;
+        let lastError = null;
+        for (const path of paths) {
+            try {
+                const res = await fetch(path);
+                if (res.ok) {
+                    loaded = await res.json();
+                    break;
+                }
+                lastError = new Error(`HTTP ${res.status} for ${path}`);
+            } catch (e) {
+                lastError = e;
             }
-        } catch(e) {
-            this.map = this._createFallbackLevel();
         }
+
+        if (!loaded) {
+            console.error('[PlatformerEngine] Level load failed, using fallback:', lastError?.message || 'unknown');
+            loaded = this._createFallbackLevel();
+        }
+
+        this.map = this._normalizeMapData(loaded);
         await this._setupLevel();
         this.isRunning = true;
         this._lastTime = performance.now();
@@ -178,7 +183,7 @@ class PlatformerGame {
     async loadLevelFromData(levelData) {
         this.currentLevelId = levelData.name || 'playtest';
         this.levelComplete = false;
-        this.map = levelData;
+        this.map = this._normalizeMapData(levelData);
         await this._setupLevel();
         this.isRunning = true;
         this._lastTime = performance.now();
@@ -186,7 +191,67 @@ class PlatformerGame {
     }
 
     _createFallbackLevel() {
-        return { width: 50, height: 20, collision: new Array(50 * 20).fill(0), spawn: { x: 2, y: 15 }, goal: { x: 45, y: 15 }, collectibles: [], entities: [] };
+        const width = 50;
+        const height = 20;
+        const collision = new Array(width * height).fill(0);
+        for (let x = 0; x < width; x++) {
+            collision[(height - 2) * width + x] = 1;
+            collision[(height - 1) * width + x] = 1;
+        }
+        return {
+            width,
+            height,
+            layers: [new Array(width * height).fill(0)],
+            collision,
+            spawn: { x: 2, y: height - 4 },
+            goal: { x: width - 5, y: height - 4 },
+            collectibles: [],
+            entities: [],
+            background: '#87CEEB',
+        };
+    }
+
+    _normalizeMapData(raw) {
+        const map = (raw && typeof raw === 'object') ? { ...raw } : this._createFallbackLevel();
+        const width = Math.max(4, Number(map.width || 50) | 0);
+        const height = Math.max(4, Number(map.height || 20) | 0);
+        const total = width * height;
+
+        map.width = width;
+        map.height = height;
+
+        if (!Array.isArray(map.layers) || map.layers.length === 0) {
+            map.layers = [new Array(total).fill(0)];
+        } else {
+            map.layers = map.layers.map((layer) => {
+                if (!Array.isArray(layer)) return new Array(total).fill(0);
+                if (layer.length === total) return layer;
+                const normalized = new Array(total).fill(0);
+                for (let i = 0; i < Math.min(total, layer.length); i++) normalized[i] = Number(layer[i] || 0);
+                return normalized;
+            });
+        }
+
+        if (!Array.isArray(map.collision) || map.collision.length !== total) {
+            const src = map.layers[0] || [];
+            map.collision = new Array(total).fill(0);
+            for (let i = 0; i < total; i++) {
+                map.collision[i] = Number(src[i] || 0) > 0 ? 1 : 0;
+            }
+        }
+
+        if (!map.spawn || typeof map.spawn !== 'object') {
+            map.spawn = { x: 2, y: Math.max(1, height - 4) };
+        }
+        if (!map.goal || typeof map.goal !== 'object') {
+            map.goal = { x: Math.max(2, width - 5), y: Math.max(1, height - 4) };
+        }
+
+        map.collectibles = Array.isArray(map.collectibles) ? map.collectibles : [];
+        map.entities = Array.isArray(map.entities) ? map.entities : [];
+        map.checkpoints = Array.isArray(map.checkpoints) ? map.checkpoints : [];
+        map.decorations = Array.isArray(map.decorations) ? map.decorations : [];
+        return map;
     }
 
     async _setupLevel() {

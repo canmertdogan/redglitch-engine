@@ -43,6 +43,8 @@ class CampaignController {
         this.currentSlot = null;
         this.playTimeStart = null;
         this.totalPlayTime = 0; // in seconds
+        this._activeProjectName = null;
+        this._activeProjectNameResolved = false;
     }
 
     /**
@@ -321,6 +323,17 @@ class CampaignController {
         const engineType = node.engineType || 'rpg-topdown';
         const levelId = node.levelId || node.id;
         const levelPath = node.levelPath || null;
+        let projectName = node.projectName
+            || node.project
+            || this.campaignMetadata?.projectName
+            || this.campaignMetadata?.project
+            || null;
+
+        // Backward compatibility: older campaigns often omit project for 3D nodes.
+        // In that case, resolve the current active project from the server.
+        if (!projectName && !levelPath && this._is3DEngine(engineType)) {
+            projectName = await this._resolveActiveProjectName();
+        }
 
         console.log(`Loading level: ${levelId} (engine: ${engineType})`);
         console.log(`[CampaignController] Current engine: ${this.currentEngineType}, Target engine: ${engineType}`);
@@ -336,6 +349,9 @@ class CampaignController {
 
             // Load level in current adapter
             if (this.currentAdapter) {
+                if (projectName && typeof this.currentAdapter.setProject === 'function') {
+                    this.currentAdapter.setProject(projectName);
+                }
                 console.log(`[CampaignController] Registering onLevelComplete callback for ${levelId}`);
                 // Register completion callback BEFORE loading level
                 this.currentAdapter.onLevelComplete((data) => {
@@ -354,6 +370,36 @@ class CampaignController {
         } catch (error) {
             console.error('Failed to load level:', error);
             this._showError(`Failed to load level: ${levelId}`);
+        }
+    }
+
+    _is3DEngine(engineType) {
+        return engineType === 'topdown-3d'
+            || engineType === 'fps-3d'
+            || engineType === 'platformer-3d';
+    }
+
+    async _resolveActiveProjectName() {
+        if (this._activeProjectNameResolved) {
+            return this._activeProjectName;
+        }
+
+        this._activeProjectNameResolved = true;
+        this._activeProjectName = null;
+
+        try {
+            const res = await fetch('/api/projects/current');
+            if (!res.ok) {
+                console.warn(`[CampaignController] Failed to resolve active project (HTTP ${res.status})`);
+                return null;
+            }
+            const data = await res.json();
+            const name = (typeof data?.name === 'string') ? data.name : null;
+            this._activeProjectName = (name && name !== 'ROOT') ? name : null;
+            return this._activeProjectName;
+        } catch (error) {
+            console.warn('[CampaignController] Failed to resolve active project:', error);
+            return null;
         }
     }
 
@@ -872,6 +918,21 @@ class CampaignController {
                 case 'platformer-2d':
                     adapter = new PlatformerAdapter();
                     break;
+                case 'topdown-3d':
+                    console.log('[CampaignController] Creating TopDown3DAdapter...');
+                    adapter = new TopDown3DAdapter();
+                    console.log('[CampaignController] TopDown3DAdapter created');
+                    break;
+                case 'fps-3d':
+                    console.log('[CampaignController] Creating FPS3DAdapter...');
+                    adapter = new FPS3DAdapter();
+                    console.log('[CampaignController] FPS3DAdapter created');
+                    break;
+                case 'platformer-3d':
+                    console.log('[CampaignController] Creating Platformer3DAdapter...');
+                    adapter = new Platformer3DAdapter();
+                    console.log('[CampaignController] Platformer3DAdapter created');
+                    break;
                 default:
                     throw new Error(`Unknown engine type: ${newEngineType}`);
             }
@@ -997,11 +1058,17 @@ class CampaignController {
      * @returns {Object}
      */
     getProgress() {
+        const totalNodes = Array.isArray(this.campaignData)
+            ? this.campaignData.length
+            : (Array.isArray(this.campaignData?.nodes) ? this.campaignData.nodes.length : 0);
+        const completedNodes = this.completedNodes.size;
         return {
-            totalNodes: this.campaignData.length,
-            completedNodes: this.completedNodes.size,
+            totalNodes,
+            completedNodes,
             currentNode: this.currentNodeId,
-            percentComplete: Math.round((this.completedNodes.size / this.campaignData.length) * 100)
+            percentComplete: totalNodes > 0
+                ? Math.round((completedNodes / totalNodes) * 100)
+                : 0
         };
     }
 
@@ -1138,13 +1205,18 @@ class CampaignController {
         // Statistics
         const stats = document.createElement('div');
         stats.style.cssText = 'font-size: 28px; text-align: center; margin-bottom: 40px; line-height: 1.8;';
-        const totalNodes = this.campaignData.nodes.length;
+        const totalNodes = Array.isArray(this.campaignData)
+            ? this.campaignData.length
+            : (Array.isArray(this.campaignData?.nodes) ? this.campaignData.nodes.length : 0);
         const completedCount = this.completedNodes.size;
-        const completionRate = Math.floor((completedCount / totalNodes) * 100);
+        const completionRate = totalNodes > 0 ? Math.floor((completedCount / totalNodes) * 100) : 0;
+        const achievementsUnlocked = Array.isArray(this.achievements)
+            ? this.achievements.length
+            : (this.achievements?.size ?? 0);
         
         stats.innerHTML = `
             <div style="color: #2ecc71;">✓ Nodes Completed: ${completedCount}/${totalNodes} (${completionRate}%)</div>
-            <div style="color: #e67e22;">★ Achievements Unlocked: ${this.achievements?.size || 0}</div>
+            <div style="color: #e67e22;">★ Achievements Unlocked: ${achievementsUnlocked}</div>
             <div style="color: #9b59b6;">⚑ Flags Set: ${Object.keys(this.globalFlags).filter(k => this.globalFlags[k]).length}</div>
         `;
         overlay.appendChild(stats);

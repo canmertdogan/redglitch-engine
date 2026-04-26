@@ -16,7 +16,8 @@
             --text: #cfd8dc;
             --header-h: 40px;
             --sidebar-w: 220px;
-            --border: 2px solid #020408;
+            --border: #1f2b42;
+            --edge-border: 2px solid #020408;
         }
 
         /* ... (Keep existing body/titlebar styles until Quick Access Toolbar) ... */
@@ -106,7 +107,7 @@
         #right-sidebar {
             width: var(--sidebar-w);
             background: #0a0f1a;
-            border-left: var(--border);
+            border-left: var(--edge-border);
             display: flex; flex-direction: column;
             padding: 0;
         }
@@ -255,18 +256,18 @@
             z-index: 1;
         }
         .brand-gold {
-            color: #f1c40f;
+            color: var(--accent);
             letter-spacing: 2px;
         }
         .separator-plus {
-            color: #f1c40f;
+            color: var(--accent);
             margin: 0 12px;
             font-size: 1.1rem;
             font-weight: 100;
             display: inline-block;
         }
         .brand-blue {
-            color: #f1c40f;
+            color: var(--accent);
             position: relative;
             display: inline-block;
         }
@@ -305,7 +306,7 @@
         #sidebar {
             width: var(--sidebar-w);
             background: var(--bg-main);
-            border-right: var(--border);
+            border-right: var(--edge-border);
             display: flex;
             flex-direction: column;
             transition: width 0.2s;
@@ -316,7 +317,7 @@
         #right-sidebar {
             width: var(--sidebar-w);
             background: var(--bg-main);
-            border-left: var(--border);
+            border-left: var(--edge-border);
             display: flex;
             flex-direction: column;
             transition: width 0.2s;
@@ -359,7 +360,7 @@
         }
         
         .handle-btn {
-            width: 12px; height: 100%; background: var(--bg-ui); border: var(--border);
+            width: 12px; height: 100%; background: var(--bg-ui); border: var(--edge-border);
             align-self: center; cursor: pointer; display: flex; align-items: center; justify-content: center;
             font-size: 10px; color: var(--accent);
         }
@@ -937,6 +938,179 @@
         display: flex; justify-content: space-between; 
         font-size: 0.8rem; color: #666; margin-bottom: 5px;
     }
+
+    /* --- LIGHT THEME OVERRIDES (Studio Chrome) --- */
+    [data-theme="modern-light"] #titlebar {
+        background: #e9eff7;
+        border-bottom-color: #b8c7db;
+        color: #1f2a37;
+    }
+    [data-theme="modern-light"] .app-icon {
+        background: #f4f8ff;
+        border-right-color: #b8c7db;
+    }
+    [data-theme="modern-light"] .control-btn {
+        color: #334155;
+    }
+    [data-theme="modern-light"] .control-btn:hover {
+        background: #dbe7f5;
+    }
+    [data-theme="modern-light"] .menu-btn {
+        color: #334155;
+    }
+    [data-theme="modern-light"] .menu-btn:hover,
+    [data-theme="modern-light"] .dropdown.active .menu-btn {
+        background: #dbe7f5;
+        color: #0f172a;
+    }
+    [data-theme="modern-light"] .dropdown-content {
+        background: #ffffff;
+        border-color: #b8c7db;
+        box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+    }
+    [data-theme="modern-light"] .dropdown-item {
+        color: #334155;
+    }
+    [data-theme="modern-light"] .dropdown-item:hover {
+        background: #eef3fb;
+    }
+    [data-theme="modern-light"] .dropdown-divider {
+        background: #d3deec;
+    }
+
+    [data-theme="modern-light"] #quick-toolbar {
+        background: #f4f8ff;
+        border-bottom-color: #b8c7db;
+    }
+    [data-theme="modern-light"] .toolbar-group {
+        border-right-color: #d3deec;
+    }
+    [data-theme="modern-light"] .tool-btn {
+        color: #475569;
+    }
+    [data-theme="modern-light"] .tool-btn:hover {
+        background: #e8eef8;
+        color: #0f172a;
+        border-color: #b8c7db;
+    }
+    [data-theme="modern-light"] .tool-btn:active,
+    [data-theme="modern-light"] .tool-btn.active {
+        background: #dbe7f5;
+    }
+    [data-theme="modern-light"] .tool-btn.primary:hover {
+        background: rgba(37, 99, 235, 0.12);
+        color: #0f172a;
+    }
+
+    [data-theme="modern-light"] #sidebar,
+    [data-theme="modern-light"] #right-sidebar {
+        background: #ffffff;
+    }
+    [data-theme="modern-light"] .sidebar-header {
+        border-bottom-color: #b8c7db;
+    }
+    [data-theme="modern-light"] .module-btn,
+    [data-theme="modern-light"] .action-btn,
+    [data-theme="modern-light"] .file-tree {
+        color: #475569;
+    }
+    [data-theme="modern-light"] .module-btn:hover,
+    [data-theme="modern-light"] .action-btn:hover,
+    [data-theme="modern-light"] .tree-item:hover {
+        background: #eef3fb;
+        color: #0f172a;
+    }
+    [data-theme="modern-light"] .module-btn.active {
+        background: #e8eef8;
+    }
+    [data-theme="modern-light"] .tool-btn-sidebar {
+        background: #f8fbff;
+        border-color: #d3deec;
+        color: #475569;
+    }
+    [data-theme="modern-light"] .tool-btn-sidebar:hover {
+        background: #eef3fb;
+        color: #0f172a;
+        border-color: #b8c7db;
+    }
+    [data-theme="modern-light"] .tool-btn-sidebar.active,
+    [data-theme="modern-light"] .tool-btn-sidebar.opened {
+        background: #e8eef8;
+        border-color: var(--accent);
+    }
+    [data-theme="modern-light"] .ops-btn {
+        background: #f8fbff;
+        border-color: #d3deec;
+        color: #475569;
+    }
+    [data-theme="modern-light"] .ops-btn:hover {
+        background: #eef3fb;
+        color: #0f172a;
+        border-color: #b8c7db;
+    }
+    [data-theme="modern-light"] .build-selector {
+        background: #ffffff;
+        border-color: #b8c7db;
+        color: #1f2a37;
+    }
+    [data-theme="modern-light"] .retro-toggle {
+        color: #475569;
+    }
+    [data-theme="modern-light"] .retro-toggle:hover {
+        color: #0f172a;
+    }
+
+    [data-theme="modern-light"] #workspace {
+        background-image: radial-gradient(rgba(142, 166, 197, 0.45) 1px, transparent 1px);
+    }
+    [data-theme="modern-light"] #tab-bar {
+        background: #eef3fb;
+        border-bottom-color: #b8c7db;
+    }
+    [data-theme="modern-light"] .tab {
+        background: #f8fbff;
+        border-color: #b8c7db;
+        color: #475569;
+    }
+    [data-theme="modern-light"] .tab:hover {
+        background: #e8eef8;
+        color: #0f172a;
+    }
+    [data-theme="modern-light"] .tab.active {
+        background: #ffffff;
+    }
+    [data-theme="modern-light"] .window {
+        border-color: #b8c7db;
+        box-shadow: 4px 4px 0 rgba(142, 166, 197, 0.45);
+    }
+    [data-theme="modern-light"] .window-title {
+        background: #eef3fb;
+        border-bottom-color: #b8c7db;
+        color: #334155;
+    }
+    [data-theme="modern-light"] .window.focused .window-title {
+        background: #e9eff7;
+    }
+    [data-theme="modern-light"] .window-btn {
+        background: #f8fbff;
+        border-color: #b8c7db;
+        color: #334155;
+    }
+    [data-theme="modern-light"] .window-btn:hover {
+        background: #e8eef8;
+    }
+    [data-theme="modern-light"] .window-content {
+        background: #ffffff;
+    }
+
+    [data-theme="modern-light"] #status-bar {
+        background: #e9eff7;
+        border-top-color: #b8c7db;
+        color: #334155;
+    }
+    [data-theme="modern-light"] .sb-item:hover {
+        background: rgba(51, 65, 85, 0.1);
+    }
     </style>
     <script src="theme.js"></script>
 </head>
@@ -978,6 +1152,15 @@
                 <div class="menu-btn" onclick="playGame()">Run</div>
                 <div class="menu-btn" onclick="window.open('http://localhost:3000/launcher.html', '_blank')">Browser</div>
                 <div class="menu-btn" onclick="openWindow({id:'settings', title:'Preferences', icon:'⚙️', src:'preferences.html'})">Preferences</div>
+                <div class="dropdown" id="theme-dropdown">
+                    <div class="menu-btn" onclick="toggleDropdown(event, 'theme-dropdown')">Theme</div>
+                    <div class="dropdown-content">
+                        <div class="dropdown-item" onclick="applyTheme('modern-light'); closeAllDropdowns();"><span>☀️</span> Modern Light</div>
+                        <div class="dropdown-item" onclick="applyTheme('modern-dark'); closeAllDropdowns();"><span>🌙</span> Modern Dark</div>
+                        <div class="dropdown-item" onclick="applyTheme('cyberpunk'); closeAllDropdowns();"><span>🟣</span> Cyberpunk</div>
+                        <div class="dropdown-item" onclick="applyTheme('classic-dungeon'); closeAllDropdowns();"><span>🛡️</span> Dungeon</div>
+                    </div>
+                </div>
                 <div class="dropdown" id="help-dropdown">
                     <div class="menu-btn" onclick="toggleDropdown(event, 'help-dropdown')">Help</div>
                     <div class="dropdown-content">
@@ -1656,6 +1839,25 @@
             document.getElementById('build-target').value = target;
             showStatusMessage(`Build Target Set: ${label}`);
             openBuildWizard(target);
+        }
+
+        function applyTheme(themeName, options = {}) {
+            if (typeof window.setTheme === 'function') {
+                window.setTheme(themeName);
+            } else {
+                localStorage.setItem('ketebe_theme', themeName);
+            }
+
+            if (options.broadcast !== false) {
+                document.querySelectorAll('#window-container iframe').forEach(frame => {
+                    const child = frame.contentWindow;
+                    if (child && typeof child.setTheme === 'function') {
+                        child.setTheme(themeName, { source: 'parent' });
+                    }
+                });
+            }
+
+            showStatusMessage(`THEME SET: ${themeName.toUpperCase()}`);
         }
 
         // --- BUILD WIZARD ---

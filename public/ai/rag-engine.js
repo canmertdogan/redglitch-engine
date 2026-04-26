@@ -24,6 +24,9 @@ export class RAGEngine {
         // Setup Embedding Worker
         this.worker = new Worker('/ai/embedding-worker.js', { type: 'module' });
         this.worker.onmessage = (e) => this.handleWorkerMessage(e.data);
+        this.worker.onerror = (e) => {
+            console.error('[RAGEngine] Embedding worker crashed:', e.message || e);
+        };
 
         // Load and index corpus
         await this.loadCorpus();
@@ -59,9 +62,9 @@ export class RAGEngine {
     }
 
     async embedChunks(chunks) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const requestId = 'embed-' + Date.now();
-            this.callbacks.set(requestId, { resolve });
+            this.callbacks.set(requestId, { resolve, reject });
             this.worker.postMessage({
                 type: 'embed_batch',
                 id: requestId,
@@ -76,9 +79,9 @@ export class RAGEngine {
     }
 
     async getQueryEmbedding(text) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const requestId = 'query-' + Date.now();
-            this.callbacks.set(requestId, { resolve });
+            this.callbacks.set(requestId, { resolve, reject });
             this.worker.postMessage({
                 type: 'embed',
                 id: requestId,
@@ -88,7 +91,7 @@ export class RAGEngine {
     }
 
     handleWorkerMessage(data) {
-        const { id, type, embedding, embeddings } = data;
+        const { id, type, embedding, embeddings, message } = data;
         const cb = this.callbacks.get(id);
         if (!cb) return;
 
@@ -97,6 +100,9 @@ export class RAGEngine {
             this.callbacks.delete(id);
         } else if (type === 'embed_batch_result') {
             cb.resolve(embeddings);
+            this.callbacks.delete(id);
+        } else if (type === 'error') {
+            cb.reject(new Error(message || 'Embedding worker error'));
             this.callbacks.delete(id);
         }
     }

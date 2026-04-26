@@ -1,13 +1,16 @@
 class PhysicsSystem {
     constructor() {
-        const config = window.PlatformerConfig || { GRAVITY: 0.5, FRICTION: 0.8, TILE_SIZE: 32 };
+        const cfg = window.PlatformerConfig || {};
+        const config = Object.assign({ GRAVITY: 0.5, FRICTION: 0.8, TILE_SIZE: 32 }, cfg);
         this.gravity = config.GRAVITY;
         this.friction = config.FRICTION;
         this.terminalVelocity = config.TERMINAL_VELOCITY || 12;
-        this.tileSize = config.TILE_SIZE;
+        this.tileSize = config.TILE_SIZE || (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
     }
 
-    apply(entity, map, platforms = []) {
+    apply(entity, map, platforms = [], dt = 1/60) {
+        // Convert dt to an equivalent "ticks" scale where 1 tick == 1/60s
+        const scale = Math.max(0, Math.min(dt * 60, 4));
         if (!entity || !map || !map.collision) return;
 
         // Sanitize entity state to prevent NaN crashes
@@ -23,27 +26,27 @@ class PhysicsSystem {
         // 1. Moving Platform Carrier Logic
         this.handlePlatforms(entity, platforms);
 
-        // 2. Apply Gravity
+        // 2. Apply Gravity (scaled)
         if (!entity.ignoreGravity) {
-            entity.vy += this.gravity;
+            entity.vy += this.gravity * scale;
             if (entity.vy > this.terminalVelocity) entity.vy = this.terminalVelocity;
         }
         
-        // 3. Apply Friction (Horizontal)
+        // 3. Apply Friction (Horizontal) - approximate per-tick multiplicative friction using pow
         if (entity.onGround) {
-            entity.vx *= this.friction;
+            entity.vx *= Math.pow(this.friction, scale);
         } else {
-            entity.vx *= (config.AIR_RESISTANCE || 0.95);
+            entity.vx *= Math.pow((config.AIR_RESISTANCE || 0.95), scale);
         }
         
-        if (Math.abs(entity.vx) < 0.1) entity.vx = 0;
+        if (Math.abs(entity.vx) < 0.01) entity.vx = 0;
 
-        // 4. X Movement & Collision
-        entity.x += entity.vx;
+        // 4. X Movement & Collision (scale velocities to current dt)
+        entity.x += entity.vx * scale;
         this.checkCollisions(entity, map, 'x');
 
         // 5. Y Movement & Collision
-        entity.y += entity.vy;
+        entity.y += entity.vy * scale;
         entity.onGround = false; 
         this.checkCollisions(entity, map, 'y');
         
@@ -59,6 +62,21 @@ class PhysicsSystem {
             if (entity.respawn) entity.respawn();
             else { entity.y = 0; entity.vy = 0; }
         }
+
+        // --- NEW: Trigger Overlaps ---
+        if (entity === window.game?.player) {
+            window.game.entities.forEach(ent => {
+                if (window.PlatformerTrigger && ent instanceof window.PlatformerTrigger) {
+                    if (this.checkOverlap(entity, ent)) {
+                        ent.onOverlap(entity);
+                    }
+                }
+            });
+        }
+    }
+
+    checkOverlap(a, b) {
+        return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
     }
 
     handlePlatforms(entity, platforms) {
@@ -81,20 +99,30 @@ class PhysicsSystem {
             }
         });
 
-        // Apply platform displacement if riding
+        // Apply platform displacement if riding (use platform velocity helper if available)
         if (entity.ridingPlatform) {
             const plat = entity.ridingPlatform;
-            const dx = plat.x - plat.lastX;
-            const dy = plat.y - plat.lastY;
-            entity.x += dx;
-            entity.y += dy;
+            let dx = 0, dy = 0;
+            if (typeof plat.getVelocity === 'function') {
+                const v = plat.getVelocity() || { x: 0, y: 0 };
+                dx = v.x || 0;
+                dy = v.y || 0;
+            } else {
+                dx = (typeof plat.x === 'number' && typeof plat.lastX === 'number') ? (plat.x - plat.lastX) : 0;
+                dy = (typeof plat.y === 'number' && typeof plat.lastY === 'number') ? (plat.y - plat.lastY) : 0;
+            }
+
+            if (dx !== 0 || dy !== 0) {
+                entity.x += dx;
+                entity.y += dy;
+            }
         }
     }
 
     checkCollisions(entity, map, axis) {
         if (!map || !map.collision) return;
-        const tileSize = 32;
-        
+        const tileSize = this.tileSize || (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+
         const left = Math.floor(entity.x / tileSize);
         const right = Math.floor((entity.x + entity.w - 0.01) / tileSize);
         const top = Math.floor(entity.y / tileSize);
@@ -228,7 +256,7 @@ class PhysicsSystem {
     }
 
     checkWallContact(entity, map) {
-        const tileSize = 32;
+        const tileSize = this.tileSize || (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
         const margin = 2;
         
         // Left

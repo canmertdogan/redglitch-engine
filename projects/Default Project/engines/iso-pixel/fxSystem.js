@@ -502,6 +502,7 @@ window.IsoFXSystem = class IsoFXSystem {
         // Lighting
         this.lightingType = 'day';
         this.gameTime = 12;
+        this.timeSpeed = 0;
         this.ambientColor = 'rgba(0,0,0,0)';
         this.ambientIntensity = 0;
         this.lights = [];
@@ -518,10 +519,10 @@ window.IsoFXSystem = class IsoFXSystem {
         // Lighting presets
         this.lightingPresets = {
             day: { ambient: 'rgba(0,0,0,0)', ambientIntensity: 0 },
-            dusk: { ambient: 'rgba(40,20,60,0.3)', ambientIntensity: 0.3 },
-            night: { ambient: 'rgba(10,10,30,0.75)', ambientIntensity: 0.75 },
-            dungeon: { ambient: 'rgba(5,5,15,0.9)', ambientIntensity: 0.9 },
-            cave: { ambient: 'rgba(0,0,0,0.95)', ambientIntensity: 0.95 }
+            dusk: { ambient: 'rgba(40,20,60,0.15)', ambientIntensity: 0.15 },
+            night: { ambient: 'rgba(10,10,30,0.5)', ambientIntensity: 0.5 },
+            dungeon: { ambient: 'rgba(5,5,15,0.7)', ambientIntensity: 0.7 },
+            cave: { ambient: 'rgba(0,0,0,0.85)', ambientIntensity: 0.85 }
         };
         
         // Screen effects
@@ -807,6 +808,11 @@ window.IsoFXSystem = class IsoFXSystem {
     // --- Update ---
 
     update(dt = 0.016) {
+        // Time progression
+        if (this.timeSpeed > 0) {
+            this.setTime(this.gameTime + this.timeSpeed * dt);
+        }
+
         // Emitters
         for (let i = this.emitters.length - 1; i >= 0; i--) {
             const em = this.emitters[i];

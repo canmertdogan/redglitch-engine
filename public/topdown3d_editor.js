@@ -36,9 +36,9 @@
     }
 
     let OrbitControls;
+    let LowPolyTerrainGen = null;
     try {
         ({ OrbitControls } = await import('/lib/three/addons/controls/OrbitControls.js'));
-        let LowPolyTerrainGen = null;
         try { ({ default: LowPolyTerrainGen } = await import('/engines/shared/LowPolyTerrainGen.js')); } catch(e) { console.warn('[topdown3d] LowPolyTerrainGen unavailable', e); }
     } catch (_) {
         OrbitControls = null; // orbit disabled; mouse pan/zoom still works
@@ -439,9 +439,11 @@
         if (!mesh?.geometry) return null;
         const pos = mesh.geometry.attributes.position;
         const col = mesh.geometry.attributes.color;
+        const idx = mesh.geometry.index;
         return {
             positions: pos ? Array.from(pos.array) : [],
             colors: col ? Array.from(col.array) : [],
+            indices: idx ? Array.from(idx.array) : null,
             width: mesh.userData.trimeshWidth ?? 0,
             height: mesh.userData.trimeshHeight ?? 0,
         };
@@ -461,7 +463,8 @@
             for (let i = 0; i < elevGrid.length; i++) elevGrid[i] = Math.random() * 0.05;
         }
         const gen = new LowPolyTerrainGen();
-        const mesh = gen.generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        const result = gen.generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        const mesh = result?.mesh ?? null;
         if (!mesh) return;
         mesh.userData.isLowPolyFloor = true;
         mesh.userData.trimeshWidth = w;

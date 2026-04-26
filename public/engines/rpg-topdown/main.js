@@ -649,14 +649,48 @@ window.MenuSystem = class MenuSystem {
             return;
         }
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPlaytest = urlParams.get('playtest') === 'true' || urlParams.get('playtest') === '1';
+        if (isPlaytest) {
+            await this.startTestMode(urlParams);
+            return;
+        }
+
         const savedName = localStorage.getItem('ketebe_username'); 
         if (savedName) this.login(savedName); 
     }
-    async startTestMode() {
-        const raw = localStorage.getItem('ketebe_test_map'); if (!raw) return;
-        const mapData = JSON.parse(raw);
-        this.screens.login.classList.add('hidden'); this.screens.mainMenu.classList.add('hidden'); document.getElementById('loading-screen').classList.add('hidden');
-        await this.game.start("DEV_TESTER", true); await this.game.loadLevelFromData(mapData); this.switchScreen('game');
+    async startTestMode(urlParams = new URLSearchParams(window.location.search)) {
+        const raw = localStorage.getItem('ketebe_test_map') || localStorage.getItem('temp_playtest');
+        if (!raw) {
+            console.error('[RPG Playtest] No map data found in localStorage.');
+            return;
+        }
+
+        const requestedSession = urlParams.get('session');
+        const latestSession = localStorage.getItem('ketebe_test_session');
+        if (requestedSession && latestSession && requestedSession !== latestSession) {
+            console.log(`[RPG Playtest] Ignoring stale playtest session: ${requestedSession}`);
+            return;
+        }
+
+        let mapData = null;
+        try {
+            mapData = JSON.parse(raw);
+        } catch (error) {
+            console.error('[RPG Playtest] Invalid playtest map payload:', error);
+            return;
+        }
+
+        this.screens.login.classList.add('hidden');
+        this.screens.mainMenu.classList.add('hidden');
+        const loadScreen = document.getElementById('loading-screen');
+        if (loadScreen) loadScreen.classList.remove('hidden');
+
+        await this.game.start("DEV_TESTER", true, { skipInitialLevelLoad: true });
+        await this.game.loadLevelFromData(mapData);
+
+        if (loadScreen) loadScreen.classList.add('hidden');
+        this.switchScreen('game');
     }
     setupEventListeners() {
         const get = (id) => document.getElementById(id);
@@ -1252,15 +1286,16 @@ window.Core = class Core {
         }
     }
 
-    createExplosion(x, y, color, count = 8) { for (let i = 0; i < count; i++) { const angle = Math.random() * Math.PI * 2; const speed = 50 + Math.random() * 100; this.spawnParticle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, color, 0.5 + Math.random() * 0.5, 3 + Math.random() * 3); } }    async start(playerName, isNewGame) {
+    createExplosion(x, y, color, count = 8) { for (let i = 0; i < count; i++) { const angle = Math.random() * Math.PI * 2; const speed = 50 + Math.random() * 100; this.spawnParticle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, color, 0.5 + Math.random() * 0.5, 3 + Math.random() * 3); } }    async start(playerName, isNewGame, options = {}) {
         this.playerName = playerName; this.isRunning = true; this.isPaused = false;
+        const skipInitialLevelLoad = !!options.skipInitialLevelLoad;
         await this.loadDefinitions(); this.assignSkills(); 
         await this.achievementSystem.init(playerName); 
         await this.dialogueSystem.init();
         await this.questSystem.init();
         this.achievementSystem.unlock('START_GAME');
-        if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; await this.loadLevel(this.currentLevel); } 
-        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.stamina = data.player.stamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true); }
+        if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; if (!skipInitialLevelLoad) await this.loadLevel(this.currentLevel); } 
+        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.stamina = data.player.stamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true, options); }
         requestAnimationFrame(this.gameLoop.bind(this)); for(let i=0; i<300; i++) this.player.history.push({ x: this.player.x, y: this.player.y, dir: this.player.direction });
     }
     async loadDefinitions() {

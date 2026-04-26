@@ -11,9 +11,10 @@ class PlatformerAssetManager {
         this.onProgress = null;
         this.onComplete = null;
         
+        const v = Date.now();
         this.manifest = {
             images: [
-                { id: 'tileset', path: '/sprite-art/platformer_spritesheet.png' },
+                { id: 'tileset', path: `/sprite-art/platformer_spritesheet.png?v=${v}` },
                 { id: 'bg_forest', path: '/sprite-art/forest_background.jpg' }
             ],
             json: [

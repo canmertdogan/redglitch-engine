@@ -8,6 +8,7 @@
  */
 
 import EngineAdapter from './EngineAdapter.js';
+import * as THREE from '/lib/three/three.module.js';
 
 // ── Logger Hook (mirrors rpg-topdown/main.js pattern) ───────────────────────
 (function _installLoggerHook3D() {
@@ -45,9 +46,9 @@ class Engine3DBase extends EngineAdapter {
         // Pass engineType string up to EngineAdapter
         super(engineType3D);
 
-        /** Identifies which 3D sub-mode is active at runtime */
-        this.engineType3D = engineType3D;
-
+        // NOTE: this.engineType3D is provided by subclass getter, not set here
+        // But we store container which is actually needed
+        
         /** Mount target for the WebGL canvas */
         this.container = container || document.body;
 
@@ -240,7 +241,7 @@ function _buildRenderer(container) {
     // Flat/low-poly style: no tone mapping, no HDR
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type    = THREE.PCFShadowMap;
 
     container.appendChild(renderer.domElement);
     return renderer;

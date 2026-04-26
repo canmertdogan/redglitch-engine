@@ -28,7 +28,10 @@ body, html {
     color: var(--text);
 }
 
-.hidden { display: none !important; }
+.hidden {
+    display: none !important;
+    visibility: hidden !important;
+}
 
 /* === GAMEPLAY CONTAINER === */
 #game-container {
@@ -145,6 +148,10 @@ body, html {
     display: flex; justify-content: center; align-items: center;
     background: rgba(0,0,0,0.85); /* Darker backdrop for modal screens */
     z-index: 100;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 .ui-scaler {
@@ -292,130 +299,57 @@ body, html {
     box-shadow: inset 2px 2px 0 rgba(255,255,255,0.5);
 }
 
-/* === SPLASH SCREEN (ADVANCED 3D) === */
+/* === SPLASH SCREEN (BLACKHOLE EDITION) === */
 #splash-screen {
-    background: radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%);
+    background: #000;
     overflow: hidden;
 }
 
-/* Stars Background */
-.stars-layer-1, .stars-layer-2 {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    pointer-events: none;
-}
-
-.stars-layer-1 {
-    background-image: 
-        radial-gradient(1px 1px at 20px 30px, #eee, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 50px 160px, #ddd, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 130px 80px, #fff, rgba(0,0,0,0)),
-        radial-gradient(1px 1px at 160px 120px, #ddd, rgba(0,0,0,0));
-    background-size: 200px 200px;
-    animation: star-scroll 60s linear infinite;
-    opacity: 0.5;
-}
-
-.stars-layer-2 {
-    background-image: 
-        radial-gradient(2px 2px at 50px 100px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 150px 50px, #f1c40f, rgba(0,0,0,0)), /* Some gold stars */
-        radial-gradient(2px 2px at 250px 200px, #ffffff, rgba(0,0,0,0));
-    background-size: 400px 400px;
-    animation: star-scroll 120s linear infinite;
-}
-
-@keyframes star-scroll {
-    from { background-position: 0 0; }
-    to { background-position: 0 1000px; }
-}
-
-/* 3D Atom Container */
-.atom-3d-container {
-    width: 200px; height: 200px;
+/* Glitch Text Effect */
+.glitch-text {
     position: relative;
-    transform-style: preserve-3d;
-    animation: atom-hover 4s ease-in-out infinite;
+    color: #fff;
+    mix-blend-mode: lighten;
 }
 
-@keyframes atom-hover {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-}
-
-.atom-3d {
-    width: 100%; height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transform: rotateX(20deg) rotateY(20deg);
-}
-
-/* Nucleus (Cube) */
-.nucleus {
-    width: 40px; height: 40px;
+.glitch-text::before,
+.glitch-text::after {
+    content: attr(data-text);
     position: absolute;
-    top: 50%; left: 50%;
-    margin-top: -20px; margin-left: -20px;
-    transform-style: preserve-3d;
-    animation: nucleus-spin 6s linear infinite;
+    top: 0;
+    width: 100%;
+    background: #000;
+    clip: rect(0, 0, 0, 0);
 }
 
-.nucleus .face {
-    position: absolute; width: 40px; height: 40px;
-    background: rgba(241, 196, 15, 0.8); /* Accent Color */
-    border: 2px solid #fff;
-    box-shadow: 0 0 15px var(--accent);
+.glitch-text::before {
+    left: -2px;
+    text-shadow: 2px 0 #ff00c1;
+    animation: glitch-anim-1 2s infinite linear alternate-reverse;
 }
 
-.nucleus .face.front  { transform: translateZ(20px); }
-.nucleus .face.back   { transform: rotateY(180deg) translateZ(20px); }
-.nucleus .face.right  { transform: rotateY(90deg) translateZ(20px); }
-.nucleus .face.left   { transform: rotateY(-90deg) translateZ(20px); }
-.nucleus .face.top    { transform: rotateX(90deg) translateZ(20px); }
-.nucleus .face.bottom { transform: rotateX(-90deg) translateZ(20px); }
-
-@keyframes nucleus-spin {
-    0% { transform: rotateX(0) rotateY(0) rotateZ(0); }
-    100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
+.glitch-text::after {
+    left: 2px;
+    text-shadow: -2px 0 #00fff9;
+    animation: glitch-anim-2 3s infinite linear alternate-reverse;
 }
 
-/* Electron Rings */
-.orbit-ring {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 180px; height: 180px;
-    margin-top: -90px; margin-left: -90px;
-    border: 2px dashed rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    transform-style: preserve-3d;
+@keyframes glitch-anim-1 {
+    0% { clip: rect(20px, 9999px, 15px, 0); }
+    20% { clip: rect(80px, 9999px, 50px, 0); }
+    40% { clip: rect(10px, 9999px, 90px, 0); }
+    60% { clip: rect(45px, 9999px, 40px, 0); }
+    80% { clip: rect(10px, 9999px, 20px, 0); }
+    100% { clip: rect(70px, 9999px, 80px, 0); }
 }
 
-.ring-1 { animation: spin-ring-1 3s linear infinite; }
-.ring-2 { animation: spin-ring-2 4s linear infinite; }
-.ring-3 { animation: spin-ring-3 5s linear infinite; }
-
-.electron {
-    width: 12px; height: 12px;
-    background: #fff;
-    position: absolute;
-    top: -6px; left: 50%; margin-left: -6px;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #fff, 0 0 20px var(--accent);
-}
-
-/* Orbits are rotated in 3D space so they look like an atom model */
-@keyframes spin-ring-1 {
-    0% { transform: rotateX(70deg) rotateY(0deg) rotateZ(0deg); }
-    100% { transform: rotateX(70deg) rotateY(0deg) rotateZ(360deg); }
-}
-@keyframes spin-ring-2 {
-    0% { transform: rotateX(-70deg) rotateY(60deg) rotateZ(0deg); }
-    100% { transform: rotateX(-70deg) rotateY(60deg) rotateZ(360deg); }
-}
-@keyframes spin-ring-3 {
-    0% { transform: rotateX(0deg) rotateY(240deg) rotateZ(0deg); }
-    100% { transform: rotateX(0deg) rotateY(240deg) rotateZ(360deg); }
+@keyframes glitch-anim-2 {
+    0% { clip: rect(10px, 9999px, 85px, 0); }
+    20% { clip: rect(30px, 9999px, 20px, 0); }
+    40% { clip: rect(60px, 9999px, 45px, 0); }
+    60% { clip: rect(15px, 9999px, 60px, 0); }
+    80% { clip: rect(80px, 9999px, 10px, 0); }
+    100% { clip: rect(40px, 9999px, 30px, 0); }
 }
 
 /* Text Styling */

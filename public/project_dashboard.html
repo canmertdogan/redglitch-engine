@@ -287,6 +287,7 @@
                 <div class="asset-row">
                     <span class="asset-label"><i class="fas fa-palette"></i> UI Theme</span>
                     <select id="theme-selector" onchange="setTheme(this.value)" style="background:#000; border:1px solid #333; color:var(--accent); font-family:inherit; padding:2px;">
+                        <option value="modern-light">Modern Light</option>
                         <option value="modern-dark">Modern Dark</option>
                         <option value="cyberpunk">Cyberpunk</option>
                         <option value="classic-dungeon">Dungeon</option>
@@ -664,7 +665,7 @@
                     if (!args[0]) {
                         const current = localStorage.getItem('ketebe_theme') || 'modern-dark';
                         Log.info(`Current theme: ${current}`);
-                        Log.info('Available: modern-dark, cyberpunk, classic-dungeon');
+                        Log.info('Available: modern-light, modern-dark, cyberpunk, classic-dungeon');
                         return;
                     }
                     setTheme(args[0]);
@@ -823,18 +824,26 @@
         
         // AI Performance Monitoring
         async function updateAIMetrics() {
+            const setOffline = () => {
+                document.getElementById('ai-mem-usage').innerText = 'OFFLINE';
+                document.getElementById('ai-cpu-usage').innerText = '0%';
+                document.getElementById('ai-cpu-usage').style.color = '#444';
+            };
+
             try {
                 const res = await fetch('/api/ai/metrics');
                 if (!res.ok) throw new Error('Backend offline');
                 const metrics = await res.json();
-
-                if (metrics.error) throw new Error(metrics.error);
+                const status = String(metrics.status || '').toLowerCase();
+                if (metrics.error || metrics.offline || status === 'offline') {
+                    setOffline();
+                    return;
+                }
 
                 document.getElementById('ai-mem-usage').innerText = `${metrics.mem_usage_mb} MB`;
                 document.getElementById('ai-cpu-usage').innerText = `${metrics.cpu_usage_percent}%`;
                 
-                const status = metrics.status || 'Unknown';
-                const metricsInfo = `Status: ${status}\nModel: ${metrics.model_path || 'None'}`;
+                const metricsInfo = `Status: ${metrics.status || 'Unknown'}\nModel: ${metrics.model_path || 'None'}`;
                 
                 document.getElementById('ai-cpu-usage').title = metricsInfo;
                 document.getElementById('ai-mem-usage').title = metricsInfo;
@@ -848,10 +857,7 @@
                 else cpuEl.style.color = '#666';
                 
             } catch(e) {
-                console.warn('AI metrics update failed:', e);
-                document.getElementById('ai-mem-usage').innerText = 'OFFLINE';
-                document.getElementById('ai-cpu-usage').innerText = '0%';
-                document.getElementById('ai-cpu-usage').style.color = '#444';
+                setOffline();
             }
         }
 
@@ -978,18 +984,76 @@
             }
         }
         
-        function setTheme(themeName) {
+        const DASHBOARD_THEME_FALLBACKS = {
+            'modern-dark': {
+                'bg-root': '#050508',
+                'bg-widget': '#0a0e14',
+                'bg-input': '#000000',
+                'border': '#1f2b42',
+                'border-highlight': '#34495e',
+                'accent': '#f1c40f',
+                'cyan': '#40e0d0',
+                'green': '#2ecc71',
+                'red': '#e74c3c'
+            },
+            'cyberpunk': {
+                'bg-root': '#0d0221',
+                'bg-widget': '#130a24',
+                'bg-input': '#241734',
+                'border': '#ff0055',
+                'border-highlight': '#ff4d88',
+                'accent': '#00f3ff',
+                'cyan': '#00f3ff',
+                'green': '#39ff88',
+                'red': '#ff3366'
+            },
+            'classic-dungeon': {
+                'bg-root': '#1a1a1a',
+                'bg-widget': '#252525',
+                'bg-input': '#0f0f0f',
+                'border': '#4a4a4a',
+                'border-highlight': '#666666',
+                'accent': '#e67e22',
+                'cyan': '#a2c4c9',
+                'green': '#7cb342',
+                'red': '#c0392b'
+            },
+            'modern-light': {
+                'bg-root': '#f3f6fb',
+                'bg-widget': '#ffffff',
+                'bg-input': '#ffffff',
+                'border': '#b8c7db',
+                'border-highlight': '#8ea6c5',
+                'accent': '#2563eb',
+                'cyan': '#0ea5e9',
+                'green': '#16a34a',
+                'red': '#dc2626'
+            }
+        };
+
+        function setTheme(themeName, options = {}) {
+            const sourceThemes =
+                (window.parent && window.parent !== window && window.parent.KETEBE_THEMES) ||
+                window.KETEBE_THEMES ||
+                DASHBOARD_THEME_FALLBACKS;
+            const theme = sourceThemes[themeName] || sourceThemes['modern-dark'] || DASHBOARD_THEME_FALLBACKS['modern-dark'];
+
+            Object.keys(theme).forEach(key => {
+                document.documentElement.style.setProperty(`--${key}`, theme[key]);
+            });
+            document.documentElement.setAttribute('data-theme', themeName);
+
             localStorage.setItem('ketebe_theme', themeName);
             const selector = document.getElementById('theme-selector');
             if (selector) selector.value = themeName;
             
             // Broadcast theme change to parent and other windows
-            if (window.KetebeEventBus) {
+            if (window.KetebeEventBus && options.source !== 'parent') {
                 window.KetebeEventBus.emit('theme:changed', { theme: themeName });
             }
             
             // Apply to current window if parent has applyTheme
-            if (window.parent && window.parent.applyTheme) {
+            if (options.source !== 'parent' && window.parent && window.parent.applyTheme) {
                 window.parent.applyTheme(themeName);
             }
         }
@@ -1019,6 +1083,7 @@
         if (document.getElementById('theme-selector')) {
             document.getElementById('theme-selector').value = savedTheme;
         }
+        setTheme(savedTheme, { source: 'parent' });
 
         loadTelemetry();
         loadCounts();

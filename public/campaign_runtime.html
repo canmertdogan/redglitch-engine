@@ -1254,7 +1254,7 @@
     <script src="engines/shared/AbilityDefinitions.js?v=1770485563"></script>
     <script src="engines/shared/PowerSelector.js?v=1770485563"></script>
     <script src="engines/shared/ConditionEvaluator.js?v=1770485563"></script>
-    <script src="engines/shared/EngineAdapter.js?v=1770485563"></script>
+    <script src="engines/shared/EngineAdapter.legacy.js?v=1770485563"></script>
     <script src="engines/shared/CampaignController.js?v=1770485563"></script>
     
     <!-- Load Engine Strategies -->
@@ -1319,6 +1319,17 @@
     <script src="engines/shared/TopDownAdapter.js?v=1770485563"></script>
     <script src="engines/shared/IsoPixelAdapter.js?v=1770485563"></script>
     <script src="engines/shared/PlatformerAdapter.js?v=1770485563"></script>
+
+    <!-- ===================== 3D ENGINE SUPPORT ===================== -->
+    
+    <!-- 3D Vendor Libraries -->
+    <!-- NOTE: Three.js and addons loaded as ES modules by engines (not global) -->
+    <!-- Cannon-es is imported by 3D engine modules when needed -->
+    
+    <!-- 3D Engine Adapters (will dynamically import ES module engines) -->
+    <script src="engines/topdown-3d/TopDown3DAdapter.js?v=1770485563"></script>
+    <script src="engines/fps-3d/FPS3DAdapter.js?v=1770485563"></script>
+    <script src="engines/platformer-3d/Platformer3DAdapter.js?v=1770485563"></script>
 
     <script>
         // Global variables

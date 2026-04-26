@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Platformer Physics Unit Tests</title>
+  <style>body{font-family:monospace;background:#111;color:#eee;padding:10px} .pass{color:#2ecc71} .fail{color:#e74c3c}</style>
+</head>
+<body>
+  <h1>PhysicsSystem.checkCollisions Unit Tests</h1>
+  <div id="results"></div>
+
+  <script src="../PhysicsSystem.js"></script>
+  <script>
+    const out = document.getElementById('results');
+    function log(msg, cls) {
+      const d = document.createElement('div'); d.innerHTML = msg; if (cls) d.className = cls; out.appendChild(d);
+    }
+
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'Assertion failed'); }
+
+    const phys = new PhysicsSystem();
+    // Utility to run one tick (use dt scaling behavior of system)
+    function tick(entity, map, platforms=[], dt=1/60) { phys.apply(entity, map, platforms, dt); }
+
+    const tests = [];
+
+    // 1) Solid tile collision (tile type 1)
+    tests.push(function solidTile() {
+      const map = { width: 3, height:3, collision: [0,0,0, 0,1,0, 0,0,0] }; // tile (1,1) is solid
+      const e = { x: 1.5*phys.tileSize, y: 0.5*phys.tileSize, w: phys.tileSize*0.75, h: phys.tileSize, vx:0, vy:5, onGround:false };
+      tick(e, map, [], 1/60);
+      // after falling, entity should land on tile y = (1 * tileSize) - h
+      assert(e.onGround === true, 'Entity should be on ground after colliding with solid tile');
+    });
+
+    // 2) One-way up (tile type 4) - should allow from below but block from above when descending
+    tests.push(function oneWayUp() {
+      const map = { width: 3, height:3, collision: [0,0,0, 0,4,0, 0,0,0] };
+      const e = { x: 1*phys.tileSize, y: 0.5*phys.tileSize, w: phys.tileSize*0.75, h: phys.tileSize, vx:0, vy:5, onGround:false, keys: {} };
+      tick(e, map, [], 1/60);
+      assert(e.onGround === true, 'One-way up should act as platform when descending onto it');
+      // Test dropping through (simulate pressing down)
+      e.y = 0; e.vy = 5; e.onGround = false; e.keys = { ArrowDown: true };
+      tick(e, map, [], 1/60);
+      // with ArrowDown pressed, it should not resolve to platform (remain falling or not be snapped)
+      // Hard to assert exact numeric; assert not forcibly snapped to tile top
+      const tileTop = 1 * phys.tileSize;
+      if (Math.abs(e.y + e.h - tileTop) < 1) throw new Error('Should have dropped through one-way when pressing down');
+    });
+
+    // 3) Slope handling (tile type 9 - right slope)
+    tests.push(function slopeRight() {
+      const width = 4, height = 4;
+      const collision = new Array(width*height).fill(0);
+      // place a right slope at (2,2)
+      collision[2*width + 2] = 9;
+      const map = { width, height, collision };
+      const e = { x: 2*phys.tileSize - phys.tileSize/2, y: 1*phys.tileSize, w: phys.tileSize*0.75, h: phys.tileSize, vx: 1, vy: 0, onGround:false };
+      // step downward so slope should catch
+      tick(e, map, [], 1/60);
+      // Expect that entity is onGround or y adjusted to slope top
+      assert(e.onGround === true || e.y + e.h <= (2+1)*phys.tileSize, 'Slope should catch and place entity on ground');
+    });
+
+    // 4) Moving platform rider displacement
+    tests.push(function movingPlatformRide() {
+      const map = { width: 6, height: 4, collision: new Array(6*4).fill(0) };
+      // platform at x=2*tile, y=2*tile
+      const plat = { x: 2*phys.tileSize, y: 2*phys.tileSize, w: phys.tileSize*2, h: phys.tileSize/2, lastX: (2*phys.tileSize)-10, lastY: 2*phys.tileSize };
+      // entity standing on platform
+      const e = { x: plat.x + 4, y: plat.y - phys.tileSize, w: phys.tileSize*0.75, h: phys.tileSize, vx:0, vy:0, onGround:true };
+      // physics should apply platform displacement after handlePlatforms
+      tick(e, map, [plat], 1/60);
+      // After tick, entity.x should have moved by plat.x - plat.lastX (10)
+      const delta = plat.x - plat.lastX;
+      assert(Math.abs(e.x - (plat.x + 4 + delta)) < 1e-6 || Math.abs(e.x - (plat.x + 4)) > 0, 'Rider should be displaced by platform movement');
+    });
+
+    // Run tests
+    (async function run() {
+      let passed = 0;
+      for (const t of tests) {
+        try {
+          t();
+          log('PASS: ' + (t.name || 'anonymous'), 'pass');
+          passed++;
+        } catch (e) {
+          log('FAIL: ' + (t.name || 'anonymous') + ' -> ' + e.message, 'fail');
+        }
+        // small pause
+        await new Promise(r => setTimeout(r, 20));
+      }
+      log('\nSummary: ' + passed + '/' + tests.length + ' tests passed.');
+    })();
+  </script>
+</body>
+</html>

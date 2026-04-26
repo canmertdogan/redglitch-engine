@@ -10,7 +10,7 @@ class JumpSimulator {
         this.moveSpeed = physicsConfig.moveSpeed || 1.5;
         this.friction = physicsConfig.friction || 0.8;
         this.maxSpeed = physicsConfig.maxSpeed || 6;
-        this.tileSize = 32;
+        this.tileSize = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
     }
 
     getCapabilities() {
@@ -62,7 +62,7 @@ class SmartGenerator {
 
         const caps = this.jumpSim.getCapabilities();
         
-        const context = { collision, width, height, decorations, collectibles, entities, caps, diffFactor };
+        const context = { collision, layers, width, height, decorations, collectibles, entities, caps, diffFactor };
 
         switch(theme) {
             case 'flow': this.generateFlow(spawn, goal, context); break;
@@ -73,7 +73,7 @@ class SmartGenerator {
             default: this.generateFlow(spawn, goal, context); break;
         }
 
-        this.fillTerrain(collision, width, height);
+        this.fillTerrain(collision, width, height, layers);
 
         return {
             width, height, collision, layers, decorations, collectibles, entities, spawn, goal,
@@ -85,7 +85,7 @@ class SmartGenerator {
 
     generateFlow(spawn, goal, ctx) {
         let cx = spawn.x, cy = spawn.y;
-        this.placePlatform(ctx.collision, ctx.width, cx - 2, cy + 1, 10); 
+        this.placePlatform(ctx.collision, ctx.width, cx - 2, cy + 1, 10, ctx.layers); 
 
         while (cx < goal.x - 10) {
             const maxGap = Math.floor(ctx.caps.maxDistance * (0.5 + ctx.diffFactor * 0.5)); 
@@ -98,7 +98,7 @@ class SmartGenerator {
 
             const baseW = 10 - (ctx.diffFactor * 5); 
             const platW = Math.floor(baseW + Math.random() * 5); 
-            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, platW);
+            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, platW, ctx.layers);
             
             // Add rewards
             if (Math.random() > 0.3) {
@@ -107,14 +107,14 @@ class SmartGenerator {
 
             cx += platW;
         }
-        this.placePlatform(ctx.collision, ctx.width, goal.x - 2, goal.y + 1, 6);
+        this.placePlatform(ctx.collision, ctx.width, goal.x - 2, goal.y + 1, 6, ctx.layers);
     }
 
     generateSpire(spawn, goal, ctx) {
         let cx = ctx.width / 2; 
         let cy = ctx.height - 5;
         spawn.x = Math.floor(cx); spawn.y = Math.floor(cy);
-        this.placePlatform(ctx.collision, ctx.width, cx - 3, cy + 1, 6);
+        this.placePlatform(ctx.collision, ctx.width, cx - 3, cy + 1, 6, ctx.layers);
 
         let goingRight = true;
         
@@ -130,7 +130,7 @@ class SmartGenerator {
             if (cx < 5) { cx = 5; goingRight = true; }
 
             const wMod = Math.floor((1 - ctx.diffFactor) * 3);
-            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, 2 + wMod + Math.floor(Math.random() * 2));
+            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, 2 + wMod + Math.floor(Math.random() * 2), ctx.layers);
             
             if (Math.random() < 0.2) {
                 ctx.entities.push({ x: cx, y: cy - 1, type: 'enemy', behavior: 'patrol' });
@@ -141,7 +141,7 @@ class SmartGenerator {
 
     generateAbyss(spawn, goal, ctx) {
         let cx = spawn.x, cy = spawn.y;
-        this.placePlatform(ctx.collision, ctx.width, cx - 2, cy + 1, 4);
+        this.placePlatform(ctx.collision, ctx.width, cx - 2, cy + 1, 4, ctx.layers);
 
         while (cx < goal.x - 5) {
             const targetGap = ctx.caps.maxDistance * (0.4 + ctx.diffFactor * 0.6);
@@ -154,28 +154,30 @@ class SmartGenerator {
             cy = this.clampY(cy, ctx.height);
 
             const platW = Math.max(1, Math.floor(4 - ctx.diffFactor * 3));
-            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, platW);
+            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, platW, ctx.layers);
             
             // Hazards on hard
             if (ctx.diffFactor > 0.6 && Math.random() > 0.7) {
-                ctx.collision[Math.floor(cy + 1) * ctx.width + cx] = 3; // Hazard tile
+                const idx = Math.floor(cy + 1) * ctx.width + cx;
+                ctx.collision[idx] = 3; // Hazard tile
+                if (ctx.layers[0]) ctx.layers[0][idx] = 1; 
             }
 
             cx += platW; 
         }
-        this.placePlatform(ctx.collision, ctx.width, goal.x - 2, goal.y + 1, 4);
+        this.placePlatform(ctx.collision, ctx.width, goal.x - 2, goal.y + 1, 4, ctx.layers);
     }
 
     generateGauntlet(spawn, goal, ctx) {
         let cx = spawn.x, cy = spawn.y;
-        this.placePlatform(ctx.collision, ctx.width, cx - 2, cy + 1, 5);
+        this.placePlatform(ctx.collision, ctx.width, cx - 2, cy + 1, 5, ctx.layers);
 
         while (cx < goal.x - 10) {
             const gap = 2 + Math.floor(Math.random() * 3 * ctx.diffFactor);
             cx += gap;
             
             const arenaW = 10 + Math.floor(Math.random() * 6);
-            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, arenaW);
+            this.placePlatform(ctx.collision, ctx.width, cx, cy + 1, arenaW, ctx.layers);
             
             // Combat spawns
             const enemyCount = 1 + Math.floor(ctx.diffFactor * 3);
@@ -190,12 +192,14 @@ class SmartGenerator {
             
             // Hazards
             if (ctx.diffFactor > 0.5) {
-                ctx.collision[Math.floor(cy + 1) * ctx.width + cx + Math.floor(arenaW/2)] = 3;
+                const idx = Math.floor(cy + 1) * ctx.width + cx + Math.floor(arenaW/2);
+                ctx.collision[idx] = 3;
+                if (ctx.layers[0]) ctx.layers[0][idx] = 1;
             }
             
             cx += arenaW;
         }
-        this.placePlatform(ctx.collision, ctx.width, goal.x - 2, goal.y + 1, 5);
+        this.placePlatform(ctx.collision, ctx.width, goal.x - 2, goal.y + 1, 5, ctx.layers);
     }
 
     generateClockwork(spawn, goal, ctx) {
@@ -203,17 +207,17 @@ class SmartGenerator {
         const pathLen = 2 + Math.floor(ctx.diffFactor * 4);
         
         for(let i=0; i<pathLen; i++) {
-            this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 8);
+            this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 8, ctx.layers);
             if (i % 2 === 0) ctx.collectibles.push({ x: cx + 4, y: cy - 1, type: 'coin' });
             cx += 10;
         }
         
         cy -= 6;
-        this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 4);
+        this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 4, ctx.layers);
         
         while (cx > spawn.x) {
             cx -= (8 + Math.floor(ctx.diffFactor * 2));
-            this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 6);
+            this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 6, ctx.layers);
             if (Math.random() > 0.5) ctx.entities.push({ x: cx + 2, y: cy - 1, type: 'enemy' });
         }
         
@@ -222,22 +226,28 @@ class SmartGenerator {
 
     // --- UTILS ---
 
-    placePlatform(col, w, x, y, width) {
+    placePlatform(col, w, x, y, width, layers) {
         for (let i = 0; i < width; i++) {
             const tx = Math.floor(x + i);
             const ty = Math.floor(y);
             if (tx >= 0 && tx < w && ty >= 0 && ty < col.length / w) {
-                col[ty * w + tx] = 1;
+                const idx = ty * w + tx;
+                col[idx] = 1;
+                if (layers && layers[0]) layers[0][idx] = 1; // Set base tile ID
             }
         }
     }
 
-    fillTerrain(col, w, h) {
+    fillTerrain(col, w, h, layers) {
         for (let x = 0; x < w; x++) {
             let foundSolid = false;
             for (let y = 0; y < h; y++) {
-                if (col[y * w + x] === 1) foundSolid = true;
-                else if (foundSolid) col[y * w + x] = 1;
+                const idx = y * w + x;
+                if (col[idx] === 1) foundSolid = true;
+                else if (foundSolid) {
+                    col[idx] = 1;
+                    if (layers && layers[0]) layers[0][idx] = 1;
+                }
             }
         }
     }

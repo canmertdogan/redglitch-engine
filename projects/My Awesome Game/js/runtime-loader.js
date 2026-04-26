@@ -205,7 +205,7 @@
     if (isCampaignMode) {
         const campaignScripts = [
             'engines/shared/CrossEngineSerializer.js',  // Load first - used by adapters
-            'engines/shared/EngineAdapter.js',
+            'engines/shared/EngineAdapter.legacy.js',
             'engines/shared/TopDownAdapter.js',
             'engines/shared/IsoPixelAdapter.js',
             'engines/shared/PlatformerAdapter.js',

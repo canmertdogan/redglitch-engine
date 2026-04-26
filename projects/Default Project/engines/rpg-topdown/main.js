@@ -1,4 +1,4 @@
-// main.js - KETEBE ENGINE v5.2 - HYBRID CORE (Robust Legacy Logic + New Architecture)
+// main.js - ketebe ENGINE v5.2 - HYBRID CORE (Robust Legacy Logic + New Architecture)
 
 // Inject Logger Hook for DevTools Integration
 (function() {
@@ -172,7 +172,23 @@ window.LogicSystem = class LogicSystem {
     async trigger(entity, eventName, data = {}) {
         if (!entity) return;
         
-        // Check if entity has algorithm runtime
+        // V2.0: Check for Visual Script Graph
+        if (entity.logicScript && this.game.vsl) {
+            const scriptName = entity.logicScript;
+            // Check if we have the JSON graph loaded
+            if (!this.algorithms.has(scriptName)) {
+                // Try to load it on the fly
+                await this.loadAlgorithm(scriptName);
+            }
+            const graph = this.algorithms.get(scriptName);
+            if (graph && graph.version === "2.0") {
+                // Execute using new Runtime
+                await this.game.vsl.runGraph(graph, entity, `evt_${eventName}`);
+                return;
+            }
+        }
+
+        // Check if entity has algorithm runtime (Legacy)
         if (entity.algorithmRuntime) {
             const runtime = entity.algorithmRuntime;
             try {
@@ -476,7 +492,13 @@ window.UISystem = class UISystem {
             case 'resume_game': menu.togglePause(); break;
             case 'quit_to_menu': menu.quitGame(); break;
             case 'open_engine': window.location.href = '/tools.html'; break;
+            case 'open_campaigns': window.location.href = 'campaign_launcher.html'; break;
             case 'open_credits': window.location.href = 'credits.html'; break;
+            case 'show_campaign_map': 
+                if (this.game.campaign && this.game.campaign.controller) {
+                    this.showCampaignMapOverlay();
+                }
+                break;
             case 'open_settings_screen': menu.switchScreen('settings'); break;
             case 'back_from_settings': 
                 if (menu.game.isPaused) menu.switchScreen('pause');
@@ -496,6 +518,103 @@ window.UISystem = class UISystem {
                 break;
             default: console.log("Action Triggered:", action);
         }
+    }
+    
+    showCampaignMapOverlay() {
+        const controller = this.game.campaign.controller;
+        if (!controller) return;
+        
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'campaign-map-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: 'VT323', monospace;
+        `;
+        
+        // Title
+        const title = document.createElement('h2');
+        title.innerText = controller.campaignMetadata?.name || 'Campaign Progress';
+        title.style.cssText = 'color: #f1c40f; font-size: 48px; margin-bottom: 20px; text-shadow: 2px 2px #000;';
+        overlay.appendChild(title);
+        
+        // Progress info
+        const info = document.createElement('div');
+        info.style.cssText = 'font-size: 24px; margin-bottom: 30px; text-align: center;';
+        const totalNodes = controller.campaignData.nodes.length;
+        const completed = controller.completedNodes.length;
+        const progress = Math.floor((completed / totalNodes) * 100);
+        
+        info.innerHTML = `
+            <p>Progress: ${completed}/${totalNodes} nodes (${progress}%)</p>
+            <p>Current Node: ${controller.currentNodeId || 'Starting...'}</p>
+            <p>Global Flags: ${Object.keys(controller.globalFlags).filter(k => controller.globalFlags[k]).join(', ') || 'None'}</p>
+        `;
+        overlay.appendChild(info);
+        
+        // Node list
+        const nodeList = document.createElement('div');
+        nodeList.style.cssText = `
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            width: 600px;
+            margin-bottom: 20px;
+        `;
+        
+        controller.campaignData.nodes.forEach(node => {
+            const nodeDiv = document.createElement('div');
+            const isCompleted = controller.completedNodes.includes(node.id);
+            const isCurrent = controller.currentNodeId === node.id;
+            
+            let icon = '○';
+            let color = '#888';
+            if (isCompleted) {
+                icon = '✓';
+                color = '#2ecc71';
+            } else if (isCurrent) {
+                icon = '▶';
+                color = '#3498db';
+            }
+            
+            nodeDiv.innerHTML = `<span style="color: ${color};">${icon} ${node.type.toUpperCase()}: ${node.id}</span>`;
+            nodeDiv.style.cssText = 'margin: 10px 0; font-size: 20px;';
+            nodeList.appendChild(nodeDiv);
+        });
+        
+        overlay.appendChild(nodeList);
+        
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerText = 'CLOSE';
+        closeBtn.style.cssText = `
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: 'VT323', monospace;
+            cursor: pointer;
+            border-radius: 5px;
+        `;
+        closeBtn.onclick = () => overlay.remove();
+        overlay.appendChild(closeBtn);
+        
+        document.body.appendChild(overlay);
     }
 }
 
@@ -524,14 +643,54 @@ window.MenuSystem = class MenuSystem {
         // Preload Definitions for UI (Skills, etc.)
         await this.game.loadDefinitions();
 
+        // Check for campaign mode first
+        if (window.CAMPAIGN_MODE && window.CAMPAIGN_DATA && window.CAMPAIGN_SETTINGS) {
+            await this.startCampaignMode();
+            return;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPlaytest = urlParams.get('playtest') === 'true' || urlParams.get('playtest') === '1';
+        if (isPlaytest) {
+            await this.startTestMode(urlParams);
+            return;
+        }
+
         const savedName = localStorage.getItem('ketebe_username'); 
         if (savedName) this.login(savedName); 
     }
-    async startTestMode() {
-        const raw = localStorage.getItem('ketebe_test_map'); if (!raw) return;
-        const mapData = JSON.parse(raw);
-        this.screens.login.classList.add('hidden'); this.screens.mainMenu.classList.add('hidden'); document.getElementById('loading-screen').classList.add('hidden');
-        await this.game.start("DEV_TESTER", true); await this.game.loadLevelFromData(mapData); this.switchScreen('game');
+    async startTestMode(urlParams = new URLSearchParams(window.location.search)) {
+        const raw = localStorage.getItem('ketebe_test_map') || localStorage.getItem('temp_playtest');
+        if (!raw) {
+            console.error('[RPG Playtest] No map data found in localStorage.');
+            return;
+        }
+
+        const requestedSession = urlParams.get('session');
+        const latestSession = localStorage.getItem('ketebe_test_session');
+        if (requestedSession && latestSession && requestedSession !== latestSession) {
+            console.log(`[RPG Playtest] Ignoring stale playtest session: ${requestedSession}`);
+            return;
+        }
+
+        let mapData = null;
+        try {
+            mapData = JSON.parse(raw);
+        } catch (error) {
+            console.error('[RPG Playtest] Invalid playtest map payload:', error);
+            return;
+        }
+
+        this.screens.login.classList.add('hidden');
+        this.screens.mainMenu.classList.add('hidden');
+        const loadScreen = document.getElementById('loading-screen');
+        if (loadScreen) loadScreen.classList.remove('hidden');
+
+        await this.game.start("DEV_TESTER", true, { skipInitialLevelLoad: true });
+        await this.game.loadLevelFromData(mapData);
+
+        if (loadScreen) loadScreen.classList.add('hidden');
+        this.switchScreen('game');
     }
     setupEventListeners() {
         const get = (id) => document.getElementById(id);
@@ -549,7 +708,7 @@ window.MenuSystem = class MenuSystem {
         const invSlots = document.querySelectorAll('.inv-slot'); invSlots.forEach((slot, idx) => { slot.addEventListener('click', () => { const item = this.game.inventory[idx]; if (item) this.game.useItem(idx); else { invSlots.forEach(s => s.classList.remove('selected')); slot.classList.add('selected'); } }); });
         window.addEventListener('keydown', (e) => { 
             if (e.key === 'Escape' && this.game.isRunning) this.togglePause(); 
-            if (e.key === 'e' && this.game.isRunning && !this.game.isPaused) this.toggleInventory();
+            if (e.key === 'e' && this.game.isRunning && (!this.game.isPaused || this.uiSystem.activeScreen === 'inventory')) this.toggleInventory();
         });
     }
     async playMusic() { }
@@ -598,21 +757,13 @@ window.MenuSystem = class MenuSystem {
         if (this.game.isPaused) { 
             // RESUME
             this.game.isPaused = false; 
-            this.screens.pause.classList.add('hidden'); 
-            this.screens.pause.classList.remove('active'); 
-            if(hud) hud.classList.remove('hidden'); 
-            
-            // Restore HUD UI
-            this.uiSystem.showScreen('hud');
+            this.switchScreen('game'); // Proper cleanup
         } else { 
             // PAUSE
             this.game.isPaused = true; 
-            this.screens.pause.classList.remove('hidden'); 
-            this.screens.pause.classList.add('active'); 
-            if(hud) hud.classList.add('hidden'); 
-            
-            // Render Pause UI
-            this.uiSystem.showScreen('pause_menu');
+            this.switchScreen('pause'); // Use switchScreen for pause too for consistency?
+            // But existing logic was manual. Let's keep manual for PAUSE to avoid full redraw if desired, 
+            // BUT for RESUME we must use switchScreen to clear Inventory/Settings overlays.
         } 
     }
     toggleInventory() {
@@ -642,7 +793,106 @@ window.MenuSystem = class MenuSystem {
         if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
         this.uiSystem.showScreen(screenId);
     }
-    quitGame() { this.game.stop(); this.game.isPaused = false; this.screens.pause.classList.add('hidden'); this.switchScreen('mainMenu'); }
+    quitGame() { 
+        // Check if campaign mode and quit to launcher
+        if (window.CAMPAIGN_MODE) {
+            window.location.href = 'campaign_launcher.html';
+        } else {
+            this.game.stop(); 
+            this.game.isPaused = false; 
+            this.screens.pause.classList.add('hidden'); 
+            this.switchScreen('mainMenu'); 
+        }
+    }
+    
+    async startCampaignMode() {
+        console.log('[MenuSystem] Starting campaign mode...');
+        
+        const { campaignId, shouldContinue, saveSlot } = window.CAMPAIGN_SETTINGS;
+        const campaignData = window.CAMPAIGN_DATA;
+        
+        // Auto-login with username (use saved or default)
+        let username = sessionStorage.getItem('ketebe_username');
+        if (!username) {
+            username = localStorage.getItem('ketebe_username') || 'PLAYER';
+        }
+        
+        this.currentUser = username;
+        localStorage.setItem('ketebe_username', username);
+        
+        // Skip login screen, go straight to loading
+        this.screens.login.classList.add('hidden');
+        this.screens.mainMenu.classList.add('hidden');
+        
+        const loadScreen = document.getElementById('loading-screen');
+        const bar = document.getElementById('game-loading-bar');
+        const text = document.getElementById('game-loading-text');
+        
+        loadScreen.classList.remove('hidden');
+        bar.style.width = '10%';
+        text.innerText = 'Initializing Campaign...';
+        
+        try {
+            // Initialize game
+            await this.game.start(this.currentUser, !shouldContinue);
+            bar.style.width = '40%';
+            text.innerText = 'Loading Campaign Data...';
+            
+            // Set campaign data in the CampaignSystem
+            if (this.game.campaign) {
+                this.game.campaign.data = campaignData;
+                
+                // Check if multi-engine and initialize controller
+                if (this.game.campaign._isMultiEngineCampaign()) {
+                    await this.game.campaign._initController();
+                    bar.style.width = '60%';
+                    text.innerText = 'Starting Campaign...';
+                    
+                    // Start or continue campaign
+                    if (shouldContinue) {
+                        // Load campaign state
+                        const stateResponse = await fetch(`/api/campaign-state/${username}`);
+                        if (stateResponse.ok) {
+                            const state = await stateResponse.json();
+                            if (state.campaignId === campaignId && this.game.campaign.controller) {
+                                await this.game.campaign.controller.loadCampaignState(state);
+                                bar.style.width = '80%';
+                                text.innerText = 'Resuming Campaign...';
+                                // Resume from saved node
+                                await this.game.campaign.controller.processNode(state.currentNodeId);
+                            } else {
+                                // State mismatch, start fresh
+                                await this.game.campaign.start();
+                            }
+                        } else {
+                            // No save found, start fresh
+                            await this.game.campaign.start();
+                        }
+                    } else {
+                        // New campaign
+                        await this.game.campaign.start();
+                    }
+                } else {
+                    // Single engine campaign - use normal flow
+                    await this.game.campaign.start();
+                }
+                
+                bar.style.width = '100%';
+                text.innerText = 'Campaign Ready!';
+                await new Promise(r => setTimeout(r, 500));
+                
+                loadScreen.classList.add('hidden');
+                this.switchScreen('game');
+                
+            } else {
+                throw new Error('Campaign system not available');
+            }
+        } catch (error) {
+            console.error('[MenuSystem] Campaign start failed:', error);
+            alert('Failed to start campaign: ' + error.message);
+            window.location.href = 'campaign_launcher.html';
+        }
+    }
 }
 
 window.Particle = class Particle {
@@ -810,7 +1060,19 @@ window.Fireball = class Fireball {
     }
     update(deltaTime, mapSystem) { 
         if (!this.active) return;
-        this.life -= deltaTime; this.x += this.dx * this.speed * deltaTime; this.y += this.dy * this.speed * deltaTime; const sw = this.width * this.scale, sh = this.height * this.scale; const cx = this.x + sw / 2; const cy = this.y + sh / 2; if (mapSystem.isSolid(cx, cy)) this.life = 0; 
+        this.life -= deltaTime; 
+        this.x += this.dx * this.speed * deltaTime; 
+        this.y += this.dy * this.speed * deltaTime; 
+        const sw = this.width * this.scale, sh = this.height * this.scale; 
+        const cx = this.x + sw / 2; 
+        const cy = this.y + sh / 2; 
+        
+        // Projectiles pass over half-height obstacles but are blocked by solid walls
+        const collType = mapSystem.getCollisionType(cx, cy);
+        if (collType === 1 || collType === 2) { // Solid or shadowless wall
+            this.life = 0;
+        }
+        // Passes through half-height (3), one-way (4-7), and trigger zones (8)
     }
 }
 
@@ -819,11 +1081,25 @@ window.Core = class Core {
         this.canvas = document.getElementById('gameCanvas'); this.ctx = this.canvas.getContext('2d');
         this.input = new window.InputHandler(this.canvas); this.mapSystem = new window.MapSystem(this.ctx);
         this.dialogueSystem = new window.DialogueSystem(); this.achievementSystem = new window.AchievementSystem(); this.saveSystem = new window.SaveSystem();
+        this.questSystem = new window.QuestSystem(this);
         this.campaignSystem = new window.CampaignSystem(this); 
         this.uiSystem = new window.UISystem(this);
         
         // Initialize Logic System
         this.logicSystem = new window.LogicSystem(this);
+        
+        // V2.0: Initialize Visual Script Runtime
+        if (window.VisualScriptEngine) {
+            this.vsl = new window.VisualScriptEngine(this);
+            console.log("[Core] VisualScriptEngine initialized (v2.0)");
+        } else {
+            // Lazy load if not present (Phase 1)
+            import('./VisualScriptEngine.js').then(m => {
+                window.VisualScriptEngine = m.VisualScriptEngine;
+                this.vsl = new m.VisualScriptEngine(this);
+                console.log("[Core] VisualScriptEngine lazy-loaded (v2.0)");
+            });
+        }
         
         // Initialize Interactive Cutscene Engine (Phase 1)
         if (window.InteractiveCutsceneEngine) {
@@ -859,6 +1135,7 @@ window.Core = class Core {
         this.entities = []; this.camera = { x: 0, y: 0 }; this.prevCamera = { x: 0, y: 0 }; this.currentLevel = 1; this.currentLevelId = 'level1';
         this.spatialHash = new window.SpatialHash(128); // Cell Size 128
         this.enemyDefs = {}; this.npcDefs = {}; this.itemDefs = []; this.skillDefs = []; this.inventory = []; this.activeSkills = [null, null, null, null];
+        this.campaign = []; // Initialize empty campaign array
         
         this.revives = 5;
         this.respawns = 3;
@@ -927,12 +1204,18 @@ window.Core = class Core {
         if (dx !== 0) {
             const moveX = dx * speed * dt;
             const nextX = entity.x + moveX;
-            // Check corners
-            if (!this.mapSystem.isSolid(nextX + padding, entity.y + padding) && 
-                !this.mapSystem.isSolid(nextX + sw - padding, entity.y + sh - padding) &&
-                !this.mapSystem.isSolid(nextX + padding, entity.y + sh - padding) && 
-                !this.mapSystem.isSolid(nextX + sw - padding, entity.y + padding)) {
+            const direction = dx > 0 ? 'right' : 'left';
+            // Check corners with directional collision
+            if (!this.mapSystem.isSolid(nextX + padding, entity.y + padding, direction) && 
+                !this.mapSystem.isSolid(nextX + sw - padding, entity.y + sh - padding, direction) &&
+                !this.mapSystem.isSolid(nextX + padding, entity.y + sh - padding, direction) && 
+                !this.mapSystem.isSolid(nextX + sw - padding, entity.y + padding, direction)) {
                 entity.x = nextX;
+                
+                // Check trigger zones
+                if (entity === this.player) {
+                    this.checkTriggerZones(entity);
+                }
             }
         }
 
@@ -940,13 +1223,46 @@ window.Core = class Core {
         if (dy !== 0) {
             const moveY = dy * speed * dt;
             const nextY = entity.y + moveY;
-            // Check corners
-            if (!this.mapSystem.isSolid(entity.x + padding, nextY + padding) && 
-                !this.mapSystem.isSolid(entity.x + sw - padding, nextY + sh - padding) &&
-                !this.mapSystem.isSolid(entity.x + padding, nextY + sh - padding) && 
-                !this.mapSystem.isSolid(entity.x + sw - padding, nextY + padding)) {
+            const direction = dy > 0 ? 'down' : 'up';
+            // Check corners with directional collision
+            if (!this.mapSystem.isSolid(entity.x + padding, nextY + padding, direction) && 
+                !this.mapSystem.isSolid(entity.x + sw - padding, nextY + sh - padding, direction) &&
+                !this.mapSystem.isSolid(entity.x + padding, nextY + sh - padding, direction) && 
+                !this.mapSystem.isSolid(entity.x + sw - padding, nextY + padding, direction)) {
                 entity.y = nextY;
+                
+                // Check trigger zones
+                if (entity === this.player) {
+                    this.checkTriggerZones(entity);
+                }
             }
+        }
+    }
+    
+    checkTriggerZones(entity) {
+        const cx = entity.x + (entity.width || 16) * (entity.scale || 3) / 2;
+        const cy = entity.y + (entity.height || 16) * (entity.scale || 3) / 2;
+        
+        if (this.mapSystem.isTriggerZone(cx, cy)) {
+            const ts = this.mapSystem.tileSize * this.mapSystem.scale;
+            const tileX = Math.floor(cx / ts);
+            const tileY = Math.floor(cy / ts);
+            const triggerId = `trigger_${tileX}_${tileY}`;
+            
+            // Fire trigger event only once per entry
+            if (!this.activeTriggers) this.activeTriggers = new Set();
+            if (!this.activeTriggers.has(triggerId)) {
+                this.activeTriggers.add(triggerId);
+                console.log(`[Trigger] Entered zone at (${tileX}, ${tileY})`);
+                
+                // Fire custom event for game logic to hook into
+                if (this.onTriggerEnter) {
+                    this.onTriggerEnter(tileX, tileY);
+                }
+            }
+        } else {
+            // Clear triggers when not in zone
+            if (this.activeTriggers) this.activeTriggers.clear();
         }
     }
 
@@ -970,12 +1286,16 @@ window.Core = class Core {
         }
     }
 
-    createExplosion(x, y, color, count = 8) { for (let i = 0; i < count; i++) { const angle = Math.random() * Math.PI * 2; const speed = 50 + Math.random() * 100; this.spawnParticle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, color, 0.5 + Math.random() * 0.5, 3 + Math.random() * 3); } }    async start(playerName, isNewGame) {
+    createExplosion(x, y, color, count = 8) { for (let i = 0; i < count; i++) { const angle = Math.random() * Math.PI * 2; const speed = 50 + Math.random() * 100; this.spawnParticle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, color, 0.5 + Math.random() * 0.5, 3 + Math.random() * 3); } }    async start(playerName, isNewGame, options = {}) {
         this.playerName = playerName; this.isRunning = true; this.isPaused = false;
-        await this.loadDefinitions(); this.assignSkills(); await this.achievementSystem.init(playerName); await this.dialogueSystem.init();
+        const skipInitialLevelLoad = !!options.skipInitialLevelLoad;
+        await this.loadDefinitions(); this.assignSkills(); 
+        await this.achievementSystem.init(playerName); 
+        await this.dialogueSystem.init();
+        await this.questSystem.init();
         this.achievementSystem.unlock('START_GAME');
-        if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; await this.loadLevel(this.currentLevel); } 
-        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.stamina = data.player.stamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true); }
+        if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; if (!skipInitialLevelLoad) await this.loadLevel(this.currentLevel); } 
+        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.stamina = data.player.stamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true, options); }
         requestAnimationFrame(this.gameLoop.bind(this)); for(let i=0; i<300; i++) this.player.history.push({ x: this.player.x, y: this.player.y, dir: this.player.direction });
     }
     async loadDefinitions() {
@@ -989,6 +1309,38 @@ window.Core = class Core {
         } catch (e) {}
     }
     triggerUltimate() { console.log("SERIOUS IRAB BURST!"); this.screenShake = 0.5; this.achievementSystem.unlock('IRAB_BURST'); const rings = 3; const bulletsPerRing = 32; const sw = this.player.width * this.player.scale, sh = this.player.height * this.player.scale; const sx = this.player.x + sw/2, sy = this.player.y + sh/2; for (let r = 0; r < rings; r++) { const rot = (r * Math.PI) / 8; const speed = 250 + (r * 75); for (let i = 0; i < bulletsPerRing; i++) { const ang = (i / bulletsPerRing) * Math.PI * 2 + rot; const spr = this.ultimateSprites[Math.floor(Math.random() * this.ultimateSprites.length)]; const fb = this.spawnFireball(sx - (spr.width * 1.5)/2, sy - (spr.height * 1.5)/2, Math.cos(ang), Math.sin(ang), spr); if(fb) { fb.speed = speed; fb.life = 4.0; fb.scale = 1.5; } } } }
+
+    destroy() {
+        this.isRunning = false;
+        
+        // Cleanup Input
+        if (this.input && this.input.destroy) {
+            this.input.destroy();
+        }
+
+        // Remove Resize Listener
+        if (this._onResize) {
+            window.removeEventListener('resize', this._onResize);
+        } else {
+            // Since we didn't store the bound function in constructor (legacy code),
+            // we can't easily remove it. We rely on the fact that arrow functions
+            // in addEventListener might be hard to remove.
+            // Future improvement: Store bound handlers in constructor.
+        }
+
+        // Cleanup any systems that need it
+        if (this.audio && this.audio.stopAll) {
+            this.audio.stopAll();
+        }
+
+        // Clear Canvas
+        if (this.ctx && this.canvas) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        console.log('[RPG Core] Destroyed');
+    }
+
     async loadLevelFromData(dungeonData) {
         try {
             await this.mapSystem.loadMap(dungeonData); this.enemies = []; this.npcs = [];
@@ -1012,7 +1364,15 @@ window.Core = class Core {
                 this.postProcess.setShader(dungeonData.shader || 'default');
             }
 
-            if (dungeonData.spawnX !== undefined) { this.player.x = dungeonData.spawnX; this.player.y = dungeonData.spawnY; }
+            // Set player spawn position - support both formats
+            if (dungeonData.spawnX !== undefined) { 
+                this.player.x = dungeonData.spawnX; 
+                this.player.y = dungeonData.spawnY; 
+            } else if (dungeonData.spawn) {
+                // Support editor format: spawn: {x, y}
+                this.player.x = dungeonData.spawn.x * 48; // Convert tile to pixel coordinates
+                this.player.y = dungeonData.spawn.y * 48;
+            }
         } catch (err) { console.error(err); }
     }
     async loadLevel(levelId) {
@@ -1040,7 +1400,17 @@ window.Core = class Core {
                 if (dungeonData.ambience && !dungeonData.weather) { if (['rain', 'fog'].includes(dungeonData.ambience)) dungeonData.weather = dungeonData.ambience; if (dungeonData.ambience === 'night') dungeonData.lighting = 'night'; } 
                 this.fx.setWeather(dungeonData.weather || 'none'); this.fx.setLighting(dungeonData.lighting || 'day');
             }
-            if (dungeonData.spawnX !== undefined) { this.player.x = dungeonData.spawnX; this.player.y = dungeonData.spawnY; }
+            
+            // Set player spawn position - support both formats
+            if (dungeonData.spawnX !== undefined) { 
+                this.player.x = dungeonData.spawnX; 
+                this.player.y = dungeonData.spawnY; 
+            } else if (dungeonData.spawn) {
+                // Support editor format: spawn: {x, y}
+                this.player.x = dungeonData.spawn.x * 48; // Convert tile to pixel coordinates
+                this.player.y = dungeonData.spawn.y * 48;
+            }
+            
             let musicToPlay = dungeonData.music; if (window.MUSIC_CONFIG && window.MUSIC_CONFIG.levels && window.MUSIC_CONFIG.levels[levelId]) { musicToPlay = window.MUSIC_CONFIG.levels[levelId]; } 
             if (musicToPlay) { this.playSong(musicToPlay); }
         } catch (err) { this.showVoidScreen(err.message); }
@@ -1063,7 +1433,7 @@ window.Core = class Core {
     
     showVoidScreen(msg) { this.isRunning = false; this.canvas.style.display = 'none'; document.getElementById('game-hud').classList.add('hidden'); let voidScreen = document.getElementById('void-screen'); if (!voidScreen) { voidScreen = document.createElement('div'); voidScreen.id = 'void-screen'; voidScreen.style.cssText = `position: absolute; top:0; left:0; width:100%; height:100%; background: #100; color: #e74c3c; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: 'VT323', monospace; z-index: 9999;`; document.body.appendChild(voidScreen); } voidScreen.innerHTML = `<h1>VOID</h1><p>${msg}</p><button onclick="location.reload()">RESTART</button>`; } 
     stop() { this.isRunning = false; }
-    resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; if (this.fx) this.fx.resize(this.canvas.width, this.canvas.height); }
+    resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; this.ctx.imageSmoothingEnabled = false; if (this.fx) this.fx.resize(this.canvas.width, this.canvas.height); }
     update(deltaTime) {
         this.gameTime += deltaTime * this.timeSpeed; if (this.gameTime >= 24) this.gameTime = 0;
         if (this.fx) { this.fx.update(deltaTime); this.fx.setTime(this.gameTime); }
@@ -1232,8 +1602,68 @@ window.Core = class Core {
             this.moveEntity(this.player, ndx, ndy, speed, deltaTime);
         } 
         
-        this.player.state = isMoving ? 'run' : 'idle'; this.player.timer += deltaTime; if (this.player.timer >= this.player.animSpeed) { this.player.timer = 0; this.player.frame++; } 
-        if (this.mapSystem.mapExit) { if (Math.sqrt((this.player.x - this.mapSystem.mapExit.x * 48) ** 2 + (this.player.y - this.mapSystem.mapExit.y * 48) ** 2) < 50) { const node = this.campaign.find(n => n.id === this.currentLevelId); if (node && node.next) { this.currentLevelId = node.next; this.loadLevel(this.currentLevelId); } else { alert("COMPLETE!"); this.isRunning = false; window.location.reload(); } } } 
+        this.player.state = isMoving ? 'run' : 'idle'; 
+        this.player.timer += deltaTime; 
+        if (this.player.timer >= this.player.animSpeed) { 
+            this.player.timer = 0; 
+            this.player.frame++; 
+        } 
+        
+        // Check for exit door to load next level
+        if (this.mapSystem.mapExit) { 
+            const exitX = this.mapSystem.mapExit.x * 48;
+            const exitY = this.mapSystem.mapExit.y * 48;
+            const distance = Math.sqrt((this.player.x - exitX) ** 2 + (this.player.y - exitY) ** 2);
+            
+            // Show hint when near exit
+            if (distance < 80) {
+                nearNPC = true; // Trigger interaction hint
+            }
+            
+            // Enter exit when close enough
+            if (distance < 50) {
+                // In campaign runtime mode, the adapter handles progression
+                if (window.CAMPAIGN_RUNTIME_MODE) {
+                    console.log('[RPG Core] Exit reached - adapter will handle progression');
+                    // Don't load next level here, let the adapter callback system handle it
+                    return;
+                }
+                
+                // Standalone mode: Try campaign system first
+                const node = this.campaign && this.campaign.find(n => n.id === this.currentLevelId);
+                if (node && node.next) {
+                    this.currentLevelId = node.next;
+                    this.loadLevel(this.currentLevelId);
+                } else if (typeof this.currentLevel === 'number') {
+                    // Fallback: increment level number
+                    this.currentLevel++;
+                    this.currentLevelId = this.currentLevel;
+                    this.loadLevel(this.currentLevel).catch(() => {
+                        // No more levels
+                        alert("CONGRATULATIONS! YOU COMPLETED ALL LEVELS!");
+                        this.isRunning = false;
+                        window.location.reload();
+                    });
+                } else {
+                    // Try to extract number from level name and increment
+                    const match = String(this.currentLevelId).match(/(\d+)/);
+                    if (match) {
+                        const num = parseInt(match[0]) + 1;
+                        const nextLevel = String(this.currentLevelId).replace(/\d+/, num);
+                        this.currentLevelId = nextLevel;
+                        this.loadLevel(nextLevel).catch(() => {
+                            alert("CONGRATULATIONS! YOU COMPLETED ALL LEVELS!");
+                            this.isRunning = false;
+                            window.location.reload();
+                        });
+                    } else {
+                        // No way to determine next level
+                        alert("LEVEL COMPLETE! (No next level configured)");
+                    }
+                }
+            }
+        }
+        
         this.updateHUD();
     }
     updateHUD() { 
@@ -1259,6 +1689,7 @@ window.Core = class Core {
     updateSkillHUD() { const slots = document.querySelectorAll('#skill-bar .skill-slot'); slots.forEach((slot, idx) => { const label = slot.innerText[0]; slot.innerHTML = `<span style="position:absolute; top:2px; left:2px; font-size:10px; pointer-events:none;">${label}</span>`; const skill = this.activeSkills[idx]; if (skill) { const icon = window.createPixelImage(skill.sprite); icon.style.width = '32px'; icon.style.height = '32px'; slot.appendChild(icon); } }); }    updateInventoryHUD() { const slots = document.querySelectorAll('.inv-slot'); slots.forEach((slot, idx) => { slot.innerHTML = ''; const item = this.inventory[idx]; if (item) { const icon = window.createPixelImage(item.sprite); icon.style.width = '32px'; icon.style.height = '32px'; slot.appendChild(icon); } }); }
     draw(alpha) {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); 
+        this.ctx.imageSmoothingEnabled = false;
         
         // Interpolate Camera
         const camX = this.prevCamera.x + (this.camera.x - this.prevCamera.x) * alpha;
@@ -1416,13 +1847,31 @@ async function initRPGEngine() {
 
     console.log("[RPG Core] Initializing Top-Down Engine...");
     window.LOCALE.setLanguage(localStorage.getItem('ketebe_lang') || 'EN'); 
+    
     try { 
         const res = await fetch('dunyalar/definitions/music.json'); 
         if(res.ok) window.MUSIC_CONFIG = await res.json(); 
     } catch(e) { console.warn("Music config not loaded"); }
     
+    // Skip auto-initialization in campaign runtime mode
+    if (window.CAMPAIGN_RUNTIME_MODE) {
+        console.log("[RPG Core] Campaign runtime mode detected, skipping auto-init");
+        return;
+    }
+    
     if (!window.game) window.game = new window.Core(); 
     if (!window.menuSystem) window.menuSystem = new window.MenuSystem(window.game); 
+
+    // V2.0: Reflection System (Dev Mode Only)
+    // In a real build, this JSON would be pre-generated.
+    import('./ReflectionSystem.js').then(m => {
+        if (!window.game) return;
+        const reflector = new m.ReflectionSystem(window.game);
+        const schema = reflector.generateSchema();
+        // Expose for Algorithm Studio to read
+        window.GAME_API_SCHEMA = schema;
+        console.log(`[Reflection] Generated ${schema.length} API nodes.`);
+    });
 }
 
 if (document.readyState === 'complete') {

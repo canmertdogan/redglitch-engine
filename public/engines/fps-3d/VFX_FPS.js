@@ -296,6 +296,9 @@ export default class VFX_FPS {
             this._scene.remove(this._sun);
             this._scene.remove(this._sun.target);
         }
+        if (this._ambient) {
+            this._scene.remove(this._ambient);
+        }
 
         const intensity = opts.intensity ?? 1.2;
         const color     = opts.color     ?? 0xffeedd;
@@ -325,13 +328,19 @@ export default class VFX_FPS {
         this._scene.add(sun.target);
         this._sun = sun;
 
+        // Add matching ambient light for unlit areas
+        const ambColor = opts.ambientColor ?? 0x1a1208;
+        const ambInt   = opts.ambientIntensity ?? 0.8;
+        this._ambient = new THREE.AmbientLight(ambColor, ambInt);
+        this._scene.add(this._ambient);
+
         // Ensure renderer accepts shadows
         if (this._renderer?.webgl) {
             this._renderer.webgl.shadowMap.enabled = true;
-            this._renderer.webgl.shadowMap.type    = THREE.PCFSoftShadowMap;
+            this._renderer.webgl.shadowMap.type    = THREE.PCFShadowMap;
         }
 
-        console.log('[VFX_FPS] DirectionalLight configured', { intensity, pos, doShadow });
+        console.log('[VFX_FPS] Lighting configured', { intensity, pos, doShadow, ambient: ambInt });
         return sun;
     }
 

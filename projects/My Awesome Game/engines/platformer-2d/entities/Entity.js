@@ -1,9 +1,11 @@
-class Entity {
+class PlatformerEntity {
     constructor(x, y, w, h) {
+        this.id = `ent_${Math.random().toString(36).substr(2, 9)}`;
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
+        this.ignoreGravity = false;
         this.vx = 0;
         this.vy = 0;
         this.color = '#f0f';
@@ -18,6 +20,10 @@ class Entity {
 
         // Visual Effects
         this.light = null; // { radius, color, intensity }
+    }
+
+    trigger(action, data) {
+        console.log(`[Entity:${this.id}] Triggered with action: ${action}`);
     }
 
     update(dt, map) {
@@ -37,4 +43,4 @@ class Entity {
     }
 }
 
-window.Entity = Entity;
+window.PlatformerEntity = PlatformerEntity;

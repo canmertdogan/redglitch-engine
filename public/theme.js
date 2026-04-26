@@ -7,10 +7,17 @@ const THEMES = {
         'bg-header': '#000000',
         'bg-canvas': '#080808',
         'bg-input': '#000000',
+        'bg-deep': '#050508',
+        'bg-main': '#080c18',
+        'bg-ui': '#121a2b',
+        'bg-widget': '#0a0e14',
         'border': '#1f2b42',
+        'border-highlight': '#34495e',
+        'edge-border': '2px solid #020408',
         'accent': '#f1c40f',
         'text-main': '#e0e0e0',
-        'text-muted': '#888'
+        'text-muted': '#888',
+        'text': '#cfd8dc'
     },
     'cyberpunk': {
         'bg-root': '#0d0221',
@@ -18,10 +25,17 @@ const THEMES = {
         'bg-header': '#000000',
         'bg-canvas': '#000000',
         'bg-input': '#241734',
+        'bg-deep': '#0d0221',
+        'bg-main': '#0f081d',
+        'bg-ui': '#1b1230',
+        'bg-widget': '#130a24',
         'border': '#ff0055',
+        'border-highlight': '#ff4d88',
+        'edge-border': '2px solid #32041f',
         'accent': '#00f3ff',
         'text-main': '#00f3ff',
-        'text-muted': '#ff0055'
+        'text-muted': '#ff0055',
+        'text': '#c4fbff'
     },
     'classic-dungeon': {
         'bg-root': '#1a1a1a',
@@ -29,10 +43,35 @@ const THEMES = {
         'bg-header': '#000000',
         'bg-canvas': '#111111',
         'bg-input': '#000000',
+        'bg-deep': '#1a1a1a',
+        'bg-main': '#2c2c2c',
+        'bg-ui': '#242424',
+        'bg-widget': '#252525',
         'border': '#4a4a4a',
+        'border-highlight': '#666666',
+        'edge-border': '2px solid #111111',
         'accent': '#e67e22',
         'text-main': '#ccc',
-        'text-muted': '#666'
+        'text-muted': '#666',
+        'text': '#d6d6d6'
+    },
+    'modern-light': {
+        'bg-root': '#f3f6fb',
+        'bg-panel': '#ffffff',
+        'bg-header': '#e9eff7',
+        'bg-canvas': '#f8fbff',
+        'bg-input': '#ffffff',
+        'bg-deep': '#f3f6fb',
+        'bg-main': '#ffffff',
+        'bg-ui': '#e9eff7',
+        'bg-widget': '#ffffff',
+        'border': '#b8c7db',
+        'border-highlight': '#8ea6c5',
+        'edge-border': '2px solid #b8c7db',
+        'accent': '#2563eb',
+        'text-main': '#1f2a37',
+        'text-muted': '#4b5563',
+        'text': '#1f2a37'
     }
 };
 
@@ -43,6 +82,7 @@ function setTheme(themeId) {
     Object.keys(theme).forEach(key => {
         root.style.setProperty(`--${key}`, theme[key]);
     });
+    root.setAttribute('data-theme', themeId);
     
     localStorage.setItem('ketebe_theme', themeId);
     console.log(`[Theme] Switched to ${themeId}`);
@@ -62,3 +102,4 @@ if (document.readyState === 'loading') {
 
 window.setTheme = setTheme;
 window.loadSavedTheme = loadSavedTheme;
+window.KETEBE_THEMES = THEMES;

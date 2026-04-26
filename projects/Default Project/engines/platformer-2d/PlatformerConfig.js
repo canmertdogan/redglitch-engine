@@ -25,6 +25,8 @@ const PlatformerConfig = {
     // World
     TILE_SIZE: 32,
     CHUNK_SIZE: 16,
+    SOURCE_TILE_SIZE: 16,
+    DEFAULT_ZOOM: 1.5,
     
     // Graphics
     SPRITE_SCALE: 1,

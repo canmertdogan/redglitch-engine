@@ -1,6 +1,6 @@
 /**
  * NPC Class - Enhanced with Brain System Support
- * KETEBE ENGINE - RPG Top-Down
+ * Ketebe Engine - RPG Top-Down
  */
 
 window.NPC = class NPC {
@@ -37,16 +37,34 @@ window.NPC = class NPC {
         this.range = def.interaction.range;
         this.speed = def.stats.speed;
         
-        // Load sprites
+        // Load sprites (handle both old flat sprite and new directional format)
         this.sprites = {};
         if (def.animations) {
-            Object.keys(def.animations).forEach(key => {
-                this.sprites[key] = window.createPixelImage(def.animations[key].sprite);
+            Object.keys(def.animations).forEach(state => {
+                const animDef = def.animations[state];
+                // New directional format
+                if (animDef.down || animDef.up || animDef.side) {
+                    this.sprites[state] = {
+                        down: animDef.down ? window.createPixelImage(animDef.down) : null,
+                        up: animDef.up ? window.createPixelImage(animDef.up) : null,
+                        side: animDef.side ? window.createPixelImage(animDef.side) : null
+                    };
+                }
+                // Old flat sprite format (fallback)
+                else if (animDef.sprite) {
+                    this.sprites[state] = window.createPixelImage(animDef.sprite);
+                }
+                // Talk state might use base
+                else if (animDef.base) {
+                    this.sprites[state] = window.createPixelImage(animDef.base);
+                }
             });
         }
         
         // State
         this.state = 'idle';
+        this.direction = 'down';
+        this.facing = 1; // -1 for left, 1 for right
         this.animTimer = 0;
         this.animFrame = 0;
         this.timer = 0;
@@ -272,10 +290,31 @@ window.NPC = class NPC {
     // ============================================
     
     update(deltaTime) {
+        // Update direction based on movement
+        if (this.dir) {
+            if (Math.abs(this.dir.y) > Math.abs(this.dir.x)) {
+                this.direction = this.dir.y > 0 ? 'down' : 'up';
+            } else if (this.dir.x !== 0) {
+                this.direction = 'side';
+                this.facing = this.dir.x > 0 ? 1 : -1; // Track horizontal facing
+            }
+        }
+        
         // Animation
         const currentAnimConfig = this.def.animations[this.state] || this.def.animations['idle'];
         const frameSpeed = currentAnimConfig.speed || 0.2;
-        const sprite = this.sprites[this.state] || this.sprites['idle'];
+        
+        // Get sprite (handle both directional and flat format)
+        let sprite = this.sprites[this.state];
+        if (sprite && typeof sprite === 'object' && sprite.down) {
+            // Directional sprite
+            sprite = sprite[this.direction] || sprite.down;
+        }
+        if (!sprite) sprite = this.sprites['idle'];
+        if (sprite && typeof sprite === 'object' && sprite.down) {
+            sprite = sprite[this.direction] || sprite.down;
+        }
+        
         const frameCount = (sprite && sprite.width) ? Math.max(1, Math.floor(sprite.width / 16)) : 1;
         
         this.animTimer += deltaTime;
@@ -378,20 +417,43 @@ window.NPC = class NPC {
     
     draw(ctx, cameraX, cameraY) {
         ctx.imageSmoothingEnabled = false;
-        const sprite = this.sprites[this.state] || this.sprites['idle'];
+        
+        // Get sprite (handle both directional and flat format)
+        let sprite = this.sprites[this.state];
+        if (sprite && typeof sprite === 'object' && sprite.down) {
+            // Directional sprite
+            sprite = sprite[this.direction] || sprite.down;
+        }
+        if (!sprite) {
+            sprite = this.sprites['idle'];
+            if (sprite && typeof sprite === 'object' && sprite.down) {
+                sprite = sprite[this.direction] || sprite.down;
+            }
+        }
         if (!sprite) return;
         
         const frameCount = Math.floor(sprite.width / 16) || 1;
         const safeFrame = this.animFrame % frameCount;
         const sourceX = safeFrame * 16;
         
-        ctx.drawImage(
-            sprite,
-            sourceX, 0, 16, 16,
-            Math.floor(this.x - cameraX),
-            Math.floor(this.y - cameraY),
-            48, 48
-        );
+        // Handle horizontal flipping for side sprites
+        const flipX = (this.direction === 'side' && this.facing === -1);
+        
+        ctx.save();
+        if (flipX) {
+            ctx.translate(Math.floor(this.x - cameraX) + 48, Math.floor(this.y - cameraY));
+            ctx.scale(-1, 1);
+            ctx.drawImage(sprite, sourceX, 0, 16, 16, 0, 0, 48, 48);
+        } else {
+            ctx.drawImage(
+                sprite,
+                sourceX, 0, 16, 16,
+                Math.floor(this.x - cameraX),
+                Math.floor(this.y - cameraY),
+                48, 48
+            );
+        }
+        ctx.restore();
     }
     
     // Legacy compatibility

@@ -455,3 +455,8 @@ class TopDownAdapter extends EngineAdapter {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = TopDownAdapter;
 }
+
+// Make available globally for browser context
+if (typeof window !== 'undefined') {
+    window.TopDownAdapter = TopDownAdapter;
+}

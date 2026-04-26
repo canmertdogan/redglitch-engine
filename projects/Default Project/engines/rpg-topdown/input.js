@@ -112,15 +112,14 @@ class InputHandler {
     }
 
     setupListeners() {
-        window.addEventListener('keydown', (e) => this.handleKey(e.code, true));
-        window.addEventListener('keyup', (e) => this.handleKey(e.code, false));
-        
-        window.addEventListener('mousemove', (e) => {
+        // Bind methods to preserve 'this' context for removal
+        this._onKeyDown = (e) => this.handleKey(e.code, true);
+        this._onKeyUp = (e) => this.handleKey(e.code, false);
+        this._onMouseMove = (e) => {
             this.mouse.x = e.clientX;
             this.mouse.y = e.clientY;
-        });
-        
-        window.addEventListener('mousedown', (e) => { 
+        };
+        this._onMouseDown = (e) => { 
             if(e.button === 0) {
                 // Ignore clicks on UI elements
                 const tag = e.target.tagName;
@@ -129,8 +128,30 @@ class InputHandler {
                 
                 this.mouse.isDown = true; 
             }
-        });
-        window.addEventListener('mouseup', (e) => { if(e.button === 0) this.mouse.isDown = false; });
+        };
+        this._onMouseUp = (e) => { if(e.button === 0) this.mouse.isDown = false; };
+
+        window.addEventListener('keydown', this._onKeyDown);
+        window.addEventListener('keyup', this._onKeyUp);
+        window.addEventListener('mousemove', this._onMouseMove);
+        window.addEventListener('mousedown', this._onMouseDown);
+        window.addEventListener('mouseup', this._onMouseUp);
+    }
+
+    destroy() {
+        if (this._onKeyDown) window.removeEventListener('keydown', this._onKeyDown);
+        if (this._onKeyUp) window.removeEventListener('keyup', this._onKeyUp);
+        if (this._onMouseMove) window.removeEventListener('mousemove', this._onMouseMove);
+        if (this._onMouseDown) window.removeEventListener('mousedown', this._onMouseDown);
+        if (this._onMouseUp) window.removeEventListener('mouseup', this._onMouseUp);
+        
+        // Mobile cleanup if needed
+        if (this.isMobile) {
+            this.toggleMobileControls(false);
+            // Note: Touch listeners on specific elements are hard to remove without storing all references
+            // But since the DOM elements might be destroyed/recreated, it's less critical 
+            // than global window listeners.
+        }
     }
 
     handleKey(code, isDown) {

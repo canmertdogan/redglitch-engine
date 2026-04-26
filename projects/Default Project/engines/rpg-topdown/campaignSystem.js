@@ -3,15 +3,110 @@ window.CampaignSystem = class CampaignSystem {
         this.game = game;
         this.data = [];
         this.currentNodeId = null;
+        
+        // Multi-engine support: Use CampaignController if available
+        this.useController = false;
+        this.controller = null;
     }
 
     init(campaignData) {
         this.data = campaignData || [];
+        
+        // Check if running in multi-engine mode
+        if (typeof CampaignController !== 'undefined' && this._isMultiEngineCampaign(campaignData)) {
+            console.log('[CampaignSystem] Multi-engine campaign detected, using CampaignController');
+            this.useController = true;
+            this._initController();
+        }
+    }
+    
+    /**
+     * Check if campaign contains multiple engine types
+     * @private
+     */
+    _isMultiEngineCampaign(campaignData) {
+        if (!campaignData || !Array.isArray(campaignData)) return false;
+        
+        const engineTypes = new Set();
+        campaignData.forEach(node => {
+            if (node.type === 'level' && node.engineType) {
+                engineTypes.add(node.engineType);
+            }
+        });
+        
+        // Multi-engine if more than one type or explicitly set to non-topdown
+        return engineTypes.size > 1 || 
+               (engineTypes.size === 1 && !engineTypes.has('rpg-topdown'));
+    }
+    
+    /**
+     * Initialize CampaignController for multi-engine campaigns
+     * @private
+     */
+    async _initController() {
+        this.controller = new CampaignController();
+        
+        // Get username from game
+        const username = this.game.currentUser || this.game.username || 'player';
+        await this.controller.initialize(username);
+        
+        // Load campaign data
+        this.controller.campaignData = this.data;
+        
+        // Bridge callbacks to game
+        this.controller.onCampaignComplete = (data) => {
+            console.log('[Campaign] Complete!', data);
+            this.game.showVoidScreen('CAMPAIGN COMPLETE');
+        };
+        
+        // Override UI methods to use game systems
+        this.controller._showDialogue = (text, callback) => {
+            if (this.game.dialogueSystem) {
+                const tempId = `_campaign_dlg_${Date.now()}`;
+                this.game.dialogueSystem.db.conversations.push({
+                    id: tempId,
+                    nodes: [{ speaker: "system", text }]
+                });
+                this.game.dialogueSystem.start(tempId, () => {
+                    this.game.dialogueSystem.db.conversations = 
+                        this.game.dialogueSystem.db.conversations.filter(c => c.id !== tempId);
+                    callback();
+                });
+            } else {
+                callback();
+            }
+        };
+        
+        this.controller._playCutscene = (cutsceneId, callback) => {
+            if (this.game.dialogueSystem) {
+                this.game.dialogueSystem.start(cutsceneId, callback);
+            } else {
+                callback();
+            }
+        };
+        
+        this.controller._showNotification = (message) => {
+            if (this.game.log) {
+                this.game.log(message, 'success');
+            }
+        };
+        
+        this.controller._showTransitionScreen = (engineType) => {
+            console.log(`[Transition] Loading ${engineType} engine...`);
+            // Could show custom transition UI here
+        };
     }
 
-    start() {
+    async start() {
         if (!this.data || this.data.length === 0) return;
         
+        // Delegate to CampaignController if multi-engine
+        if (this.useController && this.controller) {
+            await this.controller.start();
+            return;
+        }
+        
+        // Original single-engine logic
         // 1. Try to find a specific 'start' node
         let startNode = this.data.find(n => n.type === 'start');
         
@@ -189,7 +284,14 @@ window.CampaignSystem = class CampaignSystem {
         }
     }
 
-    advance() {
+    async advance() {
+        // Delegate to CampaignController if multi-engine
+        if (this.useController && this.controller) {
+            await this.controller.advance();
+            return;
+        }
+        
+        // Original single-engine logic
         const node = this.data.find(n => n.id === this.currentNodeId);
         if (node && node.next) {
             this.processNode(node.next);

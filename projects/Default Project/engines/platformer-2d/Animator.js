@@ -10,7 +10,7 @@ class Animator {
         this.currentState = 'idle';
         this.currentFrame = 0;
         this.timer = 0;
-        this.speed = 0.1;
+        this.speed = (window.PlatformerConfig && window.PlatformerConfig.DEFAULT_ANIM_SPEED) || 0.1;
         this.loop = true;
     }
 
@@ -21,7 +21,7 @@ class Animator {
      * @param {number} speed - Seconds per frame
      * @param {boolean} loop - Whether to loop
      */
-    add(name, frameCount, speed = 0.1, loop = true) {
+    add(name, frameCount, speed = (window.PlatformerConfig && window.PlatformerConfig.DEFAULT_ANIM_SPEED) || 0.1, loop = true) {
         this.animations[name] = { frameCount, speed, loop };
     }
 

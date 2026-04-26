@@ -34,6 +34,24 @@ const gitRouter = require('./server/routes/git');
 const buildRouter = require('./server/routes/build');
 const test3dRouter = require('./server/routes/test-3d');
 const debug3dRouter = require('./server/routes/debug-3d');
+let monitor3dRouter;
+try {
+    monitor3dRouter = require('./server/routes/monitor-3d');
+} catch (err) {
+    const missingMonitorRoute =
+        err && err.code === 'MODULE_NOT_FOUND' &&
+        String(err.message || '').includes('server/routes/monitor-3d');
+    if (!missingMonitorRoute) throw err;
+
+    console.warn('[Server] monitor-3d route is unavailable. /api/monitor will return 503.');
+    monitor3dRouter = express.Router();
+    monitor3dRouter.use((_req, res) => {
+        res.status(503).json({
+            error: 'monitor route unavailable',
+            details: 'server/routes/monitor-3d.js is missing from this checkout',
+        });
+    });
+}
 
 // Import WebSocket setup
 const setupWebSocket = require('./server/websocket');
@@ -46,6 +64,14 @@ const server = http.createServer(app);
 // --- IRAB NATIVE PROXY ---
 // MUST BE BEFORE BODY PARSERS TO ALLOW PIPING
 const IRAB_BACKEND = 'http://localhost:8000';
+const isAIMetricsRequest = (req) => req.method === 'GET' && req.originalUrl.startsWith('/api/ai/metrics');
+const sendOfflineMetrics = (res) => res.status(200).json({
+    status: 'offline',
+    offline: true,
+    mem_usage_mb: 0,
+    cpu_usage_percent: 0,
+    model_path: null,
+});
 
 app.use(['/api/history', '/api/ai'], (req, res) => {
     const url = IRAB_BACKEND + req.originalUrl;
@@ -56,6 +82,7 @@ app.use(['/api/history', '/api/ai'], (req, res) => {
         res.writeHead(proxyRes.statusCode, proxyRes.headers);
         proxyRes.on('error', (err) => {
             if (!res.headersSent) {
+                if (isAIMetricsRequest(req)) return sendOfflineMetrics(res);
                 res.status(502).json({ error: "IRAB Backend Proxy Error", details: err.message });
             } else {
                 res.end();
@@ -66,6 +93,7 @@ app.use(['/api/history', '/api/ai'], (req, res) => {
 
     connector.on('error', (err) => {
         if (!res.headersSent) {
+            if (isAIMetricsRequest(req)) return sendOfflineMetrics(res);
             res.status(502).json({ error: "IRAB Backend Offline", details: err.message });
         } else {
             res.end();
@@ -181,6 +209,7 @@ app.use('/api/git', gitRouter);
 app.use('/api/build', buildRouter);
 app.use('/api/test', test3dRouter);
 app.use('/api/debug', debug3dRouter);
+app.use('/api/monitor', monitor3dRouter);
 
 // ── /api/project-file — generic project-relative file read/write ─────────────
 // Used by topdown3d_editor.js and terrain_tools.js to save arbitrary

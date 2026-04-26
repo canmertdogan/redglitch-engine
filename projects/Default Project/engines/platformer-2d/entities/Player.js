@@ -1,6 +1,9 @@
-class Player extends Entity {
+class PlatformerPlayer extends PlatformerEntity {
     constructor(x, y) {
-        super(x, y, 24, 32);
+        const ts = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+        const w = Math.floor(ts * 0.75);
+        const h = ts;
+        super(x, y, w, h);
         this.color = '#e74c3c';
         
         const config = window.PlatformerConfig || {};
@@ -37,6 +40,7 @@ class Player extends Entity {
         this.ghosts = []; // For dash trail
         this.isClimbing = false;
         this.isAttacking = false;
+        this.shootCooldown = 0;
         
         // Animation
         this.spriteName = 'player'; 
@@ -89,14 +93,39 @@ class Player extends Entity {
             this.jumpBufferTimer = this.jumpBufferMax;
         }
 
-        // Dash Request
-        if ((keys['KeyK'] || keys['ShiftRight']) && this.canDash && this.dashCooldownTimer <= 0) {
+        // Dash Request (Re-mapped to ShiftRight or KeyL to free up KeyK for Shooting)
+        if ((keys['KeyL'] || keys['ShiftRight']) && this.canDash && this.dashCooldownTimer <= 0) {
             this.startDash();
         }
 
-        // Attack Request
+        // Attack Request (Melee)
         if ((keys['KeyJ'] || keys['KeyZ']) && !this.isAttacking) {
             this.startAttack();
+        }
+
+        // Shoot Request
+        if ((keys['KeyK'] || keys['KeyX']) && this.shootCooldown <= 0) {
+            this.shoot();
+        }
+    }
+
+    shoot() {
+        this.shootCooldown = 0.3; // 300ms cooldown
+        
+        const speed = 10;
+        const vx = this.facingRight ? speed : -speed;
+        const vy = 0;
+        
+        if (window.game?.combat) {
+            window.game.combat.spawnProjectile(this, this.x + this.w/2, this.y + this.h/2, vx, vy, {
+                damage: 15,
+                color: '#f1c40f',
+                w: 12, h: 12
+            });
+        }
+
+        if (window.game?.fx) {
+            window.game.fx.spawnParticles(this.x + this.w/2, this.y + this.h/2, 'spark', 3);
         }
     }
 
@@ -198,6 +227,7 @@ class Player extends Entity {
         }
 
         if (this.dashCooldownTimer > 0) this.dashCooldownTimer -= dt;
+        if (this.shootCooldown > 0) this.shootCooldown -= dt;
 
         // Ladder Logic
         if (this.onLadder) {
@@ -279,14 +309,16 @@ class Player extends Entity {
         // Particle Triggers
         if (this.onGround && Math.abs(this.vx) > 3) {
             this.walkParticleTimer = (this.walkParticleTimer || 0) + dt;
-            if (this.walkParticleTimer > 0.15) {
+            const walkInterval = (window.PlatformerConfig && window.PlatformerConfig.PARTICLE_WALK_INTERVAL) || 0.15;
+            if (this.walkParticleTimer > walkInterval) {
                 this.walkParticleTimer = 0;
                 if (window.game?.fx) window.game.fx.spawnParticles(this.x + this.w/2, this.y + this.h, 'smoke', 1);
             }
         }
         if (this.isWallSliding) {
             this.wallParticleTimer = (this.wallParticleTimer || 0) + dt;
-            if (this.wallParticleTimer > 0.1) {
+            const wallInterval = (window.PlatformerConfig && window.PlatformerConfig.PARTICLE_WALL_INTERVAL) || 0.1;
+            if (this.wallParticleTimer > wallInterval) {
                 this.wallParticleTimer = 0;
                 const px = this.wallContact === 'left' ? this.x : this.x + this.w;
                 if (window.game?.fx) window.game.fx.spawnParticles(px, this.y + this.h/2, 'smoke', 1);
@@ -323,4 +355,4 @@ class Player extends Entity {
     }
 }
 
-window.Player = Player;
+window.PlatformerPlayer = PlatformerPlayer;

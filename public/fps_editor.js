@@ -41,8 +41,11 @@ const FPSEditor = (() => {
         lights:      [],          // managed by LightEditor
         emissiveBlocks: {},       // { "x,y,z": true }
         fog:         { color: '#1a1208', near: 8, far: 30 },
-        ambient:     '#1a1208',
-        sun:         '#ffcc88',
+        ambient:     '#ffffff',
+        ambientIntensity: 1.0,
+        sun:         '#ffeedd',
+        sunIntensity: 1.5,
+        skybox:      { mode: 'gradient', topColor: '#1a2a3a', bottomColor: '#1a1208' },
         dirty:       false,
     };
 
@@ -54,6 +57,13 @@ const FPSEditor = (() => {
     let _sculpting      = false;
     let LowPolyTerrainGen = null;
     import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
+    
+    let Renderer3D = null;
+    import('/engines/shared/Renderer3D.js').then(m => { Renderer3D = m.default; }).catch(() => {});
+    
+    let SkyboxSystem = null;
+    import('/engines/shared/SkyboxSystem.js').then(m => { SkyboxSystem = m.default; }).catch(() => {});
+
     let _tilesetEnabled = false;
     let _atlas          = null;
     let _activeBlock  = 'floor';
@@ -430,26 +440,44 @@ const FPSEditor = (() => {
             _renderFallback3d(canvas);
             return;
         }
+        
+        // Wait for modern renderer/skybox modules if they are still loading
+        if (!Renderer3D || !SkyboxSystem) {
+            setTimeout(_init3d, 50);
+            return;
+        }
 
-        const w = canvas.parentElement.clientWidth;
-        const h = canvas.parentElement.clientHeight - 24;
+        const container = canvas.parentElement;
 
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-        renderer.setSize(w, h);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+        // Use modern Renderer3D from shared/ (includes cel-shading + outline)
+        const renderer3d = new Renderer3D(container, {
+            canvas:    canvas,
+            outline:   true,
+            cel:       true,
+            tones:     3,
+            outlinePx: 1.5,
+        });
+        renderer3d.init();
+        renderer3d.webgl.setClearAlpha(0); // allow canvas to show behind if needed
 
-        const scene  = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a0806);
-        scene.fog = new THREE.Fog(0x1a1208, 8, 30);
-
-        const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 500);
+        const scene  = renderer3d.scene;
+        const camera = renderer3d.camera;
         _setCam3dFromOrbit(camera);
 
+        scene.fog = new THREE.Fog(_state.fog.color, _state.fog.near, _state.fog.far);
+
+        // Skybox System
+        const skybox = new SkyboxSystem(scene);
+        skybox.applyConfig({
+            mode: 'gradient',
+            topColor: '#1a2a3a',
+            bottomColor: '#0a0806'
+        });
+
         // Lighting
-        const ambient = new THREE.AmbientLight(0x1a1208, 1.2);
+        const ambient = new THREE.AmbientLight(_state.ambient, 0.8);
         scene.add(ambient);
-        const dirLight = new THREE.DirectionalLight(0xffcc88, 1.5);
+        const dirLight = new THREE.DirectionalLight(_state.sun, 1.2);
         dirLight.position.set(10, 20, 10);
         dirLight.castShadow = true;
         scene.add(dirLight);
@@ -463,7 +491,11 @@ const FPSEditor = (() => {
         const lightGroup = new THREE.Group();
         scene.add(lightGroup);
 
-        _three = { scene, camera, renderer, meshGroup, lightGroup, dirLight, gridHelper };
+        _three = { 
+            scene, camera, renderer: renderer3d.webgl, 
+            renderer3d, skybox,
+            meshGroup, lightGroup, dirLight, ambient, gridHelper 
+        };
 
         // Orbit controls via pointer events
         canvas.addEventListener('pointerdown', _on3dDown);
@@ -512,7 +544,15 @@ const FPSEditor = (() => {
             _setCam3dFromOrbit();
         }
 
-        _three.renderer.render(_three.scene, _three.camera);
+        // Update skybox position to follow camera
+        if (_three.skybox) _three.skybox.update(_three.camera);
+
+        // Render via modern Renderer3D (Phase 62)
+        if (_three.renderer3d) {
+            _three.renderer3d.render();
+        } else {
+            _three.renderer.render(_three.scene, _three.camera);
+        }
         _updateCamInfo();
     }
 
@@ -534,7 +574,10 @@ const FPSEditor = (() => {
             for (const key in _state.voxelGrid) {
                 const [gx, gy, gz] = key.split(',').map(Number);
                 const cell      = _state.voxelGrid[key];
-                const blockType = cell.type || _activeBlock || 'floor';
+                
+                // Prioritize cell's specific texture, then tool's active block type
+                const blockType = cell.textureId || cell.type || _activeBlock || 'floor';
+                
                 const geo = new THREE.BoxGeometry(cs, cs, cs);
                 _atlas.applyBlockUVs(geo, blockType);
                 const mat  = _atlas.getMaterial(THREE);
@@ -546,31 +589,29 @@ const FPSEditor = (() => {
         } else if (typeof BrushTools !== 'undefined') {
             // ── Greedy mesh path (Phase 37) ───────────────────────────────────
             const groups = BrushTools.buildGreedyMesh(_state.voxelGrid, cs);
-            const meshes = BrushTools.buildThreeGeometries(groups, THREE);
-            for (const m of meshes) {
-                // Phase 39: apply emissive to blocks whose keys are flagged
-                // BrushTools groups by color so we do a per-vertex check on rebuild
-                group.add(m);
-            }
-            // Apply emissive per-mesh based on emissiveBlocks set
-            if (Object.keys(_state.emissiveBlocks).length) {
-                group.traverse(m => {
-                    if (!m.isMesh) return;
-                    const hex = m.material.color?.getHexString?.();
-                    if (!hex) return;
-                    // Check if any emissive block shares this mesh's color
-                    let glows = false;
-                    for (const key of Object.keys(_state.emissiveBlocks)) {
-                        const cell = _state.voxelGrid[key];
-                        if (cell && (cell.color || '#888888') === `#${hex}`) { glows = true; break; }
-                    }
-                    if (glows) {
-                        m.material = m.material.clone();
-                        m.material.emissive = new THREE.Color(`#${hex}`);
-                        m.material.emissiveIntensity = 0.6;
-                    }
-                });
-            }
+            BrushTools.buildThreeGeometries(groups, THREE, _atlas).then(meshes => {
+                for (const m of meshes) {
+                    group.add(m);
+                }
+                // Apply emissive per-mesh based on emissiveBlocks set
+                if (Object.keys(_state.emissiveBlocks).length) {
+                    group.traverse(m => {
+                        if (!m.isMesh) return;
+                        const hex = m.material.color?.getHexString?.();
+                        if (!hex) return;
+                        let glows = false;
+                        for (const key of Object.keys(_state.emissiveBlocks)) {
+                            const cell = _state.voxelGrid[key];
+                            if (cell && (cell.color || '#888888') === `#${hex}`) { glows = true; break; }
+                        }
+                        if (glows) {
+                            m.material = m.material.clone();
+                            m.material.emissive = new THREE.Color(`#${hex}`);
+                            m.material.emissiveIntensity = 0.6;
+                        }
+                    });
+                }
+            });
         } else {
             // ── Fallback: one box per block ───────────────────────────────────
             for (const key in _state.voxelGrid) {
@@ -686,6 +727,12 @@ const FPSEditor = (() => {
                     else if (btn === 2) _raycast3dAction(e, 'erase');
                 } else if (_activeTool === 'erase') {
                     _raycast3dAction(e, 'erase');
+                } else if (_activeTool === 'entity' && btn === 0) {
+                    _raycast3dAction(e, 'entity');
+                } else if (_activeTool === 'light' && btn === 0) {
+                    _raycast3dAction(e, 'light');
+                } else if (_activeTool === 'trigger' && btn === 0) {
+                    _raycast3dAction(e, 'trigger');
                 }
             }
         } else {
@@ -785,12 +832,45 @@ const FPSEditor = (() => {
                 _rebuild3d();
                 _updateBlockCount();
             }
+        } else if (mode === 'entity') {
+            const pt = hits.length ? hits[0].point : _raycastGroundPlane(e, _activeY);
+            if (!pt) return;
+            const prev = _snapshot();
+            _pushUndo(prev);
+            if (_activeEntity === 'player-spawn') {
+                _state.entities = _state.entities.filter(ent => ent.type !== 'player-spawn');
+            }
+            _state.entities.push({ id: `ent_${Date.now()}`, type: _activeEntity, x: pt.x, y: pt.y, z: pt.z, props: {} });
+            markDirty();
+            _rebuild3d();
+            _updateEntityCount();
+        } else if (mode === 'light') {
+            const pt = hits.length ? hits[0].point : _raycastGroundPlane(e, _activeY);
+            if (!pt) return;
+            if (typeof LightEditor !== 'undefined') {
+                const activeHex = (typeof ColorPalette !== 'undefined') ? ColorPalette.getActive().hex : _activeColor;
+                LightEditor.addLight(pt.x, pt.y + 0.5, pt.z, activeHex, 1.0, 8, 'Light');
+            }
+        } else if (mode === 'trigger') {
+            const pt = hits.length ? hits[0].point : _raycastGroundPlane(e, _activeY);
+            if (!pt) return;
+            const prev = _snapshot();
+            _pushUndo(prev);
+            _state.triggers.push({
+                id: `trg_${Date.now()}`,
+                event: 'onEnter',
+                x: pt.x - 1, y: pt.y, z: pt.z - 1, w: 2, h: 2.5, d: 2,
+                action: '',
+            });
+            markDirty();
+            _rebuild3d();
+            _updateTriggerList();
         }
     }
 
     function _updateGhostMesh(e) {
         if (!_three || typeof THREE === 'undefined') return;
-        const showGhost = _activeTool === 'draw-room' || _activeTool === 'corridor';
+        const showGhost = ['draw-room', 'corridor', 'entity', 'light', 'trigger'].includes(_activeTool);
         if (!showGhost) {
             if (_ghostMesh) _ghostMesh.visible = false;
             return;
@@ -814,25 +894,29 @@ const FPSEditor = (() => {
         raycaster.setFromCamera(mouse, _three.camera);
         const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
         const cs = _state.cellSize;
-        let gx, gy, gz;
-        if (hits.length) {
-            const hit = hits[0];
-            gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
-            gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
-            gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
-        } else {
-            // Fall back to floor plane so ghost always shows where block would go
-            const plane  = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(_activeY * cs));
-            const target = new THREE.Vector3();
-            if (!raycaster.ray.intersectPlane(plane, target)) {
-                _ghostMesh.visible = false;
-                return;
+
+        if (_activeTool === 'draw-room' || _activeTool === 'corridor') {
+            let gx, gy, gz;
+            if (hits.length) {
+                const hit = hits[0];
+                gx = Math.floor((hit.point.x + hit.face.normal.x * cs * 0.5) / cs);
+                gy = Math.floor((hit.point.y + hit.face.normal.y * cs * 0.5) / cs);
+                gz = Math.floor((hit.point.z + hit.face.normal.z * cs * 0.5) / cs);
+            } else {
+                const pt = _raycastGroundPlane(e, _activeY);
+                if (!pt) { _ghostMesh.visible = false; return; }
+                gx = Math.floor(pt.x / cs);
+                gy = _activeY;
+                gz = Math.floor(pt.z / cs);
             }
-            gx = Math.floor(target.x / cs);
-            gy = _activeY;
-            gz = Math.floor(target.z / cs);
+            _ghostMesh.position.set((gx + 0.5) * cs, (gy + 0.5) * cs, (gz + 0.5) * cs);
+        } else {
+            // Point-based placement (entity, light, trigger)
+            const pt = hits.length ? hits[0].point : _raycastGroundPlane(e, _activeY);
+            if (!pt) { _ghostMesh.visible = false; return; }
+            _ghostMesh.position.copy(pt);
+            if (_activeTool === 'entity') _ghostMesh.position.y += 0.25; // center the sphere ghost a bit
         }
-        _ghostMesh.position.set((gx + 0.5) * cs, (gy + 0.5) * cs, (gz + 0.5) * cs);
         _ghostMesh.visible = true;
     }
 
@@ -1019,7 +1103,7 @@ const FPSEditor = (() => {
         document.getElementById('unsaved-dot').style.display = 'none';
     }
 
-    function _updateBlockCount()  { document.getElementById('status-blocks').textContent   = `Blocks: ${Object.keys(_state.voxelGrid).length}`; }
+    function _updateBlockCount()  { document.getElementById('status-voxels').textContent   = `Voxels: ${Object.keys(_state.voxelGrid).length}`; }
     function _updateEntityCount() {
         document.getElementById('status-entities').textContent = `Entities: ${_state.entities.length}`;
         if (typeof EntitySpawner !== 'undefined') EntitySpawner.syncEntities(_state.entities);
@@ -1083,6 +1167,11 @@ const FPSEditor = (() => {
             _three.scene.fog.color.set(_state.fog.color);
             _three.scene.fog.near = _state.fog.near;
             _three.scene.fog.far  = _state.fog.far;
+            
+            // Sync skybox bottom if in gradient mode
+            if (_three.skybox && _three.skybox.mode === 'gradient') {
+                _three.skybox.setGradient(_three.skybox.config.topColor, _state.fog.color);
+            }
         }
         markDirty();
     }
@@ -1090,12 +1179,48 @@ const FPSEditor = (() => {
     function updateLighting() {
         _state.ambient = document.getElementById('ambient-color').value;
         _state.sun     = document.getElementById('sun-color').value;
+        const sunInt   = parseFloat(document.getElementById('sun-intensity').value);
+
         if (_three?.scene) {
-            _three.scene.traverse(o => {
-                if (o.isAmbientLight) o.color.set(_state.ambient);
-                if (o.isDirectionalLight) o.color.set(_state.sun);
-            });
+            if (_three.ambient) _three.ambient.color.set(_state.ambient);
+            if (_three.dirLight) {
+                _three.dirLight.color.set(_state.sun);
+                _three.dirLight.intensity = sunInt;
+            }
+            
+            // Sync skybox bottom color with ambient for consistency
+            if (_three.skybox && _three.skybox.mode === 'gradient') {
+                _three.skybox.setGradient(_three.skybox.config.topColor, _state.ambient);
+            }
         }
+        markDirty();
+    }
+
+    function updateSkybox() {
+        const mode = document.getElementById('sky-mode').value;
+        const solidCol = document.getElementById('sky-solid-color').value;
+        const topCol = document.getElementById('sky-top-color').value;
+        const botCol = document.getElementById('sky-bottom-color').value;
+
+        // Toggle UI panels
+        document.getElementById('sky-solid-props').style.display = (mode === 'solid') ? 'block' : 'none';
+        document.getElementById('sky-gradient-props').style.display = (mode === 'gradient') ? 'block' : 'none';
+
+        if (_three?.skybox) {
+            if (mode === 'solid') {
+                _three.skybox.setSolid(solidCol);
+            } else if (mode === 'gradient') {
+                _three.skybox.setGradient(topCol, botCol);
+            } else if (mode === 'voxel') {
+                _three.skybox.setVoxelSky();
+            }
+        }
+        
+        _state.skybox = {
+            mode,
+            topColor: (mode === 'solid') ? solidCol : topCol,
+            bottomColor: botCol
+        };
         markDirty();
     }
 
@@ -1309,8 +1434,9 @@ const FPSEditor = (() => {
         _state.ceilingH  = data.ceilingH  || 3;
         _state.floorY    = data.floorY    ?? 0;
         _state.fog       = data.fog       || _state.fog;
-        _state.ambient   = data.ambient   || '#1a1208';
-        _state.sun       = data.sun       || '#ffcc88';
+        _state.ambient   = data.ambient   || '#201a18';
+        _state.sun       = data.sun       || '#ffeedd';
+        _state.skybox    = data.skybox    || { mode: 'gradient', topColor: '#1a2a3a', bottomColor: '#201a18' };
         _state.voxelGrid = data.voxelGrid || {};
         _state.entities  = data.entities  || [];
         _state.triggers  = data.triggers  || [];
@@ -1340,6 +1466,20 @@ const FPSEditor = (() => {
         document.getElementById('fog-far').value     = _state.fog.far;
         document.getElementById('ambient-color').value = _state.ambient;
         document.getElementById('sun-color').value     = _state.sun;
+        
+        if (_state.skybox) {
+            document.getElementById('sky-mode').value = _state.skybox.mode || 'gradient';
+            if (_state.skybox.mode === 'solid') {
+                document.getElementById('sky-solid-color').value = _state.skybox.topColor || _state.skybox.colorHex || '#0a0806';
+            } else {
+                document.getElementById('sky-top-color').value = _state.skybox.topColor || '#1a2a3a';
+                document.getElementById('sky-bottom-color').value = _state.skybox.bottomColor || '#0a0806';
+            }
+        }
+        
+        updateSkybox();
+        updateLighting();
+
         document.getElementById('project-label').textContent = _state.project || '— no project —';
 
         _undoStack.length = 0;
@@ -1613,6 +1753,12 @@ const FPSEditor = (() => {
 
     // ── init ─────────────────────────────────────────────────────────────────
     function _init() {
+        if (typeof THREE === 'undefined') {
+            console.log('[FPSEditor] Waiting for Three.js module...');
+            setTimeout(_init, 50);
+            return;
+        }
+
         _init2d();
         _init3d();
         _initKeyboard();
@@ -1759,6 +1905,7 @@ const FPSEditor = (() => {
 
     // public exports
     return {
+        init: _init,
         switchTab, setTool, setSnap,
         selectBlock, setDrawMode, setCellSize, setCeilingHeight, setFloorY, setActiveY,
         setActiveColor, setShading, toggleGrid, toggleWireframe, toggle2d, resetCam, setView,

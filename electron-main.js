@@ -186,7 +186,9 @@ function createWindow() {
     splashWindow = new BrowserWindow({
         width: 600,
         height: 400,
+        show: false,
         transparent: true,
+        backgroundColor: '#00000000',
         frame: false,
         alwaysOnTop: true,
         icon: path.join(__dirname, 'public/icons/favicon-6.png'),
@@ -198,6 +200,7 @@ function createWindow() {
 
     splashWindow.loadFile(path.join(__dirname, 'public/splash.html'));
     splashWindow.center();
+    splashWindow.once('ready-to-show', () => splashWindow.show());
 
     // Main Window setup
     mainWindow = new BrowserWindow({
@@ -214,7 +217,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js')
         },
         autoHideMenuBar: false,
-        backgroundColor: '#0a0a0a',
+        backgroundColor: '#f5f7fb',
         frame: false,
         resizable: true,
         center: true

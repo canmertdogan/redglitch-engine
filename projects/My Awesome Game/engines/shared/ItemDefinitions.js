@@ -15,27 +15,28 @@ class ItemDefinitions {
      * @returns {Promise<void>}
      */
     async load() {
+        // Always ensure defaults are present
+        this.createDefaultItems();
+
         try {
             const response = await fetch('/dunyalar/definitions/items.json');
             if (!response.ok) {
-                console.warn('[ItemDefinitions] No items.json found, using defaults');
-                this.createDefaultItems();
+                console.warn('[ItemDefinitions] No items.json found, using defaults only');
                 return;
             }
             
             const items = await response.json();
             
-            // Normalize and store items
+            // Normalize and store items (will override defaults if IDs match)
             items.forEach(item => {
                 const normalized = this.normalizeItem(item);
                 this.definitions.set(normalized.id, normalized);
             });
             
             this.loaded = true;
-            console.log(`[ItemDefinitions] Loaded ${this.definitions.size} item definitions`);
+            console.log(`[ItemDefinitions] Loaded ${this.definitions.size} item definitions (merged with defaults)`);
         } catch (error) {
             console.error('[ItemDefinitions] Failed to load items:', error);
-            this.createDefaultItems();
         }
     }
 

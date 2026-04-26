@@ -69,6 +69,9 @@ class IsoGame {
         this.accumulator = 0;
         this.maxAccumulator = 200;      // Cap to prevent spiral of death
 
+        this._setupEngineListeners();
+        this._startPerformanceMonitor();
+
         window.addEventListener('keydown', e => {
             if (!this.keys[e.code]) this.keysPressed[e.code] = true;
             this.keys[e.code] = true;
@@ -89,6 +92,77 @@ class IsoGame {
         
         window.addEventListener('resize', () => this.resize());
         this.resize();
+    }
+
+    _setupEngineListeners() {
+        const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+        if (eventBus) {
+            eventBus.on('engine:snapshot:request', (event) => {
+                const snapshot = this.getSnapshot();
+                eventBus.emit('engine:snapshot:result', { id: event.data.id, snapshot });
+            });
+
+            eventBus.on('engine:input', (event) => {
+                const { code, state } = event.data;
+                this.keys[code] = (state === 'down');
+                if (state === 'down') this.keysPressed[code] = true;
+            });
+        }
+    }
+
+    _startPerformanceMonitor() {
+        this.frameCount = 0;
+        this.lastFpsCheck = performance.now();
+        
+        setInterval(() => {
+            const now = performance.now();
+            const elapsed = now - this.lastFpsCheck;
+            const fps = Math.round((this.frameCount * 1000) / elapsed);
+            this.frameCount = 0;
+            this.lastFpsCheck = now;
+
+            const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+            if (eventBus) {
+                eventBus.emit('system:metrics', {
+                    fps,
+                    entities: this.entities.length,
+                    memory: window.performance?.memory ? Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024) : 'N/A',
+                    engine: 'isopixel'
+                });
+            }
+        }, 2000);
+    }
+
+    getSnapshot() {
+        return {
+            type: 'isopixel',
+            player: {
+                x: this.player.x.toFixed(2),
+                y: this.player.y.toFixed(2),
+                z: this.player.z.toFixed(2),
+                hp: this.player.hp,
+                state: this.player.animState,
+                grounded: this.player.grounded
+            },
+            entities: this.entities.map(e => ({
+                id: e.id,
+                type: e.type,
+                x: e.x.toFixed(2),
+                y: e.y.toFixed(2),
+                z: e.z.toFixed(2),
+                health: e.hp
+            })),
+            world: {
+                width: this.levelMetadata?.width || 0,
+                height: this.levelMetadata?.height || 0,
+                decorations: this.levelMetadata?.decorations?.length || 0,
+                levelName: this.levelMetadata?.name || 'unknown'
+            },
+            performance: {
+                entities: this.entities.length,
+                status: this.running ? 'RUNNING' : 'STOPPED'
+            }
+        };
     }
 
     resize() {
@@ -992,6 +1066,7 @@ class IsoGame {
         
         // === VARIABLE TIMESTEP RENDERING ===
         // Camera and interpolation at frame rate
+        this.frameCount++;
         this.update(dt);
         this.draw();
         

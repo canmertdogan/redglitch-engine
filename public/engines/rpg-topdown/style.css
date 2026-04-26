@@ -28,7 +28,10 @@ body, html {
     color: var(--text);
 }
 
-.hidden { display: none !important; }
+.hidden {
+    display: none !important;
+    visibility: hidden !important;
+}
 
 /* === GAMEPLAY CONTAINER === */
 #game-container {
@@ -145,6 +148,10 @@ body, html {
     display: flex; justify-content: center; align-items: center;
     background: rgba(0,0,0,0.85); /* Darker backdrop for modal screens */
     z-index: 100;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 .ui-scaler {

@@ -3,7 +3,7 @@
  * An enemy that stays at a distance and fires projectiles at the player.
  */
 
-class ShooterEnemy extends Enemy {
+class PlatformerShooterEnemy extends PlatformerEnemy {
     constructor(x, y, type = 'goblin') {
         super(x, y, type);
         this.fireRate = 2.0;
@@ -60,4 +60,4 @@ class ShooterEnemy extends Enemy {
     }
 }
 
-window.ShooterEnemy = ShooterEnemy;
+window.PlatformerShooterEnemy = PlatformerShooterEnemy;

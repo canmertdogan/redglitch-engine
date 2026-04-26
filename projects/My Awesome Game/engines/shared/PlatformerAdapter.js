@@ -49,8 +49,25 @@ class PlatformerAdapter extends EngineAdapter {
 
         console.log(`PlatformerAdapter loading level: ${levelId}`);
 
-        // Load level using engine's loadLevel method
-        await this.engine.loadLevel(levelId, levelPath);
+        // Try to load level, checking multiple paths if levelPath isn't provided
+        if (levelPath) {
+            await this.engine.loadLevel(levelId, levelPath);
+        } else {
+            // First try main dunyalar
+            try {
+                const mainPath = `dunyalar/${levelId}.json`;
+                const check = await fetch(mainPath, { method: 'HEAD' });
+                if (check.ok) {
+                    await this.engine.loadLevel(levelId, mainPath);
+                } else {
+                    // Fallback to platformer subfolder
+                    await this.engine.loadLevel(levelId, `dunyalar/platformer/${levelId}.json`);
+                }
+            } catch (e) {
+                // Final fallback
+                await this.engine.loadLevel(levelId);
+            }
+        }
         
         this.isLoaded = true;
         
@@ -58,6 +75,32 @@ class PlatformerAdapter extends EngineAdapter {
         this._setupLevelCompleteCallback();
         
         console.log(`PlatformerAdapter level ${levelId} loaded`);
+    }
+
+    /**
+     * Trigger an ability in the engine
+     * @param {string} abilityId - ID of the ability to use
+     * @param {number} dirX - Target direction X
+     * @param {number} dirY - Target direction Y
+     * @returns {boolean}
+     */
+    useAbility(abilityId, dirX, dirY) {
+        if (!this.engine || !this.engine.player) return false;
+        
+        console.log(`[PlatformerAdapter] useAbility: ${abilityId}`);
+        
+        // Platformer engine might not have a full ability system yet, 
+        // but we can simulate basic actions like 'attack'
+        if (abilityId === 'attack' || abilityId === 'fireball') {
+            // Logic for platformer attack could go here
+            // For now, just trigger a visual effect or console log
+            if (this.engine.fx) {
+                this.engine.fx.popText(this.engine.player.x, this.engine.player.y - 20, "ATTACK!", "#fff");
+            }
+            return true;
+        }
+        
+        return false;
     }
 
     /**

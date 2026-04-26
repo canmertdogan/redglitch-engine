@@ -1,6 +1,6 @@
-class MovingPlatform extends Entity {
+class PlatformerMovingPlatform extends PlatformerEntity {
     constructor(x, y, w = 64, h = 16) {
-        super(x * 32, y * 32, w, h);
+        super(x, y, w, h);
         this.color = '#3498db';
         
         this.waypoints = [];
@@ -14,14 +14,25 @@ class MovingPlatform extends Entity {
     }
 
     addWaypoint(x, y) {
-        this.waypoints.push({ x: x * 32, y: y * 32 });
+        this.waypoints.push({ x: x, y: y });
     }
 
-    update(dt, map) {
-        if (!this.isMoving || this.waypoints.length === 0) return;
+    update(dt = 1/60, map) {
+        // Preserve previous position so consumers can compute deltas reliably after movement
+        const prevX = this.x;
+        const prevY = this.y;
 
-        this.lastX = this.x;
-        this.lastY = this.y;
+        // Scale factor to keep existing velocity units (per-1/60 tick)
+        const scale = Math.max(0, Math.min(dt * 60, 4));
+
+        if (!this.isMoving || this.waypoints.length === 0) {
+            this.vx = 0;
+            this.vy = 0;
+            // Ensure last position reflects current to avoid duplicated deltas
+            this.lastX = this.x;
+            this.lastY = this.y;
+            return;
+        }
 
         const target = this.waypoints[this.currentWaypointIndex];
         const dx = target.x - this.x;
@@ -35,9 +46,19 @@ class MovingPlatform extends Entity {
         } else {
             this.vx = (dx / dist) * this.speed;
             this.vy = (dy / dist) * this.speed;
-            this.x += this.vx;
-            this.y += this.vy;
+            this.x += this.vx * scale;
+            this.y += this.vy * scale;
         }
+
+        // After movement, set last to previous position so getVelocity computes delta = new - last
+        this.lastX = prevX;
+        this.lastY = prevY;
+    }
+
+    trigger(action, data) {
+        if (action === 'toggle') this.isMoving = !this.isMoving;
+        else if (action === 'start') this.isMoving = true;
+        else if (action === 'stop') this.isMoving = false;
     }
 
     getVelocity() {
@@ -59,4 +80,4 @@ class MovingPlatform extends Entity {
     }
 }
 
-window.MovingPlatform = MovingPlatform;
+window.PlatformerMovingPlatform = PlatformerMovingPlatform;

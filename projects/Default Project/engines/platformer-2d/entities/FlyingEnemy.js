@@ -3,16 +3,17 @@
  * An enemy that ignores gravity and can move in any direction.
  */
 
-class FlyingEnemy extends Enemy {
+class PlatformerFlyingEnemy extends PlatformerEnemy {
     constructor(x, y, type = 'bat') {
         super(x, y, type);
         this.ignoreGravity = true;
         this.speed = 2;
         this.targetY = this.y;
-        this.bobAmount = 32;
+        const ts = (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
+        this.bobAmount = ts;
         this.bobSpeed = 0.003;
-        this.w = 32;
-        this.h = 24;
+        this.w = ts;
+        this.h = Math.floor(ts * 0.75);
     }
 
     update(dt, map) {
@@ -21,15 +22,17 @@ class FlyingEnemy extends Enemy {
         if (this.behavior === 'patrol') {
             // Horizontal patrol
             this.vx = this.direction * this.speed;
-            this.x += this.vx;
+            const scale = Math.max(0, Math.min(dt * 60, 4));
+            this.x += this.vx * scale;
             
-            // Bobbing motion
+            // Bobbing motion (absolute)
             this.y = this.targetY + Math.sin(Date.now() * this.bobSpeed) * this.bobAmount;
 
             // Check for walls
             const nextX = this.x + (this.vx > 0 ? this.w : 0) + this.vx;
-            const tileX = Math.floor(nextX / 32);
-            const tileY = Math.floor((this.y + this.h / 2) / 32);
+            const ts = window.game?.tileSize || window.PlatformerConfig?.TILE_SIZE || 32;
+            const tileX = Math.floor(nextX / ts);
+            const tileY = Math.floor((this.y + this.h / 2) / ts);
             if (window.game?.physics && window.game.physics.getTile(map, tileX, tileY) === 1) {
                 this.direction *= -1;
             }
@@ -42,10 +45,11 @@ class FlyingEnemy extends Enemy {
             const dist = Math.sqrt(dx*dx + dy*dy);
 
             if (dist < this.visionRange) {
+                const scale = Math.max(0, Math.min(dt * 60, 4));
                 this.vx = (dx / dist) * this.speed;
                 this.vy = (dy / dist) * this.speed;
-                this.x += this.vx;
-                this.y += this.vy;
+                this.x += this.vx * scale;
+                this.y += this.vy * scale;
                 this.targetY = this.y; // Update patrol base
             } else {
                 this.behavior = 'patrol';
@@ -58,4 +62,4 @@ class FlyingEnemy extends Enemy {
     }
 }
 
-window.FlyingEnemy = FlyingEnemy;
+window.PlatformerFlyingEnemy = PlatformerFlyingEnemy;

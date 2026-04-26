@@ -10,6 +10,10 @@ if (typeof window.IrabBridge === 'undefined') {
             this.url = "ws://localhost:8000/ws";
             this.isConnected = false;
             this._syncListenerAttached = false;
+            this._retryTimer = null;
+            this._connecting = false;
+            this._retryDelay = 3000;
+            this._maxRetryDelay = 30000;
             
             // Hooks for UI
             this.onToken = null;
@@ -21,15 +25,29 @@ if (typeof window.IrabBridge === 'undefined') {
             this.connect();
         }
 
-        connect() {
+        async connect() {
+            if (this._connecting || this.isConnected) return;
+            this._connecting = true;
+
             console.log("[IrabBridge] Connecting to Native Cortex...");
             if (this.onStateChange) this.onStateChange('CONNECTING');
-            
+
+            const backendReady = await this._probeBackend();
+            if (!backendReady) {
+                this._connecting = false;
+                this.isConnected = false;
+                if (this.onStateChange) this.onStateChange('OFFLINE');
+                this._scheduleReconnect(10000);
+                return;
+            }
+
             try {
                 this.socket = new WebSocket(this.url);
 
                 this.socket.onopen = () => {
                     this.isConnected = true;
+                    this._connecting = false;
+                    this._retryDelay = 3000;
                     console.log("[IrabBridge] Connected to Native Cortex.");
                     if (this.onStateChange) this.onStateChange('ONLINE');
                     this.send({ type: "PING" });
@@ -46,15 +64,14 @@ if (typeof window.IrabBridge === 'undefined') {
                 };
 
                 this.socket.onclose = () => {
+                    this._connecting = false;
                     this.isConnected = false;
                     if (this.onStateChange) this.onStateChange('OFFLINE');
-                    console.warn("[IrabBridge] Connection closed. Retrying in 3s...");
-                    setTimeout(() => {
-                        if (!this.isConnected) this.connect();
-                    }, 3000);
+                    console.warn("[IrabBridge] Connection closed. Retrying...");
+                    this._scheduleReconnect();
                 };
 
-                this.socket.onerror = (err) => {
+                this.socket.onerror = () => {
                     this.isConnected = false;
                     // No need to log full error here as it triggers onclose
                 };
@@ -68,7 +85,32 @@ if (typeof window.IrabBridge === 'undefined') {
                     });
                 }
             } catch (e) {
+                this._connecting = false;
                 console.error("[IrabBridge] Connection attempt failed:", e);
+                this._scheduleReconnect();
+            }
+        }
+
+        _scheduleReconnect(delay = this._retryDelay) {
+            if (this._retryTimer) clearTimeout(this._retryTimer);
+            this._retryTimer = setTimeout(() => {
+                this._retryTimer = null;
+                this.connect();
+            }, delay);
+            this._retryDelay = Math.min(this._retryDelay * 2, this._maxRetryDelay);
+        }
+
+        async _probeBackend() {
+            try {
+                const res = await fetch('/api/ai/metrics', { cache: 'no-store' });
+                if (!res.ok) return false;
+                const metrics = await res.json().catch(() => null);
+                if (!metrics) return true;
+                if (metrics.offline) return false;
+                const status = String(metrics.status || '').toLowerCase();
+                return status !== 'offline';
+            } catch (_) {
+                return false;
             }
         }
 

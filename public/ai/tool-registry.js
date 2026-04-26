@@ -1076,7 +1076,7 @@ export class ToolRegistry {
             }
         });
 
-        // world.generateMap proxy (ensures editor is open)
+        // world.generateMap proxy (ensures editor is open and triggers generation)
         this.register({
             name: 'world.generateMap',
             description: 'Generate a procedural top-down RPG map.',
@@ -1088,12 +1088,9 @@ export class ToolRegistry {
                     density: { type: 'number', default: 5 },
                     seed: { type: 'string', description: 'Optional seed.' }
                 }
-            },
-            execute: async (args) => {
-                const ready = await ensureStudioOpen('editor');
-                if (!ready) throw new Error('World Editor could not be opened.');
-                return { success: true, message: 'Map generation requested in World Editor.' };
             }
+            // Remote execution - handled by StudioBridge in editor.js
+            // The editor listens via eventBus for 'studio:action:execute' and processes through StudioBridge
         });
 
         // Aliases for legacy

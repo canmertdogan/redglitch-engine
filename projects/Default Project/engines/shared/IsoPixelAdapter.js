@@ -479,3 +479,8 @@ class IsoPixelAdapter extends EngineAdapter {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = IsoPixelAdapter;
 }
+
+// Make available globally for browser context
+if (typeof window !== 'undefined') {
+    window.IsoPixelAdapter = IsoPixelAdapter;
+}

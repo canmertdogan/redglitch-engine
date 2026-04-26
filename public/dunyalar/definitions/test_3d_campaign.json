@@ -1,0 +1,65 @@
+{
+  "name": "3D Engine Test Campaign",
+  "description": "Test campaign to verify 3D engine integration with campaign runtime",
+  "version": "1.0.0",
+  "author": "Ketebe Team",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "name": "Campaign Start",
+      "description": "Starting the 3D engine test campaign",
+      "next": "topdown3d_level"
+    },
+    {
+      "id": "topdown3d_level",
+      "type": "level",
+      "name": "TopDown 3D Level",
+      "description": "Test the topdown-3d engine",
+      "engineType": "topdown-3d",
+      "project": "Topdown3D Demo",
+      "levelId": "battle_plains",
+      "levelPath": null,
+      "next": "fps3d_level"
+    },
+    {
+      "id": "fps3d_level",
+      "type": "level",
+      "name": "FPS 3D Level",
+      "description": "Test the fps-3d engine",
+      "engineType": "fps-3d",
+      "project": "FPS3D Demo",
+      "levelId": "tutorial_arena",
+      "levelPath": null,
+      "next": "platformer3d_level"
+    },
+    {
+      "id": "platformer3d_level",
+      "type": "level",
+      "name": "Platformer 3D Level",
+      "description": "Test the platformer-3d engine",
+      "engineType": "platformer-3d",
+      "project": "Platformer3D Demo",
+      "levelId": "sky_gardens",
+      "levelPath": null,
+      "next": "2d_rpg_level"
+    },
+    {
+      "id": "2d_rpg_level",
+      "type": "level",
+      "name": "2D RPG Level",
+      "description": "Test transition back to 2D engine",
+      "engineType": "rpg-topdown",
+      "levelId": "test_level",
+      "levelPath": null,
+      "next": "end"
+    },
+    {
+      "id": "end",
+      "type": "note",
+      "name": "Campaign Complete",
+      "message": "Congratulations! You've tested all 3D engines!",
+      "next": null
+    }
+  ]
+}

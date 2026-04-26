@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>ketebe PLATFORMER 3D MAP EDITOR</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;">
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="pixel_scrollbars.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
@@ -927,11 +928,25 @@
 </div>
 
 <!-- ── SCRIPTS ───────────────────────────────────────────────────────────────── -->
-<script src="lib/three.min.js"></script>
-<script src="platformer3d_editor/BlockTools.js"></script>
-<script src="platformer3d_editor/PathEditor3D.js"></script>
-<script src="platformer3d_editor/HazardEditor.js"></script>
-<script src="platformer3d_editor.js"></script>
+<script type="module">
+    import * as THREE from '/lib/three/three.module.js';
+    window.THREE = THREE;
+    
+    // Dynamically load dependent scripts after THREE is set
+    const scripts = [
+        'platformer3d_editor/BlockTools.js',
+        'platformer3d_editor/PathEditor3D.js',
+        'platformer3d_editor/HazardEditor.js',
+        'platformer3d_editor.js'
+    ];
+    
+    for (const src of scripts) {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = false; // keep order
+        document.body.appendChild(s);
+    }
+</script>
 
 <div id="modal-browse" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
   <div style="background:#0e0a08; border:2px solid #333; width:560px; max-height:75vh; display:flex; flex-direction:column; font-family:inherit;">

@@ -228,3 +228,57 @@ window.createPixelImage = function(spriteKey) {
     });
     return canvas;
 };
+
+// --- STANDARD PROPS (Auto-Generated) ---
+Object.assign(window.SPRITES, {
+    "tree": {
+        "width": 16, "height": 32,
+        "palette": { " ": null, "L": "#2ecc71", "D": "#27ae60", "B": "#8b4513", "S": "#5e3c18" },
+        "data": [
+            "      LLLL      ", "    LLLLLLLL    ", "   LLLLLLLLLL   ", "  LLLLLLLLLLLL  ", "  LLLLDDDDLLLL  ", "  LLLDDDDDDLLL  ", "   LLDDDDDDLL   ", "    LLDDDDLL    ",
+            "      LLLL      ", "    LLLLLLLL    ", "   LLLLLLLLLL   ", "  LLLLLLLLLLLL  ", "  LLLLDDDDLLLL  ", "   LLDDDDDDLL   ", "    LLDDDDLL    ", "      BBBB      ",
+            "      BBBB      ", "      BBBB      ", "      BBBB      ", "      BBBB      ", "      BBBB      ", "      BBBB      ", "      BBBB      ", "      BBBB      ",
+            "     SSBBSS     ", "    SSBBBBSS    ", "   SSSSBBSSSS   ", "  SSSSS  SSSSS  ", " SSSSS    SSSSS ", "                ", "                ", "                "
+        ]
+    },
+    "bush": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "L": "#2ecc71", "D": "#27ae60" },
+        "data": [
+            "                ", "                ", "      LLLL      ", "    LLLLLLLL    ", "   LLLLLLLLLL   ", "  LLLLLLLLLLLL  ", "  LLLLLLLLLLLL  ", " LLLLLDDDDLLLL  ",
+            " LLLLDDDDDDLLL  ", " LLLDDDDDDDLLL  ", " LLLDDDDDDDLLL  ", "  LLLDDDDDDLL   ", "   LLDDDDDDLL   ", "    LLDDDDLL    ", "      LLLL      ", "                "
+        ]
+    },
+    "rock": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "L": "#95a5a6", "D": "#7f8c8d", "S": "#34495e" },
+        "data": [
+            "                ", "                ", "                ", "                ", "      LLLL      ", "    LLLLLLLL    ", "   LLLLLLLLLL   ", "  LLLLDDDDLLLL  ",
+            "  LLLDDDDDDLLL  ", "  LLDDDDDDDLLL  ", " LLLDDDDDDSSLL  ", " LLLDDDSSSSSS   ", "  LLLDSSSSSS    ", "   LLDSSSS      ", "                ", "                "
+        ]
+    },
+    "chest": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "B": "#e67e22", "D": "#d35400", "G": "#f1c40f", "K": "#000000" },
+        "data": [
+            "                ", "                ", "                ", "                ", "    KKKKKKKK    ", "   KBKBBBBKDK   ", "   KBKBBBBKDK   ", "   KBKBBBBKDK   ",
+            "   KBKGGGGKDK   ", "   KKKKKKKKKK   ", "   KBKBBBBKDK   ", "   KBKBBBBKDK   ", "   KBKBBBBKDK   ", "    KKKKKKKK    ", "                ", "                "
+        ]
+    },
+    "npc": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "S": "#f1c40f", "F": "#f5d6a7", "C": "#3498db", "H": "#2c3e50", "Z": "#000000" },
+        "data": [
+            "      HHHH      ", "     HHHHHH     ", "     HHHHHH     ", "     FFFFFF     ", "     FZFZFF     ", "     FFFFFF     ", "      FFFF      ", "      CCCC      ",
+            "     CCCCCC     ", "    CC CC CC    ", "    CC CC CC    ", "    CC CC CC    ", "    CC CC CC    ", "      CC CC     ", "      CC CC     ", "      SS SS     "
+        ]
+    },
+    "lamp": {
+        "width": 16, "height": 16,
+        "palette": { " ": null, "K": "#000000", "Y": "#f1c40f", "O": "#e67e22" },
+        "data": [
+            "      KKKK      ", "     KYYYYK     ", "    KYYYYYYK    ", "    KYOOOOYK    ", "    KYOOOOYK    ", "    KYYYYYYK    ", "     KYYYYK     ", "      KKKK      ",
+            "       KK       ", "       KK       ", "       KK       ", "      KKKK      ", "     KKKKKK     ", "    KKKKKKKK    ", "                ", "                "
+        ]
+    }
+});

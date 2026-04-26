@@ -1,0 +1,62 @@
+class MovingPlatform extends Entity {
+    constructor(x, y, w = 64, h = 16) {
+        super(x * 32, y * 32, w, h);
+        this.color = '#3498db';
+        
+        this.waypoints = [];
+        this.currentWaypointIndex = 0;
+        this.speed = 2;
+        this.isMoving = true;
+        
+        // Internal state
+        this.lastX = this.x;
+        this.lastY = this.y;
+    }
+
+    addWaypoint(x, y) {
+        this.waypoints.push({ x: x * 32, y: y * 32 });
+    }
+
+    update(dt, map) {
+        if (!this.isMoving || this.waypoints.length === 0) return;
+
+        this.lastX = this.x;
+        this.lastY = this.y;
+
+        const target = this.waypoints[this.currentWaypointIndex];
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < this.speed) {
+            this.x = target.x;
+            this.y = target.y;
+            this.currentWaypointIndex = (this.currentWaypointIndex + 1) % this.waypoints.length;
+        } else {
+            this.vx = (dx / dist) * this.speed;
+            this.vy = (dy / dist) * this.speed;
+            this.x += this.vx;
+            this.y += this.vy;
+        }
+    }
+
+    getVelocity() {
+        return {
+            x: this.x - this.lastX,
+            y: this.y - this.lastY
+        };
+    }
+
+    draw(renderer) {
+        const ctx = renderer.ctx;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
+        
+        // Draw some details
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(Math.floor(this.x), Math.floor(this.y), this.w, this.h);
+    }
+}
+
+window.MovingPlatform = MovingPlatform;

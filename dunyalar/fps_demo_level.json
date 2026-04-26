@@ -1,0 +1,185 @@
+{
+  "version": 2,
+  "mapName": "FPS Demo Level",
+  "author": "Ketebe Engine",
+  "project": "Default Project",
+  "cellSize": 1,
+  "ceilingH": 3,
+  "floorY": 0,
+  "palette": [
+    "#8B4513",
+    "#A0522D",
+    "#CD853F",
+    "#DEB887",
+    "#696969",
+    "#808080",
+    "#A9A9A9",
+    "#C0C0C0",
+    "#2F4F4F",
+    "#556B2F",
+    "#6B8E23",
+    "#8FBC8F",
+    "#B22222",
+    "#DC143C",
+    "#FF6347",
+    "#FFA07A",
+    "#FFD700",
+    "#FFA500",
+    "#FF8C00",
+    "#FF4500",
+    "#4169E1",
+    "#1E90FF",
+    "#87CEEB",
+    "#ADD8E6",
+    "#800080",
+    "#9370DB",
+    "#BA55D3",
+    "#DDA0DD",
+    "#00FF00",
+    "#32CD32",
+    "#90EE90",
+    "#98FB98"
+  ],
+  "fog": {
+    "enabled": true,
+    "color": "#1a1a2e",
+    "near": 5,
+    "far": 50
+  },
+  "ambient": "#1a1208",
+  "sun": "#ffcc88",
+  "lights": [
+    {
+      "id": "light_1",
+      "type": "point",
+      "position": [10, 2, 10],
+      "color": "#ffaa44",
+      "intensity": 2,
+      "distance": 15
+    },
+    {
+      "id": "light_2",
+      "type": "point",
+      "position": [-10, 2, -10],
+      "color": "#44aaff",
+      "intensity": 1.5,
+      "distance": 12
+    }
+  ],
+  "emissiveBlocks": {},
+  "voxelGrid": {
+    "0,0,0": 0,
+    "1,0,0": 0,
+    "2,0,0": 0,
+    "3,0,0": 0,
+    "4,0,0": 0,
+    "5,0,0": 0,
+    "6,0,0": 0,
+    "7,0,0": 0,
+    "8,0,0": 0,
+    "9,0,0": 0,
+    "0,0,1": 0,
+    "9,0,1": 0,
+    "0,0,2": 0,
+    "9,0,2": 0,
+    "0,0,3": 0,
+    "9,0,3": 0,
+    "0,0,4": 0,
+    "9,0,4": 0,
+    "0,0,5": 0,
+    "9,0,5": 0,
+    "0,0,6": 0,
+    "9,0,6": 0,
+    "0,0,7": 0,
+    "9,0,7": 0,
+    "0,0,8": 0,
+    "9,0,8": 0,
+    "0,0,9": 0,
+    "1,0,9": 0,
+    "2,0,9": 0,
+    "3,0,9": 0,
+    "4,0,9": 0,
+    "5,0,9": 0,
+    "6,0,9": 0,
+    "7,0,9": 0,
+    "8,0,9": 0,
+    "9,0,9": 0,
+    "0,1,0": 0,
+    "0,2,0": 0,
+    "0,1,9": 0,
+    "0,2,9": 0,
+    "9,1,0": 0,
+    "9,2,0": 0,
+    "9,1,9": 0,
+    "9,2,9": 0,
+    "3,0,3": 12,
+    "3,0,4": 12,
+    "4,0,3": 12,
+    "4,0,4": 12,
+    "6,0,6": 20,
+    "6,0,7": 20,
+    "7,0,6": 20,
+    "7,0,7": 20
+  },
+  "entities": [
+    {
+      "id": "spawn",
+      "type": "spawn",
+      "position": [5, 0, 5],
+      "rotation": [0, 0, 0]
+    },
+    {
+      "id": "enemy_1",
+      "type": "enemy",
+      "position": [2, 0, 2],
+      "rotation": [0, 45, 0],
+      "data": {
+        "health": 100,
+        "damage": 10,
+        "speed": 1.5
+      }
+    },
+    {
+      "id": "pickup_health",
+      "type": "pickup",
+      "position": [7, 0.5, 2],
+      "rotation": [0, 0, 0],
+      "data": {
+        "pickupType": "health",
+        "amount": 25
+      }
+    },
+    {
+      "id": "pickup_ammo",
+      "type": "pickup",
+      "position": [2, 0.5, 7],
+      "rotation": [0, 0, 0],
+      "data": {
+        "pickupType": "ammo",
+        "amount": 50
+      }
+    },
+    {
+      "id": "exit_portal",
+      "type": "exit",
+      "position": [8, 0, 8],
+      "rotation": [0, 0, 0],
+      "data": {
+        "nextLevel": "fps_demo_level_2"
+      }
+    }
+  ],
+  "triggers": [
+    {
+      "id": "trigger_door",
+      "type": "area",
+      "position": [5, 0, 3],
+      "size": [2, 3, 2],
+      "action": {
+        "type": "open_door",
+        "target": "door_1"
+      }
+    }
+  ],
+  "trimesh": null
+}

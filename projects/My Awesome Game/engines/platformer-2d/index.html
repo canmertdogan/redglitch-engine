@@ -168,11 +168,25 @@
     <!-- Load Engine Scripts -->
     <script src="../rpg-topdown/sprites.js"></script>
     <script src="../rpg-topdown/fxSystem.js"></script>
+    <script src="../../shared/DialogueSystem.js"></script>
+    <script src="../../shared/QuestSystem.js"></script>
+    <script src="PlatformerConfig.js"></script>
+    <script src="PlatformerAssetManager.js"></script>
+    <script src="ParallaxSystem.js"></script>
+    <script src="Animator.js"></script>
+    <script src="CombatSystem.js"></script>
     <script src="entities/Entity.js"></script>
     <script src="entities/Player.js"></script>
+    <script src="entities/Enemy.js"></script>
+    <script src="entities/FlyingEnemy.js"></script>
+    <script src="entities/ShooterEnemy.js"></script>
+    <script src="entities/Projectile.js"></script>
+    <script src="entities/PushableBlock.js"></script>
     <script src="entities/MovingPlatform.js"></script>
+    <script src="entities/Trigger.js"></script>
     <script src="PhysicsSystem.js"></script>
     <script src="renderer.js"></script>
+    <script src="generator/SmartGenerator.js"></script>
     <script src="main.js"></script>
     
     <!-- Initialize -->
@@ -181,9 +195,31 @@
         const urlParams = new URLSearchParams(window.location.search);
         const levelId = urlParams.get('level');
         const project = urlParams.get('project');
+        const levelBlob = urlParams.get('levelBlob');
         const isPlaytest = urlParams.get('playtest') === 'true';
         
-        if (isPlaytest) {
+        if (levelBlob) {
+            // Blob playtest mode (used by some editors)
+            window.game = new PlatformerGame();
+            window.game.username = 'TEST_USER';
+            window.game.currentProject = 'Playtest';
+
+            const loadingScreen = document.getElementById('loading-screen');
+            const gameContainer = document.getElementById('game-container');
+
+            window.game.init().then(async () => {
+                const res = await fetch(levelBlob);
+                if (!res.ok) throw new Error(`Blob fetch failed (${res.status})`);
+                const levelData = await res.json();
+                return window.game.loadLevelFromData(levelData);
+            }).then(() => {
+                loadingScreen.classList.add('hidden');
+                gameContainer.classList.remove('hidden');
+            }).catch(err => {
+                console.error('[Playtest blob] Failed to load:', err);
+                alert('Failed to load playtest level: ' + err.message);
+            });
+        } else if (isPlaytest) {
             // Playtest mode - load from localStorage
             const testData = localStorage.getItem('temp_playtest_platformer');
             if (testData) {
@@ -218,8 +254,9 @@
             const gameContainer = document.getElementById('game-container');
             
             window.game.init().then(() => {
-                const levelPath = `/projects/${project}/dunyalar/platformer/${levelId}.json`;
-                return window.game.loadLevel(levelId, levelPath);
+                const cleanLevelId = levelId.replace(/\.json$/i, '');
+                const levelPath = `/projects/${encodeURIComponent(project)}/dunyalar/platformer/${encodeURIComponent(cleanLevelId)}.json`;
+                return window.game.loadLevel(cleanLevelId, levelPath);
             }).then(() => {
                 loadingScreen.classList.add('hidden');
                 gameContainer.classList.remove('hidden');

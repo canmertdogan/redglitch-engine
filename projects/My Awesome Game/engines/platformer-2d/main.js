@@ -4,8 +4,9 @@ class PlatformerGame {
         this.renderer = new PlatformerRenderer(this.canvas);
         
         this.physics = new PhysicsSystem();
+        this.tileSize = this.physics.tileSize || (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
         this.combat = new PlatformerCombatSystem(this);
-        this.player = new Player(50, 50);
+        this.player = new PlatformerPlayer(50, 50);
         
         this.map = null;
         this.currentLevelId = null;
@@ -14,7 +15,22 @@ class PlatformerGame {
         this.platforms = []; // List of MovingPlatforms
         this.collectibles = [];
         this.checkpoints = [];
+        this.dialogueSystem = new window.DialogueSystem();
+        this.questSystem = new window.QuestSystem(this);
         this.lastCheckpoint = null;
+        
+        // Dependencies for systems (Quest, Dialogue)
+        this.uiSystem = {
+            showNotification: (msg, type) => {
+                if (this.fx && this.fx.popText) {
+                    this.fx.popText(this.player.x, this.player.y - 50, msg, type === 'error' ? '#e74c3c' : '#f1c40f');
+                }
+                console.log(`[Notification:${type}] ${msg}`);
+            }
+        };
+        this.audio = {
+            play: (id) => console.log(`[Audio] Playing ${id}`)
+        };
         
         this.fx = null;
         this.campaignSystem = null;
@@ -63,7 +79,11 @@ class PlatformerGame {
     }
 
     resize() {
-        this.renderer.resize(window.innerWidth, window.innerHeight);
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        
+        this.renderer.resize(w, h);
+        if (this.fx) this.fx.resize(w, h);
     }
 
     pause() {
@@ -103,6 +123,9 @@ class PlatformerGame {
         if (typeof window.CampaignSystem !== 'undefined') {
             this.campaignSystem = new window.CampaignSystem(this);
         }
+
+        await this.dialogueSystem.init();
+        await this.questSystem.init();
         
         // Force worm mode for the IRAB aesthetic if config says so
         if (this.player && window.PlatformerConfig) {
@@ -113,38 +136,122 @@ class PlatformerGame {
         if(loading) loading.classList.add('hidden');
         const container = document.getElementById('game-container');
         if(container) container.classList.remove('hidden');
+        
+        this.resize();
+
     }
 
     async loadLevel(levelId, levelPath = null) {
-        this.currentLevelId = levelId;
+        const cleanLevelId = String(levelId || 'level').replace(/\.json$/i, '');
+        this.currentLevelId = cleanLevelId;
         this.levelComplete = false;
-        try {
-            const path = levelPath || `dunyalar/platformer/${levelId}.json`;
-            const res = await fetch(path);
-            if(res.ok) {
-                this.map = await res.json();
-            } else {
-                this.map = this._createFallbackLevel();
+
+        const paths = levelPath
+            ? [levelPath]
+            : [
+                `dunyalar/platformer/${cleanLevelId}.json`,
+                `dunyalar/${cleanLevelId}.json`,
+            ];
+
+        let loaded = null;
+        let lastError = null;
+        for (const path of paths) {
+            try {
+                const res = await fetch(path);
+                if (res.ok) {
+                    loaded = await res.json();
+                    break;
+                }
+                lastError = new Error(`HTTP ${res.status} for ${path}`);
+            } catch (e) {
+                lastError = e;
             }
-        } catch(e) {
-            this.map = this._createFallbackLevel();
         }
+
+        if (!loaded) {
+            console.error('[PlatformerEngine] Level load failed, using fallback:', lastError?.message || 'unknown');
+            loaded = this._createFallbackLevel();
+        }
+
+        this.map = this._normalizeMapData(loaded);
         await this._setupLevel();
         this.isRunning = true;
-        this.loop();
+        this._lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     async loadLevelFromData(levelData) {
         this.currentLevelId = levelData.name || 'playtest';
         this.levelComplete = false;
-        this.map = levelData;
+        this.map = this._normalizeMapData(levelData);
         await this._setupLevel();
         this.isRunning = true;
-        this.loop();
+        this._lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     _createFallbackLevel() {
-        return { width: 50, height: 20, collision: new Array(50 * 20).fill(0), spawn: { x: 2, y: 15 }, goal: { x: 45, y: 15 }, collectibles: [], entities: [] };
+        const width = 50;
+        const height = 20;
+        const collision = new Array(width * height).fill(0);
+        for (let x = 0; x < width; x++) {
+            collision[(height - 2) * width + x] = 1;
+            collision[(height - 1) * width + x] = 1;
+        }
+        return {
+            width,
+            height,
+            layers: [new Array(width * height).fill(0)],
+            collision,
+            spawn: { x: 2, y: height - 4 },
+            goal: { x: width - 5, y: height - 4 },
+            collectibles: [],
+            entities: [],
+            background: '#87CEEB',
+        };
+    }
+
+    _normalizeMapData(raw) {
+        const map = (raw && typeof raw === 'object') ? { ...raw } : this._createFallbackLevel();
+        const width = Math.max(4, Number(map.width || 50) | 0);
+        const height = Math.max(4, Number(map.height || 20) | 0);
+        const total = width * height;
+
+        map.width = width;
+        map.height = height;
+
+        if (!Array.isArray(map.layers) || map.layers.length === 0) {
+            map.layers = [new Array(total).fill(0)];
+        } else {
+            map.layers = map.layers.map((layer) => {
+                if (!Array.isArray(layer)) return new Array(total).fill(0);
+                if (layer.length === total) return layer;
+                const normalized = new Array(total).fill(0);
+                for (let i = 0; i < Math.min(total, layer.length); i++) normalized[i] = Number(layer[i] || 0);
+                return normalized;
+            });
+        }
+
+        if (!Array.isArray(map.collision) || map.collision.length !== total) {
+            const src = map.layers[0] || [];
+            map.collision = new Array(total).fill(0);
+            for (let i = 0; i < total; i++) {
+                map.collision[i] = Number(src[i] || 0) > 0 ? 1 : 0;
+            }
+        }
+
+        if (!map.spawn || typeof map.spawn !== 'object') {
+            map.spawn = { x: 2, y: Math.max(1, height - 4) };
+        }
+        if (!map.goal || typeof map.goal !== 'object') {
+            map.goal = { x: Math.max(2, width - 5), y: Math.max(1, height - 4) };
+        }
+
+        map.collectibles = Array.isArray(map.collectibles) ? map.collectibles : [];
+        map.entities = Array.isArray(map.entities) ? map.entities : [];
+        map.checkpoints = Array.isArray(map.checkpoints) ? map.checkpoints : [];
+        map.decorations = Array.isArray(map.decorations) ? map.decorations : [];
+        return map;
     }
 
     async _setupLevel() {
@@ -155,7 +262,19 @@ class PlatformerGame {
         
         // Reset Parallax
         this.renderer.parallax.clear();
-        if (window.PlatformerAssetManager) {
+        
+        // 1. Try map-defined layers first
+        if (this.map.parallaxLayers && this.map.parallaxLayers.length > 0) {
+            for (const layer of this.map.parallaxLayers) {
+                if (!layer.image) continue;
+                const img = new Image();
+                img.src = layer.image;
+                // Note: We might want to await these for perfect sync, but parallax usually loads fine asynchronously
+                this.renderer.addParallaxLayer(img, layer.scrollX, layer.scrollY || layer.scrollX, layer.opacity);
+            }
+        } 
+        // 2. Fallback to default
+        else if (window.PlatformerAssetManager) {
             const bgForest = window.PlatformerAssetManager.get('bg_forest');
             if (bgForest) {
                 this.renderer.addParallaxLayer(bgForest, 0.2, 0.1, 1.0);
@@ -168,8 +287,8 @@ class PlatformerGame {
         
         // Robust Spawn Detection (handles multiple formats)
         if(this.map.spawn) {
-            this.player.x = (this.map.spawn.x || 0) * 32;
-            this.player.y = (this.map.spawn.y || 0) * 32;
+            this.player.x = (this.map.spawn.x || 0) * this.tileSize;
+            this.player.y = (this.map.spawn.y || 0) * this.tileSize;
         } else if (this.map.spawnX !== undefined) {
             this.player.x = this.map.spawnX;
             this.player.y = this.map.spawnY;
@@ -178,6 +297,9 @@ class PlatformerGame {
             this.player.x = 100; 
             this.player.y = 100;
         }
+        
+        // Snap camera immediately
+        this.renderer.setCameraToPlayer(this.player, this.map.width, this.map.height);
         
         // Force worm mode and sprites
         this.player.isWorm = true;
@@ -207,38 +329,99 @@ class PlatformerGame {
     }
 
     _addMovingPlatform(d) {
-        const plat = new PlatformerMovingPlatform(d.x, d.y);
+        const plat = new PlatformerMovingPlatform(d.x * this.tileSize, d.y * this.tileSize);
         // Add a simple back-and-forth waypoint if none exist
-        plat.addWaypoint(d.x, d.y);
-        plat.addWaypoint(d.x + 5, d.y);
+        plat.addWaypoint(d.x * this.tileSize, d.y * this.tileSize);
+        plat.addWaypoint((d.x + 5) * this.tileSize, d.y * this.tileSize);
         this.platforms.push(plat);
     }
 
     _addCollectible(c) {
-        this.collectibles.push({ ...c, x: c.x * 32, y: c.y * 32, w: 16, h: 16, collected: false, type: c.type || 'coin' });
+        this.collectibles.push({ ...c, x: c.x * this.tileSize, y: c.y * this.tileSize, w: 16, h: 16, collected: false, type: c.type || 'coin' });
     }
 
     _addCheckpoint(cp) {
-        this.checkpoints.push({ x: cp.x * 32, y: cp.y * 32, w: 32, h: 64, activated: false });
+        this.checkpoints.push({ x: cp.x * this.tileSize, y: cp.y * this.tileSize, w: this.tileSize, h: this.tileSize * 2, activated: false });
     }
 
     _addEntity(e) {
+        // Normalize entity coordinates to world pixels using tileSize
+        const ex = (typeof e.x === 'number') ? e.x * this.tileSize : 0;
+        const ey = (typeof e.y === 'number') ? e.y * this.tileSize : 0;
+
         if (e.type === 'enemy') {
-            const enemy = new PlatformerEnemy(e.x, e.y, e.sprite || 'slime');
+            const enemy = new PlatformerEnemy(ex, ey, e.sprite || 'slime');
             if (e.behavior) enemy.behavior = e.behavior;
+            enemy.id = e.id || enemy.id;
+            enemy.hp = e.hp || enemy.hp;
+            enemy.speed = e.speed || enemy.speed;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_flying') {
-            const enemy = new PlatformerFlyingEnemy(e.x, e.y, e.sprite || 'bat');
+            const enemy = new PlatformerFlyingEnemy(ex, ey, e.sprite || 'bat');
+            enemy.id = e.id || enemy.id;
             if (e.behavior) enemy.behavior = e.behavior;
             this.entities.push(enemy);
         } else if (e.type === 'enemy_shooter') {
-            const enemy = new PlatformerShooterEnemy(e.x, e.y, e.sprite || 'goblin');
+            const enemy = new PlatformerShooterEnemy(ex, ey, e.sprite || 'goblin');
+            enemy.id = e.id || enemy.id;
             this.entities.push(enemy);
         } else if (e.type === 'pushable') {
-            this.entities.push(new PlatformerPushableBlock(e.x, e.y, e.w || 32, e.h || 32));
+            const push = new PlatformerPushableBlock(ex, ey, e.w || this.tileSize, e.h || this.tileSize);
+            push.id = e.id || push.id;
+            this.entities.push(push);
+        } else if (['switch', 'pressure_plate', 'zone'].includes(e.type)) {
+            const trigger = new PlatformerTrigger(ex, ey, {
+                triggerType: e.type,
+                targetId: e.targetId,
+                action: e.action,
+                questIdProgress: e.questIdProgress,
+                id: e.id
+            });
+            this.entities.push(trigger);
         } else {
-            this.entities.push({ ...e, x: e.x * 32, y: e.y * 32, w: 24, h: 32, vx: 0, vy: 0, behavior: e.behavior || 'static' });
+            const ent = { ...e, x: ex, y: ey, w: 24, h: this.tileSize, vx: 0, vy: 0, behavior: e.behavior || 'static' };
+            if (e.dialogueId) ent.dialogueId = e.dialogueId;
+            ent.id = e.id || ent.id;
+            this.entities.push(ent);
         }
+    }
+
+    _handleInteractions() {
+        if (this.dialogueSystem.active) return;
+
+        const interactPressed = this.keys['KeyE'] || this.keys['Enter'];
+        if (!interactPressed) return;
+
+        // Check for nearby NPCs with dialogues
+        const range = 64;
+        const px = this.player.x + this.player.w/2;
+        const py = this.player.y + this.player.h/2;
+
+        for (const ent of this.entities) {
+            if (ent.dialogueId) {
+                const ex = ent.x + (ent.w || this.tileSize)/2;
+                const ey = ent.y + (ent.h || this.tileSize)/2;
+                const dist = Math.sqrt((px - ex)**2 + (py - ey)**2);
+
+                if (dist < range) {
+                    console.log(`[Game] Starting dialogue: ${ent.dialogueId}`);
+                    this.dialogueSystem.start(ent.dialogueId);
+                    this.keys['KeyE'] = false; // Consume input
+                    this.keys['Enter'] = false;
+                    break;
+                }
+            }
+        }
+    }
+
+    triggerEntity(targetId, action, data) {
+        console.log(`[Game] Routing trigger to ${targetId}: ${action}`);
+        const targets = this.entities.filter(ent => ent.id === targetId);
+        if (targets.length === 0 && this.player.id === targetId) targets.push(this.player);
+        
+        targets.forEach(t => {
+            if (t.trigger) t.trigger(action, data);
+        });
     }
 
     _handlePushing() {
@@ -270,10 +453,12 @@ class PlatformerGame {
         });
     }
 
-    update() {
+    update(dtArg) {
         if(this.isPaused || this.levelComplete) return;
 
-        const dt = 1/60;
+        const dt = (typeof dtArg === 'number') ? dtArg : (1/60);
+        // Scale factor to keep existing velocity units (which were per-1/60 tick)
+        const scale = Math.max(0, Math.min(dt * 60, 4));
 
         // 1. Update Platforms First
         this.platforms.forEach(p => p.update(dt, this.map));
@@ -281,7 +466,7 @@ class PlatformerGame {
         // 2. Handle Player
         this.player.handleInput(this.keys);
         this.player.update(dt, this.map);
-        this.physics.apply(this.player, this.map, this.platforms);
+        this.physics.apply(this.player, this.map, this.platforms, dt);
         this._handlePushing();
         
         // 3. Environment & Effects
@@ -297,26 +482,33 @@ class PlatformerGame {
         }
         
         this.combat.update(dt);
-        this._updateEntities();
+        this._updateEntities(dt);
+        this._handleInteractions();
         this._checkCollectibles();
         this._checkCheckpoints();
         this._checkGoal();
         this._checkDeathZones();
     }
 
-    _updateEntities() {
+    _updateEntities(dt) {
         this.entities.forEach(ent => {
             if (ent.update) {
-                ent.update(1/60, this.map);
+                ent.update(dt, this.map);
             } else if(ent.behavior === 'patrol') {
                 if(!ent.patrolDir) ent.patrolDir = 1;
                 ent.vx = ent.patrolDir * 0.5;
                 const nextX = ent.x + ent.vx * 5;
-                const tileX = Math.floor(nextX / 32);
-                const tileY = Math.floor(ent.y / 32);
+                const tileX = Math.floor(nextX / this.tileSize);
+                const tileY = Math.floor(ent.y / this.tileSize);
                 if(this.physics.getTile(this.map, tileX, tileY) === 1) ent.patrolDir *= -1;
             }
-            this.physics.apply(ent, this.map, this.platforms);
+            this.physics.apply(ent, this.map, this.platforms, dt);
+
+            // Quest trigger for kills
+            if (ent.isDead && !ent._questLogged) {
+                ent._questLogged = true;
+                if (this.questSystem) this.questSystem.onEvent('kill', ent.type, 1);
+            }
         });
         
         // Remove dead entities
@@ -330,6 +522,9 @@ class PlatformerGame {
                 item.collected = true;
                 if(item.type === 'coin') this.player.coins++;
                 if(this.campaignSystem) this.campaignSystem.incrementVariable('coins', 1);
+
+                // Quest trigger
+                if (this.questSystem) this.questSystem.onEvent('collect', item.type, 1);
             }
         });
     }
@@ -347,12 +542,12 @@ class PlatformerGame {
     _checkGoal() {
         const goalData = this.map.exit || this.map.goal;
         if(!goalData) return;
-        const goal = { x: goalData.x * 32, y: goalData.y * 32, w: 32, h: 64 };
+        const goal = { x: goalData.x * this.tileSize, y: goalData.y * this.tileSize, w: this.tileSize, h: this.tileSize * 2 };
         if(this._collision(this.player, goal)) this.completeLevel();
     }
 
     _checkDeathZones() {
-        if(this.player.y > this.map.height * 32) this.respawn();
+        if(this.player.y > this.map.height * this.tileSize) this.respawn();
     }
 
     _collision(a, b) {
@@ -364,8 +559,8 @@ class PlatformerGame {
             this.player.x = this.lastCheckpoint.x;
             this.player.y = this.lastCheckpoint.y;
         } else if(this.map.spawn) {
-            this.player.x = this.map.spawn.x * 32;
-            this.player.y = this.map.spawn.y * 32;
+            this.player.x = this.map.spawn.x * this.tileSize;
+            this.player.y = this.map.spawn.y * this.tileSize;
         }
         this.player.vx = 0; this.player.vy = 0;
         this.player.history = [];
@@ -385,11 +580,20 @@ class PlatformerGame {
         this.combat.draw(this.renderer);
     }
 
-    loop() {
+    loop(now) {
         if(!this.isRunning) return;
-        this.update();
+        const nowTime = typeof now === 'number' ? now : performance.now();
+        if (!this._lastTime) this._lastTime = nowTime;
+        let dt = (nowTime - this._lastTime) / 1000;
+        // Clamp dt to avoid big jumps (e.g., when tab was hidden)
+        const minDt = (window.PlatformerConfig && window.PlatformerConfig.MIN_DT) || (1/120);
+        const maxDt = (window.PlatformerConfig && window.PlatformerConfig.MAX_DT) || 0.1;
+        dt = Math.max(minDt, Math.min(dt, maxDt));
+        this._lastTime = nowTime;
+
+        this.update(dt);
         this.draw();
-        requestAnimationFrame(() => this.loop());
+        requestAnimationFrame((t) => this.loop(t));
     }
 
     login(username) {

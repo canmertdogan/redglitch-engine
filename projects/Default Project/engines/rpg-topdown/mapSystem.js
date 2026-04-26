@@ -188,8 +188,23 @@ window.MapSystem = class MapSystem {
         
         this.isoOrder.forEach(t => {
             const idx = t.y * this.width + t.x;
-            const isSolid = this.collisionMap[idx] === 1;
-            const blockH = isSolid ? ts : 0; // Height of the block
+            const collType = this.collisionMap[idx] || 0;
+            let blockH = 0;
+            let blockColor1 = '#534';
+            let blockColor2 = '#756';
+            
+            // Determine block height and color based on collision type
+            if (collType === 1) {
+                blockH = ts; // Full height shadowed
+            } else if (collType === 2) {
+                blockH = ts * 0.8; // Shadowless wall (slightly shorter visual)
+                blockColor1 = '#246';
+                blockColor2 = '#468';
+            } else if (collType === 3) {
+                blockH = ts * 0.5; // Half height
+                blockColor1 = '#853';
+                blockColor2 = '#a75';
+            }
 
             // Screen Position (Base of the tile)
             const screenX = centerX + (t.x - t.y) * ts;
@@ -197,9 +212,9 @@ window.MapSystem = class MapSystem {
 
             // Check Visibility
             if (screenX > -ts * 2 && screenX < canvasWidth + ts && screenY > -ts - blockH && screenY < canvasHeight + ts) {
-                // DRAW BLOCK SIDES (If Solid) - only once per tile stack
-                if (isSolid) {
-                    this.ctx.fillStyle = '#534'; // Dark shadow
+                // DRAW BLOCK SIDES (If has height)
+                if (blockH > 0) {
+                    this.ctx.fillStyle = blockColor1;
                     this.ctx.beginPath();
                     this.ctx.moveTo(screenX, screenY + ts);
                     this.ctx.lineTo(screenX + ts, screenY + ts/2);
@@ -207,7 +222,7 @@ window.MapSystem = class MapSystem {
                     this.ctx.lineTo(screenX, screenY + ts - blockH);
                     this.ctx.fill();
 
-                    this.ctx.fillStyle = '#756'; // Lighter shadow
+                    this.ctx.fillStyle = blockColor2;
                     this.ctx.beginPath();
                     this.ctx.moveTo(screenX - ts, screenY + ts/2);
                     this.ctx.lineTo(screenX, screenY + ts);
@@ -248,10 +263,44 @@ window.MapSystem = class MapSystem {
         }
     }
     
-    isSolid(x, y) {
+    getCollisionType(x, y) {
         const ts = this.tileSize * this.scale;
         const c = Math.floor(x / ts), r = Math.floor(y / ts);
-        if (c < 0 || c >= this.width || r < 0 || r >= this.height) return true;
-        return this.collisionMap[r * this.width + c] === 1;
+        if (c < 0 || c >= this.width || r < 0 || r >= this.height) return 1; // Out of bounds = solid
+        return this.collisionMap[r * this.width + c] || 0;
+    }
+    
+    isSolid(x, y, direction = null) {
+        const collType = this.getCollisionType(x, y);
+        
+        // Passable
+        if (collType === 0) return false;
+        
+        // Trigger zone (passable but detectable)
+        if (collType === 8) return false;
+        
+        // One-way collision (4=up, 5=down, 6=left, 7=right)
+        if (collType >= 4 && collType <= 7) {
+            if (!direction) return true; // Default to solid if no direction given
+            
+            // Allow passage from specific directions
+            if (collType === 4 && direction === 'down') return false; // Can move down through "one-way up"
+            if (collType === 5 && direction === 'up') return false;
+            if (collType === 6 && direction === 'right') return false;
+            if (collType === 7 && direction === 'left') return false;
+            
+            return true;
+        }
+        
+        // Solid types (1, 2, 3)
+        return collType === 1 || collType === 2 || collType === 3;
+    }
+    
+    isTriggerZone(x, y) {
+        return this.getCollisionType(x, y) === 8;
+    }
+    
+    isHalfHeight(x, y) {
+        return this.getCollisionType(x, y) === 3;
     }
 }

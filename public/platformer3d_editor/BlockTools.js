@@ -35,13 +35,13 @@ window.BlockTools = (() => {
 
     // ─── Block type color hints (palette indices) ─────────────────────────────
     const BLOCK_DEFAULT_COLOR = {
-        flat:    12,   // green
-        slope:   18,   // mid-green
-        moving:  14,   // teal
-        falling: 25,   // orange-ish (index 25)
-        bouncy:  23,   // orange
-        icy:     16,   // blue
-        lava:    20,   // red
+        flat:    122,  // green
+        slope:   122,  // green
+        moving:  140,  // teal/blue
+        falling: 200,  // orange
+        bouncy:  170,  // yellow
+        icy:     95,   // blue
+        lava:    24,   // red
     };
 
     // ─── Gizmo state ──────────────────────────────────────────────────────────
@@ -156,13 +156,14 @@ window.BlockTools = (() => {
      * @returns {THREE.BufferGeometry}
      */
     function buildGeometry(blockType, w, h, d) {
-        switch (blockType) {
+        const type = (blockType || 'box').toLowerCase();
+        switch (type) {
             case 'slope':    return _buildSlopeGeometry(w, h, d);
             case 'wedge':    return _buildWedgeGeometry(w, h, d);
-            case 'cylinder': return new THREE.CylinderGeometry(w / 2, w / 2, h, 10);
             case 'arch':     return _buildArchGeometry(w, h, d);
             case 'stairs':   return _buildStairsGeometry(w, h, d);
-            default:         return new THREE.BoxGeometry(w, h, d);
+            // Default primitives handled by shared factory
+            default:         return PrimitiveFactory.create(type, w, h, d);
         }
     }
 
@@ -268,21 +269,45 @@ window.BlockTools = (() => {
     // MATERIAL FACTORY
     // ─────────────────────────────────────────────────────────────────────────
 
-    function buildMaterial(colorIdx, wireframe = false) {
-        const pal   = _palette || _defaultPalette();
-        const color = pal[Math.max(0, Math.min(255, colorIdx ?? 12))];
-        return new THREE.MeshPhongMaterial({ color, flatShading: true, shininess: 0, wireframe });
+    /**
+     * Build material prioritizing texture if assigned, else solid hex.
+     * @param {object} obj - Object record with .colorHex, .textureId, .colorIdx
+     * @param {boolean} wireframe
+     */
+    function buildMaterialForObj(obj, wireframe = false) {
+        if (obj.textureId && _atlas) {
+            return _atlas.getMaterial(THREE);
+        }
+        
+        // Use colorHex if available, fallback to palette index
+        let color = obj.colorHex || '#888888';
+        if (!obj.colorHex && obj.colorIdx !== undefined) {
+            const pal = _palette || [];
+            color = pal[Math.max(0, Math.min(255, obj.colorIdx))] ?? 0x888888;
+        }
+
+        return new THREE.MeshPhongMaterial({ 
+            color, 
+            flatShading: true, 
+            shininess: 0, 
+            wireframe 
+        });
     }
 
-    function _defaultPalette() {
-        const cols = [
-            0x2c1810,0x4a2820,0x6b3a28,0x8b4513,0xa0522d,0xcd853f,0xdaa520,0xb8860b,
-            0x444444,0x666666,0x888888,0xaaaaaa,0x27ae60,0x2ecc71,0x1abc9c,0x16a085,
-            0x2980b9,0x3498db,0x8e44ad,0x9b59b6,0xc0392b,0xe74c3c,0xe67e22,0xf39c12,
-            0xf1c40f,0xffeaa7,0xdfe6e9,0xb2bec3,0x636e72,0x2d3436,0x0a0a0a,0xffffff,
-        ];
-        while (cols.length < 256) cols.push(0x888888);
-        return cols;
+    /**
+     * Apply UV offsets for a specific texture key.
+     * @param {THREE.BufferGeometry} geo 
+     * @param {string} textureId 
+     */
+    function applyTextureUVs(geo, textureId) {
+        if (!_atlas || !textureId) return;
+        _atlas.applyBlockUVs(geo, textureId);
+    }
+
+    function buildMaterial(colorIdx, wireframe = false) {
+        const pal   = _palette || [];
+        const color = pal[Math.max(0, Math.min(255, colorIdx ?? 12))] ?? 0x888888;
+        return new THREE.MeshPhongMaterial({ color, flatShading: true, shininess: 0, wireframe });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -349,18 +374,21 @@ window.BlockTools = (() => {
         return topY;
     }
 
+    function getAvailableTextures() {
+        if (!_atlas) return [];
+        return _atlas.getAvailableKeys();
+    }
+
     /** Add a THREE.Mesh to the scene and meshMap for a given object record */
     function _addMesh(obj, meshMap) {
         if (!_scene) return;
         const geo  = buildGeometry(obj.blockType || 'box', obj.scale.x || 2, obj.scale.y || 1, obj.scale.z || 2);
-        let mat;
-        if (_tilesetEnabled && _atlas && obj.blockType === 'box') {
-            const atlasType = _PLAT_TO_ATLAS[obj.subtype || obj.platType || 'flat'] || 'flat';
-            _atlas.applyBlockUVs(geo, atlasType);
-            mat = _atlas.getMaterial(THREE);
-        } else {
-            mat = buildMaterial(obj.colorIdx);
+        
+        const mat = buildMaterialForObj(obj);
+        if (obj.textureId && obj.blockType === 'box') {
+            applyTextureUVs(geo, obj.textureId);
         }
+
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.set(obj.pos.x, obj.pos.y, obj.pos.z);
         if (obj.rot) mesh.rotation.set(obj.rot.x, obj.rot.y, obj.rot.z);
@@ -369,7 +397,9 @@ window.BlockTools = (() => {
         mesh.userData.id       = obj.id;
         mesh.userData.group    = 'object';
         mesh.userData.platType = obj.subtype || obj.platType || 'flat';
-        mesh.userData.colorIdx = obj.colorIdx ?? 12;
+        mesh.userData.colorIdx = obj.colorIdx ?? 122;
+        mesh.userData.colorHex = obj.colorHex || null;
+        mesh.userData.textureId = obj.textureId || null;
         _scene.add(mesh);
         meshMap.set(obj.id, mesh);
     }
@@ -734,6 +764,8 @@ window.BlockTools = (() => {
         showGizmo, hideGizmo, hitGizmo, applyGizmoDrag,
         // Prefabs
         savePrefab, stampPrefab, stampPrefabAtOrigin, deletePrefab, listPrefabs,
+        // Material & Textures
+        buildMaterialForObj, applyTextureUVs, getAvailableTextures,
         // Physics meta
         getPhysics, getDefaultColorIdx,
         // Tileset

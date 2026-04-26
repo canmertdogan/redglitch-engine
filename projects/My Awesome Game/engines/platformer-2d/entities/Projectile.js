@@ -3,7 +3,7 @@
  * A moving object that deals damage on collision.
  */
 
-class Projectile extends Entity {
+class PlatformerProjectile extends PlatformerEntity {
     constructor(owner, x, y, vx, vy, config = {}) {
         super(x, y, config.w || 12, config.h || 12);
         this.owner = owner;
@@ -21,12 +21,14 @@ class Projectile extends Entity {
         this.lifetime -= dt;
         if (this.lifetime <= 0) this.isDead = true;
 
-        this.x += this.vx;
-        this.y += this.vy;
+        const scale = Math.max(0, Math.min(dt * 60, 4));
+        this.x += this.vx * scale;
+        this.y += this.vy * scale;
 
         // Simple tile collision for projectiles
-        const tx = Math.floor((this.x + this.w/2) / 32);
-        const ty = Math.floor((this.y + this.h/2) / 32);
+        const ts = window.game?.tileSize || window.PlatformerConfig?.TILE_SIZE || 32;
+        const tx = Math.floor((this.x + this.w/2) / ts);
+        const ty = Math.floor((this.y + this.h/2) / ts);
         if (window.game?.physics.getTile(map, tx, ty) === 1) {
             this.onHitWall();
         }
@@ -52,4 +54,4 @@ class Projectile extends Entity {
     }
 }
 
-window.Projectile = Projectile;
+window.PlatformerProjectile = PlatformerProjectile;

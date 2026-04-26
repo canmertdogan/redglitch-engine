@@ -14,6 +14,24 @@ window.UIRenderer = class UIRenderer {
     }
 
     static create(data, context) {
+        // Check condition - skip element if condition not met
+        if (data.condition) {
+            let shouldShow = true;
+            
+            if (data.condition === 'campaign_mode') {
+                shouldShow = window.CAMPAIGN_MODE === true;
+            } else if (data.condition === '!campaign_mode') {
+                shouldShow = !window.CAMPAIGN_MODE;
+            }
+            
+            if (!shouldShow) {
+                // Return empty div that won't be visible
+                const empty = document.createElement('div');
+                empty.style.display = 'none';
+                return empty;
+            }
+        }
+        
         // Wrapper for positioning
         const container = document.createElement('div');
         container.id = data.id || `el_${Math.random().toString(36).substr(2,9)}`;
