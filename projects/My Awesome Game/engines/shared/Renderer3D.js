@@ -129,9 +129,10 @@ export const PrimitiveFactory = {
         type = (type || 'box').toLowerCase();
         switch (type) {
             case 'plane':    return new THREE.PlaneGeometry(w, d);
-            case 'cylinder': return new THREE.CylinderGeometry(w/2, w/2, h, 16);
-            case 'sphere':   return new THREE.SphereGeometry(w/2, 16, 12);
-            case 'cone':     return new THREE.ConeGeometry(w/2, h, 16);
+            case 'pillar':
+            case 'cylinder': return new THREE.CylinderGeometry(w/2, w/2, h, 32);
+            case 'sphere':   return new THREE.SphereGeometry(w/2, 32, 24);
+            case 'cone':     return new THREE.ConeGeometry(w/2, h, 32);
             case 'slope':    return this._buildSlope(w, h, d);
             case 'wedge':    return this._buildWedge(w, h, d);
             case 'stairs':   return this._buildStairs(w, h, d);

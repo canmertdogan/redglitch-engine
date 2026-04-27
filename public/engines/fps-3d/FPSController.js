@@ -32,7 +32,8 @@
  *   Sounds are played via AudioSpatial3D if provided.
  */
 
-import * as THREE from '../../lib/three/three.module.js';
+import * as THREE  from '../../lib/three/three.module.js';
+import * as CANNON from '../../lib/cannon-es/cannon-es.module.js';
 import Physics3DWorld, { PhysicsBody3D, BodyType, ShapeType } from '../shared/Physics3DWorld.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -168,6 +169,11 @@ export default class FPSController {
      */
     async init(spawnPos = { x: 0, y: EYE_HEIGHT_STAND, z: 0 }) {
         this._spawnPos.set(spawnPos.x, spawnPos.y, spawnPos.z);
+
+        // Remove old body if it exists
+        if (this._body) {
+            this._physics.removeBody(this._body);
+        }
 
         // Create a dynamic sphere body (fixedRotation prevents tipping)
         this._body = this._physics.createBody({
@@ -373,19 +379,11 @@ export default class FPSController {
     _checkGrounded() {
         if (!this._body || !this._physics?.world) return false;
 
-        const pos  = this._body.body.position;
-        const from = new (this._physics.world.constructor._CANNON_Vec3 ?? Object.getPrototypeOf(this._body.body.position).constructor)(
-            pos.x, pos.y, pos.z
-        );
-        const to   = new from.constructor(pos.x, pos.y - GROUND_RAY_LEN, pos.z);
+        const pos   = this._body.body.position;
+        const fromV = new CANNON.Vec3(pos.x, pos.y, pos.z);
+        const toV   = new CANNON.Vec3(pos.x, pos.y - GROUND_RAY_LEN, pos.z);
 
-        // Use cannon-es CANNON.Vec3 (accessed via body.position proto)
-        const CANNON_Vec3 = pos.constructor;
-        const fromV = new CANNON_Vec3(pos.x, pos.y, pos.z);
-        const toV   = new CANNON_Vec3(pos.x, pos.y - GROUND_RAY_LEN, pos.z);
-
-        const result = new (this._physics.world.raycastClosest.toString
-            ? Object : Object)();
+        const result = new CANNON.RaycastResult();
         const hit = this._physics.world.raycastClosest(
             fromV, toV,
             { skipBackfaces: true },
@@ -397,7 +395,6 @@ export default class FPSController {
             this._groundSurface = result.body.userData?.surface ?? 'concrete';
             return true;
         }
-        // Fallback: check Y velocity — if near zero and position close to last ground
         return false;
     }
 
