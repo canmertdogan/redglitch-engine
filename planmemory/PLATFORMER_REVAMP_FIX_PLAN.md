@@ -15,4 +15,4 @@
 - [x] **Level Management:** Fixed level list refreshing after save.
 
 ## 🏁 Status
-Both the Platformer Engine and Studio are now significantly more robust, feature-complete, and compatible with the broader Ketebe ecosystem.
+Both the Platformer Engine and Studio are now significantly more robust, feature-complete, and compatible with the broader Vortex ecosystem.

@@ -151,7 +151,7 @@ export default class HUD_FPS {
             this._minimapCanvas.height = 128;
             this._minimapCanvas.style.cssText = `
                 position:absolute;top:16px;right:16px;
-                width:128px;height:128px;
+                width:128px !important; height:128px !important;
                 border:2px solid rgba(255,255,255,0.18);
                 border-radius:50%;overflow:hidden;
                 pointer-events:none;z-index:120;

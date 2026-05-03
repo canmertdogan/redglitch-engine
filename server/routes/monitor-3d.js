@@ -11,7 +11,7 @@ const router = express.Router();
 const MONITOR_MODE = 'simulated';
 
 router.use((req, res, next) => {
-  res.setHeader('X-Ketebe-Monitor-Mode', MONITOR_MODE);
+  res.setHeader('X-Vortex-Monitor-Mode', MONITOR_MODE);
   next();
 });
 

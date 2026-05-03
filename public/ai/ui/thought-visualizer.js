@@ -1,11 +1,11 @@
 /**
- * Ketebe AI - Thought Visualizer (Phase 9)
+ * Vortex AI - Thought Visualizer (Phase 9)
  * Provides visual feedback, ghost previews, and voice feedback for AI actions.
  */
 
 export class ThoughtVisualizer {
     constructor(eventBus = null) {
-        this.eventBus = eventBus || window.KetebeEventBus;
+        this.eventBus = eventBus || window.VortexEventBus;
         this.voiceEnabled = false; // TTS disabled as requested
         this.setupListeners();
     }

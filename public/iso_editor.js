@@ -7,13 +7,13 @@ let eventBus, projectState, assetManager, studioBridge;
 async function initializeIsoIntegration() {
     if (typeof window !== 'undefined') {
         // Wait for EventBus to be ready if needed
-        if (!window.KetebeEventBus) {
+        if (!window.VortexEventBus) {
             await new Promise(r => setTimeout(r, 500));
         }
 
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         
         if (eventBus) {
             // Initialize StudioBridge for IRAB

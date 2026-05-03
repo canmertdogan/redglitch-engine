@@ -1,5 +1,5 @@
 /**
- * KETEBE AUDIO STUDIO Pro - Core Engine v10.0
+ * VORTEX AUDIO STUDIO Pro - Core Engine v10.0
  * Complete DAW with 8-bit/32-bit synthesis, sampler, and full project management
  * Fixed: Piano roll, timeline, MIDI patterns, panel resizing
  * Integrated with EventBus, SharedProjectState, and AssetManager
@@ -10,9 +10,9 @@ let eventBus, projectState, assetManager;
 
 function initializeDAWIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         
         if (eventBus) {
             // Listen for audio requests from cutscene editor
@@ -119,7 +119,7 @@ class DAW {
     }
 
     init() {
-        console.log('KETEBE Audio Studio Pro v10.0 - Initializing...');
+        console.log('VORTEX Audio Studio Pro v10.0 - Initializing...');
         
         // Create default tracks
         this.addTrack('synth', 'Lead 8-Bit', '8bit');

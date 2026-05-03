@@ -190,7 +190,7 @@ class KaiChatUIController {
             this.setupEventListeners();
             
             // Hook into EventBus for Debug tab & Error Watcher
-            const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+            const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
             if (eventBus) {
                 // Live Debug Logs
                 eventBus.on('*', (eventData) => {
@@ -666,7 +666,7 @@ class KaiChatUIController {
                 btn.style.padding = '2px 8px';
                 btn.innerHTML = `📂 OPEN ${path.split('/').pop()}`;
                 btn.onclick = () => {
-                    const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+                    const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
                     if (eventBus) {
                         eventBus.emit('ai:command:request', {
                             method: path.includes('world') ? 'iso_studio.open' : 'open',
@@ -816,7 +816,7 @@ Please analyze why this is happening and suggest a fix. If it's in a script I ca
         if (confirm(">> WARNING: WIPE NEURAL BUFFER? (CANNOT BE UNDONE)")) {
             const messages = document.getElementById('ai-chat-messages');
             if (messages) messages.innerHTML = '';
-            if (window.KetebeAIInstance) window.KetebeAIInstance.clearHistory();
+            if (window.VortexAIInstance) window.VortexAIInstance.clearHistory();
             this.addMessage('system', '>> MEMORY_WIPE_COMPLETE.');
             this.playSound('nudge');
         }
@@ -884,8 +884,8 @@ class KaiSettingsController {
         localStorage.setItem('kai_settings', JSON.stringify(this.settings));
         
         // Push to global AI_CONFIG if available
-        if (window.KetebeAIInstance && window.KetebeAIInstance.config) {
-            const cfg = window.KetebeAIInstance.config;
+        if (window.VortexAIInstance && window.VortexAIInstance.config) {
+            const cfg = window.VortexAIInstance.config;
             cfg.models.llm.temperature = parseFloat(this.settings.temp);
             cfg.models.llm.topP = parseFloat(this.settings.topP);
             cfg.models.llm.maxNewTokens = parseInt(this.settings.maxTokens);

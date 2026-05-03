@@ -1,5 +1,5 @@
 /**
- * Ketebe AI - Studio Bridge (KAP)
+ * Vortex AI - Studio Bridge (KAP)
  * Helper for Studio tools to register their capabilities with the AI ToolRegistry.
  * 
  * Usage:
@@ -20,7 +20,7 @@ export class StudioBridge {
      */
     constructor(namespace, eventBus = null) {
         this.namespace = namespace;
-        this.eventBus = eventBus || window.KetebeEventBus;
+        this.eventBus = eventBus || window.VortexEventBus;
         this.tools = new Map();
         
         if (!this.eventBus) {

@@ -1,4 +1,4 @@
-// theme.js - Unified Theme System for Ketebe Engine
+// theme.js - Unified Theme System for Vortex Engine
 
 const THEMES = {
     'modern-dark': {

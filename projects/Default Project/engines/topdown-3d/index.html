@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Topdown 3D Engine — Ketebe</title>
+    <title>Topdown 3D Engine — Vortex</title>
     <link href="../../fonts/fonts.css" rel="stylesheet">
     <style>
         *, *::before, *::after {
@@ -207,7 +207,7 @@
 
     <!-- Loading Screen -->
     <div id="loading-screen">
-        <div id="loading-title">KETEBE</div>
+        <div id="loading-title">VORTEX</div>
         <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
         <div id="loading-text">LOADING TOPDOWN 3D ENGINE...</div>
     </div>
@@ -215,7 +215,7 @@
     <!-- Login Screen -->
     <div id="login-screen" class="hidden">
         <div id="login-box">
-            <div id="login-logo">KETEBE ENGINE</div>
+            <div id="login-logo">VORTEX ENGINE</div>
             <div id="login-title">TOPDOWN 3D</div>
             <input type="text" id="username-input" placeholder="ENTER USERNAME" maxlength="16" autocomplete="off">
             <button id="login-btn" onclick="attemptLogin()">START GAME</button>
@@ -275,7 +275,8 @@
         const levelId     = params.get('level');
         const project     = params.get('project');
         const levelBlob   = params.get('levelBlob');
-        const isPlaytest  = params.get('playtest') === 'true';
+        const pt          = params.get('playtest');
+        const isPlaytest  = pt === 'true' || pt === '1';
         const username    = params.get('username') || null;
 
         // ── Create game ───────────────────────────────────────────────────

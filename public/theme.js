@@ -1,4 +1,4 @@
-// theme.js - Unified Theme System for Ketebe Engine
+// theme.js - Unified Theme System for Vortex Engine
 
 const THEMES = {
     'modern-dark': {
@@ -102,4 +102,4 @@ if (document.readyState === 'loading') {
 
 window.setTheme = setTheme;
 window.loadSavedTheme = loadSavedTheme;
-window.KETEBE_THEMES = THEMES;
+window.VORTEX_THEMES = THEMES;

@@ -42,6 +42,6 @@ The platformer-3d engine uses **Save3D** (`public/engines/shared/Save3D.js`) for
 
 ## Customizing
 
-- Open **Platformer3D Editor** from the Ketebe launcher to build levels visually.
+- Open **Platformer3D Editor** from the Vortex launcher to build levels visually.
 - Add a new level by creating a `dunyalar/<name>.pf3d.json` and updating `startLevel` in `ketebe.json`.
 - Extend the palette by editing `"palette"` in `ketebe.json` and the shared palette asset at `public/engines/platformer-3d/palette.js`.

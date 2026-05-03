@@ -1,4 +1,4 @@
-// character_editor.js - Enhanced Ketebe Hero Studio
+// character_editor.js - Enhanced Vortex Hero Studio
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -8,9 +8,9 @@ let characterId = null; // Current character being edited
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         
         if (eventBus) {
             // Listen for external character load requests

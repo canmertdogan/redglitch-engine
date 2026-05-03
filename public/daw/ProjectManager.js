@@ -1,5 +1,5 @@
 /**
- * KETEBE Project Manager - Save/Load/Export DAW projects
+ * VORTEX Project Manager - Save/Load/Export DAW projects
  */
 
 class ProjectManager {

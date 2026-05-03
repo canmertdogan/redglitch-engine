@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         
         if (eventBus) {
             // Listen for character updates (NPCs reference characters)
@@ -856,9 +856,9 @@ window.openPixelEditor = function(inputId) {
     }
     
     // Method 3: Direct API call (if available)
-    if (!opened && window.KetebeAssetManager) {
+    if (!opened && window.VortexAssetManager) {
         try {
-            window.KetebeAssetManager.openSpriteEditor(key);
+            window.VortexAssetManager.openSpriteEditor(key);
             opened = true;
         } catch(e) {}
     }

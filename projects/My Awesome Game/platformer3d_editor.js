@@ -250,8 +250,8 @@ const Pf3dEditor = (() => {
     function _resizeRenderer() {
         const wrap = document.getElementById('viewport-wrap');
         if (!wrap || !_renderer) return;
-        const w = wrap.clientWidth;
-        const h = wrap.clientHeight;
+        const w = Math.max(1, wrap.clientWidth);
+        const h = Math.max(1, wrap.clientHeight);
         _renderer.setSize(w, h);
         if (_camera) _camera.aspect = w / h;
         if (_camera) _camera.updateProjectionMatrix();
@@ -1434,7 +1434,8 @@ const Pf3dEditor = (() => {
         const w = 20, h = 20;
         const elevGrid = new Float32Array(w * h);
         for (let i = 0; i < elevGrid.length; i++) elevGrid[i] = Math.random() * 0.05;
-        const mesh = new LowPolyTerrainGen().generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        const res = new LowPolyTerrainGen().generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        const mesh = res.mesh;
         if (!mesh) return;
         mesh.userData.isLowPolyFloor = true;
         _scene.add(mesh);

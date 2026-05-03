@@ -1,4 +1,4 @@
-// interactive_cutscene_editor.js - Interactive Cutscene Editor for Ketebe Studio
+// interactive_cutscene_editor.js - Interactive Cutscene Editor for Vortex Studio
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration system
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState || new SharedProjectState();
-        assetManager = window.KetebeAssetManager || new AssetManager();
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState || new SharedProjectState();
+        assetManager = window.VortexAssetManager || new AssetManager();
         
         if (eventBus) {
             // Listen for external cutscene requests
@@ -1795,7 +1795,7 @@ class InteractiveCutsceneEditor {
     }
     
     showAbout() {
-        alert('INTERACTIVE CUTSCENE STUDIO v1.0\nBuilt with Ketebe Engine\n\nPowered by KETEBE Technology');
+        alert('INTERACTIVE CUTSCENE STUDIO v1.0\nBuilt with Vortex Engine\n\nPowered by VORTEX Technology');
     }
     
     // New editing tools

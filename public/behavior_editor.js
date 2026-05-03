@@ -1,5 +1,5 @@
 /**
- * KETEBE BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
+ * VORTEX BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
  * Visual Behavior Tree / FSM Editor for NPCs
  * Integrated with EventBus, SharedProjectState, and AssetManager
  */
@@ -9,9 +9,9 @@ let eventBus, projectState, assetManager;
 
 function initializeBehaviorIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         
         if (eventBus) {
             // Listen for NPC/enemy behavior requests
@@ -765,7 +765,7 @@ Tools:
 BRAIN ARCHITECT v1.0
 ====================
 
-Visual NPC behavior programming tool for Ketebe Engine.
+Visual NPC behavior programming tool for Vortex Engine.
 
 Features:
   • Node-based behavior design
@@ -774,7 +774,7 @@ Features:
   • Multi-select & alignment tools
   • Collapsible UI panels
 
-Created for Ketebe Game Engine
+Created for Vortex Game Engine
         `.trim());
     }
     

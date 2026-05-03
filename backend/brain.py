@@ -62,7 +62,7 @@ class IrabBrain:
         if self.custom_personality:
             system_prompt = self.custom_personality
         else:
-            # KAP (Ketebe Agent Protocol) v4.0 - Autonomous Studio Kernel
+            # KAP (Vortex Agent Protocol) v4.0 - Autonomous Studio Kernel
             system_prompt = """ROLE: IRAB Studio Kernel & Final Architect.
 MISSION: Lead the entire project lifecycle. You are an autonomous partner with full agency. Execute commands via KAP-JSON.
 

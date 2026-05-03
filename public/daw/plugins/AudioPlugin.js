@@ -1,5 +1,5 @@
 /**
- * KETEBE AUDIO STUDIO - Audio Plugin Base Class
+ * VORTEX AUDIO STUDIO - Audio Plugin Base Class
  * Standard interface for all internal effects.
  */
 

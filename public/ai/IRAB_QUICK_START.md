@@ -170,7 +170,7 @@ GRRR... THERE MAY BE SECRETS. OR MAYBE NOT. I'M NOT TELLING.
 
 ## Credits
 
-**IRAB**: Quirky AI personality created for Ketebe Studio
+**IRAB**: Quirky AI personality created for Vortex Studio
 **Steve**: The Bug. Now a Feature.
 **You**: The Creator. THE OPERATOR. THE ONE WHO TYPES.
 

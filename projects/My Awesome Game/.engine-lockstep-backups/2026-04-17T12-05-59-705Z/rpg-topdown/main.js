@@ -1,4 +1,4 @@
-// main.js - KETEBE ENGINE v5.2 - HYBRID CORE (Robust Legacy Logic + New Architecture)
+// main.js - VORTEX ENGINE v5.2 - HYBRID CORE (Robust Legacy Logic + New Architecture)
 
 // Inject Logger Hook for DevTools Integration
 (function() {

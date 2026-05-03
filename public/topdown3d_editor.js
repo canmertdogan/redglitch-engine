@@ -7,7 +7,7 @@
  *  - Tool system: select / paint / place / erase / height
  *  - Sidebar panels: Terrain, Objects, Lights, NavMesh, Settings
  *  - Level JSON serialization (same schema as demo_level_01.json)
- *  - KetebeEventBus + KetebeProjectState integration
+ *  - VortexEventBus + VortexProjectState integration
  *  - Undo/redo command stack
  *  - Launcher dashboard registration
  */
@@ -45,8 +45,8 @@
     }
 
     // ── 2. Globals ────────────────────────────────────────────────────────────
-    let eventBus    = window.KetebeEventBus    ?? null;
-    let projectState = window.KetebeProjectState ?? null;
+    let eventBus    = window.VortexEventBus    ?? null;
+    let projectState = window.VortexProjectState ?? null;
 
     const DEFAULT_PALETTE = [
         '#2e7d32', '#388e3c', '#4caf50', '#81c784',  // greens
@@ -184,8 +184,8 @@
 
     // ── 10. Resize handling ───────────────────────────────────────────────────
     function resize() {
-        const w = viewport.clientWidth;
-        const h = viewport.clientHeight;
+        const w = Math.max(1, viewport.clientWidth);
+        const h = Math.max(1, viewport.clientHeight);
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
@@ -1186,7 +1186,7 @@
         selRectDiv.style.display = 'none';
     });
 
-    // ── 41. KetebeEventBus integration ────────────────────────────────────────
+    // ── 41. VortexEventBus integration ────────────────────────────────────────
     if (eventBus) {
         eventBus.on('project:loaded', ({ project }) => {
             state.projectName = project;
@@ -1201,13 +1201,13 @@
     }
 
     // ── 42. Register editor in launcher (if opened from launcher) ─────────────
-    if (window.opener?.KetebeEventBus) {
-        window.opener.KetebeEventBus.emit('editor:opened', {
+    if (window.opener?.VortexEventBus) {
+        window.opener.VortexEventBus.emit('editor:opened', {
             editorType: 'topdown3d',
             capabilities: ['level-editor', 'terrain', 'navmesh', 'entities', 'lights'],
         });
     }
-    const _ps = window.opener?.KetebeProjectState ?? window.parent?.KetebeProjectState ?? null;
+    const _ps = window.opener?.VortexProjectState ?? window.parent?.VortexProjectState ?? null;
     if (_ps) {
         projectState = _ps;
         const pn = projectState.currentProject ?? projectState.get?.('projectName');

@@ -1,5 +1,5 @@
 /**
- * Ketebe AI - Asset Synthesizer
+ * Vortex AI - Asset Synthesizer
  * Procedural Pixel Art Generator for KAI
  */
 

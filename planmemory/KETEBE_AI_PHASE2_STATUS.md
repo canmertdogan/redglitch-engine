@@ -1,4 +1,4 @@
-# Ketebe AI - Phase 2 Status: RAG System
+# Vortex AI - Phase 2 Status: RAG System
 
 **Date:** 2026-02-08
 **Status:** Implemented ✅

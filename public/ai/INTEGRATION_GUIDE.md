@@ -1,4 +1,4 @@
-# Ketebe AI Assistant - Integration Guide
+# Vortex AI Assistant - Integration Guide
 
 ## What Has Been Implemented
 

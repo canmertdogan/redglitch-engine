@@ -1,7 +1,7 @@
 {
     "id": "iso-starter",
     "name": "Isometric World",
-    "author": "Ketebe Game Studio",
+    "author": "Vortex Game Studio",
     "description": "A 2.5D Isometric starter kit with depth-sorting, height mapping support, and pixel-art diamond grid.",
     "version": "1.0.0",
     "category": "RPG"

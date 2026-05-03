@@ -1,6 +1,6 @@
 /**
  * public/ai/config.js
- * Central configuration for Ketebe AI Micro Edition.
+ * Central configuration for Vortex AI Micro Edition.
  */
 
 export const AI_CONFIG = {

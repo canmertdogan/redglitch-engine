@@ -153,7 +153,7 @@
     <!-- Login Screen -->
     <div id="login-screen" class="hidden">
         <div id="login-box">
-            <div id="login-title">KETEBE WORM</div>
+            <div id="login-title">VORTEX WORM</div>
             <input type="text" id="username-input" placeholder="ENTER USERNAME" maxlength="16">
             <br>
             <button id="login-btn" onclick="attemptLogin()">START</button>
@@ -196,7 +196,8 @@
         const levelId = urlParams.get('level');
         const project = urlParams.get('project');
         const levelBlob = urlParams.get('levelBlob');
-        const isPlaytest = urlParams.get('playtest') === 'true';
+        const pt         = urlParams.get('playtest');
+        const isPlaytest = pt === 'true' || pt === '1';
         
         if (levelBlob) {
             // Blob playtest mode (used by some editors)

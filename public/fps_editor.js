@@ -1049,8 +1049,8 @@ const FPSEditor = (() => {
         if (btn) btn.classList.toggle('active', _show2d);
         if (_three && _three.renderer) {
             const canvas = document.getElementById('canvas-3d');
-            const w = canvas.parentElement.clientWidth;
-            const h = canvas.parentElement.clientHeight - 24;
+            const w = Math.max(1, canvas.parentElement.clientWidth);
+            const h = Math.max(1, canvas.parentElement.clientHeight - 24);
             _three.renderer.setSize(w, h);
             _three.camera.aspect = w / h;
             _three.camera.updateProjectionMatrix();
@@ -1406,7 +1406,8 @@ const FPSEditor = (() => {
         const w = 20, h = 20;
         const elevGrid = new Float32Array(w * h);
         for (let i = 0; i < elevGrid.length; i++) elevGrid[i] = Math.random() * 0.05;
-        const mesh = new LowPolyTerrainGen().generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        const res = new LowPolyTerrainGen().generate(elevGrid, w, h, { tileSize: 1, maxHeight: 0.5 });
+        const mesh = res.mesh;
         if (!mesh) return;
         mesh.userData.isLowPolyFloor = true;
         _three.scene.add(mesh);
@@ -1639,8 +1640,8 @@ const FPSEditor = (() => {
             _resize2d();
             if (_three) {
                 const vp = document.getElementById('viewport-3d');
-                const w  = vp.clientWidth;
-                const h  = vp.clientHeight - 24;
+                const w  = Math.max(1, vp.clientWidth);
+                const h  = Math.max(1, vp.clientHeight - 24);
                 _three.renderer.setSize(w, h);
                 _three.camera.aspect = w / h;
                 _three.camera.updateProjectionMatrix();

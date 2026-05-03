@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Central Event Bus
+ * Vortex Engine - Central Event Bus
  * Provides unified communication across all editors and tools
  */
 class EventBus {
@@ -339,7 +339,7 @@ class EventBus {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.KetebeEventBus = window.KetebeEventBus || new EventBus();
+    window.VortexEventBus = window.VortexEventBus || new EventBus();
 }
 
 // Export for Node.js

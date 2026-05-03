@@ -2,7 +2,7 @@
 
 ## Launching
 
-From the Ketebe dashboard, select a project with `"engineType": "platformer-3d"` and click **Open Editor**.
+From the Vortex dashboard, select a project with `"engineType": "platformer-3d"` and click **Open Editor**.
 
 - **Editor files:** `public/platformer3d_editor.html` + `public/platformer3d_editor.js`
 - **Output:** `projects/<ProjectName>/dunyalar/<level>.pf3d.json` (schema v2.0)

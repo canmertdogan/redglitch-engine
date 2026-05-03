@@ -1,5 +1,5 @@
 /**
- * KETEBE Drum Machine - Multi-pad sample player with internal step sequencer
+ * VORTEX Drum Machine - Multi-pad sample player with internal step sequencer
  * Features: 16 pads, individual pitch/pan/vol per pad, internal 16-step sequencer
  */
 

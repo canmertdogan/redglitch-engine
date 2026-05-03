@@ -7,9 +7,9 @@
 let eventBus, projectState, assetManager;
 function initUIStudioIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         if (eventBus) {
             eventBus.on('ui:request', (e) => console.log('[UIStudio] UI requested:', e.data));
             console.log('[UIStudio] EventBus connected');

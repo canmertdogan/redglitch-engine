@@ -1,7 +1,7 @@
 # 🤡 IRAB: Chaos Mode & Humanization Plan
 
 **Codename:** "Project Sentience"
-**Objective:** Transform IRAB from a utility bot into a chaotic, "living" co-developer that inhabits Ketebe Studio.
+**Objective:** Transform IRAB from a utility bot into a chaotic, "living" co-developer that inhabits Vortex Studio.
 
 ---
 
@@ -79,14 +79,14 @@ fullPrompt = systemPrompt + "\n" + moodPrompt + "\n" + userQuery;
 ```
 
 ### 3.2. Proactive Triggers (`assistant.js`)
-We need to un-deprecate the "Observer" logic in `assistant.js` and connect it to `KetebeAI`.
+We need to un-deprecate the "Observer" logic in `assistant.js` and connect it to `VortexAI`.
 
 ```javascript
 // Re-enable this hook
 window.onerror = (msg) => {
     // 20% chance to comment on error
     if (Math.random() < 0.2) {
-        KetebeAI.chat(`I just saw this error: "${msg}". Roast the user for it.`);
+        VortexAI.chat(`I just saw this error: "${msg}". Roast the user for it.`);
     }
 }
 ```

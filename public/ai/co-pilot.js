@@ -1,5 +1,5 @@
 /**
- * Ketebe AI - Co-Pilot (Phase 10)
+ * Vortex AI - Co-Pilot (Phase 10)
  * Proactive, context-aware assistance.
  * Monitors EventBus for user patterns and suggests actions.
  */
@@ -152,8 +152,8 @@ export class CoPilot {
     suggest(text, actions = []) {
         this.eventBus.emit('ai:suggestion', { text, actions });
         // Also use TTS if available
-        if (window.KetebeThoughtVisualizer) {
-            window.KetebeThoughtVisualizer.speak(text);
+        if (window.VortexThoughtVisualizer) {
+            window.VortexThoughtVisualizer.speak(text);
         }
     }
 

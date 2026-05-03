@@ -1,6 +1,6 @@
 /**
  * NPC Class - Enhanced with Brain System Support
- * Ketebe Engine - RPG Top-Down
+ * Vortex Engine - RPG Top-Down
  */
 
 window.NPC = class NPC {

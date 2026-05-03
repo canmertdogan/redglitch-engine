@@ -1,4 +1,4 @@
-// script_editor.js - Ketebe Code Forge Logic
+// script_editor.js - Vortex Code Forge Logic
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -6,9 +6,9 @@ let eventBus, projectState, assetManager, studioBridge;
 
 function initializeScriptIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         
         if (eventBus) {
             // Initialize StudioBridge for IRAB
@@ -323,8 +323,8 @@ window.onload = async () => {
         // --- AI Ghost Text Provider ---
         monaco.languages.registerInlineCompletionsProvider('javascript', {
             provideInlineCompletions: async (model, position, context, token) => {
-                // Only trigger if KetebeAI is ready
-                if (!window.KetebeAI || !window.KetebeAI.isInitialized) return { items: [] };
+                // Only trigger if VortexAI is ready
+                if (!window.VortexAI || !window.VortexAI.isInitialized) return { items: [] };
                 
                 // Debounce simple typing
                 if (context.triggerKind === monaco.languages.InlineCompletionTriggerKind.Automatic) {
@@ -343,7 +343,7 @@ window.onload = async () => {
                 });
 
                 try {
-                    const suggestion = await window.KetebeAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
+                    const suggestion = await window.VortexAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
                     if (suggestion) {
                         return {
                             items: [{

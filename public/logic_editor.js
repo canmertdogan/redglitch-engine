@@ -6,9 +6,9 @@ let eventBus, projectState, assetManager;
 
 function initializeLogicIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.VortexEventBus;
+        projectState = window.VortexProjectState;
+        assetManager = window.VortexAssetManager;
         
         if (eventBus) {
             console.log('[LogicEditor] EventBus connected');
@@ -940,7 +940,7 @@ javascriptGenerator['time_get_game_time'] = function(block) {
 
 // --- WORKSPACE SETUP ---
 
-const KetebeStudioTheme = Blockly.Theme.defineTheme('ketebe_studio', {
+const VortexStudioTheme = Blockly.Theme.defineTheme('ketebe_studio', {
   'base': Blockly.Themes.Dark,
   'blockStyles': {
     'logic_blocks': { 'colourPrimary': '#5b67a5' },
@@ -966,7 +966,7 @@ const KetebeStudioTheme = Blockly.Theme.defineTheme('ketebe_studio', {
 
 const workspace = Blockly.inject('blockly-div', {
   toolbox: document.getElementById('toolbox'),
-  theme: KetebeStudioTheme,
+  theme: VortexStudioTheme,
   grid: { spacing: 40, length: 2, colour: '#1a1a2e', snap: true },
   zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
   trashcan: true

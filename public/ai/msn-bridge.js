@@ -90,8 +90,8 @@ window.IRAB = {
                         }
                         
                         // Broadcast via EventBus
-                        if (window.KetebeEventBus) {
-                            window.KetebeEventBus.emit('ai:command', msg.data);
+                        if (window.VortexEventBus) {
+                            window.VortexEventBus.emit('ai:command', msg.data);
                         }
                     }
                 } catch(e) {
@@ -455,8 +455,8 @@ window.IRAB = {
     takeScreenshot() { this.addMessage('system', "📸 Studio captured!"); },
     
     injectCode(code) {
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('ai:inject-code', { code });
+        if (window.VortexEventBus) {
+            window.VortexEventBus.emit('ai:inject-code', { code });
             this.showBalloon("GRRR... CODE INJECTED!");
             this.playSound('msg');
         } else {
@@ -506,7 +506,7 @@ window.IRAB = {
     changeBackground() { this.addMessage('system', "Feature coming soon!"); },
     
     // --- QUICK ACTIONS ---
-    quickHelp() { if (window.irab) window.irab.prompt("How do I use Ketebe Studio?"); },
+    quickHelp() { if (window.irab) window.irab.prompt("How do I use Vortex Studio?"); },
     quickTutorial() { if (window.irab) window.irab.prompt("Give me a quick tutorial on engine basics."); },
     quickTips() { if (window.irab) window.irab.prompt("Give me a random pro tip."); },
     

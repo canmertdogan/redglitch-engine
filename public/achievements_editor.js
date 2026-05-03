@@ -213,8 +213,8 @@ class AchievementEditor {
             });
 
             if (res.ok) {
-                if (window.KetebeEventBus) {
-                    window.KetebeEventBus.emit('achievements:updated', this.data);
+                if (window.VortexEventBus) {
+                    window.VortexEventBus.emit('achievements:updated', this.data);
                 }
                 alert("DATABASE UPDATED.");
             } else alert("SAVE FAILED.");

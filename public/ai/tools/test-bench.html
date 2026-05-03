@@ -120,7 +120,7 @@
             const desc = document.getElementById('tool-desc').value;
 
             if (!bridges.has(ns)) {
-                bridges.set(ns, new StudioBridge(ns, window.KetebeEventBus));
+                bridges.set(ns, new StudioBridge(ns, window.VortexEventBus));
             }
 
             const bridge = bridges.get(ns);
@@ -150,7 +150,7 @@
             const requestId = 'test_' + Math.random().toString(36).substr(2, 5);
             log(`Emitting request ${requestId} for ${method}`, 'out');
             
-            window.KetebeEventBus.emit('ai:command:request', {
+            window.VortexEventBus.emit('ai:command:request', {
                 id: requestId,
                 method: method,
                 params: params
@@ -162,7 +162,7 @@
         };
 
         // Listen for all protocol events
-        const bus = window.KetebeEventBus;
+        const bus = window.VortexEventBus;
         const events = [
             'studio:tool:announce',
             'ai:tool:registered',
@@ -180,7 +180,7 @@
             });
         });
 
-        log("Test Bench Ready. KetebeEventBus connected.");
+        log("Test Bench Ready. VortexEventBus connected.");
     </script>
 </body>
 </html>

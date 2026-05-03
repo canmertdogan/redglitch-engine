@@ -1,14 +1,14 @@
-# Code Review: Ketebe Engine (v8.0 - AI Micro Edition)
+# Code Review: Vortex Engine (v8.0 - AI Micro Edition)
 
 **Review Date:** March 6, 2026  
 **Status:** Post-Phase 2 (RAG & Local Inference)  
-**Scope:** Core Architecture, Ketebe AI (IRAB Cortex), Server-Side, and Engine Integration
+**Scope:** Core Architecture, Vortex AI (IRAB Cortex), Server-Side, and Engine Integration
 
 ---
 
 ## Executive Summary
 
-The Ketebe Engine has evolved significantly since the previous audit (Feb 2026). The transition to **Ketebe AI Micro Edition (IRAB Cortex)** marks a shift toward browser-native/local-first agentic capabilities. The architecture remains a robust hybrid of Node.js (Studio/Orchestration), Python (Local LLM/RAG), and a multi-core JavaScript engine (IsoPixel, RPG, Platformer). 
+The Vortex Engine has evolved significantly since the previous audit (Feb 2026). The transition to **Vortex AI Micro Edition (IRAB Cortex)** marks a shift toward browser-native/local-first agentic capabilities. The architecture remains a robust hybrid of Node.js (Studio/Orchestration), Python (Local LLM/RAG), and a multi-core JavaScript engine (IsoPixel, RPG, Platformer). 
 
 The "shadow filesystem" pattern for project-based overrides continues to be a primary strength, allowing lightweight project portability without bloating the core engine.
 
@@ -16,7 +16,7 @@ The "shadow filesystem" pattern for project-based overrides continues to be a pr
 
 ## Architectural Deep-Dive
 
-### 1. Ketebe AI Micro Edition (IRAB Cortex)
+### 1. Vortex AI Micro Edition (IRAB Cortex)
 The new AI subsystem is the highlight of v8.0. It successfully implements a local-first RAG pipeline.
 - **Model**: Qwen2.5-Coder-1.5B-Instruct-GGUF (Q4_K_M) running via `llama-cpp-python`.
 - **RAG Engine**: A custom `NumpyVectorStore` using `SentenceTransformers` (all-MiniLM-L6-v2) for embeddings. This is a brilliant choice for a "Micro Edition" as it avoids the overhead of ChromaDB or Pinecone while maintaining high performance for project-scale context.
@@ -85,4 +85,4 @@ The Node.js server acts as the primary orchestrator, managing project state, ass
 ---
 
 **Reviewer:** Gemini (Project AI)  
-**Conclusion:** The Ketebe Engine is in its most stable and capable state yet. The integration of local AI context (Context 3.0) significantly lowers the barrier for complex game creation within the studio.
+**Conclusion:** The Vortex Engine is in its most stable and capable state yet. The integration of local AI context (Context 3.0) significantly lowers the barrier for complex game creation within the studio.

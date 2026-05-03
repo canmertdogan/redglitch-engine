@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>KETEBE GRIMOIRE</title>
+    <title>VORTEX GRIMOIRE</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -258,8 +258,8 @@
 
             <!-- WELCOME -->
             <section id="welcome" class="active">
-                <h1><i class="fas fa-book-open"></i> Welcome to Ketebe</h1>
-                <p><b>Ketebe Engine</b> is a multi-platform game development studio built with Electron. It lets you build 2D and 3D games and export them to Windows desktop, Android, and web — all without leaving the studio.</p>
+                <h1><i class="fas fa-book-open"></i> Welcome to Vortex</h1>
+                <p><b>Vortex Engine</b> is a multi-platform game development studio built with Electron. It lets you build 2D and 3D games and export them to Windows desktop, Android, and web — all without leaving the studio.</p>
 
                 <div class="note">
                     <i class="fas fa-info-circle"></i>
@@ -355,7 +355,7 @@ npm run build:game "ProjectName" android</code></pre>
                 </div>
             </section>
 
-            <!-- KETEBE.JSON -->
+            <!-- VORTEX.JSON -->
             <section id="ketebe-json">
                 <h1><i class="fas fa-file-code"></i> ketebe.json Reference</h1>
                 <p>Every project has a <code>ketebe.json</code> at its root defining engine type and settings.</p>
@@ -892,7 +892,7 @@ npm run build:game "ProjectName" android</code></pre>
                     <tr><td><code>Input3D.js</code></td><td>ES module</td><td>Keyboard + gamepad action bindings; Pointer Lock API</td></tr>
                     <tr><td><code>AudioSpatial3D.js</code></td><td>ES module</td><td>Web Audio API spatial sound (PannerNode, HRTF, Doppler)</td></tr>
                     <tr><td><code>Raycast3D.js</code></td><td>ES module</td><td>Three.js + cannon-es dual raycast for hitscan</td></tr>
-                    <tr><td><code>Engine3DAdapter.js</code></td><td>ES module</td><td>Glue layer: binds Ketebe project API to 3D engine</td></tr>
+                    <tr><td><code>Engine3DAdapter.js</code></td><td>ES module</td><td>Glue layer: binds Vortex project API to 3D engine</td></tr>
                     <tr><td><code>CrossEngineSerializer.js</code></td><td>Global script</td><td>Serializes entities/levels for campaign runtime</td></tr>
                     <tr><td><code>Save3D.js</code></td><td>ES module</td><td>Schema-versioned save/load; schema = <code>ketebe.3d.save.v3</code></td></tr>
                     <tr><td><code>VoxelPalette.js</code></td><td>ES module</td><td>8-color shared flat-shaded color palette for all 3D assets</td></tr>
@@ -1556,8 +1556,8 @@ Object.entries(game._flags).forEach(([k,v]) => console.log(k, '=', v));</code></
 
             <section id="sys-eventbus">
                 <h1><i class="fas fa-broadcast-tower"></i> EventBus — Cross-Tool Communication</h1>
-                <p><b>File:</b> <code>public/shared/EventBus.js</code> — Auto-instantiated as <code>window.KetebeEventBus</code></p>
-                <p>The EventBus is the backbone of all inter-tool communication in Ketebe. It operates on three channels simultaneously: <b>local listeners</b> within the same window, <b>cross-window postMessage</b> for iframes and popups, and <b>WebSocket broadcast</b> for real-time sync between multiple editor tabs.</p>
+                <p><b>File:</b> <code>public/shared/EventBus.js</code> — Auto-instantiated as <code>window.VortexEventBus</code></p>
+                <p>The EventBus is the backbone of all inter-tool communication in Vortex. It operates on three channels simultaneously: <b>local listeners</b> within the same window, <b>cross-window postMessage</b> for iframes and popups, and <b>WebSocket broadcast</b> for real-time sync between multiple editor tabs.</p>
 
                 <h2>Core API</h2>
                 <table>
@@ -1572,7 +1572,7 @@ Object.entries(game._flags).forEach(([k,v]) => console.log(k, '=', v));</code></
                 </table>
 
                 <h2>Usage Examples</h2>
-                <pre><code>const bus = window.KetebeEventBus;
+                <pre><code>const bus = window.VortexEventBus;
 
 // Subscribe to an event
 const listenerId = bus.on('enemy:updated', (event) => {
@@ -1613,7 +1613,7 @@ bus.on('asset:*', (event) => {
                 <p>Every emitted event is also broadcast via <code>postMessage</code> to three targets: the parent window (if inside an iframe), all child iframes, and <code>window.opener</code> (if opened as a popup). The message is wrapped as <code>{ sourceType: 'ketebe-event', event: {...} }</code>. This is how the game window logs route back to the editor console.</p>
 
                 <h2>Full Event Catalog</h2>
-                <p>All events used across the Ketebe tool suite:</p>
+                <p>All events used across the Vortex tool suite:</p>
                 <table>
                     <tr><th>Event</th><th>Emitted By</th><th>Consumed By</th><th>Payload Fields</th></tr>
                     <tr><td><code>project:loaded</code></td><td>Dashboard</td><td>All tools</td><td><code>name</code></td></tr>
@@ -1681,9 +1681,9 @@ bus.on('asset:*', (event) => {
 let eventBus, projectState, assetManager;
 
 function initializeIntegration() {
-    eventBus     = window.KetebeEventBus;
-    projectState = window.KetebeProjectState;
-    assetManager = window.KetebeAssetManager;
+    eventBus     = window.VortexEventBus;
+    projectState = window.VortexProjectState;
+    assetManager = window.VortexAssetManager;
 
     if (!eventBus) return;
 

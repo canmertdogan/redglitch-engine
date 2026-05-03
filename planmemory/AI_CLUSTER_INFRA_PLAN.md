@@ -1,8 +1,8 @@
-# 🌐 AI Cluster Infrastructure Plan (Ketebe AI Pro)
+# 🌐 AI Cluster Infrastructure Plan (Vortex AI Pro)
 
 **Status:** Draft v1.0  
 **Target:** High-Performance Remote AI Inference with Local WASM Security Bridge  
-**Objective:** Enable Ketebe Studio to utilize powerful AI clusters (outside Electron) while maintaining a high-performance, secure, and binary-efficient communication layer using WASM.
+**Objective:** Enable Vortex Studio to utilize powerful AI clusters (outside Electron) while maintaining a high-performance, secure, and binary-efficient communication layer using WASM.
 
 ---
 
@@ -26,10 +26,10 @@ This infrastructure introduces a hybrid model:
 
 ```ascii
 ┌─────────────────────────────────────────────────────────────┐
-│                    Ketebe Studio (Electron)                 │
+│                    Vortex Studio (Electron)                 │
 │                                                             │
 │  ┌───────────────────┐        ┌──────────────────────────┐  │
-│  │   KetebeAI        │        │   WASM Bridge Wrapper    │  │
+│  │   VortexAI        │        │   WASM Bridge Wrapper    │  │
 │  │ (Orchestrator JS) ├───────►│ (Rust/C++ → WASM)        │  │
 │  └───────────────────┘        └──────────┬───────────────┘  │
 └──────────────────────────────────────────│──────────────────┘
@@ -75,7 +75,7 @@ A separate environment (Kubernetes cluster or dedicated GPU server) running high
 
 ## 4. Phase 1: Bridge Protocol & WASM Core
 
-- [ ] **1.1** Define the **Ketebe AI Binary Protocol (KABP)** using Protobuf.
+- [ ] **1.1** Define the **Vortex AI Binary Protocol (KABP)** using Protobuf.
 - [ ] **1.2** Set up a Rust/C++ project targeting `wasm32-unknown-unknown`.
 - [ ] **1.3** Implement the Core Bridge logic:
     - Buffer management.
@@ -96,7 +96,7 @@ A separate environment (Kubernetes cluster or dedicated GPU server) running high
 ## 6. Phase 3: Electron Integration
 
 - [ ] **6.1** Create `public/ai/cluster-engine.js` as a provider for the Orchestrator.
-- [ ] **6.2** Update `KetebeAI.js` to support engine switching (Local vs. Cluster).
+- [ ] **6.2** Update `VortexAI.js` to support engine switching (Local vs. Cluster).
 - [ ] **6.3** Implement UI indicators for "Cluster Mode" (latency, node status).
 - [ ] **6.4** Add configuration panel for Cluster URL and Access Token.
 

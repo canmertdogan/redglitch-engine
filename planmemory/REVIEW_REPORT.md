@@ -1,4 +1,4 @@
-# KETEBE ENGINE: Codebase Review Report
+# VORTEX ENGINE: Codebase Review Report
 
 **Date:** February 5, 2026
 **Reviewer:** Gemini CLI Agent
@@ -6,7 +6,7 @@
 ---
 
 ## 1. Executive Summary
-KETEBE ENGINE (also referred to as Ketebe Engine) is a sophisticated, feature-rich game development suite built on Electron and Capacitor. It provides a modular environment for creating various types of games (RPG, Isometric, Platformer) with integrated tools for almost every aspect of development, from level design to logic scripting and shader management.
+VORTEX ENGINE (also referred to as Vortex Engine) is a sophisticated, feature-rich game development suite built on Electron and Capacitor. It provides a modular environment for creating various types of games (RPG, Isometric, Platformer) with integrated tools for almost every aspect of development, from level design to logic scripting and shader management.
 
 The codebase reflects a high level of ambition and a "studio-in-a-box" philosophy. It successfully bridges the gap between a web-based editor and a native application environment.
 
@@ -76,7 +76,7 @@ Many `try-catch` blocks in `server.js` and frontend logic simply log errors or r
 ---
 
 ## 6. Final Verdict
-The KETEBE ENGINE is a **powerful and versatile tool** that is remarkably complete for its current stage. The "IsoPixel Studio" integration is particularly impressive. By addressing the consistency and scalability points mentioned above, the engine could evolve from a high-quality prototype into a professional-grade game development platform.
+The VORTEX ENGINE is a **powerful and versatile tool** that is remarkably complete for its current stage. The "IsoPixel Studio" integration is particularly impressive. By addressing the consistency and scalability points mentioned above, the engine could evolve from a high-quality prototype into a professional-grade game development platform.
 
 **Current Status:** Alpha/Beta-ready.
 **Primary Focus for next phase:** Refactoring for consistency, performance optimization for large projects, and hardening security.

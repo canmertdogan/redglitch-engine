@@ -49,6 +49,6 @@ A demo project for the **fps-3d** engine — a first-person shooter runtime buil
 
 ## Customizing
 
-- Open **FPS Editor** from the Ketebe launcher to place enemies, triggers, and cover points visually.
+- Open **FPS Editor** from the Vortex launcher to place enemies, triggers, and cover points visually.
 - Replace the procedural room with a custom GLTF model by adding `"gltfUrl": "assets3d/level.glb"` to the level file — the engine loads it automatically if the key is present.
 - Add more weapon pickups in `triggers[]` with `"type": "pickup", "pickupType": "weapon"`.

@@ -1,4 +1,4 @@
-# Ketebe Engine — Latest Code State Report
+# Vortex Engine — Latest Code State Report
 
 **Report date:** 2026-04-17  
 **Repository:** `main` (ahead of `origin/main` by 12 commits)  
@@ -137,7 +137,7 @@ The codebase is in a **major 3D integration phase** with broad cross-cutting upd
 
 ## 6. Additional risks / observations
 
-- `server/routes/monitor-3d.js` endpoints remain synthetic diagnostics scaffolding (responses include `X-Ketebe-Monitor-Mode: simulated`).
+- `server/routes/monitor-3d.js` endpoints remain synthetic diagnostics scaffolding (responses include `X-Vortex-Monitor-Mode: simulated`).
 - `extraInProject` entries remain and should be treated as project-local extensions:
   - `platformer-2d/physics.js`
   - `rpg-topdown/dialogueSystem.js`

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>KETEBE COMMAND CENTER</title>
+    <title>VORTEX COMMAND CENTER</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <style>
@@ -484,7 +484,7 @@
                             Log.error(`No help available for: ${args[0]}`);
                         }
                     } else {
-                        Log.info('=== KETEBE TERMINAL COMMANDS ===');
+                        Log.info('=== VORTEX TERMINAL COMMANDS ===');
                         Object.keys(commandRegistry).sort().forEach(cmd => {
                             Log.info(`  ${cmd.padEnd(15)} - ${commandRegistry[cmd].desc}`);
                         });
@@ -682,8 +682,8 @@
                         return;
                     }
                     if (args[0] === 'state') {
-                        if (window.KetebeProjectState) {
-                            const data = window.KetebeProjectState.export();
+                        if (window.VortexProjectState) {
+                            const data = window.VortexProjectState.export();
                             const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
@@ -867,8 +867,8 @@
             
             // Get activities from shared state or local fallback
             let activities = [];
-            if (window.KetebeProjectState) {
-                activities = window.KetebeProjectState.get('activities', []);
+            if (window.VortexProjectState) {
+                activities = window.VortexProjectState.get('activities', []);
             }
             
             // Fallback to localStorage if empty (migration path)
@@ -966,8 +966,8 @@
                     Log.info(`Opened tool: ${id}`);
                     
                     // Log Activity
-                    if (window.KetebeProjectState) {
-                        window.KetebeProjectState.logActivity('tool', tool.title, { id: tool.id });
+                    if (window.VortexProjectState) {
+                        window.VortexProjectState.logActivity('tool', tool.title, { id: tool.id });
                     }
                 } else {
                     Log.warn(`Tool not found: ${id}`);
@@ -979,8 +979,8 @@
             // Need to implement file opening in parent IDE from here
             Log.info(`Request to open: ${path}`);
             // Log Activity (Optimistic)
-            if (window.KetebeProjectState) {
-                window.KetebeProjectState.logActivity('file', path.split('/').pop(), { path: path });
+            if (window.VortexProjectState) {
+                window.VortexProjectState.logActivity('file', path.split('/').pop(), { path: path });
             }
         }
         
@@ -1033,8 +1033,8 @@
 
         function setTheme(themeName, options = {}) {
             const sourceThemes =
-                (window.parent && window.parent !== window && window.parent.KETEBE_THEMES) ||
-                window.KETEBE_THEMES ||
+                (window.parent && window.parent !== window && window.parent.VORTEX_THEMES) ||
+                window.VORTEX_THEMES ||
                 DASHBOARD_THEME_FALLBACKS;
             const theme = sourceThemes[themeName] || sourceThemes['modern-dark'] || DASHBOARD_THEME_FALLBACKS['modern-dark'];
 
@@ -1048,8 +1048,8 @@
             if (selector) selector.value = themeName;
             
             // Broadcast theme change to parent and other windows
-            if (window.KetebeEventBus && options.source !== 'parent') {
-                window.KetebeEventBus.emit('theme:changed', { theme: themeName });
+            if (window.VortexEventBus && options.source !== 'parent') {
+                window.VortexEventBus.emit('theme:changed', { theme: themeName });
             }
             
             // Apply to current window if parent has applyTheme
@@ -1060,7 +1060,7 @@
 
         // Init
         Log.info("Dashboard initialized.");
-        Log.info("Connecting to Ketebe Core...");
+        Log.info("Connecting to Vortex Core...");
         Log.info("Terminal ready. Type 'help' for available commands.");
         
         // Auto-focus terminal input
@@ -1072,8 +1072,8 @@
         });
         
         // Init Event Bus & State if available
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.on('activity:logged', () => {
+        if (window.VortexEventBus) {
+            window.VortexEventBus.on('activity:logged', () => {
                 renderActivities();
             });
         }

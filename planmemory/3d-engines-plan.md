@@ -1,8 +1,8 @@
-# Ketebe Engine — 3D Game Modes: 60-Phase Implementation Plan
+# Vortex Engine — 3D Game Modes: 60-Phase Implementation Plan
 
 ## Problem Statement
 
-The Ketebe Engine currently supports three 2D engines: `rpg-topdown`, `platformer-2d`, and `iso-pixel`. This plan extends the engine with **three fully 3D game modes**, each with a dedicated map editor:
+The Vortex Engine currently supports three 2D engines: `rpg-topdown`, `platformer-2d`, and `iso-pixel`. This plan extends the engine with **three fully 3D game modes**, each with a dedicated map editor:
 
 - **`topdown-3d`** — Fixed isometric-perspective 3D (League of Legends style)
 - **`fps-3d`** — First-person shooter (DOOM/Quake style)
@@ -222,7 +222,7 @@ All three engines share a consistent aesthetic:
 - Embed Three.js viewport (orbit camera, grid overlay)
 - Sidebar panels: Terrain, Objects, Lights, NavMesh, Settings
 - Toolbar: Select, Paint, Place, Erase, Test-Play
-- Connect to `KetebeEventBus` and `KetebeProjectState`
+- Connect to `VortexEventBus` and `VortexProjectState`
 - Register in launcher dashboard with LoL map icon
 
 **Phase 22 — Terrain Painting Tools (Voxel + Low-poly)**

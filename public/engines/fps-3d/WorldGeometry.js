@@ -26,6 +26,7 @@
 
 import * as THREE from '/lib/three/three.module.js';
 import { BodyType, ShapeType } from '../shared/Physics3DWorld.js';
+import VoxelMeshGen from '../shared/VoxelMeshGen.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -138,6 +139,9 @@ export default class WorldGeometry {
         if (Array.isArray(levelData.geometry) && levelData.geometry.length > 0) {
             // New Editor-built geometry (Phase 64)
             await this._loadEditorGeometry(levelData.geometry);
+        } else if (levelData.voxelGrid && Object.keys(levelData.voxelGrid).length > 0) {
+            // Voxel Editor data (Phase 41)
+            await this._loadVoxelGrid(levelData.voxelGrid, levelData.cellSize || 1.0);
         } else if (gltfUrl) {
             await this._loadGLTF(gltfUrl, levelData);
         } else {
@@ -184,6 +188,37 @@ export default class WorldGeometry {
     }
 
     // ── GLTF loading ──────────────────────────────────────────────────────────
+
+    async _loadVoxelGrid(voxelGrid, cellSize) {
+        console.log(`[WorldGeometry] building voxel mesh (size=${cellSize})...`);
+        const gen = new VoxelMeshGen(voxelGrid, cellSize);
+        const meshes = await gen.buildMeshes(this._atlas);
+
+        for (const mesh of meshes) {
+            mesh.name = 'voxel_mesh';
+            this._scene.add(mesh);
+            this._colMeshes.push(mesh);
+        }
+
+        // Voxel collision: standard approach is to create a collider per block,
+        // or a compound body. For simplicity and performance, we'll use a
+        // simplified box collider for every voxel.
+        this._addVoxelColliders(voxelGrid, cellSize);
+    }
+
+    _addVoxelColliders(voxelGrid, cellSize) {
+        const keys = Object.keys(voxelGrid);
+        console.log(`[WorldGeometry] adding ${keys.length} voxel colliders...`);
+        
+        for (const key of keys) {
+            const [gx, gy, gz] = key.split(',').map(Number);
+            const cx = (gx + 0.5) * cellSize;
+            const cy = (gy + 0.5) * cellSize;
+            const cz = (gz + 0.5) * cellSize;
+
+            this._addBoxCollider(cx, cy, cz, cellSize, cellSize, cellSize, 'concrete');
+        }
+    }
 
     async _loadEditorGeometry(geometryData) {
         console.log(`[WorldGeometry] loading ${geometryData.length} editor shapes`);

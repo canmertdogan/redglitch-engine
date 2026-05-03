@@ -138,6 +138,9 @@ export default class WorldGeometry {
         if (Array.isArray(levelData.geometry) && levelData.geometry.length > 0) {
             // New Editor-built geometry (Phase 64)
             await this._loadEditorGeometry(levelData.geometry);
+        } else if (levelData.voxelGrid && Object.keys(levelData.voxelGrid).length > 0) {
+            // Voxel Editor data (Phase 41)
+            await this._loadVoxelGrid(levelData.voxelGrid, levelData.cellSize || 1.0);
         } else if (gltfUrl) {
             await this._loadGLTF(gltfUrl, levelData);
         } else {
@@ -769,6 +772,32 @@ export default class WorldGeometry {
 
         // Remove procedural meshes
         const toRemove = this._scene.children.filter(c => c.name?.startsWith('proc_'));
+        for (const obj of toRemove) this._scene.remove(obj);
+
+        this._triggers      = [];
+        this._portals       = [];
+        this._colMeshes     = [];
+        this._triggerMeshes = [];
+        this._portalMeshes  = [];
+
+        console.log('[WorldGeometry] disposed');
+    }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Infer surface material from mesh name fragments.
+ * e.g. "floor_metal_01" → "metal"
+ */
+function _surfaceFromName(name = '') {
+    const n = name.toLowerCase();
+    if (n.includes('grass') || n.includes('dirt') || n.includes('soil'))  return 'grass';
+    if (n.includes('metal') || n.includes('steel') || n.includes('iron')) return 'metal';
+    if (n.includes('wood')  || n.includes('plank') || n.includes('crate')) return 'wood';
+    return 'concrete';
+}
+;
         for (const obj of toRemove) this._scene.remove(obj);
 
         this._triggers      = [];

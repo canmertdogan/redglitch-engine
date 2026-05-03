@@ -1,4 +1,4 @@
-# Ketebe Project Manifesto
+# Vortex Project Manifesto
 
 ## 🌌 Vision
 [Describe the core vision of your game here. What makes it unique?]

@@ -41,8 +41,8 @@ class EditorCore {
         await this.renderer.loadTileset('WORLD_PIXEL_ART');
         
         // 2c. Initialize Shared State for Undo/Redo
-        if (window.KetebeProjectState) {
-            window.KetebeProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)), { skipUndo: true });
+        if (window.VortexProjectState) {
+            window.VortexProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)), { skipUndo: true });
         }
 
         // 2d. Initialize Parallax
@@ -331,16 +331,16 @@ class EditorCore {
     }
 
     pushState() {
-        if (window.KetebeProjectState) {
+        if (window.VortexProjectState) {
             // Sync current map to shared state for undo point
-            window.KetebeProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
+            window.VortexProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
         }
     }
 
     undo() {
-        if (window.KetebeProjectState) {
-            if (window.KetebeProjectState.undo()) {
-                const undoneMap = window.KetebeProjectState.get('platformer.currentMap');
+        if (window.VortexProjectState) {
+            if (window.VortexProjectState.undo()) {
+                const undoneMap = window.VortexProjectState.get('platformer.currentMap');
                 if (undoneMap) {
                     this.map = JSON.parse(JSON.stringify(undoneMap));
                     this.renderer.invalidateCache();
@@ -350,9 +350,9 @@ class EditorCore {
     }
 
     redo() {
-        if (window.KetebeProjectState) {
-            if (window.KetebeProjectState.redo()) {
-                const redoneMap = window.KetebeProjectState.get('platformer.currentMap');
+        if (window.VortexProjectState) {
+            if (window.VortexProjectState.redo()) {
+                const redoneMap = window.VortexProjectState.get('platformer.currentMap');
                 if (redoneMap) {
                     this.map = JSON.parse(JSON.stringify(redoneMap));
                     this.renderer.invalidateCache();

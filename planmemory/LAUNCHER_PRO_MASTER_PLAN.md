@@ -1,4 +1,4 @@
-# Launcher Pro: "Ketebe Studio Startup Hub"
+# Launcher Pro: "Vortex Studio Startup Hub"
 
 ## 1. Visual Identity
 *   **Design Language:** "Industrial Pixel". Heavy-set panels, recessed buttons, and sharp, high-contrast text.

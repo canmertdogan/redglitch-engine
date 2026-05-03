@@ -1,7 +1,7 @@
 # PLATFORMER ENGINE MASTER PLAN
 
 **Status:** Active Development
-**Goal:** Create a robust, feature-rich 2D platformer runtime (`platformer-2d`) compatible with the Ketebe ecosystem.
+**Goal:** Create a robust, feature-rich 2D platformer runtime (`platformer-2d`) compatible with the Vortex ecosystem.
 
 ---
 
@@ -78,7 +78,7 @@ public/engines/platformer-2d/
 ## 5. Level Format & Editor Integration
 
 **Format:**
-Re-use standard Ketebe JSON map format, but interpret layers differently:
+Re-use standard Vortex JSON map format, but interpret layers differently:
 *   **Layer 0 (Background)**: Decorative, non-colliding.
 *   **Layer 1 (Collision)**: Solid blocks.
     *   *Convention:* Tile ID 1 = Solid, Tile ID 2 = One-Way, Tile ID 3 = Spike.

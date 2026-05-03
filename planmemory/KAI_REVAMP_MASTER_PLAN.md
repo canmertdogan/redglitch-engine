@@ -1,7 +1,7 @@
 # KAI Assistant Revamp: Master Master Plan (v2.0)
 
 ## Objective
-Transform the Kai Assistant into a deeply integrated, proactive, and visually stunning "Retro-Futuristic Terminal" that acts as the central brain of Ketebe Studio.
+Transform the Kai Assistant into a deeply integrated, proactive, and visually stunning "Retro-Futuristic Terminal" that acts as the central brain of Vortex Studio.
 
 ---
 

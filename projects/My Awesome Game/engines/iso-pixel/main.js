@@ -95,7 +95,7 @@ class IsoGame {
     }
 
     _setupEngineListeners() {
-        const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+        const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
         if (eventBus) {
             eventBus.on('engine:snapshot:request', (event) => {
                 const snapshot = this.getSnapshot();
@@ -121,7 +121,7 @@ class IsoGame {
             this.frameCount = 0;
             this.lastFpsCheck = now;
 
-            const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+            const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
             if (eventBus) {
                 eventBus.emit('system:metrics', {
                     fps,
@@ -368,7 +368,7 @@ class IsoGame {
             }
         };
         
-        // Load Caterpillar/Worm sprites (matching 2D engine's "Ketebe Canavarı")
+        // Load Caterpillar/Worm sprites (matching 2D engine's "Vortex Canavarı")
         if (window.createPixelImage) {
             this.playerHead = window.createPixelImage('caterpillar_head');
             this.playerBody = window.createPixelImage('caterpillar_body');

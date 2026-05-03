@@ -363,7 +363,7 @@ useAbility(abilityId, dirX, dirY) {
 
 ✅ **All 3D engines are now fully integrated with campaign runtime**
 
-The Ketebe engine now supports seamless campaigns that can mix:
+The Vortex engine now supports seamless campaigns that can mix:
 - 3 × 2D engines (rpg-topdown, iso-pixel, platformer-2d)
 - 3 × 3D engines (topdown-3d, fps-3d, platformer-3d)
 

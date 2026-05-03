@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Asset Manager
+ * Vortex Engine - Asset Manager
  * Unified asset management and dependency tracking
  */
 class AssetManager {
@@ -10,8 +10,8 @@ class AssetManager {
         this.watchers = new Set();
         this.eventBus = null;
         
-        if (typeof window !== 'undefined' && window.KetebeEventBus) {
-            this.eventBus = window.KetebeEventBus;
+        if (typeof window !== 'undefined' && window.VortexEventBus) {
+            this.eventBus = window.VortexEventBus;
             this.setupEventListeners();
         }
         
@@ -656,7 +656,7 @@ class AssetManager {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.KetebeAssetManager = window.KetebeAssetManager || new AssetManager();
+    window.VortexAssetManager = window.VortexAssetManager || new AssetManager();
 }
 
 // Export for Node.js

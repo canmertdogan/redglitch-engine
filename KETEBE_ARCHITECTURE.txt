@@ -1,5 +1,5 @@
-                          KETEBE GAME STUDIO - SYSTEM ARCHITECTURE (v9.0 "The 3D Evolution")
-                          ==================================================================
+                          VORTEX GAME STUDIO - SYSTEM ARCHITECTURE (v9.1 "The Hybrid Frontier")
+                          =====================================================================
 
   +-----------------------------------------------------------------------------------------------------------------------+
   |                                               USER WORKSTATION (Chromium / Electron)                                  |
@@ -10,31 +10,32 @@
   |   +--------------------------+           +-------------------------------------+           +--------------------------+   |
   |   | [CORE 2D/2.5D TOOLS]     |           | [FRONTEND UI]                       |           | [ISOPIXEL (2.5D)]        |   |
   |   | - Dashboard (IDE Hub)    |           | - MSN-Retro UI / Ctrl+K             |           | - IsoStrategy Projection |   |
-  |   | - Iso Studio (Canvas)    |           | - Monaco Ghost-Text (Copilot)       |           | - Int8 Occlusion Buffer  |   |
-  |   | - Code Forge (Monaco)    |           | - Tool Registry (Permission Gate)   |           | - Shadow Propagation     |   |
+  |   | - Iso Studio (Canvas)    |           | - Monaco Ghost-Text (Copilot)       |           | - Sprite-based Rendering |   |
+  |   | - Code Forge (Monaco)    |           | - Tool Registry (Permission Gate)   |           | - Dynamic Day/Night Cycle|   |
   |   | - NPC/Dialogue Weaver    |           +-------------------------------------+           | - IsoShaderSystem WebGL  |   |
   |   | - Pixel/FX Studio        |                        |                                    | - Fixed 60Hz Tick Rate   |   |
   |   |                          |           +-------------------------------------+           |                          |   |
-  |   | [3D-FIRST SUITE (v9)]    |           |      KETEBE AI BRAIN (Worker)       |           | [3D CORES (Three.js)]    |   |
-  |   | - FPS Editor (Voxels)    |           +-------------------------------------+           | - FPS Core (6DOF)        |   |
-  |   | - TopDown3D Editor       |           | [INFERENCE] | [RAG / ORAMA DB]      |           | - Platformer3D (AABB)    |   |
-  |   | - Platformer3D Editor    |           | - WebGPU    | - Docs Corpus         |           | - TopDown3D (Y-Sort)     |   |
-  |   | - Low-Poly Terrain Gen   |<--+       | - WASM/CPU  | - Vector Embeddings   |           | - Voxel/Trimesh hybrid   |   |
-  |   | - 256-Color Palette      |   |       | - Xform.js  |   (all-MiniLM-L6-v2)  |           | - Tile/Atlas Support     |   |
-  |   |                          |   |       | - DeepSeek/ | - IndexedDB Persist   |           |                          |   |
-  |   | [DUAL VIEWPORT BRIDGE]   |   |       |   Qwen2.5   |                       |           | [LEGACY 2D CORES]        |   |
-  |   | - 2D Floor Plan (Canvas) |   |       +-------------+-----------------------+           | - RPG TopDown (LogicSys) |   |
-  |   | - 3D Preview (Three.js)  |   +------>|       EVENT BUS (WebSockets)        |<----------|   - Quest/Dialogue Sys   |   |
-  |   +--------------------------+           |   (Real-time State Sync & HOT)      |           | - Platformer2D (Simple)  |   |
-  |                                          |   (Port 3000, Chokidar File Watch)  |           +--------------------------+   |
-  |                                          +-------------------------------------+                                      |
-  |                                                           |                                                           |
+  |   | [3D-FIRST SUITE (v9)]    |           |      VORTEX AI BRAIN (Worker)       |           | [3D CORES (Three.js)]    |   |
+  |   | - FPS Editor (Voxels)    |           +-------------------------------------+           | - Shared Renderer3D Pipe |   |
+  |   | - TopDown3D Editor       |           | [INFERENCE] | [RAG / ORAMA DB]      |           |   (Public Resize Method) |   |
+  |   | - Platformer3D Editor    |           | - WebGPU    | - Docs Corpus         |           | - FPS Core (6DOF)        |   |
+  |   | - Low-Poly Terrain Gen   |<--+       | - WASM/CPU  | - Vector Embeddings   |           | - Platformer3D (AABB)    |   |
+  |   | - 256-Color Palette      |   |       | - Xform.js  |   (all-MiniLM-L6-v2)  |           | - TopDown3D (Y-Sort)     |   |
+  |   |                          |   |       | - DeepSeek/ | - IndexedDB Persist   |           | - Voxel/Trimesh hybrid   |   |
+  |   | [DUAL VIEWPORT BRIDGE]   |   |       |   Qwen2.5   |                       |           | - Tile/Atlas Support     |   |
+  |   | - 2D Floor Plan (Canvas) |   |       +-------------+-----------------------+           |                          |   |
+  |   | - 3D Preview (Three.js)  |   +------>|       EVENT BUS (WebSockets)        |<----------| [LEGACY 2D CORES]        |   |
+  |   +--------------------------+           |   (Real-time State Sync & HOT)      |           | - RPG TopDown (LogicSys) |   |
+  |                                          |   (Port 3000, Chokidar File Watch)  |           |   - Quest/Dialogue Sys   |   |
+  |                                          +-------------------------------------+           | - Platformer2D (Simple)  |   |
+  |                                                           |                                    +--------------------------+   |
   |   +-------------------------------------------------------+-------------------------------------------------------+   |
   |   |                                         SHARED KERNEL (public/shared/)                                        |   |
   |   +--------------------------+----------------------------+----------------------------+--------------------------+   |
   |   |      ASSET MANAGER       |      SHARED STATE (SPS)    |      RESOURCE LOADER       |      PHYSICS BRIDGE      |   |
   |   |    (v9 Path Mapping)     |    (Voxel Grid / Undo)     |     (Texture Atlases)      |     (Raycast / AABB)     |   |
-  |   |  - Sanitizes /dunyalar/  |    (Dashboard Activity)    |                            |                          |   |
+  |   |  - Sanitizes /dunyalar/  |    (Dashboard Activity)    |                            | - Renderer3D.resize()    |   |
+  |   |  - Fixed Path Doubling   |                            |                            |                          |   |
   |   +--------------------------+----------------------------+----------------------------+--------------------------+   |
   |                                                           ^                                                       |
   |                
@@ -67,7 +68,8 @@
   DATA FLOW & RECENT EVOLUTIONS:
   1. DUAL-VIEWPORT SYNC: Editing in the 2D Floor Plan (Canvas) generates voxel diffs pushed to the 3D THREE.js Scene.
   2. PROJECT OVERLAY: Server serves files from `projects/ActiveProject/` if they exist, otherwise `public/` (Core).
-  3. AI AGENTIC LOOP: AI Chat UI -> Tool Registry (Permission Gate) -> EventBus -> IDE Command (e.g., "Spawn NPC").
-  4. HYBRID RAG: Client uses Orama (Vector DB) for fast lookup; Server-side Python backend manages large vector pkls.
-  5. VOXEL RENDERING: Map data is stored as a sparse JSON grid `voxelGrid: { "x,y,z": colorIndex }` for performance.
-  6. LOGIC EXECUTION: RPG TopDown engine dynamically loads JS scripts from /api/logic/js/ with specific lifecycle hooks.
+  3. AI AGENTIC LOOP: AI Chat UI (Phase 2 MSN-Retro) -> Orama RAG -> Tool Registry -> EventBus -> IDE Command.
+  4. HYBRID RAG: Local Orama Vector Store (IndexedDB) for docs; Python backend handles large model inference/heavy vector pkls.
+  5. RENDERER RESIZE FIX: Renderer3D now implements a public `.resize(w, h)` method used by all 3D engine adapters.
+  6. ASSET PATH FIX: Code Forge and AssetManager now implement client-side path sanitation to prevent double-prefix 404s.
+  7. ISOPIXEL V8: Removed occlusion culling for better sprite stability; added dynamic day/night light progression.

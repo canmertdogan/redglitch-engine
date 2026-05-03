@@ -293,7 +293,7 @@ class FPSGame extends Engine3DAdapter {
         // Sync WeaponSystem ammo → HUD
         this.weaponSystem.onAmmoChanged = (id, ammo) => {
             this._ammo = ammo;
-            this.hud?.updateAmmo(ammo.current, ammo.reserve);
+            this.hud?.updateAmmo(ammo.mag, ammo.reserve);
         };
         // Weapon toast on equip
         this.weaponSystem.onEquip = (id, def) => {

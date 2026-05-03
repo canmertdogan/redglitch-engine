@@ -1,8 +1,8 @@
-# Ketebe Engine Architecture Overview
+# Vortex Engine Architecture Overview
 
 ## High-Level System Architecture
 
-KETEBE ENGINE is a **hybrid web-desktop game development environment**. It uses a local Node.js server to provide filesystem access and project management, while the entire IDE and Game Runtime operate as a Single Page Application (SPA) suite within the browser (or Electron container).
+VORTEX ENGINE is a **hybrid web-desktop game development environment**. It uses a local Node.js server to provide filesystem access and project management, while the entire IDE and Game Runtime operate as a Single Page Application (SPA) suite within the browser (or Electron container).
 
 ```ascii
 +-------------------------------------------------------+
@@ -46,7 +46,7 @@ These components are loaded by both the IDE and the Game Runtime to ensure consi
 *   **State Management**: Handles global project configuration.
 
 #### B. The Engines (The "Runtime")
-Ketebe supports multiple engine paradigms, residing in `public/engines/`.
+Vortex supports multiple engine paradigms, residing in `public/engines/`.
 1.  **IsoPixel**: Isometric rendering, dynamic lighting, 2.5D depth sorting.
 2.  **RPG Top-Down**: Classic 2D tile-based rendering, turn-based or real-time logic.
 3.  **Platformer 2D**: Side-scrolling physics and camera systems.

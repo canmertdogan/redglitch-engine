@@ -248,6 +248,11 @@ const BrushTools = (() => {
         return groups;
     }
 
+    function exportGreedyMesh(grid, cellSize) {
+        const groups = buildGreedyMesh(grid, cellSize);
+        return Object.values(groups);
+    }
+
     async function buildThreeGeometries(groups, THREEref, atlas = null) {
         const meshes = [];
         const { hexMaterial } = await import('/engines/shared/Renderer3D.js');

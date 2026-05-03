@@ -1,4 +1,4 @@
-# Comprehensive Project Review: ketebe ENGINE (Ketebe Game Studio)
+# Comprehensive Project Review: ketebe ENGINE (Vortex Game Studio)
 
 ## 1. Executive Summary
 The **ketebe ENGINE** is a sophisticated, multi-paradigm game development environment designed for high-fidelity 2D and 2.5D game creation. Unlike monolithic engines, ketebe employs a "Multi-Core" strategy, providing specialized mathematical and rendering models for Isometric, Top-Down RPG, and Platformer genres while maintaining a unified asset and tooling pipeline.

@@ -1,5 +1,5 @@
 /**
- * KETEBE Audio Recorder
+ * VORTEX Audio Recorder
  * Handles microphone input, recording to buffer, and creating audio clips.
  */
 

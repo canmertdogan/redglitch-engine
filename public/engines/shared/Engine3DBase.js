@@ -1,5 +1,5 @@
 /**
- * Engine3DBase.js — Abstract base class for all 3D engines in Ketebe.
+ * Engine3DBase.js — Abstract base class for all 3D engines in Vortex.
  *
  * Extends the existing EngineAdapter contract with a 3D lifecycle layer.
  * Shared by topdown-3d, fps-3d, and platformer-3d engine types.
@@ -181,8 +181,8 @@ class Engine3DBase extends EngineAdapter {
 
     resize() {
         if (!this.renderer || !this.camera) return;
-        const w = this.container.clientWidth  || window.innerWidth;
-        const h = this.container.clientHeight || window.innerHeight;
+        const w = Math.max(1, this.container.clientWidth  || window.innerWidth);
+        const h = Math.max(1, this.container.clientHeight || window.innerHeight);
         this.renderer.setSize(w, h);
         if (this.camera.isPerspectiveCamera) {
             this.camera.aspect = w / h;

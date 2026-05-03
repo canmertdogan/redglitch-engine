@@ -108,6 +108,15 @@ class Renderer3D {
 
     render() { if (this.composer) this.composer.render(); }
 
+    resize(width, height) {
+        if (width > 0 && height > 0 && this.webgl) {
+            this.webgl.setSize(width, height);
+            if (this.composer) this.composer.setSize(width, height);
+            this.camera.aspect = width / height;
+            this.camera.updateProjectionMatrix();
+        }
+    }
+
     _size() { return { width: this.container.clientWidth, height: this.container.clientHeight || 400 }; }
 
     _onResize() {

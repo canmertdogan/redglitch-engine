@@ -1,8 +1,8 @@
-# Ketebe 3D Engines — Architecture & API Reference
+# Vortex 3D Engines — Architecture & API Reference
 
 ## Overview
 
-Ketebe ships three 3D engine types built on a shared foundation:
+Vortex ships three 3D engine types built on a shared foundation:
 
 | Engine Type | Entry Class | Use Case |
 |-------------|-------------|----------|
@@ -33,12 +33,13 @@ Ketebe ships three 3D engine types built on a shared foundation:
 
 | Module | Pattern | Purpose |
 |--------|---------|---------|
+| `Renderer3D.js` | ES module | Shared WebGL pipeline (Cel/Outline) with `.resize(w, h)` support |
 | `CrossEngineSerializer.js` | Classic-script global | Serializes 3D entities and levels for campaign runtime |
 | `Save3D.js` | ES module | Schema-guarded save/load for all 3D engines. Schema: `ketebe.3d.save.v3` |
 | `LayerMask.js` | ES module | Bit-flag layer constants |
 | `CollisionGroups.js` | ES module | cannon-es collision filter groups and masks |
 | `PhysicsDebugRenderer.js` | ES module | Wireframe overlay for cannon-es bodies |
-| `VoxelPalette.js` | ES module | 8-color shared flat-shaded color palette |
+| `PaletteManager.js` | ES module | 256-color shared palette manager and mapper |
 
 ### LayerMask Flags
 

@@ -1,13 +1,13 @@
 /**
  * public/ai/ketebe-ai-assistant.js
- * Compatibility layer for the Kai UI to interface with the KetebeAI engine.
+ * Compatibility layer for the Kai UI to interface with the VortexAI engine.
  */
 
-// We assume KetebeAIInstance is available globally via ketebe-ai.js
+// We assume VortexAIInstance is available globally via ketebe-ai.js
 
 class IRABAssistantSimple {
     constructor() {
-        this.ai = window.KetebeAIInstance || (window.parent && window.parent.KetebeAIInstance) || null;
+        this.ai = window.VortexAIInstance || (window.parent && window.parent.VortexAIInstance) || null;
         
         // Ensure personality is loaded
         if (typeof window.IRABPersonality !== 'undefined') {
@@ -31,7 +31,7 @@ class IRABAssistantSimple {
     }
 
     setProgressCallback(callback) {
-        // Hook into KetebeAI's event bus for progress updates if available
+        // Hook into VortexAI's event bus for progress updates if available
         if (this.ai && this.ai.inferenceEngine && this.ai.inferenceEngine.isModelReady) {
             callback({ percent: 100, status: 'ready' });
         }
@@ -39,18 +39,18 @@ class IRABAssistantSimple {
 
     async waitForCore(timeout = 5000) {
         if (this.ai) return this.ai;
-        if (window.KetebeAIInstance) {
-            this.ai = window.KetebeAIInstance;
+        if (window.VortexAIInstance) {
+            this.ai = window.VortexAIInstance;
             return this.ai;
         }
-        if (window.parent && window.parent.KetebeAIInstance) {
-            this.ai = window.parent.KetebeAIInstance;
+        if (window.parent && window.parent.VortexAIInstance) {
+            this.ai = window.parent.VortexAIInstance;
             return this.ai;
         }
 
         console.log('Kai: Waiting for AI Core...');
         const start = Date.now();
-        while (!window.KetebeAIInstance) {
+        while (!window.VortexAIInstance) {
             if (Date.now() - start > timeout) {
                 console.error("Kai: Core wait timeout.");
                 throw new Error("AI Core Connection Failed");
@@ -58,7 +58,7 @@ class IRABAssistantSimple {
             await new Promise(r => setTimeout(r, 100));
         }
         
-        this.ai = window.KetebeAIInstance;
+        this.ai = window.VortexAIInstance;
         return this.ai;
     }
 
@@ -275,8 +275,8 @@ class IRABAssistantSimple {
             
             // Get conversation context if possible (from project state)
             const context = {};
-            if (window.KetebeProjectState) {
-                context.project = window.KetebeProjectState.projectName;
+            if (window.VortexProjectState) {
+                context.project = window.VortexProjectState.projectName;
                 context.activeEditor = localStorage.getItem('ketebe_last_editor');
             }
 

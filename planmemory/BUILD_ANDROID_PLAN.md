@@ -12,7 +12,7 @@ The system has been configured to use a "FileSystem Adapter" (`android-adapter.b
 ## How it Works
 
 -   **Desktop/Web:** The app communicates with `server.js` via `fetch('/api/...')`.
--   **Android:** The app uses `js/android-adapter.bundle.js` to intercept these `fetch` calls. Instead of hitting a server, it uses `@capacitor/filesystem` to read/write files in `Documents/KetebeEngine`.
+-   **Android:** The app uses `js/android-adapter.bundle.js` to intercept these `fetch` calls. Instead of hitting a server, it uses `@capacitor/filesystem` to read/write files in `Documents/VortexEngine`.
 
 ## Build Steps
 
@@ -43,10 +43,10 @@ Inside Android Studio:
 
 ## File Permissions
 On Android 10+, the app is scoped to its own storage or specific public collections.
-The adapter is configured to use `Directory.Documents` and creates a folder named `KetebeEngine`.
+The adapter is configured to use `Directory.Documents` and creates a folder named `VortexEngine`.
 
--   **Projects:** Stored in `Documents/KetebeEngine/`.
--   **Levels:** Stored in `Documents/KetebeEngine/[ProjectName]/dunyalar/`.
+-   **Projects:** Stored in `Documents/VortexEngine/`.
+-   **Levels:** Stored in `Documents/VortexEngine/[ProjectName]/dunyalar/`.
 
 ## Debugging on Android
 You can debug the WebView using Chrome DevTools on your PC:

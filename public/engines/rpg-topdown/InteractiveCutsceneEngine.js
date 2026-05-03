@@ -1,4 +1,4 @@
-// InteractiveCutsceneEngine.js - Unified Interactive Cutscene System for Ketebe
+// InteractiveCutsceneEngine.js - Unified Interactive Cutscene System for Vortex
 // Combines timeline-based animation with interactive dialogue and player choices
 
 window.InteractiveCutsceneEngine = class InteractiveCutsceneEngine {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-22T20:18:57.541Z",
+  "generatedAt": "2026-04-30T08:57:11.607Z",
   "root": "/Users/n0rthstar/Documents/GitHub/ketebe",
   "publicEngines": "/Users/n0rthstar/Documents/GitHub/ketebe/public/engines",
   "selectedProjects": [
@@ -13,33 +13,57 @@
   "projects": {
     "Default Project": {
       "missingInProject": [],
-      "differentContent": [],
+      "differentContent": [
+        "fps-3d/FPSController.js",
+        "fps-3d/VFX_FPS.js",
+        "fps-3d/WorldGeometry.js",
+        "platformer-3d/index.html",
+        "shared/Engine3DBase.js"
+      ],
       "extraInProject": [
         "platformer-2d/physics.js",
         "rpg-topdown/dialogueSystem.js",
         "rpg-topdown/questSystem.js"
       ],
-      "candidates": [],
+      "candidates": [
+        "fps-3d/FPSController.js",
+        "fps-3d/VFX_FPS.js",
+        "fps-3d/WorldGeometry.js",
+        "platformer-3d/index.html",
+        "shared/Engine3DBase.js"
+      ],
       "applied": [],
       "skipped": []
     },
     "My Awesome Game": {
       "missingInProject": [],
-      "differentContent": [],
+      "differentContent": [
+        "fps-3d/FPSController.js",
+        "fps-3d/VFX_FPS.js",
+        "fps-3d/WorldGeometry.js",
+        "platformer-3d/index.html",
+        "shared/Engine3DBase.js"
+      ],
       "extraInProject": [
         "rpg-topdown/dialogueSystem.js",
         "rpg-topdown/questSystem.js"
       ],
-      "candidates": [],
+      "candidates": [
+        "fps-3d/FPSController.js",
+        "fps-3d/VFX_FPS.js",
+        "fps-3d/WorldGeometry.js",
+        "platformer-3d/index.html",
+        "shared/Engine3DBase.js"
+      ],
       "applied": [],
       "skipped": []
     }
   },
   "totals": {
     "missingInProject": 0,
-    "differentContent": 0,
+    "differentContent": 10,
     "extraInProject": 5,
-    "candidates": 0,
+    "candidates": 10,
     "applied": 0
   }
 }
