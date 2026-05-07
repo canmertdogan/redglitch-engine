@@ -2,289 +2,267 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ketebe FPS MAP EDITOR</title>
+    <title>ketebe FPS STUDIO</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="pixel_scrollbars.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <style>
         :root {
-            --bg: #0c0805;
-            --sidebar: #140d0a;
-            --panel: #1a120e;
-            --border: #2a1a14;
-            --accent: #ff6b35;
-            --accent2: #4ecdc4;
-            --text: #dcd0c0;
-            --text-dim: #8c7a70;
-            --header-bg: #251814;
+            --bg-root: #050505;
+            --bg-panel: #0a0a0f;
+            --bg-header: #000000;
+            --bg-canvas: #080808;
+            --bg-input: #000000;
+            --border: #1f2b42;
+            --accent: #f1c40f;
+            --accent-dim: #b8860b;
+            --text-main: #e0e0e0;
+            --text-muted: #888;
+            --danger: #e74c3c;
         }
 
-        * { box-sizing: border-box; }
-        body, html {
-            margin: 0; padding: 0;
-            width: 100%; height: 100%;
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'VortexMono', monospace;
-            overflow: hidden;
-            user-select: none;
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
+            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none; font-size: 18px;
+            image-rendering: pixelated;
         }
 
-        /* ── TOP MENUBAR ─────────────────────────────────────────────────── */
+        /* --- MENUBAR --- */
         #menubar {
-            height: 28px;
-            background: var(--header-bg);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            font-size: 0.8rem;
-            z-index: 100;
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0;
+            font-size: 1.1rem; border-bottom: 2px solid var(--border);
+            z-index: 3000; flex-shrink: 0;
         }
+        .menubar-title {
+            color: var(--accent); font-weight: bold; padding: 0 15px; 
+            border-right: 2px solid var(--border); margin-right: 10px; 
+            font-size: 1.2rem; letter-spacing: 2px; height: 100%;
+            display: flex; align-items: center; gap: 10px;
+        }
+        
         .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; }
-        .menu-item { padding: 0 12px; cursor: pointer; height: 100%; display: flex; align-items: center; }
-        .menu-item:hover { background: var(--panel); color: var(--accent); }
+        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
+        .menu-item:hover, .menu-item-root:hover .menu-item { background: var(--accent); color: #000; }
+
         .dropdown {
-            position: absolute; top: 28px; left: 0;
-            background: var(--panel); border: 1px solid var(--border);
-            min-width: 160px; display: none; flex-direction: column;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5); z-index: 1000;
+            position: absolute; top: 100%; left: 0; background: #111; border: 2px solid var(--border);
+            display: none; flex-direction: column; min-width: 200px; box-shadow: 10px 10px 0 rgba(0,0,0,0.5);
+            z-index: 4000;
         }
         .menu-item-root:hover .dropdown { display: flex; }
-        .drop-opt { padding: 6px 12px; cursor: pointer; display: flex; justify-content: space-between; }
-        .drop-opt:hover { background: var(--accent); color: #fff; }
-        .shortcut { color: var(--text-dim); font-size: 0.7rem; margin-left: 10px; }
-        #menubar-right { margin-left: auto; display: flex; align-items: center; gap: 15px; color: var(--text-dim); }
-        #unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: none; }
+        .drop-opt {
+            padding: 8px 15px; cursor: pointer; color: #aaa; font-size: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .drop-opt:hover { background: #222; color: #fff; border-left: 4px solid var(--accent); }
+        .drop-sep { height: 1px; background: #333; margin: 4px 0; }
+        .shortcut { font-size: 0.8rem; color: #555; margin-left: 20px; }
 
-        /* ── TOOLBAR ─────────────────────────────────────────────────────── */
+        /* --- TOOLBAR --- */
         #toolbar {
-            height: 42px;
-            background: var(--sidebar);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            gap: 4px;
+            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
         }
         .tool-btn {
-            width: 32px; height: 32px;
-            background: var(--panel);
-            border: 1px solid var(--border);
-            color: var(--text-dim);
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 2px;
+            background: #111; border: 1px solid #444; color: #aaa;
+            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-size: 1rem; border-radius: 3px;
         }
-        .tool-btn:hover { color: var(--text); border-color: var(--text-dim); }
-        .tool-btn.active { background: var(--accent); color: #fff; border-color: #fff; }
-        .tool-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
-        .tool-label { font-size: 0.65rem; color: var(--text-dim); margin-right: 4px; text-transform: uppercase; }
-        #tool-coords { margin-left: auto; font-size: 0.75rem; color: var(--accent2); background: #000; padding: 4px 8px; border-radius: 3px; }
+        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+        .tool-label { font-size: 0.9rem; color: #666; text-transform: uppercase; margin-right: 4px; }
+        #tool-coords { margin-left: auto; font-size: 1rem; color: var(--accent); background: #000; padding: 4px 10px; border: 1px solid var(--border); }
 
-        /* ── MAIN LAYOUT ─────────────────────────────────────────────────── */
-        #layout {
-            display: flex;
-            height: calc(100% - 70px);
-            width: 100%;
-        }
+        /* --- LAYOUT --- */
+        #layout { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #main-area { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 
-        #sidebar-left {
-            width: 280px;
-            background: var(--sidebar);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
+        /* --- TOOL RAIL (LEFTMOST) --- */
+        #tool-rail {
+            width: 50px; background: #000; border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 10px;
+            flex-shrink: 0; z-index: 20;
         }
+        
+        .rail-btn {
+            width: 40px; height: 40px; background: transparent; border: 1px solid transparent;
+            color: #666; cursor: pointer; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; font-size: 0.8rem; border-radius: 4px;
+            transition: all 0.1s;
+        }
+        .rail-btn i { font-size: 1.2rem; margin-bottom: 2px; }
+        .rail-btn span { font-size: 0.6rem; text-transform: uppercase; }
+        .rail-btn:hover { color: #fff; background: #111; border-color: #333; }
+        .rail-btn.active { color: var(--accent); background: #1a1a1a; border-color: var(--accent); }
+        
+        .rail-sep { width: 30px; height: 1px; background: #333; margin: 5px 0; }
 
-        .panel-tabs {
-            display: flex;
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
+        /* --- SIDEBAR / PANELS --- */
+        #sidebar-left { width: 260px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        
+        .panel-header {
+            height: 36px; background: #000; display: flex; align-items: center; padding: 0 10px;
+            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
+            flex-shrink: 0;
         }
+        .panel-tabs { display: flex; background: #000; border-bottom: 2px solid var(--border); }
         .panel-tab {
-            flex: 1;
-            padding: 8px 0;
-            text-align: center;
-            font-size: 0.7rem;
-            cursor: pointer;
-            color: var(--text-dim);
-            border-right: 1px solid var(--border);
+            flex: 1; padding: 8px 0; text-align: center; font-size: 1rem; cursor: pointer;
+            color: #666; border-right: 1px solid #222; transition: all 0.1s;
         }
-        .panel-tab:last-child { border-right: none; }
-        .panel-tab.active { background: var(--sidebar); color: var(--accent); font-weight: bold; border-bottom: 2px solid var(--accent); }
+        .panel-tab:hover { background: #151520; color: #fff; }
+        .panel-tab.active { background: #1a1a1a; color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -2px; }
 
-        .panel-body {
-            flex: 1;
-            overflow-y: auto;
-            display: none;
-            padding: 12px;
-        }
+        .panel-body { flex: 1; overflow-y: auto; display: none; padding: 12px; }
         .panel-body.active { display: block; }
 
         .section-header {
-            font-size: 0.75rem;
-            color: var(--accent);
-            margin: 15px 0 8px 0;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 0.9rem; color: var(--accent); margin: 15px 0 8px 0;
+            border-bottom: 1px solid var(--border); padding-bottom: 4px;
+            text-transform: uppercase; letter-spacing: 1px;
         }
         .section-header:first-child { margin-top: 0; }
 
-        /* ── VIEWPORTS ────────────────────────────────────────────────────── */
-        #viewports {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #000;
-        }
-
-        #viewport-3d {
-            flex: 1.2;
-            position: relative;
-            border-bottom: 1px solid var(--border);
-        }
-        #viewport-2d {
-            flex: 1;
-            position: relative;
-            background: #080503;
-        }
+        /* --- CENTER PANEL & VIEWPORTS --- */
+        #center-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #000; }
+        #viewports { flex: 1; display: flex; flex-direction: column; }
+        
+        #viewport-3d { flex: 1.2; position: relative; border-bottom: 1px solid var(--border); }
+        #viewport-2d { flex: 1; position: relative; background: #080503; }
 
         .viewport-label {
             position: absolute; top: 8px; left: 10px;
-            background: rgba(0,0,0,0.6);
-            padding: 4px 8px;
-            font-size: 0.65rem;
-            color: #666;
-            pointer-events: none;
-            z-index: 10;
-            border-radius: 2px;
+            background: rgba(0,0,0,0.7); padding: 4px 10px;
+            font-size: 0.8rem; color: #888; pointer-events: none;
+            z-index: 10; border: 1px solid #333;
         }
-        .viewport-label span { color: var(--text-dim); }
-
-        canvas { display: block; width: 100%; height: 100%; }
+        .viewport-label span { color: var(--accent); font-weight: bold; }
 
         #overlay-3d { position: absolute; bottom: 10px; right: 10px; z-index: 20; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-        #cam-info { font-size: 0.7rem; color: #444; background: rgba(0,0,0,0.5); padding: 4px 8px; }
+        #cam-info { font-size: 0.8rem; color: #666; background: rgba(0,0,0,0.7); padding: 4px 10px; border: 1px solid #333; }
         .vp-corner-btn { display: flex; gap: 4px; }
         .vp-btn {
-            width: 28px; height: 28px;
-            background: rgba(26,18,14,0.8);
-            border: 1px solid var(--border);
-            color: var(--text-dim);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; border-radius: 2px;
+            width: 32px; height: 32px;
+            background: rgba(10,10,15,0.8); border: 1px solid var(--border);
+            color: #666; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border-radius: 3px; font-size: 1rem;
         }
-        .vp-btn:hover { background: var(--accent); color: #fff; }
-        .vp-btn.active { color: var(--accent2); border-color: var(--accent2); }
+        .vp-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .vp-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
-        /* ── COMPONENTS ──────────────────────────────────────────────────── */
-        .block-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 4px;
+        /* --- ASSET GRIDS & CARDS --- */
+        .asset-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+            gap: 10px; padding: 5px; align-content: start;
         }
+        .asset-card {
+            background: #111; border: 1px solid #333; display: flex; flex-direction: column;
+            cursor: pointer; transition: all 0.1s;
+        }
+        .asset-card:hover { border-color: var(--accent); background: #1a1a1a; transform: translateY(-2px); }
+        .asset-card.active { border-color: var(--accent); background: #1a1a1a; box-shadow: 0 0 10px rgba(241,196,15,0.2); }
+        
+        .asset-thumb { 
+            height: 60px; background: #050505; border-bottom: 1px solid #222; 
+            display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #444;
+        }
+        .asset-card:hover .asset-thumb { color: #888; }
+        .asset-card.active .asset-thumb { color: var(--accent); }
+        .asset-info { padding: 6px; text-align: center; }
+        .asset-name { font-size: 0.9rem; font-weight: bold; color: #eee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .asset-meta { font-size: 0.7rem; color: #666; text-transform: uppercase; margin-top: 2px; }
+
+        /* --- COMPONENTS --- */
+        .block-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
         .block-cell {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            padding: 8px 4px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 0.65rem;
+            background: #111; border: 1px solid #333; padding: 8px 4px;
+            text-align: center; cursor: pointer; font-size: 0.8rem;
             display: flex; flex-direction: column; align-items: center; gap: 4px;
         }
-        .block-cell i { font-size: 1.1rem; color: var(--text-dim); }
-        .block-cell:hover { border-color: var(--accent); }
-        .block-cell.active { background: var(--accent); border-color: #fff; color: #fff; }
-        .block-cell.active i { color: #fff; }
+        .block-cell i { font-size: 1.2rem; color: #666; }
+        .block-cell:hover { border-color: var(--accent); color: #fff; }
+        .block-cell.active { background: var(--accent); border-color: var(--accent); color: #000; }
+        .block-cell.active i { color: #000; }
 
-        .field-row {
-            display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+        .field-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .field-row label { flex: 0 0 80px; font-size: 0.9rem; color: #888; }
+        input[type="text"], input[type="number"], select, input[type="range"] {
+            flex: 1; background: #000; border: 1px solid #444;
+            color: var(--accent); font-family: inherit; font-size: 1rem;
+            padding: 4px 8px; outline: none;
         }
-        .field-row label { flex: 0 0 75px; font-size: 0.75rem; color: var(--text-dim); }
-        .field-row input, .field-row select {
-            flex: 1;
-            background: #000; border: 1px solid var(--border);
-            color: #ccc; font-family: inherit; font-size: 0.8rem;
-            padding: 4px; outline: none;
-        }
+        input:focus, select:focus { border-color: var(--accent); }
 
         .action-btn {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 8px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            width: 100%;
-            margin-bottom: 4px;
+            background: #111; border: 1px solid #444; color: #aaa;
+            padding: 8px; cursor: pointer; font-family: inherit; font-size: 0.9rem;
+            text-transform: uppercase; width: 100%; margin-bottom: 5px;
             transition: all 0.1s;
         }
-        .action-btn:hover { border-color: var(--accent); color: var(--accent); }
-        .action-btn.primary { background: var(--accent); color: #fff; border: none; }
-        .action-btn.primary:hover { filter: brightness(1.1); }
+        .action-btn:hover { border-color: var(--accent); color: var(--accent); background: #1a1a1a; }
+        .action-btn.primary { background: var(--accent); color: #000; border: none; font-weight: bold; }
+        .action-btn.primary:hover { filter: brightness(1.2); }
         .action-btn.danger:hover { background: #600; color: #fff; border-color: #f00; }
 
-        .entity-list, .trigger-list {
-            display: flex; flex-direction: column; gap: 2px;
-        }
+        .entity-list, .trigger-list { display: flex; flex-direction: column; gap: 2px; }
         .entity-item, .trigger-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 8px; background: var(--panel);
-            border-left: 2px solid transparent; cursor: pointer;
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; background: #111; border: 1px solid transparent; cursor: pointer;
         }
-        .entity-item:hover, .trigger-item:hover { background: #251a15; }
-        .entity-item.active, .trigger-item.active { border-left-color: var(--accent); background: #1c1410; }
-        .entity-icon, .trigger-icon { width: 20px; text-align:center; color: var(--accent); font-size: 0.9rem; }
-        .entity-name { flex: 1; font-size: 0.85rem; }
-        .entity-badge { font-size: 0.6rem; background: #000; padding: 2px 4px; color: var(--accent2); border-radius: 2px; }
+        .entity-item:hover, .trigger-item:hover { background: #1a1a1a; border-color: #333; }
+        .entity-item.active, .trigger-item.active { border-color: var(--accent); background: #1a1a1a; color: var(--accent); }
+        .entity-icon, .trigger-icon { width: 24px; text-align:center; color: var(--accent); font-size: 1.1rem; }
+        .entity-name { flex: 1; font-size: 1rem; }
+        .entity-badge { font-size: 0.7rem; background: #000; padding: 2px 6px; color: #3498db; border: 1px solid #1f2b42; border-radius: 2px; }
 
-        #sidebar-right {
-            width: 320px;
-            background: var(--sidebar);
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            z-index: 50;
+        /* --- INSPECTOR --- */
+        #sidebar-right { width: 300px; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        
+        /* --- BOTTOM PALETTE --- */
+        #bottom-palette {
+            height: 220px; background: var(--bg-panel); border-top: 2px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0;
         }
-        #right-header {
-            padding: 10px; font-size: 0.75rem; color: var(--accent);
-            text-transform: uppercase; border-bottom: 1px solid var(--border);
-            background: var(--header-bg);
+        .palette-header { height: 36px; background: #000; display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+        .palette-tabs { display: flex; height: 100%; flex: 1; }
+        .palette-tab {
+            padding: 0 20px; border: none; background: transparent; color: #666;
+            font-family: inherit; font-size: 1.1rem; cursor: pointer;
+            border-right: 1px solid #222; height: 100%; display: flex; align-items: center;
+            gap: 8px; transition: all 0.1s;
         }
+        .palette-tab:hover { background: #151520; color: #fff; }
+        .palette-tab.active { background: #1a1a1a; color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -1px; }
+        .palette-content { flex: 1; display: flex; overflow: hidden; }
+        .palette-panel { display: none; flex: 1; padding: 12px; overflow-y: auto; }
+        .palette-panel.active { display: block; }
 
-        /* ── STATUSBAR ───────────────────────────────────────────────────── */
+        /* --- STATUSBAR --- */
         #statusbar {
-            height: 28px;
-            background: var(--header-bg);
-            border-top: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            font-size: 0.7rem;
-            color: #666;
+            height: 32px; background: #000; border-top: 2px solid var(--border);
+            display: flex; align-items: center; padding: 0 15px; font-size: 0.9rem; color: #666;
         }
-        .status-item { border-right: 1px solid var(--border); padding: 0 10px; height: 100%; display: flex; align-items: center; }
+        .status-item { border-right: 1px solid var(--border); padding: 0 15px; height: 100%; display: flex; align-items: center; }
 
-        /* ── SCROLLBARS ──────────────────────────────────────────────────── */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--border); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+        /* --- RESIZERS --- */
+        .resizer { width: 5px; background: #000; cursor: col-resize; z-index: 100; flex-shrink: 0; border-left: 1px solid #222; border-right: 1px solid #222; }
+        .resizer:hover { background: var(--accent); }
+        .resizer-h { height: 5px; background: #000; cursor: row-resize; border-top: 1px solid #222; border-bottom: 1px solid #222; }
+        .resizer-h:hover { background: var(--accent); }
 
-        /* Modal / Browse overlay */
+        /* Modal */
         #modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2000;
+            background: rgba(0,0,0,0.9); z-index: 5000;
             display: none; align-items: center; justify-content: center;
         }
         #browse-modal {
-            background: var(--sidebar); width: 600px; max-height: 80%;
-            border: 1px solid var(--accent); border-radius: 4px;
+            background: var(--bg-panel); width: 600px; max-height: 80%;
+            border: 2px solid var(--accent); box-shadow: 20px 20px 0 rgba(0,0,0,0.5);
             display: flex; flex-direction: column;
         }
     </style>
@@ -293,13 +271,17 @@
 
 <!-- ══ MENUBAR ═══════════════════════════════════════════════════════════ -->
 <div id="menubar">
+    <div class="menubar-title">
+        <i class="fas fa-crosshairs"></i> FPS STUDIO <span id="unsaved-dot" style="display:none; color:var(--danger); margin-left:5px;">●</span>
+    </div>
+    
     <div class="menu-item-root">
         <div class="menu-item">File</div>
         <div class="dropdown">
             <div class="drop-opt" onclick="FPSEditor.newMap()">New Map <span class="shortcut">Ctrl+N</span></div>
             <div class="drop-opt" onclick="FPSEditor.openBrowse()">Open Project <span class="shortcut">Ctrl+O</span></div>
             <div class="drop-opt" onclick="FPSEditor.saveMap()">Save Map <span class="shortcut">Ctrl+S</span></div>
-            <div class="tool-sep" style="width:100%; height:1px; margin:4px 0;"></div>
+            <div class="drop-sep"></div>
             <div class="drop-opt" onclick="FPSEditor.exportMap()">Export as JSON...</div>
             <div class="drop-opt" onclick="window.close()">Exit</div>
         </div>
@@ -310,20 +292,9 @@
         <div class="dropdown">
             <div class="drop-opt" onclick="FPSEditor.undo()">Undo <span class="shortcut">Ctrl+Z</span></div>
             <div class="drop-opt" onclick="FPSEditor.redo()">Redo <span class="shortcut">Ctrl+Y</span></div>
-            <div class="tool-sep" style="width:100%; height:1px; margin:4px 0;"></div>
+            <div class="drop-sep"></div>
             <div class="drop-opt" onclick="FPSEditor.selectAll()">Select All <span class="shortcut">Ctrl+A</span></div>
             <div class="drop-opt" onclick="FPSEditor.deleteSelected()">Delete <span class="shortcut">Del</span></div>
-        </div>
-    </div>
-
-    <div class="menu-item-root">
-        <div class="menu-item">View</div>
-        <div class="dropdown">
-            <div class="drop-opt" onclick="FPSEditor.toggle2d()">Toggle Floor Plan <span class="shortcut">Tab</span></div>
-            <div class="drop-opt" onclick="FPSEditor.fitView2d()">Reset 2D View</div>
-            <div class="tool-sep" style="width:100%; height:1px; margin:4px 0;"></div>
-            <div class="drop-opt" onclick="FPSEditor.setShading('shaded')">Shaded Mode</div>
-            <div class="drop-opt" onclick="FPSEditor.setShading('wireframe')">Wireframe</div>
         </div>
     </div>
 
@@ -336,26 +307,18 @@
         </div>
     </div>
 
-    <div id="menubar-right">
-        <div id="unsaved-dot" title="Unsaved changes"></div>
-        <div id="project-label">— no project —</div>
-    </div>
+    <div style="flex-grow:1"></div>
+    <div id="project-label" style="font-size:0.9rem; color:#555; padding-right:15px;">— no project —</div>
 </div>
 
 <!-- ══ TOOLBAR ═══════════════════════════════════════════════════════════ -->
 <div id="toolbar">
-    <span class="tool-label">MODE</span>
-    <button class="tool-btn active" id="tool-draw-room"   title="Draw Room (R)"       onclick="FPSEditor.setTool('draw-room')"><i class="fas fa-vector-square"></i></button>
-    <button class="tool-btn"        id="tool-corridor"     title="Add Corridor (C)"    onclick="FPSEditor.setTool('corridor')"><i class="fas fa-grip-lines"></i></button>
-    <button class="tool-btn"        id="tool-entity"       title="Place Entity (E)"    onclick="FPSEditor.setTool('entity')"><i class="fas fa-user-secret"></i></button>
-    <button class="tool-btn"        id="tool-paint"        title="Color Paint (P)"     onclick="FPSEditor.setTool('paint')"><i class="fas fa-fill-drip"></i></button>
-    <button class="tool-btn"        id="tool-light"        title="Place Light (L)"     onclick="FPSEditor.setTool('light')"><i class="fas fa-lightbulb"></i></button>
-    <button class="tool-btn"        id="tool-trigger"      title="Trigger Volume (T)"  onclick="FPSEditor.setTool('trigger')"><i class="fas fa-bolt"></i></button>
-    <button class="tool-btn"        id="tool-select"       title="Select (S)"          onclick="FPSEditor.setTool('select')"><i class="fas fa-mouse-pointer"></i></button>
+    <button class="tool-btn" title="Undo (Ctrl+Z)" onclick="FPSEditor.undo()"><i class="fas fa-undo"></i></button>
+    <button class="tool-btn" title="Redo (Ctrl+Y)" onclick="FPSEditor.redo()"><i class="fas fa-redo"></i></button>
     <div class="tool-sep"></div>
 
     <span class="tool-label">SNAP</span>
-    <select id="snap-select" onchange="FPSEditor.setSnap(this.value)">
+    <select id="snap-select" onchange="FPSEditor.setSnap(this.value)" style="width:80px; height:32px;">
         <option value="0.25">0.25 m</option>
         <option value="0.5">0.5 m</option>
         <option value="1" selected>1 m</option>
@@ -363,347 +326,234 @@
     </select>
     <div class="tool-sep"></div>
 
-    <button class="tool-btn" title="Undo (Ctrl+Z)" onclick="FPSEditor.undo()"><i class="fas fa-undo"></i></button>
-    <button class="tool-btn" title="Redo (Ctrl+Y)" onclick="FPSEditor.redo()"><i class="fas fa-redo"></i></button>
+    <button class="tool-btn" title="Test Play (F5)" onclick="FPSEditor.testPlay()" style="width:auto; padding:0 12px; color:var(--accent); font-weight:bold;">
+        <i class="fas fa-play"></i> TEST PLAY
+    </button>
     <div class="tool-sep"></div>
-    <button class="tool-btn" title="Test Play (F5)" onclick="FPSEditor.testPlay()"><i class="fas fa-play"></i></button>
 
-    <div class="tool-sep"></div>
-    <button class="toolbar-btn" onclick="FPSEditor.openBrowse()" title="Browse projects"><i class="fas fa-folder-open"></i> BROWSE</button>
+    <button class="tool-btn" onclick="FPSEditor.openBrowse()" style="width:auto; padding:0 12px;">
+        <i class="fas fa-folder-open"></i> BROWSE
+    </button>
+
     <div id="tool-coords">X: 0.00 &nbsp; Y: 0.00 &nbsp; Z: 0.00</div>
 </div>
 
 <!-- ══ MAIN LAYOUT ════════════════════════════════════════════════════════ -->
 <div id="layout">
-
-    <!-- Left Sidebar (Tool Panels) -->
-    <div id="sidebar-left">
-        <div class="panel-tabs">
-            <div class="panel-tab active" data-tab="geo"      onclick="FPSEditor.switchTab('geo')">GEO</div>
-            <div class="panel-tab"        data-tab="textures" onclick="FPSEditor.switchTab('textures')">COL</div>
-            <div class="panel-tab"        data-tab="lights"   onclick="FPSEditor.switchTab('lights')">LIT</div>
-            <div class="panel-tab"        data-tab="sky"      onclick="FPSEditor.switchTab('sky')">SKY</div>
-            <div class="panel-tab"        data-tab="entities" onclick="FPSEditor.switchTab('entities')">ENT</div>
-            <div class="panel-tab"        data-tab="triggers" onclick="FPSEditor.switchTab('triggers')">TRG</div>
-            <div class="panel-tab"        data-tab="settings" onclick="FPSEditor.switchTab('settings')">SET</div>
+    <div id="main-area">
+        <!-- Tool Rail -->
+        <div id="tool-rail">
+            <button class="rail-btn active" id="tool-draw-room" title="Draw Room (R)" onclick="FPSEditor.setTool('draw-room')"><i class="fas fa-vector-square"></i><span>ROOM</span></button>
+            <button class="rail-btn" id="tool-corridor" title="Add Corridor (C)" onclick="FPSEditor.setTool('corridor')"><i class="fas fa-grip-lines"></i><span>CORR</span></button>
+            <button class="rail-btn" id="tool-paint" title="Color Paint (P)" onclick="FPSEditor.setTool('paint')"><i class="fas fa-fill-drip"></i><span>PAINT</span></button>
+            <button class="rail-btn" id="tool-entity" title="Place Entity (E)" onclick="FPSEditor.setTool('entity')"><i class="fas fa-user-secret"></i><span>ENT</span></button>
+            <button class="rail-btn" id="tool-light" title="Place Light (L)" onclick="FPSEditor.setTool('light')"><i class="fas fa-lightbulb"></i><span>LIGHT</span></button>
+            <button class="rail-btn" id="tool-trigger" title="Trigger Volume (T)" onclick="FPSEditor.setTool('trigger')"><i class="fas fa-bolt"></i><span>TRIG</span></button>
+            <button class="rail-btn" id="tool-select" title="Select (S)" onclick="FPSEditor.setTool('select')"><i class="fas fa-mouse-pointer"></i><span>SEL</span></button>
         </div>
 
-        <!-- GEOMETRY PANEL -->
-        <div class="panel-body active" id="tab-geo">
-            <div class="terrain-mode-row" style="display:flex;gap:4px;margin-bottom:8px;">
-                <div class="block-cell active" style="flex:1" id="fps-tmode-voxel" data-tmode="voxel" onclick="FPSEditor.setTerrainMode('voxel')">VOXEL</div>
-                <div class="block-cell" style="flex:1" id="fps-tmode-trimesh" data-tmode="trimesh" onclick="FPSEditor.setTerrainMode('trimesh')">TRI-MESH</div>
+        <!-- Left Sidebar (Geometry & Settings) -->
+        <div id="sidebar-left">
+            <div class="panel-header">MODE SETTINGS</div>
+            <div class="panel-tabs">
+                <div class="panel-tab active" data-tab="geo" onclick="FPSEditor.switchTab('geo')">GEO</div>
+                <div class="panel-tab" data-tab="sky" onclick="FPSEditor.switchTab('sky')">SKY</div>
+                <div class="panel-tab" data-tab="settings" onclick="FPSEditor.switchTab('settings')">SET</div>
             </div>
-            <div id="fps-trimesh-section" style="display:none">
-                <div class="section-header">Sculpt Tools</div>
-                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
-                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="elevate"    onclick="FPSEditor.setSculptTool('elevate')">Elevate</div>
-                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="facet-paint" onclick="FPSEditor.setSculptTool('facet-paint')">Paint</div>
-                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="smooth"     onclick="FPSEditor.setSculptTool('smooth')">Smooth</div>
-                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="noise"      onclick="FPSEditor.setSculptTool('noise')">Noise</div>
-                    <div class="block-cell" style="flex:1 1 auto" data-sculpt="flatten"    onclick="FPSEditor.setSculptTool('flatten')">Flatten</div>
+
+            <div class="panel-body active" id="tab-geo">
+                <div class="section-header">Terrain Mode</div>
+                <div style="display:flex; gap:4px; margin-bottom:8px;">
+                    <div class="block-cell active" style="flex:1" id="fps-tmode-voxel" onclick="FPSEditor.setTerrainMode('voxel')">VOXEL</div>
+                    <div class="block-cell" style="flex:1" id="fps-tmode-trimesh" onclick="FPSEditor.setTerrainMode('trimesh')">TRI-MESH</div>
                 </div>
-                <div class="field-row"><label>Brush R</label><input type="range" id="fps-brush-r" min="0.5" max="8" value="2" step="0.5" oninput="FPSEditor.setBrushRadius(+this.value)"><span id="fps-brush-r-val">2</span></div>
-                <div class="field-row"><label>Strength</label><input type="range" id="fps-brush-s" min="0.1" max="1" value="0.5" step="0.1" oninput="FPSEditor.setBrushStrength(+this.value)"><span id="fps-brush-s-val">0.5</span></div>
-                <button class="btn" style="width:100%;margin-top:4px" onclick="FPSEditor.generateLowPolyFloor()">Generate Low-poly Floor</button>
-                <div class="section-header" style="margin-top:8px">Tri-mesh Assets</div>
-                <div id="fps-trimesh-assets" style="font-size:0.75rem;color:#666;padding:4px">Drop .glb files here</div>
-            </div>
-            <div class="section-header">Block Types</div>
-            <div class="block-grid">
-                <div class="block-cell active" data-block="floor"   onclick="FPSEditor.selectBlock('floor')"><i class="fas fa-th"></i>Floor</div>
-                <div class="block-cell"        data-block="wall"    onclick="FPSEditor.selectBlock('wall')"><i class="fas fa-border-all"></i>Wall</div>
-                <div class="block-cell"        data-block="ceiling" onclick="FPSEditor.selectBlock('ceiling')"><i class="fas fa-border-top-left"></i>Ceil</div>
-                <div class="block-cell"        data-block="slope-n" onclick="FPSEditor.selectBlock('slope-n')"><i class="fas fa-angle-up"></i>Slope N</div>
-                <div class="block-cell"        data-block="slope-s" onclick="FPSEditor.selectBlock('slope-s')"><i class="fas fa-angle-down"></i>Slope S</div>
-                <div class="block-cell"        data-block="pillar"  onclick="FPSEditor.selectBlock('pillar')"><i class="fas fa-grip-vertical"></i>Pillar</div>
-                <div class="block-cell"        data-block="door-frame" onclick="FPSEditor.selectBlock('door-frame')"><i class="fas fa-door-open"></i>Door</div>
-                <div class="block-cell"        data-block="window-open" onclick="FPSEditor.selectBlock('window-open')"><i class="fas fa-border-none"></i>Window</div>
-                <div class="block-cell"        data-block="arch"    onclick="FPSEditor.selectBlock('arch')"><i class="fas fa-archway"></i>Arch</div>
-            </div>
 
-            <div class="section-header">Draw Mode</div>
-            <div style="display:flex;gap:4px;margin-bottom:8px;">
-                <div class="block-cell active" style="flex:1" id="draw-pencil" onclick="FPSEditor.setDrawMode('pencil')"><i class="fas fa-pencil-alt"></i>Pencil</div>
-                <div class="block-cell" style="flex:1" id="draw-rect" onclick="FPSEditor.setDrawMode('rect')"><i class="fas fa-vector-square"></i>Rect</div>
-                <div class="block-cell" style="flex:1" id="draw-fill" onclick="FPSEditor.setDrawMode('fill')"><i class="fas fa-fill"></i>Fill</div>
-            </div>
-
-            <div class="section-header">Grid Settings</div>
-            <div class="field-row">
-                <label>Cell Size</label>
-                <select onchange="FPSEditor.setCellSize(this.value)">
-                    <option value="0.5">0.5 m</option>
-                    <option value="1" selected>1 m</option>
-                    <option value="2">2 m</option>
-                </select>
-            </div>
-            <div class="field-row">
-                <label>Ceiling H</label>
-                <input type="number" id="ceiling-height" value="3" min="1" max="10" step="0.5"
-                    onchange="FPSEditor.setCeilingHeight(+this.value)">
-            </div>
-            <div class="field-row">
-                <label>Floor Y</label>
-                <input type="number" id="floor-y" value="0" min="-20" max="20" step="0.5"
-                    onchange="FPSEditor.setFloorY(+this.value)">
-            </div>
-            <div class="field-row" style="align-items:center;">
-                <label>Edit Layer Y</label>
-                <div style="display:flex;gap:4px;align-items:center;">
-                    <button class="btn" style="padding:0 8px;font-size:1rem;line-height:1.6"
-                        onclick="FPSEditor.setActiveY(parseInt(document.getElementById('active-y-display').textContent)-1)"
-                        title="Lower layer  [  or PageDown">▼</button>
-                    <span id="active-y-display" style="min-width:26px;text-align:center;background:#1a1208;
-                        border:1px solid var(--border);padding:1px 4px;font-size:1rem;">0</span>
-                    <button class="btn" style="padding:0 8px;font-size:1rem;line-height:1.6"
-                        onclick="FPSEditor.setActiveY(parseInt(document.getElementById('active-y-display').textContent)+1)"
-                        title="Higher layer  ]  or PageUp">▲</button>
+                <div id="fps-trimesh-section" style="display:none">
+                    <div class="section-header">Sculpt Tools</div>
+                    <div class="block-grid">
+                        <div class="block-cell" data-sculpt="elevate" onclick="FPSEditor.setSculptTool('elevate')">Raise</div>
+                        <div class="block-cell" data-sculpt="facet-paint" onclick="FPSEditor.setSculptTool('facet-paint')">Paint</div>
+                        <div class="block-cell" data-sculpt="smooth" onclick="FPSEditor.setSculptTool('smooth')">Smooth</div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- COLOR PALETTE PANEL — populated by ColorPalette.js -->
-        <div class="panel-body" id="tab-textures">
-            <!-- ColorPalette.init() mounts its full UI here at runtime -->
-        </div>
+                <div class="section-header">Draw Mode</div>
+                <div style="display:flex; gap:4px;">
+                    <div class="block-cell active" style="flex:1" id="draw-pencil" onclick="FPSEditor.setDrawMode('pencil')"><i class="fas fa-pencil-alt"></i>PENCIL</div>
+                    <div class="block-cell" style="flex:1" id="draw-rect" onclick="FPSEditor.setDrawMode('rect')"><i class="fas fa-vector-square"></i>RECT</div>
+                    <div class="block-cell" style="flex:1" id="draw-fill" onclick="FPSEditor.setDrawMode('fill')"><i class="fas fa-fill"></i>FILL</div>
+                </div>
 
-        <!-- LIGHTS PANEL — populated by LightEditor.js -->
-        <div class="panel-body" id="tab-lights">
-            <!-- LightEditor.init() mounts its full UI here at runtime -->
-        </div>
-
-        <!-- SKY PANEL -->
-        <div class="panel-body" id="tab-sky">
-            <div class="section-header">SKYBOX SETTINGS</div>
-            <div class="field-row">
-                <label>Sky Mode</label>
-                <select id="sky-mode" onchange="FPSEditor.updateSkybox()">
-                    <option value="solid">Solid Color</option>
-                    <option value="gradient" selected>Gradient</option>
-                    <option value="voxel">Procedural Voxel</option>
-                </select>
-            </div>
-            <div id="sky-solid-props" style="display:none">
+                <div class="section-header">Grid</div>
+                <div class="field-row"><label>Cell Size</label><select onchange="FPSEditor.setCellSize(this.value)"><option value="0.5">0.5m</option><option value="1" selected>1.0m</option><option value="2">2.0m</option></select></div>
+                <div class="field-row"><label>Ceil H</label><input type="number" id="ceiling-height" value="3" step="0.5" onchange="FPSEditor.setCeilingHeight(+this.value)"></div>
+                <div class="field-row"><label>Floor Y</label><input type="number" id="floor-y" value="0" step="0.5" onchange="FPSEditor.setFloorY(+this.value)"></div>
                 <div class="field-row">
-                    <label>Color</label>
-                    <input type="color" id="sky-solid-color" value="#0a0806" onchange="FPSEditor.updateSkybox()">
-                </div>
-            </div>
-            <div id="sky-gradient-props">
-                <div class="field-row">
-                    <label>Top Color</label>
-                    <input type="color" id="sky-top-color" value="#1a2a3a" onchange="FPSEditor.updateSkybox()">
-                </div>
-                <div class="field-row">
-                    <label>Bottom Color</label>
-                    <input type="color" id="sky-bottom-color" value="#0a0806" onchange="FPSEditor.updateSkybox()">
+                    <label>Layer Y</label>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <button class="tool-btn" onclick="FPSEditor.setActiveY(parseInt(document.getElementById('active-y-display').textContent)-1)">▼</button>
+                        <span id="active-y-display" style="width:30px; text-align:center; color:var(--accent);">0</span>
+                        <button class="tool-btn" onclick="FPSEditor.setActiveY(parseInt(document.getElementById('active-y-display').textContent)+1)">▲</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="section-header">ENVIRONMENT LIGHTING</div>
-            <div class="field-row">
-                <label>Ambient</label>
-                <input type="color" id="ambient-color" value="#1a1208" onchange="FPSEditor.updateLighting()">
-            </div>
-            <div class="field-row">
-                <label>Sun Color</label>
-                <input type="color" id="sun-color" value="#ffcc88" onchange="FPSEditor.updateLighting()">
-            </div>
-            <div class="field-row">
-                <label>Sun Inten.</label>
-                <input type="range" id="sun-intensity" min="0" max="3" step="0.1" value="1.2" oninput="FPSEditor.updateLighting()">
-            </div>
-        </div>
-
-        <!-- ENTITIES PANEL -->
-        <div class="panel-body" id="tab-entities">
-            <div class="section-header">Player</div>
-            <div class="entity-list">
-                <div class="entity-item active" data-entity="player-spawn" onclick="FPSEditor.selectEntity('player-spawn')">
-                    <span class="entity-icon"><i class="fas fa-user"></i></span>
-                    <span class="entity-name">Player Spawn</span>
+            <div class="panel-body" id="tab-sky">
+                <div class="section-header">Skybox</div>
+                <div class="field-row"><label>Mode</label><select id="sky-mode" onchange="FPSEditor.updateSkybox()"><option value="solid">Solid</option><option value="gradient" selected>Gradient</option><option value="voxel">Voxel</option></select></div>
+                
+                <div id="sky-solid-props" style="display:none">
+                    <div class="field-row"><label>Color</label><input type="color" id="sky-solid-color" value="#0a0806" onchange="FPSEditor.updateSkybox()"></div>
                 </div>
+                
+                <div id="sky-gradient-props">
+                    <div class="field-row"><label>Top</label><input type="color" id="sky-top-color" value="#1a2a3a" onchange="FPSEditor.updateSkybox()"></div>
+                    <div class="field-row"><label>Bottom</label><input type="color" id="sky-bottom-color" value="#0a0806" onchange="FPSEditor.updateSkybox()"></div>
+                </div>
+                
+                <div class="section-header">Environment</div>
+                <div class="field-row"><label>Ambient</label><input type="color" id="ambient-color" value="#ffffff" onchange="FPSEditor.updateLighting()"></div>
+                <div class="field-row"><label>Sun Color</label><input type="color" id="sun-color" value="#ffcc88" onchange="FPSEditor.updateLighting()"></div>
+                <div class="field-row"><label>Intensity</label><input type="range" id="sun-intensity" min="0" max="3" step="0.1" value="1.5" oninput="FPSEditor.updateLighting()"></div>
             </div>
 
-            <div class="section-header" style="margin-top:8px">Enemies</div>
-            <div class="entity-list">
-                <div class="entity-item" data-entity="enemy-grunt"   onclick="FPSEditor.selectEntity('enemy-grunt')">
-                    <span class="entity-icon"><i class="fas fa-skull"></i></span>
-                    <span class="entity-name">Grunt</span>
-                    <span class="entity-badge">MELEE</span>
-                </div>
-                <div class="entity-item" data-entity="enemy-shooter" onclick="FPSEditor.selectEntity('enemy-shooter')">
-                    <span class="entity-icon"><i class="fas fa-skull-crossbones"></i></span>
-                    <span class="entity-name">Shooter</span>
-                    <span class="entity-badge">RANGED</span>
-                </div>
-                <div class="entity-item" data-entity="enemy-patrol"  onclick="FPSEditor.selectEntity('enemy-patrol')">
-                    <span class="entity-icon"><i class="fas fa-walking"></i></span>
-                    <span class="entity-name">Patrol Route</span>
-                    <span class="entity-badge">PATH</span>
-                </div>
-            </div>
+            <div class="panel-body" id="tab-settings">
+                <div class="section-header">Map Properties</div>
+                <div class="field-row"><label>Name</label><input type="text" id="map-name" onchange="FPSEditor.markDirty()"></div>
+                <div class="field-row"><label>Author</label><input type="text" id="map-author" onchange="FPSEditor.markDirty()"></div>
+                
+                <div class="section-header">Atmosphere</div>
+                <div class="field-row"><label>Fog Color</label><input type="color" id="fog-color" onchange="FPSEditor.updateFog()"></div>
+                <div class="field-row"><label>Fog Near</label><input type="number" id="fog-near" onchange="FPSEditor.updateFog()"></div>
+                <div class="field-row"><label>Fog Far</label><input type="number" id="fog-far" onchange="FPSEditor.updateFog()"></div>
 
-            <div class="section-header" style="margin-top:8px">Pickups</div>
-            <div class="entity-list">
-                <div class="entity-item" data-entity="pickup-health" onclick="FPSEditor.selectEntity('pickup-health')">
-                    <span class="entity-icon"><i class="fas fa-heart"></i></span>
-                    <span class="entity-name">Health Pack</span>
-                </div>
-                <div class="entity-item" data-entity="pickup-ammo"   onclick="FPSEditor.selectEntity('pickup-ammo')">
-                    <span class="entity-icon"><i class="fas fa-box"></i></span>
-                    <span class="entity-name">Ammo Crate</span>
-                </div>
-                <div class="entity-item" data-entity="pickup-armor"  onclick="FPSEditor.selectEntity('pickup-armor')">
-                    <span class="entity-icon"><i class="fas fa-shield-alt"></i></span>
-                    <span class="entity-name">Armor Shard</span>
-                </div>
-                <div class="entity-item" data-entity="pickup-weapon" onclick="FPSEditor.selectEntity('pickup-weapon')">
-                    <span class="entity-icon"><i class="fas fa-gun"></i></span>
-                    <span class="entity-name">Weapon Spawn</span>
-                </div>
-            </div>
-
-            <div class="section-header" style="margin-top:8px">Props</div>
-            <div class="entity-list">
-                <div class="entity-item" data-entity="door"   onclick="FPSEditor.selectEntity('door')">
-                    <span class="entity-icon"><i class="fas fa-door-closed"></i></span>
-                    <span class="entity-name">Door</span>
-                </div>
-                <div class="entity-item" data-entity="switch" onclick="FPSEditor.selectEntity('switch')">
-                    <span class="entity-icon"><i class="fas fa-toggle-on"></i></span>
-                    <span class="entity-name">Switch</span>
-                </div>
-                <div class="entity-item" data-entity="level-exit" onclick="FPSEditor.selectEntity('level-exit')">
-                    <span class="entity-icon" style="color:#f39c12"><i class="fas fa-sign-out-alt"></i></span>
-                    <span class="entity-name">Level Exit</span>
-                </div>
-            </div>
-
-            <!-- EntitySpawner mounts entity instance list + property editor here -->
-            <div id="entity-spawner-mount"></div>
-        </div>
-
-        <!-- TRIGGERS PANEL -->
-        <div class="panel-body" id="tab-triggers">
-            <div class="section-header">Add Trigger</div>
-            <div class="trigger-list">
-                <div class="trigger-item" onclick="FPSEditor.addTrigger('onEnter')">
-                    <span class="trigger-icon"><i class="fas fa-sign-in-alt"></i></span>
-                    <span style="flex:1;font-size:.9rem">On Enter</span>
-                </div>
-                <div class="trigger-item" onclick="FPSEditor.addTrigger('onExit')">
-                    <span class="trigger-icon"><i class="fas fa-sign-out-alt"></i></span>
-                    <span style="flex:1;font-size:.9rem">On Exit</span>
-                </div>
-                <div class="trigger-item" onclick="FPSEditor.addTrigger('onStay')">
-                    <span class="trigger-icon"><i class="fas fa-pause"></i></span>
-                    <span style="flex:1;font-size:.9rem">On Stay</span>
-                </div>
-                <div class="trigger-item" onclick="FPSEditor.addTrigger('levelComplete')">
-                    <span class="trigger-icon" style="color:#f39c12"><i class="fas fa-flag-checkered"></i></span>
-                    <span style="flex:1;font-size:.9rem">Level Complete</span>
-                </div>
-                <div class="trigger-item" onclick="FPSEditor.addTrigger('cutscene')">
-                    <span class="trigger-icon"><i class="fas fa-film"></i></span>
-                    <span style="flex:1;font-size:.9rem">Cutscene Trigger</span>
-                </div>
-            </div>
-
-            <div class="section-header" style="margin-top:10px">In Map</div>
-            <!-- EntitySpawner mounts trigger instance list + property editor here -->
-            <div id="trigger-spawner-mount"></div>
-        </div>
-
-        <!-- SETTINGS PANEL -->
-        <div class="panel-body" id="tab-settings">
-            <div class="section-header">Map Info</div>
-            <div class="field-row"><label>Map Name</label><input type="text" id="map-name" value="untitled_map" onchange="FPSEditor.markDirty()"></div>
-            <div class="field-row"><label>Author</label>  <input type="text" id="map-author" value="" onchange="FPSEditor.markDirty()"></div>
-            <div class="field-row"><label>Project</label> <input type="text" id="map-project" value="" readonly style="opacity:.5"></div>
-
-            <div class="section-header" style="margin-top:10px">Atmosphere</div>
-            <div class="field-row"><label>Fog Color</label> <input type="color" id="fog-color" value="#1a1208" onchange="FPSEditor.updateFog()"></div>
-            <div class="field-row"><label>Fog Near</label>  <input type="number" id="fog-near" value="8"   min="0"  max="100" step="1"  onchange="FPSEditor.updateFog()"></div>
-            <div class="field-row"><label>Fog Far</label>   <input type="number" id="fog-far"  value="30"  min="1"  max="200" step="1"  onchange="FPSEditor.updateFog()"></div>
-
-            <div class="section-header" style="margin-top:10px">Actions</div>
-            <div class="setting-group">
-                <button class="action-btn primary" onclick="FPSEditor.saveMap()"><i class="fas fa-save"></i> Save Map</button>
-                <button class="action-btn"         onclick="FPSEditor.testPlay()"><i class="fas fa-play"></i> Test Play</button>
-                <button class="action-btn"         onclick="FPSEditor.buildNavmesh()"><i class="fas fa-route"></i> Build Navmesh</button>
-                <button class="action-btn"         onclick="FPSEditor.validateMap()"><i class="fas fa-check-circle"></i> Validate</button>
-                <button class="action-btn"         onclick="FPSEditor.exportMap()"><i class="fas fa-file-export"></i> Export</button>
-                <button class="action-btn danger"  onclick="FPSEditor.clearMap()"><i class="fas fa-trash"></i> Clear Map</button>
+                <button class="action-btn danger" onclick="FPSEditor.clearMap()" style="margin-top:20px;"><i class="fas fa-trash"></i> CLEAR MAP</button>
             </div>
         </div>
-    </div><!-- /sidebar-left -->
 
-    <!-- Dual Viewports -->
-    <div id="viewports">
-
-        <!-- 3D Perspective Viewport -->
-        <div id="viewport-3d">
-            <div class="viewport-label"><span>PERSPECTIVE</span> — orbit: RMB drag · pan: MMB · zoom: wheel · <span style="color:var(--accent2)">WASD / ↑↓←→</span>: fly · Q/E: up/down · <span style="color:var(--accent)">LMB: place block · RMB click: erase</span></div>
-            <canvas id="canvas-3d"></canvas>
-            <div id="overlay-3d">
-                <div id="cam-info"></div>
-                <div class="vp-corner-btn">
-                    <div class="vp-btn active" id="btn-shaded"    title="Shaded"    onclick="FPSEditor.setShading('shaded')"><i class="fas fa-circle"></i></div>
-                    <div class="vp-btn"        id="btn-wireframe" title="Wireframe" onclick="FPSEditor.setShading('wireframe')"><i class="fas fa-draw-polygon"></i></div>
-                    <div class="vp-btn"        id="btn-solid"     title="Solid"     onclick="FPSEditor.setShading('solid')"><i class="fas fa-square"></i></div>
-                    <div class="vp-btn"        id="btn-tileset"   title="Toggle Tileset Atlas" onclick="FPSEditor.setTilesetEnabled(!FPSEditor._tilesetEnabled)">🧱</div>
-                    <div class="vp-btn"        id="btn-toggle-2d" title="Toggle 2D Floor Plan" onclick="FPSEditor.toggle2d()">📐</div>
+        <!-- Center Panel -->
+        <div id="center-panel">
+            <div id="viewports">
+                <div id="viewport-3d">
+                    <div class="viewport-label"><span>PERSPECTIVE</span> — Orbit: RMB · Fly: WASD · Place: LMB</div>
+                    <canvas id="canvas-3d"></canvas>
+                    <div id="overlay-3d">
+                        <div id="cam-info"></div>
+                        <div class="vp-corner-btn">
+                            <div class="vp-btn active" id="btn-shaded" title="Shaded" onclick="FPSEditor.setShading('shaded')"><i class="fas fa-circle"></i></div>
+                            <div class="vp-btn" id="btn-wireframe" title="Wireframe" onclick="FPSEditor.setShading('wireframe')"><i class="fas fa-draw-polygon"></i></div>
+                            <div class="vp-btn" id="btn-tileset" title="Toggle Tiles" onclick="FPSEditor.setTilesetEnabled(!FPSEditor._tilesetEnabled)">🧱</div>
+                            <div class="vp-btn" id="btn-toggle-2d" title="Floor Plan" onclick="FPSEditor.toggle2d()">📐</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="viewport-2d">
+                    <div class="viewport-label"><span>FLOOR PLAN</span> — Pan: MMB · Draw: LMB</div>
+                    <canvas id="canvas-2d"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- 2D Floor Plan Viewport -->
-        <div id="viewport-2d">
-            <div class="viewport-label"><span>FLOOR PLAN</span> — draw: LMB · erase: RMB · pan: MMB · zoom: wheel</div>
-            <canvas id="canvas-2d"></canvas>
-            <div id="overlay-2d">
-                <div class="vp-2d-controls">
-                    <div class="vp-btn" title="Zoom In"  onclick="FPSEditor.zoom2d(1.2)"><i class="fas fa-search-plus"></i></div>
-                    <div class="vp-btn" title="Zoom Out" onclick="FPSEditor.zoom2d(0.8)"><i class="fas fa-search-minus"></i></div>
-                    <div class="vp-btn" title="Fit to view" onclick="FPSEditor.fitView2d()"><i class="fas fa-expand"></i></div>
+        <div class="resizer" id="resizer-right"></div>
+
+        <!-- Inspector (Right) -->
+        <div id="sidebar-right">
+            <div class="panel-header">PROPERTIES</div>
+            <div id="properties-panel" style="flex:1; overflow-y:auto; padding:12px;">
+                <div style="color:#666; font-size:1rem; text-align:center; margin-top:40px;">
+                    Select an entity or trigger to edit properties.
                 </div>
             </div>
-        </div>
-
-    </div><!-- /viewports -->
-
-    <!-- Right Sidebar (Properties) -->
-    <div id="sidebar-right">
-        <div id="right-header">Properties</div>
-        <div id="properties-panel" style="flex:1; overflow-y:auto; padding:12px;">
-            <div style="color:#666; font-size:0.8rem; text-align:center; margin-top:20px;">
-                Select an entity or trigger to edit properties.
+            
+            <div style="padding:10px; border-top:1px solid var(--border);">
+                <button class="action-btn primary" onclick="FPSEditor.saveMap()"><i class="fas fa-save"></i> SAVE MAP</button>
+                <button class="action-btn" onclick="FPSEditor.exportMap()"><i class="fas fa-file-export"></i> EXPORT</button>
             </div>
         </div>
     </div>
 
-</div><!-- /layout -->
+    <!-- Bottom Palette -->
+    <div class="resizer-h" id="resizer-bottom"></div>
+    <div id="bottom-palette">
+        <div class="palette-header">
+            <div class="palette-tabs">
+                <div class="palette-tab active" data-tab="blocks" onclick="FPSEditor.switchPalette('blocks')"><i class="fas fa-cube"></i> BLOCKS</div>
+                <div class="palette-tab" data-tab="entities" onclick="FPSEditor.switchPalette('entities')"><i class="fas fa-user-secret"></i> ENTITIES</div>
+                <div class="palette-tab" data-tab="triggers" onclick="FPSEditor.switchPalette('triggers')"><i class="fas fa-bolt"></i> TRIGGERS</div>
+                <div class="palette-tab" data-tab="textures" onclick="FPSEditor.switchPalette('textures')"><i class="fas fa-palette"></i> COLORS</div>
+                <div class="palette-tab" data-tab="lights"   onclick="FPSEditor.switchPalette('lights')"><i class="fas fa-lightbulb"></i> LIGHTS</div>
+            </div>
+        </div>
+        <div class="palette-content">
+            <!-- BLOCKS PANEL -->
+            <div class="palette-panel active" id="pal-blocks">
+                <div class="asset-grid">
+                    <div class="asset-card active" data-block="floor" onclick="FPSEditor.selectBlock('floor')"><div class="asset-thumb"><i class="fas fa-th"></i></div><div class="asset-info"><div class="asset-name">Floor</div></div></div>
+                    <div class="asset-card" data-block="wall" onclick="FPSEditor.selectBlock('wall')"><div class="asset-thumb"><i class="fas fa-border-all"></i></div><div class="asset-info"><div class="asset-name">Wall</div></div></div>
+                    <div class="asset-card" data-block="ceiling" onclick="FPSEditor.selectBlock('ceiling')"><div class="asset-thumb"><i class="fas fa-border-top-left"></i></div><div class="asset-info"><div class="asset-name">Ceiling</div></div></div>
+                    <div class="asset-card" data-block="slope-n" onclick="FPSEditor.selectBlock('slope-n')"><div class="asset-thumb"><i class="fas fa-angle-up"></i></div><div class="asset-info"><div class="asset-name">Slope N</div></div></div>
+                    <div class="asset-card" data-block="slope-s" onclick="FPSEditor.selectBlock('slope-s')"><div class="asset-thumb"><i class="fas fa-angle-down"></i></div><div class="asset-info"><div class="asset-name">Slope S</div></div></div>
+                    <div class="asset-card" data-block="pillar" onclick="FPSEditor.selectBlock('pillar')"><div class="asset-thumb"><i class="fas fa-grip-vertical"></i></div><div class="asset-info"><div class="asset-name">Pillar</div></div></div>
+                    <div class="asset-card" data-block="door-frame" onclick="FPSEditor.selectBlock('door-frame')"><div class="asset-thumb"><i class="fas fa-door-open"></i></div><div class="asset-info"><div class="asset-name">Door Frame</div></div></div>
+                    <div class="asset-card" data-block="window-open" onclick="FPSEditor.selectBlock('window-open')"><div class="asset-thumb"><i class="fas fa-border-none"></i></div><div class="asset-info"><div class="asset-name">Window</div></div></div>
+                </div>
+            </div>
 
-<!-- ══ STATUSBAR ════════──────────────────────────────────────────────── -->
+            <!-- ENTITIES PANEL -->
+            <div class="palette-panel" id="pal-entities">
+                <div class="asset-grid">
+                    <div class="asset-card active" data-entity="player-spawn" onclick="FPSEditor.selectEntity('player-spawn')"><div class="asset-thumb"><i class="fas fa-user"></i></div><div class="asset-info"><div class="asset-name">Player Spawn</div><div class="asset-meta">System</div></div></div>
+                    <div class="asset-card" data-entity="enemy-grunt" onclick="FPSEditor.selectEntity('enemy-grunt')"><div class="asset-thumb"><i class="fas fa-skull"></i></div><div class="asset-info"><div class="asset-name">Grunt</div><div class="asset-meta">Enemy</div></div></div>
+                    <div class="asset-card" data-entity="enemy-shooter" onclick="FPSEditor.selectEntity('enemy-shooter')"><div class="asset-thumb"><i class="fas fa-skull-crossbones"></i></div><div class="asset-info"><div class="asset-name">Shooter</div><div class="asset-meta">Enemy</div></div></div>
+                    <div class="asset-card" data-entity="pickup-health" onclick="FPSEditor.selectEntity('pickup-health')"><div class="asset-thumb"><i class="fas fa-heart"></i></div><div class="asset-info"><div class="asset-name">Health Pack</div><div class="asset-meta">Pickup</div></div></div>
+                    <div class="asset-card" data-entity="pickup-ammo" onclick="FPSEditor.selectEntity('pickup-ammo')"><div class="asset-thumb"><i class="fas fa-box"></i></div><div class="asset-info"><div class="asset-name">Ammo Crate</div><div class="asset-meta">Pickup</div></div></div>
+                    <div class="asset-card" data-entity="level-exit" onclick="FPSEditor.selectEntity('level-exit')"><div class="asset-thumb" style="color:#f1c40f"><i class="fas fa-sign-out-alt"></i></div><div class="asset-info"><div class="asset-name">Level Exit</div><div class="asset-meta">Prop</div></div></div>
+                </div>
+                <div id="entity-spawner-mount"></div>
+            </div>
+
+            <!-- TRIGGERS PANEL -->
+            <div class="palette-panel" id="pal-triggers">
+                <div style="display:flex; gap:20px;">
+                    <div class="trigger-list" style="width:200px;">
+                        <div class="trigger-item" onclick="FPSEditor.addTrigger('onEnter')"><span class="trigger-icon"><i class="fas fa-sign-in-alt"></i></span><span>On Enter</span></div>
+                        <div class="trigger-item" onclick="FPSEditor.addTrigger('onExit')"><span class="trigger-icon"><i class="fas fa-sign-out-alt"></i></span><span>On Exit</span></div>
+                        <div class="trigger-item" onclick="FPSEditor.addTrigger('levelComplete')"><span class="trigger-icon" style="color:#f1c40f"><i class="fas fa-flag-checkered"></i></span><span>Level Complete</span></div>
+                    </div>
+                    <div id="trigger-spawner-mount" style="flex:1"></div>
+                </div>
+            </div>
+
+            <!-- COLORS PANEL -->
+            <div class="palette-panel" id="pal-textures">
+                <div id="tab-textures"></div>
+            </div>
+
+            <!-- LIGHTS PANEL -->
+            <div class="palette-panel" id="pal-lights">
+                <div id="tab-lights"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ STATUSBAR ═════════════════════════════════════════════════════════ -->
 <div id="statusbar">
     <div class="status-item" id="status-project">Project: None</div>
     <div class="status-item" id="status-tool">Tool: DRAW ROOM</div>
     <div class="status-item" id="status-layer">Layer: 0</div>
-    <div class="status-item" id="status-grid">Grid: 1.0m</div>
-    <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+    <div style="margin-left:auto; display:flex; align-items:center; gap:20px;">
         <span id="status-voxels">Voxels: 0</span>
         <span id="status-entities">Entities: 0</span>
-        <span id="status-fps" style="color:var(--accent2)">60 FPS</span>
+        <span id="status-fps" style="color:var(--accent)">60 FPS</span>
     </div>
 </div>
 
 <!-- ══ MODALS ═══════════════════════════════════════════════════════════ -->
-<div id="modal-overlay" onclick="FPSEditor.closeBrowse()">
-  <div id="browse-modal" onclick="event.stopPropagation()">
-    <div style="padding:15px; background:var(--header-bg); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-      <span style="font-weight:bold; font-size:0.9rem;">SELECT PROJECTS</span>
+<div id="modal-browse" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:5000; display:none; align-items:center; justify-content:center;" onclick="FPSEditor.closeBrowse()">
+  <div id="browse-modal-content" style="background:var(--bg-panel); width:600px; max-height:80%; border:2px solid var(--accent); box-shadow:20px 20px 0 rgba(0,0,0,0.5); display:flex; flex-direction:column;" onclick="event.stopPropagation()">
+    <div style="padding:15px; background:#000; border-bottom:2px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-weight:bold; font-size:1.2rem; color:var(--accent);">SELECT PROJECTS</span>
       <span style="cursor:pointer; color:#666;" onclick="FPSEditor.closeBrowse()">✕</span>
     </div>
     <div id="browse-list" style="flex:1; overflow-y:auto; padding:12px;"></div>
@@ -711,18 +561,15 @@
 </div>
 
 <!-- ── SCRIPTS ────────────────────────────────────────────────────────── -->
-<!-- Three.js (using module version to avoid SyntaxError) -->
 <script type="module">
     import * as THREE from '/lib/three/three.module.js';
     window.THREE = THREE;
 </script>
-<!-- Editor modules (standard IIFEs) -->
 <script src="fps_editor/BrushTools.js"></script>
 <script src="fps_editor/ColorPalette.js"></script>
 <script src="fps_editor/LightEditor.js"></script>
 <script src="fps_editor/EntitySpawner.js"></script>
 <script src="fps_editor/MapExporter.js"></script>
-<!-- Main editor logic -->
 <script src="fps_editor.js"></script>
 
 <script>
@@ -730,8 +577,40 @@
     window.addEventListener('load', () => {
         if (typeof FPSEditor !== 'undefined') {
             FPSEditor.init();
+            
+            // Override switchPalette for bottom tabs
+            FPSEditor.switchPalette = (id) => {
+                document.querySelectorAll('#bottom-palette .palette-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+                document.querySelectorAll('#bottom-palette .palette-panel').forEach(p => p.classList.toggle('active', p.id === `pal-${id}`));
+            };
         }
     });
+
+    // Simple resizer logic
+    const makeResizable = (resizerId, targetId, direction) => {
+        const resizer = document.getElementById(resizerId);
+        const target = document.getElementById(targetId);
+        if(!resizer || !target) return;
+        resizer.addEventListener('mousedown', (e) => {
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startWidth = target.clientWidth;
+            const startHeight = target.clientHeight;
+            const onMove = (me) => {
+                if(direction === 'H') target.style.height = (startHeight - (me.clientY - startY)) + 'px';
+                if(direction === 'W') target.style.width = (startWidth - (me.clientX - startX)) + 'px';
+                window.dispatchEvent(new Event('resize'));
+            };
+            const onUp = () => {
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onUp);
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+        });
+    };
+    makeResizable('resizer-right', 'sidebar-right', 'W');
+    makeResizable('resizer-bottom', 'bottom-palette', 'H');
 </script>
 
 </body>

@@ -1433,6 +1433,7 @@ const FPSEditor = (() => {
             fog:            _state.fog,
             ambient:        _state.ambient,
             sun:            _state.sun,
+            skybox:         _state.skybox,
             lights:         lightsData.lights,
             emissiveBlocks: lightsData.emissiveBlocks,
             voxelGrid:      _state.voxelGrid,

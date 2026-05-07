@@ -141,7 +141,7 @@ export default class WorldGeometry {
             await this._loadEditorGeometry(levelData.geometry);
         } else if (levelData.voxelGrid && Object.keys(levelData.voxelGrid).length > 0) {
             // Voxel Editor data (Phase 41)
-            await this._loadVoxelGrid(levelData.voxelGrid, levelData.cellSize || 1.0);
+            await this._loadVoxelGrid(levelData.voxelGrid, levelData.cellSize || 1.0, levelData.palette || []);
         } else if (gltfUrl) {
             await this._loadGLTF(gltfUrl, levelData);
         } else {
@@ -189,34 +189,33 @@ export default class WorldGeometry {
 
     // ── GLTF loading ──────────────────────────────────────────────────────────
 
-    async _loadVoxelGrid(voxelGrid, cellSize) {
+    async _loadVoxelGrid(voxelGrid, cellSize, palette = []) {
         console.log(`[WorldGeometry] building voxel mesh (size=${cellSize})...`);
-        const gen = new VoxelMeshGen(voxelGrid, cellSize);
+        const gen = new VoxelMeshGen(voxelGrid, cellSize, palette);
         const meshes = await gen.buildMeshes(this._atlas);
+
+        const group = new THREE.Group();
+        group.name = 'voxel_root';
 
         for (const mesh of meshes) {
             mesh.name = 'voxel_mesh';
-            this._scene.add(mesh);
+            group.add(mesh);
             this._colMeshes.push(mesh);
         }
+        this._scene.add(group);
+        this._levelRoot = group;
 
-        // Voxel collision: standard approach is to create a collider per block,
-        // or a compound body. For simplicity and performance, we'll use a
-        // simplified box collider for every voxel.
-        this._addVoxelColliders(voxelGrid, cellSize);
+        // Voxel collision: using a single trimesh for the entire voxel grid
+        // is much faster than hundreds of individual box colliders.
+        this._addVoxelTrimeshCollider(meshes);
     }
 
-    _addVoxelColliders(voxelGrid, cellSize) {
-        const keys = Object.keys(voxelGrid);
-        console.log(`[WorldGeometry] adding ${keys.length} voxel colliders...`);
+    _addVoxelTrimeshCollider(meshes) {
+        if (!meshes.length) return;
+        console.log(`[WorldGeometry] adding voxel trimesh collider...`);
         
-        for (const key of keys) {
-            const [gx, gy, gz] = key.split(',').map(Number);
-            const cx = (gx + 0.5) * cellSize;
-            const cy = (gy + 0.5) * cellSize;
-            const cz = (gz + 0.5) * cellSize;
-
-            this._addBoxCollider(cx, cy, cz, cellSize, cellSize, cellSize, 'concrete');
+        for (const mesh of meshes) {
+            this._addTrimeshBody(mesh);
         }
     }
 

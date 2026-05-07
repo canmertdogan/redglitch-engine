@@ -167,7 +167,7 @@ export default class FPSController {
      * Call once after Physics3DWorld.init() (inside FPSGame.init or onLevelLoaded).
      * @param {{ x:number, y:number, z:number }} [spawnPos]
      */
-    async init(spawnPos = { x: 0, y: EYE_HEIGHT_STAND, z: 0 }) {
+    async init(spawnPos = { x: 0, y: 0, z: 0 }) {
         this._spawnPos.set(spawnPos.x, spawnPos.y, spawnPos.z);
 
         // Remove old body if it exists
@@ -176,12 +176,13 @@ export default class FPSController {
         }
 
         // Create a dynamic sphere body (fixedRotation prevents tipping)
+        // position.y is now feet-level + radius
         this._body = this._physics.createBody({
             type:           BodyType.DYNAMIC,
             shape:          ShapeType.SPHERE,
             radius:         CAPSULE_RADIUS,
             mass:           80,
-            position:       new THREE.Vector3(spawnPos.x, spawnPos.y - EYE_HEIGHT_STAND + CAPSULE_RADIUS, spawnPos.z),
+            position:       new THREE.Vector3(spawnPos.x, spawnPos.y + CAPSULE_RADIUS, spawnPos.z),
             fixedRotation:  true,
             linearDamping:  0,
             angularDamping: 1,
@@ -190,19 +191,19 @@ export default class FPSController {
         // Tag body for raycaster layer detection
         this._body.body.userData = { type: 'player' };
 
-        // Sync eye position to spawn
+        // Sync eye position to spawn (feet + eyeHeight)
         this._eyeHeightCurrent = EYE_HEIGHT_STAND;
         this._eyeHeightTarget  = EYE_HEIGHT_STAND;
         this._lastStepPos.copy(this._spawnPos);
 
-        console.log('[FPSController] init() — spawn:', spawnPos);
+        console.log('[FPSController] init() — spawn (feet):', spawnPos);
     }
 
-    /** Move player to a position (e.g. checkpoint / load). */
+    /** Move player to a position (e.g. checkpoint / load). Y = feet position. */
     setPosition(x, y, z) {
         if (!this._body) return;
-        const bodyY = y - this._eyeHeightCurrent + CAPSULE_RADIUS;
-        this._body.teleport(new THREE.Vector3(x, bodyY, z));
+        const bodyY = y + CAPSULE_RADIUS;
+        this._body.setPosition(new THREE.Vector3(x, bodyY, z));
         this._velX = 0; this._velY = 0; this._velZ = 0;
         this._lastStepPos.set(x, y, z);
     }

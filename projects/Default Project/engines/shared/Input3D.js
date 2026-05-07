@@ -56,7 +56,10 @@ export const DEFAULT_ACTION_MAP = {
     sprint:       ['ShiftLeft',   'ShiftRight',   'GP_LB'],
     interact:     ['KeyE', 'GP_X'],
     fire:         ['Mouse0', 'GP_RT'],
+    attack:       ['Mouse0', 'GP_RT'],
     aimZoom:      ['Mouse1', 'GP_LT'],
+    aim:          ['Mouse1', 'GP_LT'],
+    zoom:         ['Mouse1', 'GP_LT'],
     pause:        ['Escape', 'GP_START'],
     inventory:    ['KeyI', 'Tab'],
 };
@@ -214,12 +217,13 @@ class Input3D {
 
     // ── Query API ─────────────────────────────────────────────────────────────
 
-    /**
-     * Is the named action currently active (key held, button held, or touch active)?
-     * @param {string} action
-     * @returns {boolean}
-     */
+    /** Is the named action currently active (key held, button held, or touch active)? */
     isAction(action) {
+        return this.isActionHeld(action);
+    }
+
+    /** Alias for isAction to match some engine patterns */
+    isActionHeld(action) {
         const codes = this._actionMap[action];
         if (!codes) return false;
 
@@ -240,11 +244,12 @@ class Input3D {
         return false;
     }
 
-    /**
-     * WASD / left-stick normalised movement axis.
-     * @returns {{ x: number, y: number }}  values in [-1, 1]
-     */
-    getAxis() {
+    /** Is a raw keyboard code currently held? */
+    isKeyHeld(code) {
+        return this._keys.has(code);
+    }
+
+    /** WASD / left-stick normalised movement axis. */
         // Gamepad left stick takes priority if active
         const gx = this._dead(this._gamepadAxes[GP_AXIS.MOVE_X]);
         const gy = this._dead(this._gamepadAxes[GP_AXIS.MOVE_Y]);

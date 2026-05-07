@@ -957,16 +957,35 @@ const FPSEditor = (() => {
     // ── public API ───────────────────────────────────────────────────────────
 
     function switchTab(tab) {
-        document.querySelectorAll('.panel-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-        document.querySelectorAll('.panel-body').forEach(b => b.classList.toggle('active', b.id === `tab-${tab}`));
+        document.querySelectorAll('#sidebar-left .panel-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        document.querySelectorAll('#sidebar-left .panel-body').forEach(b => b.classList.toggle('active', b.id === `tab-${tab}`));
+    }
+
+    function switchPalette(tab) {
+        document.querySelectorAll('#bottom-palette .palette-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        document.querySelectorAll('#bottom-palette .palette-panel').forEach(p => p.classList.toggle('active', p.id === `pal-${tab}`));
     }
 
     function setTool(tool) {
         _activeTool = tool;
+        // Update tool rail
+        document.querySelectorAll('.rail-btn').forEach(b => {
+            b.classList.toggle('active', b.id === `tool-${tool}`);
+        });
+        // Update toolbar buttons if they use tool-btn class
         document.querySelectorAll('.tool-btn[id^=tool-]').forEach(b => {
             b.classList.toggle('active', b.id === `tool-${tool}`);
         });
-        document.getElementById('status-tool').textContent = `Tool: ${tool.toUpperCase()}`;
+        
+        const statusEl = document.getElementById('status-tool');
+        if (statusEl) statusEl.textContent = `Tool: ${tool.toUpperCase()}`;
+        
+        // Auto-switch palette tab for certain tools
+        if (tool === 'entity') switchPalette('entities');
+        if (tool === 'light')  switchPalette('lights');
+        if (tool === 'trigger') switchPalette('triggers');
+        if (tool === 'paint')  switchPalette('textures');
+        if (tool === 'draw-room' || tool === 'corridor') switchPalette('blocks');
     }
 
     function setSnap(val) {
@@ -975,7 +994,9 @@ const FPSEditor = (() => {
 
     function selectBlock(type) {
         _activeBlock = type;
-        document.querySelectorAll('.block-cell').forEach(c => c.classList.toggle('active', c.dataset.block === type));
+        document.querySelectorAll('.asset-card[data-block]').forEach(c => c.classList.toggle('active', c.dataset.block === type));
+        document.querySelectorAll('.block-cell[data-block]').forEach(c => c.classList.toggle('active', c.dataset.block === type));
+        if (_activeTool !== 'corridor') setTool('draw-room');
     }
 
     function setDrawMode(mode) {
@@ -983,6 +1004,9 @@ const FPSEditor = (() => {
         ['pencil','rect','fill'].forEach(m => {
             const el = document.getElementById(`draw-${m}`);
             if (el) el.classList.toggle('active', m === mode);
+        });
+        document.querySelectorAll('.block-cell[id^=draw-]').forEach(c => {
+            c.classList.toggle('active', c.id === `draw-${mode}`);
         });
     }
 
@@ -1004,6 +1028,7 @@ const FPSEditor = (() => {
 
     function selectEntity(type) {
         _activeEntity = type;
+        document.querySelectorAll('.asset-card[data-entity]').forEach(e => e.classList.toggle('active', e.dataset.entity === type));
         document.querySelectorAll('.entity-item').forEach(e => e.classList.toggle('active', e.dataset.entity === type));
         setTool('entity');
     }
@@ -1029,6 +1054,8 @@ const FPSEditor = (() => {
             const el = document.getElementById(`btn-${m}`);
             if (el) el.classList.toggle('active', m === mode);
         });
+        const statusEl = document.getElementById('status-shading');
+        if (statusEl) statusEl.textContent = mode.toUpperCase();
         _rebuild3d();
     }
 
@@ -1433,6 +1460,7 @@ const FPSEditor = (() => {
             fog:            _state.fog,
             ambient:        _state.ambient,
             sun:            _state.sun,
+            skybox:         _state.skybox,
             lights:         lightsData.lights,
             emissiveBlocks: lightsData.emissiveBlocks,
             voxelGrid:      _state.voxelGrid,
@@ -1874,7 +1902,8 @@ const FPSEditor = (() => {
         if (typeof EntitySpawner !== 'undefined') {
             EntitySpawner.init(
                 document.getElementById('entity-spawner-mount'),
-                document.getElementById('trigger-spawner-mount')
+                document.getElementById('trigger-spawner-mount'),
+                document.getElementById('properties-panel')
             );
             EntitySpawner.onEntityChanged((type, id, data) => {
                 if (type === 'remove') {

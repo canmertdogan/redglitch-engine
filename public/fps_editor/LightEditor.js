@@ -56,7 +56,7 @@ const LightEditor = (() => {
     }
 
     function _typeIcon(type) {
-        return { point: '●', torch: '🔥', lamp: '💡', portal: '◈' }[type] || '●';
+        return { point: 'fas fa-lightbulb', torch: 'fas fa-fire', lamp: 'fas fa-lightbulb', portal: 'fas fa-portal-exit' }[type] || 'fas fa-lightbulb';
     }
 
     function _fire() {
@@ -69,79 +69,79 @@ const LightEditor = (() => {
         _container = container;
         container.innerHTML = '';
         container.insertAdjacentHTML('beforeend', `
-<div class="section-header">POINT LIGHTS
-    <button class="action-btn" style="float:right;padding:1px 7px;font-size:.75rem"
-        onclick="LightEditor.addLight(0,1.5,0,'${DEFAULT_COLOR}',${DEFAULT_INTENSITY},${DEFAULT_RADIUS},'New Light')">+</button>
+<div style="display:flex; gap:20px;">
+    <div style="width:250px; display:flex; flex-direction:column;">
+        <div class="section-header">POINT LIGHTS
+            <button class="tool-btn" style="float:right;width:24px;height:24px;"
+                onclick="LightEditor.addLight(0,1.5,0,'${DEFAULT_COLOR}',${DEFAULT_INTENSITY},${DEFAULT_RADIUS},'New Light')">+</button>
+        </div>
+        <div id="le-list" class="entity-list" style="min-height:32px;margin-bottom:6px"></div>
+    </div>
+
+    <div id="le-props" style="display:none; flex:1; border-left:1px solid var(--border); padding-left:20px;">
+        <div class="section-header">LIGHT PROPERTIES</div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div>
+                <div class="field-row">
+                    <label>Label</label>
+                    <input id="le-label" type="text" value="">
+                </div>
+
+                <div class="field-row">
+                    <label>Type</label>
+                    <select id="le-type">
+                        ${LIGHT_TYPES.map(t => `<option value="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="field-row">
+                    <label>Color</label>
+                    <input id="le-color" type="color" value="${DEFAULT_COLOR}">
+                    <span id="le-color-hex" style="color:var(--accent);font-size:.9rem;margin-left:4px">${DEFAULT_COLOR}</span>
+                </div>
+            </div>
+
+            <div>
+                <div class="field-row">
+                    <label>Intensity</label>
+                    <input id="le-intensity" type="range" min="0.1" max="5" step="0.1" value="${DEFAULT_INTENSITY}">
+                    <span id="le-intensity-val" style="color:var(--accent);font-size:.9rem;min-width:28px;text-align:right">1.0</span>
+                </div>
+
+                <div class="field-row">
+                    <label>Radius</label>
+                    <input id="le-radius" type="range" min="1" max="50" step="1" value="${DEFAULT_RADIUS}">
+                    <span id="le-radius-val" style="color:var(--accent);font-size:.9rem;min-width:28px;text-align:right">${DEFAULT_RADIUS}</span>
+                </div>
+
+                <div class="field-row">
+                    <label>Position</label>
+                    <div style="display:flex; gap:4px; flex:1;">
+                        <input id="le-px" type="number" step="0.5" placeholder="X">
+                        <input id="le-py" type="number" step="0.5" placeholder="Y">
+                        <input id="le-pz" type="number" step="0.5" placeholder="Z">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:4px;margin-top:10px">
+            <button class="action-btn primary" style="flex:1" onclick="LightEditor._applyProps()"><i class="fas fa-check"></i> Apply</button>
+            <button class="action-btn danger" style="flex:1" onclick="LightEditor._deleteSelected()"><i class="fas fa-trash"></i> Delete</button>
+        </div>
+    </div>
+
+    <div style="width:200px; border-left:1px solid var(--border); padding-left:20px;">
+        <div class="section-header">EMISSIVE BLOCKS</div>
+        <div style="font-size:.85rem;color:#666;line-height:1.4;margin-bottom:10px">
+            Select a block in 2D view, then toggle emissive.
+        </div>
+        <button class="action-btn" onclick="LightEditor.toggleSelectedEmissive()">Toggle Selected</button>
+        <button class="action-btn" onclick="LightEditor.clearEmissive()">Clear All</button>
+        <div id="le-emissive-count" style="font-size:.8rem;color:var(--accent);margin-top:8px">0 emissive blocks</div>
+    </div>
 </div>
-<div id="le-list" style="min-height:32px;margin-bottom:6px"></div>
-
-<div id="le-props" style="display:none">
-    <div class="section-header">PROPERTIES</div>
-
-    <div class="field-row">
-        <label style="min-width:64px;color:#666;font-size:.8rem">Label</label>
-        <input id="le-label" type="text" value="" style="
-            flex:1;background:#000;border:1px solid #333;color:#ccc;
-            font-family:inherit;font-size:.85rem;padding:2px 5px;outline:none">
-    </div>
-
-    <div class="field-row">
-        <label style="min-width:64px;color:#666;font-size:.8rem">Type</label>
-        <select id="le-type" style="
-            flex:1;background:#000;border:1px solid #333;color:#ccc;
-            font-family:inherit;font-size:.85rem;padding:2px">
-            ${LIGHT_TYPES.map(t => `<option value="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('')}
-        </select>
-    </div>
-
-    <div class="field-row">
-        <label style="min-width:64px;color:#666;font-size:.8rem">Color</label>
-        <input id="le-color" type="color" value="${DEFAULT_COLOR}" style="width:40px;height:24px;border:none;background:none;cursor:pointer">
-        <span id="le-color-hex" style="color:#666;font-size:.8rem;margin-left:4px">${DEFAULT_COLOR}</span>
-    </div>
-
-    <div class="field-row">
-        <label style="min-width:64px;color:#666;font-size:.8rem">Intensity</label>
-        <input id="le-intensity" type="range" min="0.1" max="5" step="0.1" value="${DEFAULT_INTENSITY}"
-            style="flex:1;accent-color:#ff6b35">
-        <span id="le-intensity-val" style="color:#888;font-size:.8rem;min-width:28px;text-align:right">1.0</span>
-    </div>
-
-    <div class="field-row">
-        <label style="min-width:64px;color:#666;font-size:.8rem">Radius</label>
-        <input id="le-radius" type="range" min="1" max="50" step="1" value="${DEFAULT_RADIUS}"
-            style="flex:1;accent-color:#ff6b35">
-        <span id="le-radius-val" style="color:#888;font-size:.8rem;min-width:28px;text-align:right">${DEFAULT_RADIUS}</span>
-    </div>
-
-    <div class="field-row" style="margin-top:4px">
-        <label style="min-width:64px;color:#666;font-size:.8rem">Position</label>
-        <input id="le-px" type="number" step="0.5" placeholder="X" style="
-            width:40px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 4px;outline:none">
-        <input id="le-py" type="number" step="0.5" placeholder="Y" style="
-            width:40px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 4px;outline:none;margin:0 2px">
-        <input id="le-pz" type="number" step="0.5" placeholder="Z" style="
-            width:40px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 4px;outline:none">
-    </div>
-
-    <div style="display:flex;gap:4px;margin-top:6px">
-        <button class="action-btn" style="flex:1" onclick="LightEditor._applyProps()">Apply</button>
-        <button class="action-btn" style="flex:1;color:#e74c3c" onclick="LightEditor._deleteSelected()">Delete</button>
-    </div>
-</div>
-
-<div class="section-header" style="margin-top:10px">EMISSIVE BLOCKS</div>
-<div style="font-size:.78rem;color:#555;line-height:1.5;margin-bottom:6px">
-    Select a block in the 2D view, then toggle emissive. Emissive blocks glow in 3D.
-</div>
-<div style="display:flex;gap:4px">
-    <button class="action-btn" style="flex:1" onclick="LightEditor.toggleSelectedEmissive()">Toggle Selected</button>
-    <button class="action-btn" style="flex:1" onclick="LightEditor.clearEmissive()">Clear All</button>
-</div>
-<div id="le-emissive-count" style="font-size:.75rem;color:#555;margin-top:4px">0 emissive blocks</div>
 `);
 
         _elList  = container.querySelector('#le-list');
@@ -160,15 +160,12 @@ const LightEditor = (() => {
         _elList.innerHTML = '';
         for (const lt of _lights) {
             const row = document.createElement('div');
-            row.style.cssText = `
-                display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;
-                border-left:3px solid ${lt.id === _selectedId ? '#ff6b35' : 'transparent'};
-                background:${lt.id === _selectedId ? '#180e06' : 'transparent'};
-            `;
+            row.className = `entity-item ${lt.id === _selectedId ? 'active' : ''}`;
+            
             row.innerHTML = `
-                <span style="color:${lt.color};font-size:1rem">${_typeIcon(lt.type)}</span>
-                <span style="flex:1;font-size:.82rem;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lt.label || lt.type}</span>
-                <span style="font-size:.72rem;color:#555">${lt.x.toFixed(1)},${lt.y.toFixed(1)},${lt.z.toFixed(1)}</span>
+                <span class="entity-icon" style="color:${lt.color}"><i class="${_typeIcon(lt.type)}"></i></span>
+                <span class="entity-name">${lt.label || lt.type}</span>
+                <span class="entity-badge">${lt.x.toFixed(1)},${lt.z.toFixed(1)}</span>
             `;
             row.addEventListener('click', () => selectLight(lt.id));
             _elList.appendChild(row);

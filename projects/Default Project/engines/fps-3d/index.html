@@ -458,10 +458,13 @@
         });
 
         // ── Pointer lock — click on game to capture mouse ─────────────────
-        gameContainer.addEventListener('click', () => {
+        const requestLock = () => {
             if (game.isPaused) return;
             game.requestPointerLock();
-        });
+        };
+
+        gameContainer.addEventListener('click', requestLock);
+        pointerLockOverlay.addEventListener('click', requestLock);
 
         document.addEventListener('pointerlockchange', () => {
             const locked = document.pointerLockElement === document.body

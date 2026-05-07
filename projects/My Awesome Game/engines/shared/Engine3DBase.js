@@ -141,9 +141,13 @@ class Engine3DBase extends EngineAdapter {
         console.log(`[Engine3DBase:${this.engineType3D}] initialize()`);
 
         // Create Three.js core objects shared by all 3D engines
-        this.scene    = new THREE.Scene();
-        this.clock    = new THREE.Clock(false);
-        this.renderer = _buildRenderer(this.container);
+        if (!this.scene) this.scene = new THREE.Scene();
+        this.clock = new THREE.Clock(false);
+        
+        // Skip default renderer if subclass already provided one (e.g. Renderer3D)
+        if (!this.renderer) {
+            this.renderer = _buildRenderer(this.container);
+        }
 
         // Let subclass finish scene setup
         await this.init3D();
@@ -241,7 +245,7 @@ function _buildRenderer(container) {
     // Flat/low-poly style: no tone mapping, no HDR
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type    = THREE.PCFShadowMap;
 
     container.appendChild(renderer.domElement);
     return renderer;

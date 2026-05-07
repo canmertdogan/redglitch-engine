@@ -1,7 +1,7 @@
 /**
  * VoxelMeshGen.js — Shared greedy meshing utility for voxel-based 3D engines.
  * 
- * Optimized to convert a voxel grid { "x,y,z": { type, color, textureId } }
+ * Optimized to convert a voxel grid { "x,y,z": { type, color, textureId } | number }
  * into an efficient set of BufferGeometries with minimal face count.
  */
 
@@ -9,12 +9,14 @@ import * as THREE from '/lib/three/three.module.js';
 
 export default class VoxelMeshGen {
     /**
-     * @param {object} voxelGrid  { "gx,gy,gz": { type, color, textureId } }
+     * @param {object} voxelGrid  { "gx,gy,gz": { type, color, textureId } | number }
      * @param {number} cellSize   World size per voxel unit
+     * @param {string[]} [palette] Optional hex color array for numeric voxels
      */
-    constructor(voxelGrid, cellSize = 1.0) {
-        this.grid = voxelGrid || {};
-        this.cs   = cellSize;
+    constructor(voxelGrid, cellSize = 1.0, palette = []) {
+        this.grid    = voxelGrid || {};
+        this.cs      = cellSize;
+        this.palette = palette || [];
     }
 
     /**
@@ -44,8 +46,18 @@ export default class VoxelMeshGen {
             return groups[key];
         };
 
-        const emitQuad = (cell, nx, ny, nz, v0, v1, v2, v3) => {
-            const g  = getGroup(cell.color || '#888888', cell.textureId);
+        const emitQuad = (voxel, nx, ny, nz, v0, v1, v2, v3) => {
+            let color = '#888888';
+            let textureId = null;
+
+            if (typeof voxel === 'number') {
+                color = this.palette[voxel] || color;
+            } else if (voxel && typeof voxel === 'object') {
+                color = voxel.color || color;
+                textureId = voxel.textureId || null;
+            }
+
+            const g  = getGroup(color, textureId);
             const bi = g.positions.length / 3;
             
             for (const v of [v0, v1, v2, v3]) {
@@ -68,11 +80,10 @@ export default class VoxelMeshGen {
         ];
 
         for (const axis of AXES) {
-            const { d, b, c, n, inv } = axis;
-            const dimD = [b.x0, b.x1, b.y0, b.y1, b.z0, b.z1];
+            const { d, b: bIdx, c: cIdx, n, inv } = axis;
             const startD = b[`${['x','y','z'][d]}0`], endD = b[`${['x','y','z'][d]}1`];
-            const startB = b[`${['x','y','z'][b]}0`], endB = b[`${['x','y','z'][b]}1`];
-            const startC = b[`${['x','y','z'][c]}0`], endC = b[`${['x','y','z'][c]}1`];
+            const startB = b[`${['x','y','z'][bIdx]}0`], endB = b[`${['x','y','z'][bIdx]}1`];
+            const startC = b[`${['x','y','z'][cIdx]}0`], endC = b[`${['x','y','z'][cIdx]}1`];
 
             for (let i = startD; i <= endD; i++) {
                 const bSz = endB - startB + 1, cSz = endC - startC + 1;
@@ -80,7 +91,7 @@ export default class VoxelMeshGen {
                 
                 for (let j = startB; j <= endB; j++) {
                     for (let k = startC; k <= endC; k++) {
-                        const coords = [0,0,0]; coords[d]=i; coords[b]=j; coords[c]=k;
+                        const coords = [0,0,0]; coords[d]=i; coords[bIdx]=j; coords[cIdx]=k;
                         const nextC  = [...coords]; nextC[d] += (inv ? -1 : 1);
                         
                         if (this._hasVoxel(...coords) && !this._hasVoxel(...nextC)) {
@@ -94,13 +105,13 @@ export default class VoxelMeshGen {
                     const wb = startB + bi, wc = startC + ci;
                     const v0=[0,0,0], v1=[0,0,0], v2=[0,0,0], v3=[0,0,0];
                     
-                    v0[d]=i+(inv?0:1); v0[b]=wb;    v0[c]=wc;
-                    v1[d]=i+(inv?0:1); v1[b]=wb+bh; v1[c]=wc;
-                    v2[d]=i+(inv?0:1); v2[b]=wb+bh; v2[c]=wc+cw;
-                    v3[d]=i+(inv?0:1); v3[b]=wb;    v3[c]=wc+cw;
+                    v0[d]=i+(inv?0:1); v0[bIdx]=wb;    v0[cIdx]=wc;
+                    v1[d]=i+(inv?0:1); v1[bIdx]=wb+bh; v1[cIdx]=wc;
+                    v2[d]=i+(inv?0:1); v2[bIdx]=wb+bh; v2[cIdx]=wc+cw;
+                    v3[d]=i+(inv?0:1); v3[bIdx]=wb;    v3[cIdx]=wc+cw;
                     
-                    if (inv) emitQuad(cell, n[0], n[1], n[2], v3, v2, v1, v0);
-                    else     emitQuad(cell, n[0], n[1], n[2], v0, v1, v2, v3);
+                    if (inv) emitQuad(cell, n[0], n[1], n[2], v0, v1, v2, v3);
+                    else     emitQuad(cell, n[0], n[1], n[2], v3, v2, v1, v0);
                 });
             }
         }
@@ -144,7 +155,7 @@ export default class VoxelMeshGen {
     // ── Internal ─────────────────────────────────────────────────────────────
 
     _getVoxel(x, y, z) { return this.grid[`${x},${y},${z}`]; }
-    _hasVoxel(x, y, z) { return !!this.grid[`${x},${y},${z}`]; }
+    _hasVoxel(x, y, z) { return this.grid[`${x},${y},${z}`] !== undefined; }
 
     _getBounds() {
         let x0 = Infinity, x1 = -Infinity;
@@ -164,22 +175,22 @@ export default class VoxelMeshGen {
         for (let bi = 0; bi < bSz; bi++) {
             for (let ci = 0; ci < cSz; ci++) {
                 const mi = bi * cSz + ci;
-                if (!mask[mi] || merged[mi]) continue;
+                if (mask[mi] === null || merged[mi]) continue;
                 const cell = mask[mi];
 
                 let cw = 1;
                 while (ci + cw < cSz) {
                     const next = mask[bi * cSz + (ci + cw)];
-                    if (!next || merged[bi * cSz + (ci + cw)] || 
-                        next.color !== cell.color || next.textureId !== cell.textureId) break;
+                    if (next === null || merged[bi * cSz + (ci + cw)] || 
+                        !this._cellsMatch(next, cell)) break;
                     cw++;
                 }
                 let bh = 1;
                 outer: while (bi + bh < bSz) {
                     for (let dc = 0; dc < cw; dc++) {
                         const next = mask[(bi + bh) * cSz + (ci + dc)];
-                        if (!next || merged[(bi + bh) * cSz + (ci + dc)] || 
-                            next.color !== cell.color || next.textureId !== cell.textureId) break outer;
+                        if (next === null || merged[(bi + bh) * cSz + (ci + dc)] || 
+                            !this._cellsMatch(next, cell)) break outer;
                     }
                     bh++;
                 }
@@ -190,5 +201,13 @@ export default class VoxelMeshGen {
                 onRect({ bi, ci, bh, cw, cell });
             }
         }
+    }
+
+    _cellsMatch(a, b) {
+        if (typeof a !== typeof b) return false;
+        if (typeof a === 'object') {
+            return a.color === b.color && a.textureId === b.textureId;
+        }
+        return a === b;
     }
 }

@@ -86,10 +86,12 @@ class SkyboxSystem {
         });
 
         this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.name = 'skybox_mesh';
+        this.mesh.renderOrder = -100; // render behind everything else
         this.scene.add(this.mesh);
         
-        // Reset scene background so it doesn't clear the mesh
-        this.scene.background = null;
+        // Fallback: set scene background to bottomColor so it's not pure black
+        this.scene.background = new THREE.Color(bottomColor);
     }
 
     /**

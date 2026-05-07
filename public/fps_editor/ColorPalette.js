@@ -118,55 +118,62 @@ const ColorPalette = (() => {
         container.innerHTML = '';
 
         container.insertAdjacentHTML('beforeend', `
-<div id="pal-active-section">
-  <div class="section-header">ACTIVE COLOR <span id="pal-idx-label" style="float:right;color:#666;font-size:.75rem">IDX: 000</span></div>
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-    <div id="pal-active-swatch" title="Click to open picker" style="
-      width:38px;height:38px;border:2px solid #555;border-radius:2px;cursor:pointer;flex-shrink:0;
-      background:${_colors[_activeIdx]}"></div>
-    <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-      <input id="pal-hex-input" type="text" value="${_colors[_activeIdx]}"
-        maxlength="7" spellcheck="false"
-        style="background:#000;border:1px solid #444;color:#ff6b35;font-family:inherit;
-          font-size:1rem;padding:3px 6px;width:100%;outline:none">
-      <input id="pal-native-picker" type="color" value="${_colors[_activeIdx]}"
-        style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none">
+<div id="pal-active-section" style="display:flex; gap:20px;">
+  <div style="width:200px;">
+    <div class="section-header">ACTIVE COLOR <span id="pal-idx-label" style="float:right;color:#666;font-size:.75rem">IDX: 000</span></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <div id="pal-active-swatch" title="Click to open picker" style="
+        width:44px;height:44px;border:2px solid #555;border-radius:2px;cursor:pointer;flex-shrink:0;
+        background:${_colors[_activeIdx]}"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+        <input id="pal-hex-input" type="text" value="${_colors[_activeIdx]}"
+            maxlength="7" spellcheck="false"
+            style="background:#000;border:1px solid #444;color:var(--accent);font-family:inherit;
+            font-size:1.1rem;padding:3px 6px;width:100%;outline:none">
+        <input id="pal-native-picker" type="color" value="${_colors[_activeIdx]}"
+            style="opacity:0;position:absolute;width:1px;height:1px;pointer-events:none">
+        </div>
     </div>
   </div>
 
-  <div class="section-header">HSL PICKER</div>
-  <div id="pal-hsl-section" style="margin-bottom:8px">
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-      <span style="color:#666;font-size:.8rem;min-width:14px">H</span>
-      <input id="pal-hsl-h" type="range" min="0" max="359" value="0" style="flex:1;accent-color:#ff6b35">
-      <span id="pal-hsl-h-val" style="color:#888;font-size:.8rem;min-width:24px;text-align:right">0</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-      <span style="color:#666;font-size:.8rem;min-width:14px">S</span>
-      <input id="pal-hsl-s" type="range" min="0" max="100" value="0" style="flex:1;accent-color:#ff6b35">
-      <span id="pal-hsl-s-val" style="color:#888;font-size:.8rem;min-width:24px;text-align:right">0</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <span style="color:#666;font-size:.8rem;min-width:14px">L</span>
-      <input id="pal-hsl-l" type="range" min="0" max="100" value="0" style="flex:1;accent-color:#ff6b35">
-      <span id="pal-hsl-l-val" style="color:#888;font-size:.8rem;min-width:24px;text-align:right">0</span>
+  <div style="flex:1;">
+    <div class="section-header">HSL PICKER</div>
+    <div id="pal-hsl-section" style="margin-bottom:8px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div>
+            <div class="field-row">
+                <label style="flex:0 0 20px">H</label>
+                <input id="pal-hsl-h" type="range" min="0" max="359" value="0" style="flex:1;accent-color:var(--accent)">
+                <span id="pal-hsl-h-val" style="color:var(--accent);font-size:.9rem;min-width:24px;text-align:right">0</span>
+            </div>
+            <div class="field-row">
+                <label style="flex:0 0 20px">S</label>
+                <input id="pal-hsl-s" type="range" min="0" max="100" value="0" style="flex:1;accent-color:var(--accent)">
+                <span id="pal-hsl-s-val" style="color:var(--accent);font-size:.9rem;min-width:24px;text-align:right">0</span>
+            </div>
+        </div>
+        <div>
+            <div class="field-row">
+                <label style="flex:0 0 20px">L</label>
+                <input id="pal-hsl-l" type="range" min="0" max="100" value="0" style="flex:1;accent-color:var(--accent)">
+                <span id="pal-hsl-l-val" style="color:var(--accent);font-size:.9rem;min-width:24px;text-align:right">0</span>
+            </div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <button class="action-btn" style="flex:1" onclick="ColorPalette.randomize()">RAND</button>
+                <button class="action-btn" style="flex:1" onclick="ColorPalette.importPAL()">IMP</button>
+                <button class="action-btn" style="flex:1" onclick="ColorPalette.exportPAL()">EXP</button>
+            </div>
+        </div>
     </div>
   </div>
 </div>
 
-<div class="section-header">PALETTE <span style="float:right;color:#666;font-size:.75rem">256 COLORS</span></div>
+<div class="section-header">PALETTE GRID <span style="float:right;color:#666;font-size:.75rem">256 COLORS</span></div>
 <div id="pal-grid" style="
-  display:grid;grid-template-columns:repeat(16,1fr);gap:1px;
-  margin-bottom:8px;image-rendering:pixelated"></div>
+  display:grid;grid-template-columns:repeat(32,1fr);gap:1px;
+  margin-bottom:8px;image-rendering:pixelated; border:1px solid #333; background:#000;"></div>
 
-<div style="display:flex;gap:4px;flex-wrap:wrap">
-  <button class="action-btn" style="flex:1" onclick="ColorPalette.randomize()">Rand</button>
-  <button class="action-btn" style="flex:1" onclick="ColorPalette.importPAL()">Import</button>
-  <button class="action-btn" style="flex:1" onclick="ColorPalette.exportPAL()">Export</button>
-  <button class="action-btn" style="flex:1" onclick="ColorPalette.exportPNG()">PNG</button>
-</div>
-<div style="font-size:.75rem;color:#444;margin-top:6px;line-height:1.5">
-  Click swatch to select.<br>Double-click to edit color.<br>Paint tool paints 2D &amp; 3D blocks.
+<div style="font-size:.8rem;color:#444;line-height:1.4">
+  Click swatch to select. Double-click to edit. Paint tool applies active color to blocks.
 </div>
 `);
 

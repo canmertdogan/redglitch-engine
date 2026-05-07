@@ -503,12 +503,12 @@ function _toVec3(input, fallback) {
 }
 
 function _defaultAmbient() {
-    return { id: '__ambient__', type: 'ambient', intensity: 1.0, palette_index: null, colorHex: '#ffffff' };
+    return { id: '__ambient__', type: 'ambient', intensity: 1.2, palette_index: null, colorHex: '#ffffff' };
 }
 
 function _defaultSun() {
     return {
-        id: '__sun__', type: 'directional', intensity: 1.5,
+        id: '__sun__', type: 'directional', intensity: 2.5,
         position: [30, 60, 30], target: [0, 0, 0],
         palette_index: null, colorHex: '#fffbe0', castShadow: true,
     };

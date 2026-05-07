@@ -268,7 +268,7 @@ class Physics3DWorld {
             }
             case ShapeType.BOX:
             default: {
-                const s = cfg.size ?? { x: 0.5, y: 0.5, z: 0.5 };
+                const s = cfg.halfExtents ?? cfg.size ?? { x: 0.5, y: 0.5, z: 0.5 };
                 return new CANNON.Box(new CANNON.Vec3(
                     s.x ?? s[0] ?? 0.5,
                     s.y ?? s[1] ?? 0.5,

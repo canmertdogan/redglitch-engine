@@ -26,6 +26,7 @@
 
 import * as THREE from '/lib/three/three.module.js';
 import { BodyType, ShapeType } from '../shared/Physics3DWorld.js';
+import VoxelMeshGen from '../shared/VoxelMeshGen.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -140,7 +141,7 @@ export default class WorldGeometry {
             await this._loadEditorGeometry(levelData.geometry);
         } else if (levelData.voxelGrid && Object.keys(levelData.voxelGrid).length > 0) {
             // Voxel Editor data (Phase 41)
-            await this._loadVoxelGrid(levelData.voxelGrid, levelData.cellSize || 1.0);
+            await this._loadVoxelGrid(levelData.voxelGrid, levelData.cellSize || 1.0, levelData.palette || []);
         } else if (gltfUrl) {
             await this._loadGLTF(gltfUrl, levelData);
         } else {
@@ -187,6 +188,36 @@ export default class WorldGeometry {
     }
 
     // ── GLTF loading ──────────────────────────────────────────────────────────
+
+    async _loadVoxelGrid(voxelGrid, cellSize, palette = []) {
+        console.log(`[WorldGeometry] building voxel mesh (size=${cellSize})...`);
+        const gen = new VoxelMeshGen(voxelGrid, cellSize, palette);
+        const meshes = await gen.buildMeshes(this._atlas);
+
+        const group = new THREE.Group();
+        group.name = 'voxel_root';
+
+        for (const mesh of meshes) {
+            mesh.name = 'voxel_mesh';
+            group.add(mesh);
+            this._colMeshes.push(mesh);
+        }
+        this._scene.add(group);
+        this._levelRoot = group;
+
+        // Voxel collision: using a single trimesh for the entire voxel grid
+        // is much faster than hundreds of individual box colliders.
+        this._addVoxelTrimeshCollider(meshes);
+    }
+
+    _addVoxelTrimeshCollider(meshes) {
+        if (!meshes.length) return;
+        console.log(`[WorldGeometry] adding voxel trimesh collider...`);
+        
+        for (const mesh of meshes) {
+            this._addTrimeshBody(mesh);
+        }
+    }
 
     async _loadEditorGeometry(geometryData) {
         console.log(`[WorldGeometry] loading ${geometryData.length} editor shapes`);
@@ -772,32 +803,6 @@ export default class WorldGeometry {
 
         // Remove procedural meshes
         const toRemove = this._scene.children.filter(c => c.name?.startsWith('proc_'));
-        for (const obj of toRemove) this._scene.remove(obj);
-
-        this._triggers      = [];
-        this._portals       = [];
-        this._colMeshes     = [];
-        this._triggerMeshes = [];
-        this._portalMeshes  = [];
-
-        console.log('[WorldGeometry] disposed');
-    }
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Infer surface material from mesh name fragments.
- * e.g. "floor_metal_01" → "metal"
- */
-function _surfaceFromName(name = '') {
-    const n = name.toLowerCase();
-    if (n.includes('grass') || n.includes('dirt') || n.includes('soil'))  return 'grass';
-    if (n.includes('metal') || n.includes('steel') || n.includes('iron')) return 'metal';
-    if (n.includes('wood')  || n.includes('plank') || n.includes('crate')) return 'wood';
-    return 'concrete';
-}
-;
         for (const obj of toRemove) this._scene.remove(obj);
 
         this._triggers      = [];

@@ -212,6 +212,10 @@ const MapExporter = (() => {
      * @returns {Object}
      */
     function buildPayload(mapData, navmesh) {
+        const entities = mapData.entities || [];
+        const spawn    = entities.find(e => e.type === 'player-spawn');
+        const enemies  = entities.filter(e => e.type === 'enemy');
+
         return {
             // schema identifiers
             version:        mapData.version    || 2,
@@ -224,6 +228,9 @@ const MapExporter = (() => {
             author:         mapData.author     || '',
             project:        mapData.project    || '',
 
+            // spawn point
+            playerSpawn:    spawn ? { x: spawn.x, y: spawn.y, z: spawn.z } : { x: 0, y: 1.8, z: 0 },
+
             // geometry
             cellSize:       mapData.cellSize   || 1,
             ceilingH:       mapData.ceilingH   || 3,
@@ -235,13 +242,15 @@ const MapExporter = (() => {
             fog:            mapData.fog        || { color: '#1a1208', near: 8, far: 30 },
             ambient:        mapData.ambient    || '#1a1208',
             sun:            mapData.sun        || '#ffcc88',
+            skybox:         mapData.skybox     || { mode: 'solid', colorHex: '#1a1208' },
 
             // lights & emissive
             lights:         mapData.lights         || [],
             emissiveBlocks: mapData.emissiveBlocks  || {},
 
             // entities & triggers
-            entities:       mapData.entities   || [],
+            entities:       entities,
+            enemies:        enemies,
             triggers:       mapData.triggers   || [],
 
             // navmesh (generated at export time)

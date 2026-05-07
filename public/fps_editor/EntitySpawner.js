@@ -36,8 +36,9 @@ const EntitySpawner = (() => {
     let _onTriggerCh   = null;
 
     // DOM mounts
-    let _entMount = null;
-    let _trgMount = null;
+    let _entMount   = null;
+    let _trgMount   = null;
+    let _propsMount = null;
 
     // DOM refs (entity side)
     let _elEntList   = null;
@@ -80,47 +81,57 @@ const EntitySpawner = (() => {
     function _buildEntUI(container) {
         _entMount = container;
         container.innerHTML = `
-<div class="section-header" style="margin-top:10px">IN MAP
+<div class="section-header" style="margin-top:10px">INSTANCES IN MAP
     <span id="es-ent-count" style="float:right;color:#555;font-size:.75rem">0 entities</span>
 </div>
-<div id="es-ent-list" style="min-height:24px;margin-bottom:6px"></div>
+<div id="es-ent-list" class="entity-list" style="min-height:24px;margin-bottom:6px"></div>
+`;
+        _elEntList  = container.querySelector('#es-ent-list');
+    }
+
+    function _buildTrgUI(container) {
+        _trgMount = container;
+        container.innerHTML = `
+<div class="section-header" style="margin-top:10px">TRIGGERS IN MAP
+    <span id="es-trg-count" style="float:right;color:#555;font-size:.75rem">0 triggers</span>
+</div>
+<div id="es-trg-list" class="trigger-list" style="min-height:24px;margin-bottom:6px"></div>
+`;
+        _elTrgList  = container.querySelector('#es-trg-list');
+    }
+
+    function _buildPropsUI() {
+        if (!_propsMount) return;
+        _propsMount.innerHTML = `
 <div id="es-ent-props" style="display:none">
-    <div class="section-header">PROPERTIES</div>
+    <div class="section-header">ENTITY PROPERTIES</div>
 
     <div class="field-row">
-        <label style="min-width:56px;color:#666;font-size:.8rem">Type</label>
-        <span id="es-ep-type" style="color:#ff6b35;font-size:.85rem"></span>
+        <label>Type</label>
+        <span id="es-ep-type" style="color:#ff6b35;font-size:1.1rem;font-weight:bold;"></span>
     </div>
     <div class="field-row">
-        <label style="min-width:56px;color:#666;font-size:.8rem">X / Z</label>
-        <input id="es-ep-x" type="number" step="0.25" style="
-            width:52px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 4px;outline:none">
-        <input id="es-ep-z" type="number" step="0.25" style="
-            width:52px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 4px;outline:none;margin-left:3px">
+        <label>Position</label>
+        <div style="display:flex; gap:5px; flex:1;">
+            <input id="es-ep-x" type="number" step="0.25" placeholder="X">
+            <input id="es-ep-z" type="number" step="0.25" placeholder="Z">
+        </div>
     </div>
     <div class="field-row">
-        <label style="min-width:56px;color:#666;font-size:.8rem">Yaw °</label>
-        <input id="es-ep-yaw" type="number" step="45" min="0" max="359" value="0" style="
-            width:60px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 4px;outline:none">
+        <label>Yaw °</label>
+        <input id="es-ep-yaw" type="number" step="45" min="0" max="359" value="0">
     </div>
 
-    <!-- door link (only shown for door entities) -->
+    <!-- door link -->
     <div id="es-door-section" style="display:none">
-        <div class="section-header" style="margin-top:8px">DOOR LINK</div>
+        <div class="section-header">DOOR LINK</div>
         <div class="field-row">
-            <label style="min-width:56px;color:#666;font-size:.8rem">Linked Trigger</label>
-            <input id="es-ep-linked-trigger" type="text" placeholder="trigger ID or 'none'"
-                style="flex:1;background:#000;border:1px solid #333;color:#ccc;
-                font-size:.78rem;padding:2px 4px;outline:none">
+            <label>Trigger ID</label>
+            <input id="es-ep-linked-trigger" type="text" placeholder="trigger ID or 'none'">
         </div>
         <div class="field-row">
-            <label style="min-width:56px;color:#666;font-size:.8rem">Axis</label>
-            <select id="es-ep-door-axis" style="
-                flex:1;background:#000;border:1px solid #333;color:#ccc;
-                font-size:.8rem;padding:2px">
+            <label>Axis</label>
+            <select id="es-ep-door-axis">
                 <option value="y">Slide Up (Y)</option>
                 <option value="x">Slide X</option>
                 <option value="z">Slide Z</option>
@@ -128,22 +139,19 @@ const EntitySpawner = (() => {
         </div>
     </div>
 
-    <!-- patrol waypoints (only shown for enemy-patrol) -->
+    <!-- patrol waypoints -->
     <div id="es-patrol-section" style="display:none">
-        <div class="section-header" style="margin-top:8px">PATROL WAYPOINTS</div>
-        <div id="es-waypoints" style="margin-bottom:4px"></div>
-        <button class="action-btn" style="width:100%;font-size:.78rem"
-            onclick="EntitySpawner.addWaypoint()">+ Add Waypoint</button>
+        <div class="section-header">PATROL WAYPOINTS</div>
+        <div id="es-waypoints" style="margin-bottom:8px"></div>
+        <button class="action-btn" onclick="EntitySpawner.addWaypoint()"><i class="fas fa-plus"></i> Add Waypoint</button>
     </div>
 
-    <!-- pickup weapon type (only shown for pickup-weapon) -->
+    <!-- weapon settings -->
     <div id="es-weapon-section" style="display:none">
-        <div class="section-header" style="margin-top:8px">WEAPON TYPE</div>
+        <div class="section-header">WEAPON TYPE</div>
         <div class="field-row">
-            <label style="min-width:56px;color:#666;font-size:.8rem">Weapon</label>
-            <select id="es-ep-weapon" style="
-                flex:1;background:#000;border:1px solid #333;color:#ccc;
-                font-size:.8rem;padding:2px">
+            <label>Weapon</label>
+            <select id="es-ep-weapon">
                 <option value="pistol">Pistol</option>
                 <option value="shotgun">Shotgun</option>
                 <option value="rifle">Rifle</option>
@@ -153,65 +161,45 @@ const EntitySpawner = (() => {
         </div>
     </div>
 
-    <!-- pickup amount (health/ammo/armor) -->
+    <!-- pickup amount -->
     <div id="es-pickup-section" style="display:none">
-        <div class="section-header" style="margin-top:8px">PICKUP AMOUNT</div>
+        <div class="section-header">PICKUP AMOUNT</div>
         <div class="field-row">
-            <label style="min-width:56px;color:#666;font-size:.8rem">Amount</label>
-            <input id="es-ep-amount" type="number" min="1" max="999" value="25" style="
-                width:60px;background:#000;border:1px solid #333;color:#ccc;
-                font-size:.8rem;padding:2px 4px;outline:none">
+            <label>Amount</label>
+            <input id="es-ep-amount" type="number" min="1" max="999" value="25">
         </div>
     </div>
 
-    <!-- enemy settings (grunt / shooter) -->
+    <!-- enemy settings -->
     <div id="es-enemy-section" style="display:none">
-        <div class="section-header" style="margin-top:8px">ENEMY SETTINGS</div>
+        <div class="section-header">ENEMY SETTINGS</div>
         <div class="field-row">
-            <label style="min-width:56px;color:#666;font-size:.8rem">HP</label>
-            <input id="es-ep-hp" type="number" min="1" max="9999" value="100" style="
-                width:60px;background:#000;border:1px solid #333;color:#ccc;
-                font-size:.8rem;padding:2px 4px;outline:none">
+            <label>HP</label>
+            <input id="es-ep-hp" type="number" min="1" max="9999" value="100">
         </div>
         <div class="field-row">
-            <label style="min-width:56px;color:#666;font-size:.8rem">Alert Radius</label>
-            <input id="es-ep-alert-radius" type="number" min="1" max="100" value="10" style="
-                width:60px;background:#000;border:1px solid #333;color:#ccc;
-                font-size:.8rem;padding:2px 4px;outline:none">
+            <label>Alert R</label>
+            <input id="es-ep-alert-radius" type="number" min="1" max="100" value="10">
         </div>
     </div>
 
-    <!-- custom JSON props -->
-    <div class="section-header" style="margin-top:8px">CUSTOM PROPS
-        <button class="action-btn" style="float:right;padding:1px 6px;font-size:.7rem"
-            onclick="EntitySpawner._addCustomProp()">+</button>
+    <!-- custom props -->
+    <div class="section-header">CUSTOM PROPS
+        <button class="tool-btn" style="float:right;width:24px;height:24px;" onclick="EntitySpawner._addCustomProp()">+</button>
     </div>
-    <div id="es-custom-props" style="margin-bottom:4px"></div>
+    <div id="es-custom-props" style="margin-bottom:10px"></div>
 
-    <div style="display:flex;gap:4px;margin-top:6px">
-        <button class="action-btn" style="flex:1" onclick="EntitySpawner._applyEntProps()">Apply</button>
-        <button class="action-btn" style="flex:1;color:#e74c3c" onclick="EntitySpawner._deleteEnt()">Delete</button>
+    <div style="display:flex;gap:4px;margin-top:20px">
+        <button class="action-btn primary" style="flex:1" onclick="EntitySpawner._applyEntProps()"><i class="fas fa-check"></i> Apply</button>
+        <button class="action-btn danger" style="flex:1" onclick="EntitySpawner._deleteEnt()"><i class="fas fa-trash"></i> Delete</button>
     </div>
 </div>
-`;
-        _elEntList  = container.querySelector('#es-ent-list');
-        _elEntProps = container.querySelector('#es-ent-props');
-    }
 
-    function _buildTrgUI(container) {
-        _trgMount = container;
-        // Replace the entire "In Map" section
-        container.innerHTML = `
-<div class="section-header" style="margin-top:10px">IN MAP
-    <span id="es-trg-count" style="float:right;color:#555;font-size:.75rem">0 triggers</span>
-</div>
-<div id="es-trg-list" style="min-height:24px;margin-bottom:6px"></div>
 <div id="es-trg-props" style="display:none">
     <div class="section-header">TRIGGER PROPERTIES</div>
     <div class="field-row">
-        <label style="min-width:52px;color:#666;font-size:.8rem">Event</label>
-        <select id="es-tp-event" style="flex:1;background:#000;border:1px solid #333;
-            color:#ccc;font-family:inherit;font-size:.8rem;padding:2px">
+        <label>Event</label>
+        <select id="es-tp-event">
             <option value="onEnter">onEnter</option>
             <option value="onExit">onExit</option>
             <option value="onStay">onStay</option>
@@ -220,40 +208,32 @@ const EntitySpawner = (() => {
         </select>
     </div>
     <div class="field-row">
-        <label style="min-width:52px;color:#666;font-size:.8rem">Action</label>
-        <input id="es-tp-action" type="text" placeholder="e.g. openDoor:door_abc123"
-            style="flex:1;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.78rem;padding:2px 4px;outline:none">
+        <label>Action</label>
+        <input id="es-tp-action" type="text" placeholder="e.g. openDoor:door_abc123">
     </div>
     <div class="field-row">
-        <label style="min-width:52px;color:#666;font-size:.8rem">W / H / D</label>
-        <input id="es-tp-w" type="number" step="0.5" min="0.5" value="2" style="
-            width:40px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 3px;outline:none">
-        <input id="es-tp-h" type="number" step="0.5" min="0.5" value="2.5" style="
-            width:40px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 3px;outline:none;margin:0 2px">
-        <input id="es-tp-d" type="number" step="0.5" min="0.5" value="2" style="
-            width:40px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 3px;outline:none">
+        <label>Size</label>
+        <div style="display:flex; gap:4px; flex:1;">
+            <input id="es-tp-w" type="number" step="0.5" placeholder="W">
+            <input id="es-tp-h" type="number" step="0.5" placeholder="H">
+            <input id="es-tp-d" type="number" step="0.5" placeholder="D">
+        </div>
     </div>
     <div class="field-row">
-        <label style="min-width:52px;color:#666;font-size:.8rem">X / Z</label>
-        <input id="es-tp-x" type="number" step="0.5" style="
-            width:52px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 3px;outline:none">
-        <input id="es-tp-z" type="number" step="0.5" style="
-            width:52px;background:#000;border:1px solid #333;color:#ccc;
-            font-size:.8rem;padding:2px 3px;outline:none;margin-left:3px">
+        <label>Position</label>
+        <div style="display:flex; gap:4px; flex:1;">
+            <input id="es-tp-x" type="number" step="0.5" placeholder="X">
+            <input id="es-tp-z" type="number" step="0.5" placeholder="Z">
+        </div>
     </div>
-    <div style="display:flex;gap:4px;margin-top:6px">
-        <button class="action-btn" style="flex:1" onclick="EntitySpawner._applyTrgProps()">Apply</button>
-        <button class="action-btn" style="flex:1;color:#e74c3c" onclick="EntitySpawner._deleteTrg()">Delete</button>
+    <div style="display:flex;gap:4px;margin-top:20px">
+        <button class="action-btn primary" style="flex:1" onclick="EntitySpawner._applyTrgProps()"><i class="fas fa-check"></i> Apply</button>
+        <button class="action-btn danger" style="flex:1" onclick="EntitySpawner._deleteTrg()"><i class="fas fa-trash"></i> Delete</button>
     </div>
 </div>
 `;
-        _elTrgList  = container.querySelector('#es-trg-list');
-        _elTrgProps = container.querySelector('#es-trg-props');
+        _elEntProps = _propsMount.querySelector('#es-ent-props');
+        _elTrgProps = _propsMount.querySelector('#es-trg-props');
     }
 
     // ── entity list rebuild ───────────────────────────────────────────────────
@@ -270,24 +250,14 @@ const EntitySpawner = (() => {
         _elEntList.innerHTML = '';
         for (const ent of _entities) {
             const m   = _meta(ent.type);
-            const row = document.createElement('div');
             const sel = ent.id === _selEntityId;
-            row.style.cssText = `
-                display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;
-                border-left:3px solid ${sel ? m.color : 'transparent'};
-                background:${sel ? '#180e06' : 'transparent'};
-            `;
-            const wpLabel = (ent.type === 'enemy-patrol' && ent.props?.waypoints?.length)
-                ? ` <span style="color:#555;font-size:.7rem">[${ent.props.waypoints.length} wp]</span>`
-                : '';
-            const exitTag = ent.type === 'level-exit'
-                ? ' <span style="color:#ff6b35;font-size:.7rem">EXIT</span>' : '';
+            const row = document.createElement('div');
+            row.className = `entity-item ${sel ? 'active' : ''}`;
+            
             row.innerHTML = `
-                <span style="font-size:.9rem">${m.icon}</span>
-                <span style="flex:1;font-size:.82rem;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-                    ${m.label}${wpLabel}${exitTag}
-                </span>
-                <span style="font-size:.7rem;color:#555">${ent.x?.toFixed(1)},${ent.z?.toFixed(1)}</span>
+                <span class="entity-icon" style="color:${m.color}"><i class="${m.icon}"></i></span>
+                <span class="entity-name">${m.label}</span>
+                <span class="entity-badge">${ent.x?.toFixed(1)},${ent.z?.toFixed(1)}</span>
             `;
             row.addEventListener('click', () => selectEntity(ent.id));
             _elEntList.appendChild(row);
@@ -297,8 +267,10 @@ const EntitySpawner = (() => {
     function _populateEntProps(ent) {
         if (!_elEntProps || !ent) return;
         _elEntProps.style.display = 'block';
+        if (_elTrgProps) _elTrgProps.style.display = 'none';
+
         const m = _meta(ent.type);
-        _elEntProps.querySelector('#es-ep-type').textContent = `${m.icon} ${m.label}`;
+        _elEntProps.querySelector('#es-ep-type').innerHTML = `<i class="${m.icon}" style="color:${m.color}"></i> ${m.label}`;
         _elEntProps.querySelector('#es-ep-x').value   = ent.x?.toFixed(2) ?? 0;
         _elEntProps.querySelector('#es-ep-z').value   = ent.z?.toFixed(2) ?? 0;
         _elEntProps.querySelector('#es-ep-yaw').value = ent.props?.yaw ?? 0;
@@ -500,16 +472,12 @@ const EntitySpawner = (() => {
             const m   = _trgMeta(trg.event);
             const sel = trg.id === _selTriggerId;
             const row = document.createElement('div');
-            row.style.cssText = `
-                display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;
-                border-left:3px solid ${sel ? m.color : 'transparent'};
-                background:${sel ? '#180e06' : 'transparent'};
-            `;
+            row.className = `trigger-item ${sel ? 'active' : ''}`;
+            
             row.innerHTML = `
-                <span style="color:${m.color};font-size:.9rem">${m.icon}</span>
-                <span style="flex:1;font-size:.82rem;color:#aaa">${trg.event}</span>
-                ${trg.action ? `<span style="font-size:.7rem;color:#555;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${trg.action}</span>` : ''}
-                <span style="font-size:.7rem;color:#444">${_shortId(trg.id)}</span>
+                <span class="trigger-icon" style="color:${m.color}"><i class="${m.icon}"></i></span>
+                <span class="entity-name">${trg.event}</span>
+                <span class="entity-badge">${_shortId(trg.id)}</span>
             `;
             row.addEventListener('click', () => selectTrigger(trg.id));
             _elTrgList.appendChild(row);
@@ -519,6 +487,8 @@ const EntitySpawner = (() => {
     function _populateTrgProps(trg) {
         if (!_elTrgProps || !trg) return;
         _elTrgProps.style.display = 'block';
+        if (_elEntProps) _elEntProps.style.display = 'none';
+
         _elTrgProps.querySelector('#es-tp-event').value  = trg.event  || 'onEnter';
         _elTrgProps.querySelector('#es-tp-action').value = trg.action || '';
         _elTrgProps.querySelector('#es-tp-w').value      = trg.w      ?? 2;
@@ -558,12 +528,18 @@ const EntitySpawner = (() => {
      * Mount entity and trigger UIs into their respective containers.
      * @param {Element|string} entityMount    — container for entity instance list
      * @param {Element|string} triggerMount   — container for trigger instance list
+     * @param {Element|string} propsMount     — container for property editor (right sidebar)
      */
-    function init(entityMount, triggerMount) {
+    function init(entityMount, triggerMount, propsMount) {
         if (typeof entityMount  === 'string') entityMount  = document.querySelector(entityMount);
         if (typeof triggerMount === 'string') triggerMount = document.querySelector(triggerMount);
+        if (typeof propsMount   === 'string') propsMount   = document.querySelector(propsMount);
+        
         if (entityMount)  _buildEntUI(entityMount);
         if (triggerMount) _buildTrgUI(triggerMount);
+        
+        _propsMount = propsMount;
+        if (propsMount) _buildPropsUI();
     }
 
     /** Refresh entity list from current _state.entities snapshot. */
