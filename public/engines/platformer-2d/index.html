@@ -153,7 +153,7 @@
     <!-- Login Screen -->
     <div id="login-screen" class="hidden">
         <div id="login-box">
-            <div id="login-title">VORTEX WORM</div>
+            <div id="login-title">KETEBE WORM</div>
             <input type="text" id="username-input" placeholder="ENTER USERNAME" maxlength="16">
             <br>
             <button id="login-btn" onclick="attemptLogin()">START</button>
@@ -256,7 +256,7 @@
             
             window.game.init().then(() => {
                 const cleanLevelId = levelId.replace(/\.json$/i, '');
-                const levelPath = `/projects/${encodeURIComponent(project)}/dunyalar/platformer/${encodeURIComponent(cleanLevelId)}.json`;
+                const levelPath = `/projects/${encodeURIComponent(project)}/dunyalar/${encodeURIComponent(cleanLevelId)}.json`;
                 return window.game.loadLevel(cleanLevelId, levelPath);
             }).then(() => {
                 loadingScreen.classList.add('hidden');

@@ -26,7 +26,7 @@ class DebugConsole {
         
         this.createDOM();
         this.setupInput();
-        this.log("VORTEX ENGINE ALPHA // CONSOLE READY", 'system');
+        this.log("KETEBE ENGINE ALPHA // CONSOLE READY", 'system');
         this.log("Type 'help' for command list. Press [TAB] to autocomplete.", 'info');
     }
 

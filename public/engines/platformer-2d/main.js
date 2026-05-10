@@ -149,7 +149,7 @@ class PlatformerGame {
         const paths = levelPath
             ? [levelPath]
             : [
-                `dunyalar/platformer/${cleanLevelId}.json`,
+                `dunyalar/${cleanLevelId}.json`,
                 `dunyalar/${cleanLevelId}.json`,
             ];
 

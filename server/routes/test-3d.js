@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * Test API for Vortex 3D Engines
+ * Test API for Ketebe 3D Engines
  * Provides endpoints to validate topdown-3d, fps-3d, platformer-3d and shared 3D infrastructure
  */
 

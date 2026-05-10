@@ -78,6 +78,7 @@ class Renderer3D {
         const rOpts = { antialias: false, powerPreference: 'high-performance', alpha: false };
         if (this._opts.canvas) rOpts.canvas = this._opts.canvas;
         this.webgl = new THREE.WebGLRenderer(rOpts);
+        this.webgl.setClearColor(0x050505, 1);
         this.webgl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.webgl.setSize(width, height);
         this.webgl.outputColorSpace = THREE.SRGBColorSpace;
@@ -117,15 +118,28 @@ class Renderer3D {
         }
     }
 
-    _size() { return { width: this.container.clientWidth, height: this.container.clientHeight || 400 }; }
+    _size() { 
+        return { 
+            width: this.container.clientWidth, 
+            height: this.container.clientHeight 
+        }; 
+    }
 
     _onResize() {
         const { width, height } = this._size();
-        if (width > 0 && height > 0 && this.webgl) {
-            this.webgl.setSize(width, height); this.composer.setSize(width, height);
-            this.camera.aspect = width / height; this.camera.updateProjectionMatrix();
-        }
+        if (width <= 0 || height <= 0 || !this.webgl) return;
+
+        // Only resize if different to avoid flickering/looping
+        const currentSize = new THREE.Vector2();
+        this.webgl.getSize(currentSize);
+        if (currentSize.x === width && currentSize.y === height) return;
+
+        this.webgl.setSize(width, height);
+        if (this.composer) this.composer.setSize(width, height);
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
     }
+
 
     dispose() { this._resizeObserver?.disconnect(); this.webgl?.dispose(); this.composer?.dispose(); }
 }
@@ -192,8 +206,17 @@ export function applyFlatShading(obj) {
         }
     });
 }
+const _hexMatCache = {};
 export function hexMaterial(color) {
-    return new THREE.MeshPhongMaterial({ color: new THREE.Color(color), flatShading: true, shininess: 0 });
+    if (!_hexMatCache[color]) {
+        _hexMatCache[color] = new THREE.MeshLambertMaterial({ 
+            color: new THREE.Color(color), 
+            flatShading: true,
+            emissive: new THREE.Color(color),
+            emissiveIntensity: 0.02 // Reduced from 0.05 to restore shadow depth
+        });
+    }
+    return _hexMatCache[color];
 }
 // ── Exports ───────────────────────────────────────────────────────────────────
 

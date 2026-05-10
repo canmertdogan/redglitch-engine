@@ -17,7 +17,7 @@
 
 ### What is Campaign Studio?
 
-Campaign Studio is a powerful visual node-based editor for creating multi-engine game campaigns in Vortex Engine. It allows you to:
+Campaign Studio is a powerful visual node-based editor for creating multi-engine game campaigns in Ketebe Engine. It allows you to:
 
 - **Connect levels across all three engines** (RPG-TopDown, ISO-Pixel, Platformer-2D)
 - **Create complex branching narratives** with conditional logic
@@ -39,7 +39,7 @@ Campaign Studio is a powerful visual node-based editor for creating multi-engine
 
 ### Opening Campaign Studio
 
-1. Launch Vortex Engine
+1. Launch Ketebe Engine
 2. From the main dashboard, click **"Campaign Editor"**
 3. The Campaign Studio interface will open
 
@@ -389,4 +389,4 @@ Access testing tools at:
 
 **Happy Campaign Creating!** 🎮✨
 
-*Campaign Studio - Multi-Engine Game Development for Vortex Engine*
+*Campaign Studio - Multi-Engine Game Development for Ketebe Engine*

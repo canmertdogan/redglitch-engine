@@ -151,16 +151,22 @@
     }
 
     // 3. Define Manifests
-    // Ideally these would be in a json file per engine, but we define here for Phase 1.
     const manifests = {
         'rpg-topdown': [
+            'shared/LoggerHook.js',
+            'shared/EventBus.js',
+            'shared/AssetManager.js',
+            'shared/DialogueSystem.js',
+            'shared/QuestSystem.js',
+            'shared/LogicSystem.js',
+            'shared/AtmosphereSystem.js',
+            'shared/UISystem.js',
+            'shared/UIRenderer.js',
             'engines/rpg-topdown/localization.js',
-            'engines/rpg-topdown/sprites.js', // This might need server.js tweak
+            'engines/rpg-topdown/sprites.js',
             'engines/rpg-topdown/input.js',
             'engines/rpg-topdown/saveSystem.js',
             'engines/rpg-topdown/mapSystem.js',
-            'shared/DialogueSystem.js',
-            'shared/QuestSystem.js',
             'engines/rpg-topdown/achievementSystem.js',
             'engines/rpg-topdown/fxSystem.js',
             'engines/rpg-topdown/audioSystem.js',
@@ -168,13 +174,18 @@
             'engines/rpg-topdown/campaignSystem.js',
             'engines/rpg-topdown/spatialHash.js',
             'engines/rpg-topdown/stateMachine.js',
-            'engines/rpg-topdown/ui/uiRenderer.js',
-            'engines/rpg-topdown/BrainRuntime.js', // Brain system
-            'engines/rpg-topdown/NPC.js', // Enhanced NPC class
+            'engines/rpg-topdown/BrainRuntime.js',
+            'engines/rpg-topdown/NPC.js',
             'engines/rpg-topdown/main.js'
         ],
         'iso-pixel': [
-            'engines/rpg-topdown/main.js', // For AtmosphereSystem and shared logic
+            'shared/LoggerHook.js',
+            'shared/EventBus.js',
+            'shared/AssetManager.js',
+            'shared/LogicSystem.js',
+            'shared/AtmosphereSystem.js',
+            'shared/UISystem.js',
+            'shared/UIRenderer.js',
             'engines/iso-pixel/renderer.js',
             'engines/iso-pixel/fxSystem.js',
             'engines/iso-pixel/hudSystem.js',
@@ -184,9 +195,15 @@
             'engines/iso-pixel/main.js'
         ],
         'platformer-2d': [
-            'engines/rpg-topdown/main.js', // For AtmosphereSystem
+            'shared/LoggerHook.js',
+            'shared/EventBus.js',
+            'shared/AssetManager.js',
             'shared/DialogueSystem.js',
             'shared/QuestSystem.js',
+            'shared/LogicSystem.js',
+            'shared/AtmosphereSystem.js',
+            'shared/UISystem.js',
+            'shared/UIRenderer.js',
             'engines/platformer-2d/PlatformerConfig.js',
             'engines/platformer-2d/PlatformerAssetManager.js',
             'engines/platformer-2d/ParallaxSystem.js',
@@ -207,8 +224,9 @@
             'engines/platformer-2d/main.js'
         ],
         'fps-3d': [
-            // fps-3d uses ES modules loaded via main.js; only the entry point is needed
-            // All sub-systems (EnemyAI, HUD_FPS, etc.) are imported inside main.js
+            'shared/LoggerHook.js',
+            'shared/EventBus.js',
+            'shared/AssetManager.js',
             'engines/fps-3d/main.js'
         ]
     };

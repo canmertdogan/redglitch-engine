@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VORTEX GAME STUDIO</title>
+    <title>KETEBE GAME STUDIO</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -312,7 +312,7 @@
             </div>
         </nav>
         <div class="sidebar-footer">
-            &copy; 2026 Vortex Corp.<br>
+            &copy; 2026 Ketebe Corp.<br>
             STABLE_BUILD v7.0.1
         </div>
     </aside>
@@ -525,7 +525,7 @@
         <div id="view-terminal" class="view-section">
             <h1>Terminal</h1>
             <div style="background: #000; border: 1px solid #1f2b42; height: 60vh; padding: 12px; font-family: monospace; display: flex; flex-direction: column; color: #2ecc71; font-size: 14px;">
-                <div id="term-out" style="flex-grow: 1; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap;">Vortex Terminal v1.0 ready</div>
+                <div id="term-out" style="flex-grow: 1; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap;">Ketebe Terminal v1.0 ready</div>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <span style="color:var(--accent)">></span>
                     <input type="text" id="term-in" style="background: transparent; border: none; color: #fff; font-family: inherit; font-size: 16px; width: 100%; outline: none;">
@@ -536,7 +536,7 @@
         <div id="view-docs" class="view-section">
             <h1>Documentation</h1>
             <div style="max-width: 800px; margin: 20px auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px);">
-                <h2 style="color:var(--accent); margin-top:0;">Welcome to Vortex Engine</h2>
+                <h2 style="color:var(--accent); margin-top:0;">Welcome to Ketebe Engine</h2>
                 <p style="line-height:1.8; color:#ccc;">A powerful multi-platform game development studio supporting RPG, platformer, and isometric games.</p>
                 <h3 style="color:var(--accent); margin-top:25px;">Quick Start</h3>
                 <ol style="line-height:1.8; color:#ccc;">
@@ -656,7 +656,7 @@
                     <i class="fas fa-shopping-bag" style="font-size:64px; color:var(--accent); margin-bottom:20px;"></i>
                     <h2 style="color:var(--accent); margin-bottom:15px;">Asset Marketplace</h2>
                     <p style="color:#888; line-height:1.8; max-width:600px; margin:0 auto 25px;">
-                        Discover premium assets, plugins, and templates created by the Vortex community. Expand your game with ready-to-use content.
+                        Discover premium assets, plugins, and templates created by the Ketebe community. Expand your game with ready-to-use content.
                     </p>
                     <div style="color:#666; font-size:14px; margin-top:30px; padding:20px; background:rgba(0,0,0,0.3); border:1px solid #1f2b42;">
                         <i class="fas fa-rocket"></i> Marketplace coming soon in v7.1
@@ -713,7 +713,7 @@
             <h1><i class="fas fa-users"></i> Community</h1>
             <div style="max-width: 800px; margin: 20px auto;">
                 <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px); margin-bottom:20px;">
-                    <h2 style="color:var(--accent); margin-top:0;">Join the Vortex Community</h2>
+                    <h2 style="color:var(--accent); margin-top:0;">Join the Ketebe Community</h2>
                     <p style="color:#888; line-height:1.8; margin-bottom:25px;">
                         Connect with other game developers, share your projects, get help, and collaborate.
                     </p>
@@ -793,91 +793,14 @@
     </div>
 
     <script src="lib/three.min.js"></script>
+    <script src="js/BlackholeBackground.js"></script>
     <script>
-        // --- BLACKHOLE SHADER ---
-        (function() {
-            const container = document.getElementById('blackhole-container-dash');
-            const scene = new THREE.Scene();
-            const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            container.appendChild(renderer.domElement);
-
-            const uniforms = {
-                iTime: { value: 0 },
-                iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-            };
-
-            const fragmentShader = `
-                uniform float iTime;
-                uniform vec2 iResolution;
-                float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123); }
-                float noise(vec2 p) {
-                    vec2 i = floor(p); vec2 f = fract(p);
-                    f = f*f*(3.0-2.0*f);
-                    return mix(mix(hash(i + vec2(0,0)), hash(i + vec2(1,0)), f.x),
-                               mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y);
-                }
-                void main() {
-                    vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
-                    float d = length(uv);
-                    float shadow = smoothstep(0.08, 0.085, d);
-                    float photon = exp(-pow(d - 0.09, 2.0) * 5000.0) * 1.2;
-                    float angle = atan(uv.y, uv.x);
-                    float disk_h = exp(-pow(uv.y, 2.0) * 200.0) * smoothstep(0.1, 0.5, d) * exp(-d * 1.5);
-                    float lens_r = abs(d - 0.22);
-                    float disk_v = exp(-pow(lens_r, 2.0) * 1000.0) * 0.4;
-                    float n = noise(vec2(angle * 5.0 - iTime * 1.0, d * 20.0));
-                    float final_disk = (disk_h + disk_v) * (0.7 + 0.3 * n);
-                    float glow = exp(-d * 6.0) * 0.1;
-                    vec3 col = vec3(0.0);
-                    vec2 star_uv = uv * (1.0 + 0.03 / (d + 0.01));
-                    float stars = pow(noise(star_uv * 100.0), 40.0);
-                    col += vec3(stars) * 0.3 * shadow;
-                    vec3 gold = vec3(1.0, 0.7, 0.2);
-                    col += gold * final_disk * 1.5 + vec3(1.0) * photon + gold * glow;
-                    col *= shadow;
-                    col = pow(col, vec3(1.1));
-                    gl_FragColor = vec4(col, 1.0);
-                }
-            `;
-
-            const material = new THREE.ShaderMaterial({ uniforms, fragmentShader });
-            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
-
-            function animate(time) {
-                requestAnimationFrame(animate);
-                uniforms.iTime.value = time * 0.001;
-                renderer.render(scene, camera);
-            }
-            animate();
-
-            // Mesh Graph
-            const meshCanvas = document.getElementById('mesh-canvas-dash');
-            const mctx = meshCanvas.getContext('2d');
-            let mw, mh, particles = [];
-            function mresize() { mw = meshCanvas.width = window.innerWidth; mh = meshCanvas.height = window.innerHeight; }
-            window.addEventListener('resize', () => {
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                uniforms.iResolution.value.set(window.innerWidth, window.innerHeight);
-                mresize();
+        // --- Initialize Dashboard Cinematic ---
+        window.addEventListener('load', () => {
+            new BlackholeBackground('blackhole-container-dash', {
+                meshCanvasId: 'mesh-canvas-dash'
             });
-            mresize();
-            class P { constructor(){this.x=Math.random()*mw;this.y=Math.random()*mh;this.vx=(Math.random()-0.5)*0.3;this.vy=(Math.random()-0.5)*0.3;} update(){this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>mw)this.vx*=-1;if(this.y<0||this.y>mh)this.vy*=-1;}}
-            for(let i=0;i<40;i++) particles.push(new P());
-            function mdraw(){
-                mctx.clearRect(0,0,mw,mh); mctx.strokeStyle='rgba(64, 224, 208, 0.08)'; mctx.lineWidth=0.5;
-                for(let i=0;i<particles.length;i++){
-                    particles[i].update();
-                    for(let j=i+1;j<particles.length;j++){
-                        let dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y, dist=Math.sqrt(dx*dx+dy*dy);
-                        if(dist<180){mctx.beginPath();mctx.moveTo(particles[i].x,particles[i].y);mctx.lineTo(particles[j].x,particles[j].y);mctx.stroke();}
-                    }
-                }
-                requestAnimationFrame(mdraw);
-            }
-            mdraw();
-        })();
+        });
 
         // --- SYSTEM LOGIC ---
         const LogManager = {
@@ -1282,7 +1205,7 @@
 
         // Typing brand animation
         const savedName = localStorage.getItem('ketebe_username') || 'Architect';
-        const brandText = `VORTEX STUDIO - ${savedName}`;
+        const brandText = `KETEBE STUDIO - ${savedName}`;
         let charIndex = 0;
         const brandEl = document.getElementById('typing-brand');
         

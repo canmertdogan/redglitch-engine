@@ -2,10 +2,10 @@
 
 ## 1. Restructuring
 *   **Current Dashboard:** The "Command Center" (Telemetry, Logs, Scratchpad) is perfect for *active development*. It will be moved to `project_dashboard.html`.
-*   **New Dashboard:** The file `dashboard.html` will become the **Vortex Launcher**. This is the entry point.
+*   **New Dashboard:** The file `dashboard.html` will become the **Ketebe Launcher**. This is the entry point.
 
 ## 2. The "Launcher" Design (New `dashboard.html`)
-Inspired by Godot/Unreal/Photoshop start screens, but stylized for Vortex (Pixel Art/Cyberpunk).
+Inspired by Godot/Unreal/Photoshop start screens, but stylized for Ketebe (Pixel Art/Cyberpunk).
 
 ### Visual Language
 *   **Theme:** Darkest Void (`#050508`) background.

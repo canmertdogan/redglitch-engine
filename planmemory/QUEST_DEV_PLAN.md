@@ -35,7 +35,7 @@ Quests will be stored in `dunyalar/definitions/quests.json`.
 **File:** `public/quest_editor.html`, `public/quest_editor.js`
 
 ### 3.1 UI/UX Overhaul
-*   [ ] **Theme:** Apply Vortex "Pixel Gold" theme (`VT323` font, `#f1c40f` accents, solid borders).
+*   [ ] **Theme:** Apply Ketebe "Pixel Gold" theme (`VT323` font, `#f1c40f` accents, solid borders).
 *   [ ] **Layout:** Split into "Quest Details" (Left) and "Stages/Rewards" (Right).
 *   [ ] **Search:** Add search bar for the quest list.
 

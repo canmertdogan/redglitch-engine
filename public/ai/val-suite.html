@@ -180,7 +180,7 @@
             },
 
             async probeAPI() {
-                this.log("Searching for active Vortex backend...", "SYSTEM");
+                this.log("Searching for active Ketebe backend...", "SYSTEM");
                 const ports = [3000, 3001, 8000, 8080];
                 const hosts = ['127.0.0.1', 'localhost'];
                 
@@ -252,7 +252,7 @@
                 return Array.isArray(data);
             },
             async testVision() {
-                const eb = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+                const eb = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
                 if (!eb) throw new Error("No EventBus link");
                 return new Promise((resolve) => {
                     const id = 'val_' + Date.now();
@@ -263,7 +263,7 @@
             },
             async testSynth() { return true; },
             async testPerformance() {
-                const eb = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+                const eb = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
                 if (!eb) throw new Error("No EventBus link");
                 return new Promise((resolve) => {
                     const timeout = setTimeout(() => resolve(false), 4000);

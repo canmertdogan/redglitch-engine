@@ -8,9 +8,9 @@ let eventBus, projectState, assetManager;
 
 function initializeLocalizationIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
-        assetManager = window.VortexAssetManager;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
             // Listen for dialogue updates to sync localization keys
@@ -150,7 +150,7 @@ class LocalizationEditor {
     
     async loadProject() {
         try {
-            // Try to load from Vortex project structure
+            // Try to load from Ketebe project structure
             const response = await fetch('/dunyalar/definitions/locales.json');
             if (response.ok) {
                 const loadedData = await response.json();
@@ -176,7 +176,7 @@ class LocalizationEditor {
     
     async saveProject() {
         try {
-            // Save to Vortex project structure
+            // Save to Ketebe project structure
             const response = await fetch('/api/ide/write', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

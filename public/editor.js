@@ -92,8 +92,8 @@ let eventBus, projectState, studioBridge;
 
 function initializeWorldIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
         
         if (eventBus) {
             // Initialize StudioBridge for IRAB

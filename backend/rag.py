@@ -34,8 +34,8 @@ class NumpyVectorStore:
     def _load(self):
         if os.path.exists(self.store_path):
             try:
-                with open(self.store_path, 'rb') as f:
-                    data = pickle.load(f)
+                with open(self.store_path, 'r') as f:
+                    data = json.load(f)
                 self._ids = data.get('ids', [])
                 self._documents = data.get('documents', [])
                 self._metadatas = data.get('metadatas', [])
@@ -61,8 +61,8 @@ class NumpyVectorStore:
                 'embeddings': self._embeddings.tolist() if self._embeddings is not None else []
             }
             tmp = self.store_path + '.tmp'
-            with open(tmp, 'wb') as f:
-                pickle.dump(data, f, protocol=4)
+            with open(tmp, 'w') as f:
+                json.dump(data, f)
             os.replace(tmp, self.store_path)
         except Exception as e:
             logger.error(f"Failed to save vector store: {e}")
@@ -323,3 +323,4 @@ class RAGSystem:
 # Singleton
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 rag = RAGSystem(PROJECT_ROOT)
+stem(PROJECT_ROOT)

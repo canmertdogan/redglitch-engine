@@ -190,7 +190,7 @@ class KaiChatUIController {
             this.setupEventListeners();
             
             // Hook into EventBus for Debug tab & Error Watcher
-            const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+            const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
             if (eventBus) {
                 // Live Debug Logs
                 eventBus.on('*', (eventData) => {
@@ -277,7 +277,15 @@ class KaiChatUIController {
         if (logs) {
             const line = document.createElement('div');
             const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
-            line.innerHTML = `<span style="color: #444;">[${time}]</span> >> ${message.toUpperCase()}`;
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.style.color = '#444';
+            timeSpan.textContent = `[${time}] `;
+            line.appendChild(timeSpan);
+            
+            const msgText = document.createTextNode(`>> ${message.toUpperCase()}`);
+            line.appendChild(msgText);
+            
             logs.appendChild(line);
             logs.scrollTop = logs.scrollHeight;
             this.playSound('typing');
@@ -645,7 +653,12 @@ class KaiChatUIController {
             badge.style.color = '#ffd700';
             badge.style.marginTop = '4px';
             badge.style.opacity = '0.7';
-            badge.innerHTML = '<i class="fas fa-eye"></i> VISION_ALIGNED';
+            
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-eye';
+            badge.appendChild(icon);
+            badge.appendChild(document.createTextNode(' VISION_ALIGNED'));
+            
             content.appendChild(badge);
         }
 
@@ -664,9 +677,9 @@ class KaiChatUIController {
                 btn.className = 'xp-button';
                 btn.style.fontSize = '12px';
                 btn.style.padding = '2px 8px';
-                btn.innerHTML = `📂 OPEN ${path.split('/').pop()}`;
+                btn.textContent = `📂 OPEN ${path.split('/').pop()}`;
                 btn.onclick = () => {
-                    const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+                    const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
                     if (eventBus) {
                         eventBus.emit('ai:command:request', {
                             method: path.includes('world') ? 'iso_studio.open' : 'open',
@@ -816,7 +829,7 @@ Please analyze why this is happening and suggest a fix. If it's in a script I ca
         if (confirm(">> WARNING: WIPE NEURAL BUFFER? (CANNOT BE UNDONE)")) {
             const messages = document.getElementById('ai-chat-messages');
             if (messages) messages.innerHTML = '';
-            if (window.VortexAIInstance) window.VortexAIInstance.clearHistory();
+            if (window.KetebeAIInstance) window.KetebeAIInstance.clearHistory();
             this.addMessage('system', '>> MEMORY_WIPE_COMPLETE.');
             this.playSound('nudge');
         }
@@ -884,8 +897,8 @@ class KaiSettingsController {
         localStorage.setItem('kai_settings', JSON.stringify(this.settings));
         
         // Push to global AI_CONFIG if available
-        if (window.VortexAIInstance && window.VortexAIInstance.config) {
-            const cfg = window.VortexAIInstance.config;
+        if (window.KetebeAIInstance && window.KetebeAIInstance.config) {
+            const cfg = window.KetebeAIInstance.config;
             cfg.models.llm.temperature = parseFloat(this.settings.temp);
             cfg.models.llm.topP = parseFloat(this.settings.topP);
             cfg.models.llm.maxNewTokens = parseInt(this.settings.maxTokens);
@@ -968,6 +981,15 @@ window.openChat = () => window.AIChatUI.openChat();
 window.closeChat = () => window.AIChatUI.closeChat();
 window.dismiss = () => window.AIChatUI.dismiss();
 window.updateAIProgress = (data) => window.AIChatUI.updateLoadingProgress(data);
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.AIChatUI.initialize().catch(console.error));
+} else {
+    window.AIChatUI.initialize().catch(console.error);
+}
+
+console.log('KAI UI LOADED.');
+ingProgress(data);
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => window.AIChatUI.initialize().catch(console.error));

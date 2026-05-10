@@ -10,7 +10,7 @@ This document maps all 23 editors in ketebe ENGINE, showing their relationships,
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           VORTEX ENGINE EDITOR ECOSYSTEM                         │
+│                           KETEBE ENGINE EDITOR ECOSYSTEM                         │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐          │

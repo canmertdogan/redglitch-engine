@@ -15,10 +15,10 @@ The "Kernel" of ketebe ENGINE consists of three singleton classes that manage th
 ### API Snapshot
 ```javascript
 // Load an asset (handles caching and async fetching)
-const sprite = await window.VortexAssetManager.loadAsset('my_sprite_id');
+const sprite = await window.KetebeAssetManager.loadAsset('my_sprite_id');
 
 // Register a new file dropped onto the browser
-window.VortexAssetManager.importAsset(fileObject, 'assets/new_image.png');
+window.KetebeAssetManager.importAsset(fileObject, 'assets/new_image.png');
 ```
 
 ---
@@ -55,10 +55,10 @@ It is a **hybrid Pub/Sub system**:
 ### Usage
 ```javascript
 // Set a value (automatically triggers 'state:changed' event and adds to Undo stack)
-window.VortexProjectState.set('settings.gravity', 9.8);
+window.KetebeProjectState.set('settings.gravity', 9.8);
 
 // Watch for changes
-window.VortexProjectState.watch('settings.gravity', (newValue) => {
+window.KetebeProjectState.watch('settings.gravity', (newValue) => {
     console.log("Gravity changed to:", newValue);
 });
 ```

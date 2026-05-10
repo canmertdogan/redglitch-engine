@@ -250,6 +250,7 @@ class Input3D {
     }
 
     /** WASD / left-stick normalised movement axis. */
+    getAxis() {
         // Gamepad left stick takes priority if active
         const gx = this._dead(this._gamepadAxes[GP_AXIS.MOVE_X]);
         const gy = this._dead(this._gamepadAxes[GP_AXIS.MOVE_Y]);

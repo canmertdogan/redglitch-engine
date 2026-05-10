@@ -230,7 +230,7 @@ class AssetLoader3D {
      * palette colour snap), persist the result to `projects/{projectName}/assets3d/`
      * via POST `/api/assets3d/{projectName}`, and return asset metadata.
      *
-     * @param {string} projectName  Vortex project name (used for storage path)
+     * @param {string} projectName  Ketebe project name (used for storage path)
      * @param {File}   file         GLB/GLTF File from an <input type="file">
      * @param {object} [opts]
      * @param {boolean} [opts.remapColors=true]  Snap colours to project palette

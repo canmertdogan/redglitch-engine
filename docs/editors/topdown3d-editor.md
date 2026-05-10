@@ -2,7 +2,7 @@
 
 ## Launching
 
-From the Vortex dashboard, select a project with `"engineType": "topdown-3d"` and click **Open Editor**.
+From the Ketebe dashboard, select a project with `"engineType": "topdown-3d"` and click **Open Editor**.
 
 - **Editor files:** `public/topdown3d_editor.html` + `public/topdown3d_editor.js`
 - **Output:** `projects/<ProjectName>/dunyalar/<level>.json`

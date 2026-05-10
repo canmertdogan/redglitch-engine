@@ -155,27 +155,69 @@ app.get('/base_game/sprites.js', (req, res, next) => {
 
 // Dynamic Asset Serving for Projects
 app.use('/dunyalar', (req, res, next) => {
-    const targetDir = projectService.isRootProject()
-        ? path.join(__dirname, 'public', 'dunyalar')
-        : path.join(projectService.getActiveProject(), 'dunyalar');
+    const projectDir = projectService.getActiveProject();
+    const projectFilePath = path.join(projectDir, 'dunyalar', req.path);
+    const rootFilePath = path.join(__dirname, 'public', 'dunyalar', req.path);
     
-    const filePath = path.join(targetDir, req.path);
-    res.sendFile(filePath, err => {
-        if (err && !res.headersSent) next();
+    // Try project file first
+    res.sendFile(projectFilePath, err => {
+        if (!err) return;
+        // If not in project, try root public
+        res.sendFile(rootFilePath, err2 => {
+            if (err2 && !res.headersSent) next();
+        });
     });
 });
 
 app.use('/muzikler', (req, res, next) => {
-    const filePath = path.join(projectService.getActiveProject(), 'muzikler', req.path);
-    res.sendFile(filePath, err => {
-        if (err && !res.headersSent) next();
+    const projectDir = projectService.getActiveProject();
+    const projectFilePath = path.join(projectDir, 'muzikler', req.path);
+    const rootFilePath = path.join(__dirname, 'public', 'muzikler', req.path);
+    
+    res.sendFile(projectFilePath, err => {
+        if (!err) return;
+        res.sendFile(rootFilePath, err2 => {
+            if (err2 && !res.headersSent) next();
+        });
     });
 });
 
 app.use('/assets', (req, res, next) => {
-    const filePath = path.join(projectService.getActiveProject(), 'assets', req.path);
-    res.sendFile(filePath, err => {
-        if (err && !res.headersSent) next();
+    const projectDir = projectService.getActiveProject();
+    const projectFilePath = path.join(projectDir, 'assets', req.path);
+    const rootFilePath = path.join(__dirname, 'public', 'assets', req.path);
+    
+    res.sendFile(projectFilePath, err => {
+        if (!err) return;
+        res.sendFile(rootFilePath, err2 => {
+            if (err2 && !res.headersSent) next();
+        });
+    });
+});
+
+app.use('/data', (req, res, next) => {
+    const projectDir = projectService.getActiveProject();
+    const projectFilePath = path.join(projectDir, 'data', req.path);
+    const rootFilePath = path.join(__dirname, 'public', 'data', req.path);
+    
+    res.sendFile(projectFilePath, err => {
+        if (!err) return;
+        res.sendFile(rootFilePath, err2 => {
+            if (err2 && !res.headersSent) next();
+        });
+    });
+});
+
+app.use('/sprite-art', (req, res, next) => {
+    const projectDir = projectService.getActiveProject();
+    const projectFilePath = path.join(projectDir, 'sprite-art', req.path);
+    const rootFilePath = path.join(__dirname, 'public', 'sprite-art', req.path);
+    
+    res.sendFile(projectFilePath, err => {
+        if (!err) return;
+        res.sendFile(rootFilePath, err2 => {
+            if (err2 && !res.headersSent) next();
+        });
     });
 });
 
@@ -211,99 +253,9 @@ app.use('/api/test', test3dRouter);
 app.use('/api/debug', debug3dRouter);
 app.use('/api/monitor', monitor3dRouter);
 
-// ── /api/project-file — generic project-relative file read/write ─────────────
-// Used by topdown3d_editor.js and terrain_tools.js to save arbitrary
-// project files (level JSON, palette JSON, etc.) without encoding them
-// as saves or level objects.
-//
-// POST  { project, path, content }  — write file (content is a string)
-// GET   ?project=&path=             — read file (returns { content } JSON)
-(function () {
-    const { resolveUnderRoot } = require('./server/utils/pathGuard');
-    const fss = require('fs').promises;
-    const PROJECTS_ROOT = path.resolve(__dirname, 'projects');
 
-    function resolveFilePath(project, relPath) {
-        const safeProject = (project || '').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
-        if (!safeProject || safeProject !== project) return null;
-        // relPath must stay within the project directory
-        const projectDir = path.join(PROJECTS_ROOT, safeProject);
-        const full = path.resolve(projectDir, relPath);
-        if (!full.startsWith(projectDir + path.sep) && full !== projectDir) return null;
-        return full;
-    }
 
-    app.post('/api/project-file', async (req, res) => {
-        const { project, path: relPath, content } = req.body;
-        if (!project || !relPath || typeof content !== 'string') {
-            return res.status(400).json({ error: 'project, path, and content are required' });
-        }
-        const fullPath = resolveFilePath(project, relPath);
-        if (!fullPath) return res.status(400).json({ error: 'Invalid project or path' });
-        try {
-            await fss.mkdir(path.dirname(fullPath), { recursive: true });
-            await fss.writeFile(fullPath, content, 'utf8');
-            res.json({ ok: true, path: relPath });
-        } catch (err) {
-            console.error('[project-file] write error:', err.message);
-            res.status(500).json({ error: 'Write failed' });
-        }
-    });
 
-    app.get('/api/project-file', async (req, res) => {
-        const { project, path: relPath } = req.query;
-        if (!project || !relPath) {
-            return res.status(400).json({ error: 'project and path are required' });
-        }
-        const fullPath = resolveFilePath(project, relPath);
-        if (!fullPath) return res.status(400).json({ error: 'Invalid project or path' });
-        try {
-            const content = await fss.readFile(fullPath, 'utf8');
-            res.json({ ok: true, content });
-        } catch (err) {
-            if (err.code === 'ENOENT') return res.status(404).json({ error: 'File not found' });
-            res.status(500).json({ error: 'Read failed' });
-        }
-    });
-})();
-
-app.post('/api/save-spritesheet', async (req, res) => {
-    try {
-        const dataUrl = req.body.image;
-        if (!dataUrl) {
-            return res.status(400).send('No image data provided.');
-        }
-
-        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
-        const spritesheetPath = path.join(__dirname, 'public', 'sprite-art', 'platformer_spritesheet.png');
-        
-        await safeFs.safeWriteFullPath(path.resolve(__dirname), spritesheetPath, base64Data, 'base64');
-        
-        console.log('[SERVER] Spritesheet saved to:', spritesheetPath);
-
-        // Now, generate the atlas
-        const atlas = {};
-        const tSize = 16;
-        const cols = 16;
-        const totalTiles = 600;
-
-        for (let i = 0; i < totalTiles; i++) {
-            const x = (i % cols) * tSize;
-            const y = Math.floor(i / cols) * tSize;
-            atlas[i + 1] = { x, y, w: tSize, h: tSize };
-        }
-
-        const atlasPath = path.join(__dirname, 'public', 'sprite-art', 'platformer_atlas.json');
-        await safeFs.safeWriteFullPath(path.resolve(__dirname), atlasPath, JSON.stringify(atlas, null, 2), 'utf8');
-
-        console.log('[SERVER] Atlas saved to:', atlasPath);
-
-        res.json({ success: true, message: 'Spritesheet and atlas saved.' });
-    } catch (error) {
-        console.error('[SERVER] Error saving spritesheet:', error);
-        res.status(500).json({ success: false, message: 'Failed to save spritesheet.' });
-    }
-});
 
 // Root redirect to dashboard
 app.get('/', (req, res) => {
@@ -321,7 +273,7 @@ app.locals.websocket = websocket;
 
 // Start server
 server.listen(config.PORT, () => {
-    console.log(`🚀 Vortex Engine Server running on http://localhost:${config.PORT}`);
+    console.log(`🚀 Ketebe Engine Server running on http://localhost:${config.PORT}`);
     console.log(`📁 Root directory: ${config.ROOT_DIR}`);
 });
 

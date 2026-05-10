@@ -1,5 +1,5 @@
 /**
- * Engine3DBase.js — Abstract base class for all 3D engines in Vortex.
+ * Engine3DBase.js — Abstract base class for all 3D engines in Ketebe.
  *
  * Extends the existing EngineAdapter contract with a 3D lifecycle layer.
  * Shared by topdown-3d, fps-3d, and platformer-3d engine types.
@@ -9,31 +9,6 @@
 
 import EngineAdapter from './EngineAdapter.js';
 import * as THREE from '/lib/three/three.module.js';
-
-// ── Logger Hook (mirrors rpg-topdown/main.js pattern) ───────────────────────
-(function _installLoggerHook3D() {
-    if (typeof window === 'undefined' || window.__loggerHook3DInstalled) return;
-    window.__loggerHook3DInstalled = true;
-
-    const _orig = { log: console.log, warn: console.warn, error: console.error };
-
-    function _send(level, msg) {
-        if (!window.opener) return;
-        try {
-            const safe = typeof msg === 'string' ? msg : JSON.stringify(msg, (k, v) => {
-                if (k === 'scene' || k === 'renderer' || k === 'canvas') return '[THREE/DOM]';
-                return v;
-            });
-            window.opener.postMessage({ type: 'log', level, message: safe }, '*');
-        } catch (_) {
-            window.opener.postMessage({ type: 'log', level, message: String(msg) }, '*');
-        }
-    }
-
-    console.log   = function(...a) { _send('info',    a.map(String).join(' ')); _orig.log.apply(console, a); };
-    console.warn  = function(...a) { _send('warning', a.map(String).join(' ')); _orig.warn.apply(console, a); };
-    console.error = function(...a) { _send('error',   a.map(String).join(' ')); _orig.error.apply(console, a); };
-}());
 
 // ── Engine3DBase ─────────────────────────────────────────────────────────────
 

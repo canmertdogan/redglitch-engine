@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-30T08:57:11.607Z",
+  "generatedAt": "2026-05-10T08:05:23.203Z",
   "root": "/Users/n0rthstar/Documents/GitHub/ketebe",
   "publicEngines": "/Users/n0rthstar/Documents/GitHub/ketebe/public/engines",
   "selectedProjects": [
@@ -14,23 +14,42 @@
     "Default Project": {
       "missingInProject": [],
       "differentContent": [
-        "fps-3d/FPSController.js",
         "fps-3d/VFX_FPS.js",
-        "fps-3d/WorldGeometry.js",
+        "iso-pixel/main.js",
+        "platformer-2d/index.html",
+        "platformer-2d/main.js",
         "platformer-3d/index.html",
-        "shared/Engine3DBase.js"
+        "rpg-topdown/main.js",
+        "shared/CampaignController.js",
+        "shared/Engine3DBase.js",
+        "shared/Input3D.js",
+        "shared/IsoPixelAdapter.js",
+        "shared/PlatformerAdapter.js",
+        "shared/Renderer3D.js",
+        "shared/TopDownAdapter.js",
+        "shared/VoxelMeshGen.js"
       ],
       "extraInProject": [
         "platformer-2d/physics.js",
         "rpg-topdown/dialogueSystem.js",
-        "rpg-topdown/questSystem.js"
+        "rpg-topdown/questSystem.js",
+        "rpg-topdown/ui/uiRenderer.js"
       ],
       "candidates": [
-        "fps-3d/FPSController.js",
         "fps-3d/VFX_FPS.js",
-        "fps-3d/WorldGeometry.js",
+        "iso-pixel/main.js",
+        "platformer-2d/index.html",
+        "platformer-2d/main.js",
         "platformer-3d/index.html",
-        "shared/Engine3DBase.js"
+        "rpg-topdown/main.js",
+        "shared/CampaignController.js",
+        "shared/Engine3DBase.js",
+        "shared/Input3D.js",
+        "shared/IsoPixelAdapter.js",
+        "shared/PlatformerAdapter.js",
+        "shared/Renderer3D.js",
+        "shared/TopDownAdapter.js",
+        "shared/VoxelMeshGen.js"
       ],
       "applied": [],
       "skipped": []
@@ -38,22 +57,41 @@
     "My Awesome Game": {
       "missingInProject": [],
       "differentContent": [
-        "fps-3d/FPSController.js",
         "fps-3d/VFX_FPS.js",
-        "fps-3d/WorldGeometry.js",
+        "iso-pixel/main.js",
+        "platformer-2d/index.html",
+        "platformer-2d/main.js",
         "platformer-3d/index.html",
-        "shared/Engine3DBase.js"
+        "rpg-topdown/main.js",
+        "shared/CampaignController.js",
+        "shared/Engine3DBase.js",
+        "shared/Input3D.js",
+        "shared/IsoPixelAdapter.js",
+        "shared/PlatformerAdapter.js",
+        "shared/Renderer3D.js",
+        "shared/TopDownAdapter.js",
+        "shared/VoxelMeshGen.js"
       ],
       "extraInProject": [
         "rpg-topdown/dialogueSystem.js",
-        "rpg-topdown/questSystem.js"
+        "rpg-topdown/questSystem.js",
+        "rpg-topdown/ui/uiRenderer.js"
       ],
       "candidates": [
-        "fps-3d/FPSController.js",
         "fps-3d/VFX_FPS.js",
-        "fps-3d/WorldGeometry.js",
+        "iso-pixel/main.js",
+        "platformer-2d/index.html",
+        "platformer-2d/main.js",
         "platformer-3d/index.html",
-        "shared/Engine3DBase.js"
+        "rpg-topdown/main.js",
+        "shared/CampaignController.js",
+        "shared/Engine3DBase.js",
+        "shared/Input3D.js",
+        "shared/IsoPixelAdapter.js",
+        "shared/PlatformerAdapter.js",
+        "shared/Renderer3D.js",
+        "shared/TopDownAdapter.js",
+        "shared/VoxelMeshGen.js"
       ],
       "applied": [],
       "skipped": []
@@ -61,9 +99,9 @@
   },
   "totals": {
     "missingInProject": 0,
-    "differentContent": 10,
-    "extraInProject": 5,
-    "candidates": 10,
+    "differentContent": 28,
+    "extraInProject": 7,
+    "candidates": 28,
     "applied": 0
   }
 }

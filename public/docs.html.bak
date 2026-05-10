@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VORTEX GRIMOIRE</title>
+    <title>KETEBE GRIMOIRE</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -196,8 +196,8 @@
 
             <!-- WELCOME -->
             <section id="welcome" class="active">
-                <h1><i class="fas fa-book-open"></i> Welcome to Vortex</h1>
-                <p><b>Vortex Engine (v7.0)</b> is a hyper-advanced retro development kit. It fuses the soul of 16-bit classics with modern web architecture.</p>
+                <h1><i class="fas fa-book-open"></i> Welcome to Ketebe</h1>
+                <p><b>Ketebe Engine (v7.0)</b> is a hyper-advanced retro development kit. It fuses the soul of 16-bit classics with modern web architecture.</p>
                 
                 <div class="note">
                     <i class="fas fa-info-circle"></i>

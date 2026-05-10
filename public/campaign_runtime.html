@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campaign Runtime - Vortex Engine</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' ws: http:; img-src 'self' data: blob:;">
+    <title>Campaign Runtime — Ketebe</title>
     <link rel="stylesheet" href="base_game/style.css">
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -1027,7 +1028,7 @@
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
-            <div class="loading-logo">VORTEX ENGINE</div>
+            <div class="loading-logo">KETEBE ENGINE</div>
             <div class="loading-spinner"></div>
             <div class="loading-text">Loading Campaign...</div>
             <div class="loading-bar-container">
@@ -1039,7 +1040,7 @@
     <!-- Game Container -->
     <div id="game-container">
         <!-- Campaign HUD -->
-        <div id="campaign-hud">
+        <div id="campaign-hud" class="game-hud">
             <div class="hud-row">
                 <span class="hud-label">SLOT:</span>
                 <span class="hud-value" id="hud-slot">-</span>
@@ -1083,7 +1084,7 @@
                     <span class="stat-value"><span id="hp-current">100</span>/<span id="hp-max">100</span></span>
                 </div>
                 <div class="stat-bar-bg">
-                    <div class="stat-bar-fill hp" id="hp-bar" style="width: 100%;"></div>
+                    <div class="stat-bar-fill bar-fill hp" id="hp-bar" style="width: 100%;"></div>
                 </div>
             </div>
             <div class="stat-bar-container">
@@ -1092,7 +1093,7 @@
                     <span class="stat-value"><span id="stamina-current">100</span>/<span id="stamina-max">100</span></span>
                 </div>
                 <div class="stat-bar-bg">
-                    <div class="stat-bar-fill stamina" id="stamina-bar" style="width: 100%;"></div>
+                    <div class="stat-bar-fill bar-fill stamina" id="stamina-bar" style="width: 100%;"></div>
                 </div>
             </div>
             <div class="stat-bar-container">
@@ -1101,7 +1102,7 @@
                     <span class="stat-value"><span id="mana-current">50</span>/<span id="mana-max">50</span></span>
                 </div>
                 <div class="stat-bar-bg">
-                    <div class="stat-bar-fill mana" id="mana-bar" style="width: 100%;"></div>
+                    <div class="stat-bar-fill bar-fill mana" id="mana-bar" style="width: 100%;"></div>
                 </div>
             </div>
         </div>
@@ -1245,92 +1246,33 @@
         window.CAMPAIGN_RUNTIME_MODE = true;
     </script>
     
+    <!-- Load Core Shared Systems -->
+    <script src="shared/LoggerHook.js"></script>
+    <script src="shared/EventBus.js"></script>
+    <script src="shared/SharedProjectState.js"></script>
+    <script src="shared/AssetManager.js"></script>
+    <script src="shared/DialogueSystem.js"></script>
+    <script src="shared/QuestSystem.js"></script>
+    <script src="shared/LogicSystem.js"></script>
+    <script src="shared/AtmosphereSystem.js"></script>
+    <script src="shared/UISystem.js"></script>
+    <script src="shared/UIRenderer.js"></script>
+
     <!-- Load Dependencies -->
-    <script src="js/CampaignSlot.js?v=1770485563"></script>
-    <script src="js/SlotManager.js?v=1770485563"></script>
-    <script src="engines/shared/CrossEngineSerializer.js?v=1770485563"></script>
-    <script src="engines/shared/InventorySystem.js?v=1770485563"></script>
-    <script src="engines/shared/ItemDefinitions.js?v=1770485563"></script>
-    <script src="engines/shared/AbilityDefinitions.js?v=1770485563"></script>
-    <script src="engines/shared/PowerSelector.js?v=1770485563"></script>
-    <script src="engines/shared/ConditionEvaluator.js?v=1770485563"></script>
-    <script src="engines/shared/EngineAdapter.legacy.js?v=1770485563"></script>
-    <script src="engines/shared/CampaignController.js?v=1770485563"></script>
+    <script src="js/CampaignSlot.js"></script>
+    <script src="js/SlotManager.js"></script>
+    <script src="engines/shared/CrossEngineSerializer.js"></script>
+    <script src="engines/shared/InventorySystem.js"></script>
+    <script src="engines/shared/ItemDefinitions.js"></script>
+    <script src="engines/shared/AbilityDefinitions.js"></script>
+    <script src="engines/shared/PowerSelector.js"></script>
+    <script src="engines/shared/ConditionEvaluator.js"></script>
+    <script src="engines/shared/EngineAdapter.legacy.js"></script>
+    <script src="engines/shared/TopDownAdapter.js"></script>
+    <script src="engines/shared/IsoPixelAdapter.js"></script>
+    <script src="engines/shared/PlatformerAdapter.js"></script>
+    <script src="engines/shared/CampaignController.js"></script>
     
-    <!-- Load Engine Strategies -->
-    <script src="strategies/TopDownStrategy.js?v=1770485563"></script>
-    <script src="strategies/IsoStrategy.js?v=1770485563"></script>
-    <script src="strategies/PlatformerStrategy.js?v=1770485563"></script>
-    
-    <!-- Load RPG-Topdown Engine -->
-    <script src="base_game/sprites.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/sprites.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/input.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/spatialHash.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/console.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/localization.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/audioSystem.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/fxSystem.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/postProcess.js?v=1770485563"></script>
-    <script src="shared/DialogueSystem.js?v=1770485563"></script>
-    <script src="shared/QuestSystem.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/achievementSystem.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/saveSystem.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/mapSystem.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/stateMachine.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/logicRuntime.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/BrainRuntime.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/AlgorithmRuntime.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/NPC.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/InteractiveCutsceneEngine.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/campaignSystem.js?v=1770485563"></script>
-    <script src="engines/rpg-topdown/main.js?v=1770485563"></script>
-    
-    <!-- Load ISO-Pixel Engine -->
-    <script src="engines/iso-pixel/renderer.js?v=1770485563"></script>
-    <script src="engines/iso-pixel/fxSystem.js?v=1770485563"></script>
-    <script src="engines/iso-pixel/hudSystem.js?v=1770485563"></script>
-    <script src="engines/iso-pixel/shaderSystem.js?v=1770485563"></script>
-    <script src="engines/iso-pixel/IsoCombatSystem.js?v=1770485563"></script>
-    <script src="engines/iso-pixel/IsoEntity.js?v=1770485563"></script>
-    <script src="engines/iso-pixel/main.js?v=1770485563"></script>
-    
-    <!-- Load Platformer-2D Engine -->
-    <script src="engines/platformer-2d/PlatformerConfig.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/PlatformerAssetManager.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/ParallaxSystem.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/Animator.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/CombatSystem.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/Entity.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/Player.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/Enemy.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/FlyingEnemy.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/ShooterEnemy.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/Projectile.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/PushableBlock.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/MovingPlatform.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/entities/Trigger.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/PhysicsSystem.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/renderer.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/generator/SmartGenerator.js?v=1770485563"></script>
-    <script src="engines/platformer-2d/main.js?v=1770485563"></script>
-    
-    <!-- Load Engine Adapters -->
-    <script src="engines/shared/TopDownAdapter.js?v=1770485563"></script>
-    <script src="engines/shared/IsoPixelAdapter.js?v=1770485563"></script>
-    <script src="engines/shared/PlatformerAdapter.js?v=1770485563"></script>
-
-    <!-- ===================== 3D ENGINE SUPPORT ===================== -->
-    
-    <!-- 3D Vendor Libraries -->
-    <!-- NOTE: Three.js and addons loaded as ES modules by engines (not global) -->
-    <!-- Cannon-es is imported by 3D engine modules when needed -->
-    
-    <!-- 3D Engine Adapters (will dynamically import ES module engines) -->
-    <script src="engines/topdown-3d/TopDown3DAdapter.js?v=1770485563"></script>
-    <script src="engines/fps-3d/FPS3DAdapter.js?v=1770485563"></script>
-    <script src="engines/platformer-3d/Platformer3DAdapter.js?v=1770485563"></script>
-
     <script>
         // Global variables
         let campaignController = null;

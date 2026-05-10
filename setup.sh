@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Vortex Engine Automated Setup Script
+# Ketebe Engine Automated Setup Script
 # Works on macOS and Linux
 
 # Colors for output
@@ -10,7 +10,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}===============================================${NC}"
-echo -e "${BLUE}          VORTEX ENGINE SETUP START            ${NC}"
+echo -e "${BLUE}          KETEBE ENGINE SETUP START            ${NC}"
 echo -e "${BLUE}===============================================${NC}"
 
 # 1. Check Prerequisites

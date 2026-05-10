@@ -1,4 +1,4 @@
-# Vortex AI Micro Edition - Phase 1 Status
+# Ketebe AI Micro Edition - Phase 1 Status
 
 **Date:** 2026-02-07  
 **Status:** Core Engine Implemented ✅

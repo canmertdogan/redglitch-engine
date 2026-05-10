@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vortex AI Assistant - Test Page</title>
+    <title>Ketebe AI Assistant - Test Page</title>
     <style>
         body {
             margin: 0;
@@ -76,7 +76,7 @@
     </style>
 </head>
 <body>
-    <h1>🤖 Vortex AI Assistant - Test Page</h1>
+    <h1>🤖 Ketebe AI Assistant - Test Page</h1>
     
     <div class="test-section">
         <h2>Safety Tests</h2>
@@ -130,13 +130,13 @@
     <script type="module">
         import { PermissionGate } from './permission-gate.js';
         import { EditorTools } from './tools/editor-tools.js';
-        import { VortexAIAssistant } from './ketebe-ai-assistant.js';
+        import { KetebeAIAssistant } from './ketebe-ai-assistant.js';
 
         // Setup globals for tests
         window.testResults = [];
         window.permissionGate = new PermissionGate();
         window.editorTools = new EditorTools(window.permissionGate);
-        window.aiAssistant = new VortexAIAssistant();
+        window.aiAssistant = new KetebeAIAssistant();
 
         function logResult(type, message) {
             const resultsDiv = document.getElementById('test-results');
@@ -253,7 +253,7 @@
             
             try {
                 await window.aiAssistant.initialize();
-                const response = await window.aiAssistant.processQuery('What is Vortex?');
+                const response = await window.aiAssistant.processQuery('What is Ketebe?');
                 
                 if (response && response.text) {
                     logResult('success', `✓ Query processed: ${response.text.substring(0, 50)}...`);

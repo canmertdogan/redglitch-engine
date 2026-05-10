@@ -1,8 +1,8 @@
-# Vortex AI - Phase 2: RAG System Development Plan
+# Ketebe AI - Phase 2: RAG System Development Plan
 
 **Status:** Planned
 **Target Date:** Feb 8, 2026
-**Goal:** Implement a local Retrieval-Augmented Generation (RAG) system to allow Vortex AI to answer questions using project documentation and code context.
+**Goal:** Implement a local Retrieval-Augmented Generation (RAG) system to allow Ketebe AI to answer questions using project documentation and code context.
 
 ---
 
@@ -68,4 +68,4 @@ The RAG system consists of three main components:
 
 -   **Build Test:** Run `npm run build:corpus` and verify `corpus.json` structure/size.
 -   **Search Test:** In the browser console, manually query the RAG Engine: `await ketebeAI.rag.search("How do I create an NPC?")`.
--   **End-to-End:** Ask the Chat UI a question about Vortex-specific API (e.g., "How does EventBus work?") and verify the response includes details from the docs.
+-   **End-to-End:** Ask the Chat UI a question about Ketebe-specific API (e.g., "How does EventBus work?") and verify the response includes details from the docs.

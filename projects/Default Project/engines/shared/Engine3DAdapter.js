@@ -1,5 +1,5 @@
 /**
- * Engine3DAdapter.js — Concrete 3D adapter base for Vortex 3D engines.
+ * Engine3DAdapter.js — Concrete 3D adapter base for Ketebe 3D engines.
  *
  * Extends Engine3DBase with:
  *  - Standard level lifecycle: initialize3D(), loadLevel3D(), unloadLevel3D()

@@ -1,5 +1,5 @@
 /**
- * Vortex AI - Permission Gate (KAP)
+ * Ketebe AI - Permission Gate (KAP)
  * Safety layer that intercepts tool calls and requires user confirmation
  * before executing sensitive actions (write/delete).
  * 
@@ -7,7 +7,7 @@
  * - File blacklist prevents modification of engine core and critical systems
  * - Action audit logging for transparency
  * - User approval required for all write/delete operations
- * - Integrated with VortexProjectState for undo support
+ * - Integrated with KetebeProjectState for undo support
  */
 
 export class PermissionGate {
@@ -165,15 +165,15 @@ export class PermissionGate {
 
         this.aiActionsStack.push(action);
         
-        if (window.VortexProjectState) {
-            window.VortexProjectState.logActivity('ai_action', toolName, {
+        if (window.KetebeProjectState) {
+            window.KetebeProjectState.logActivity('ai_action', toolName, {
                 args,
                 actionId: action.id
             });
             
             // If it's a structural change, trigger a state snapshot for undo
             if (undoFn || toolName.startsWith('fs.') || toolName.includes('save')) {
-                window.VortexProjectState.createUndoPoint();
+                window.KetebeProjectState.createUndoPoint();
             }
         }
     }

@@ -1,5 +1,5 @@
-# Vortex Launcher: Professional Redesign Plan
-**Aesthetic Goal:** Unified "Hub" experience matching the Vortex IDE (Modern-Dark, Grid-based, Industrial-Retro).
+# Ketebe Launcher: Professional Redesign Plan
+**Aesthetic Goal:** Unified "Hub" experience matching the Ketebe IDE (Modern-Dark, Grid-based, Industrial-Retro).
 
 ## Phase 1: Visual Foundation (The Studio Aesthetic)
 - [ ] **Unified CSS Variable Sync:** Import and use the exact `--bg-root`, `--bg-panel`, and `--accent` (#f1c40f) variables from the IDE.
@@ -9,7 +9,7 @@
 
 ## Phase 2: Functional Title Bar & Branding
 - [ ] **Native-Feel Titlebar:** A dedicated top-strip with:
-    - Left: Pulsing Atom icon and "VORTEX ARCHITECT // LAUNCHER".
+    - Left: Pulsing Atom icon and "KETEBE ARCHITECT // LAUNCHER".
     - Center: Draggable region.
     - Right: Minimize/Close buttons and System Clock.
 - [ ] **Branding:** Add the "Core Version" and "Build Date" to the top corner, similar to the Splash Screen.
@@ -33,5 +33,5 @@
 
 ## Phase 5: Transition & Polish
 - [ ] **Boot-Sequence Logic:** Ensure the transition from Splash -> Launcher -> Studio is seamless with zero flicker.
-- [ ] **Interactive Hover States:** All buttons should have the "Vortex Glow" (yellow border transition and subtle translate effect).
+- [ ] **Interactive Hover States:** All buttons should have the "Ketebe Glow" (yellow border transition and subtle translate effect).
 - [ ] **Sound Integration:** Subtle "click/beep" sounds for project selection (optional/toggle).

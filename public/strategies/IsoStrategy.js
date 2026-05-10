@@ -585,7 +585,7 @@ class IsoStrategy {
     }
     
     drawWorm(ctx, player, dims, sprites) {
-        // Vortex Canavarı Worm - matching 2D engine exactly
+        // Ketebe Canavarı Worm - matching 2D engine exactly
         const history = player.history || [];
         const segmentCount = player.segmentCount || 8;  // Match 2D default
         const segmentSpacing = player.segmentSpacing || 4;  // Match 2D default

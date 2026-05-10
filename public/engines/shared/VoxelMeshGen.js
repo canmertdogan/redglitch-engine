@@ -110,6 +110,8 @@ export default class VoxelMeshGen {
                     v2[d]=i+(inv?0:1); v2[bIdx]=wb+bh; v2[cIdx]=wc+cw;
                     v3[d]=i+(inv?0:1); v3[bIdx]=wb;    v3[cIdx]=wc+cw;
                     
+                    // Reverted to original alternating winding: 
+                    // ensures normals point OUTWARD for all 6 axes.
                     if (inv) emitQuad(cell, n[0], n[1], n[2], v0, v1, v2, v3);
                     else     emitQuad(cell, n[0], n[1], n[2], v3, v2, v1, v0);
                 });
@@ -122,6 +124,7 @@ export default class VoxelMeshGen {
     async buildMeshes(atlas = null) {
         const groups = this.buildGroups();
         const meshes = [];
+        const matCache = {};
 
         for (const [key, data] of Object.entries(groups)) {
             if (!data.positions.length) continue;
@@ -137,11 +140,16 @@ export default class VoxelMeshGen {
                 atlas.applyBlockUVs(geo, data.textureId);
                 mat = atlas.getMaterial(THREE);
             } else {
-                mat = new THREE.MeshPhongMaterial({
-                    color: new THREE.Color(data.color || '#888888'),
-                    flatShading: true,
-                    shininess: 0
-                });
+                const cacheKey = data.color || '#888888';
+                if (!matCache[cacheKey]) {
+                    matCache[cacheKey] = new THREE.MeshLambertMaterial({ 
+                        color: new THREE.Color(cacheKey),
+                        flatShading: true,
+                        emissive: new THREE.Color(cacheKey),
+                        emissiveIntensity: 0.05
+                    });
+                }
+                mat = matCache[cacheKey];
             }
 
             const mesh = new THREE.Mesh(geo, mat);

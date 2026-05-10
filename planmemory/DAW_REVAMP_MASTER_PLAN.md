@@ -1,4 +1,4 @@
-# VORTEX AUDIO STUDIO - REVAMP MASTER PLAN
+# KETEBE AUDIO STUDIO - REVAMP MASTER PLAN
 
 ## 1. Executive Summary
 The goal is to transform the current prototype DAW into a fully functional, professional-grade music production environment in the browser. The focus will be on a robust audio engine, a flexible mixer architecture, a suite of high-quality effects, and a smooth, intuitive user experience.

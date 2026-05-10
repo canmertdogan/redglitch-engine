@@ -1,5 +1,5 @@
 /**
- * Vortex AI Cluster Bridge - C++ Source
+ * Ketebe AI Cluster Bridge - C++ Source
  * 
  * This file is intended to be compiled to WASM using Emscripten.
  * Emits: cluster_bridge.wasm

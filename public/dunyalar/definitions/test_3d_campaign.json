@@ -2,7 +2,7 @@
   "name": "3D Engine Test Campaign",
   "description": "Test campaign to verify 3D engine integration with campaign runtime",
   "version": "1.0.0",
-  "author": "Vortex Team",
+  "author": "Ketebe Team",
   "nodes": [
     {
       "id": "start",

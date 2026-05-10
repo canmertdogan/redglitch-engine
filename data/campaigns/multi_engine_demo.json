@@ -2,7 +2,7 @@
   "name": "Multi-Engine Demo Campaign",
   "description": "Demonstrates transitions between all three engine types",
   "version": "1.0.0",
-  "author": "Vortex Team",
+  "author": "Ketebe Team",
   "nodes": [
     {
       "id": "start",

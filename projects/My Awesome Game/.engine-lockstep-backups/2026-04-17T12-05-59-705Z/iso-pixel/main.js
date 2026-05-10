@@ -294,7 +294,7 @@ class IsoGame {
             }
         };
         
-        // Load Caterpillar/Worm sprites (matching 2D engine's "Vortex Canavarı")
+        // Load Caterpillar/Worm sprites (matching 2D engine's "Ketebe Canavarı")
         if (window.createPixelImage) {
             this.playerHead = window.createPixelImage('caterpillar_head');
             this.playerBody = window.createPixelImage('caterpillar_body');

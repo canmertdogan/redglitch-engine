@@ -1,5 +1,5 @@
 /**
- * VORTEX Audio Engine - Core WebAudio System
+ * KETEBE Audio Engine - Core WebAudio System
  * Handles audio context, master bus, routing, timing, and scheduling
  */
 

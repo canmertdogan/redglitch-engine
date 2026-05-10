@@ -1,5 +1,5 @@
 /**
- * VORTEX 32-Bit Synthesizer - Modern subtractive synthesis
+ * KETEBE 32-Bit Synthesizer - Modern subtractive synthesis
  * Features: Multi-oscillator, Filter with envelope, LFO, Advanced ADSR
  */
 

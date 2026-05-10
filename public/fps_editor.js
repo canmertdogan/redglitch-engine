@@ -40,12 +40,12 @@ const FPSEditor = (() => {
         triggers:    [],
         lights:      [],          // managed by LightEditor
         emissiveBlocks: {},       // { "x,y,z": true }
-        fog:         { color: '#1a1208', near: 8, far: 30 },
+        fog:         { color: '#87ceeb', near: 20, far: 100 },
         ambient:     '#ffffff',
-        ambientIntensity: 1.0,
-        sun:         '#ffeedd',
-        sunIntensity: 1.5,
-        skybox:      { mode: 'gradient', topColor: '#1a2a3a', bottomColor: '#1a1208' },
+        ambientIntensity: 1.2,
+        sun:         '#fff9e3',
+        sunIntensity: 2.0,
+        skybox:      { mode: 'gradient', topColor: '#0077be', bottomColor: '#87ceeb' },
         dirty:       false,
     };
 
@@ -75,10 +75,12 @@ const FPSEditor = (() => {
     let _showGrid     = true;
     let _selection    = null;
     let _activeY      = 0;          // current edit layer (Y axis)
+    let _viewportMode = '3d';       // '3d' | 'split' | '2d'
 
-    // ── rect-stamp drag state ────────────────────────────────────────────────
-    // Set on mousedown when drawMode === 'rect'; cleared on mouseup.
-    let _rectDrag = null;  // { gx0, gz0, gx1, gz1, erase: bool }
+    // ── drawing / drag state ────────────────────────────────────────────────
+    let _rectDrag     = null;       // { gx0, gz0, gx1, gz1, erase: bool }
+    let _drawing3d    = false;      // active drag-drawing in 3D
+    let _lastDrawKey  = null;       // prevent redundant draws on same cell
 
     // ── undo stack ───────────────────────────────────────────────────────────
     const _undoStack = [];
@@ -297,8 +299,8 @@ const FPSEditor = (() => {
         // update coords display
         const wx = (cx - _pan2d.x) / _zoom2d;
         const wz = (cy - _pan2d.y) / _zoom2d;
-        document.getElementById('tool-coords').textContent =
-            `X: ${wx.toFixed(2)}   Y: ${_activeY}   Z: ${wz.toFixed(2)}`;
+        const coordEl = document.getElementById('tool-coords');
+        if (coordEl) coordEl.textContent = `X: ${wx.toFixed(2)}   Y: ${_activeY}   Z: ${wz.toFixed(2)}`;
 
         // track hovered voxel key for LightEditor emissive tool (Phase 39)
         if (typeof LightEditor !== 'undefined') {
@@ -434,7 +436,10 @@ const FPSEditor = (() => {
     const _keysDown = new Set();    // tracks WASD/QE while canvas hovered
 
     function _init3d() {
+        if (_three) return; // Already initialized
+
         const canvas = document.getElementById('canvas-3d');
+        if (!canvas) return;
 
         // Three.js is loaded as a global from lib/ only when available; 
         // fall back to a placeholder canvas renderer if not available.
@@ -472,20 +477,30 @@ const FPSEditor = (() => {
         const skybox = new SkyboxSystem(scene);
         skybox.applyConfig({
             mode: 'gradient',
-            topColor: '#1a2a3a',
-            bottomColor: '#0a0806'
+            topColor: '#0077be',
+            bottomColor: '#87ceeb'
         });
 
-        // Lighting
-        const ambient = new THREE.AmbientLight(_state.ambient, 0.8);
+        // Lighting: High-Contrast Studio Model
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
+        scene.add(hemi);
+
+        const ambient = new THREE.AmbientLight(_state.ambient, 1.2);
         scene.add(ambient);
-        const dirLight = new THREE.DirectionalLight(_state.sun, 1.2);
-        dirLight.position.set(10, 20, 10);
+        
+        const dirLight = new THREE.DirectionalLight(_state.sun, 1.8);
+        dirLight.position.set(20, 50, 10);
         dirLight.castShadow = true;
+        dirLight.shadow.mapSize.set(2048, 2048);
         scene.add(dirLight);
 
-        // Grid helper
-        const gridHelper = new THREE.GridHelper(40, 40, 0x2a2018, 0x1a1208);
+        // Sharp 1x1 Block Grid (Balanced Contrast)
+        const gridHelper = new THREE.GridHelper(100, 100, 0xcccccc, 0x444444);
+        gridHelper.position.y = (_activeY * _state.cellSize) + 0.05;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.5;
+        gridHelper.material.depthWrite = false;
+        gridHelper.visible = _showGrid;
         scene.add(gridHelper);
 
         const meshGroup  = new THREE.Group();
@@ -496,7 +511,7 @@ const FPSEditor = (() => {
         _three = { 
             scene, camera, renderer: renderer3d.webgl, 
             renderer3d, skybox,
-            meshGroup, lightGroup, dirLight, ambient, gridHelper 
+            meshGroup, lightGroup, dirLight, ambient, gridHelper
         };
 
         // Orbit controls via pointer events
@@ -558,6 +573,24 @@ const FPSEditor = (() => {
         _updateCamInfo();
     }
 
+    function _renderVoxelToGroup(group, cs) {
+        const boxGeo = new THREE.BoxGeometry(cs, cs, cs);
+        for (const key in _state.voxelGrid) {
+            const [gx, gy, gz] = key.split(',').map(Number);
+            const cell  = _state.voxelGrid[key];
+            const color = cell.color || '#666';
+            // Use the shared hexMaterial from Renderer3D if available, else manual
+            const mat   = (typeof hexMaterial === 'function') 
+                ? hexMaterial(color) 
+                : new THREE.MeshLambertMaterial({ color, flatShading: true });
+            const mesh  = new THREE.Mesh(boxGeo, mat);
+            mesh.position.set(gx * cs + cs / 2, gy * cs + cs / 2, gz * cs + cs / 2);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            group.add(mesh);
+        }
+    }
+
     function _rebuild3d() {
         if (!_three) return;
         
@@ -567,108 +600,117 @@ const FPSEditor = (() => {
             return;
         }
 
-        const group = _three.meshGroup;
-        const cs    = _state.cellSize;
+        const mainGroup = _three.meshGroup;
+        const cs        = _state.cellSize;
 
         _rebuildPromise = (async () => {
-            // clear old meshes
-            while (group.children.length) {
-                const m = group.children[0];
-                m.geometry?.dispose();
-                m.material?.dispose();
-                group.remove(m);
-            }
+            try {
+                // Prepare a temporary group to hold new geometry (Double Buffering)
+                const tempGroup = new THREE.Group();
 
-            if (_tilesetEnabled && _atlas) {
-                // ── Atlas tileset path ──────────────────────────────────────────
-                for (const key in _state.voxelGrid) {
-                    const [gx, gy, gz] = key.split(',').map(Number);
-                    const cell      = _state.voxelGrid[key];
-                    const blockType = cell.textureId || cell.type || _activeBlock || 'floor';
-                    const geo       = PrimitiveFactory.create(blockType, cs, cs, cs);
-                    _atlas.applyBlockUVs(geo, blockType);
-                    const mat  = _atlas.getMaterial(THREE);
+                if (_tilesetEnabled && _atlas) {
+                    // ── Atlas tileset path ──────────────────────────────────────────
+                    for (const key in _state.voxelGrid) {
+                        const [gx, gy, gz] = key.split(',').map(Number);
+                        const cell      = _state.voxelGrid[key];
+                        const blockType = cell.textureId || cell.type || _activeBlock || 'floor';
+                        const geo       = PrimitiveFactory.create(blockType, cs, cs, cs);
+                        _atlas.applyBlockUVs(geo, blockType);
+                        const mat  = _atlas.getMaterial(THREE);
+                        const mesh = new THREE.Mesh(geo, mat);
+                        mesh.position.set(gx * cs + cs / 2, gy * cs + cs / 2, gz * cs + cs / 2);
+                        mesh.userData.blockType = blockType;
+                        tempGroup.add(mesh);
+                    }
+                } else if (typeof BrushTools !== 'undefined') {
+                    // ── Greedy mesh path (Phase 37) ───────────────────────────────
+                    const groups = BrushTools.buildGreedyMesh(_state.voxelGrid, cs);
+                    // This is the ASYNC part that used to cause flickering
+                    const meshes = await BrushTools.buildThreeGeometries(groups, THREE, _atlas);
+                    if (meshes && meshes.length) {
+                        for (const m of meshes) tempGroup.add(m);
+                    } else if (Object.keys(_state.voxelGrid).length > 0) {
+                        _renderVoxelToGroup(tempGroup, cs);
+                    }
+                    
+                    // Apply emissive
+                    if (Object.keys(_state.emissiveBlocks).length) {
+                        tempGroup.traverse(m => {
+                            if (!m.isMesh) return;
+                            const hex = m.material.color?.getHexString?.();
+                            if (!hex) return;
+                            let glows = false;
+                            for (const key of Object.keys(_state.emissiveBlocks)) {
+                                const cell = _state.voxelGrid[key];
+                                if (cell && (cell.color || '#888888') === `#${hex}`) { glows = true; break; }
+                            }
+                            if (glows) {
+                                m.material = m.material.clone();
+                                m.material.emissive = new THREE.Color(`#${hex}`);
+                                m.material.emissiveIntensity = 0.6;
+                            }
+                        });
+                    }
+                } else {
+                    _renderVoxelToGroup(tempGroup, cs);
+                }
+
+                if (_shading === 'wireframe') {
+                    tempGroup.traverse(m => { if (m.isMesh && !m.material.wireframe) m.material.wireframe = true; });
+                }
+
+                // entity markers
+                for (const ent of _state.entities) {
+                    const geo  = new THREE.SphereGeometry(0.25, 6, 4);
+                    const mat  = new THREE.MeshLambertMaterial({ color: _entityColor(ent.type) });
                     const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.set(gx * cs + cs / 2, gy * cs + cs / 2, gz * cs + cs / 2);
-                    mesh.userData.blockType = blockType;
-                    group.add(mesh);
+                    mesh.position.set(ent.x, ent.y + 0.5, ent.z);
+                    tempGroup.add(mesh);
                 }
-            } else if (typeof BrushTools !== 'undefined') {
-                // ── Greedy mesh path (Phase 37) ───────────────────────────────
-                const groups = BrushTools.buildGreedyMesh(_state.voxelGrid, cs);
-                const meshes = await BrushTools.buildThreeGeometries(groups, THREE, _atlas);
-                for (const m of meshes) {
-                    group.add(m);
-                }
-                // Apply emissive
-                if (Object.keys(_state.emissiveBlocks).length) {
-                    group.traverse(m => {
-                        if (!m.isMesh) return;
-                        const hex = m.material.color?.getHexString?.();
-                        if (!hex) return;
-                        let glows = false;
-                        for (const key of Object.keys(_state.emissiveBlocks)) {
-                            const cell = _state.voxelGrid[key];
-                            if (cell && (cell.color || '#888888') === `#${hex}`) { glows = true; break; }
-                        }
-                        if (glows) {
-                            m.material = m.material.clone();
-                            m.material.emissive = new THREE.Color(`#${hex}`);
-                            m.material.emissiveIntensity = 0.6;
-                        }
-                    });
-                }
-            } else {
-                // ── Fallback: one box per block ───────────────────────────────────
-                for (const key in _state.voxelGrid) {
-                    const [gx, gy, gz] = key.split(',').map(Number);
-                    const cell  = _state.voxelGrid[key];
-                    const color = cell.color || '#666';
-                    const geo   = new THREE.BoxGeometry(cs, cs, cs);
-                    const mat   = new THREE.MeshLambertMaterial({ color });
-                    const mesh  = new THREE.Mesh(geo, mat);
-                    mesh.position.set(gx * cs + cs / 2, gy * cs + cs / 2, gz * cs + cs / 2);
-                    group.add(mesh);
-                }
-            }
 
-            // entity markers
-            for (const ent of _state.entities) {
-                const geo  = new THREE.SphereGeometry(0.25, 6, 4);
-                const mat  = new THREE.MeshLambertMaterial({ color: _entityColor(ent.type) });
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(ent.x, ent.y + 0.5, ent.z);
-                group.add(mesh);
-            }
+                // trigger volumes
+                for (const trg of _state.triggers) {
+                    const geo = new THREE.BoxGeometry(trg.w, trg.h || 2, trg.d);
+                    const mat = new THREE.MeshBasicMaterial({ color: 0xf39c12, wireframe: true, opacity: 0.5, transparent: true });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.set(trg.x + trg.w/2, _state.floorY + (trg.h||2)/2, trg.z + trg.d/2);
+                    tempGroup.add(mesh);
+                }
 
-            // trigger volumes
-            for (const trg of _state.triggers) {
-                const geo = new THREE.BoxGeometry(trg.w, trg.h || 2, trg.d);
-                const mat = new THREE.MeshBasicMaterial({ color: 0xf39c12, wireframe: true, opacity: 0.5, transparent: true });
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(trg.x + trg.w/2, _state.floorY + (trg.h||2)/2, trg.z + trg.d/2);
-                group.add(mesh);
-            }
-
-            // ── Point lights (Phase 39) ───────────────────────────────────────────
-            if (_three.lightGroup) {
-                const lg = _three.lightGroup;
-                while (lg.children.length) lg.remove(lg.children[0]);
+                // ── Point lights (Phase 39) ───────────────────────────────────────────
+                const tempLights = new THREE.Group();
                 for (const lt of _state.lights) {
                     const pl = new THREE.PointLight(lt.color, lt.intensity, lt.radius, 2);
                     pl.position.set(lt.x, lt.y, lt.z);
-                    lg.add(pl);
-                    // small helper sphere so the light is visible in the viewport
+                    tempLights.add(pl);
                     const sg = new THREE.SphereGeometry(0.12, 5, 4);
                     const sm = new THREE.MeshBasicMaterial({ color: lt.color });
                     const sh = new THREE.Mesh(sg, sm);
                     sh.position.copy(pl.position);
-                    lg.add(sh);
+                    tempLights.add(sh);
                 }
-            }
 
-            if (_shading === 'wireframe') {
-                group.traverse(m => { if (m.isMesh && !m.material.wireframe) m.material.wireframe = true; });
+                // ── FINAL SWAP (SYNCHRONOUS) ─────────────────────────────────────────
+                // This single block replaces the scene content in one frame
+                while (mainGroup.children.length) {
+                    const m = mainGroup.children[0];
+                    m.geometry?.dispose();
+                    m.material?.dispose();
+                    mainGroup.remove(m);
+                }
+                while (tempGroup.children.length) {
+                    mainGroup.add(tempGroup.children[0]);
+                }
+
+                // Swap lights
+                if (_three.lightGroup) {
+                    const lg = _three.lightGroup;
+                    while (lg.children.length) lg.remove(lg.children[0]);
+                    while (tempLights.children.length) lg.add(tempLights.children[0]);
+                }
+
+            } catch (err) {
+                console.error('[FPSEditor] _rebuild3d failed:', err);
             }
         })();
 
@@ -681,6 +723,48 @@ const FPSEditor = (() => {
         });
     }
 
+    /** Raycast and return snapped grid coordinates { gx, gy, gz } */
+    function _raycastToGridCoords(e) {
+        if (!_three) return null;
+        const canvas = document.getElementById('canvas-3d');
+        const rect = canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, _three.camera);
+        const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
+        const cs   = _state.cellSize;
+
+        if (hits.length) {
+            const hit = hits[0];
+            // We want the cell we are actually looking at/hitting
+            const gx = Math.floor((hit.point.x - hit.face.normal.x * cs * 0.01) / cs);
+            const gy = Math.floor((hit.point.y - hit.face.normal.y * cs * 0.01) / cs);
+            const gz = Math.floor((hit.point.z - hit.face.normal.z * cs * 0.01) / cs);
+            return { gx, gy, gz };
+        } else {
+            const pt = _raycastGroundPlane(e, _activeY);
+            if (!pt) return null;
+            return { gx: Math.floor(pt.x/cs), gy: _activeY, gz: Math.floor(pt.z/cs) };
+        }
+    }
+
+    function _fill3d(gx, gz, erase) {
+        if (typeof BrushTools === 'undefined') return;
+        const prev = _snapshot();
+        const changes = erase 
+            ? BrushTools.floodFill(_state.voxelGrid, gx, _activeY, gz, null, null)
+            : BrushTools.floodFill(_state.voxelGrid, gx, _activeY, gz, _activeBlock, _activeColor);
+        if (changes.length) {
+            _pushUndo(prev);
+            markDirty();
+            _rebuild3d();
+            _updateBlockCount();
+        }
+    }
+
     function _setCam3dFromOrbit(cam) {
         cam = cam || _three?.camera;
         if (!cam) return;
@@ -690,21 +774,63 @@ const FPSEditor = (() => {
         const z = o.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta);
         cam.position.set(x, y, z);
         cam.lookAt(o.target.x, o.target.y, o.target.z);
+
+        // Sync Headlamp
+        if (_three?.camLight) {
+            _three.camLight.position.copy(cam.position);
+        }
     }
 
     function _on3dDown(e) {
         e.preventDefault();
         _drag3d = { button: e.button, cx: e.clientX, cy: e.clientY, theta: _orbitState.theta, phi: _orbitState.phi, tx: _orbitState.target.x, tz: _orbitState.target.z };
         _drag3dMoved = 0;
+
         if (_trimeshMode === 'trimesh' && e.button === 0) {
             _sculpting = true;
             _sculptRaycast(e);
+        } else if (e.button === 0 || e.button === 2) {
+            if (['draw-room', 'corridor'].includes(_activeTool)) {
+                const coords = _raycastToGridCoords(e);
+                if (coords) {
+                    if (_drawMode === 'rect') {
+                        _rectDrag = { gx0: coords.gx, gz0: coords.gz, gx1: coords.gx, gz1: coords.gz, erase: e.button === 2 };
+                        return; // Block orbit while dragging rect
+                    } else if (_drawMode === 'fill') {
+                        _fill3d(coords.gx, coords.gz, e.button === 2);
+                        return; // Block orbit on fill click
+                    } else {
+                        // Pencil mode
+                        _drawing3d = true;
+                        _lastDrawKey = null;
+                        _raycast3dAction(e, e.button === 2 ? 'erase' : 'place');
+                    }
+                }
+            } else if (_activeTool === 'paint' && e.button === 0) {
+                _drawing3d = true;
+                _lastDrawKey = null;
+                _raycast3dAction(e, 'paint');
+            }
         }
     }
 
     function _on3dMove(e) {
         if (_sculpting && _trimeshMode === 'trimesh') {
             _sculptRaycast(e);
+            return;
+        }
+        if (_rectDrag) {
+            const coords = _raycastToGridCoords(e);
+            if (coords) {
+                _rectDrag.gx1 = coords.gx;
+                _rectDrag.gz1 = coords.gz;
+            }
+            _updateGhostMesh(e);
+            return;
+        }
+        if (_drawing3d) {
+            const mode = (_activeTool === 'paint') ? 'paint' : 'place';
+            _raycast3dAction(e, mode);
             return;
         }
         if (_drag3d) {
@@ -732,6 +858,29 @@ const FPSEditor = (() => {
 
     function _on3dUp(e) {
         _sculpting = false;
+        _drawing3d = false;
+        _lastDrawKey = null;
+
+        if (_rectDrag) {
+            const { gx0, gz0, gx1, gz1, erase } = _rectDrag;
+            _rectDrag = null;
+            if (typeof BrushTools === 'undefined') return;
+            const prev = _snapshot();
+            let changes;
+            if (erase) {
+                changes = BrushTools.rectErase(_state.voxelGrid, gx0, gz0, gx1, gz1, _activeY);
+            } else {
+                changes = BrushTools.rectStamp(_state.voxelGrid, gx0, gz0, gx1, gz1, _activeY, _activeBlock, _activeColor);
+            }
+            if (changes.length) {
+                _pushUndo(prev);
+                markDirty();
+                _rebuild3d();
+                _updateBlockCount();
+            }
+            return;
+        }
+
         if (_drag3d && _drag3dMoved < 5) {
             // treat as a click
             const btn = _drag3d.button;
@@ -823,6 +972,11 @@ const FPSEditor = (() => {
                 gy = _activeY;
                 gz = Math.floor(pt.z / cs);
             }
+
+            const key = `${gx},${gy},${gz}`;
+            if (key === _lastDrawKey) return;
+            _lastDrawKey = key;
+
             if (typeof BrushTools === 'undefined') return;
             const prev    = _snapshot();
             const changes = BrushTools.pencil(_state.voxelGrid, gx, gy, gz, _activeBlock, _activeColor);
@@ -831,6 +985,30 @@ const FPSEditor = (() => {
                 markDirty();
                 _rebuild3d();
                 _updateBlockCount();
+            }
+        } else if (mode === 'paint') {
+            if (!hits.length) return;
+            const hit = hits[0];
+            // Paint the voxel WE HIT (inset slightly into the voxel)
+            const inset = cs * 0.01;
+            const px = hit.point.x - hit.face.normal.x * inset;
+            const py = hit.point.y - hit.face.normal.y * inset;
+            const pz = hit.point.z - hit.face.normal.z * inset;
+            const gx = Math.floor(px / cs);
+            const gy = Math.floor(py / cs);
+            const gz = Math.floor(pz / cs);
+            
+            const key = `${gx},${gy},${gz}`;
+            if (key === _lastDrawKey) return;
+            _lastDrawKey = key;
+
+            if (typeof BrushTools === 'undefined') return;
+            const prev    = _snapshot();
+            const changes = BrushTools.paintBlock(_state.voxelGrid, gx, gy, gz, _activeColor);
+            if (changes.length) {
+                _pushUndo(prev);
+                markDirty();
+                _rebuild3d();
             }
         } else if (mode === 'erase') {
             if (!hits.length) return;
@@ -890,15 +1068,42 @@ const FPSEditor = (() => {
             if (_ghostMesh) _ghostMesh.visible = false;
             return;
         }
-        // lazy-create ghost mesh
+
+        const cs = _state.cellSize;
+        // lazy-create ghost mesh (Phase 63 Upgrade: Holographic Cursor)
         if (!_ghostMesh) {
-            const cs = _state.cellSize;
-            _ghostMesh = new THREE.LineSegments(
-                new THREE.EdgesGeometry(new THREE.BoxGeometry(cs, cs, cs)),
-                new THREE.LineBasicMaterial({ color: 0xff6b35 })
-            );
+            _ghostMesh = new THREE.Group();
+            
+            // Edge cage (high-vis cyan)
+            const cageGeo = new THREE.BoxGeometry(cs * 1.01, cs * 1.01, cs * 1.01);
+            const edgeGeo = new THREE.EdgesGeometry(cageGeo);
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2, transparent: true, opacity: 0.8 });
+            const edges   = new THREE.LineSegments(edgeGeo, edgeMat);
+            _ghostMesh.add(edges);
+
+            // Translucent fill
+            const fillGeo = new THREE.BoxGeometry(cs, cs, cs);
+            const fillMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.15 });
+            const fill    = new THREE.Mesh(fillGeo, fillMat);
+            _ghostMesh.add(fill);
+
             _three.scene.add(_ghostMesh);
         }
+
+        if (_rectDrag) {
+            const { gx0, gz0, gx1, gz1 } = _rectDrag;
+            const minX = Math.min(gx0, gx1), maxX = Math.max(gx0, gx1);
+            const minZ = Math.min(gz0, gz1), maxZ = Math.max(gz0, gz1);
+            const w = (maxX - minX + 1);
+            const d = (maxZ - minZ + 1);
+            _ghostMesh.scale.set(w, 1, d);
+            _ghostMesh.position.set((minX + w / 2) * cs, (_activeY + 0.5) * cs, (minZ + d / 2) * cs);
+            _ghostMesh.visible = true;
+            return;
+        } else {
+            _ghostMesh.scale.set(1, 1, 1);
+        }
+
         const canvas = document.getElementById('canvas-3d');
         const rect = canvas.getBoundingClientRect();
         const mouse = new THREE.Vector2(
@@ -908,7 +1113,6 @@ const FPSEditor = (() => {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(mouse, _three.camera);
         const hits = raycaster.intersectObjects(_three.meshGroup.children, false);
-        const cs = _state.cellSize;
 
         if (_activeTool === 'draw-room' || _activeTool === 'corridor') {
             let gx, gy, gz;
@@ -936,10 +1140,18 @@ const FPSEditor = (() => {
     }
 
     function _updateCamInfo() {
-        const el = document.getElementById('cam-info');
-        if (!el || !_three) return;
-        const c = _three.camera.position;
-        el.textContent = `Cam  X:${c.x.toFixed(1)}  Y:${c.y.toFixed(1)}  Z:${c.z.toFixed(1)}\nBlocks: ${Object.keys(_state.voxelGrid).length}`;
+        const elPos = document.getElementById('cam-pos-val');
+        const elRot = document.getElementById('cam-rot-val');
+        const elFov = document.getElementById('cam-fov-val');
+        if (!elPos || !_three) return;
+
+        const cam = _three.camera;
+        const p   = cam.position;
+        const r   = cam.rotation;
+
+        elPos.textContent = `X ${p.x.toFixed(2)} Y ${p.y.toFixed(2)} Z ${p.z.toFixed(2)}`;
+        elRot.textContent = `P ${THREE.MathUtils.radToDeg(r.x).toFixed(0)}° Y ${THREE.MathUtils.radToDeg(r.y).toFixed(0)}° R ${THREE.MathUtils.radToDeg(r.z).toFixed(0)}°`;
+        elFov.textContent = `${cam.fov}°`;
     }
 
     // ── render loop (2D + 3D together) ───────────────────────────────────────
@@ -964,6 +1176,35 @@ const FPSEditor = (() => {
     function switchPalette(tab) {
         document.querySelectorAll('#bottom-palette .palette-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
         document.querySelectorAll('#bottom-palette .palette-panel').forEach(p => p.classList.toggle('active', p.id === `pal-${tab}`));
+    }
+
+    function setViewportMode(mode) {
+        _viewportMode = mode;
+        const v3d = document.getElementById('viewport-3d');
+        const v2d = document.getElementById('viewport-2d');
+        if (!v3d || !v2d) return;
+
+        // Update HUD buttons
+        document.querySelectorAll('.vp-toolbar-btn[id^=btn-vmode-]').forEach(b => {
+            b.classList.toggle('active', b.id === `btn-vmode-${mode}`);
+        });
+
+        if (mode === '3d') {
+            v3d.style.display = 'block';
+            v3d.style.flex = '1';
+            v2d.classList.remove('viewport-2d-visible');
+        } else if (mode === 'split') {
+            v3d.style.display = 'block';
+            v3d.style.flex = '1';
+            v2d.classList.add('viewport-2d-visible');
+            v2d.style.height = '35%';
+        } else if (mode === '2d') {
+            v3d.style.display = 'none';
+            v2d.classList.add('viewport-2d-visible');
+            v2d.style.height = '100%';
+        }
+        
+        window.dispatchEvent(new Event('resize'));
     }
 
     function setTool(tool) {
@@ -1018,6 +1259,18 @@ const FPSEditor = (() => {
         _activeY = Math.max(-20, Math.min(20, Math.round(v)));
         const el = document.getElementById('active-y-display');
         if (el) el.textContent = _activeY;
+        
+        // Sync 3D Grid
+        if (_three?.gridHelper) {
+            // Offset grid by 0.05 to prevent z-fighting with blocks
+            _three.gridHelper.position.y = (_activeY * _state.cellSize) + 0.05;
+        }
+        
+        // Update statusbar
+        const layerEl = document.getElementById('status-layer');
+        if (layerEl) layerEl.textContent = `Layer: ${_activeY}`;
+        
+        _draw2d();
     }
 
     /** Called by ColorPalette.onColorSelected callback — keeps _activeColor in sync. */
@@ -1062,26 +1315,17 @@ const FPSEditor = (() => {
     function toggleGrid() {
         _showGrid = !_showGrid;
         if (_three?.gridHelper) _three.gridHelper.visible = _showGrid;
+        
+        // Update HUD button
+        const btn = document.getElementById('btn-grid-toggle');
+        if (btn) btn.classList.toggle('active', _showGrid);
     }
 
     function toggleWireframe() {
         setShading(_shading === 'wireframe' ? 'shaded' : 'wireframe');
     }
-
     function toggle2d() {
-        _show2d = !_show2d;
-        const vp = document.getElementById('viewport-2d');
-        if (vp) vp.classList.toggle('viewport-2d-visible', _show2d);
-        const btn = document.getElementById('btn-toggle-2d');
-        if (btn) btn.classList.toggle('active', _show2d);
-        if (_three && _three.renderer) {
-            const canvas = document.getElementById('canvas-3d');
-            const w = Math.max(1, canvas.parentElement.clientWidth);
-            const h = Math.max(1, canvas.parentElement.clientHeight - 24);
-            _three.renderer.setSize(w, h);
-            _three.camera.aspect = w / h;
-            _three.camera.updateProjectionMatrix();
-        }
+        setViewportMode(_viewportMode === '3d' ? 'split' : '3d');
     }
 
     /**
@@ -1137,17 +1381,23 @@ const FPSEditor = (() => {
 
     function markDirty() {
         _state.dirty = true;
-        document.getElementById('unsaved-dot').style.display = 'block';
+        const el = document.getElementById('unsaved-dot');
+        if (el) el.style.display = 'block';
     }
 
     function _clearDirty() {
         _state.dirty = false;
-        document.getElementById('unsaved-dot').style.display = 'none';
+        const el = document.getElementById('unsaved-dot');
+        if (el) el.style.display = 'none';
     }
 
-    function _updateBlockCount()  { document.getElementById('status-voxels').textContent   = `Voxels: ${Object.keys(_state.voxelGrid).length}`; }
+    function _updateBlockCount() {
+        const el = document.getElementById('status-voxels');
+        if (el) el.textContent = `Voxels: ${Object.keys(_state.voxelGrid).length}`;
+    }
     function _updateEntityCount() {
-        document.getElementById('status-entities').textContent = `Entities: ${_state.entities.length}`;
+        const el = document.getElementById('status-entities');
+        if (el) el.textContent = `Entities: ${_state.entities.length}`;
         if (typeof EntitySpawner !== 'undefined') EntitySpawner.syncEntities(_state.entities);
     }
     function _updateTriggerList() {
@@ -1202,9 +1452,13 @@ const FPSEditor = (() => {
 
     // ── fog / lighting settings ──────────────────────────────────────────────
     function updateFog() {
-        _state.fog.color = document.getElementById('fog-color').value;
-        _state.fog.near  = +document.getElementById('fog-near').value;
-        _state.fog.far   = +document.getElementById('fog-far').value;
+        const elColor = document.getElementById('fog-color');
+        const elNear = document.getElementById('fog-near');
+        const elFar = document.getElementById('fog-far');
+        if (elColor) _state.fog.color = elColor.value;
+        if (elNear) _state.fog.near = +elNear.value;
+        if (elFar) _state.fog.far = +elFar.value;
+        
         if (_three?.scene?.fog) {
             _three.scene.fog.color.set(_state.fog.color);
             _three.scene.fog.near = _state.fog.near;
@@ -1219,9 +1473,13 @@ const FPSEditor = (() => {
     }
 
     function updateLighting() {
-        _state.ambient = document.getElementById('ambient-color').value;
-        _state.sun     = document.getElementById('sun-color').value;
-        const sunInt   = parseFloat(document.getElementById('sun-intensity').value);
+        const elAmb = document.getElementById('ambient-color');
+        const elSun = document.getElementById('sun-color');
+        const elInt = document.getElementById('sun-intensity');
+        
+        if (elAmb) _state.ambient = elAmb.value;
+        if (elSun) _state.sun = elSun.value;
+        const sunInt = elInt ? parseFloat(elInt.value) : 1.2;
 
         if (_three?.scene) {
             if (_three.ambient) _three.ambient.color.set(_state.ambient);
@@ -1239,14 +1497,22 @@ const FPSEditor = (() => {
     }
 
     function updateSkybox() {
-        const mode = document.getElementById('sky-mode').value;
-        const solidCol = document.getElementById('sky-solid-color').value;
-        const topCol = document.getElementById('sky-top-color').value;
-        const botCol = document.getElementById('sky-bottom-color').value;
+        const elMode = document.getElementById('sky-mode');
+        const elSolid = document.getElementById('sky-solid-color');
+        const elTop = document.getElementById('sky-top-color');
+        const elBot = document.getElementById('sky-bottom-color');
+        
+        if (!elMode) return;
+        const mode = elMode.value;
+        const solidCol = elSolid ? elSolid.value : '#000000';
+        const topCol = elTop ? elTop.value : '#1a2a3a';
+        const botCol = elBot ? elBot.value : '#000000';
 
         // Toggle UI panels
-        document.getElementById('sky-solid-props').style.display = (mode === 'solid') ? 'block' : 'none';
-        document.getElementById('sky-gradient-props').style.display = (mode === 'gradient') ? 'block' : 'none';
+        const panelSolid = document.getElementById('sky-solid-props');
+        const panelGrad = document.getElementById('sky-gradient-props');
+        if (panelSolid) panelSolid.style.display = (mode === 'solid') ? 'block' : 'none';
+        if (panelGrad) panelGrad.style.display = (mode === 'gradient') ? 'block' : 'none';
 
         if (_three?.skybox) {
             if (mode === 'solid') {
@@ -1317,7 +1583,8 @@ const FPSEditor = (() => {
         const name = prompt('Save map as:', _state.mapName);
         if (!name) return;
         _state.mapName = name;
-        document.getElementById('map-name').value = name;
+        const el = document.getElementById('map-name');
+        if (el) el.value = name;
         saveMap();
     }
 
@@ -1500,31 +1767,36 @@ const FPSEditor = (() => {
         _state.emissiveBlocks = data.emissiveBlocks || {};
 
         // update UI fields
-        document.getElementById('map-name').value    = _state.mapName;
-        document.getElementById('map-author').value  = _state.author;
-        document.getElementById('map-project').value = _state.project;
-        document.getElementById('ceiling-height').value = _state.ceilingH;
-        document.getElementById('floor-y').value     = _state.floorY;
-        document.getElementById('fog-color').value   = _state.fog.color;
-        document.getElementById('fog-near').value    = _state.fog.near;
-        document.getElementById('fog-far').value     = _state.fog.far;
-        document.getElementById('ambient-color').value = _state.ambient;
-        document.getElementById('sun-color').value     = _state.sun;
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        };
+        setVal('map-name',       _state.mapName);
+        setVal('map-author',     _state.author);
+        setVal('map-project',    _state.project);
+        setVal('ceiling-height', _state.ceilingH);
+        setVal('floor-y',        _state.floorY);
+        setVal('fog-color',      _state.fog.color);
+        setVal('fog-near',       _state.fog.near);
+        setVal('fog-far',        _state.fog.far);
+        setVal('ambient-color',  _state.ambient);
+        setVal('sun-color',      _state.sun);
         
         if (_state.skybox) {
-            document.getElementById('sky-mode').value = _state.skybox.mode || 'gradient';
+            setVal('sky-mode', _state.skybox.mode || 'gradient');
             if (_state.skybox.mode === 'solid') {
-                document.getElementById('sky-solid-color').value = _state.skybox.topColor || _state.skybox.colorHex || '#0a0806';
+                setVal('sky-solid-color', _state.skybox.topColor || _state.skybox.colorHex || '#0a0806');
             } else {
-                document.getElementById('sky-top-color').value = _state.skybox.topColor || '#1a2a3a';
-                document.getElementById('sky-bottom-color').value = _state.skybox.bottomColor || '#0a0806';
+                setVal('sky-top-color',    _state.skybox.topColor    || '#1a2a3a');
+                setVal('sky-bottom-color', _state.skybox.bottomColor || '#0a0806');
             }
         }
         
         updateSkybox();
         updateLighting();
 
-        document.getElementById('project-label').textContent = _state.project || '— no project —';
+        const projLbl = document.getElementById('project-label');
+        if (projLbl) projLbl.textContent = _state.project || '— no project —';
 
         _undoStack.length = 0;
         _redoStack.length = 0;
@@ -1652,6 +1924,9 @@ const FPSEditor = (() => {
                 if (e.key === 's') setTool('select');
                 if (e.key === 'g') toggleGrid();
                 if (e.key === 'w') toggleWireframe();
+                if (e.key === 'F1') { e.preventDefault(); setViewportMode('3d'); }
+                if (e.key === 'F2') { e.preventDefault(); setViewportMode('split'); }
+                if (e.key === 'F3') { e.preventDefault(); setViewportMode('2d'); }
                 if (e.key === 'F5') { e.preventDefault(); testPlay(); }
                 if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
             }
@@ -1663,19 +1938,30 @@ const FPSEditor = (() => {
     }
 
     // ── resize handler ───────────────────────────────────────────────────────
+    let _lastW = 0, _lastH = 0;
     function _initResize() {
-        const ro = new ResizeObserver(() => {
-            _resize2d();
-            if (_three) {
-                const vp = document.getElementById('viewport-3d');
-                const w  = Math.max(1, vp.clientWidth);
-                const h  = Math.max(1, vp.clientHeight - 24);
-                _three.renderer.setSize(w, h);
-                _three.camera.aspect = w / h;
-                _three.camera.updateProjectionMatrix();
+        const ro = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const { width: w, height: h } = entry.contentRect;
+                if (Math.abs(w - _lastW) < 0.1 && Math.abs(h - _lastH) < 0.1) continue;
+                _lastW = w; _lastH = h;
+
+                _resize2d();
+                // Renderer3D (Phase 62) has its own ResizeObserver on its container,
+                // but we may need to nudge it or handle fallback.
+                if (_three && !_three.renderer3d && _three.renderer) {
+                    const vp = document.getElementById('viewport-3d');
+                    if (!vp) return;
+                    const vw = Math.max(1, vp.clientWidth);
+                    const vh = Math.max(1, vp.clientHeight);
+                    _three.renderer.setSize(vw, vh);
+                    _three.camera.aspect = vw / vh;
+                    _three.camera.updateProjectionMatrix();
+                }
             }
         });
-        ro.observe(document.getElementById('layout'));
+        const layoutEl = document.getElementById('layout');
+        if (layoutEl) ro.observe(layoutEl);
     }
 
     // ── persistence & browse helpers ─────────────────────────────────────────
@@ -1815,7 +2101,7 @@ const FPSEditor = (() => {
         // Init 256-color palette (Phase 38)
         if (typeof ColorPalette !== 'undefined') {
             const palMount = document.getElementById('tab-textures');
-            ColorPalette.init(palMount);
+            if (palMount) ColorPalette.init(palMount);
             ColorPalette.onColorSelected((hex /*, idx*/) => {
                 _activeColor = hex;
             });
@@ -1865,8 +2151,10 @@ const FPSEditor = (() => {
         const project = params.get('project') || '';
         if (project) {
             _state.project = project;
-            document.getElementById('project-label').textContent = project;
-            document.getElementById('map-project').value = project;
+            const lbl = document.getElementById('project-label');
+            if (lbl) lbl.textContent = project;
+            const inp = document.getElementById('map-project');
+            if (inp) inp.value = project;
         }
 
         // auto-load startLevel when ?project= is present
@@ -1888,14 +2176,16 @@ const FPSEditor = (() => {
         // Init light editor (Phase 39)
         if (typeof LightEditor !== 'undefined') {
             const litMount = document.getElementById('tab-lights');
-            LightEditor.init(litMount);
-            LightEditor.onChanged(() => {
-                const data = LightEditor.toData();
-                _state.lights         = data.lights;
-                _state.emissiveBlocks = data.emissiveBlocks;
-                markDirty();
-                _rebuild3d();
-            });
+            if (litMount) {
+                LightEditor.init(litMount);
+                LightEditor.onChanged(() => {
+                    const data = LightEditor.toData();
+                    _state.lights         = data.lights;
+                    _state.emissiveBlocks = data.emissiveBlocks;
+                    markDirty();
+                    _rebuild3d();
+                });
+            }
         }
 
         // Init entity & trigger spawner (Phase 40)
@@ -1951,7 +2241,7 @@ const FPSEditor = (() => {
     // public exports
     return {
         init: _init,
-        switchTab, setTool, setSnap,
+        switchTab, switchPalette, setViewportMode, setTool, setSnap,
         selectBlock, setDrawMode, setCellSize, setCeilingHeight, setFloorY, setActiveY,
         setActiveColor, setShading, toggleGrid, toggleWireframe, toggle2d, resetCam, setView,
         zoom2d, fitView2d,

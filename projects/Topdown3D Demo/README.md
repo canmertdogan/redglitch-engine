@@ -40,6 +40,6 @@ A demo project showcasing the **topdown-3d** engine — a real-time strategy / t
 
 ## Customizing
 
-- Edit `dunyalar/demo_level_01.json` directly, or use **Topdown3D Editor** from the Vortex launcher.
+- Edit `dunyalar/demo_level_01.json` directly, or use **Topdown3D Editor** from the Ketebe launcher.
 - Add new unit types by extending `entities[]` with a matching `type` registered in the engine's unit registry.
 - Swap terrain to `mode: "voxel"` and provide `chunks[]` for a Minecraft-style world.

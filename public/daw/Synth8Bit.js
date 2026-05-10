@@ -1,5 +1,5 @@
 /**
- * VORTEX 8-Bit Synthesizer - Classic chiptune sounds
+ * KETEBE 8-Bit Synthesizer - Classic chiptune sounds
  * Features: Pulse wave (with duty cycle), Triangle wave, Noise
  */
 

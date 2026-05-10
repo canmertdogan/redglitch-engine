@@ -22,6 +22,7 @@
         }
 
         * { box-sizing: border-box; outline: none; }
+        canvas { display: block; }
         
         body {
             margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
@@ -63,7 +64,7 @@
 
         /* --- TOOLBAR --- */
         #toolbar {
-            height: 44px; background: #000; border-bottom: 1px solid var(--border);
+            height: 38px; background: #000; border-bottom: 2px solid var(--border);
             display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
         }
         .tool-btn {
@@ -79,13 +80,13 @@
 
         /* --- LAYOUT --- */
         #layout { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        #main-area { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+        #main-area { flex: 1; display: flex; overflow: hidden; min-height: 0; background: #000; }
 
         /* --- TOOL RAIL (LEFTMOST) --- */
         #tool-rail {
-            width: 50px; background: #000; border-right: 1px solid var(--border);
+            width: 50px; background: #000; border-right: 2px solid var(--border);
             display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 10px;
-            flex-shrink: 0; z-index: 20;
+            flex-shrink: 0; z-index: 100;
         }
         
         .rail-btn {
@@ -101,14 +102,32 @@
         
         .rail-sep { width: 30px; height: 1px; background: #333; margin: 5px 0; }
 
-        /* --- SIDEBAR / PANELS --- */
-        #sidebar-left { width: 260px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        /* --- SIDEBARS --- */
+        .sidebar { background: var(--bg-panel); display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.15s; position: relative; }
+        #sidebar-left { width: 260px; border-right: 2px solid var(--border); }
+        #sidebar-right { width: 300px; border-left: 2px solid var(--border); }
+
+        .sidebar.collapsed { width: 34px !important; }
+        .sidebar.collapsed .panel-header span, 
+        .sidebar.collapsed .panel-tabs, 
+        .sidebar.collapsed .panel-body,
+        .sidebar.collapsed #properties-panel,
+        .sidebar.collapsed .action-row { display: none !important; }
         
+        .sidebar.collapsed .panel-header { padding: 5px 0; justify-content: center; border-bottom: none; }
+        .sidebar.collapsed .collapse-btn { transform: rotate(180deg); }
+
         .panel-header {
             height: 36px; background: #000; display: flex; align-items: center; padding: 0 10px;
-            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
-            flex-shrink: 0;
+            font-weight: bold; color: var(--accent); border-bottom: 2px solid var(--border); 
+            flex-shrink: 0; justify-content: space-between;
         }
+        .collapse-btn { cursor: pointer; color: #555; font-size: 0.9rem; transition: color 0.1s; }
+        .collapse-btn:hover { color: var(--accent); }
+
+        .panel-title-vertical { writing-mode: vertical-lr; transform: rotate(180deg); display: none !important; padding: 15px 5px; font-size: 1.1rem; letter-spacing: 2px; cursor: pointer; color: var(--accent); font-weight: bold; }
+        .sidebar.collapsed .panel-title-vertical { display: block !important; }
+
         .panel-tabs { display: flex; background: #000; border-bottom: 2px solid var(--border); }
         .panel-tab {
             flex: 1; padding: 8px 0; text-align: center; font-size: 1rem; cursor: pointer;
@@ -128,31 +147,51 @@
         .section-header:first-child { margin-top: 0; }
 
         /* --- CENTER PANEL & VIEWPORTS --- */
-        #center-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #000; }
-        #viewports { flex: 1; display: flex; flex-direction: column; }
+        #center-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #000; position: relative; }
+        #viewports { flex: 1; display: flex; flex-direction: column; background: #000; overflow: hidden; }
         
-        #viewport-3d { flex: 1.2; position: relative; border-bottom: 1px solid var(--border); }
-        #viewport-2d { flex: 1; position: relative; background: #080503; }
+        #viewport-3d { flex: 1; position: relative; border-bottom: 2px solid var(--border); background: #050505; }
+        #viewport-2d { flex-basis: 35%; position: relative; background: #080503; display: none; border-top: 1px solid #111; }
+        #viewport-2d.viewport-2d-visible { display: block; }
 
-        .viewport-label {
-            position: absolute; top: 8px; left: 10px;
-            background: rgba(0,0,0,0.7); padding: 4px 10px;
-            font-size: 0.8rem; color: #888; pointer-events: none;
-            z-index: 10; border: 1px solid #333;
-        }
-        .viewport-label span { color: var(--accent); font-weight: bold; }
+        canvas#canvas-3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: block; }
 
-        #overlay-3d { position: absolute; bottom: 10px; right: 10px; z-index: 20; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-        #cam-info { font-size: 0.8rem; color: #666; background: rgba(0,0,0,0.7); padding: 4px 10px; border: 1px solid #333; }
-        .vp-corner-btn { display: flex; gap: 4px; }
-        .vp-btn {
-            width: 32px; height: 32px;
-            background: rgba(10,10,15,0.8); border: 1px solid var(--border);
-            color: #666; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; border-radius: 3px; font-size: 1rem;
+        /* HUD Components */
+        .vp-hud-top-left { position: absolute; top: 10px; left: 10px; z-index: 20; display: flex; flex-direction: column; gap: 5px; pointer-events: none; }
+        .vp-hud-top-right { position: absolute; top: 10px; right: 10px; z-index: 20; display: flex; gap: 5px; pointer-events: none; }
+        .vp-hud-bottom-left { position: absolute; bottom: 15px; left: 15px; z-index: 20; pointer-events: none; }
+        .vp-hud-bottom-right { position: absolute; bottom: 15px; right: 15px; z-index: 20; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
+
+        .vp-tag {
+            background: rgba(0,0,0,0.6); border-left: 3px solid var(--accent); 
+            padding: 6px 14px; font-size: 0.85rem; color: #eee; letter-spacing: 1.5px;
+            display: flex; align-items: center; gap: 8px; pointer-events: auto;
+            text-transform: uppercase;
         }
-        .vp-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
-        .vp-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .vp-tag b { color: var(--accent); font-weight: bold; }
+        .vp-tag-muted { font-size: 0.7rem; color: #888; margin-left: 5px; }
+
+        /* Integrated Viewport Toolbar */
+        .vp-toolbar {
+            background: rgba(10,10,15,0.9); border: 1px solid #222; border-radius: 2px;
+            padding: 3px; display: flex; gap: 4px; pointer-events: auto;
+        }
+        .vp-toolbar-btn {
+            width: 32px; height: 30px; background: transparent; border: 1px solid transparent;
+            color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; border-radius: 3px; transition: all 0.1s;
+        }
+        .vp-toolbar-btn:hover { color: #fff; background: #111; border-color: #333; }
+        .vp-toolbar-btn.active { color: var(--accent); background: #1a1a1a; border-color: var(--accent); }
+        .vp-toolbar-sep { width: 1px; height: 18px; background: #222; margin: 6px 4px; }
+
+        /* Camera Readout */
+        .cam-readout {
+            font-family: 'VT323', monospace; font-size: 0.9rem; color: #555; text-align: right;
+            line-height: 1.3; text-transform: uppercase; pointer-events: auto;
+            background: rgba(0,0,0,0.5); padding: 8px 12px; border-right: 2px solid var(--accent);
+        }
+        .cam-readout span { color: #aaa; margin-left: 10px; font-weight: bold; }
 
         /* --- ASSET GRIDS & CARDS --- */
         .asset-grid {
@@ -219,14 +258,14 @@
         .entity-name { flex: 1; font-size: 1rem; }
         .entity-badge { font-size: 0.7rem; background: #000; padding: 2px 6px; color: #3498db; border: 1px solid #1f2b42; border-radius: 2px; }
 
-        /* --- INSPECTOR --- */
-        #sidebar-right { width: 300px; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
-        
         /* --- BOTTOM PALETTE --- */
         #bottom-palette {
             height: 220px; background: var(--bg-panel); border-top: 2px solid var(--border);
-            display: flex; flex-direction: column; flex-shrink: 0;
+            display: flex; flex-direction: column; flex-shrink: 0; transition: height 0.2s;
         }
+        #bottom-palette.collapsed { height: 36px !important; overflow: hidden; }
+        #bottom-palette.collapsed .palette-content { display: none !important; }
+        #bottom-palette.collapsed .palette-header { border-bottom: none; }
         .palette-header { height: 36px; background: #000; display: flex; align-items: center; border-bottom: 1px solid var(--border); }
         .palette-tabs { display: flex; height: 100%; flex: 1; }
         .palette-tab {
@@ -249,9 +288,9 @@
         .status-item { border-right: 1px solid var(--border); padding: 0 15px; height: 100%; display: flex; align-items: center; }
 
         /* --- RESIZERS --- */
-        .resizer { width: 5px; background: #000; cursor: col-resize; z-index: 100; flex-shrink: 0; border-left: 1px solid #222; border-right: 1px solid #222; }
+        .resizer { width: 5px; background: #000; cursor: col-resize; z-index: 200; flex-shrink: 0; border-left: 1px solid #222; border-right: 1px solid #222; }
         .resizer:hover { background: var(--accent); }
-        .resizer-h { height: 5px; background: #000; cursor: row-resize; border-top: 1px solid #222; border-bottom: 1px solid #222; }
+        .resizer-h { height: 5px; background: #000; cursor: row-resize; z-index: 200; border-top: 1px solid #222; border-bottom: 1px solid #222; }
         .resizer-h:hover { background: var(--accent); }
 
         /* Modal */
@@ -272,7 +311,7 @@
 <!-- ══ MENUBAR ═══════════════════════════════════════════════════════════ -->
 <div id="menubar">
     <div class="menubar-title">
-        <i class="fas fa-crosshairs"></i> FPS STUDIO <span id="unsaved-dot" style="display:none; color:var(--danger); margin-left:5px;">●</span>
+        <i class="fas fa-crosshairs"></i> <span id="unsaved-dot" style="display:none; color:var(--danger); margin-left:5px;">●</span>
     </div>
     
     <div class="menu-item-root">
@@ -353,8 +392,12 @@
         </div>
 
         <!-- Left Sidebar (Geometry & Settings) -->
-        <div id="sidebar-left">
-            <div class="panel-header">MODE SETTINGS</div>
+        <div id="sidebar-left" class="sidebar">
+            <div class="panel-header">
+                <span>MODE SETTINGS</span>
+                <i class="fas fa-chevron-left collapse-btn" title="Collapse" onclick="toggleSidebar('left')"></i>
+            </div>
+            <div class="panel-title-vertical" onclick="toggleSidebar('left')">MODE SETTINGS</div>
             <div class="panel-tabs">
                 <div class="panel-tab active" data-tab="geo" onclick="FPSEditor.switchTab('geo')">GEO</div>
                 <div class="panel-tab" data-tab="sky" onclick="FPSEditor.switchTab('sky')">SKY</div>
@@ -403,29 +446,30 @@
                 <div class="field-row"><label>Mode</label><select id="sky-mode" onchange="FPSEditor.updateSkybox()"><option value="solid">Solid</option><option value="gradient" selected>Gradient</option><option value="voxel">Voxel</option></select></div>
                 
                 <div id="sky-solid-props" style="display:none">
-                    <div class="field-row"><label>Color</label><input type="color" id="sky-solid-color" value="#0a0806" onchange="FPSEditor.updateSkybox()"></div>
+                    <div class="field-row"><label>Color</label><input type="color" id="sky-solid-color" value="#0077be" onchange="FPSEditor.updateSkybox()"></div>
                 </div>
                 
                 <div id="sky-gradient-props">
-                    <div class="field-row"><label>Top</label><input type="color" id="sky-top-color" value="#1a2a3a" onchange="FPSEditor.updateSkybox()"></div>
-                    <div class="field-row"><label>Bottom</label><input type="color" id="sky-bottom-color" value="#0a0806" onchange="FPSEditor.updateSkybox()"></div>
+                    <div class="field-row"><label>Top</label><input type="color" id="sky-top-color" value="#0077be" onchange="FPSEditor.updateSkybox()"></div>
+                    <div class="field-row"><label>Bottom</label><input type="color" id="sky-bottom-color" value="#87ceeb" onchange="FPSEditor.updateSkybox()"></div>
                 </div>
                 
                 <div class="section-header">Environment</div>
                 <div class="field-row"><label>Ambient</label><input type="color" id="ambient-color" value="#ffffff" onchange="FPSEditor.updateLighting()"></div>
-                <div class="field-row"><label>Sun Color</label><input type="color" id="sun-color" value="#ffcc88" onchange="FPSEditor.updateLighting()"></div>
-                <div class="field-row"><label>Intensity</label><input type="range" id="sun-intensity" min="0" max="3" step="0.1" value="1.5" oninput="FPSEditor.updateLighting()"></div>
+                <div class="field-row"><label>Sun Color</label><input type="color" id="sun-color" value="#fff9e3" onchange="FPSEditor.updateLighting()"></div>
+                <div class="field-row"><label>Intensity</label><input type="range" id="sun-intensity" min="0" max="4" step="0.1" value="2.0" oninput="FPSEditor.updateLighting()"></div>
             </div>
 
             <div class="panel-body" id="tab-settings">
                 <div class="section-header">Map Properties</div>
                 <div class="field-row"><label>Name</label><input type="text" id="map-name" onchange="FPSEditor.markDirty()"></div>
                 <div class="field-row"><label>Author</label><input type="text" id="map-author" onchange="FPSEditor.markDirty()"></div>
+                <input type="hidden" id="map-project">
                 
                 <div class="section-header">Atmosphere</div>
-                <div class="field-row"><label>Fog Color</label><input type="color" id="fog-color" onchange="FPSEditor.updateFog()"></div>
-                <div class="field-row"><label>Fog Near</label><input type="number" id="fog-near" onchange="FPSEditor.updateFog()"></div>
-                <div class="field-row"><label>Fog Far</label><input type="number" id="fog-far" onchange="FPSEditor.updateFog()"></div>
+                <div class="field-row"><label>Fog Color</label><input type="color" id="fog-color" value="#87ceeb" onchange="FPSEditor.updateFog()"></div>
+                <div class="field-row"><label>Fog Near</label><input type="number" id="fog-near" value="20" onchange="FPSEditor.updateFog()"></div>
+                <div class="field-row"><label>Fog Far</label><input type="number" id="fog-far" value="100" onchange="FPSEditor.updateFog()"></div>
 
                 <button class="action-btn danger" onclick="FPSEditor.clearMap()" style="margin-top:20px;"><i class="fas fa-trash"></i> CLEAR MAP</button>
             </div>
@@ -435,15 +479,45 @@
         <div id="center-panel">
             <div id="viewports">
                 <div id="viewport-3d">
-                    <div class="viewport-label"><span>PERSPECTIVE</span> — Orbit: RMB · Fly: WASD · Place: LMB</div>
+                    <!-- HUD Top Left -->
+                    <div class="vp-hud-top-left">
+                        <div class="vp-tag"><b>PERSPECTIVE</b> <span class="vp-tag-muted">/ REAL-TIME</span></div>
+                        <div class="vp-tag" style="font-size:0.75rem; opacity:0.6;">Orbit: RMB · Fly: WASD · Place: LMB</div>
+                    </div>
+
+                    <!-- HUD Top Right -->
+                    <div class="vp-hud-top-right">
+                        <div class="vp-toolbar">
+                            <button class="vp-toolbar-btn active" id="btn-shaded" title="Shaded Mode" onclick="FPSEditor.setShading('shaded')"><i class="fas fa-circle"></i></button>
+                            <button class="vp-toolbar-btn" id="btn-wireframe" title="Wireframe Mode" onclick="FPSEditor.setShading('wireframe')"><i class="fas fa-draw-polygon"></i></button>
+                            <div class="vp-toolbar-sep"></div>
+                            <button class="vp-toolbar-btn" id="btn-tileset" title="Toggle Textures" onclick="FPSEditor.setTilesetEnabled(!FPSEditor._tilesetEnabled)">🧱</button>
+                            <button class="vp-toolbar-btn active" id="btn-grid-toggle" title="Toggle Grid (G)" onclick="FPSEditor.toggleGrid()"><i class="fas fa-border-all"></i></button>
+                            <div class="vp-toolbar-sep"></div>
+                            <button class="vp-toolbar-btn active" id="btn-vmode-3d" title="Perspective (F1)" onclick="FPSEditor.setViewportMode('3d')"><i class="fas fa-cube"></i></button>
+                            <button class="vp-toolbar-btn" id="btn-vmode-split" title="Split View (F2)" onclick="FPSEditor.setViewportMode('split')"><i class="fas fa-columns"></i></button>
+                            <button class="vp-toolbar-btn" id="btn-vmode-2d" title="Floor Plan (F3)" onclick="FPSEditor.setViewportMode('2d')"><i class="fas fa-map"></i></button>
+                            <div class="vp-toolbar-sep"></div>
+                            <button class="vp-toolbar-btn" title="Reset Camera" onclick="FPSEditor.resetCam()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+
                     <canvas id="canvas-3d"></canvas>
-                    <div id="overlay-3d">
-                        <div id="cam-info"></div>
-                        <div class="vp-corner-btn">
-                            <div class="vp-btn active" id="btn-shaded" title="Shaded" onclick="FPSEditor.setShading('shaded')"><i class="fas fa-circle"></i></div>
-                            <div class="vp-btn" id="btn-wireframe" title="Wireframe" onclick="FPSEditor.setShading('wireframe')"><i class="fas fa-draw-polygon"></i></div>
-                            <div class="vp-btn" id="btn-tileset" title="Toggle Tiles" onclick="FPSEditor.setTilesetEnabled(!FPSEditor._tilesetEnabled)">🧱</div>
-                            <div class="vp-btn" id="btn-toggle-2d" title="Floor Plan" onclick="FPSEditor.toggle2d()">📐</div>
+
+                    <!-- HUD Bottom Left -->
+                    <div class="vp-hud-bottom-left">
+                        <div style="width:60px; height:60px; border-left:1px solid #333; border-bottom:1px solid #333; opacity:0.3; position:relative;">
+                            <span style="position:absolute; top:-10px; left:2px; font-size:0.6rem; color:#666;">Z</span>
+                            <span style="position:absolute; bottom:2px; right:-10px; font-size:0.6rem; color:#666;">X</span>
+                        </div>
+                    </div>
+
+                    <!-- HUD Bottom Right -->
+                    <div class="vp-hud-bottom-right">
+                        <div class="cam-readout">
+                            <div>POS <span id="cam-pos-val">X 0.00 Y 0.00 Z 0.00</span></div>
+                            <div>ROT <span id="cam-rot-val">P 0° Y 0° R 0°</span></div>
+                            <div>FOV <span id="cam-fov-val">75°</span></div>
                         </div>
                     </div>
                 </div>
@@ -457,15 +531,20 @@
         <div class="resizer" id="resizer-right"></div>
 
         <!-- Inspector (Right) -->
-        <div id="sidebar-right">
-            <div class="panel-header">PROPERTIES</div>
+        <div id="sidebar-right" class="sidebar">
+            <div class="panel-header">
+                <i class="fas fa-chevron-right collapse-btn" title="Collapse" onclick="toggleSidebar('right')"></i>
+                <span>PROPERTIES</span>
+                <span></span>
+            </div>
+            <div class="panel-title-vertical" onclick="toggleSidebar('right')">PROPERTIES</div>
             <div id="properties-panel" style="flex:1; overflow-y:auto; padding:12px;">
                 <div style="color:#666; font-size:1rem; text-align:center; margin-top:40px;">
                     Select an entity or trigger to edit properties.
                 </div>
             </div>
             
-            <div style="padding:10px; border-top:1px solid var(--border);">
+            <div class="action-row" style="padding:10px; border-top:1px solid var(--border);">
                 <button class="action-btn primary" onclick="FPSEditor.saveMap()"><i class="fas fa-save"></i> SAVE MAP</button>
                 <button class="action-btn" onclick="FPSEditor.exportMap()"><i class="fas fa-file-export"></i> EXPORT</button>
             </div>
@@ -483,6 +562,7 @@
                 <div class="palette-tab" data-tab="textures" onclick="FPSEditor.switchPalette('textures')"><i class="fas fa-palette"></i> COLORS</div>
                 <div class="palette-tab" data-tab="lights"   onclick="FPSEditor.switchPalette('lights')"><i class="fas fa-lightbulb"></i> LIGHTS</div>
             </div>
+            <i class="fas fa-chevron-down collapse-btn" id="bottom-collapse-icon" title="Toggle Palette" style="padding-right:15px;" onclick="toggleBottomPalette()"></i>
         </div>
         <div class="palette-content">
             <!-- BLOCKS PANEL -->
@@ -565,12 +645,12 @@
     import * as THREE from '/lib/three/three.module.js';
     window.THREE = THREE;
 </script>
-<script src="fps_editor/BrushTools.js"></script>
-<script src="fps_editor/ColorPalette.js"></script>
-<script src="fps_editor/LightEditor.js"></script>
-<script src="fps_editor/EntitySpawner.js"></script>
-<script src="fps_editor/MapExporter.js"></script>
-<script src="fps_editor.js"></script>
+<script src="fps_editor/BrushTools.js?v=2"></script>
+<script src="fps_editor/ColorPalette.js?v=2"></script>
+<script src="fps_editor/LightEditor.js?v=2"></script>
+<script src="fps_editor/EntitySpawner.js?v=2"></script>
+<script src="fps_editor/MapExporter.js?v=2"></script>
+<script src="fps_editor.js?v=2"></script>
 
 <script>
     // Initialize editor on load
@@ -611,6 +691,20 @@
     };
     makeResizable('resizer-right', 'sidebar-right', 'W');
     makeResizable('resizer-bottom', 'bottom-palette', 'H');
+
+    // Collapse Logic
+    window.toggleSidebar = (side) => {
+        const el = document.getElementById(`sidebar-${side}`);
+        el.classList.toggle('collapsed');
+        window.dispatchEvent(new Event('resize'));
+    };
+    window.toggleBottomPalette = () => {
+        const el = document.getElementById('bottom-palette');
+        const icon = document.getElementById('bottom-collapse-icon');
+        const isCollapsed = el.classList.toggle('collapsed');
+        icon.className = isCollapsed ? 'fas fa-chevron-up collapse-btn' : 'fas fa-chevron-down collapse-btn';
+        window.dispatchEvent(new Event('resize'));
+    };
 </script>
 
 </body>

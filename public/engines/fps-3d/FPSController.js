@@ -277,8 +277,9 @@ export default class FPSController {
         const cosYaw = Math.cos(yaw);
 
         // Wish direction in world XZ (forward = -Z in Three.js convention)
-        const wishX  = axis.x * cosYaw - axis.y * sinYaw;
-        const wishZ  = axis.x * sinYaw + axis.y * cosYaw;
+        // Standard 2D rotation for Three.js XZ plane (where +Z is "down" on screen)
+        const wishX  = axis.x * cosYaw + axis.y * sinYaw;
+        const wishZ  = -axis.x * sinYaw + axis.y * cosYaw;
 
         const speed  = isCrouching ? this._speedCrouch
                      : isSprinting ? this._speedSprint

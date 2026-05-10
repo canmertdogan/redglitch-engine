@@ -1,8 +1,8 @@
-# Copilot Instructions for Vortex Engine
+# Copilot Instructions for Ketebe Engine
 
 ## Project Overview
 
-**Vortex Engine** is a multi-platform game development studio and launcher built with Electron, capable of creating games across RPG, platformer, and isometric pixel art styles. It consists of:
+**Ketebe Engine** is a multi-platform game development studio and launcher built with Electron, capable of creating games across RPG, platformer, and isometric pixel art styles. It consists of:
 
 - **Launcher & Studio**: Electron-based IDE with HTML/JS editors for game creation
 - **Game Engines**: Three specialized runtime engines (rpg-topdown, platformer-2d, iso-pixel)
@@ -181,15 +181,15 @@ Profiles stored as `profile_{username}.json` with character stats (hp, mana, sta
 - Verify save/load mechanics
 - Validate multi-platform game exports
 
-## AI Architecture (VortexAI)
+## AI Architecture (KetebeAI)
 
-Vortex Engine features a **local-first AI assistant** ("IRAB") integrated directly into the studio. It provides intelligent code completion, documentation retrieval, and studio automation without relying on external cloud APIs.
+Ketebe Engine features a **local-first AI assistant** ("IRAB") integrated directly into the studio. It provides intelligent code completion, documentation retrieval, and studio automation without relying on external cloud APIs.
 
 ### Core Components
 
 1.  **Orchestrator (`public/ai/ketebe-ai.js`)**:
     - Central entry point that coordinates the model manager, inference engine, RAG system, and tool registry.
-    - Exposes a high-level API: `VortexAI.chat(msg)`, `VortexAI.suggest(code)`.
+    - Exposes a high-level API: `KetebeAI.chat(msg)`, `KetebeAI.suggest(code)`.
 
 2.  **Inference Engine (`public/ai/inference-engine.js` + `inference-worker.js`)**:
     - Runs **Transformers.js v3** in a dedicated Web Worker.
@@ -212,7 +212,7 @@ Vortex Engine features a **local-first AI assistant** ("IRAB") integrated direct
 
 5.  **UI Integration**:
     - **Spotlight Modal**: `Ctrl+K` triggers `AIChatUI`.
-    - **Ghost Text**: Inline code completion in `script_editor.js` via `VortexAI.suggest()`.
+    - **Ghost Text**: Inline code completion in `script_editor.js` via `KetebeAI.suggest()`.
     - **Event Bus**: Real-time status updates via `ketebe.EventBus`.
 
 ### Development Workflow
@@ -220,4 +220,4 @@ Vortex Engine features a **local-first AI assistant** ("IRAB") integrated direct
 - **AI Code Location**: `public/ai/`
 - **Documentation Build**: `node public/ai/docs/build-corpus.js`
 - **Model Storage**: Browser Cache API (persistent) + IndexedDB (vectors)
-- **Debugging**: Use `public/test-ai-final.html` or check the DevTools console for `[VortexAI]` logs.
+- **Debugging**: Use `public/test-ai-final.html` or check the DevTools console for `[KetebeAI]` logs.

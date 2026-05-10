@@ -61,7 +61,7 @@ class PlatformerAdapter extends EngineAdapter {
                     await this.engine.loadLevel(levelId, mainPath);
                 } else {
                     // Fallback to platformer subfolder
-                    await this.engine.loadLevel(levelId, `dunyalar/platformer/${levelId}.json`);
+                    await this.engine.loadLevel(levelId, `dunyalar/${levelId}.json`);
                 }
             } catch (e) {
                 // Final fallback
@@ -91,9 +91,18 @@ class PlatformerAdapter extends EngineAdapter {
         
         // Platformer engine might not have a full ability system yet, 
         // but we can simulate basic actions like 'attack'
-        if (abilityId === 'attack' || abilityId === 'fireball') {
-            // Logic for platformer attack could go here
-            // For now, just trigger a visual effect or console log
+        if (abilityId === 'fireball') {
+            if (this.engine.spawnFireball) {
+                const dir = this.engine.player.facingRight ? 1 : -1;
+                this.engine.spawnFireball(this.engine.player.x, this.engine.player.y, dir);
+                return true;
+            } else if (this.engine.fx) {
+                this.engine.fx.popText(this.engine.player.x, this.engine.player.y - 20, "FIREBALL!", "#ff6b35");
+                return true;
+            }
+        }
+        
+        if (abilityId === 'attack') {
             if (this.engine.fx) {
                 this.engine.fx.popText(this.engine.player.x, this.engine.player.y - 20, "ATTACK!", "#fff");
             }

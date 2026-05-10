@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
-        assetManager = window.VortexAssetManager;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
             // Listen for skill updates (items may grant skills)

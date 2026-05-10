@@ -23,7 +23,7 @@ const CONFIG = {
  * Main Build Function
  */
 async function buildCorpus() {
-    console.log('📚 Building Vortex AI Knowledge Corpus...');
+    console.log('📚 Building Ketebe AI Knowledge Corpus...');
     const chunks = [];
 
     for (const source of CONFIG.sources) {

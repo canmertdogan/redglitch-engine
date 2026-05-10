@@ -1,6 +1,6 @@
 {
     "name": "Iso Pixel Demo",
-    "author": "Vortex Agent",
+    "author": "Ketebe Agent",
     "version": "0.1.0",
     "description": "A small demo showcasing the Isometric engine.",
     "template": "iso-starter",

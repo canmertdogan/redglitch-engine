@@ -1,4 +1,4 @@
-// dialogue_editor.js - VORTEX DIALOGUE STUDIO v3.0
+// dialogue_editor.js - KETEBE DIALOGUE STUDIO v3.0
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeDialogueIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
-        assetManager = window.VortexAssetManager;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
             // Listen for NPC updates (dialogues reference NPCs as speakers)

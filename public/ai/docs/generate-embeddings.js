@@ -1,5 +1,5 @@
 /**
- * Vortex AI - Generate Embeddings for Corpus
+ * Ketebe AI - Generate Embeddings for Corpus
  * Run with: node public/ai/docs/generate-embeddings.js
  */
 

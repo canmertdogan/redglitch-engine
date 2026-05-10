@@ -1,5 +1,5 @@
 /**
- * VORTEX Track - Individual audio track with effects chain and metering
+ * KETEBE Track - Individual audio track with effects chain and metering
  */
 
 class Track {

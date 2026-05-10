@@ -72,41 +72,66 @@ class IsoGame {
         this._setupEngineListeners();
         this._startPerformanceMonitor();
 
-        window.addEventListener('keydown', e => {
+        this.resizeHandler = () => this.resize();
+        this.keydownHandler = e => {
             if (!this.keys[e.code]) this.keysPressed[e.code] = true;
             this.keys[e.code] = true;
-        });
-        window.addEventListener('keyup', e => {
+        };
+        this.keyupHandler = e => {
             this.keys[e.code] = false;
             this.keysPressed[e.code] = false;
-        });
-        
-        // Mouse tracking for combat targeting
-        this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0 };
-        this.canvas.addEventListener('mousemove', e => {
+        };
+        this.mousemoveHandler = e => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouse.x = e.clientX - rect.left;
             this.mouse.y = e.clientY - rect.top;
-        });
+        };
+
+        window.addEventListener('keydown', this.keydownHandler);
+        window.addEventListener('keyup', this.keyupHandler);
+        
+        // Mouse tracking for combat targeting
+        this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0 };
+        this.canvas.addEventListener('mousemove', this.mousemoveHandler);
         this.canvas.style.cursor = 'none';
         
-        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('resize', this.resizeHandler);
         this.resize();
     }
 
+    destroy() {
+        this.running = false;
+        if (this.perfInterval) clearInterval(this.perfInterval);
+        
+        window.removeEventListener('keydown', this.keydownHandler);
+        window.removeEventListener('keyup', this.keyupHandler);
+        window.removeEventListener('resize', this.resizeHandler);
+        this.canvas.removeEventListener('mousemove', this.mousemoveHandler);
+        
+        // Unsubscribe from EventBus
+        const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+        if (eventBus && this.eventBusIds) {
+            this.eventBusIds.forEach(id => eventBus.off('*', id));
+        }
+
+        console.log('[IsoEngine] Destroyed and cleaned up listeners.');
+    }
+
     _setupEngineListeners() {
-        const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+        const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+        this.eventBusIds = [];
         if (eventBus) {
-            eventBus.on('engine:snapshot:request', (event) => {
+            const id1 = eventBus.on('engine:snapshot:request', (event) => {
                 const snapshot = this.getSnapshot();
                 eventBus.emit('engine:snapshot:result', { id: event.data.id, snapshot });
             });
 
-            eventBus.on('engine:input', (event) => {
+            const id2 = eventBus.on('engine:input', (event) => {
                 const { code, state } = event.data;
                 this.keys[code] = (state === 'down');
                 if (state === 'down') this.keysPressed[code] = true;
             });
+            this.eventBusIds.push(id1, id2);
         }
     }
 
@@ -114,14 +139,14 @@ class IsoGame {
         this.frameCount = 0;
         this.lastFpsCheck = performance.now();
         
-        setInterval(() => {
+        this.perfInterval = setInterval(() => {
             const now = performance.now();
             const elapsed = now - this.lastFpsCheck;
             const fps = Math.round((this.frameCount * 1000) / elapsed);
             this.frameCount = 0;
             this.lastFpsCheck = now;
 
-            const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+            const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
             if (eventBus) {
                 eventBus.emit('system:metrics', {
                     fps,
@@ -307,8 +332,25 @@ class IsoGame {
                 if (playtestData) {
                     levelData = JSON.parse(playtestData);
                 } else {
-                    const res = await fetch('dunyalar/level1.json');
-                    if(res.ok) levelData = await res.json();
+                    // Try to fetch registry to find first available level
+                    try {
+                        const registryRes = await fetch('/api/assets');
+                        const registry = await registryRes.json();
+                        const levels = registry.assets.filter(a => a.type === 'data' && a.id.startsWith('dunyalar/'));
+                        if (levels.length > 0) {
+                            const firstLevelPath = levels[0].path.startsWith('/') ? levels[0].path : '/' + levels[0].path;
+                            console.log(`[IsoEngine] No playtest map, falling back to registry level: ${firstLevelPath}`);
+                            const res = await fetch(firstLevelPath);
+                            if (res.ok) levelData = await res.json();
+                        } else {
+                            // Last ditch effort: legacy hardcoded level1
+                            const res = await fetch('dunyalar/level1.json');
+                            if(res.ok) levelData = await res.json();
+                        }
+                    } catch (err) {
+                        const res = await fetch('dunyalar/level1.json');
+                        if(res.ok) levelData = await res.json();
+                    }
                 }
             }
 
@@ -368,7 +410,7 @@ class IsoGame {
             }
         };
         
-        // Load Caterpillar/Worm sprites (matching 2D engine's "Vortex Canavarı")
+        // Load Caterpillar/Worm sprites (matching 2D engine's "Ketebe Canavarı")
         if (window.createPixelImage) {
             this.playerHead = window.createPixelImage('caterpillar_head');
             this.playerBody = window.createPixelImage('caterpillar_body');

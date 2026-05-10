@@ -3,6 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
+const safeFs = require('../utils/safeFs');
 
 function isSafeName(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
@@ -17,98 +18,44 @@ async function ensureDir(dirPath) {
     }
 }
 
-// Helper to save definition files
-async function saveDefinition(filename, data) {
-    const targetDir = projectService.isRootProject()
-        ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions')
-        : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions');
-    
-    const filePath = path.join(targetDir, filename);
-    await ensureDir(path.dirname(filePath));
-    await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(data, null, 2), 'utf8');
+// Helper for consistent route creation
+function createDefinitionRoutes(typeName, fileName) {
+    // GET
+    router.get(`/${typeName}`, async (req, res) => {
+        try {
+            const targetDir = projectService.getDunyalarPath();
+            const filePath = path.join(targetDir, 'definitions', fileName);
+            const data = await fs.readFile(filePath, 'utf8');
+            res.json(JSON.parse(data));
+        } catch (err) {
+            res.json([]); // Return empty array if file not found
+        }
+    });
+
+    // POST
+    const saveHandler = async (req, res) => {
+        try {
+            const targetDir = path.join(projectService.getDunyalarPath(), 'definitions');
+            const filePath = path.join(targetDir, fileName);
+            await ensureDir(targetDir);
+            await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(req.body, null, 2), 'utf8');
+            res.json({ success: true });
+        } catch (err) {
+            console.error(`[GameData:${typeName}] Save error:`, err.message);
+            res.status(500).json({ error: `Failed to save ${typeName}` });
+        }
+    };
+
+    router.post(`/${typeName}`, saveHandler);
+    router.post(`/${typeName}-defs`, saveHandler); // Legacy support
 }
 
-// --- QUESTS API ---
-router.get('/quests', async (req, res) => {
-    try {
-        const targetDir = projectService.isRootProject()
-            ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions')
-            : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions');
-        const filePath = path.join(targetDir, 'quests.json');
-        const data = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(data));
-    } catch (err) { res.json([]); }
-});
-
-router.post('/quests', async (req, res) => {
-    try {
-        await saveDefinition('quests.json', req.body);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to save quests' });
-    }
-});
-
-// --- NPCS API ---
-router.get('/npcs', async (req, res) => {
-    try {
-        const targetDir = projectService.isRootProject()
-            ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions')
-            : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions');
-        const filePath = path.join(targetDir, 'npcs.json');
-        const data = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(data));
-    } catch (err) { res.json([]); }
-});
-
-// --- ITEMS API ---
-router.get('/items', async (req, res) => {
-    try {
-        const targetDir = projectService.isRootProject()
-            ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions')
-            : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions');
-        const filePath = path.join(targetDir, 'items.json');
-        const data = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(data));
-    } catch (err) { res.json([]); }
-});
-
-// --- DEFINITION SAVE ENDPOINTS ---
-router.post('/enemy-defs', async (req, res) => {
-    try {
-        await saveDefinition('enemies.json', req.body);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to save enemy definitions' });
-    }
-});
-
-router.post('/npc-defs', async (req, res) => {
-    try {
-        await saveDefinition('npcs.json', req.body);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to save NPC definitions' });
-    }
-});
-
-router.post('/skill-defs', async (req, res) => {
-    try {
-        await saveDefinition('skills.json', req.body);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to save skill definitions' });
-    }
-});
-
-router.post('/item-defs', async (req, res) => {
-    try {
-        await saveDefinition('items.json', req.body);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to save item definitions' });
-    }
-});
+// Create routes for all definition types
+createDefinitionRoutes('quests', 'quests.json');
+createDefinitionRoutes('npcs', 'npcs.json');
+createDefinitionRoutes('items', 'items.json');
+createDefinitionRoutes('enemies', 'enemies.json');
+createDefinitionRoutes('skills', 'skills.json');
 
 // --- FX SYSTEM API ---
 router.get('/fx/list', async (req, res) => {

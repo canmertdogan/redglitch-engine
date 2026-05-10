@@ -1,5 +1,5 @@
 /**
- * VORTEX Piano Roll Controller v2.0
+ * KETEBE Piano Roll Controller v2.0
  * Handles user interaction with the piano roll: tools, snapping, selection, and editing.
  */
 

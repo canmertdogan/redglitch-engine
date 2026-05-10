@@ -1,6 +1,6 @@
 /**
- * Vortex Engine Core Type Definitions
- * Providing intelligence to the Vortex Code Studio
+ * Ketebe Engine Core Type Definitions
+ * Providing intelligence to the Ketebe Code Studio
  */
 
 declare namespace ketebe {
@@ -63,7 +63,7 @@ declare namespace ketebe {
     }
 
     /**
-     * Vortex AI Action Protocol (KAP)
+     * Ketebe AI Action Protocol (KAP)
      * Standardized bridge for AI ↔ Studio tool communication
      */
     namespace ai {
@@ -112,7 +112,7 @@ declare namespace ketebe {
             data?: any;
         }
 
-        interface VortexAI {
+        interface KetebeAI {
             /**
              * Initialize the AI system (lazy-loaded).
              */
@@ -210,5 +210,5 @@ declare namespace ketebe {
 declare const eventBus: ketebe.EventBus;
 declare const assetManager: ketebe.AssetManager;
 declare const sharedProjectState: ketebe.SharedProjectState;
-declare const ketebeAI: ketebe.ai.VortexAI;
+declare const ketebeAI: ketebe.ai.KetebeAI;
 

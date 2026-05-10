@@ -1,4 +1,4 @@
-# Vortex AI - Quick Start Guide
+# Ketebe AI - Quick Start Guide
 
 ## Current Configuration
 

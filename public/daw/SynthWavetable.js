@@ -1,5 +1,5 @@
 /**
- * VORTEX Wavetable Synthesizer - Advanced synthesis using PeriodicWave
+ * KETEBE Wavetable Synthesizer - Advanced synthesis using PeriodicWave
  * Features: Multiple wavetables, morphing (interpolation), sub-oscillator, filter envelope
  */
 

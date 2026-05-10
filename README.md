@@ -1,18 +1,18 @@
-# Vortex Engine (v7)
+# Ketebe Engine (v7)
 
-![Vortex Engine Banner](public/logo.png) <!-- Placeholder for a banner if it exists -->
+![Ketebe Engine Banner](public/logo.png) <!-- Placeholder for a banner if it exists -->
 
-Vortex Engine is a comprehensive, multi-paradigm game development ecosystem designed for building high-quality 2D and 2.5D games. It provides a full suite of integrated tools, from visual level designers to a Monaco-powered code editor, all unified by a browser-native AI assistant.
+Ketebe Engine is a comprehensive, multi-paradigm game development ecosystem designed for building high-quality 2D and 2.5D games. It provides a full suite of integrated tools, from visual level designers to a Monaco-powered code editor, all unified by a browser-native AI assistant.
 
 ## 🚀 Key Features
 
 ### 🎮 Multi-Engine Architecture
-Vortex supports three distinct engine paradigms, each optimized for specific genres:
+Ketebe supports three distinct engine paradigms, each optimized for specific genres:
 - **IsoPixel (2.5D)**: Advanced isometric engine featuring dynamic lighting, a full day/night cycle, particle systems (IsoFX), and depth-sorted rendering.
 - **RPG Top-Down**: Systems-heavy engine with built-in support for branching dialogues, quest management, inventory systems, and dynamic logic scripting.
 - **Platformer 2D**: Precision-focused engine with custom AABB physics and smooth camera systems.
 
-### 🧠 Vortex AI (Kai)
+### 🧠 Ketebe AI (Kai)
 A state-of-the-art, browser-native AI assistant built directly into the IDE:
 - **Local Inference**: Runs entirely in your browser using WebGPU/WASM (Transformers.js), ensuring privacy and offline capability.
 - **RAG (Retrieval-Augmented Generation)**: Intelligent context awareness using a vector store (Orama) to answer questions based on the engine's documentation and codebase.
@@ -61,7 +61,7 @@ A complete suite of tools to streamline your workflow:
    ```
 
 ### Running the Engine
-You can run Vortex Engine in two ways:
+You can run Ketebe Engine in two ways:
 
 #### 1. Development Server (Web Mode)
 Starts the Node.js server to serve the IDE and project files.
@@ -85,7 +85,7 @@ npm run build:ai-worker # Builds the browser-native AI worker scripts
 *Note: Python 3.8+ is also used for advanced backend AI services in `backend/`.*
 
 ## 📱 Mobile Development
-Vortex Engine is ready for mobile deployment via [Capacitor](https://capacitorjs.com/):
+Ketebe Engine is ready for mobile deployment via [Capacitor](https://capacitorjs.com/):
 - **Android**: Located in `/android/`
 - **iOS**: Located in `/ios/`
 
@@ -99,7 +99,7 @@ npx cap open ios
 ## 📜 Documentation
 For more detailed information on specific subsystems, check the `architecture/` and `planmemory/` directories:
 - `ENGINE_ARCHITECTURE.md`: Deep dive into rendering loops and engine internals.
-- `AI_SYSTEM.md`: Details on the Vortex AI and RAG implementation.
+- `AI_SYSTEM.md`: Details on the Ketebe AI and RAG implementation.
 - `OVERVIEW.md`: High-level system architecture and data flow.
 
 ## 🤝 Contributing
@@ -107,4 +107,4 @@ Contributions are welcome! Please refer to the `CODE_REVIEW.md` and existing doc
 
 ---
 
-*Built with ❤️ by the Vortex Team.*
+*Built with ❤️ by the Ketebe Team.*

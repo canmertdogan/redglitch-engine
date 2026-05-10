@@ -2,7 +2,7 @@
 
 ## Launching
 
-From the Vortex dashboard, select a project with `"engineType": "fps-3d"` and click **Open Editor**.
+From the Ketebe dashboard, select a project with `"engineType": "fps-3d"` and click **Open Editor**.
 
 - **Editor files:** `public/fps_editor.html` + `public/fps_editor.js`
 - **Output:** `projects/<ProjectName>/dunyalar/<level>.json`

@@ -6,9 +6,9 @@ let eventBus, projectState, assetManager;
 
 function initializeBackgroundIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
-        assetManager = window.VortexAssetManager;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
             // Listen for background requests from other editors

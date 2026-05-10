@@ -1,4 +1,4 @@
-// script_editor.js - Vortex Code Forge Logic
+// script_editor.js - Ketebe Code Forge Logic
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -6,9 +6,9 @@ let eventBus, projectState, assetManager, studioBridge;
 
 function initializeScriptIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
-        assetManager = window.VortexAssetManager;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
             // Initialize StudioBridge for IRAB
@@ -262,7 +262,7 @@ const SettingsManager = {
 };
 
 // --- Monaco Setup ---
-require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs'}});
+require.config({ paths: { 'vs': 'lib/monaco/vs'}});
 
 window.onload = async () => {
     // Initialize integration first
@@ -274,7 +274,7 @@ window.onload = async () => {
     
     require(['vs/editor/editor.main'], function() {
         // Create Editor
-        editor = monaco.editor.create(document.getElementById('monaco-host'), {
+        editor = monaco.editor.create(document.getElementById('monaco-editor'), {
             theme: SettingsManager.current.theme,
             automaticLayout: true,
             fontFamily: SettingsManager.current.fontFamily,
@@ -323,8 +323,8 @@ window.onload = async () => {
         // --- AI Ghost Text Provider ---
         monaco.languages.registerInlineCompletionsProvider('javascript', {
             provideInlineCompletions: async (model, position, context, token) => {
-                // Only trigger if VortexAI is ready
-                if (!window.VortexAI || !window.VortexAI.isInitialized) return { items: [] };
+                // Only trigger if KetebeAI is ready
+                if (!window.KetebeAI || !window.KetebeAI.isInitialized) return { items: [] };
                 
                 // Debounce simple typing
                 if (context.triggerKind === monaco.languages.InlineCompletionTriggerKind.Automatic) {
@@ -343,7 +343,7 @@ window.onload = async () => {
                 });
 
                 try {
-                    const suggestion = await window.VortexAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
+                    const suggestion = await window.KetebeAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
                     if (suggestion) {
                         return {
                             items: [{

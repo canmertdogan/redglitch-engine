@@ -1,4 +1,4 @@
-// questSystem.js - Vortex Quest Runtime
+// questSystem.js - Ketebe Quest Runtime
 
 window.QuestSystem = class QuestSystem {
     constructor(game) {

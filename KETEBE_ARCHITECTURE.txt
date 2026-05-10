@@ -1,4 +1,4 @@
-                          VORTEX GAME STUDIO - SYSTEM ARCHITECTURE (v9.1 "The Hybrid Frontier")
+                          KETEBE GAME STUDIO - SYSTEM ARCHITECTURE (v9.1 "The Hybrid Frontier")
                           =====================================================================
 
   +-----------------------------------------------------------------------------------------------------------------------+
@@ -15,7 +15,7 @@
   |   | - NPC/Dialogue Weaver    |           +-------------------------------------+           | - IsoShaderSystem WebGL  |   |
   |   | - Pixel/FX Studio        |                        |                                    | - Fixed 60Hz Tick Rate   |   |
   |   |                          |           +-------------------------------------+           |                          |   |
-  |   | [3D-FIRST SUITE (v9)]    |           |      VORTEX AI BRAIN (Worker)       |           | [3D CORES (Three.js)]    |   |
+  |   | [3D-FIRST SUITE (v9)]    |           |      KETEBE AI BRAIN (Worker)       |           | [3D CORES (Three.js)]    |   |
   |   | - FPS Editor (Voxels)    |           +-------------------------------------+           | - Shared Renderer3D Pipe |   |
   |   | - TopDown3D Editor       |           | [INFERENCE] | [RAG / ORAMA DB]      |           |   (Public Resize Method) |   |
   |   | - Platformer3D Editor    |           | - WebGPU    | - Docs Corpus         |           | - FPS Core (6DOF)        |   |

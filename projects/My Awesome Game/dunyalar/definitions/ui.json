@@ -32,7 +32,7 @@
         {
           "id": "title",
           "type": "label",
-          "text": "REVENGE OF THE\nVORTEX CANAVARI",
+          "text": "REVENGE OF THE\nKETEBE CANAVARI",
           "rect": {
             "x": 190,
             "y": 60,
@@ -528,7 +528,7 @@
         {
           "id": "inv_title",
           "type": "label",
-          "text": "VORTEX SACK",
+          "text": "KETEBE SACK",
           "rect": {
             "x": 540,
             "y": 100,

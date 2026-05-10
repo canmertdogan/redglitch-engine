@@ -1,4 +1,4 @@
-# Vortex IsoPixel Studio: Phase 2 Development Plan
+# Ketebe IsoPixel Studio: Phase 2 Development Plan
 
 **Goal:** Elevate the IsoPixel Editor from a "block placer" to a "Voxel Architecture Suite".
 **Focus:** Advanced Geometry, Smart Prefabs, and Physics Integration.

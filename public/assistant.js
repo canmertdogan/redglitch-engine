@@ -48,8 +48,8 @@ window.IRAB = {
                 console.log("[IRAB] Received command from bridge:", action, params);
                 
                 // If Brain (Registry) is ready, execute immediately
-                if (window.VortexAIInstance && window.VortexAIInstance.toolRegistry) {
-                    window.VortexAIInstance.toolRegistry.execute(action, params);
+                if (window.KetebeAIInstance && window.KetebeAIInstance.toolRegistry) {
+                    window.KetebeAIInstance.toolRegistry.execute(action, params);
                 } else {
                     // Brain not ready yet, queue the command
                     console.log("[IRAB] Brain (Registry) not ready. Queuing command...");
@@ -58,11 +58,11 @@ window.IRAB = {
                     // Start a polling interval to flush the queue once Brain is ready
                     if (!this._flushInterval) {
                         this._flushInterval = setInterval(() => {
-                            if (window.VortexAIInstance && window.VortexAIInstance.toolRegistry) {
+                            if (window.KetebeAIInstance && window.KetebeAIInstance.toolRegistry) {
                                 console.log("[IRAB] Brain detected! Flushing command queue...");
                                 while (this._commandQueue.length > 0) {
                                     const next = this._commandQueue.shift();
-                                    window.VortexAIInstance.toolRegistry.execute(next.action, next.params);
+                                    window.KetebeAIInstance.toolRegistry.execute(next.action, next.params);
                                 }
                                 clearInterval(this._flushInterval);
                                 this._flushInterval = null;
@@ -90,7 +90,7 @@ window.IRAB = {
                         }
                     }, 5000);
                 }
-                if (window.VortexEventBus) window.VortexEventBus.emit('ai:command', cmdData);
+                if (window.KetebeEventBus) window.KetebeEventBus.emit('ai:command', cmdData);
             };
             
             window.irab.onReady = () => {
@@ -107,8 +107,8 @@ window.IRAB = {
             };
 
             // Phase 10: Co-Pilot Integration
-            if (window.VortexEventBus) {
-                window.VortexEventBus.on('ai:suggestion', (data) => {
+            if (window.KetebeEventBus) {
+                window.KetebeEventBus.on('ai:suggestion', (data) => {
                     this.showBalloon(`💡 SUGGESTION: ${data.text}`);
                     // If there are actions, we can log them to chat or show them in a special way
                     if (data.actions && data.actions.length > 0) {
@@ -116,7 +116,7 @@ window.IRAB = {
                     }
                 });
 
-                window.VortexEventBus.on('ai:thought', (data) => {
+                window.KetebeEventBus.on('ai:thought', (data) => {
                     this.showBalloon(data.text);
                 });
             }
@@ -453,8 +453,8 @@ window.IRAB = {
     },
 
     injectCode(code) {
-        if (window.VortexEventBus) {
-            window.VortexEventBus.emit('ai:inject-code', { code });
+        if (window.KetebeEventBus) {
+            window.KetebeEventBus.emit('ai:inject-code', { code });
         }
     },
 
@@ -527,7 +527,7 @@ window.IRAB = {
 
         const prompts = {
             'default': "You are IRAB, a grumpy but expert game engine assistant. You like pixels, hate bugs, and start every response with 'GRRR...'",
-            'developer': "You are a Senior Engine Developer at Vortex. Focus on code efficiency, logic architecture, and technical precision. Professional tone.",
+            'developer': "You are a Senior Engine Developer at Ketebe. Focus on code efficiency, logic architecture, and technical precision. Professional tone.",
             'creative': "You are a Master Pixel Artist and Game Designer. Focus on aesthetics, juice, game feel, and creative color palettes.",
             'minimal': "Kernel mode active. Minimal text. Execute tools immediately. Direct and cold.",
             'custom': text.value
@@ -611,7 +611,7 @@ window.IRAB = {
         setTimeout(() => { overlay.style.opacity = 0; overlay.innerHTML = ''; }, 2500);
     },
 
-    quickHelp() { if (window.irab) window.irab.prompt("How do I use Vortex Studio?"); },
+    quickHelp() { if (window.irab) window.irab.prompt("How do I use Ketebe Studio?"); },
     quickTutorial() { if (window.irab) window.irab.prompt("Give me a quick tutorial on engine basics."); },
     quickTips() { if (window.irab) window.irab.prompt("Give me a random pro tip."); },
     tellJoke() { if (window.irab) window.irab.prompt("Tell me a funny developer joke."); },

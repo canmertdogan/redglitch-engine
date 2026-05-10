@@ -1,8 +1,8 @@
-# Vortex 3D Engines — Architecture & API Reference
+# Ketebe 3D Engines — Architecture & API Reference
 
 ## Overview
 
-Vortex ships three 3D engine types built on a shared foundation:
+Ketebe ships three 3D engine types built on a shared foundation:
 
 | Engine Type | Entry Class | Use Case |
 |-------------|-------------|----------|

@@ -145,8 +145,6 @@ async function copyGameFromPublic(projectPath, options = {}) {
         'sprite-art',
         'dunyalar',
         'data',
-        // Support both legacy and current naming
-        'oyuncu_profilleri',
         'profiles'
     ];
     const allowedFiles = options.allowedFiles || [
@@ -301,7 +299,7 @@ router.post('/projects', async (req, res) => {
             name: sanitizeProjectName(name), // Use sanitized name
             author: metadata.author || "Anonymous",
             version: "0.1.0",
-            description: metadata.description || "A new Vortex Engine project.",
+            description: metadata.description || "A new Ketebe Engine project.",
             template: templateId,
             created: new Date().toISOString(),
             engineVersion: "0.2.0"
@@ -503,6 +501,80 @@ router.post('/projects/switch', async (req, res) => {
         websocket.startFileWatcher();
     }
     res.json({ success: true, active: name });
+});
+
+// POST /api/projects/project-file
+router.post('/project-file', async (req, res) => {
+    const { project, path: relPath, content } = req.body;
+    if (!project || !relPath || typeof content !== 'string') {
+        return res.status(400).json({ error: 'project, path, and content are required' });
+    }
+    const fullPath = resolveProjectPath(project);
+    if (!fullPath) return res.status(400).json({ error: 'Invalid project' });
+    const targetPath = path.join(fullPath, relPath);
+    if (!targetPath.startsWith(fullPath + path.sep) && targetPath !== fullPath) return res.status(403).json({ error: 'Access denied' });
+    try {
+        await ensureDir(path.dirname(targetPath));
+        await safeFs.safeWriteFullPath(fullPath, targetPath, content, 'utf8');
+        res.json({ ok: true, path: relPath });
+    } catch (err) {
+        console.error('[project-file] write error:', err.message);
+        res.status(500).json({ error: 'Write failed' });
+    }
+});
+
+// GET /api/projects/project-file
+router.get('/project-file', async (req, res) => {
+    const { project, path: relPath } = req.query;
+    if (!project || !relPath) {
+        return res.status(400).json({ error: 'project and path are required' });
+    }
+    const fullPath = resolveProjectPath(project);
+    if (!fullPath) return res.status(400).json({ error: 'Invalid project' });
+    const targetPath = path.join(fullPath, relPath);
+    if (!targetPath.startsWith(fullPath + path.sep) && targetPath !== fullPath) return res.status(403).json({ error: 'Access denied' });
+    try {
+        const content = await fs.readFile(targetPath, 'utf8');
+        res.json({ ok: true, content });
+    } catch (err) {
+        if (err.code === 'ENOENT') return res.status(404).json({ error: 'File not found' });
+        res.status(500).json({ error: 'Read failed' });
+    }
+});
+
+// GET /api/project/:name/state - Get project shared state
+router.get('/project/:name/state', async (req, res) => {
+    const { name } = req.params;
+    const projectPath = resolveProjectPath(name);
+    if (!projectPath) return res.status(403).json({ error: 'Access denied' });
+
+    const statePath = path.join(projectPath, 'data', 'project_state.json');
+    try {
+        const data = await fs.readFile(statePath, 'utf8');
+        res.json(JSON.parse(data));
+    } catch (err) {
+        // Return empty state if not found
+        res.json({ state: {}, metadata: { created: Date.now(), version: 0 } });
+    }
+});
+
+// POST /api/project/:name/state - Save project shared state
+router.post('/project/:name/state', async (req, res) => {
+    const { name } = req.params;
+    const projectPath = resolveProjectPath(name);
+    if (!projectPath) return res.status(403).json({ error: 'Access denied' });
+
+    const dataDir = path.join(projectPath, 'data');
+    const statePath = path.join(dataDir, 'project_state.json');
+    
+    try {
+        await ensureDir(dataDir);
+        await safeFs.safeWriteFullPath(projectPath, statePath, JSON.stringify(req.body, null, 2), 'utf8');
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[ProjectState] Save error:', err.message);
+        res.status(500).json({ error: 'Failed to save project state' });
+    }
 });
 
 module.exports = router;

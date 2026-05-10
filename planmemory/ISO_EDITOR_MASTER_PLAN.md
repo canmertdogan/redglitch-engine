@@ -1,4 +1,4 @@
-# Vortex IsoPixel Studio: Development Master Plan
+# Ketebe IsoPixel Studio: Development Master Plan
 
 **Goal:** Create a dedicated, professional-grade Level Editor specifically for the **IsoPixel Engine**.
 **Philosophy:** "Verticality is Key." Unlike the Top-Down editor, this tool focuses on depth ($Z$), structure, and 2.5D aesthetics.

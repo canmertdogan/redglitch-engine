@@ -35,7 +35,7 @@ router.post('/save/:username/:slot', async (req, res) => {
     const filePath = path.join(activeProject, 'data', 'saves', `${username}_${slot}.json`);
     try {
         await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await fs.writeFile(filePath, JSON.stringify(req.body, null, 2));
+        await safeFs.safeWriteFullPath(activeProject, filePath, JSON.stringify(req.body, null, 2), 'utf8');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to save game' });
@@ -65,7 +65,7 @@ router.post('/profile/:username', async (req, res) => {
     const filePath = path.join(activeProject, 'data', 'profiles', `${username}.json`);
     try {
         await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await fs.writeFile(filePath, JSON.stringify(req.body, null, 2));
+        await safeFs.safeWriteFullPath(activeProject, filePath, JSON.stringify(req.body, null, 2), 'utf8');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to save profile' });
@@ -80,7 +80,7 @@ router.post('/profiles/:username', async (req, res) => {
     const filePath = path.join(activeProject, 'data', 'profiles', `${username}.json`);
     try {
         await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await fs.writeFile(filePath, JSON.stringify(req.body, null, 2));
+        await safeFs.safeWriteFullPath(activeProject, filePath, JSON.stringify(req.body, null, 2), 'utf8');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to save profile' });
@@ -109,7 +109,7 @@ router.post('/achievements/:username', async (req, res) => {
     const filePath = path.join(activeProject, 'data', 'achievements', `${username}.json`);
     try {
         await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await fs.writeFile(filePath, JSON.stringify(req.body, null, 2));
+        await safeFs.safeWriteFullPath(activeProject, filePath, JSON.stringify(req.body, null, 2), 'utf8');
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to save achievements' });

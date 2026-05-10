@@ -1,4 +1,4 @@
-# 🧠 Vortex AI Micro Edition — Comprehensive Development Plan
+# 🧠 Ketebe AI Micro Edition — Comprehensive Development Plan
 
 **Status:** Final Draft v1.0  
 **Target:** Browser-Native (Client-Side) AI Assistant  
@@ -63,7 +63,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Vortex Studio (Electron / Browser)            │
+│                    Ketebe Studio (Electron / Browser)            │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
 │  │  Monaco       │  │  Map Editor  │  │  Other Editors        │ │
@@ -78,7 +78,7 @@
 │                            │                                    │
 │                            ▼                                    │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │              🧠 VortexAI Module (NEW)                       ││
+│  │              🧠 KetebeAI Module (NEW)                       ││
 │  │                                                             ││
 │  │  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐  ││
 │  │  │ InferenceEng │  │ RAG Engine   │  │ Tool Registry     │  ││
@@ -163,7 +163,7 @@ public/
 
 | File | Change | Reason |
 |------|--------|--------|
-| `public/assistant.js` | Add `VortexAI` integration hooks, keep personality/avatar | Bridge old IRAB to new AI engine |
+| `public/assistant.js` | Add `KetebeAI` integration hooks, keep personality/avatar | Bridge old IRAB to new AI engine |
 | `public/tools.html` | Add `<script>` tags for AI modules | Load the AI system |
 | `public/lib/monaco/ketebe.d.ts` | Add AI-related type definitions | Monaco IntelliSense |
 | `public/script_editor.js` | Add ghost-text completion provider | Inline code suggestions |
@@ -782,13 +782,13 @@ export class ContextManager {
 **System Prompt (hardcoded in context-manager.js):**
 
 ```
-You are IRAB, the AI assistant for Vortex Game Studio.
+You are IRAB, the AI assistant for Ketebe Game Studio.
 You are an expert in the ketebe ENGINE, which supports three game types:
 rpg-topdown, platformer-2d, and iso-pixel.
 
 RULES:
 1. Only use ketebe ENGINE APIs. Never invent functions that don't exist.
-2. When suggesting code, use JavaScript and follow Vortex conventions.
+2. When suggesting code, use JavaScript and follow Ketebe conventions.
 3. If you don't know something, say so. Never hallucinate API methods.
 4. When the user asks you to perform an action, use the available tools.
 5. Format code in ```javascript blocks.
@@ -1058,7 +1058,7 @@ Revamped chat panel that replaces IRAB's chat UI (while keeping the avatar).
 ┌─ Ctrl+K Spotlight Modal ──────────────────────────────────┐
 │                                                            │
 │  ┌─ Header ──────────────────────────────────────────────┐│
-│  │  🧠 IRAB · Vortex AI        [WebGPU ✓]  [RAG ✓]  [×] ││
+│  │  🧠 IRAB · Ketebe AI        [WebGPU ✓]  [RAG ✓]  [×] ││
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌─ Chat History (scrollable) ───────────────────────────┐│
@@ -1117,7 +1117,7 @@ Added to `public/script_editor.js` and `public/ide.js`.
 monaco.languages.registerInlineCompletionsProvider('javascript', {
     provideInlineCompletions: async (model, position, context, token) => {
         // 1. Get surrounding code context (±20 lines around cursor)
-        // 2. Send to VortexAI.complete() for short completion
+        // 2. Send to KetebeAI.complete() for short completion
         // 3. Return as inline suggestion
         // 4. Debounce to avoid spamming the model
     },
@@ -1138,7 +1138,7 @@ Minimal changes to bridge IRAB v11 with the new AI system:
 
 ```javascript
 // What changes in assistant.js:
-// 1. Replace the fetch('/api/ai/chat') call with VortexAI.chat()
+// 1. Replace the fetch('/api/ai/chat') call with KetebeAI.chat()
 // 2. Keep all personality, avatar, proactive triggers intact
 // 3. Use ai-chat-ui.js for the chat panel instead of inline HTML
 // 4. Add event listeners for AI state changes (model loading, etc.)
@@ -1153,9 +1153,9 @@ Minimal changes to bridge IRAB v11 with the new AI system:
 <!-- Add before </body>, after assistant.js -->
 <link rel="stylesheet" href="ai-chat-ui.css">
 <script type="module">
-    import { VortexAI } from './ai/ketebe-ai.js';
-    window.VortexAI = new VortexAI();
-    // VortexAI auto-registers with IRAB (assistant.js) via EventBus
+    import { KetebeAI } from './ai/ketebe-ai.js';
+    window.KetebeAI = new KetebeAI();
+    // KetebeAI auto-registers with IRAB (assistant.js) via EventBus
 </script>
 ```
 
@@ -1167,7 +1167,7 @@ Minimal changes to bridge IRAB v11 with the new AI system:
 
 ```javascript
 /**
- * VortexAI — Main entry point and orchestrator for the AI system.
+ * KetebeAI — Main entry point and orchestrator for the AI system.
  *
  * Coordinates all subsystems:
  *   - InferenceEngine (LLM)
@@ -1179,7 +1179,7 @@ Minimal changes to bridge IRAB v11 with the new AI system:
  *
  * Public API (used by assistant.js and editors):
  */
-export class VortexAI {
+export class KetebeAI {
     constructor() { ... }
 
     /**
@@ -1314,16 +1314,16 @@ User sends message
 | `ai:model:ready` | `{ modelId, backend }` | ModelManager |
 | `ai:model:disposed` | `{ modelId }` | ModelManager |
 | `ai:token` | `{ token, partial }` | InferenceEngine |
-| `ai:response:complete` | `{ text, toolCalls }` | VortexAI |
+| `ai:response:complete` | `{ text, toolCalls }` | KetebeAI |
 | `ai:tool:request` | `{ toolName, args }` | ContextManager |
 | `ai:tool:approved` | `{ toolName, args }` | PermissionGate |
 | `ai:tool:rejected` | `{ toolName }` | PermissionGate |
 | `ai:tool:executed` | `{ toolName, result }` | ToolRegistry |
 | `ai:tool:error` | `{ toolName, error }` | ToolRegistry |
 | `ai:error` | `{ message, code }` | Any |
-| `ai:status` | `{ state, backend, ragReady }` | VortexAI |
+| `ai:status` | `{ state, backend, ragReady }` | KetebeAI |
 | `ai:rag:indexed` | `{ filePath }` | RAGEngine |
-| `ai:ghost:suggest` | `{ text, position }` | VortexAI |
+| `ai:ghost:suggest` | `{ text, position }` | KetebeAI |
 
 ### 9.5 — Error Handling Strategy
 
@@ -1416,7 +1416,7 @@ User sends message
 - [ ] **3.5** Implement editor context extraction (current file, cursor, selection)
 - [ ] **3.6** Implement tool call parsing from LLM response
 - [ ] **3.7** Test: Full prompt fits within 2048 token window
-- [ ] **3.8** Test: Model responds correctly about Vortex APIs with RAG context
+- [ ] **3.8** Test: Model responds correctly about Ketebe APIs with RAG context
 - [ ] **3.9** Test: Model doesn't hallucinate non-existent APIs
 - [ ] **3.10** Test: History pruning keeps most recent relevant messages
 
@@ -1447,7 +1447,7 @@ User sends message
 - [ ] **5.4** Add code block rendering with syntax highlighting
 - [ ] **5.5** Add "Copy" and "Apply" buttons for code blocks
 - [ ] **5.6** Add inline action buttons for tool confirmations
-- [ ] **5.7** Add model download progress UI (progress bar + tips/Vortex facts)
+- [ ] **5.7** Add model download progress UI (progress bar + tips/Ketebe facts)
 - [ ] **5.8** Add status bar (model info, backend, inference time)
 - [ ] **5.9** Add keyboard navigation (Ctrl+K open, Escape close, Enter send, Up history)
 - [ ] **5.10** Modify `public/assistant.js` — bridge IRAB avatar to new AI backend
@@ -1531,7 +1531,7 @@ User sends message
 16. `public/ai/docs/corpus.json` (generated)
 
 ### Modified Files (7)
-17. `public/assistant.js` — Bridge to VortexAI
+17. `public/assistant.js` — Bridge to KetebeAI
 18. `public/tools.html` — Load AI modules
 19. `public/script_editor.js` — Ghost text provider
 20. `public/ide.js` — Ghost text provider

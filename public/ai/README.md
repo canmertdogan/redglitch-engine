@@ -1,10 +1,10 @@
 # IRAB AI Assistant System
 
-> **GRRR... LOCAL AI ASSISTANT FOR VORTEX GAME STUDIO**
+> **GRRR... LOCAL AI ASSISTANT FOR KETEBE GAME STUDIO**
 
 ## What Is This?
 
-IRAB (formerly "Vortex AI Assistant") is your quirky AI helper with:
+IRAB (formerly "Ketebe AI Assistant") is your quirky AI helper with:
 
 - 📚 **Knowledge Base Q&A** - I ATE THE DOCS
 - 🎓 **Interactive Tutorials** - STEP-BY-STEP GUIDES  

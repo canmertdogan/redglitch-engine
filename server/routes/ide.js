@@ -17,11 +17,17 @@ async function ensureDir(dirPath) {
 
 // POST /api/ide/read - Read file content
 router.get('/read', async (req, res) => {
-    const filePath = req.query.file;
+    let filePath = req.query.file;
     if (!filePath) return res.status(400).json({ error: 'No file path provided' });
 
     try {
-        const rootDir = path.resolve(__dirname, '..', '..');
+        const rootDir = projectService.getProjectPath('');
+        const projectName = projectService.getActiveProject() === rootDir ? '' : path.basename(rootDir);
+        const prefix = `projects/${projectName}/`;
+        if (projectName && filePath.startsWith(prefix)) {
+            filePath = filePath.slice(prefix.length);
+        }
+
         const fullPath = resolveUnderRoot(rootDir, filePath);
         
         // Security check: ensure path is within root
@@ -39,11 +45,18 @@ router.get('/read', async (req, res) => {
 
 // POST /api/ide/write - Write file content
 router.post('/write', async (req, res) => {
-    const { path: filePath, content } = req.body;
+    let filePath = req.body.file || req.body.path;
+    const content = req.body.content;
     if (!filePath) return res.status(400).json({ error: 'No file path provided' });
 
     try {
-        const rootDir = path.resolve(__dirname, '..', '..');
+        const rootDir = projectService.getProjectPath('');
+        const projectName = projectService.getActiveProject() === rootDir ? '' : path.basename(rootDir);
+        const prefix = `projects/${projectName}/`;
+        if (projectName && filePath.startsWith(prefix)) {
+            filePath = filePath.slice(prefix.length);
+        }
+
         const fullPath = resolveUnderRoot(rootDir, filePath);
         
         // Security check: ensure path is within root
@@ -64,11 +77,17 @@ router.post('/write', async (req, res) => {
 
 // DELETE /api/ide/delete - Delete a file
 router.post('/delete', async (req, res) => {
-    const { path: filePath } = req.body;
+    let filePath = req.body.file || req.body.path;
     if (!filePath) return res.status(400).json({ error: 'No file path provided' });
 
     try {
-        const rootDir = path.resolve(__dirname, '..', '..');
+        const rootDir = projectService.getProjectPath('');
+        const projectName = projectService.getActiveProject() === rootDir ? '' : path.basename(rootDir);
+        const prefix = `projects/${projectName}/`;
+        if (projectName && filePath.startsWith(prefix)) {
+            filePath = filePath.slice(prefix.length);
+        }
+
         const fullPath = resolveUnderRoot(rootDir, filePath);
         
         if (!fullPath) {
@@ -86,9 +105,15 @@ router.post('/delete', async (req, res) => {
 
 // GET /api/ide/list - List files in directory
 router.get('/list', async (req, res) => {
-    const dirPath = req.query.dir || '';
+    let dirPath = req.query.dir || '';
     try {
-        const rootDir = path.resolve(__dirname, '..', '..');
+        const rootDir = projectService.getProjectPath('');
+        const projectName = projectService.getActiveProject() === rootDir ? '' : path.basename(rootDir);
+        const prefix = `projects/${projectName}/`;
+        if (projectName && dirPath.startsWith(prefix)) {
+            dirPath = dirPath.slice(prefix.length);
+        }
+
         const fullPath = resolveUnderRoot(rootDir, dirPath);
         
         if (!fullPath) {
@@ -111,34 +136,42 @@ router.get('/list', async (req, res) => {
 // GET /api/ide/tree - Return nested file tree for the active project
 router.get('/tree', async (req, res) => {
     try {
-        const baseDir = projectService.getProjectPath('');
+        const activeProject = projectService.getActiveProject();
+        const rootDir = activeProject;
+        const projectName = path.basename(rootDir);
 
-        async function walk(dir, rel = '') {
+        async function buildTree(dir, relativePath = '') {
             const entries = await fs.readdir(dir, { withFileTypes: true });
-            const nodes = [];
-            for (const e of entries) {
-                // Skip common large or system folders
-                if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('.')) continue;
+            const children = [];
 
-                const fullPath = path.join(dir, e.name);
-                const nodePath = path.join(rel, e.name).replace(/\\/g, '/');
+            for (const entry of entries) {
+                if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
 
-                if (e.isDirectory()) {
-                    const children = await walk(fullPath, path.join(rel, e.name));
-                    nodes.push({ name: e.name, type: 'dir', path: nodePath, children });
+                const rel = path.join(relativePath, entry.name);
+                const full = path.join(dir, entry.name);
+
+                if (entry.isDirectory()) {
+                    children.push({
+                        name: entry.name,
+                        path: `projects/${projectName}/${rel}`,
+                        type: 'directory',
+                        children: await buildTree(full, rel)
+                    });
                 } else {
-                    nodes.push({ name: e.name, type: 'file', path: nodePath });
+                    children.push({
+                        name: entry.name,
+                        path: `projects/${projectName}/${rel}`,
+                        type: 'file'
+                    });
                 }
             }
-            // Directories first, then files, alphabetical
-            nodes.sort((a,b) => {
+            return children.sort((a, b) => {
                 if (a.type === b.type) return a.name.localeCompare(b.name);
-                return a.type === 'dir' ? -1 : 1;
+                return a.type === 'directory' ? -1 : 1;
             });
-            return nodes;
         }
 
-        const tree = await walk(baseDir, '');
+        const tree = await buildTree(rootDir);
         res.json(tree);
     } catch (err) {
         console.error('[IDE:Tree] Error:', err);
@@ -148,92 +181,61 @@ router.get('/tree', async (req, res) => {
 
 // GET /api/ide/search - Search project files for a query
 router.get('/search', async (req, res) => {
-    const q = (req.query.query || '').trim();
-    if (!q) return res.json([]);
+    const { query } = req.query;
+    if (!query) return res.json([]);
 
     try {
-        const baseDir = projectService.getProjectPath('');
+        const activeProject = projectService.getActiveProject();
+        const projectName = path.basename(activeProject);
+        
+        // Simple recursive search
         const results = [];
-        const maxResults = 200;
-
         async function search(dir, rel = '') {
             const entries = await fs.readdir(dir, { withFileTypes: true });
             for (const e of entries) {
-                if (results.length >= maxResults) return;
-                if (e.name === 'node_modules' || e.name === '.git' || e.name.startsWith('.')) continue;
-
-                const fullPath = path.join(dir, e.name);
-                const relPath = path.join(rel, e.name).replace(/\\/g, '/');
-
+                if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+                const full = path.join(dir, e.name);
+                const rPath = path.join(rel, e.name);
+                
                 if (e.isDirectory()) {
-                    await search(fullPath, path.join(rel, e.name));
+                    await search(full, rPath);
                 } else {
-                    // Skip obvious binary file types
-                    const ext = path.extname(e.name).toLowerCase();
-                    if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.wasm', '.bin', '.exe', '.dll'].includes(ext)) continue;
-
-                    try {
-                        const stat = await fs.stat(fullPath);
-                        if (stat.size > 200 * 1024) continue; // skip very large files
-                        const content = await fs.readFile(fullPath, 'utf8');
-                        const lines = content.split(/\r?\n/);
-                        for (let i = 0; i < lines.length && results.length < maxResults; i++) {
-                            if (lines[i].toLowerCase().includes(q.toLowerCase())) {
-                                results.push({ file: relPath, line: i + 1, text: lines[i].trim() });
-                            }
-                        }
-                    } catch (err) {
-                        // ignore unreadable files
+                    const content = await fs.readFile(full, 'utf8');
+                    if (content.toLowerCase().includes(query.toLowerCase())) {
+                        results.push({
+                            name: e.name,
+                            path: `projects/${projectName}/${rPath}`
+                        });
                     }
                 }
             }
         }
-
-        await search(baseDir, '');
+        await search(activeProject);
         res.json(results);
     } catch (err) {
-        console.error('[IDE:Search] Error:', err);
         res.status(500).json({ error: 'Search failed' });
     }
 });
 
 // POST /api/ide/terminal - Restricted terminal-like operations (pwd, ls, cat)
 router.post('/terminal', async (req, res) => {
-    const cmd = (req.body && req.body.command) ? String(req.body.command) : '';
-    if (!cmd) return res.status(400).json({ error: 'No command provided' });
+    const { command, args = [] } = req.body;
+    const activeProject = projectService.getActiveProject();
+    const projectName = path.basename(activeProject);
 
     try {
-        const activeRoot = projectService.getActiveProject() || path.resolve(__dirname, '..', '..');
-
-        // pwd
-        if (/^\s*pwd\s*$/.test(cmd)) {
-            return res.json({ stdout: activeRoot, stderr: '' });
+        if (command === 'pwd') {
+            return res.json({ stdout: `/projects/${projectName}`, stderr: '' });
         }
 
-        // cat <file>
-        const catMatch = cmd.match(/^\s*cat\s+(.+)$/);
-        if (catMatch) {
-            let target = catMatch[1].trim().replace(/^['\"]|['\"]$/g, '');
-            const full = resolveUnderRoot(activeRoot, target);
-            if (!full) return res.status(403).json({ error: 'Access denied' });
+        if (command === 'ls') {
             try {
-                const content = await fs.readFile(full, 'utf8');
-                return res.json({ stdout: content, stderr: '' });
-            } catch (e) {
-                return res.json({ stdout: '', stderr: e.message });
-            }
-        }
-
-        // ls [path]
-        const lsMatch = cmd.match(/^\s*ls(?:\s+(.+))?$/);
-        if (lsMatch) {
-            let arg = (lsMatch[1] || '.').trim().replace(/^['\"]|['\"]$/g, '');
-            const full = resolveUnderRoot(activeRoot, arg);
-            if (!full) return res.status(403).json({ error: 'Access denied' });
-            try {
-                const entries = await fs.readdir(full, { withFileTypes: true });
+                const target = args[0] ? resolveUnderRoot(activeProject, args[0]) : activeProject;
+                if (!target) return res.json({ stdout: '', stderr: 'Access denied' });
+                
+                const entries = await fs.readdir(target, { withFileTypes: true });
                 const list = await Promise.all(entries.map(async e => {
-                    const stats = await fs.stat(path.join(full, e.name));
+                    const stats = await fs.stat(path.join(target, e.name));
                     return { name: e.name, isDirectory: e.isDirectory(), size: stats.size, modified: stats.mtime };
                 }));
                 return res.json({ stdout: list, stderr: '' });

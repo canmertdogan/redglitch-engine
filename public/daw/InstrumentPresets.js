@@ -1,5 +1,5 @@
 /**
- * VORTEX Instrument Presets - Pre-configured synth and sampler settings
+ * KETEBE Instrument Presets - Pre-configured synth and sampler settings
  */
 
 class InstrumentPresets {

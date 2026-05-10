@@ -142,6 +142,11 @@ async def update_persona(data: dict):
 async def save_history(data: dict):
     try:
         session_id = data.get("session_id", "latest")
+        # Sanitize session_id: allow only alphanumeric, underscores, and hyphens
+        import re
+        if not re.match(r"^[a-zA-Z0-9_\-]+$", session_id):
+             return {"error": "Invalid session_id format"}
+             
         filename = f"session_{session_id}.json"
         filepath = os.path.join(LOGS_DIR, filename)
         with open(filepath, "w") as f:
@@ -153,6 +158,10 @@ async def save_history(data: dict):
 @app.get("/api/history/load")
 async def load_history(session_id: str = "latest"):
     try:
+        import re
+        if not re.match(r"^[a-zA-Z0-9_\-]+$", session_id):
+             return {"error": "Invalid session_id format"}
+
         filepath = os.path.join(LOGS_DIR, f"session_{session_id}.json")
         if os.path.exists(filepath):
             with open(filepath, "r") as f:

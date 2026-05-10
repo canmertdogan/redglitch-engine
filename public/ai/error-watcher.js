@@ -4,7 +4,7 @@
  */
 
 (function() {
-    const eventBus = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+    const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
     
     if (!eventBus) {
         console.warn('[ErrorWatcher] EventBus not found, waiting...');
@@ -37,11 +37,11 @@
     });
 
     function broadcastError(data) {
-        const eb = window.VortexEventBus || (window.parent && window.parent.VortexEventBus);
+        const eb = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
         if (eb) {
             eb.emit('system:error', data);
         }
-        console.error('[Vortex-ErrorWatcher]', data);
+        console.error('[Ketebe-ErrorWatcher]', data);
     }
 
     console.log('[ErrorWatcher] KAI Sentinel is active.');

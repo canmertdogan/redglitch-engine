@@ -13,8 +13,8 @@ window.AchievementSystem = class AchievementSystem {
         this.createUI();
 
         // Hot Reload Listener
-        if (window.VortexEventBus) {
-            window.VortexEventBus.on('achievements:updated', (event) => {
+        if (window.KetebeEventBus) {
+            window.KetebeEventBus.on('achievements:updated', (event) => {
                 console.log("[AchievementSystem] Definitions Updated!");
                 this.definitions = event.data;
             });

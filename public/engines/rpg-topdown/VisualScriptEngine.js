@@ -140,8 +140,8 @@ export class VisualScriptEngine {
 
     async executeNode(ctx) {
         // --- PHASE 5: LIVE DEBUGGING ---
-        if (window.VortexEventBus) {
-            window.VortexEventBus.emit('vsl:node_exec', {
+        if (window.KetebeEventBus) {
+            window.KetebeEventBus.emit('vsl:node_exec', {
                 nodeId: ctx.node.id,
                 entityId: ctx.entity.id,
                 timestamp: Date.now()
@@ -202,8 +202,8 @@ export class VisualScriptEngine {
         }
 
         // --- PHASE 5: DATA PROBES ---
-        if (window.VortexEventBus && wire) {
-            window.VortexEventBus.emit('vsl:value_update', {
+        if (window.KetebeEventBus && wire) {
+            window.KetebeEventBus.emit('vsl:value_update', {
                 wireId: wire.id,
                 value: value,
                 timestamp: Date.now()

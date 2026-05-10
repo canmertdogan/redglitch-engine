@@ -196,4 +196,42 @@ router.post('/upload', async (req, res) => {
     }
 });
 
+router.post('/save-spritesheet', async (req, res) => {
+    try {
+        const dataUrl = req.body.image;
+        if (!dataUrl) {
+            return res.status(400).send('No image data provided.');
+        }
+
+        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+        const spritesheetPath = path.join(__dirname, '..', '..', 'public', 'sprite-art', 'platformer_spritesheet.png');
+        
+        await safeFs.safeWriteFullPath(path.resolve(__dirname, '..', '..'), spritesheetPath, base64Data, 'base64');
+        
+        console.log('[SERVER] Spritesheet saved to:', spritesheetPath);
+
+        // Now, generate the atlas
+        const atlas = {};
+        const tSize = 16;
+        const cols = 16;
+        const totalTiles = 600;
+
+        for (let i = 0; i < totalTiles; i++) {
+            const x = (i % cols) * tSize;
+            const y = Math.floor(i / cols) * tSize;
+            atlas[i + 1] = { x, y, w: tSize, h: tSize };
+        }
+
+        const atlasPath = path.join(__dirname, '..', '..', 'public', 'sprite-art', 'platformer_atlas.json');
+        await safeFs.safeWriteFullPath(path.resolve(__dirname, '..', '..'), atlasPath, JSON.stringify(atlas, null, 2), 'utf8');
+
+        console.log('[SERVER] Atlas saved to:', atlasPath);
+
+        res.json({ success: true, message: 'Spritesheet and atlas saved.' });
+    } catch (error) {
+        console.error('[SERVER] Error saving spritesheet:', error);
+        res.status(500).json({ success: false, message: 'Failed to save spritesheet.' });
+    }
+});
+
 module.exports = router;

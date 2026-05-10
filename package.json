@@ -1,8 +1,8 @@
 {
   "name": "ketebe-engine",
-  "productName": "Vortex Game Studio",
+  "productName": "Ketebe Game Studio",
   "version": "1.0.0",
-  "description": "Vortex Engine Alpha - Professional Game Development Studio",
+  "description": "Ketebe Engine Alpha - Professional Game Development Studio",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
@@ -44,7 +44,7 @@
   },
   "build": {
     "appId": "com.ketebe.engine",
-    "productName": "Vortex Game Studio",
+    "productName": "Ketebe Game Studio",
     "directories": {
       "output": "dist"
     },

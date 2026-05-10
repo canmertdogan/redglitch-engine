@@ -1,6 +1,6 @@
-# Vortex AI (Micro Edition)
+# Ketebe AI (Micro Edition)
 
-Vortex AI is a **browser-native, offline-capable AI assistant** integrated directly into the IDE. Unlike most AI tools that rely on cloud APIs (OpenAI/Anthropic), Vortex AI runs **locally** on the user's GPU using WebGPU and WebAssembly.
+Ketebe AI is a **browser-native, offline-capable AI assistant** integrated directly into the IDE. Unlike most AI tools that rely on cloud APIs (OpenAI/Anthropic), Ketebe AI runs **locally** on the user's GPU using WebGPU and WebAssembly.
 
 ## Core Philosophy
 *   **Zero Latency**: No network round-trips for inference.
@@ -10,7 +10,7 @@ Vortex AI is a **browser-native, offline-capable AI assistant** integrated direc
 ## Architecture
 
 ```ascii
-[ User ] <---> [ AI Chat UI ] <---> [ VortexAI (Orchestrator) ]
+[ User ] <---> [ AI Chat UI ] <---> [ KetebeAI (Orchestrator) ]
                                           |
                     +---------------------+---------------------+
                     |                     |                     |

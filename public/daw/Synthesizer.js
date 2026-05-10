@@ -1,5 +1,5 @@
 /**
- * VORTEX Synthesizer - Base class for all synthesizer instruments
+ * KETEBE Synthesizer - Base class for all synthesizer instruments
  */
 
 class Synthesizer {

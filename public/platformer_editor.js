@@ -152,7 +152,7 @@ class PlatformerEditor {
         if (!this.currentProject) return;
         
         try {
-            const path = `/projects/${this.currentProject}/dunyalar/platformer/${levelId}.json`;
+            const path = `/projects/${this.currentProject}/dunyalar/${levelId}.json`;
             const res = await fetch(path);
             
             if (!res.ok) {
@@ -591,7 +591,7 @@ class PlatformerEditor {
         };
 
         const filename = this.levelId.endsWith('.json') ? this.levelId : `${this.levelId}.json`;
-        const path = `projects/${this.currentProject}/dunyalar/platformer/${filename}`;
+        const path = `projects/${this.currentProject}/dunyalar/${filename}`;
 
         try {
             const res = await fetch('/api/ide/write', {
@@ -642,7 +642,7 @@ window.editor = new PlatformerEditor();
 
 // --- AI Integration: StudioBridge + Tool Dispatch ---
 (function initPlatformerAI() {
-    const eventBus = window.VortexEventBus;
+    const eventBus = window.KetebeEventBus;
     if (!eventBus || !window.StudioBridge) {
         console.log('[PlatformerEditor] EventBus or StudioBridge not available, AI integration skipped.');
         return;

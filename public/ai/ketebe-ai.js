@@ -1,6 +1,6 @@
 /**
  * public/ai/ketebe-ai.js
- * Main orchestrator for Vortex AI Micro Edition.
+ * Main orchestrator for Ketebe AI Micro Edition.
  */
 
 import { AI_CONFIG } from './config.js?v=8';
@@ -14,7 +14,7 @@ import { WorkflowManager } from './workflow-manager.js?v=8';
 import { CoPilot } from './co-pilot.js?v=8';
 import { EventBus } from './shim.js?v=8';
 
-export class VortexAI {
+export class KetebeAI {
     constructor() {
         this.config = { ...AI_CONFIG };
         this.loadSavedSettings();
@@ -36,7 +36,7 @@ export class VortexAI {
             const parsed = JSON.parse(raw);
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (e) {
-            console.warn('[VortexAI] Invalid kai_settings JSON, using defaults.');
+            console.warn('[KetebeAI] Invalid kai_settings JSON, using defaults.');
             return {};
         }
     }
@@ -50,14 +50,14 @@ export class VortexAI {
         if (s.historyLimit !== undefined) this.config.limits.maxHistoryMessages = s.historyLimit;
         if (s.ragEnabled !== undefined) this.config.features.enableRAG = s.ragEnabled;
         if (Object.keys(s).length > 0) {
-            console.log('[VortexAI] Saved settings loaded into kernel.');
+            console.log('[KetebeAI] Saved settings loaded into kernel.');
         }
     }
 
     async initialize() {
         if (this.isInitialized) return;
         
-        console.log('[VortexAI] Initializing Kernel...');
+        console.log('[KetebeAI] Initializing Kernel...');
         
         // Determine Provider
         const savedSettings = this._getKaiSettings();
@@ -65,16 +65,16 @@ export class VortexAI {
 
         // 1. If Native, we don't need to load local weights (300MB save!)
         if (provider === 'native') {
-            console.log('[VortexAI] Native Cortex detected. Skipping local model load.');
+            console.log('[KetebeAI] Native Cortex detected. Skipping local model load.');
         } else if (this.config.features.enableWebGPU) {
             // Only load WebGPU if specifically requested or native is unavailable
             await this.inferenceEngine.initialize().catch(e => {
-                console.warn('[VortexAI] WebGPU Init Failed, falling back to Native:', e);
+                console.warn('[KetebeAI] WebGPU Init Failed, falling back to Native:', e);
             });
         }
         
         if (this.config.features.enableRAG) {
-            this.ragEngine.initialize().catch(e => console.error('[VortexAI] RAG Init Failed:', e));
+            this.ragEngine.initialize().catch(e => console.error('[KetebeAI] RAG Init Failed:', e));
         }
 
         this.isInitialized = true;
@@ -132,7 +132,7 @@ export class VortexAI {
         const provider = this._getKaiSettings().provider || 'native';
         
         if (provider === 'native' && irabBridge && irabBridge.isConnected) {
-            console.log('[VortexAI] Routing to Native Cortex...');
+            console.log('[KetebeAI] Routing to Native Cortex...');
             const nativeResult = await new Promise((resolve) => {
                 irabBridge.send({
                     type: "CHAT",
@@ -153,7 +153,7 @@ export class VortexAI {
 
         // 2. SECONDARY: Local WebGPU (Micro Edition)
         if (this.inferenceEngine.isModelReady && !options.forceNative) {
-            console.log('[VortexAI] Using Local Inference...');
+            console.log('[KetebeAI] Using Local Inference...');
             return await this._localChat(message, options);
         }
 
@@ -167,7 +167,7 @@ export class VortexAI {
             try {
                 ragContext = await this.ragEngine.retrieveContext(message);
             } catch (e) {
-                console.warn('[VortexAI] RAG Retrieval Failed:', e);
+                console.warn('[KetebeAI] RAG Retrieval Failed:', e);
             }
         }
 
@@ -196,7 +196,7 @@ export class VortexAI {
             
             return { text: responseText, toolCalls: [], source: 'local' };
         } catch (error) {
-            console.error('[VortexAI] Local Chat Failed:', error);
+            console.error('[KetebeAI] Local Chat Failed:', error);
             return this.fallbackToServer(message);
         }
     }
@@ -208,7 +208,7 @@ export class VortexAI {
         if (!this.config.features.enableGhostText) return null;
 
         const prompt = `<|im_start|>system
-You are a Ghost Text autocomplete provider for Vortex Code Forge.
+You are a Ghost Text autocomplete provider for Ketebe Code Forge.
 Generate a SHORT (1-5 lines) code completion based on the prefix and suffix.
 Respond ONLY with the code to be inserted. Do not use markdown blocks.
 File: ${filePath}<|im_end|>
@@ -262,7 +262,7 @@ ${suffix}<|im_end|>
     }
 
     async fallbackToServer(message) {
-        console.log('[VortexAI] Falling back to server API...');
+        console.log('[KetebeAI] Falling back to server API...');
         try {
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -291,7 +291,7 @@ ${suffix}<|im_end|>
 }
 
 // Safe auto-instantiation
-if (typeof window !== 'undefined' && !window.VortexAIInstance) {
-    console.log("[VortexAI] Creating global instance...");
-    window.VortexAIInstance = new VortexAI();
+if (typeof window !== 'undefined' && !window.KetebeAIInstance) {
+    console.log("[KetebeAI] Creating global instance...");
+    window.KetebeAIInstance = new KetebeAI();
 }

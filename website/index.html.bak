@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VORTEX | The AI-Native Retro Engine</title>
+    <title>KETEBE | The AI-Native Retro Engine</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
 <body class="pro-retro">
     <div id="bootloader">
         <div class="boot-text">
-            <div>VORTEX_BOOTLOADER_v1.0.0</div>
+            <div>KETEBE_BOOTLOADER_v1.0.0</div>
             <div id="boot-progress">INITIALIZING_SYSTEM_CORES...</div>
         </div>
     </div>
@@ -23,7 +23,7 @@
         <div class="nav-container">
             <div class="nav-brand">
                 <img src="assets/logo.png" alt="Logo">
-                <span>VORTEX_v1.0.0</span>
+                <span>KETEBE_v1.0.0</span>
             </div>
             <div class="nav-links">
                 <a href="#cores">SYSTEM_CORES</a>
@@ -39,7 +39,7 @@
     <!-- MOBILE MENU OVERLAY -->
     <div id="mobileMenu" class="mobile-menu-overlay">
         <div class="mobile-menu-content">
-            <div class="menu-header">VORTEX_SYSTEM_MENU</div>
+            <div class="menu-header">KETEBE_SYSTEM_MENU</div>
             <div class="menu-list">
                 <a href="#cores" class="menu-item">> SYSTEM_CORES</a>
                 <a href="#kai" class="menu-item">> KAI_COIL</a>
@@ -60,7 +60,7 @@
                     <div class="sys-label">[ STATUS: OPTIMAL ]</div>
                     <h1 class="glitch" data-text="BEYOND PIXELS">BEYOND PIXELS</h1>
                     <div class="hero-desc">
-                        <p class="typewriter">Vortex is a multi-paradigm game development ecosystem. We've combined the crunchiest pixel art aesthetics with brain-melting browser AI. Build isometric, platformer, and top-down RPGs with a browser-native assistant that lives in your workspace.</p>
+                        <p class="typewriter">Ketebe is a multi-paradigm game development ecosystem. We've combined the crunchiest pixel art aesthetics with brain-melting browser AI. Build isometric, platformer, and top-down RPGs with a browser-native assistant that lives in your workspace.</p>
                     </div>
                     <div class="hero-cta">
                         <a href="../public/project_dashboard.html" class="btn-main">INITIALIZE_STUDIO</a>
@@ -107,7 +107,7 @@
                 <div class="pro-card">
                     <div class="card-tag">SYSTEM_01 [ONLINE]</div>
                     <h3>IsoPixel (2.5D)</h3>
-                    <p>Advanced isometric rendering with "illegal" lighting tricks and a Day/Night cycle that breathes. Built for tactical depth and complex world-states. Vortex's IsoPixel core handles millions of tiles with sub-millisecond sorting.</p>
+                    <p>Advanced isometric rendering with "illegal" lighting tricks and a Day/Night cycle that breathes. Built for tactical depth and complex world-states. Ketebe's IsoPixel core handles millions of tiles with sub-millisecond sorting.</p>
                 </div>
                 <div class="pro-card">
                     <div class="card-tag">SYSTEM_02 [STABLE]</div>
@@ -141,7 +141,7 @@
                 <div class="showcase-content">
                     <div class="sys-label">ATMOSPHERE_v0.5</div>
                     <h3>BEYOND PIXEL COLOR</h3>
-                    <p>Vortex goes beyond just rendering tiles. Our atmosphere engine handles global illumination shifts, procedural vegetation growth, and weather particle systems.</p>
+                    <p>Ketebe goes beyond just rendering tiles. Our atmosphere engine handles global illumination shifts, procedural vegetation growth, and weather particle systems.</p>
                     <div class="feature-pills">
                         <span>PROCEDURAL_TREES</span>
                         <span>DYNAMIC_SHADOWS</span>
@@ -168,7 +168,7 @@
             <div class="ai-pro-layout">
                 <div class="ai-pro-text">
                     <div class="sys-label blue">IRQ_LEVEL_05</div>
-                    <h2>VORTEX AI (KAI)</h2>
+                    <h2>KETEBE AI (KAI)</h2>
                     <p>The first game engine with a built-in local brain. KAI uses WebGPU to process your project logic locally. No cloud, no lag, no privacy leaks. It understands your code as you write it, offering real-time architectural insights.</p>
                     <ul class="pro-list">
                         <li><span>></span> LOCAL_INFERENCE: DeepSeek-powered logic suggestions running on your hardware.</li>
@@ -315,7 +315,7 @@
                 <div class="sync-info">
                     <div class="sys-label blue">EVENT_BUS_v2.0</div>
                     <h3>THE MULTI-WINDOW HEARTBEAT</h3>
-                    <p>Vortex's editors don't just "save" files. They talk to each other. Through our proprietary EventBus protocol, every change in Code_Forge is instantly reflected in the running game and all open editors. No more refreshing, no more state-desync.</p>
+                    <p>Ketebe's editors don't just "save" files. They talk to each other. Through our proprietary EventBus protocol, every change in Code_Forge is instantly reflected in the running game and all open editors. No more refreshing, no more state-desync.</p>
                     <ul class="pro-list">
                         <li><span>></span> ZERO_LATENCY: WebSocket-based state broadcasting.</li>
                         <li><span>></span> DISTRIBUTED_TOOLS: Run editors on different monitors or even different devices.</li>
@@ -378,7 +378,7 @@
 
     <footer class="footer-pro">
         <div class="footer-container">
-            <div class="footer-brand">VORTEX_ENGINE_STUDIO_2026</div>
+            <div class="footer-brand">KETEBE_ENGINE_STUDIO_2026</div>
             <div class="footer-status">BUILD_REV: 0x82A1 // STATUS: NOMINAL // MARCH_2026</div>
             <div class="footer-cta">
                 <a href="../public/project_dashboard.html" class="btn-main">RETURN_TO_STUDIO</a>

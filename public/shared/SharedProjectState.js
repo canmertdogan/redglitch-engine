@@ -1,5 +1,5 @@
 /**
- * Vortex Engine - Shared Project State Management
+ * Ketebe Engine - Shared Project State Management
  * Provides centralized state management across all editors
  */
 class SharedProjectState {
@@ -15,8 +15,8 @@ class SharedProjectState {
         this.isDirty = false;
         
         // Subscribe to EventBus if available
-        if (typeof window !== 'undefined' && window.VortexEventBus) {
-            this.eventBus = window.VortexEventBus;
+        if (typeof window !== 'undefined' && window.KetebeEventBus) {
+            this.eventBus = window.KetebeEventBus;
             this.setupEventListeners();
         }
         
@@ -573,7 +573,7 @@ class SharedProjectState {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.VortexProjectState = window.VortexProjectState || new SharedProjectState();
+    window.KetebeProjectState = window.KetebeProjectState || new SharedProjectState();
 }
 
 // Export for Node.js

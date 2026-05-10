@@ -179,7 +179,7 @@ router.post('/levels3d/:project/:level', async (req, res) => {
         // Ensure dunyalar/ directory exists
         const dir = path.dirname(filePath);
         await fs.mkdir(dir, { recursive: true });
-        await fs.writeFile(filePath, JSON.stringify(level, null, 2), 'utf8');
+        await safeFs.safeWriteFullPath(projectDir, filePath, JSON.stringify(level, null, 2), 'utf8');
         res.json({ ok: true, levelId, engineType: level.engineType });
     } catch (err) {
         console.error('[levels3d] POST error:', err.message);

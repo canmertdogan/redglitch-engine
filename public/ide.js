@@ -1,4 +1,4 @@
-// ide.js - Vortex Code Studio Logic
+// ide.js - Ketebe Code Studio Logic
 
 let editor = null;
 let openTabs = new Map(); // path -> { model, state }
@@ -128,17 +128,17 @@ async function updateStats() {
 setInterval(updateStats, 2000);
 
 // --- MONACO INIT ---
-require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' }});
+require.config({ paths: { 'vs': 'lib/monaco/vs' }});
 
 window.editorInit = function() {
     require(['vs/editor/editor.main'], async function() {
-        // Load Vortex Type Definitions
+        // Load Ketebe Type Definitions
         try {
             const dtsRes = await fetch('lib/monaco/ketebe.d.ts');
             if (dtsRes.ok) {
                 const dtsContent = await dtsRes.text();
                 monaco.languages.typescript.javascriptDefaults.addExtraLib(dtsContent, 'ketebe.d.ts');
-                console.log("Vortex intelligence loaded.");
+                console.log("Ketebe intelligence loaded.");
             }
         } catch (e) { console.error("Failed to load type definitions", e); }
 
@@ -170,10 +170,10 @@ window.editorInit = function() {
 
         // --- AI INTEGRATION: Ghost-Text Autocomplete ---
         try {
-            const { VortexAI } = await import('/ai/ketebe-ai.js');
+            const { KetebeAI } = await import('/ai/ketebe-ai.js');
             const { EventBus } = await import('/ai/shim.js');
-            const ai = new VortexAI();
-            window.VortexAIInstance = ai;
+            const ai = new KetebeAI();
+            window.KetebeAIInstance = ai;
 
             monaco.languages.registerInlineCompletionsProvider('javascript', {
                 provideInlineCompletions: async (model, position, context, token) => {
@@ -217,14 +217,14 @@ window.editorInit = function() {
                 },
                 freeInlineCompletions: () => {}
             });
-            console.log("Vortex AI Ghost-Text enabled.");
+            console.log("Ketebe AI Ghost-Text enabled.");
         } catch (e) {
             console.error("Failed to initialize AI Ghost-Text:", e);
         }
 
         // --- AI INTEGRATION: Code Injection ---
-        if (window.VortexEventBus) {
-            window.VortexEventBus.on('ai:inject-code', (data) => {
+        if (window.KetebeEventBus) {
+            window.KetebeEventBus.on('ai:inject-code', (data) => {
                 if (!editor) return;
                 const model = editor.getModel();
                 if (!model) return;

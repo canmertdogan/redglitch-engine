@@ -1,4 +1,4 @@
-# Vortex AI Micro Edition - Final Integration Status
+# Ketebe AI Micro Edition - Final Integration Status
 
 **Date:** 2026-02-08  
 **Status:** Phases 1-5 Complete ✅
@@ -34,7 +34,7 @@
 | Inference | Transformers.js v3 (WebGPU/WASM) |
 | Vector DB | Orama 2.x |
 | Persistence | IndexedDB |
-| Messaging | Vortex EventBus |
+| Messaging | Ketebe EventBus |
 
 ---
 
@@ -57,4 +57,4 @@ The system has been verified in `public/test-ai-final.html`.
 
 ---
 
-**Vortex AI Micro Edition is now ready for production rollout.** 🚀
+**Ketebe AI Micro Edition is now ready for production rollout.** 🚀

@@ -16,10 +16,10 @@
     <script src="ai/cerebras-adapter.js"></script>
     <script type="module" src="ai/ketebe-ai.js"></script>
     
-    <!-- Wait for module to load VortexAIInstance -->
+    <!-- Wait for module to load KetebeAIInstance -->
     <script>
         function checkCore() {
-            if (window.VortexAIInstance) {
+            if (window.KetebeAIInstance) {
                 console.log("SMOKE TEST: Core Loaded");
                 loadNext();
             } else {

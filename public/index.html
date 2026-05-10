@@ -1,508 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' ; font-src 'self' ; connect-src 'self' http://localhost:3000 ws://localhost:3000; img-src 'self' data: blob:;">
-    <script>
-        window.onerror = function(msg, url, line, col, error) {
-            console.error("Error: " + msg + "\n\n" + url + ":" + line + ":" + col);
-            return false;
-        };
-        window.onunhandledrejection = function(event) {
-            console.error("Unhandled Rejection: " + event.reason);
-        };
-    </script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' http://localhost:3000 ws://localhost:3000; img-src 'self' data:;">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ketebe ENGINE</title>
+    <title>Ketebe Terminal // Puzzle Node</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="base_game/style.css">
     <link href="fonts/fonts.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/kai-theme.css">
-    <link rel="stylesheet" href="transitions.css">
-</head>
-<body>
-    <canvas id="atmosphere-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1;"></canvas>
-
-    <!-- SCREEN: LOGIN -->
-    <div id="login-screen" class="screen active">
-        <div class="ui-scaler">
-            <div class="terminal-window" style="position: absolute; left: 175px; top: 50px;">
-                <h1 style="color:var(--accent); margin:0;">ketebe TERMINAL</h1>
-                <p id="login-prompt">Identify yourself, Traveler.</p>
-                <input type="text" id="username-input" placeholder="ENTER NAME..." maxlength="12" autocomplete="off">
-                <button id="login-btn" class="retro-btn" style="position:relative; width:100%; height:50px; margin-top:10px;" onclick="window.attemptLogin()">CONNECT</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN: MAIN MENU -->
-    <div id="main-menu" class="screen hidden">
-        <div class="ui-scaler">
-            <!-- Title -->
-            <div style="position: absolute; top: 80px; width: 100%; text-align: center;">
-                <h1 style="font-size: 3.5rem; color: var(--accent); text-shadow: 4px 4px 0 rgba(0,0,0,0.5); margin: 0;">
-                    ketebe ENGINE
-                </h1>
-                <p style="font-size: 1rem; color: #888; margin-top: 10px;">ketebe ENGINE Game Platform</p>
-            </div>
-
-            <!-- Main Menu Buttons -->
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 15px; width: 400px;">
-                <button class="retro-btn" style="width: 100%; height: 60px; font-size: 1.5rem;" onclick="window.location.href='slot_selection.html'">
-                    <i class="fas fa-gamepad"></i> CAMPAIGN MODE
-                </button>
-                <button class="retro-btn" style="width: 100%; height: 60px; font-size: 1.5rem;" onclick="window.location.href='campaign_launcher.html'">
-                    <i class="fas fa-play"></i> QUICK PLAY
-                </button>
-                <button class="retro-btn" style="width: 100%; height: 60px; font-size: 1.5rem;" onclick="window.location.href='campaign_editor.html'">
-                    <i class="fas fa-edit"></i> CAMPAIGN EDITOR
-                </button>
-                <button class="retro-btn" style="width: 100%; height: 60px; font-size: 1.5rem;" onclick="window.location.href='tools.html'">
-                    <i class="fas fa-tools"></i> TOOLS
-                </button>
-                <button class="retro-btn" style="width: 100%; height: 60px; font-size: 1.5rem; border-color: #555; color: #888;" onclick="quitGame()">
-                    <i class="fas fa-power-off"></i> EXIT
-                </button>
-            </div>
-
-            <!-- User Display -->
-            <div style="position: absolute; bottom: 20px; width: 100%; text-align: center; color: #555;">
-                USER: <span id="current-user-display" style="color:var(--accent);">GUEST</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN: SKILL SELECTOR -->
-    <div id="skill-selector-screen" class="screen hidden">
-        <div class="ui-scaler"></div>
-    </div>
-
-    <!-- SCREEN: SETTINGS -->
-    <div id="settings-screen" class="screen hidden">
-        <div class="ui-scaler"></div>
-    </div>
-
-    <!-- SCREEN: OVERLAYS -->
-    <div id="overlay-screen" class="screen hidden">
-        <div class="ui-scaler">
-            <div class="retro-panel" style="left: 100px; top: 50px; width: 600px; height: 350px; text-align: center;">
-                <h2 id="overlay-title" class="retro-label" style="position:relative; width:100%; font-size:2.5rem; margin-top:20px;">TITLE</h2>
-                <div id="overlay-body" style="padding:20px; color:#fff; font-size:1.2rem;">Content...</div>
-                <button id="btn-close-overlay" class="retro-btn" style="position:relative; width:150px; height:40px; margin-top:20px;">CLOSE</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN: DEATH -->
-    <div id="death-screen" class="screen hidden">
-        <div class="ui-scaler">
-            <h1 class="death-title">YOU DIED</h1>
-            
-            <div style="position:absolute; width:100%; top:220px; text-align:center; color:#ff0000; font-family:inherit; font-size:1.5rem; text-shadow:2px 2px 0 #000;">
-                REVIVES: <span id="revive-count" style="color:#fff;">5</span> | 
-                RESPAWNS: <span id="respawn-count" style="color:#fff;">3</span>
-            </div>
-
-            <div style="position:absolute; width:100%; top:280px; display:flex; justify-content:center; gap:20px;">
-                <button id="btn-revive" class="retro-btn death-btn" style="position:relative; width:180px; height:60px; font-size:2rem;">REVIVE</button>
-                <button id="btn-respawn" class="retro-btn death-btn" style="position:relative; width:180px; height:60px; font-size:2rem;">RESPAWN</button>
-            </div>
-
-            <button id="btn-death-quit" class="retro-btn" style="left:300px; top:360px; width:200px; height:40px; font-size:1.2rem; border-color:#555; color:#888;">MAIN MENU</button>
-        </div>
-    </div>
-
-    <!-- SCREEN: PAUSE -->
-    <div id="pause-menu" class="screen hidden">
-        <div class="ui-scaler"></div>
-    </div>
-
-    <!-- SCREEN: INVENTORY -->
-    <div id="inventory-screen" class="screen hidden">
-        <div class="ui-scaler"></div>
-    </div>
-
-    <!-- SCREEN: SPLASH -->
-    <div id="splash-screen" class="screen" style="background:#000; z-index:10000; display:flex; overflow:hidden;">
-        <div id="blackhole-container-index" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
-        <canvas id="mesh-canvas-index" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; opacity: 0.2; pointer-events: none;"></canvas>
-        <div id="ui-overlay-tint-index" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.9) 100%); pointer-events: none; z-index: 3;"></div>
-        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(to bottom, transparent, rgba(64, 224, 208, 0.2), transparent); z-index: 101; animation: scan 8s linear infinite; opacity: 0.5;"></div>
-        
-        <!-- HUD ELEMENTS -->
-        <div style="position: fixed; top: 100px; left: 40px; color: rgba(64, 224, 208, 0.4); font-size: 10px; z-index: 100; letter-spacing: 1px;" id="hud-coords-index">LAT: 45.9206° N<br>LON: 63.3422° E</div>
-        <div style="position: fixed; top: 100px; right: 40px; color: rgba(64, 224, 208, 0.4); font-size: 10px; z-index: 100; letter-spacing: 1px; text-align: right;">SYSTEM: NOMINAL<br>CORE: STABLE</div>
-
-        <div class="ui-scaler" style="display:flex; flex-direction:column; align-items:center; justify-content:center; position: relative; z-index: 4;">
-            <div id="splash-logo-container" style="position: relative;">
-                <h1 class="splash-text glitch-text" data-text="ketebe ENGINE">POWERED BY <br><span style="color:var(--accent); font-size: 1.5em; text-shadow: 0 0 20px var(--accent);">ketebe ENGINE</span></h1>
-            </div>
-            <!-- Dynamic Progress Info -->
-            <div style="margin-top: 40px; width: 300px; text-align: center;">
-                <div id="splash-progress-text" style="color: #888; font-size: 14px; margin-bottom: 10px; letter-spacing: 2px; text-transform: uppercase;">INITIALIZING SINGULARITY...</div>
-                <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
-                    <div id="splash-progress-bar" style="width: 0%; height: 100%; background: var(--accent); box-shadow: 0 0 10px var(--accent); transition: width 0.3s;"></div>
-                </div>
-            </div>
-        </div>
-        <div style="position: fixed; bottom: 25px; right: 45px; font-size: 10px; color: rgba(255,255,255,0.1); letter-spacing: 4px; z-index: 100; pointer-events: none;">РОСКОСМОС</div>
-    </div>
-
-    <script src="lib/three.min.js"></script>
-    <script>
-        // --- Blackhole Cinematic V4 PRO ---
-        (function() {
-            const container = document.getElementById('blackhole-container-index');
-            if (!container) return;
-            const scene = new THREE.Scene();
-            const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            container.appendChild(renderer.domElement);
-
-            const uniforms = {
-                iTime: { value: 0 },
-                iResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
-            };
-
-            const fragmentShader = `
-                uniform float iTime;
-                uniform vec2 iResolution;
-                float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453123); }
-                float noise(vec2 p) {
-                    vec2 i = floor(p); vec2 f = fract(p);
-                    f = f*f*(3.0-2.0*f);
-                    return mix(mix(hash(i + vec2(0,0)), hash(i + vec2(1,0)), f.x),
-                               mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y);
-                }
-                void main() {
-                    vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution.xy) / min(iResolution.y, iResolution.x);
-                    float d = length(uv);
-                    float shadow = smoothstep(0.08, 0.085, d);
-                    float photon = exp(-pow(d - 0.09, 2.0) * 5000.0) * 1.5;
-                    float angle = atan(uv.y, uv.x);
-                    float disk_h = exp(-pow(uv.y, 2.0) * 200.0) * smoothstep(0.1, 0.5, d) * exp(-d * 1.5);
-                    float lens_r = abs(d - 0.22);
-                    float disk_v = exp(-pow(lens_r, 2.0) * 1000.0) * 0.5;
-                    float turb = noise(vec2(angle * 5.0 - iTime * 1.5, d * 20.0));
-                    float final_disk = (disk_h + disk_v) * (0.7 + 0.3 * turb);
-                    float glow = exp(-d * 6.0) * 0.15;
-                    vec3 col = vec3(0.0);
-                    vec2 star_uv = uv * (1.0 + 0.03 / (d + 0.01));
-                    float stars = pow(noise(star_uv * 100.0), 40.0);
-                    col += vec3(stars) * 0.4 * shadow;
-                    vec3 gold = vec3(1.0, 0.7, 0.2);
-                    col += gold * final_disk * 1.8 + vec3(1.0) * photon + gold * glow;
-                    col *= shadow;
-                    col = pow(col, vec3(1.1));
-                    gl_FragColor = vec4(col, 1.0);
-                }
-            `;
-
-            const material = new THREE.ShaderMaterial({ uniforms, fragmentShader });
-            scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
-
-            function animate(time) {
-                requestAnimationFrame(animate);
-                uniforms.iTime.value = time * 0.001;
-                renderer.render(scene, camera);
-            }
-            animate();
-
-            // Mesh Graph
-            const meshCanvas = document.getElementById('mesh-canvas-index');
-            const mctx = meshCanvas.getContext('2d');
-            let mw, mh, particles = [];
-            function mresize() { mw = meshCanvas.width = window.innerWidth; mh = meshCanvas.height = window.innerHeight; }
-            window.addEventListener('resize', () => {
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                uniforms.iResolution.value.set(window.innerWidth, window.innerHeight);
-                mresize();
-            });
-            mresize();
-            class P { constructor(){this.x=Math.random()*mw;this.y=Math.random()*mh;this.vx=(Math.random()-0.5)*0.4;this.vy=(Math.random()-0.5)*0.4;} update(){this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>mw)this.vx*=-1;if(this.y<0||this.y>mh)this.vy*=-1;}}
-            for(let i=0;i<50;i++) particles.push(new P());
-            function mdraw(){
-                mctx.clearRect(0,0,mw,mh); mctx.strokeStyle='rgba(64,224,208,0.1)'; mctx.lineWidth=0.5;
-                for(let i=0;i<particles.length;i++){
-                    particles[i].update();
-                    for(let j=i+1;j<particles.length;j++){
-                        let dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y, dist=Math.sqrt(dx*dx+dy*dy);
-                        if(dist<150){mctx.beginPath();mctx.moveTo(particles[i].x,particles[i].y);mctx.lineTo(particles[j].x,particles[j].y);mctx.stroke();}
-                    }
-                }
-                requestAnimationFrame(mdraw);
-            }
-            mdraw();
-
-            // Small powered-by intro banner (show ASCII art briefly) and Progress Logic
-            (function showPoweredBanner(){
-                const splash = document.getElementById('splash-screen');
-                if (!splash) return;
-                // Insert banner element
-                const banner = document.createElement('div');
-                banner.id = 'powered-banner';
-                banner.style.position = 'absolute';
-                banner.style.zIndex = 105;
-                banner.style.top = '40%';
-                banner.style.left = '50%';
-                banner.style.transform = 'translate(-50%, -50%)';
-                banner.style.opacity = '0';
-                banner.style.transition = 'opacity 0.5s ease';
-                banner.innerHTML = `<pre style="font-family: 'VT323', monospace; color:var(--accent); text-shadow:0 0 10px var(--accent); font-size:18px; line-height:1; margin:0;">
-  ██╗  ██╗███████╗████████╗███████╗██████╗ ███████╗
-  ██║ ██╔╝██╔════╝╚══██╔══╝██╔════╝██╔══██╗██╔════╝
-  █████╔╝ █████╗     ██║   █████╗  ██████╔╝█████╗  
-  ██╔═██╗ ██╔══╝     ██║   ██╔══╝  ██╔══██╗██╔══╝  
-  ██║  ██╗███████╗   ██║   ███████╗██║  ██║███████╗
-  ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
-
-          VORTEX GAME STUDIO — POWERED BY VORTEX ENGINE
-</pre>`;
-                splash.appendChild(banner);
-                // Trigger show/hide
-                requestAnimationFrame(() => { banner.style.opacity = '1'; });
-                setTimeout(() => { banner.style.opacity = '0'; setTimeout(()=>banner.remove(), 600); }, 2200);
-            })();
-
-            let progress = 0;
-            const pBar = document.getElementById('splash-progress-bar');
-            const pText = document.getElementById('splash-progress-text');
-            const steps = ["STABILIZING SINGULARITY", "CALIBRATING PHOTON SPHERE", "IGNITING FORGE", "FORGE READY"];
-            
-            const interval = setInterval(() => {
-                progress += Math.random() * 2.5;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(interval);
-                }
-                if (pBar) pBar.style.width = progress + '%';
-                if (pText) pText.innerText = steps[Math.floor((progress/101) * steps.length)];
-                
-                const coords = document.getElementById('hud-coords-index');
-                if(coords) {
-                    const lat = (45.9206 + (Math.random()-0.5)*0.001).toFixed(4);
-                    const lon = (63.3422 + (Math.random()-0.5)*0.001).toFixed(4);
-                    coords.innerHTML = `LAT: ${lat}° N<br>LON: ${lon}° E<br>ALT: ${(408.2 + (Math.random()-0.5)*0.5).toFixed(1)} KM`;
-                }
-            }, 80);
-        })();
-    </script>
-
-    <!-- SCREEN: LOADING -->
-    <div id="loading-screen" class="screen hidden" style="background:#000; z-index:9999;">
-        <div class="ui-scaler">
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
-                <h1 class="retro-label" style="position:relative; font-size:3rem;">LOADING ASSETS...</h1>
-                <div style="width:400px; height:30px; border:2px solid var(--accent); padding:3px; margin-top:20px;">
-                    <div id="game-loading-bar" style="width:0%; height:100%; background:var(--accent); transition:width 0.1s;"></div>
-                </div>
-                <div id="game-loading-text" style="margin-top:10px; color:#fff;">0%</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN: ENGINE TRANSITION -->
-    <div id="engine-transition-screen" class="screen hidden" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); z-index:10000;">
-        <style>
-            @keyframes pulse {
-                0%, 100% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.2); opacity: 0.7; }
-            }
-        </style>
-        <div class="ui-scaler">
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;">
-                <div style="font-size:4rem; color:#f1c40f; margin-bottom:30px; animation: pulse 1.5s infinite;">
-                    🎮 ⚡ 🎮
-                </div>
-                <h1 class="retro-label" style="position:relative; font-size:2.5rem; color:#fff; margin-bottom:20px;">
-                    SWITCHING ENGINES...
-                </h1>
-                <div id="transition-target-engine" style="font-size:1.8rem; color:#3498db; margin-bottom:30px; font-family: 'VT323', monospace;">
-                    Loading Next Level
-                </div>
-                <div style="width:500px; height:20px; border:3px solid #fff; padding:4px; margin-top:20px; background:#000;">
-                    <div id="transition-progress-bar" style="width:0%; height:100%; background: linear-gradient(90deg, #2ecc71, #3498db); transition:width 0.3s;"></div>
-                </div>
-                <div id="transition-status-text" style="margin-top:15px; color:#ecf0f1; font-size:1.2rem; font-family: 'VT323', monospace;">
-                    Preparing...
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCREEN: GAMEPLAY -->
-    <div id="game-container" class="hidden">
-        <canvas id="gameCanvas"></canvas>
-        <div class="ui-scaler" id="game-ui-scaler" style="pointer-events: none;">
-            <div id="game-hud">
-                <div id="status-bars">
-                    <div class="bar-container" id="hp_bar"><div class="bar-fill hp" style="width: 100%;"></div><span class="bar-label">AL-HAYAT</span></div>
-                    <div class="bar-container" id="stamina_bar"><div class="bar-fill stamina" style="width: 100%;"></div><span class="bar-label">SAAF TA'ISH</span></div>
-                    <div class="bar-container" id="mana_bar"><div class="bar-fill mana" style="width: 100%;"></div><span class="bar-label">KAI SYSTEM LOAD</span></div>
-                </div>
-                <div id="game-clock">08:00</div>
-                <div id="skill-bar">
-                    <div class="skill-slot"><span class="inv-slot-num">Z</span></div>
-                    <div class="skill-slot"><span class="inv-slot-num">X</span></div>
-                    <div class="skill-slot"><span class="inv-slot-num">C</span></div>
-                    <div class="skill-slot"><span class="inv-slot-num">V</span></div>
-                </div>
-                <div id="inventory-bar">
-                    <div class="inv-slot"><span class="inv-slot-num">1</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">2</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">3</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">4</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">5</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">6</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">7</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">8</span></div>
-                    <div class="inv-slot"><span class="inv-slot-num">9</span></div>
-                </div>
-                <div id="top-right-controls">
-                    <button id="debug-iso-btn" class="retro-btn" style="position:relative; width:44px; height:44px; font-size:0.8rem;">ISO</button>
-                    <button id="btn-save" class="retro-btn" style="position:relative; width:44px; height:44px; font-size:0.8rem;">SAV</button>
-                    <button id="pause-btn" class="retro-btn" style="position:relative; width:44px; height:44px;">||</button>
-                    <button id="fullscreen-btn" class="retro-btn" style="position:relative; width:44px; height:44px;">⛶</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MOBILE CONTROLS -->
-    <div id="mobile-controls" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999;">
-        <!-- D-Pad / Joystick Area -->
-        <div id="joystick-zone" style="position: absolute; bottom: 50px; left: 50px; width: 150px; height: 150px; pointer-events: auto;">
-            <div id="virtual-joystick-base" class="joystick-base pixel-art">
-                <div id="virtual-joystick-stick" class="joystick-stick pixel-art"></div>
-            </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div id="action-zone" style="position: absolute; bottom: 50px; right: 50px; width: 200px; height: 180px; pointer-events: auto;">
-            <!-- Main Attack (Big) -->
-            <div class="touch-btn action-btn btn-atk" data-key="MOUSE" style="position:absolute; bottom:20px; right:20px; width:90px; height:90px; font-size:1.5rem;">ATK</div>
-            
-            <!-- Secondary Actions -->
-            <div class="touch-btn action-btn btn-act" data-key="Space" style="position:absolute; bottom:0; right:130px; width:60px; height:60px; font-size:1rem;">ACT</div>
-            <div class="touch-btn action-btn btn-run" data-key="ShiftLeft" style="position:absolute; bottom:80px; right:130px; width:60px; height:60px; font-size:1rem;">RUN</div>
-            <div class="touch-btn action-btn btn-skill" data-key="KeyZ" style="position:absolute; top:0; right:40px; width:60px; height:60px; font-size:1rem;">SKILL</div>
-        </div>
-    </div>
-
-    <!-- SCRIPTS -->
-    <script src="js/smooth-nav.js"></script>
-    <script src="js/android-adapter.bundle.js"></script>
-    <script src="js/runtime-loader.js"></script>
-    <script>
-        // Helper function for quit
-        function quitGame() {
-            if (typeof window !== 'undefined' && window.process && window.process.type) {
-                // Electron environment
-                const { ipcRenderer } = require('electron');
-                ipcRenderer.send('window-close');
-            } else {
-                // Web environment - go back or close
-                if (window.history.length > 1) {
-                    window.history.back();
-                } else {
-                    window.close();
-                }
-            }
+    <style>
+        :root {
+            --bg: #080d1b;
+            --panel: #040913;
+            --line: rgba(106, 241, 194, 0.16);
+            --text: #7af1c8;
+            --dim: #4ec8a3;
+            --warn: #ffd08a;
+            --accent: #6fd9ff;
+            --error: #ff8e8e;
         }
 
-        // Show main menu after login
-        window.attemptLogin = function() {
-            const username = document.getElementById('username-input').value.trim();
-            if (!username) {
-                alert('Please enter a username');
-                return;
-            }
+        * {
+            box-sizing: border-box;
+        }
 
-            // Store username
-            localStorage.setItem('ketebe_username', username);
-            document.getElementById('current-user-display').textContent = username;
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% -20%, #162748 0%, var(--bg) 55%, #02050a 100%);
+            color: var(--text);
+            font-family: "VT323", monospace;
+            overflow: hidden;
+        }
 
-            // Hide login, show main menu
-            document.getElementById('login-screen').classList.remove('active');
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-menu').classList.remove('hidden');
-            document.getElementById('main-menu').classList.add('active');
-        };
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
 
-        // Auto-login if username exists
-        window.addEventListener('load', () => {
-            const savedUsername = localStorage.getItem('ketebe_username');
-            if (savedUsername) {
-                document.getElementById('username-input').value = savedUsername;
-                document.getElementById('current-user-display').textContent = savedUsername;
-            }
+        body::before {
+            background-image: linear-gradient(transparent 95%, rgba(122, 241, 200, 0.09) 96%);
+            background-size: 100% 4px;
+            z-index: 1;
+        }
 
-            // Allow Enter key on username input
-            document.getElementById('username-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    window.attemptLogin();
-                }
-            });
-        });
-    </script>
-    
-    <!-- Kai AI Assistant - Retro Terminal UI -->
-    <iframe id="kai-ai-panel" src="ai/ui/assistant-panel.html?v=8" 
-            style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                   border: none; pointer-events: none; z-index: 9998;">
-    </iframe>
-    
+        body::after {
+            background: radial-gradient(circle at 15% 15%, rgba(111, 217, 255, 0.09), transparent 40%);
+            z-index: 1;
+        }
+
+        .noise {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            opacity: 0.045;
+            background-image: radial-gradient(circle, #ffffff 0.5px, transparent 0.6px);
+            background-size: 3px 3px;
+            pointer-events: none;
+        }
+
+        .layout {
+            position: relative;
+            z-index: 3;
+            width: min(1050px, 94vw);
+            margin: 18px auto;
+            height: calc(100vh - 36px);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: rgba(4, 9, 19, 0.92);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.56), inset 0 0 36px rgba(0, 0, 0, 0.55);
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+            letter-spacing: 0.08rem;
+            text-transform: uppercase;
+        }
+
+        .topbar strong {
+            color: var(--accent);
+            font-size: 1.25rem;
+        }
+
+        .chip {
+            border: 1px solid rgba(111, 217, 255, 0.35);
+            color: var(--accent);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        #terminal-output {
+            margin: 0;
+            padding: 14px 16px;
+            overflow: auto;
+            line-height: 1.28;
+            font-size: 1.2rem;
+            scrollbar-width: thin;
+            white-space: pre-wrap;
+        }
+
+        .line {
+            margin-bottom: 2px;
+        }
+
+        .line.dim {
+            color: var(--dim);
+        }
+
+        .line.warn {
+            color: var(--warn);
+        }
+
+        .line.error {
+            color: var(--error);
+        }
+
+        .prompt {
+            border-top: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 14px;
+            background: rgba(0, 0, 0, 0.22);
+        }
+
+        .prompt-label {
+            color: var(--accent);
+            font-size: 1.15rem;
+            white-space: nowrap;
+        }
+
+        #command-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font: inherit;
+            font-size: 1.24rem;
+            outline: none;
+        }
+
+        #quick-links {
+            position: fixed;
+            left: 24px;
+            bottom: 24px;
+            z-index: 4;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            max-width: min(92vw, 560px);
+        }
+
+        #quick-links a {
+            text-decoration: none;
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.26);
+            transition: border-color 0.15s ease;
+        }
+
+        #quick-links a:hover {
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+
+    <main class="layout">
+        <header class="topbar">
+            <strong>Ketebe Puzzle Terminal</strong>
+            <span class="chip" id="status-chip">locked</span>
+        </header>
+
+        <pre id="terminal-output" aria-live="polite"></pre>
+
+        <div class="prompt">
+            <span class="prompt-label">operator@ketebe:~$</span>
+            <input id="command-input" type="text" autocomplete="off" spellcheck="false" placeholder="type help">
+        </div>
+    </main>
+
+    <nav id="quick-links" aria-label="quick links">
+        <a href="slot_selection.html">campaign</a>
+        <a href="campaign_launcher.html">quick play</a>
+        <a href="campaign_editor.html">editor</a>
+        <a href="tools.html">tools</a>
+        <a href="credits.html">credits</a>
+    </nav>
+
     <script>
-        // Kai Assistant - Smart Interaction Bridge
-        window.addEventListener('load', () => {
-            const iframe = document.getElementById('kai-ai-panel');
-            if (!iframe) return;
-            
-            let hitZones = [];
+        (function() {
+            const output = document.getElementById('terminal-output');
+            const input = document.getElementById('command-input');
+            const statusChip = document.getElementById('status-chip');
 
-            // Hit detection logic
-            const checkHit = (coords) => {
-                const { clientX: x, clientY: y } = coords;
-                let hit = false;
-                for (const zone of hitZones) {
-                    if (x >= zone.left && x <= zone.right && y >= zone.top && y <= zone.bottom) {
-                        hit = true;
-                        break;
-                    }
+            let unlocked = localStorage.getItem('ketebe_terminal_unlocked') === '1';
+            let clueStep = 0;
+            let history = [];
+            let historyIndex = 0;
+
+            function line(text, klass) {
+                const span = document.createElement('span');
+                span.className = klass ? "line " + klass : "line";
+                span.textContent = text;
+                output.appendChild(span);
+                output.appendChild(document.createTextNode("\n"));
+                output.scrollTop = output.scrollHeight;
+            }
+
+            function boot() {
+                line("KETEBE SECURE NODE // RETRO TERMINAL INTERFACE", "warn");
+                line("Build 1.0.43 // Session initialized.", "dim");
+                line("Type 'help' to list commands.", "dim");
+                line("");
+                line("Puzzle objective: recover the passphrase and unlock hidden commands.", "warn");
+                line("Hint: run 'clue' more than once.");
+                if (unlocked) {
+                    statusChip.textContent = "unlocked";
+                    line("Welcome back, operator. Secret channel already unlocked.", "warn");
                 }
-                iframe.style.pointerEvents = hit ? 'auto' : 'none';
-            };
+            }
 
-            // Listen for data from the assistant
-            window.addEventListener('message', (e) => {
-                if (!e.data) return;
-                
-                if (e.data.type === 'kai:hitzones') {
-                    hitZones = e.data.zones;
-                } else if (e.data.type === 'kai:mousemove') {
-                    // Forwarded from inside the iframe
-                    checkHit(e.data);
+            function clearOutput() {
+                output.textContent = "";
+            }
+
+            function unlock() {
+                unlocked = true;
+                localStorage.setItem('ketebe_terminal_unlocked', '1');
+                statusChip.textContent = "unlocked";
+                line("PASSCODE ACCEPTED. Secret channel unlocked.", "warn");
+                line("Now available: run secret, run credits, run campaign, run quick, run editor, run tools");
+            }
+
+            function listHelp() {
+                line("Available commands:", "dim");
+                line("  help       - show this list");
+                line("  clear      - clear terminal");
+                line("  whoami     - show active profile");
+                line("  clue       - reveal passphrase clues");
+                line("  bootlog    - replay puzzle briefing");
+                line("  run <cmd>  - open pages (more unlock after puzzle)");
+                line("  reset      - lock terminal again");
+            }
+
+            function doRun(arg) {
+                const map = {
+                    credits: "credits.html",
+                    campaign: "slot_selection.html",
+                    quick: "campaign_launcher.html",
+                    editor: "campaign_editor.html",
+                    tools: "tools.html",
+                    secret: "credits.html#decoded"
+                };
+
+                if (!arg) {
+                    line("Usage: run <credits|campaign|quick|editor|tools|secret>", "error");
+                    return;
+                }
+
+                if (!unlocked && arg !== "credits") {
+                    line("Channel locked. Solve the puzzle first. Try: clue", "error");
+                    return;
+                }
+
+                const target = map[arg];
+                if (!target) {
+                    line("Unknown run target: " + arg, "error");
+                    return;
+                }
+
+                line("Launching: " + arg + "...", "dim");
+                window.location.href = target;
+            }
+
+            function doClue() {
+                clueStep += 1;
+                if (clueStep === 1) {
+                    line("CLUE[1]: The key starts with the engine core: V8", "warn");
+                    return;
+                }
+                if (clueStep === 2) {
+                    line("CLUE[2]: Add a separator, then the word 'EASTER'.", "warn");
+                    return;
+                }
+                if (clueStep === 3) {
+                    line("CLUE[3]: End with another separator and 'KETEBE'.", "warn");
+                    line("Submit with: pass <phrase>", "dim");
+                    return;
+                }
+                line("No more clues. Build the phrase from all parts.", "dim");
+            }
+
+            function resetLock() {
+                unlocked = false;
+                clueStep = 0;
+                localStorage.removeItem('ketebe_terminal_unlocked');
+                statusChip.textContent = "locked";
+                line("Terminal lock restored.", "warn");
+            }
+
+            function runCommand(raw) {
+                const command = raw.trim();
+                if (!command) return;
+
+                history.push(command);
+                historyIndex = history.length;
+
+                line("operator@ketebe:~$ " + command, "dim");
+                const [cmd, ...rest] = command.split(/\s+/);
+                const arg = rest.join(" ");
+
+                if (cmd === "help") return listHelp();
+                if (cmd === "clear") return clearOutput();
+                if (cmd === "whoami") {
+                    const user = localStorage.getItem('ketebe_username') || "guest";
+                    line("active-profile: " + user);
+                    return;
+                }
+                if (cmd === "clue") return doClue();
+                if (cmd === "bootlog") return boot();
+                if (cmd === "reset") return resetLock();
+                if (cmd === "run") return doRun(arg.toLowerCase());
+                if (cmd === "pass") {
+                    if (arg.toUpperCase() === "V8-EASTER-KETEBE") unlock();
+                    else line("Invalid passphrase.", "error");
+                    return;
+                }
+
+                line("Unknown command: " + cmd + " (try 'help')", "error");
+            }
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key === "Enter") {
+                    runCommand(input.value);
+                    input.value = "";
+                    return;
+                }
+
+                if (event.key === "ArrowUp") {
+                    if (history.length === 0) return;
+                    historyIndex = Math.max(0, historyIndex - 1);
+                    input.value = history[historyIndex] || "";
+                    event.preventDefault();
+                    return;
+                }
+
+                if (event.key === "ArrowDown") {
+                    if (history.length === 0) return;
+                    historyIndex = Math.min(history.length, historyIndex + 1);
+                    input.value = history[historyIndex] || "";
+                    event.preventDefault();
                 }
             });
 
-            // Listen on parent window
-            window.addEventListener('mousemove', (e) => checkHit(e));
-            window.addEventListener('mousedown', (e) => checkHit(e));
-
-            // Wait for iframe to load
-            iframe.addEventListener('load', () => {
-                try {
-                    const doc = iframe.contentWindow.document;
-                    doc.body.style.background = 'transparent';
-                    console.log('✅ Kai Assistant UI loaded (Smart Interaction Mode)!');
-                } catch (e) {
-                    console.warn('Could not access iframe:', e);
-                    iframe.style.pointerEvents = 'auto';
-                }
-            });
-        });
+            boot();
+            input.focus();
+        })();
     </script>
 </body>
 </html>

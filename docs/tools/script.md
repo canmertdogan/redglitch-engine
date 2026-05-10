@@ -7,7 +7,7 @@ The Script Editor provides a full-featured code environment for writing game log
 
 ### Key Features
 - **Monaco Editor Integration:** Modern IDE features like syntax highlighting and autocomplete.
-- **Engine API Access:** Direct access to Vortex Engine core classes (Player, Entity, Physics).
+- **Engine API Access:** Direct access to Ketebe Engine core classes (Player, Entity, Physics).
 - **Auto-save:** Logic is persisted as you write.
 - **Project Scope:** Automatically focuses on the scripts within the current active project.
 

@@ -1,13 +1,13 @@
 import { PermissionGate } from './permission-gate.js?v=6';
 
 /**
- * Vortex AI - Tool Registry (KAP)
+ * Ketebe AI - Tool Registry (KAP)
  * Registry of Command Bus actions that the AI can invoke across the Studio.
  */
 
 export class ToolRegistry {
     constructor(eventBus = null) {
-        this.eventBus = eventBus || window.VortexEventBus;
+        this.eventBus = eventBus || window.KetebeEventBus;
         this.permissionGate = new PermissionGate();
         this.tools = new Map();
         this.NAMESPACE_ALIAS = {
@@ -875,8 +875,8 @@ export class ToolRegistry {
                 required: ['steps']
             },
             execute: async (args) => {
-                if (!window.VortexAIInstance || !window.VortexAIInstance.workflowManager) {
-                    throw new Error("Workflow Manager not initialized in VortexAIInstance");
+                if (!window.KetebeAIInstance || !window.KetebeAIInstance.workflowManager) {
+                    throw new Error("Workflow Manager not initialized in KetebeAIInstance");
                 }
                 // Safety net: if steps have NO navigateTo and look like a plain studio-open
                 // attempt (just generic stubs), redirect to correct studio instead.
@@ -891,11 +891,11 @@ export class ToolRegistry {
                     if (/iso|isometric|isopixel/.test(allArgs)) target = 'iso_studio';
                     else if (/platformer|platform/.test(allArgs)) target = 'platformer_studio';
                     else if (/topdown|top.down|rpg|world/.test(allArgs)) target = 'editor';
-                    if (target && window.VortexAIInstance && window.VortexAIInstance.toolRegistry) {
-                        return await window.VortexAIInstance.toolRegistry.execute('navigateTo', { target });
+                    if (target && window.KetebeAIInstance && window.KetebeAIInstance.toolRegistry) {
+                        return await window.KetebeAIInstance.toolRegistry.execute('navigateTo', { target });
                     }
                 }
-                return await window.VortexAIInstance.workflowManager.executeWorkflow(args.steps);
+                return await window.KetebeAIInstance.workflowManager.executeWorkflow(args.steps);
             }
         });
 

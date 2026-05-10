@@ -1,4 +1,4 @@
-// shader_editor.js - VORTEX SHADER LAB PRO
+// shader_editor.js - KETEBE SHADER LAB PRO
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -6,9 +6,9 @@ let eventBus, projectState, assetManager;
 
 function initializeShaderIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
-        assetManager = window.VortexAssetManager;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
             // Listen for shader requests

@@ -1,7 +1,7 @@
 /**
- * Vortex AI Cluster Bridge
+ * Ketebe AI Cluster Bridge
  * 
- * This module acts as the interface between the Vortex AI Orchestrator 
+ * This module acts as the interface between the Ketebe AI Orchestrator 
  * and a high-performance AI Cluster using a WASM-powered binary bridge.
  */
 

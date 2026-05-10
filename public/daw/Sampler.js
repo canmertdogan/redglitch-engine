@@ -1,5 +1,5 @@
 /**
- * VORTEX Sampler - Multi-sample playback engine
+ * KETEBE Sampler - Multi-sample playback engine
  * Features: Pitch shifting, velocity layers, loop points, ADSR
  */
 

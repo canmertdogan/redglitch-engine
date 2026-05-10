@@ -79,8 +79,8 @@ if (!gotLock) {
         dialog.showMessageBoxSync({
             type: 'warning',
             buttons: ['OK'],
-            title: 'Vortex Game Studio',
-            message: 'Another instance of Vortex Studio is already running.\nThis instance will now close.'
+            title: 'Ketebe Game Studio',
+            message: 'Another instance of Ketebe Studio is already running.\nThis instance will now close.'
         });
         app.quit();
     });
@@ -100,14 +100,14 @@ app.commandLine.appendSwitch('enable-unsafe-webgpu');
 
 // Set app name for macOS top bar - MUST BE DONE BEFORE READY
 if (process.platform === 'darwin') {
-    app.name = 'Vortex Game Studio';
-    app.setName('Vortex Game Studio');
+    app.name = 'Ketebe Game Studio';
+    app.setName('Ketebe Game Studio');
     console.log('App Name (Initial):', app.name);
     console.log('App Name via getName():', app.getName());
     app.setAboutPanelOptions({
-        applicationName: 'Vortex Game Studio',
+        applicationName: 'Ketebe Game Studio',
         applicationVersion: '1.0.0',
-        copyright: 'Copyright © 2026 Vortex',
+        copyright: 'Copyright © 2026 Ketebe',
         version: '1.0.0'
     });
 }
@@ -121,7 +121,7 @@ let splashWindow;
 function createMenu() {
     const template = [
         ...(process.platform === 'darwin' ? [{
-            label: 'Vortex Game Studio',
+            label: 'Ketebe Game Studio',
             submenu: [
                 { role: 'about' },
                 { type: 'separator' },
@@ -209,7 +209,7 @@ function createWindow() {
         minWidth: 800,
         minHeight: 450,
         show: false, // Don't show until ready
-        title: "Vortex Game Studio",
+        title: "Ketebe Game Studio",
         icon: path.join(__dirname, 'public/icons/favicon-6.png'),
         webPreferences: {
             nodeIntegration: false,

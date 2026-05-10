@@ -1,4 +1,4 @@
-# Code Review: Vortex Engine (Vortex Engine)
+# Code Review: Ketebe Engine (Ketebe Engine)
 
 **Review Date:** February 12, 2026  
 **Scope:** Server layer, project structure, architecture
@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Vortex Engine is a hybrid web-desktop game development environment combining a Node.js Express server, Electron desktop app, and a Python AI backend. The architecture is well-documented and follows a clear "shadow filesystem" pattern for project-based asset resolution. The codebase is modular with sensible separation of routes, services, and middleware.
+Ketebe Engine is a hybrid web-desktop game development environment combining a Node.js Express server, Electron desktop app, and a Python AI backend. The architecture is well-documented and follows a clear "shadow filesystem" pattern for project-based asset resolution. The codebase is modular with sensible separation of routes, services, and middleware.
 
 ---
 
@@ -82,10 +82,10 @@ setupWebSocket(server, {
 ---
 
 ### 3. Inconsistent Naming
-- **package.json**: `"ketebe-engine"`, `"Vortex Engine Alpha"`
-- **ketebe.json / UI**: `"Vortex Game Studio"`, `"Revenge of the Vortex Canavarı"`
+- **package.json**: `"ketebe-engine"`, `"Ketebe Engine Alpha"`
+- **ketebe.json / UI**: `"Ketebe Game Studio"`, `"Revenge of the Ketebe Canavarı"`
 
-**Recommendation:** Standardize on a single product name (Vortex vs Vortex) across configs, docs, and UI.
+**Recommendation:** Standardize on a single product name (Ketebe vs Ketebe) across configs, docs, and UI.
 
 ---
 
@@ -190,6 +190,6 @@ The project has a solid architecture and good security practices. The most impac
 
 1. Passing correct options to WebSocket and starting the file watcher.
 2. Unifying project creation logic and directory naming.
-3. Aligning naming (Vortex vs Vortex) and configuration (port, product name).
+3. Aligning naming (Ketebe vs Ketebe) and configuration (port, product name).
 
 After these changes, the server and tooling would be more reliable and consistent.

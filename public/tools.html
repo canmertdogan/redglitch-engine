@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Vortex Game Studio</title>
+    <title>Ketebe Game Studio</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -1172,7 +1172,7 @@
         </div>
         
         <div class="app-caption">
-            <span class="brand-gold">VORTEX GAME STUDIO</span>
+            <span class="brand-gold">KETEBE GAME STUDIO</span>
         </div>
 
         <div class="win-controls">
@@ -1457,7 +1457,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Author</label>
-                            <input type="text" id="new-proj-author" class="form-input" value="Vortex User">
+                            <input type="text" id="new-proj-author" class="form-input" value="Ketebe User">
                         </div>
                     </div>
 
@@ -1713,8 +1713,8 @@
                 capture(msg, 'error');
                 
                 // Phase 10: Emit to EventBus for AI Co-Pilot
-                if (window.VortexEventBus) {
-                    window.VortexEventBus.emit('editor:error', { message: msg });
+                if (window.KetebeEventBus) {
+                    window.KetebeEventBus.emit('editor:error', { message: msg });
                 }
                 
                 originalError.apply(console, args);
@@ -2223,8 +2223,8 @@
             }
             
             // Log activity
-            if (window.VortexProjectState) {
-                window.VortexProjectState.logActivity('tool', tool.title, { id: tool.id });
+            if (window.KetebeProjectState) {
+                window.KetebeProjectState.logActivity('tool', tool.title, { id: tool.id });
             }
             
             focusWindow(winId);
@@ -2502,21 +2502,21 @@
     <script src="/ai/error-watcher.js?v=1"></script>
     <script type="module">
         import { ThoughtVisualizer } from '/ai/ui/thought-visualizer.js';
-        window.VortexThoughtVisualizer = new ThoughtVisualizer(window.VortexEventBus);
+        window.KetebeThoughtVisualizer = new ThoughtVisualizer(window.KetebeEventBus);
     </script>
     <script>
         // --- Activity Logging Hook ---
         const _originalOpenWindow = openWindow;
         openWindow = function(tool) {
             _originalOpenWindow(tool);
-            if (window.VortexProjectState) {
-                window.VortexProjectState.logActivity('tool', tool.title, { id: tool.id });
+            if (window.KetebeProjectState) {
+                window.KetebeProjectState.logActivity('tool', tool.title, { id: tool.id });
             }
         };
 
         init();
     </script>
-    <!-- KAI AI Assistant (Vortex AI Micro Edition) -->
+    <!-- KAI AI Assistant (Ketebe AI Micro Edition) -->
     <iframe id="kai-ai-panel" src="ai/ui/assistant-panel.html?v=8" 
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                    border: none; pointer-events: none; z-index: 9998;">
@@ -2599,9 +2599,9 @@
     
     <script type="module">
         // Initialize AI Micro for ghost-text and Command Bus (ToolRegistry)
-        import { VortexAI } from './ai/ketebe-ai.js?v=7';
-        if (window.VortexAIInstance) {
-            window.VortexAIInstance.initialize().catch(err => {
+        import { KetebeAI } from './ai/ketebe-ai.js?v=7';
+        if (window.KetebeAIInstance) {
+            window.KetebeAIInstance.initialize().catch(err => {
                 console.error("❌ AI Brain failed to initialize:", err);
             });
         }

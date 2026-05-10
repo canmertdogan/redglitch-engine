@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">VortexEngine</string>
-    <string name="title_activity_main">VortexEngine</string>
+    <string name="app_name">KetebeEngine</string>
+    <string name="title_activity_main">KetebeEngine</string>
     <string name="package_name">com.ketebe.engine</string>
     <string name="custom_url_scheme">com.ketebe.engine</string>
 </resources>

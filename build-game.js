@@ -183,7 +183,7 @@ function bakeVoxToGlb(voxPath) {
         for (let c = 0; c < 3; c++) { minP[c] = Math.min(minP[c], positions[i+c]); maxP[c] = Math.max(maxP[c], positions[i+c]); }
 
     const gltf = {
-        asset: { version: '2.0', generator: 'Vortex Build System Phase 58' },
+        asset: { version: '2.0', generator: 'Ketebe Build System Phase 58' },
         scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
         meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1, COLOR_0: 2 }, mode: 4 }] }],
         accessors: [
@@ -270,7 +270,7 @@ try {
     ];
     const allowedRootDirs = [
         'engines', 'base_game', 'fonts', 'js', 'lib', 'muzikler', 
-        'sprite-art', 'dunyalar', 'data', 'oyuncu_profilleri',
+        'sprite-art', 'dunyalar', 'data', 'profiles',
         'ai', 'shared', 'css', 'strategies', 'daw', 'icons'
     ];
 

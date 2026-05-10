@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.VortexEventBus;
-        projectState = window.VortexProjectState;
-        assetManager = window.VortexAssetManager;
+        eventBus = window.KetebeEventBus;
+        projectState = window.KetebeProjectState;
+        assetManager = window.KetebeAssetManager;
         
         if (eventBus) {
             // Listen for skill updates (enemies may have skills)
@@ -1010,9 +1010,9 @@ window.openPixelEditor = function(inputId) {
     }
     
     // Method 3: Direct API call (if available)
-    if (!opened && window.VortexAssetManager) {
+    if (!opened && window.KetebeAssetManager) {
         try {
-            window.VortexAssetManager.openSpriteEditor(key);
+            window.KetebeAssetManager.openSpriteEditor(key);
             opened = true;
         } catch(e) {}
     }

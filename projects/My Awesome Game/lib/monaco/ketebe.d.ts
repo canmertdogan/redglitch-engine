@@ -1,6 +1,6 @@
 /**
- * Vortex Engine Core Type Definitions
- * Providing intelligence to the Vortex Code Studio
+ * Ketebe Engine Core Type Definitions
+ * Providing intelligence to the Ketebe Code Studio
  */
 
 declare namespace ketebe {
@@ -63,11 +63,11 @@ declare namespace ketebe {
     }
 
     /**
-     * Vortex AI Micro Edition API
-     * Local-first AI Assistant for the Vortex Studio
+     * Ketebe AI Micro Edition API
+     * Local-first AI Assistant for the Ketebe Studio
      */
     namespace ai {
-        interface VortexAI {
+        interface KetebeAI {
             /**
              * Initialize the AI system (lazy-loaded).
              */
@@ -152,5 +152,5 @@ declare namespace ketebe {
 declare const eventBus: ketebe.EventBus;
 declare const assetManager: ketebe.AssetManager;
 declare const sharedProjectState: ketebe.SharedProjectState;
-declare const ketebeAI: ketebe.ai.VortexAI;
+declare const ketebeAI: ketebe.ai.KetebeAI;
 

@@ -1,5 +1,5 @@
 /**
- * Vortex Engine - Central Event Bus
+ * Ketebe Engine - Central Event Bus
  * Provides unified communication across all editors and tools
  */
 class EventBus {
@@ -245,7 +245,7 @@ class EventBus {
         // Broadcast to parent window (if we are in an iframe)
         if (window.parent && window.parent !== window) {
             try {
-                window.parent.postMessage(message, '*');
+                window.parent.postMessage(message, window.location.origin);
             } catch (e) {}
         }
         
@@ -254,7 +254,7 @@ class EventBus {
         iframes.forEach(iframe => {
             try {
                 if (iframe.contentWindow) {
-                    iframe.contentWindow.postMessage(message, '*');
+                    iframe.contentWindow.postMessage(message, window.location.origin);
                 }
             } catch (e) {}
         });
@@ -262,7 +262,7 @@ class EventBus {
         // Broadcast to opener (if we were opened as a popup)
         if (window.opener && window.opener !== window) {
             try {
-                window.opener.postMessage(message, '*');
+                window.opener.postMessage(message, window.location.origin);
             } catch (err) {}
         }
     }
@@ -339,7 +339,7 @@ class EventBus {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.VortexEventBus = window.VortexEventBus || new EventBus();
+    window.KetebeEventBus = window.KetebeEventBus || new EventBus();
 }
 
 // Export for Node.js

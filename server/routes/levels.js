@@ -84,7 +84,7 @@ router.post('/save-level', async (req, res) => {
         if (!projectPath) {
             return res.status(400).json({ error: 'Invalid project name' });
         }
-        const levelDir = path.join(projectPath, 'dunyalar', 'platformer');
+        const levelDir = path.join(projectPath, 'dunyalar');
         const levelPath = path.join(levelDir, `${levelId}.json`);
         
         // Ensure directory exists
@@ -110,7 +110,7 @@ router.get('/platformer-levels/:project', async (req, res) => {
         if (!projectPath) {
             return res.status(400).json({ error: 'Invalid project name' });
         }
-        const levelDir = path.join(projectPath, 'dunyalar', 'platformer');
+        const levelDir = path.join(projectPath, 'dunyalar');
         
         // Ensure directory exists
         await fs.mkdir(levelDir, { recursive: true });
@@ -263,17 +263,9 @@ router.get('/levels/by-engine/:engineType', async (req, res) => {
             ? path.join(__dirname, '..', '..', 'public', 'dunyalar')
             : path.join(activeProject, 'dunyalar');
         
-        const platformerDir = path.join(mainDunyalarDir, 'platformer');
-        
         console.log(`[API] levels/by-engine/${req.params.engineType} - checking: ${mainDunyalarDir}`);
         
-        // Scan both directories
         const dirsToScan = [mainDunyalarDir];
-        try {
-            await fs.access(platformerDir);
-            dirsToScan.push(platformerDir);
-        } catch (e) {}
-
         const levelsByEngine = [];
         
         for (const dir of dirsToScan) {
@@ -295,7 +287,7 @@ router.get('/levels/by-engine/:engineType', async (req, res) => {
                                 filename: file,
                                 name: data.name || data.metadata?.name || file.replace('.json', ''),
                                 engineType: standardizedType,
-                                path: dir === platformerDir ? `platformer/${file}` : file
+                                path: file
                             });
                         }
                     } catch (e) {}
@@ -311,3 +303,4 @@ router.get('/levels/by-engine/:engineType', async (req, res) => {
 });
 
 module.exports = router;
+rts = router;
