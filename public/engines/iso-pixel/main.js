@@ -316,7 +316,10 @@ class IsoGame {
 
     async init() {
         console.log("[IsoEngine] Initializing World...");
-        this.strategy = new IsoStrategy();
+        if (typeof window.IsoStrategy === 'undefined') {
+            throw new Error('IsoStrategy not found! Ensure strategies/IsoStrategy.js is loaded.');
+        }
+        this.strategy = new window.IsoStrategy();
         this.config = { tileSize: 16, scale: 2 }; 
         
         try {

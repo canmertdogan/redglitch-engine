@@ -39,6 +39,7 @@ class CampaignController {
         // Engine Manifests
         this.engineManifests = {
             'rpg-topdown': [
+                'strategies/TopDownStrategy.js',
                 'engines/rpg-topdown/localization.js',
                 'engines/rpg-topdown/sprites.js',
                 'engines/rpg-topdown/input.js',
@@ -60,6 +61,7 @@ class CampaignController {
                 'engines/rpg-topdown/main.js'
             ],
             'iso-pixel': [
+                'strategies/IsoStrategy.js',
                 'engines/iso-pixel/renderer.js',
                 'engines/iso-pixel/fxSystem.js',
                 'engines/iso-pixel/hudSystem.js',
@@ -69,6 +71,7 @@ class CampaignController {
                 'engines/iso-pixel/main.js'
             ],
             'platformer-2d': [
+                'strategies/PlatformerStrategy.js',
                 'engines/platformer-2d/PlatformerConfig.js',
                 'engines/platformer-2d/PlatformerAssetManager.js',
                 'engines/platformer-2d/ParallaxSystem.js',
@@ -89,19 +92,16 @@ class CampaignController {
                 'engines/platformer-2d/main.js'
             ],
             'topdown-3d': [
-                'lib/three.min.js',
                 'engines/shared/Engine3DBase.js',
                 'engines/shared/Engine3DAdapter.js',
                 'engines/topdown-3d/TopDown3DAdapter.js'
             ],
             'fps-3d': [
-                'lib/three.min.js',
                 'engines/shared/Engine3DBase.js',
                 'engines/shared/Engine3DAdapter.js',
                 'engines/fps-3d/FPS3DAdapter.js'
             ],
             'platformer-3d': [
-                'lib/three.min.js',
                 'engines/shared/Engine3DBase.js',
                 'engines/shared/Engine3DAdapter.js',
                 'engines/platformer-3d/Platformer3DAdapter.js'
@@ -257,9 +257,14 @@ class CampaignController {
         for (const src of scripts) {
             await new Promise((resolve) => {
                 const script = document.createElement('script');
-                script.src = src;
+                // Add version/cache bust
+                const v = Date.now();
+                script.src = `${src}?v=${v}`;
                 script.onload = resolve;
-                script.onerror = resolve;
+                script.onerror = () => {
+                    console.error(`[CampaignController] Failed to load ${src}`);
+                    resolve();
+                };
                 document.body.appendChild(script);
             });
         }
