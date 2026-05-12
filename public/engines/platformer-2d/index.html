@@ -222,7 +222,7 @@
             });
         } else if (isPlaytest) {
             // Playtest mode - load from localStorage
-            const testData = localStorage.getItem('temp_playtest_platformer');
+            const testData = sessionStorage.getItem('ketebe_playtest_data') || localStorage.getItem('temp_playtest_platformer');
             if (testData) {
                 window.game = new PlatformerGame();
                 window.game.username = 'TEST_USER';

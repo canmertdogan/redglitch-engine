@@ -1012,7 +1012,7 @@ function showSuccessNotification(message) {
 
 async function loadFromServer() {
     try {
-        const response = await fetch('/dunyalar/definitions/npcs.json');
+        const response = await fetch('/api/npcs');
         if (response.ok) {
             let data = await response.json();
             npcs = data.map(ensureNewSchema);
@@ -1116,5 +1116,7 @@ function showValidationError(message) {
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
+    }, 3000);
+});
     }, 3000);
 }

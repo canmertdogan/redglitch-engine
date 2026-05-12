@@ -154,7 +154,7 @@ router.get('/tree', async (req, res) => {
                     children.push({
                         name: entry.name,
                         path: `projects/${projectName}/${rel}`,
-                        type: 'directory',
+                        type: 'dir',
                         children: await buildTree(full, rel)
                     });
                 } else {

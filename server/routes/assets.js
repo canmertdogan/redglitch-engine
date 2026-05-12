@@ -3,27 +3,14 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
+const assetRegistry = require('../services/AssetRegistry');
 const { resolveUnderRoot } = require('../utils/pathGuard');
 const safeFs = require('../utils/safeFs');
 
-// GET /api/assets - Get all assets
+// GET /api/assets - Get all assets from the centralized registry
 router.get('/', async (req, res) => {
     try {
-        const activeProject = projectService.getActiveProject();
-        const isRoot = projectService.isRootProject();
-        
-        const registryPath = isRoot
-            ? path.join(activeProject, 'public', 'data', 'assets.json')
-            : path.join(activeProject, 'data', 'assets.json');
-        
-        let data = { assets: [] };
-        try {
-            const content = await fs.readFile(registryPath, 'utf8');
-            data = JSON.parse(content);
-        } catch (err) {
-            // Registry doesn't exist yet
-        }
-        
+        const data = await assetRegistry.getRegistry();
         res.json(data);
     } catch (error) {
         console.error('Error fetching assets:', error);
@@ -31,100 +18,12 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST /api/assets/rebuild - Scan filesystem and update registry
+// POST /api/assets/rebuild - Force a refresh of the registry
 router.post('/rebuild', async (req, res) => {
-    console.log('[AssetManager] Rebuild request received');
+    console.log('[AssetRegistry] Rebuild request received');
     try {
-        const activeProject = projectService.getActiveProject();
-        const isRoot = projectService.isRootProject();
-        const projectBase = path.basename(activeProject);
-        
-        const assets = [];
-        const scanDirs = [
-            { dir: 'assets', type: 'image' },
-            { dir: 'muzikler', type: 'audio' },
-            { dir: 'dunyalar', type: 'data' }
-        ];
-
-        // If root, we scan in public/
-        const baseScanPath = isRoot ? path.join(activeProject, 'public') : activeProject;
-
-        for (const entry of scanDirs) {
-            const fullPath = path.join(baseScanPath, entry.dir);
-            try {
-                // Recursive scan using a safe walker (fs.readdir with withFileTypes)
-                async function walk(dir, rel) {
-                    const found = [];
-                    const entries = await fs.readdir(dir, { withFileTypes: true });
-                    for (const d of entries) {
-                        if (d.name === 'node_modules' || d.name === '.git' || d.name.startsWith('.')) continue;
-                        const childFull = path.join(dir, d.name);
-                        const childRel = path.join(rel, d.name).replace(/\\/g, '/');
-                        if (d.isDirectory()) {
-                            const children = await walk(childFull, path.join(rel, d.name));
-                            found.push(...children);
-                        } else {
-                            found.push({ dirent: d, full: childFull, rel: childRel });
-                        }
-                    }
-                    return found;
-                }
-
-                // Ensure directory exists, then walk
-                let files = [];
-                try {
-                    await fs.access(fullPath);
-                    files = await walk(fullPath, entry.dir);
-                } catch (err) {
-                    files = [];
-                }
-
-                for (const fileInfo of files) {
-                    const dirent = fileInfo.dirent;
-                    const fullFile = fileInfo.full;
-                    const relativePath = fileInfo.rel;
-                    const ext = path.extname(dirent.name).toLowerCase();
-
-                    let type = entry.type;
-                    if (ext === '.json' || ext === '.algorithm') type = 'json';
-                    if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) type = 'image';
-                    if (['.mp3', '.wav', '.ogg'].includes(ext)) type = 'audio';
-
-                    let assetPath = relativePath;
-                    if (!isRoot) {
-                        assetPath = `projects/${projectBase}/${assetPath}`;
-                    }
-
-                    let size = 0;
-                    try { size = (await fs.stat(fullFile)).size; } catch (e) { /* ignore */ }
-
-                    assets.push({
-                        id: relativePath.replace(/\\/g, '/'),
-                        name: path.basename(dirent.name),
-                        path: assetPath,
-                        type: type,
-                        metadata: {
-                            size: size,
-                            ext: ext
-                        },
-                        dependencies: []
-                    });
-                }
-            } catch (e) {
-                // Directory might not exist or be unreadable
-            }
-        }
-
-        // Save to registry
-        const registryPath = isRoot 
-            ? path.join(activeProject, 'public', 'data', 'assets.json')
-            : path.join(activeProject, 'data', 'assets.json');
-            
-        await fs.mkdir(path.dirname(registryPath), { recursive: true });
-        await safeFs.safeWriteFullPath(activeProject, registryPath, JSON.stringify({ assets }, null, 2), 'utf8');
-
-        console.log(`[AssetManager] Scanned ${assets.length} assets for ${isRoot ? 'ROOT' : projectBase}`);
-        res.json({ success: true, count: assets.length });
+        const data = await assetRegistry.rebuild();
+        res.json({ success: true, count: data.assets.length });
     } catch (error) {
         console.error('Error scanning assets:', error);
         res.status(500).json({ error: 'Failed to scan assets' });

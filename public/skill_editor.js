@@ -193,7 +193,7 @@ function renderPreview() {
 
 async function saveToServer() {
     try {
-        const response = await fetch('/api/skill-defs', {
+        const response = await fetch('/api/skills', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(skills)
@@ -212,11 +212,13 @@ async function saveToServer() {
 
 async function loadFromServer() {
     try {
-        const response = await fetch('/dunyalar/definitions/skills.json');
+        const response = await fetch('/api/skills');
         if (response.ok) {
             skills = await response.json();
         }
     } catch (e) {
         console.warn("No skill defs found on server.");
+    }
+}server.");
     }
 }

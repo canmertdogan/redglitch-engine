@@ -1122,7 +1122,7 @@ async function saveToServer() {
     }
     
     try {
-        const response = await fetch('/api/enemy-defs', {
+        const response = await fetch('/api/enemies', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(enemies)
@@ -1144,7 +1144,7 @@ async function saveToServer() {
 
 async function loadFromServer() {
     try {
-        const response = await fetch('/dunyalar/definitions/enemies.json');
+        const response = await fetch('/api/enemies');
         if (response.ok) {
             let data = await response.json();
             enemies = data.map(ensureNewSchema);

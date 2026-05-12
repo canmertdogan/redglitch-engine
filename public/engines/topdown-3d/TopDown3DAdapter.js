@@ -1,25 +1,14 @@
 /**
- * TopDown3DAdapter.js — Phase 20
+ * TopDown3DAdapter.js
  * CampaignController adapter for the topdown-3d engine.
- *
- * Follows the same interface as TopDownAdapter / PlatformerAdapter so
- * CampaignController._switchEngine() can drive it uniformly.
- *
- * Loaded as a plain <script> (non-module) alongside the other adapters so
- * CampaignController can instantiate it with `new TopDown3DAdapter()`.
- * It dynamically imports the ES-module TopDownGame3D when needed.
- *
- * Registration: CampaignController._createAdapter() switch-case is patched
- * at the bottom of this file (adds case 'topdown-3d') without modifying the
- * original CampaignController source — it runs after CampaignController loads.
+ * ESM Version.
  */
 
-/* global EngineAdapter, CrossEngineSerializer */
+import EngineAdapter from '../shared/EngineAdapter.js';
 
-class TopDown3DAdapter extends EngineAdapter {
+export default class TopDown3DAdapter extends EngineAdapter {
     constructor() {
         super('topdown-3d');
-        /** @type {import('./main.js').default|null} */
         this.engine    = null;
         this._strategy = null;
         this._container = null;
@@ -43,9 +32,7 @@ class TopDown3DAdapter extends EngineAdapter {
             })();
 
         // Dynamic import of the ES-module engine entry point
-        const { default: TopDownGame3D } = await import(
-            '/engines/topdown-3d/main.js'
-        );
+        const { default: TopDownGame3D } = await import('/engines/topdown-3d/main.js');
 
         this.engine = new TopDownGame3D(this._container);
         if (this.currentProject) {
@@ -55,9 +42,7 @@ class TopDown3DAdapter extends EngineAdapter {
         this.isLoaded = false;
 
         // Attach strategy helper
-        const { default: TopDown3DStrategy } = await import(
-            '/engines/topdown-3d/TopDown3DStrategy.js'
-        );
+        const { default: TopDown3DStrategy } = await import('/engines/topdown-3d/TopDown3DStrategy.js');
         this._strategy = new TopDown3DStrategy(this.engine);
 
         // Connect engine events to CampaignController callbacks
@@ -229,15 +214,11 @@ class TopDown3DAdapter extends EngineAdapter {
         this._onLevelComplete = null;
         this.currentProject = null;
         this.isLoaded   = false;
-        super.destroy?.();
+        super.destroy();
     }
 }
 
+// Ensure global access if needed
 if (typeof window !== 'undefined') {
     window.TopDown3DAdapter = TopDown3DAdapter;
-}
-
-// CommonJS compat
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = TopDown3DAdapter;
 }

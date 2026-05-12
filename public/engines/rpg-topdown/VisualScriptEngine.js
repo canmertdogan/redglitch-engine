@@ -9,6 +9,7 @@ export class VisualScriptEngine {
         this.game = gameContext;
         this.activeScripts = new Map(); // entityId -> scriptState
         this.nodeRegistry = this.buildNodeRegistry();
+        this.MAX_RECURSION_DEPTH = 100; // Phase 16: Prevent infinite loops
     }
 
     /**
@@ -38,7 +39,7 @@ export class VisualScriptEngine {
                 for (const wire of wires) {
                     const nextNode = ctx.graph.nodes.find(n => n.id === wire.toNode);
                     if (nextNode) {
-                        await this.executeNode({ ...ctx, node: nextNode });
+                        await this.executeNode({ ...ctx, node: nextNode }, ctx.depth);
                     }
                 }
                 return val;
@@ -66,17 +67,15 @@ export class VisualScriptEngine {
                 return ctx.memory[name] || 0;
             },
             
-            // --- PHASE 6: MATH EXPANSION ---
+            // --- PHASE 6: MATH EXPANSION & PHASE 16: SAFE EVAL ---
             'math_expression': (ctx) => {
                 const expr = ctx.node.data.expression;
-                const a = this.resolveInput(ctx, 'a');
-                const b = this.resolveInput(ctx, 'b');
-                const c = this.resolveInput(ctx, 'c');
-                try {
-                    // Safe evaluation of simple math
-                    const fn = new Function('a', 'b', 'c', `return ${expr}`);
-                    return fn(a, b, c);
-                } catch(e) { return 0; }
+                const vars = {
+                    a: this.resolveInput(ctx, 'a'),
+                    b: this.resolveInput(ctx, 'b'),
+                    c: this.resolveInput(ctx, 'c')
+                };
+                return this._safeMathEval(expr, vars);
             },
             'vec2_dist': (ctx) => {
                 const x1 = this.resolveInput(ctx, 'x1'), y1 = this.resolveInput(ctx, 'y1');
@@ -106,6 +105,67 @@ export class VisualScriptEngine {
     }
 
     /**
+     * Phase 16: Secure math evaluator (no eval/new Function)
+     */
+    _safeMathEval(expr, vars) {
+        if (!expr) return 0;
+        // Strict whitelist: numbers, a/b/c, math ops, parens
+        if (!/^[0-9abc\+\-\*\/\(\)\.\s]+$/.test(expr)) {
+            console.warn(`[VSL] Blocked unsafe math expression: ${expr}`);
+            return 0;
+        }
+        
+        try {
+            // Replace variables
+            let processed = expr
+                .replace(/\ba\b/g, vars.a || 0)
+                .replace(/\bb\b/g, vars.b || 0)
+                .replace(/\bc\b/g, vars.c || 0);
+            
+            // Simple stack-based evaluator for basic arithmetic
+            return this._parseInfix(processed);
+        } catch(e) {
+            return 0;
+        }
+    }
+
+    _parseInfix(str) {
+        const tokens = str.match(/\d+\.?\d*|[\+\-\*\/\(\)]/g);
+        if (!tokens) return 0;
+
+        const ops = [];
+        const vals = [];
+        const precedence = { '+': 1, '-': 1, '*': 2, '/': 2 };
+
+        const applyOp = () => {
+            const op = ops.pop();
+            const right = vals.pop();
+            const left = vals.pop();
+            if (op === '+') vals.push(left + right);
+            if (op === '-') vals.push(left - right);
+            if (op === '*') vals.push(left * right);
+            if (op === '/') vals.push(left / right);
+        };
+
+        for (let i = 0; i < tokens.length; i++) {
+            const t = tokens[i];
+            if (t === '(') {
+                ops.push(t);
+            } else if (t === ')') {
+                while (ops.length && ops[ops.length - 1] !== '(') applyOp();
+                ops.pop();
+            } else if (precedence[t]) {
+                while (ops.length && precedence[ops[ops.length - 1]] >= precedence[t]) applyOp();
+                ops.push(t);
+            } else {
+                vals.push(parseFloat(t));
+            }
+        }
+        while (ops.length) applyOp();
+        return vals[0] || 0;
+    }
+
+    /**
      * Run a script graph for a specific entity.
      */
     async runGraph(graph, entity, triggerEvent) {
@@ -128,17 +188,24 @@ export class VisualScriptEngine {
             graph: graph,
             entity: entity,
             memory: entity.scriptMemory,
-            currentNode: null
+            currentNode: null,
+            depth: 0
         };
 
         // Execute all matching entry points
         for (const node of entryNodes) {
             context.node = node;
-            await this.executeNode(context);
+            await this.executeNode(context, 0);
         }
     }
 
-    async executeNode(ctx) {
+    async executeNode(ctx, depth = 0) {
+        if (depth > this.MAX_RECURSION_DEPTH) {
+            console.error(`[VSL] Max recursion depth (${this.MAX_RECURSION_DEPTH}) reached! Possible loop in graph.`);
+            return;
+        }
+        ctx.depth = depth;
+
         // --- PHASE 5: LIVE DEBUGGING ---
         if (window.KetebeEventBus) {
             window.KetebeEventBus.emit('vsl:node_exec', {
@@ -165,19 +232,17 @@ export class VisualScriptEngine {
             if (nextNode) {
                 // Create new context for next node, preserving memory/entity
                 const nextCtx = { ...ctx, node: nextNode };
-                await this.executeNode(nextCtx);
+                await this.executeNode(nextCtx, ctx.depth + 1);
             }
         }
     }
 
     resolveInput(ctx, portName) {
         let value = null;
-        let sourceNodeId = null;
 
         // 1. Check for incoming wire
         const wire = ctx.graph.wires.find(w => w.toNode === ctx.node.id && w.toPort === portName);
         if (wire) {
-            sourceNodeId = wire.fromNode;
             const sourceNode = ctx.graph.nodes.find(n => n.id === wire.fromNode);
             if (sourceNode) {
                 // If source is a reroute node, recursively resolve its input

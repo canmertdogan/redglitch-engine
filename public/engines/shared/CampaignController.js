@@ -39,13 +39,17 @@ class CampaignController {
         // Engine Manifests
         this.engineManifests = {
             'rpg-topdown': [
+                'shared/InputSystem.js',
+                'shared/AchievementSystem.js',
+                'shared/Profiler.js',
+                'shared/VFXBridge.js',
+                'shared/LocalizationSystem.js',
+                'shared/SoundManager.js',
                 'strategies/TopDownStrategy.js',
-                'engines/rpg-topdown/localization.js',
                 'engines/rpg-topdown/sprites.js',
                 'engines/rpg-topdown/input.js',
                 'engines/rpg-topdown/saveSystem.js',
                 'engines/rpg-topdown/mapSystem.js',
-                'engines/rpg-topdown/achievementSystem.js',
                 'engines/rpg-topdown/fxSystem.js',
                 'engines/rpg-topdown/audioSystem.js',
                 'engines/rpg-topdown/console.js',
@@ -61,6 +65,12 @@ class CampaignController {
                 'engines/rpg-topdown/main.js'
             ],
             'iso-pixel': [
+                'shared/InputSystem.js',
+                'shared/AchievementSystem.js',
+                'shared/Profiler.js',
+                'shared/VFXBridge.js',
+                'shared/LocalizationSystem.js',
+                'shared/SoundManager.js',
                 'strategies/IsoStrategy.js',
                 'engines/iso-pixel/renderer.js',
                 'engines/iso-pixel/fxSystem.js',
@@ -71,6 +81,12 @@ class CampaignController {
                 'engines/iso-pixel/main.js'
             ],
             'platformer-2d': [
+                'shared/InputSystem.js',
+                'shared/AchievementSystem.js',
+                'shared/Profiler.js',
+                'shared/VFXBridge.js',
+                'shared/LocalizationSystem.js',
+                'shared/SoundManager.js',
                 'strategies/PlatformerStrategy.js',
                 'engines/platformer-2d/PlatformerConfig.js',
                 'engines/platformer-2d/PlatformerAssetManager.js',
@@ -143,6 +159,8 @@ class CampaignController {
         this.username = username;
         this.slotId = slotId;
         
+        // Phase 24: Global Atmosphere Management
+
         if (window.AbilityDefinitions && (!this.equippedAbilities || this.equippedAbilities.every(a => a === null))) {
             this.equippedAbilities = AbilityDefinitions.getStarterAbilities();
         }
@@ -255,18 +273,30 @@ class CampaignController {
         const scripts = this.engineManifests[engineType];
         if (!scripts) return;
         for (const src of scripts) {
-            await new Promise((resolve) => {
-                const script = document.createElement('script');
-                // Add version/cache bust
-                const v = Date.now();
-                script.src = `${src}?v=${v}`;
-                script.onload = resolve;
-                script.onerror = () => {
-                    console.error(`[CampaignController] Failed to load ${src}`);
-                    resolve();
-                };
-                document.body.appendChild(script);
-            });
+            // Phase 17: Use dynamic import for ES Modules (3D components)
+            const isModule = src.endsWith('Adapter.js') && this._is3DEngine(engineType) || src.includes('Engine3D');
+            
+            if (isModule) {
+                console.log(`[CampaignController] Importing module: ${src}`);
+                try {
+                    await import(`/${src}?v=${Date.now()}`);
+                } catch (err) {
+                    console.error(`[CampaignController] Module import failed for ${src}:`, err);
+                }
+            } else {
+                await new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    // Add version/cache bust
+                    const v = Date.now();
+                    script.src = `${src}?v=${v}`;
+                    script.onload = resolve;
+                    script.onerror = () => {
+                        console.error(`[CampaignController] Failed to load ${src}`);
+                        resolve();
+                    };
+                    document.body.appendChild(script);
+                });
+            }
         }
         this.loadedEngines.add(engineType);
     }
@@ -283,6 +313,10 @@ class CampaignController {
             }
             this._showTransitionScreen(newEngineType);
             await this._loadEngineScripts(newEngineType);
+
+            // Phase 24: Toggle 2D Atmosphere based on engine type
+            if (window.atmosphere) {
+            }
 
             let adapter;
             switch (newEngineType) {

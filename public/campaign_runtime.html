@@ -154,18 +154,13 @@
             justify-content: center;
         }
 
-        #gameCanvas, #atmosphere-canvas {
+        #gameCanvas {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-        }
-
-        #atmosphere-canvas {
-            pointer-events: none;
-            z-index: 10;
         }
 
         /* HUD - Campaign Info (Top Left) */
@@ -1168,7 +1163,6 @@
         <!-- Engine canvas will be injected here -->
         <div id="engine-root">
             <canvas id="gameCanvas" width="960" height="640"></canvas>
-            <canvas id="atmosphere-canvas" width="960" height="640"></canvas>
         </div>
     </div>
 
@@ -1254,7 +1248,6 @@
     <script src="shared/DialogueSystem.js"></script>
     <script src="shared/QuestSystem.js"></script>
     <script src="shared/LogicSystem.js"></script>
-    <script src="shared/AtmosphereSystem.js"></script>
     <script src="shared/UISystem.js"></script>
     <script src="shared/UIRenderer.js"></script>
 

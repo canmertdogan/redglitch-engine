@@ -237,7 +237,8 @@ class EditorCore {
         // Play
         document.getElementById('btn-play').addEventListener('click', () => {
             console.log('[PlatformerStudio] Launching Playtest...');
-            localStorage.setItem('temp_playtest_platformer', JSON.stringify(this.map));
+            sessionStorage.setItem('ketebe_playtest_data', JSON.stringify(this.map));
+            localStorage.setItem('temp_playtest_platformer', JSON.stringify(this.map)); // Legacy fallback
             window.open('engines/platformer-2d/index.html?playtest=true', '_blank');
         });
 

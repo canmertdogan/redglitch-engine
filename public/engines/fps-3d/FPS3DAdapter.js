@@ -1,17 +1,14 @@
 /**
- * FPS3DAdapter.js — Phase 26 (extended Phase 35)
- * Adapter for the fps-3d engine, following the same EngineAdapter interface used
- * by TopDownAdapter, PlatformerAdapter etc. so CampaignController can drive
- * all engine types with a single uniform API.
- *
- * This adapter wraps `window.FPSGame` (the FPSGame class from fps-3d/main.js)
- * and exposes the standard lifecycle methods expected by CampaignController.
+ * FPS3DAdapter.js
+ * Adapter for the fps-3d engine.
+ * ESM Version.
  */
 
-class FPS3DAdapter extends EngineAdapter {
+import EngineAdapter from '../shared/EngineAdapter.js';
+
+export default class FPS3DAdapter extends EngineAdapter {
     constructor() {
         super('fps-3d');
-        /** @type {FPSGame|null} */
         this.game         = null;
         this.username     = null;
         this.currentProject = null;
@@ -23,7 +20,6 @@ class FPS3DAdapter extends EngineAdapter {
     async initialize() {
         if (this.isInitialized) { console.warn('[FPS3DAdapter] already initialized'); return; }
 
-        // Determine or create a container div for the engine canvas
         const container = document.getElementById('game-container')
             ?? document.getElementById('canvas-container')
             ?? (() => {
@@ -34,7 +30,6 @@ class FPS3DAdapter extends EngineAdapter {
                 return div;
             })();
 
-        // Dynamic import of the ES-module engine entry point
         const { default: FPSGame } = await import('/engines/fps-3d/main.js');
         
         this.game = new FPSGame(container);
@@ -53,7 +48,6 @@ class FPS3DAdapter extends EngineAdapter {
         };
         this.game.on?.('levelComplete', this._onLevelComplete);
 
-        // Attach strategy helper
         const { default: FPS3DStrategy } = await import('/engines/fps-3d/FPS3DStrategy.js');
         this.game.strategy = new FPS3DStrategy(this.game);
 
@@ -62,7 +56,6 @@ class FPS3DAdapter extends EngineAdapter {
         console.log('[FPS3DAdapter] initialized');
     }
 
-    /** @param {string} levelId @param {string|null} levelPath */
     async loadLevel(levelId, levelPath = null) {
         if (!this.isInitialized) throw new Error('[FPS3DAdapter] not initialized');
         this.isLoaded = false;
@@ -100,12 +93,10 @@ class FPS3DAdapter extends EngineAdapter {
         console.log('[FPS3DAdapter] level unloaded');
     }
 
-    /** @returns {Object} serializable state snapshot */
     getState() {
         return this.game?.strategy?.getState() ?? {};
     }
 
-    /** @param {Object} state — previously returned from getState() */
     async setState(state) {
         this.game?.strategy?.setState(state);
     }
@@ -153,8 +144,6 @@ class FPS3DAdapter extends EngineAdapter {
         console.log('[FPS3DAdapter] destroyed');
     }
 
-    // ── Cross-engine player data ──────────────────────────────────────────────
-
     getPlayerData() {
         if (!this.game) return null;
         const s = this.game.strategy;
@@ -181,11 +170,7 @@ class FPS3DAdapter extends EngineAdapter {
         });
     }
 
-    // ── Abilities (unified interface) ─────────────────────────────────────────
-
     useAbility(abilityId, dirX, dirY) {
-        // FPS games typically don't use the same ability system as RPG
-        // But we support basic ability framework for campaign compatibility
         if (!this.game || !this.game.strategy) return false;
         return this.game.strategy.useAbility?.(abilityId, dirX, dirY) ?? false;
     }
@@ -200,15 +185,11 @@ class FPS3DAdapter extends EngineAdapter {
         return this.game.strategy.getCooldownFraction?.(abilityId) ?? 0;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    /** @param {string} username */
     setUsername(username) {
         this.username = username;
         if (this.game) this.game.username = username;
     }
 
-    /** @param {string} projectName */
     setProject(projectName) {
         this.currentProject = projectName || null;
         if (this.game) this.game.currentProject = this.currentProject;
@@ -228,7 +209,6 @@ class FPS3DAdapter extends EngineAdapter {
     }
 }
 
-// Expose so CampaignController can instantiate it by engine-type string
 if (typeof window !== 'undefined') {
     window.FPS3DAdapter = FPS3DAdapter;
 }

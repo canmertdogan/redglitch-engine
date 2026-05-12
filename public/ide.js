@@ -261,56 +261,95 @@ async function loadTree() {
 }
 
 function renderTree() {
-    const container = document.getElementById('file-tree');
-    container.innerHTML = '';
+    const leftContainer = document.getElementById('file-tree');
+    const rightContainer = document.getElementById('file-tree-right');
     
-    function buildNode(node, depth) {
-        const div = document.createElement('div');
-        div.className = `tree-item ${node.type}`;
-        div.style.paddingLeft = (depth * 15) + 'px';
+    const renderTo = (container) => {
+        if (!container) return;
+        container.innerHTML = '';
         
-        let icon = node.type === 'dir' ? (expandedDirs.has(node.path) ? '📂' : '📁') : '📄';
-        
-        // Color coding for file types
-        if (node.type === 'file') {
-            const ext = node.name.split('.').pop();
-            if (ext === 'js') icon = '📜';
-            if (ext === 'json') icon = '⚙️';
-            if (ext === 'html') icon = '🌐';
-            if (ext === 'css') icon = '🎨';
-            if (ext === 'md') icon = '📝';
-        }
-
-        div.innerHTML = `<span style="opacity:0.6; margin-right:5px; font-size: 12px;">${icon}</span>${node.name}`;
-        
-        if (node.path === activeTab) div.classList.add('active');
-        
-        div.onclick = (e) => {
-            e.stopPropagation();
+        function buildNode(node, depth) {
+            const div = document.createElement('div');
+            div.className = `tree-item ${node.type}`;
+            div.style.paddingLeft = (depth * 15) + 'px';
+            
+            let icon = node.type === 'dir' ? (expandedDirs.has(node.path) ? '📂' : '📁') : '📄';
+            
             if (node.type === 'file') {
-                openFile(node.path);
-            } else {
-                if (expandedDirs.has(node.path)) {
-                    expandedDirs.delete(node.path);
-                } else {
-                    expandedDirs.add(node.path);
-                }
-                renderTree();
+                const ext = node.name.split('.').pop();
+                if (ext === 'js') icon = '📜';
+                if (ext === 'json') icon = '⚙️';
+                if (ext === 'html') icon = '🌐';
+                if (ext === 'css') icon = '🎨';
+                if (ext === 'md') icon = '📝';
             }
-        };
-        
-        container.appendChild(div);
 
-        if (node.type === 'dir' && expandedDirs.has(node.path) && node.children) {
-            const sorted = [...node.children].sort((a,b) => {
-                if (a.type === b.type) return a.name.localeCompare(b.name);
-                return a.type === 'dir' ? -1 : 1;
-            });
-            sorted.forEach(c => buildNode(c, depth + 1));
+            div.innerHTML = `<span style="opacity:0.6; margin-right:5px; font-size: 12px;">${icon}</span>${node.name}`;
+            
+            if (node.path === activeTab) div.classList.add('active');
+            
+            div.onclick = (e) => {
+                e.stopPropagation();
+                if (node.type === 'file') {
+                    openFile(node.path);
+                } else {
+                    if (expandedDirs.has(node.path)) {
+                        expandedDirs.delete(node.path);
+                    } else {
+                        expandedDirs.add(node.path);
+                    }
+                    renderTree();
+                }
+            };
+            
+            container.appendChild(div);
+
+            if (node.type === 'dir' && expandedDirs.has(node.path) && node.children) {
+                const sorted = [...node.children].sort((a,b) => {
+                    if (a.type === b.type) return a.name.localeCompare(b.name);
+                    return a.type === 'dir' ? -1 : 1;
+                });
+                sorted.forEach(c => buildNode(c, depth + 1));
+            }
         }
-    }
 
-    fileTreeData.forEach(root => buildNode(root, 0));
+        fileTreeData.forEach(root => buildNode(root, 0));
+    };
+
+    renderTo(leftContainer);
+    renderTo(rightContainer);
+}
+
+// --- RIGHT SIDEBAR TABS ---
+function switchRightSidebar(pane) {
+    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+    const tab = document.getElementById(`tab-${pane}`);
+    if (tab) tab.classList.add('active');
+
+    document.querySelectorAll('.sidebar-content-pane').forEach(p => p.classList.add('hidden'));
+    const paneEl = document.getElementById(`pane-${pane}`);
+    if (paneEl) paneEl.classList.remove('hidden');
+    
+    if (pane === 'files') renderTree();
+}
+
+async function createNewFile() {
+    const name = prompt("Enter file name (e.g. script.js):");
+    if (!name) return;
+    
+    try {
+        const res = await fetch('/api/ide/write', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ file: name, content: "// New File\n" })
+        });
+        if (res.ok) loadTree();
+        else throw new Error("Create failed");
+    } catch (e) { alert(e.message); }
+}
+
+async function createNewFolder() {
+    alert("Folder creation logic arriving in next update!");
 }
 
 async function openFile(path) {
@@ -442,5 +481,27 @@ async function saveCurrentFile() {
     }
 }
 
+// --- REAL-TIME SYNC ---
+function initRealTimeSync() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+    ws.onmessage = (event) => {
+        try {
+            const msg = JSON.parse(event.data);
+            if (['file:changed', 'file:added', 'file:deleted'].includes(msg.type)) {
+                console.log('[IDE] Real-time file sync triggered:', msg.type);
+                loadTree(); // Refresh the tree
+            }
+        } catch (e) {}
+    };
+
+    ws.onclose = () => {
+        console.warn('[IDE] Real-time sync lost. Retrying in 5s...');
+        setTimeout(initRealTimeSync, 5000);
+    };
+}
+
 // Kick off init
 window.editorInit();
+initRealTimeSync();

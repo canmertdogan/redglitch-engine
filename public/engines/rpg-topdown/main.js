@@ -10,7 +10,7 @@
 
 window.MenuSystem = class MenuSystem {
     constructor(gameInstance) {
-        this.game = gameInstance; this.currentUser = "GUEST"; this.atmosphere = new window.AtmosphereSystem(); this.music = document.getElementById('menu-music');
+        this.game = gameInstance; this.currentUser = "GUEST";  this.music = document.getElementById('menu-music');
         this.uiSystem = this.game.uiSystem; // Shared instance
         this.screens = { 
             login: document.getElementById('login-screen'), 
@@ -28,7 +28,6 @@ window.MenuSystem = class MenuSystem {
     async init() { 
         await this.uiSystem.init(); 
         this.setupEventListeners(); 
-        this.atmosphere.start(); 
         
         // Preload Definitions for UI (Skills, etc.)
         await this.game.loadDefinitions();
@@ -50,7 +49,10 @@ window.MenuSystem = class MenuSystem {
         if (savedName) this.login(savedName); 
     }
     async startTestMode(urlParams = new URLSearchParams(window.location.search)) {
-        const raw = localStorage.getItem('ketebe_test_map') || localStorage.getItem('temp_playtest');
+        // Phase 28: Unified playtest data from sessionStorage
+        const raw = sessionStorage.getItem('ketebe_playtest_data') || 
+                   localStorage.getItem('ketebe_test_map') || 
+                   localStorage.getItem('temp_playtest');
         if (!raw) {
             console.error('[RPG Playtest] No map data found in localStorage.');
             return;
@@ -469,7 +471,8 @@ window.Fireball = class Fireball {
 window.Core = class Core {
     constructor() {
         this.canvas = document.getElementById('gameCanvas'); this.ctx = this.canvas.getContext('2d');
-        this.input = new window.InputHandler(this.canvas); this.mapSystem = new window.MapSystem(this.ctx);
+        this.input = window.KetebeInput || new window.InputHandler(this.canvas); 
+        this.mapSystem = new window.MapSystem(this.ctx);
         this.dialogueSystem = new window.DialogueSystem(); this.achievementSystem = new window.AchievementSystem(); this.saveSystem = new window.SaveSystem();
         this.questSystem = new window.QuestSystem(this);
         this.campaignSystem = new window.CampaignSystem(this); 
@@ -518,10 +521,19 @@ window.Core = class Core {
 
         this.enemies = []; this.npcs = []; this.particles = []; this.weather = new window.WeatherSystem(); this.screenShake = 0;
         this.fx = new window.FXSystem(this.ctx, this.canvas.width, this.canvas.height); 
-        this.audio = new window.AudioSystem(); 
+
+        // Phase 27: VFX Bridge registration
+        if (window.VFX) window.VFX.setSystem(this.fx, '2d');
+        
+        // Phase 26: Performance Profiler
+        this.profiler = window.KetebeProfiler;
+
+        this.audio = window.Sound; 
+        if (this.audio && !this.audio.ctx) this.audio.init();
+
         this.console = new window.DebugConsole(this); 
         this.gameTime = 8.0; this.timeSpeed = 0.1; 
-        
+
         this.entities = []; this.camera = { x: 0, y: 0 }; this.prevCamera = { x: 0, y: 0 }; this.currentLevel = 1; this.currentLevelId = 'level1';
         this.spatialHash = new window.SpatialHash(128); // Cell Size 128
         this.enemyDefs = {}; this.npcDefs = {}; this.itemDefs = []; this.skillDefs = []; this.inventory = []; this.activeSkills = [null, null, null, null];
@@ -845,12 +857,13 @@ window.Core = class Core {
         this.prevCamera.x = this.camera.x;
         this.prevCamera.y = this.camera.y;
 
+        const input = window.KetebeInput || this.input;
         if (this.dialogueSystem && this.dialogueSystem.active) { 
-            if (this.input.keys.Action && !this.dialogueSystem.justStarted) { 
+            if (input.actions.action && !this.dialogueSystem.justStarted) { 
                 if (this.dialogueSystem.choicesContainer.innerHTML === '') {
                     this.dialogueSystem.next(); 
                 }
-                this.input.keys.Action = false; 
+                input.actions.action = false; 
             } 
             return; 
         }
@@ -860,8 +873,8 @@ window.Core = class Core {
         
         // --- CAMERA JUICE (Look-Ahead + Smoothing) ---
         // 1. Calculate Target: Player Center + Mouse Offset (capped)
-        const mouseXRel = this.input.mouse.x - (this.canvas.width / 2);
-        const mouseYRel = this.input.mouse.y - (this.canvas.height / 2);
+        const mouseXRel = input.mouse.x - (this.canvas.width / 2);
+        const mouseYRel = input.mouse.y - (this.canvas.height / 2);
         const lookAheadFactor = 0.15; // How much it peeks towards mouse
         
         const targetCamX = (this.player.x + sw/2) - (this.canvas.width / 2) + (mouseXRel * lookAheadFactor);
@@ -874,16 +887,16 @@ window.Core = class Core {
         
         // 3. Shake is handled by FXSystem now
         
-        const axis = this.input.getAxis();
+        const axis = input.getAxis();
         const isMoving = (axis.x !== 0 || axis.y !== 0);
         if (isMoving) { const lastPos = this.player.history[0]; const distMoved = lastPos ? Math.sqrt((this.player.x - lastPos.x) ** 2 + (this.player.y - lastPos.y) ** 2) : 999; if (distMoved > 2) { this.player.history.unshift({ x: this.player.x, y: this.player.y, dir: this.player.direction }); if (this.player.history.length > 300) this.player.history.pop(); } }        if (!this.mapSystem || !this.mapSystem.width || !this.player) return;
         if (this.player.shootCooldown > 0) this.player.shootCooldown -= deltaTime;
         const pxS = this.player.x - this.camera.x + sw / 2, pyS = this.player.y - this.camera.y + sh / 2;
-        const dx = this.input.mouse.x - pxS, dy = this.input.mouse.y - pyS, dist = Math.sqrt(dx * dx + dy * dy);
-        this.aimCursor = { x: this.input.mouse.x, y: this.input.mouse.y };
+        const dx = input.mouse.x - pxS, dy = input.mouse.y - pyS, dist = Math.sqrt(dx * dx + dy * dy);
+        this.aimCursor = { x: input.mouse.x, y: input.mouse.y };
 
         // AUTO-AIM
-        if (this.input.isMobile || (this.input.joystick && this.input.joystick.active)) {
+        if (input.joystick?.active) {
             let closest = null;
             let minDst = 400;
             this.enemies.forEach(en => {
@@ -900,11 +913,16 @@ window.Core = class Core {
             }
         }
 
-        if (this.input.keys.z) this.useSkill(0); if (this.input.keys.x) this.useSkill(1); if (this.input.keys.c) this.useSkill(2); if (this.input.keys.v) this.useSkill(3);
-        if (this.input.mouse.isDown && this.player.shootCooldown <= 0 && dist > 0 && this.player.mana >= 2) this.useSkill(-1); 
+        if (input.actions.skill1) this.useSkill(0); if (input.actions.skill2) this.useSkill(1); if (input.actions.skill3) this.useSkill(2); if (input.actions.skill4) this.useSkill(3);
+        if (input.mouse.isDown && this.player.shootCooldown <= 0 && dist > 0 && this.player.mana >= 2) this.useSkill(-1); 
         if (!isMoving) { if (Math.random() > 0.8) this.spawnParticle(this.player.x + 24, this.player.y + 24, (Math.random()-0.5)*20, -Math.random()*40, '#f39c12', 0.6, 2); if (Math.random() > 0.85) this.spawnParticle(this.player.x + 10 + Math.random()*28, this.player.y + Math.random()*20, 0, -30 - Math.random()*20, null, 0.8, 20, this.fireFrames); } 
         if (this.player.mana <= 0.05 && !this.player.manaDepleted) { this.player.mana = 0; this.player.manaDepleted = true; this.triggerUltimate(); }
         if (this.player.mana < this.player.maxMana) { this.player.mana += 2 * deltaTime; if (this.player.mana >= 10) this.player.manaDepleted = false; }
+        
+        if (input.actions.inventory) {
+            input.actions.inventory = false;
+            if(this.uiSystem) this.uiSystem.showScreen('inventory');
+        }
         
         this.enemies.forEach(en => { try { en.update(deltaTime); } catch(e) { console.warn("Enemy Error:", e); } }); 
         this.npcs.forEach(npc => { try { npc.update(deltaTime); } catch(e) { console.warn("NPC Error:", e); } });
@@ -974,7 +992,7 @@ window.Core = class Core {
         } 
         
         if (this.player.hp <= 0) { this.player.hp = 0; this.updateHUD(); this.die(); return; }
-        const sprinting = this.input.keys.Shift && isMoving; let speed = this.player.speed;
+        const sprinting = input.actions.shift && isMoving; let speed = this.player.speed;
         if (sprinting && this.player.stamina > 0) { this.player.stamina -= 20 * deltaTime; speed *= 1.8; this.player.animSpeed = 0.08; } 
         else { this.player.animSpeed = 0.15; if (this.player.stamina < this.player.maxStamina) this.player.stamina += 10 * deltaTime; }
         let nearNPC = false; this.npcs.forEach(npc => { 
@@ -984,15 +1002,15 @@ window.Core = class Core {
             
             if (dist < 80) { 
                 nearNPC = true; 
-                if (this.input.keys.Action && !this.dialogueSystem.active) { 
+                if (input.actions.action && !this.dialogueSystem.active) { 
                     const dialogueId = (npc.def && npc.def.interaction) ? npc.def.interaction.dialogue : npc.id; 
                     this.dialogueSystem.start(dialogueId); 
                     this.achievementSystem.unlock('TALK_NPC'); 
-                    this.input.keys.Action = false; 
+                    input.actions.action = false; 
                 } 
             } 
         });
-        this.mapSystem.decorations.forEach(deco => { if (deco.type === 'sign') { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (this.input.keys.Action && !this.dialogueSystem.active) { this.dialogueSystem.db.conversations.push({ id: "_sign_temp", nodes: [{ speaker: "sign", text: deco.data || "A blank sign." }] }); this.dialogueSystem.start("_sign_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_sign_temp"); }); this.input.keys.Action = false; } } } if (deco.type === 'chest' && !deco.opened) { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (this.input.keys.Action && !this.dialogueSystem.active) { deco.opened = true; this.createExplosion(dx, dy, '#f1c40f', 20); const itemIds = deco.data ? deco.data.split(',').map(s => s.trim()) : ["apple"]; itemIds.forEach(id => { const itemDef = this.itemDefs.find(i => i.id === id) || this.itemDefs[Math.floor(Math.random()*this.itemDefs.length)]; if (itemDef) { this.inventory.push({...itemDef}); console.log("Gained item:", itemDef.name); } }); this.updateInventoryHUD(); this.dialogueSystem.db.conversations.push({ id: "_chest_temp", nodes: [{ speaker: "hero", text: `You found: ${itemIds.join(", ")}!` }] }); this.dialogueSystem.start("_chest_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_chest_temp"); }); this.input.keys.Action = false; } } } });
+        this.mapSystem.decorations.forEach(deco => { if (deco.type === 'sign') { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { this.dialogueSystem.db.conversations.push({ id: "_sign_temp", nodes: [{ speaker: "sign", text: deco.data || "A blank sign." }] }); this.dialogueSystem.start("_sign_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_sign_temp"); }); input.actions.action = false; } } } if (deco.type === 'chest' && !deco.opened) { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { deco.opened = true; this.createExplosion(dx, dy, '#f1c40f', 20); const itemIds = deco.data ? deco.data.split(',').map(s => s.trim()) : ["apple"]; itemIds.forEach(id => { const itemDef = this.itemDefs.find(i => i.id === id) || this.itemDefs[Math.floor(Math.random()*this.itemDefs.length)]; if (itemDef) { this.inventory.push({...itemDef}); console.log("Gained item:", itemDef.name); } }); this.updateInventoryHUD(); this.dialogueSystem.db.conversations.push({ id: "_chest_temp", nodes: [{ speaker: "hero", text: `You found: ${itemIds.join(", ")}!` }] }); this.dialogueSystem.start("_chest_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_chest_temp"); }); input.actions.action = false; } } } });
         if (this.interactionHint) { if (nearNPC && !this.dialogueSystem.active) { this.interactionHint.classList.remove('hidden'); } else { this.interactionHint.classList.add('hidden'); } }
         let mx = axis.x, my = axis.y; if (this.mapSystem.type === 'isometric') { mx = axis.x + axis.y; my = axis.y - axis.x; } 
         if (mx > 0) this.player.direction = 1; if (mx < 0) this.player.direction = -1;
@@ -1089,7 +1107,40 @@ window.Core = class Core {
         if (skill.type === 'heal') { this.player.hp = Math.min(this.player.maxHp, this.player.hp + 20); for(let i=0; i<15; i++) this.spawnParticle(this.player.x + sw/2, this.player.y + sh/2, (Math.random()-0.5)*100, -Math.random()*100, '#2ecc71', 0.8, 4); }
     }
     assignSkills() { for (let i = 0; i < 4; i++) { if (this.skillDefs && this.skillDefs[i]) { this.activeSkills[i] = this.skillDefs[i]; } else { this.activeSkills[i] = null; } } this.updateSkillHUD(); }
-    updateSkillHUD() { const slots = document.querySelectorAll('#skill-bar .skill-slot'); slots.forEach((slot, idx) => { const label = slot.innerText[0]; slot.innerHTML = `<span style="position:absolute; top:2px; left:2px; font-size:10px; pointer-events:none;">${label}</span>`; const skill = this.activeSkills[idx]; if (skill) { const icon = window.createPixelImage(skill.sprite); icon.style.width = '32px'; icon.style.height = '32px'; slot.appendChild(icon); } }); }    updateInventoryHUD() { const slots = document.querySelectorAll('.inv-slot'); slots.forEach((slot, idx) => { slot.innerHTML = ''; const item = this.inventory[idx]; if (item) { const icon = window.createPixelImage(item.sprite); icon.style.width = '32px'; icon.style.height = '32px'; slot.appendChild(icon); } }); }
+    updateSkillHUD() {
+        const slots = document.querySelectorAll('#skill-bar .skill-slot');
+        slots.forEach((slot, idx) => {
+            const label = slot.innerText[0]; // Preserve Z,X,C,V
+            slot.innerHTML = ''; // Clear but we will rebuild safely
+            
+            const labelSpan = document.createElement('span');
+            labelSpan.style.cssText = 'position:absolute; top:2px; left:2px; font-size:10px; pointer-events:none;';
+            labelSpan.textContent = label;
+            slot.appendChild(labelSpan);
+
+            const skill = this.activeSkills[idx];
+            if (skill) {
+                const icon = window.createPixelImage(skill.sprite);
+                icon.style.width = '32px';
+                icon.style.height = '32px';
+                slot.appendChild(icon);
+            }
+        });
+    }
+
+    updateInventoryHUD() {
+        const slots = document.querySelectorAll('.inv-slot');
+        slots.forEach((slot, idx) => {
+            slot.innerHTML = '';
+            const item = this.inventory[idx];
+            if (item) {
+                const icon = window.createPixelImage(item.sprite);
+                icon.style.width = '32px';
+                icon.style.height = '32px';
+                slot.appendChild(icon);
+            }
+        });
+    }
     draw(alpha) {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); 
         this.ctx.imageSmoothingEnabled = false;
@@ -1214,6 +1265,9 @@ window.Core = class Core {
     gameLoop(ts) { 
         if (!this.isRunning) return; 
         
+        // Phase 26: Begin profiling
+        if (this.profiler) this.profiler.beginFrame();
+
         let dt = (ts - this.lastTime) / 1000;
         this.lastTime = ts;
         
@@ -1230,6 +1284,14 @@ window.Core = class Core {
         const alpha = this.accumulator / this.fixedTimeStep;
         this.draw(alpha);
         
+        // Phase 26: End profiling
+        if (this.profiler) {
+            this.profiler.updateStats({
+                entities: this.entities.length + this.npcs.length + this.enemies.length
+            });
+            this.profiler.endFrame();
+        }
+
         requestAnimationFrame(this.gameLoop.bind(this)); 
     }
 }

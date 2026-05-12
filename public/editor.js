@@ -1590,8 +1590,8 @@ function playtest() {
     const serializedMap = JSON.stringify(map);
     const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-    localStorage.setItem('ketebe_test_map', serializedMap);
-    localStorage.setItem('temp_playtest', serializedMap); // Backward compatibility
+    // Phase 28: Unified Session Storage
+    sessionStorage.setItem('ketebe_playtest_data', serializedMap);
     localStorage.setItem('ketebe_test_session', sessionId);
 
     const playtestUrl = `index.html?engine=rpg-topdown&playtest=true&session=${encodeURIComponent(sessionId)}&ts=${Date.now()}`;

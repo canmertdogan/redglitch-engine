@@ -28,9 +28,9 @@ class PlatformerGame {
                 console.log(`[Notification:${type}] ${msg}`);
             }
         };
-        this.audio = {
-            play: (id) => console.log(`[Audio] Playing ${id}`)
-        };
+
+        this.audio = window.Sound;
+        if (this.audio && !this.audio.ctx) this.audio.init();
         
         this.fx = null;
         this.campaignSystem = null;
@@ -622,8 +622,5 @@ window.addEventListener('load', () => {
 
     if (!window.game) window.game = new PlatformerGame();
     if (document.getElementById('demo-title')) window.game.init();
-    else if (window.AtmosphereSystem) {
-        window.atmosphere = new window.AtmosphereSystem();
-        window.atmosphere.start();
     }
 });

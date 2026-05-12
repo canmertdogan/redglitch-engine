@@ -48,11 +48,9 @@
         
         if (loginScreen) {
             loginScreen.classList.remove('active');
-            loginScreen.classList.add('hidden');
         }
         
         if (mainMenu) {
-            mainMenu.classList.remove('hidden');
             mainMenu.classList.add('active');
         }
 

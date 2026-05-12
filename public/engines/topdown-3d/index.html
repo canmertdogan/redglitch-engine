@@ -322,7 +322,7 @@
 
             } else if (isPlaytest) {
                 // ── Playtest mode: data from localStorage ─────────────────
-                const raw = localStorage.getItem('temp_playtest_topdown3d');
+                const raw = sessionStorage.getItem('ketebe_playtest_data') || localStorage.getItem('temp_playtest_topdown3d');
                 if (!raw) { showError('No playtest data in localStorage'); return; }
                 try {
                     const levelData = JSON.parse(raw);

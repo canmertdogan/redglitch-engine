@@ -1550,8 +1550,9 @@ const Pf3dEditor = (() => {
         const overlay = document.getElementById('test-overlay');
         const iframe  = document.getElementById('test-iframe');
         const payload = _buildLevelPayload();
-        const key     = 'temp_playtest_platformer3d';
-        localStorage.setItem(key, JSON.stringify(payload));
+        const key     = 'ketebe_playtest_data';
+        sessionStorage.setItem(key, JSON.stringify(payload));
+        localStorage.setItem('temp_playtest_platformer3d', JSON.stringify(payload)); // Legacy fallback
         const params = new URLSearchParams({ playtest: '1' });
         if (_state.project) params.set('project', _state.project);
         iframe.src   = `engines/platformer-3d/index.html?${params.toString()}`;

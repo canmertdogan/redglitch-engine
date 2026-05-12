@@ -185,13 +185,29 @@ class Engine3DBase extends EngineAdapter {
 
     _loop() {
         if (!this._running) return;
+
+        // Phase 26: Performance Profiling
+        if (window.KetebeProfiler) window.KetebeProfiler.beginFrame();
+
         this._rafId = requestAnimationFrame(() => this._loop());
-        if (this._paused) return;
+        if (this._paused) {
+            if (window.KetebeProfiler) window.KetebeProfiler.endFrame();
+            return;
+        }
 
         const raw   = this.clock.getDelta();
         const delta = Math.min(raw, 0.1); // cap at 100 ms to avoid spiral-of-death
+        
         this.update3D(delta);
         this.render3D();
+
+        if (window.KetebeProfiler) {
+            // Update 3D specific stats
+            window.KetebeProfiler.updateStats({
+                drawCalls: this.renderer ? this.renderer.info.render.calls : 0
+            });
+            window.KetebeProfiler.endFrame();
+        }
     }
 
     _stopLoop() {
@@ -227,17 +243,42 @@ function _buildRenderer(container) {
 }
 
 /**
+ * Recursively dispose all geometries, materials and textures in a scene.
+ * @param {THREE.Scene|THREE.Object3D} object
+ */
+function _disposeObject(obj) {
+    if (!obj) return;
+
+    if (obj.geometry) {
+        obj.geometry.dispose();
+    }
+
+    if (obj.material) {
+        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const mat of materials) {
+            // Dispose textures
+            for (const key of Object.keys(mat)) {
+                if (mat[key] && mat[key].isTexture) {
+                    mat[key].dispose();
+                }
+            }
+            mat.dispose();
+        }
+    }
+
+    if (obj.children) {
+        for (const child of obj.children) {
+            _disposeObject(child);
+        }
+    }
+}
+
+/**
  * Recursively dispose all geometries and materials in a scene.
  * @param {THREE.Scene} scene
  */
 function _disposeScene(scene) {
-    scene.traverse(obj => {
-        if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) {
-            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-            mats.forEach(m => m.dispose());
-        }
-    });
+    _disposeObject(scene);
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────

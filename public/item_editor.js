@@ -113,7 +113,7 @@ async function populateSpriteSelect() {
 
     // 2. Add Pixel Mart PNGs (from the list we generated)
     try {
-        const res = await fetch('/dunyalar/definitions/items.json');
+        const res = await fetch('/api/items');
         if (res.ok) {
             const items = await res.json();
             // Filter unique sprites that are PNGs
@@ -297,11 +297,13 @@ async function saveToServer() {
 
 async function loadFromServer() {
     try {
-        const response = await fetch('/dunyalar/definitions/items.json');
+        const response = await fetch('/api/items');
         if (response.ok) {
             items = await response.json();
         }
     } catch (e) {
         console.warn("No item defs found on server.");
+    }
+}server.");
     }
 }

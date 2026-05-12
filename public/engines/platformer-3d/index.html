@@ -476,7 +476,7 @@
             setLoadingProgress(50, 'SYSTEMS ONLINE');
 
             if (isPlaytest) {
-                const raw = localStorage.getItem('temp_playtest_platformer3d');
+                const raw = sessionStorage.getItem('ketebe_playtest_data') || localStorage.getItem('temp_playtest_platformer3d');
                 if (!raw) { window.showError('No playtest data in localStorage'); return; }
                 try {
                     const parsed = JSON.parse(raw);

@@ -29,8 +29,10 @@ function initializeAlgorithmIntegration() {
 
             eventBus.on('vsl:value_update', (event) => {
                 const { wireId, value } = event.data;
-                if (!this.liveValues) this.liveValues = new Map();
-                this.liveValues.set(wireId, value);
+                if (window.studio) {
+                    if (!window.studio.liveValues) window.studio.liveValues = new Map();
+                    window.studio.liveValues.set(wireId, value);
+                }
             });
             
             console.log('[AlgorithmEditor] EventBus connected');
@@ -218,22 +220,24 @@ class AlgorithmStudio {
     async fetchProjectData() {
         try {
             // 1. Fetch Assets
-            const assetRes = await fetch('/api/assets/list');
+            const assetRes = await fetch('/api/assets');
             if (assetRes.ok) {
-                const assets = await assetRes.ok ? await assetRes.json() : [];
-                this.projectAssets.sounds = assets.filter(a => a.name.match(/\.(mp3|wav|ogg)$/i)).map(a => a.name);
-                this.projectAssets.sprites = assets.filter(a => a.name.match(/\.(png|jpg|jpeg)$/i)).map(a => a.name);
+                const data = await assetRes.json();
+                const assets = data.assets || [];
+                this.projectAssets.sounds = assets.filter(a => a.type === 'audio').map(a => a.name);
+                this.projectAssets.sprites = assets.filter(a => a.type === 'image').map(a => a.name);
             }
 
-            // 2. Fetch Prefabs (from world definitions)
-            const prefabRes = await fetch('/api/files/definitions'); // Assuming this endpoint lists prefab JSONs
-            if (prefabRes.ok) {
-                this.projectAssets.prefabs = await prefabRes.json();
+            // 2. Fetch Prefabs (from standardized NPCs/Enemies registries)
+            const npcRes = await fetch('/api/npcs');
+            if (npcRes.ok) {
+                const npcs = await npcRes.json();
+                this.projectAssets.prefabs.push(...npcs.map(n => n.id));
             }
             
-            console.log(`[Phase 3] Assets Loaded: ${this.projectAssets.sounds.length} sounds, ${this.projectAssets.prefabs.length} prefabs.`);
+            console.log(`[AlgorithmStudio] Assets Synchronized: ${this.projectAssets.sounds.length} sounds.`);
         } catch (e) {
-            console.warn("[Phase 3] Failed to fetch project data:", e);
+            console.warn("[AlgorithmStudio] Failed to synchronize project data:", e);
         }
     }
 

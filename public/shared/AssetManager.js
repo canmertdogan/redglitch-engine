@@ -162,6 +162,31 @@ class AssetManager {
         throw new Error('Export failed');
     }
 
+    /**
+     * Resolve an asset ID to a usable URL
+     */
+    resolveAssetPath(assetId) {
+        if (!assetId) return '';
+        
+        // Handle full URLs
+        if (assetId.startsWith('http') || assetId.startsWith('data:')) {
+            return assetId;
+        }
+
+        // Check if it's already registered
+        const asset = this.assets.get(assetId);
+        if (asset) return asset.path;
+
+        // Heuristic fallback for non-registered assets
+        // If it starts with a known folder, assume virtual root
+        if (assetId.startsWith('assets/') || assetId.startsWith('muzikler/') || 
+            assetId.startsWith('dunyalar/') || assetId.startsWith('sprite-art/')) {
+            return '/' + assetId;
+        }
+
+        return assetId;
+    }
+
     setupEventListeners() {
         // Listen for asset-related events
         this.eventBus.on('asset:request', (event) => {

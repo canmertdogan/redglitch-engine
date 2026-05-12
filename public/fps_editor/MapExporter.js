@@ -311,7 +311,8 @@ const MapExporter = (() => {
         const navmesh = buildNavmesh(mapData.voxelGrid, mapData.cellSize);
         const payload = buildPayload(mapData, navmesh);
         try {
-            localStorage.setItem('temp_playtest_fps3d', JSON.stringify(payload));
+            sessionStorage.setItem('ketebe_playtest_data', JSON.stringify(payload));
+            localStorage.setItem('temp_playtest_fps3d', JSON.stringify(payload)); // Legacy fallback
         } catch (e) {
             alert('[MapExporter] localStorage quota exceeded — map too large for playtest.');
             return;

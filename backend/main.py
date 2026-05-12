@@ -32,11 +32,18 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Booting up Cortex...")
     asyncio.create_task(load_brain_task())
+    asyncio.create_task(heartbeat_loop())
     yield
     # Shutdown
     logger.info("Shutting down Cortex...")
     if watcher:
         watcher.stop()
+
+async def heartbeat_loop():
+    while True:
+        # Print to stdout for Electron CortexManager to see
+        print("HEARTBEAT", flush=True)
+        await asyncio.sleep(5)
 
 app = FastAPI(title="IRAB Native Cortex", lifespan=lifespan)
 
@@ -244,6 +251,30 @@ async def get_status():
         "model_loaded": brain.llm is not None
     }
 
+@app.post("/api/ai/chat")
+async def chat_fallback(data: dict):
+    try:
+        message = data.get("message", "")
+        if not message:
+            return {"error": "Empty message"}
+        
+        logger.info(f"Fallback chat request: {message[:50]}...")
+        
+        # Determine engine context if provided
+        context = data.get("context", {})
+        
+        # Use brain to generate response (non-streaming)
+        # We wrap it in a list to get the full response from the generator
+        full_response = ""
+        for token in brain.generate_stream(message):
+            if token:
+                full_response += token
+        
+        return {"response": full_response}
+    except Exception as e:
+        logger.error(f"Fallback chat error: {e}")
+        return {"error": str(e)}
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -268,7 +299,7 @@ async def websocket_endpoint(websocket: WebSocket):
             
             msg_type = message.get("type")
             
-            if msg_type == "PROMPT":
+            if msg_type == "PROMPT" or msg_type == "CHAT":
                 await handle_prompt(message, websocket)
             elif msg_type == "ABORT":
                 logger.info("Received ABORT request.")
@@ -311,17 +342,28 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)
-
 async def handle_prompt(message, websocket):
-    prompt = message.get("data", "")
+    msg_id = message.get("id")
+    data = message.get("data", "")
+
+    # If data is an object (from CHAT event), extract message and context
+    prompt = data
+    context_data = {}
+    if isinstance(data, dict):
+        prompt = data.get("message", "")
+        context_data = data.get("context", {})
+    else:
+        context_data = message.get("context", {})
+
     is_ghost = "Ghost Text autocomplete" in prompt
-    
-    logger.info(f"Handling prompt (Ghost: {is_ghost}): {prompt[:50]}...")
-    
+
+    logger.info(f"Handling prompt (ID: {msg_id}, Ghost: {is_ghost}): {prompt[:50]}...")
+
     if not is_ghost:
         await manager.send_personal_message({"type": "SET_STATE", "data": "THINKING"}, websocket)
 
     # Deterministic intent routing for iso map requests:
+
     # Using pixel.generateTerrain directly allows ToolRegistry redirect/pending recovery
     # and avoids workflow interruption during full-page navigation.
     prompt_lower = prompt.lower()
@@ -462,6 +504,15 @@ async def handle_prompt(message, websocket):
         await manager.send_personal_message({"type": "TOKEN", "data": f"Error: {str(e)}"}, websocket)
     
     await manager.send_personal_message({"type": "TOKEN", "data": None}, websocket)
+    
+    # If msg_id exists, send a final consolidated response to resolve the frontend's promise
+    if msg_id:
+        await manager.send_personal_message({
+            "type": "CHAT_RESPONSE",
+            "id": msg_id,
+            "data": {"text": full_response}
+        }, websocket)
+
     if not is_ghost:
         await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
 

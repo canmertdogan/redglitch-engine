@@ -69,12 +69,13 @@ export default class VoxelMeshGen {
             g.indices.push(bi, bi + 1, bi + 2, bi, bi + 2, bi + 3);
         };
 
-        // Greedy sweep across 6 axes
+        // Greedy sweep across 6 axes - normalized to cyclic order (X->Y, Y->Z, Z->X)
+        // to ensure consistent face winding.
         const AXES = [
             { d:0, b:1, c:2, n:[1,0,0],  inv:false }, // +X
             { d:0, b:1, c:2, n:[-1,0,0], inv:true  }, // -X
-            { d:1, b:0, c:2, n:[0,1,0],  inv:false }, // +Y
-            { d:1, b:0, c:2, n:[0,-1,0], inv:true  }, // -Y
+            { d:1, b:2, c:0, n:[0,1,0],  inv:false }, // +Y
+            { d:1, b:2, c:0, n:[0,-1,0], inv:true  }, // -Y
             { d:2, b:0, c:1, n:[0,0,1],  inv:false }, // +Z
             { d:2, b:0, c:1, n:[0,0,-1], inv:true  }  // -Z
         ];
@@ -110,10 +111,11 @@ export default class VoxelMeshGen {
                     v2[d]=i+(inv?0:1); v2[bIdx]=wb+bh; v2[cIdx]=wc+cw;
                     v3[d]=i+(inv?0:1); v3[bIdx]=wb;    v3[cIdx]=wc+cw;
                     
-                    // Reverted to original alternating winding: 
-                    // ensures normals point OUTWARD for all 6 axes.
-                    if (inv) emitQuad(cell, n[0], n[1], n[2], v0, v1, v2, v3);
-                    else     emitQuad(cell, n[0], n[1], n[2], v3, v2, v1, v0);
+                    // Outward winding:
+                    // inv=false (+axis): v0,v1,v2,v3 is CCW
+                    // inv=true  (-axis): v3,v2,v1,v0 is CCW
+                    if (inv) emitQuad(cell, n[0], n[1], n[2], v3, v2, v1, v0);
+                    else     emitQuad(cell, n[0], n[1], n[2], v0, v1, v2, v3);
                 });
             }
         }
@@ -133,7 +135,13 @@ export default class VoxelMeshGen {
             geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(data.positions), 3));
             geo.setAttribute('normal',   new THREE.BufferAttribute(new Float32Array(data.normals),   3));
             geo.setAttribute('uv',       new THREE.BufferAttribute(new Float32Array(data.uvs),       2));
-            geo.setIndex(data.indices);
+            
+            // Phase 18: Use appropriate typed array for indices based on vertex count
+            const vertexCount = data.positions.length / 3;
+            const IndexArray = vertexCount > 65535 ? Uint32Array : Uint16Array;
+            geo.setIndex(new THREE.BufferAttribute(new IndexArray(data.indices), 1));
+            
+            geo.computeBoundingSphere();
 
             let mat;
             if (data.textureId && atlas) {

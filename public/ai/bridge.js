@@ -14,6 +14,7 @@ if (typeof window.IrabBridge === 'undefined') {
             this._connecting = false;
             this._retryDelay = 3000;
             this._maxRetryDelay = 30000;
+            this._callbacks = new Map();
             
             // Hooks for UI
             this.onToken = null;
@@ -115,6 +116,14 @@ if (typeof window.IrabBridge === 'undefined') {
         }
 
         handleMessage(msg) {
+            // Check for callback
+            if (msg.id && this._callbacks.has(msg.id)) {
+                const cb = this._callbacks.get(msg.id);
+                cb(msg.data);
+                this._callbacks.delete(msg.id);
+                // We might still want to process other fields if it's a multi-purpose message
+            }
+
             switch(msg.type) {
                 case "TOKEN":
                     if (this.onToken) this.onToken(msg.data);
@@ -143,8 +152,13 @@ if (typeof window.IrabBridge === 'undefined') {
             }
         }
 
-        send(data) {
+        send(data, callback) {
             if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                if (callback) {
+                    const id = Math.random().toString(36).substr(2, 9);
+                    this._callbacks.set(id, callback);
+                    data.id = id;
+                }
                 this.socket.send(JSON.stringify(data));
             }
         }

@@ -7,6 +7,8 @@ class CortexManager {
     constructor() {
         this.process = null;
         this.isRunning = false;
+        this.heartbeatTimer = null;
+        this.lastHeartbeat = Date.now();
     }
 
     start() {
@@ -18,7 +20,6 @@ class CortexManager {
         
         console.log('[Cortex] Starting AI Brain...');
         
-        // Use venv if it exists, otherwise fallback to system python3
         const fs = require('fs');
         const pythonCmd = fs.existsSync(venvPath) ? venvPath : 'python3';
         
@@ -34,13 +35,17 @@ class CortexManager {
 
         this.process.stdout.on('data', (data) => {
             const output = data.toString().trim();
-            console.log(`[Cortex] ${output}`);
+            if (output.includes('HEARTBEAT')) {
+                this.lastHeartbeat = Date.now();
+            } else {
+                console.log(`[Cortex] ${output}`);
+            }
         });
 
         this.process.stderr.on('data', (data) => {
             const error = data.toString().trim();
             if (error.includes('ModuleNotFoundError')) {
-                console.error(`[Cortex Critical] Missing Python dependencies! Please run: cd backend && pip install -r requirements.txt`);
+                console.error(`[Cortex Critical] Missing Python dependencies!`);
             } else {
                 console.error(`[Cortex Error] ${error}`);
             }
@@ -49,7 +54,7 @@ class CortexManager {
         this.process.on('close', (code) => {
             console.log(`[Cortex] Process exited with code ${code}`);
             this.isRunning = false;
-            // Auto-restart if it was unexpected
+            this._stopHeartbeatMonitor();
             if (code !== 0 && code !== null) {
                 console.log('[Cortex] Unexpected exit, restarting in 3s...');
                 setTimeout(() => this.start(), 3000);
@@ -57,9 +62,37 @@ class CortexManager {
         });
 
         this.isRunning = true;
+        this._startHeartbeatMonitor();
+    }
+
+    _startHeartbeatMonitor() {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.lastHeartbeat = Date.now();
+        this.heartbeatTimer = setInterval(() => {
+            if (!this.isRunning) return;
+            const now = Date.now();
+            // If no heartbeat for 20 seconds, something is wrong
+            if (now - this.lastHeartbeat > 20000) {
+                console.warn('[Cortex] AI Brain heartbeat lost. Force-restarting...');
+                this.restart();
+            }
+        }, 5000);
+    }
+
+    _stopHeartbeatMonitor() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+    }
+
+    restart() {
+        this.stop();
+        setTimeout(() => this.start(), 1000);
     }
 
     stop() {
+        this._stopHeartbeatMonitor();
         if (this.process) {
             console.log('[Cortex] Stopping AI Brain...');
             this.process.kill();
@@ -259,8 +292,26 @@ function createWindow() {
         console.log(`[ipc] window-resize applied: ${w}x${h}`);
     });
     ipcMain.on('window-close', () => mainWindow.close());
-    ipcMain.on('open-external', (event, url) => shell.openExternal(url));
-    ipcMain.on('show-item-in-folder', (event, path) => shell.showItemInFolder(path));
+    ipcMain.on('open-external', (event, url) => {
+        try {
+            const parsed = new URL(url);
+            if (['http:', 'https:'].includes(parsed.protocol)) {
+                shell.openExternal(url);
+            }
+        } catch (e) {
+            console.error('[ipc] Invalid external URL:', url);
+        }
+    });
+    ipcMain.on('show-item-in-folder', (event, filePath) => {
+        if (!filePath) return;
+        const normalized = path.normalize(filePath);
+        // Only allow showing files within the application's root directory or user projects
+        if (normalized.includes(__dirname) || normalized.includes('projects')) {
+            shell.showItemInFolder(normalized);
+        } else {
+            console.warn('[ipc] Blocked showItemInFolder for outside path:', normalized);
+        }
+    });
     ipcMain.on('open-devtools', () => mainWindow.webContents.openDevTools());
 
     // Create and set the menu

@@ -128,7 +128,14 @@ export default class Engine3DAdapter extends Engine3DBase {
             // Populate scene
             this._populateLights(level.lights);
             this._populateGeometry(level.geometry);
-            this._applySkybox(level.skybox);
+            
+            // Phase 37: Advanced Lighting & Fog Integration
+            if (level.lighting) {
+                this._applyLightingConfig(level.lighting);
+            } else {
+                this._applySkybox(level.skybox);
+            }
+            
             this._applyPhysicsConfig(level.physics);
 
             this._currentLevel = level;
@@ -313,11 +320,18 @@ export default class Engine3DAdapter extends Engine3DBase {
 
             let mat;
             if (def.textureId && atlas) {
-                atlas.applyBlockUVs(geo, def.textureId);
+                atlas.applyBlockUVs(geo, data.textureId);
                 mat = atlas.getMaterial(THREE);
             } else {
                 const color = _resolveColor(def, paletteManager);
                 mat = hexMaterial(color);
+            }
+
+            // Phase 38: Support emissive overrides (for glow blocks)
+            if (def.emissive || def.emissiveIntensity != null) {
+                mat = mat.clone();
+                if (def.emissive) mat.emissive.set(def.emissive);
+                if (def.emissiveIntensity != null) mat.emissiveIntensity = def.emissiveIntensity;
             }
 
             obj = new THREE.Mesh(geo, mat);
@@ -328,6 +342,63 @@ export default class Engine3DAdapter extends Engine3DBase {
 
             this.scene.add(obj);
             if (def.id) this._levelObjects.set(def.id, obj);
+        }
+    }
+
+    _applyLightingConfig(config) {
+        if (!this.scene || !this.THREE) return;
+        const THREE = this.THREE;
+
+        // 1. Sun Directional Light
+        let sun = this.scene.getObjectByName('__sunLight') || this.scene.getObjectByName('__sun__');
+        if (!sun && config.sunIntensity > 0) {
+            sun = new THREE.DirectionalLight(config.sunColor, config.sunIntensity);
+            sun.name = '__sunLight';
+            this.scene.add(sun);
+        }
+        if (sun) {
+            sun.color.set(config.sunColor);
+            sun.intensity = config.sunIntensity;
+            
+            // Calculate direction from Azimuth/Elevation
+            const az = (config.sunAzimuth ?? 45) * Math.PI / 180;
+            const el = (config.sunElevation ?? 45) * Math.PI / 180;
+            const r = 100;
+            sun.position.set(
+                r * Math.cos(el) * Math.sin(az),
+                r * Math.sin(el),
+                r * Math.cos(el) * Math.cos(az)
+            );
+            sun.target.position.set(0, 0, 0);
+        }
+
+        // 2. Ambient Light
+        let amb = this.scene.getObjectByName('__ambLight') || this.scene.getObjectByName('__ambient__');
+        if (!amb && config.ambientIntensity > 0) {
+            amb = new THREE.AmbientLight(config.ambientColor, config.ambientIntensity);
+            amb.name = '__ambLight';
+            this.scene.add(amb);
+        }
+        if (amb) {
+            amb.color.set(config.ambientColor);
+            amb.intensity = config.ambientIntensity;
+        }
+
+        // 3. Fog
+        if (config.fogEnabled) {
+            this.scene.fog = new THREE.FogExp2(config.fogColor, config.fogDensity);
+        } else {
+            this.scene.fog = null;
+        }
+
+        // 4. Sky (Simple background or dome)
+        if (config.skyTop && config.skyHorizon) {
+            // If we have a complex skybox system, use it. Otherwise just set background color
+            if (this.skybox && typeof this.skybox.setColors === 'function') {
+                this.skybox.setColors(config.skyTop, config.skyHorizon);
+            } else {
+                this.scene.background = new THREE.Color(config.skyHorizon);
+            }
         }
     }
 

@@ -302,5 +302,49 @@ router.get('/levels/by-engine/:engineType', async (req, res) => {
     }
 });
 
+// Get all levels (generic list)
+router.get('/levels', async (req, res) => {
+    try {
+        const activeProject = projectService.getActiveProject();
+        const isRoot = projectService.isRootProject();
+        const mainDunyalarDir = isRoot
+            ? path.join(__dirname, '..', '..', 'public', 'dunyalar')
+            : path.join(activeProject, 'dunyalar');
+        
+        console.log(`[API] levels/ - checking: ${mainDunyalarDir}`);
+        
+        const levels = [];
+        try {
+            await fs.mkdir(mainDunyalarDir, { recursive: true });
+            const files = await fs.readdir(mainDunyalarDir);
+            const jsonFiles = files.filter(f => f.endsWith('.json'));
+            
+            for (const file of jsonFiles) {
+                try {
+                    const filePath = path.join(mainDunyalarDir, file);
+                    const content = await fs.readFile(filePath, 'utf8');
+                    const data = JSON.parse(content);
+                    
+                    levels.push({
+                        id: file.replace('.json', ''),
+                        filename: file,
+                        name: data.name || data.metadata?.name || file.replace('.json', ''),
+                        engineType: inferEngineTypeFromLevelData(data),
+                        path: file
+                    });
+                } catch (e) {
+                    // Skip invalid JSON
+                }
+            }
+        } catch (e) {
+            console.warn(`[API] levels/ - Directory not found or inaccessible: ${mainDunyalarDir}`);
+        }
+        
+        res.json({ levels });
+    } catch (err) {
+        console.error('Error listing all levels:', err);
+        res.status(500).json({ error: 'Failed to list levels' });
+    }
+});
+
 module.exports = router;
-rts = router;

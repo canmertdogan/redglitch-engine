@@ -1847,7 +1847,7 @@ window.loadLevelFromServer = window.loadWorld;
 
 window.playtest = () => {
     map.tilesetPath = CONFIG.tilesetPath;
-    sessionStorage.setItem('ketebe_playtest_map', JSON.stringify(map));
+    sessionStorage.setItem('ketebe_playtest_data', JSON.stringify(map));
     window.open('iso_play.html', '_blank', 'width=1280,height=720');
 };
 

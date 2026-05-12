@@ -87,43 +87,54 @@ window.AchievementSystem = class AchievementSystem {
     grantReward(ach) {
         if (!ach.rewardType || ach.rewardType === 'NONE') return;
         
+        // Try CampaignController first (Cross-engine rewards)
+        const campaign = window.campaignController;
         const game = window.game;
-        if (!game || !game.player) return;
 
         const val = ach.rewardValue;
 
         if (ach.rewardType === 'XP') {
             const amount = parseInt(val) || 0;
-            if (!game.player.xp) game.player.xp = 0;
-            game.player.xp += amount;
-            if(game.fx) game.fx.popText(game.player.x, game.player.y, `+${amount} XP`, '#f1c40f');
+            if (campaign) {
+                campaign.incrementVariable('xp', amount);
+            } else if (game && game.player) {
+                game.player.xp = (game.player.xp || 0) + amount;
+            }
+            this._popText(`+${amount} XP`, '#f1c40f');
         }
         else if (ach.rewardType === 'STAT') {
-            // value format: "statName:amount" or just assume stat name in type?
-            // Editor allows "STAT" type and "Value".
-            // Let's assume Value is "hp:10" or just "hp".
-            // Simplified: We assume value is the amount, but which stat?
-            // The editor only has one value field. 
-            // Implementation: Value should be "hp 10"
             const parts = val.split(' ');
             if (parts.length === 2) {
                 const stat = parts[0];
                 const amount = parseInt(parts[1]);
-                if (game.player[stat] !== undefined) {
+                if (game && game.player && game.player[stat] !== undefined) {
                     game.player[stat] += amount;
-                    if (stat.includes('max')) game.player[stat.replace('max','').toLowerCase()] += amount; // Heal if max increased
-                    if(game.fx) game.fx.popText(game.player.x, game.player.y, `+${amount} ${stat.toUpperCase()}`, '#2ecc71');
+                    if (stat.includes('max')) game.player[stat.replace('max','').toLowerCase()] += amount;
                 }
+                this._popText(`+${amount} ${stat.toUpperCase()}`, '#2ecc71');
             }
         }
         else if (ach.rewardType === 'ITEM') {
             const itemId = val;
-            const def = game.itemDefs.find(i => i.id === itemId);
-            if (def) {
-                game.inventory.push({...def});
-                if(game.updateInventoryHUD) game.updateInventoryHUD();
-                if(game.fx) game.fx.popText(game.player.x, game.player.y, `GOT ${def.name}`, '#fff');
+            if (campaign) {
+                campaign.giveItem(itemId);
+            } else if (game && game.itemDefs) {
+                const def = game.itemDefs.find(i => i.id === itemId);
+                if (def) {
+                    game.inventory.push({...def});
+                    if(game.updateInventoryHUD) game.updateInventoryHUD();
+                }
             }
+            this._popText(`GOT ${itemId}`, '#fff');
+        }
+    }
+
+    _popText(text, color) {
+        const game = window.game;
+        if (game && game.fx && game.fx.popText && game.player) {
+            game.fx.popText(game.player.x, game.player.y, text, color);
+        } else if (window.showNotification) {
+            window.showNotification(text, 'success');
         }
     }
 

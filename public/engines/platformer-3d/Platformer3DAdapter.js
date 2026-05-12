@@ -1,17 +1,14 @@
 /**
- * Platformer3DAdapter.js — Phase 51
- * Adapter for the platformer-3d engine, following the same EngineAdapter interface
- * used by FPS3DAdapter and TopDown3DAdapter so CampaignController can drive all
- * engine types with a single uniform API.
- *
- * This adapter wraps `window.Platformer3DGame` (from platformer-3d/main.js)
- * and exposes the standard lifecycle methods expected by CampaignController.
+ * Platformer3DAdapter.js
+ * Adapter for the platformer-3d engine.
+ * ESM Version.
  */
 
-class Platformer3DAdapter extends EngineAdapter {
+import EngineAdapter from '../shared/EngineAdapter.js';
+
+export default class Platformer3DAdapter extends EngineAdapter {
     constructor() {
         super('platformer-3d');
-        /** @type {Platformer3DGame|null} */
         this.game           = null;
         this.username       = null;
         this.currentProject = null;
@@ -25,7 +22,6 @@ class Platformer3DAdapter extends EngineAdapter {
     async initialize() {
         if (this.isInitialized) { console.warn('[Platformer3DAdapter] already initialized'); return; }
 
-        // Determine or create a container div for the engine canvas
         const container = document.getElementById('game-container')
             ?? document.getElementById('canvas-container')
             ?? (() => {
@@ -36,7 +32,6 @@ class Platformer3DAdapter extends EngineAdapter {
                 return div;
             })();
 
-        // Dynamic import of the ES-module engine entry point
         const { default: Platformer3DGame } = await import('/engines/platformer-3d/main.js');
         
         this.game = new Platformer3DGame(container);
@@ -61,7 +56,6 @@ class Platformer3DAdapter extends EngineAdapter {
         };
         this.game.onLevelComplete = this._onLevelComplete;
 
-        // Attach strategy helper
         const { default: Platformer3DStrategy } = await import('/engines/platformer-3d/Platformer3DStrategy.js');
         this.game.strategy = new Platformer3DStrategy(this.game);
 
@@ -70,7 +64,6 @@ class Platformer3DAdapter extends EngineAdapter {
         console.log('[Platformer3DAdapter] initialized');
     }
 
-    /** @param {string} levelId @param {string|null} levelPath */
     async loadLevel(levelId, levelPath = null) {
         if (!this.isInitialized) throw new Error('[Platformer3DAdapter] not initialized');
         this.isLoaded = false;
@@ -110,24 +103,22 @@ class Platformer3DAdapter extends EngineAdapter {
         console.log('[Platformer3DAdapter] level unloaded');
     }
 
-    /** @returns {Object} serializable state snapshot */
     getState() {
         return this.game?.strategy?.getState() ?? {};
     }
 
-    /** @param {Object} state — previously returned from getState() */
     async setState(state) {
         this.game?.strategy?.setState(state);
     }
 
     start() {
-        if (!this.isInitialized || !this.isLoaded || !this.game || this.game.isRunning) return;
+        if (!this.isInitialized || !this.isLoaded || !this.engine || this.engine.isRunning) return;
         this.game._startLoop?.();
     }
 
     stop() {
-        if (!this.game || !this.game.isRunning) return;
-        this.game._stopLoop?.();
+        if (!this.engine || !this.engine.isRunning) return;
+        this.engine._stopLoop?.();
     }
 
     pause() {
@@ -165,8 +156,6 @@ class Platformer3DAdapter extends EngineAdapter {
         console.log('[Platformer3DAdapter] destroyed');
     }
 
-    // ── Cross-engine player data ──────────────────────────────────────────────
-
     getPlayerData() {
         if (!this.game) return null;
         const s = this.game.strategy;
@@ -195,10 +184,7 @@ class Platformer3DAdapter extends EngineAdapter {
         });
     }
 
-    // ── Abilities (unified interface) ─────────────────────────────────────────
-
     useAbility(abilityId, dirX, dirY) {
-        // Platformer abilities (double jump, dash, etc)
         if (!this.game || !this.game.strategy) return false;
         return this.game.strategy.useAbility?.(abilityId, dirX, dirY) ?? false;
     }
@@ -213,15 +199,11 @@ class Platformer3DAdapter extends EngineAdapter {
         return this.game.strategy.getCooldownFraction?.(abilityId) ?? 0;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    /** @param {string} username */
     setUsername(username) {
         this.username = username;
         if (this.game) this.game.username = username;
     }
 
-    /** @param {string} projectName */
     setProject(projectName) {
         this.currentProject = projectName || null;
         if (this.game) this.game.currentProject = this.currentProject;
@@ -241,7 +223,6 @@ class Platformer3DAdapter extends EngineAdapter {
     }
 }
 
-// Expose so CampaignController can instantiate it by engine-type string
 if (typeof window !== 'undefined') {
     window.Platformer3DAdapter = Platformer3DAdapter;
 }

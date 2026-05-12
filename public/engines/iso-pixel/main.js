@@ -54,6 +54,10 @@ class IsoGame {
         this.keysPressed = {}; // For detecting key press events
         this.levelMetadata = null;
         
+        // Unified Audio System
+        this.audio = window.Sound;
+        if (this.audio && !this.audio.ctx) this.audio.init();
+
         // Physics constants (tuned for smooth 60fps feel)
         this.GRAVITY = 0.025;           // Gravity per physics tick
         this.JUMP_FORCE = 0.45;         // Initial jump velocity
@@ -331,7 +335,7 @@ class IsoGame {
                 levelData = this.levelMetadata;
             } else {
                 // Normal mode: load map from sessionStorage or default file
-                const playtestData = sessionStorage.getItem('ketebe_playtest_map');
+                const playtestData = sessionStorage.getItem('ketebe_playtest_data') || sessionStorage.getItem('ketebe_playtest_map');
                 if (playtestData) {
                     levelData = JSON.parse(playtestData);
                 } else {
