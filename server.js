@@ -22,6 +22,7 @@ const projectsRouter = require('./server/routes/projects');
 const logicRouter = require('./server/routes/logic');
 const abilitiesRouter = require('./server/routes/abilities');
 const brainsRouter = require('./server/routes/brains');
+const audioRouter = require('./server/routes/audio');
 const slotsRouter = require('./server/routes/slots');
 const cutscenesRouter = require('./server/routes/cutscenes');
 const campaignsRouter = require('./server/routes/campaigns');
@@ -32,8 +33,11 @@ const systemRouter = require('./server/routes/system');
 const ideRouter = require('./server/routes/ide');
 const gitRouter = require('./server/routes/git');
 const buildRouter = require('./server/routes/build');
+const shadersRouter = require('./server/routes/shaders');
 const test3dRouter = require('./server/routes/test-3d');
 const debug3dRouter = require('./server/routes/debug-3d');
+const uiConfigRouter = require('./server/routes/ui-config');
+
 let monitor3dRouter;
 try {
     monitor3dRouter = require('./server/routes/monitor-3d');
@@ -58,7 +62,7 @@ const setupWebSocket = require('./server/websocket');
 
 // Initialize Express app and HTTP server
 const app = express();
-app.use(cors()); // Enable CORS for all routes
+app.use(cors({ origin: ['http://localhost:3000', 'file://'] })); // Restrict CORS origins
 const server = http.createServer(app);
 
 // --- IRAB NATIVE PROXY ---
@@ -113,7 +117,7 @@ app.use(['/api/history', '/api/ai'], (req, res) => {
 app.use(securityHeaders);
 
 // Body parser
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '5mb' }));
 
 // Set explicit MIME types for ESM and WASM
 express.static.mime.define({
@@ -130,28 +134,71 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // Legacy Alias: Redirect /base_game to /engines/rpg-topdown
+app.use('/base_game', (req, res, next) => {
+    const activeProject = projectService.getActiveProject();
+    express.static(path.join(activeProject, 'engines', 'rpg-topdown'))(req, res, next);
+});
 app.use('/base_game', express.static(path.join(__dirname, 'public', 'engines', 'rpg-topdown')));
 
-// Serve sprites.js from active project if it exists, otherwise fallback to engine default
-app.get('/engines/rpg-topdown/sprites.js', (req, res, next) => {
-    const projectSprites = path.join(projectService.getActiveProject(), 'sprites.js');
-    res.sendFile(projectSprites, err => {
-        if (!err) return;
-        if (res.headersSent) return;
-        if (err.code === 'ENOENT') return next();
-        return next(err);
-    });
-});
+// Serve sprites.js with hybrid merging
+const serveMergedSprites = async (req, res, next) => {
+    try {
+        const engineSpritesPath = path.join(__dirname, 'public', 'engines', 'rpg-topdown', 'sprites.js');
+        const projectDir = projectService.getActiveProject();
+        const projectSpritesPath = path.join(projectDir, 'sprites.js');
+        const isRoot = projectService.isRootProject();
 
-app.get('/base_game/sprites.js', (req, res, next) => {
-    const projectSprites = path.join(projectService.getActiveProject(), 'sprites.js');
-    res.sendFile(projectSprites, err => {
-        if (!err) return;
-        if (res.headersSent) return;
-        if (err.code === 'ENOENT') return next();
-        return next(err);
-    });
-});
+        let engineContent = '';
+        try {
+            engineContent = await fs.readFile(engineSpritesPath, 'utf8');
+        } catch (e) {}
+
+        if (isRoot) {
+            return res.send(engineContent);
+        }
+
+        let projectContent = '';
+        try {
+            projectContent = await fs.readFile(projectSpritesPath, 'utf8');
+        } catch (e) {}
+
+        if (!projectContent) {
+            return res.send(engineContent);
+        }
+
+        // Merge logic: Extract the object part from both and combine
+        // Expected format: window.SPRITES = { ... };
+        const extractSprites = (content) => {
+            const match = content.match(/window\.SPRITES\s*=\s*(\{[\s\S]*\});?\s*$/);
+            if (match) {
+                try {
+                    // Using a safer approach than eval: wrap in a vm context
+                    const vm = require('vm');
+                    const sandbox = {};
+                    vm.createContext(sandbox);
+                    return vm.runInContext(`(${match[1]})`, sandbox);
+                } catch (e) {
+                    console.error('[Sprites:Merge] Parse error:', e);
+                }
+            }
+            return {};
+        };
+
+        const engineSprites = extractSprites(engineContent);
+        const projectSprites = extractSprites(projectContent);
+
+        const mergedSprites = { ...engineSprites, ...projectSprites };
+        const mergedContent = `// Merged sprites.js - Engine + Project\nwindow.SPRITES = ${JSON.stringify(mergedSprites, null, 2)};`;
+        
+        res.set('Content-Type', 'application/javascript');
+        res.send(mergedContent);
+    } catch (err) {
+        next(err);
+    }
+};
+
+app.get('/engines/rpg-topdown/sprites.js', serveMergedSprites);
+app.get('/base_game/sprites.js', serveMergedSprites);
 
 // Dynamic Asset Serving for Projects
 app.use('/dunyalar', (req, res, next) => {
@@ -243,19 +290,23 @@ app.use('/api', gamedataRouter);
 app.use('/api/logic', logicRouter);
 app.use('/api/abilities', abilitiesRouter);
 app.use('/api/brains', brainsRouter);
+app.use('/api/audio', audioRouter);
 app.use('/api/slots', slotsRouter);
 app.use('/api', cutscenesRouter);
 app.use('/api', campaignsRouter);
 app.use('/api/ide', ideRouter);
 app.use('/api/git', gitRouter);
 app.use('/api/build', buildRouter);
+app.use('/api/shaders', shadersRouter);
 app.use('/api/test', test3dRouter);
 app.use('/api/debug', debug3dRouter);
 app.use('/api/monitor', monitor3dRouter);
+app.use('/api/ui-config', uiConfigRouter);
 
-
-
-
+// Fallback for API
+app.use('/api/*', (req, res) => {
+    res.redirect('/dashboard.html');
+});
 
 // Root redirect to dashboard
 app.get('/', (req, res) => {

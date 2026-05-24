@@ -85,7 +85,7 @@ window.NPC = class NPC {
         
         // Load brain if defined
         if (this.def.behavior && this.def.behavior.script) {
-            this.loadScript(this.def.behavior.script);
+            this.attachBrain(this.def.behavior.script);
         }
     }
     
@@ -93,30 +93,30 @@ window.NPC = class NPC {
     // BRAIN LOADING & EXECUTION
     // ============================================
     
-    async loadScript(name) {
-        try {
-            // FIX-1: Fetch from correct endpoint
-            const res = await fetch(`/api/brains/js/${name}`);
-            if (res.ok) {
-                const code = await res.text();
-                const blob = new Blob([code], { type: 'application/javascript' });
-                const url = URL.createObjectURL(blob);
-                const module = await import(url);
-                
-                // Check for new generator format
-                if (module.runBehavior) {
-                    this.brainRuntime = new BrainRuntime(this, module.runBehavior);
+    async attachBrain(name) {
+        if (!this.game.logicSystem) {
+            console.warn('[NPC] Cannot attach brain: LogicSystem not found in game context');
+            return;
+        }
+        await this.game.logicSystem.attachToEntity(this, name);
+    }
+
+    refreshSprites() {
+        console.log(`[NPC:${this.id}] Refreshing sprites...`);
+        const def = this.def;
+        if (def.animations) {
+            Object.keys(def.animations).forEach(state => {
+                const animDef = def.animations[state];
+                if (animDef.down || animDef.up || animDef.side) {
+                    if (animDef.down) this.sprites[state].down = window.createPixelImage(animDef.down);
+                    if (animDef.up) this.sprites[state].up = window.createPixelImage(animDef.up);
+                    if (animDef.side) this.sprites[state].side = window.createPixelImage(animDef.side);
+                } else if (animDef.sprite) {
+                    this.sprites[state] = window.createPixelImage(animDef.sprite);
+                } else if (animDef.base) {
+                    this.sprites[state] = window.createPixelImage(animDef.base);
                 }
-                // Fallback to old format
-                else if (module.runLogic) {
-                    this.script = module.runLogic;
-                    this.script({ event: 'evt_start', target: this }, this.game, this.game.uiSystem);
-                }
-                
-                URL.revokeObjectURL(url);
-            }
-        } catch(e) {
-            console.warn(`Failed to load NPC brain: ${name}`, e);
+            });
         }
     }
     

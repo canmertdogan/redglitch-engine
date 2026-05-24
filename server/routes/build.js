@@ -7,10 +7,29 @@ const { spawn } = require('child_process');
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const BUILDS_DIR = path.join(ROOT_DIR, 'builds');
 
+let isBuilding = false;
+const VALID_TARGETS = new Set(['electron', 'web', 'ios', 'android', 'windows', 'macos']);
+
 // GET /api/build/stream?target=win&project=... — SSE live log stream
 router.get('/stream', (req, res) => {
     const target = req.query.target || 'electron';
     const projectName = req.query.project || 'Default Project';
+
+    if (!VALID_TARGETS.has(target)) {
+        res.setHeader('Content-Type', 'text/plain');
+        return res.status(400).end('Invalid target');
+    }
+    
+    if (!/^[a-zA-Z0-9_\-\s]+$/.test(projectName)) {
+        res.setHeader('Content-Type', 'text/plain');
+        return res.status(400).end('Invalid project name');
+    }
+    
+    if (isBuilding) {
+        res.setHeader('Content-Type', 'text/plain');
+        return res.status(409).end('A build is already in progress');
+    }
+    isBuilding = true;
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -43,6 +62,7 @@ router.get('/stream', (req, res) => {
         const outputPath = fs.existsSync(releaseDir) ? releaseDir : path.join(ROOT_DIR, 'dist', 'game');
         // Small delay to let any remaining stdout/stderr data flush through
         setTimeout(() => {
+            isBuilding = false;
             if (!res.writableEnded) {
                 send('done', { success: code === 0, path: outputPath, code });
                 res.end();
@@ -51,6 +71,7 @@ router.get('/stream', (req, res) => {
     });
 
     child.on('error', (err) => {
+        isBuilding = false;
         if (!res.writableEnded) {
             send('error', { text: err.message });
             send('done', { success: false });
@@ -66,6 +87,15 @@ router.get('/stream', (req, res) => {
 // POST /api/build — run build-game.js for the active project
 router.post('/', (req, res) => {
     const { target = 'electron' } = req.body;
+
+    if (!VALID_TARGETS.has(target)) {
+        return res.status(400).json({ success: false, error: 'Invalid target' });
+    }
+
+    if (isBuilding) {
+        return res.status(409).json({ success: false, error: 'A build is already in progress' });
+    }
+    isBuilding = true;
 
     const projectService = req.projectService;
     const activeProject = projectService ? projectService.getActiveProject() : null;
@@ -88,6 +118,7 @@ router.post('/', (req, res) => {
     child.stderr.on('data', (d) => logs.push(d.toString()));
 
     child.on('close', (code) => {
+        isBuilding = false;
         if (code === 0) {
             res.json({ success: true, path: outputPath, log: logs.join('') });
         } else {
@@ -96,6 +127,7 @@ router.post('/', (req, res) => {
     });
 
     child.on('error', (err) => {
+        isBuilding = false;
         res.status(500).json({ success: false, error: err.message });
     });
 });

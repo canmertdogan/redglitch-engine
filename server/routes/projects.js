@@ -54,7 +54,7 @@ function sanitizeProjectName(name) {
 
 function resolveProjectPath(name) {
     const safeName = sanitizeProjectName(name);
-    if (!safeName || safeName !== name) {
+    if (!safeName) {
         return null;
     }
 

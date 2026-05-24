@@ -7,11 +7,11 @@ export const AI_CONFIG = {
     // Model configuration
     models: {
         llm: {
-            name: 'Qwen/Qwen2.5-Coder-0.5B-Instruct',
-            modelId: 'onnx-community/Qwen2.5-Coder-0.5B-Instruct', // Transformers.js v3 ID
-            quantization: 'q4f16',           // 4-bit quantized, ~300MB
-            maxNewTokens: 512,
-            temperature: 0.3,
+            name: 'Qwen/Qwen2.5-Coder-3B-Instruct',
+            modelId: 'onnx-community/Qwen2.5-Coder-3B-Instruct', // Transformers.js v3 ID
+            quantization: 'q4f16',           // 4-bit quantized, ~1.8GB
+            maxNewTokens: 1024,
+            temperature: 0.4,
             topP: 0.9,
             repetitionPenalty: 1.1,
         },
@@ -25,17 +25,17 @@ export const AI_CONFIG = {
 
     // Runtime limits
     limits: {
-        contextWindow: 2048,                  // Total tokens for 0.5B model
-        maxHistoryMessages: 6,                // Sliding window
+        contextWindow: 4096,                  // Total tokens for 3B model
+        maxHistoryMessages: 10,                // Sliding window
         maxRAGChunks: 3,                      // Top-K retrieval
         ragChunkSize: 300,                    // Characters per chunk
         ragChunkOverlap: 50,                  // Overlap between chunks
         idleDisposeMinutes: 5,                // Unload model after idle
-        maxFileContextChars: 4000,            // File content sent to LLM
-        maxTokensForSystemPrompt: 400,        // Reserved for system prompt
-        maxTokensForRAG: 300,                 // Reserved for RAG context
-        maxTokensForHistory: 300,             // Reserved for chat history
-        maxTokensForUserMessage: 200,         // Reserved for current query
+        maxFileContextChars: 8000,            // Increased for 3B
+        maxTokensForSystemPrompt: 800,        // Increased for 3B
+        maxTokensForRAG: 600,                 // Increased for 3B
+        maxTokensForHistory: 600,             // Increased for 3B
+        maxTokensForUserMessage: 500,         // Increased for 3B
     },
 
     // Storage keys

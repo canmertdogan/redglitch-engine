@@ -16,14 +16,21 @@ import logging
 import asyncio
 import os
 import psutil
+import requests
+from huggingface_hub import hf_hub_download
 from contextlib import asynccontextmanager
 from brain import brain
 from watcher import IrabWatcher
 from rag import rag
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("IRAB-Cortex")
+
+# Silence uvicorn access logs
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+# Also silence uvicorn.error logs that are just info
+logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 process = psutil.Process(os.getpid())
 
@@ -212,10 +219,59 @@ async def load_brain_task():
     
     loop.run_in_executor(None, watcher.start)
     
-    model_path = os.path.join(PROJECT_ROOT, "backend", "models", "qwen2.5-coder-1.5b.gguf")
+    model_repo = "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF"
+    model_filename = "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
+    model_dir = os.path.join(PROJECT_ROOT, "backend", "models")
+    model_path = os.path.join(model_dir, model_filename)
+
+    if not os.path.exists(model_path):
+        logger.info(f"Model missing. Starting download from {model_repo}...")
+        try:
+            # Use requests for manual download to track progress for UI
+            url = f"https://huggingface.co/{model_repo}/resolve/main/{model_filename}"
+            
+            def _dl_with_progress():
+                response = requests.get(url, stream=True, timeout=10)
+                response.raise_for_status()
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded_size = 0
+                
+                logger.info(f"Downloading {model_filename} ({total_size / (1024*1024*1024):.2f} GB)...")
+                
+                with open(model_path + ".tmp", 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=1024 * 1024): # 1MB chunks
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            percent = int((downloaded_size / total_size) * 100)
+                            
+                            # Update UI (throttle to every 2% to avoid flooding)
+                            if percent % 2 == 0:
+                                status_msg = f"Downloading 3B Model: {percent}% ({downloaded_size // (1024*1024)}MB / {total_size // (1024*1024)}MB)"
+                                asyncio.run_coroutine_threadsafe(
+                                    manager.broadcast({"type": "LOAD_PROGRESS", "data": {"percent": percent, "status": status_msg}}),
+                                    loop
+                                )
+                                # Also log to console
+                                if percent % 10 == 0:
+                                    logger.info(f"Download progress: {percent}%")
+                
+                os.replace(model_path + ".tmp", model_path)
+                return True
+
+            await loop.run_in_executor(None, _dl_with_progress)
+            logger.info("Download complete.")
+        except Exception as e:
+            brain.status = "ERROR"
+            logger.error(f"Download failed: {e}")
+            if os.path.exists(model_path + ".tmp"):
+                os.remove(model_path + ".tmp")
+            await manager.broadcast({"type": "LOAD_PROGRESS", "data": {"percent": 0, "status": f"Download Failed: {str(e)}"}})
+            return
+
     if os.path.exists(model_path):
-        # Notify initial progress
-        await manager.broadcast({"type": "LOAD_PROGRESS", "data": {"percent": 15, "status": "Allocating Metal memory..."}})
+        # 2. Notify initial progress
+        await manager.broadcast({"type": "LOAD_PROGRESS", "data": {"percent": 85, "status": "Allocating Metal memory..."}})
         
         # 3. Load model in thread
         await loop.run_in_executor(None, brain.load_model, model_path)
@@ -230,7 +286,7 @@ async def load_brain_task():
         await manager.broadcast({"type": "LOAD_PROGRESS", "data": {"percent": 100, "status": "Ready"}})
     else:
         brain.status = "ERROR"
-        logger.error(f"Model not found at {model_path}")
+        logger.error(f"Model not found at {model_path} after download attempt.")
 
     # 6. Start RAG scan AFTER model is fully loaded and warmed up to avoid OOM
     async def initial_rag_scan():
@@ -434,7 +490,7 @@ async def handle_prompt(message, websocket):
     logger.info(f"Augmented prompt length: {len(augmented_prompt)} chars")
     full_response = ""
     
-    # Phrases the 1.3B model tends to regurgitate
+    # Phrases the 3B model tends to regurgitate
     PROMPT_LEAK_PHRASES = [
         'Available tools:', 'To open a tool:', 'To show emotion:', 
         'Do NOT repeat', 'COMMANDS:', 'RULES:', '--- FILE:', 
@@ -517,4 +573,4 @@ async def handle_prompt(message, websocket):
         await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info", access_log=False)

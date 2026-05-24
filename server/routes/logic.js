@@ -26,9 +26,9 @@ function normalizeLogicName(value, allowAlgorithm = false) {
     return isSafeBaseName(value) ? `${value}.json` : null;
 }
 
-// Save logic (visual workspace + executable code)
+// Save logic (visual workspace + executable code + AST)
 router.post('/save', async (req, res) => {
-    const { name, json, js } = req.body;
+    const { name, json, js, ast } = req.body;
     if (!name) return res.status(400).json({ error: 'Name required' });
     if (!isSafeBaseName(name)) return res.status(400).json({ error: 'Invalid name' });
     try {
@@ -39,8 +39,11 @@ router.post('/save', async (req, res) => {
         // Save the visual workspace (JSON)
         if (json) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.json`), json, 'utf8');
         
-        // Save the executable code (JS)
+        // Save the executable code (JS) - DEPRECATED but kept for legacy
         if (js) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.js`), js, 'utf8');
+
+        // Save the AST (JSON)
+        if (ast) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.ast.json`), typeof ast === 'string' ? ast : JSON.stringify(ast, null, 2), 'utf8');
         
         res.json({ success: true });
     } catch (err) {
@@ -95,6 +98,18 @@ router.get('/:name', async (req, res) => {
         }
     } catch (err) {
         res.status(404).json({ error: 'Logic not found' });
+    }
+});
+
+// Get logic AST
+router.get('/ast/:name', async (req, res) => {
+    try {
+        if (!isSafeBaseName(req.params.name)) return res.status(400).json({ error: 'Invalid name' });
+        const activeProject = projectService.getActiveProject();
+        const ast = await fs.readFile(path.join(activeProject, 'data', 'logic', `${req.params.name}.ast.json`), 'utf8');
+        res.json(JSON.parse(ast));
+    } catch (err) {
+        res.status(404).json({ error: 'AST not found' });
     }
 });
 

@@ -83,7 +83,7 @@
             pointer-events: none;
         }
 
-        /* Glitch Text Effect */
+        /* Title */
         .glitch {
             z-index: 100;
             position: fixed;
@@ -93,25 +93,10 @@
             font-size: 2rem;
             letter-spacing: 6px;
             color: #fff;
+            text-shadow: 0 0 6px rgba(241, 196, 15, 0.25);
             pointer-events: none;
         }
         .glitch span { color: var(--accent); }
-        .glitch::before, .glitch::after {
-            content: 'KETEBE GAME STUDIO';
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0.8;
-        }
-        .glitch::before { color: #ff00c1; z-index: -1; animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite; }
-        .glitch::after { color: #00fff9; z-index: -2; animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) reverse both infinite; }
-
-        @keyframes glitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); }
-            80% { transform: translate(2px, -2px); }
-            100% { transform: translate(0); }
-        }
 
         .subtitle {
             font-size: 0.9rem;
@@ -423,10 +408,10 @@
                 }
 
                 if (progress >= 100) {
-                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 250);
                     return;
                 }
-                setTimeout(updateProgress, 35);
+                setTimeout(updateProgress, 20);
             }
         }
         updateProgress();

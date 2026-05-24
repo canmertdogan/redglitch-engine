@@ -13,7 +13,7 @@ A defining characteristic of this project is the deep integration of **IRAB Nati
 The engine operates on a distributed architecture where the **Studio UI (Electron)** acts as the central hub.
 - **Frontend:** A rich, web-based suite of editors (Behavior, Campaign, Map, Script) built with high-performance pixel-art rendering.
 - **Backend (Node.js):** Manages file system operations, project configuration, and serves as a proxy for the AI services.
-- **AI Cortex (Python/FastAPI):** A dedicated process for LLM inference (DeepSeek-Coder-1.3B) and vector-based project indexing.
+- **AI Cortex (Python/FastAPI):** A dedicated process for LLM inference (Qwen2.5-Coder-3B) and vector-based project indexing.
 
 ### 2.2 Shared Infrastructure
 The project demonstrates strong architectural consistency through its shared libraries:
@@ -46,7 +46,7 @@ A precision-focused engine for arcade-style gameplay.
 The integration of IRAB is perhaps the engine's most innovative feature.
 
 ### 4.1 Local Inference Layer
-The engine avoids cloud dependencies by running **DeepSeek-Coder-1.3B** locally via `llama-cpp-python`. It leverages Apple's **Metal API** for hardware acceleration, ensuring high-speed token generation even on consumer-grade hardware.
+The engine avoids cloud dependencies by running **Qwen2.5-Coder-3B** locally via `llama-cpp-python`. It leverages Apple's **Metal API** for hardware acceleration, ensuring high-speed token generation even on consumer-grade hardware.
 
 ### 4.2 Knowledge Base (RAG)
 The RAG system (built using `ChromaDB`) periodically indexes the entire project. When a user asks a question, the backend:

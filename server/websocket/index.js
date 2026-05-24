@@ -24,7 +24,7 @@ function setupWebSocket(server, options = {}) {
 
     // WebSocket connection handling
     wss.on('connection', (ws) => {
-        console.log('[WebSocket] Client connected');
+        // console.log('[WebSocket] Client connected');
         connectedClients.add(ws);
         
         const activeProject = getActiveProject();
@@ -40,23 +40,28 @@ function setupWebSocket(server, options = {}) {
         
         ws.on('message', (message) => {
             try {
-                const data = JSON.parse(message);
+                const msgStr = message.toString();
+                if (msgStr.length > 1024 * 1024) { // 1MB limit
+                    console.warn('[WebSocket] Message too large, dropping');
+                    return;
+                }
+                const data = JSON.parse(msgStr);
                 
                 // Broadcast to all other connected clients
                 connectedClients.forEach(client => {
                     if (client !== ws && client.readyState === WebSocket.OPEN) {
-                        client.send(message);
+                        client.send(msgStr);
                     }
                 });
                 
-                console.log('[WebSocket] Broadcasted event:', data.type);
+                // console.log('[WebSocket] Broadcasted event:', data.type);
             } catch (err) {
                 console.error('[WebSocket] Invalid message received:', err);
             }
         });
         
         ws.on('close', () => {
-            console.log('[WebSocket] Client disconnected');
+            // console.log('[WebSocket] Client disconnected');
             connectedClients.delete(ws);
         });
         
@@ -97,7 +102,7 @@ function setupWebSocket(server, options = {}) {
         fileWatcher
             .on('change', (filePath) => {
                 const relativePath = path.relative(rootDir, filePath);
-                console.log(`[FileWatcher] File changed: ${relativePath}`);
+                // console.log(`[FileWatcher] File changed: ${relativePath}`);
                 
                 broadcastToClients({
                     type: 'file:changed',
@@ -110,7 +115,7 @@ function setupWebSocket(server, options = {}) {
             })
             .on('add', (filePath) => {
                 const relativePath = path.relative(rootDir, filePath);
-                console.log(`[FileWatcher] File added: ${relativePath}`);
+                // console.log(`[FileWatcher] File added: ${relativePath}`);
                 
                 broadcastToClients({
                     type: 'file:added',
@@ -123,7 +128,7 @@ function setupWebSocket(server, options = {}) {
             })
             .on('unlink', (filePath) => {
                 const relativePath = path.relative(rootDir, filePath);
-                console.log(`[FileWatcher] File deleted: ${relativePath}`);
+                // console.log(`[FileWatcher] File deleted: ${relativePath}`);
                 
                 broadcastToClients({
                     type: 'file:deleted',
@@ -135,7 +140,7 @@ function setupWebSocket(server, options = {}) {
                 });
             });
         
-        console.log('[FileWatcher] Started watching:', watchPaths);
+        // console.log('[FileWatcher] Started watching:', watchPaths);
     }
 
     // Stop file watcher
@@ -143,7 +148,7 @@ function setupWebSocket(server, options = {}) {
         if (fileWatcher) {
             fileWatcher.close();
             fileWatcher = null;
-            console.log('[FileWatcher] Stopped watching');
+            // console.log('[FileWatcher] Stopped watching');
         }
     }
 

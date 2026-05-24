@@ -24,13 +24,13 @@ Ketebe AI is a **browser-native, offline-capable AI assistant** integrated direc
 ## Subsystems
 
 ### 1. Inference Engine (`public/ai/inference-engine.js`)
-*   **Model**: `Qwen/Qwen2.5-Coder-0.5B-Instruct` (Quantized to q4f16).
+*   **Model**: `Qwen/Qwen2.5-Coder-3B-Instruct` (Quantized to q4f16).
 *   **Execution**: Runs in a dedicated Web Worker to prevent UI freezing.
 *   **Backend**: Tries **WebGPU** first (fast), falls back to **WASM** (CPU) if unavailable.
 *   **Streaming**: Tokens are streamed character-by-character to the UI.
 
 ### 2. RAG System (`public/ai/rag-engine.js`)
-*   **Goal**: Provide the small model (0.5B) with accurate knowledge about ketebe ENGINE APIs to prevent hallucinations.
+*   **Goal**: Provide the model (3B) with accurate knowledge about ketebe ENGINE APIs to prevent hallucinations.
 *   **Vector Store**: Uses **Orama** (a browser-native vector database).
 *   **Process**:
     1.  **Ingestion**: Documentation and core engine files are chunked and embedded (using `all-MiniLM-L6-v2`) into a `corpus.json`.

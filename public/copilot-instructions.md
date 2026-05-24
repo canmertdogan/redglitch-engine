@@ -196,7 +196,7 @@ Ketebe Engine features a **local-first AI assistant** ("IRAB") integrated direct
     - Supports **WebGPU** acceleration for near-native performance.
     - Falls back to WASM (CPU) if GPU is unavailable.
     - Manages model lifecycle (download, cache, dispose).
-    - Current Model: `Qwen2.5-Coder-0.5B-Instruct` (Quantized).
+    - Current Model: `Qwen2.5-Coder-3B-Instruct` (Quantized).
 
 3.  **RAG System (`public/ai/rag-engine.js` + `vector-store.js`)**:
     - **Retrieval-Augmented Generation** for context-aware answers.

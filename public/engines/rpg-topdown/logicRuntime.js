@@ -365,7 +365,7 @@ window.LogicRuntime = class LogicRuntime {
 
     playSound(name, volume = 1.0, loop = false) {
         if (this.game.audio) {
-            this.game.audio.play(name, volume, loop);
+            this.game.audio.play(name, { volume, loop });
         }
     }
 

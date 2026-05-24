@@ -6,9 +6,11 @@ let eventBus, projectState, assetManager, studioBridge;
 
 async function initializeIsoIntegration() {
     if (typeof window !== 'undefined') {
-        // Wait for EventBus to be ready if needed
-        if (!window.KetebeEventBus) {
-            await new Promise(r => setTimeout(r, 500));
+        // Wait for EventBus to be ready with polling and timeout
+        let retries = 20;
+        while (!window.KetebeEventBus && retries > 0) {
+            await new Promise(r => setTimeout(r, 100));
+            retries--;
         }
 
         eventBus = window.KetebeEventBus;

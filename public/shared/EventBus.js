@@ -17,8 +17,10 @@ class EventBus {
     }
 
     generateSourceId() {
-        if (typeof window !== 'undefined') {
-            return `${window.location.pathname}_${Math.random().toString(36).substr(2, 5)}`;
+        if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+            return `${window.location.pathname}_${window.crypto.randomUUID()}`;
+        } else if (typeof window !== 'undefined') {
+            return `${window.location.pathname}_${Math.random().toString(36).substr(2, 9)}`;
         }
         return 'server';
     }
@@ -57,8 +59,16 @@ class EventBus {
                 try {
                     let textData;
                     if (event.data instanceof Blob) {
+                        if (event.data.size > 5 * 1024 * 1024) { // 5MB limit
+                            console.warn('[EventBus] Discarding incoming Blob message: Exceeds 5MB limit.');
+                            return;
+                        }
                         textData = await event.data.text();
                     } else {
+                        if (typeof event.data === 'string' && event.data.length > 5 * 1024 * 1024) { // 5MB limit
+                            console.warn('[EventBus] Discarding incoming text message: Exceeds 5MB limit.');
+                            return;
+                        }
                         textData = event.data;
                     }
                     const data = JSON.parse(textData);
@@ -87,7 +97,12 @@ class EventBus {
 
     attemptReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.warn('[EventBus] Max reconnection attempts reached');
+            console.error('[EventBus] Max reconnection attempts reached. Real-time sync is offline.');
+            this.emit('system:websocket:failed');
+            // Show notification if running in an editor context
+            if (typeof document !== 'undefined') {
+                this._showDisconnectNotification();
+            }
             return;
         }
         
@@ -98,6 +113,27 @@ class EventBus {
         setTimeout(() => {
             this.connectWebSocket();
         }, delay);
+    }
+    
+    _showDisconnectNotification() {
+        const notif = document.createElement('div');
+        notif.style.position = 'fixed';
+        notif.style.bottom = '20px';
+        notif.style.right = '20px';
+        notif.style.background = '#e74c3c';
+        notif.style.color = '#fff';
+        notif.style.padding = '10px 20px';
+        notif.style.borderRadius = '5px';
+        notif.style.zIndex = '999999';
+        notif.style.fontFamily = 'Arial, sans-serif';
+        notif.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
+        notif.innerHTML = '<strong>Connection Lost</strong><br><small>Real-time sync is offline.</small>';
+        document.body.appendChild(notif);
+        
+        // Remove after 10 seconds
+        setTimeout(() => {
+            if (notif.parentNode) notif.parentNode.removeChild(notif);
+        }, 10000);
     }
 
     /**

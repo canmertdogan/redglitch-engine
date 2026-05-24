@@ -20,6 +20,9 @@ export class PermissionGate {
         /\/shared\/SharedProjectState\.js$/,            // State management
         /\/ai\/permission-gate\.js$/,                   // Safety system itself
         /^\/server\.js$/,                               // API server
+        /\/server\/routes\/.*\.js$/,                    // Backend API routes
+        /\/server\/middleware\/.*\.js$/,                // Backend middleware
+        /\/server\/utils\/.*\.js$/,                     // Backend utilities
         /^\/electron-main\.js$/,                        // Electron entry
         /^\/build-game\.js$/,                           // Build system
         /^\/build-adapter\.js$/,                        // Adapter build
@@ -204,7 +207,7 @@ export class PermissionGate {
                     diffHtml = `
                         <div class="ai-diff-container side-by-side">
                             <div class="ai-diff-pane">
-                                <div class="ai-diff-label">ORIGINAL (${filePath})</div>
+                                <div class="ai-diff-label">ORIGINAL (${this._escapeHtml(filePath)})</div>
                                 <pre class="ai-code-preview original">${this._escapeHtml(originalContent.substring(0, 1000))}${originalContent.length > 1000 ? '...' : ''}</pre>
                             </div>
                             <div class="ai-diff-pane">

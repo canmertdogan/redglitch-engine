@@ -48,15 +48,156 @@ const tools = [
 ];
 
 let zIndexCounter = 100;
+let focusedWinId = null;
 let snapMode = null;
 let diagnostics = { errors: 0, warnings: 0 };
 let logBuffer = [];
+
+// --- DRAGGABLE WORKSPACE STATE ---
+let workspacePan = { x: 0, y: 0 };
+let isPanning = false;
+let lastPanX, lastPanY;
+
+function updateWorkspaceTransform() {
+    const canvas = document.getElementById('workspace-canvas');
+    if (canvas) {
+        canvas.style.transform = `translate3d(${workspacePan.x}px, ${workspacePan.y}px, 0)`;
+    }
+}
+
+// --- WORKSPACE V2.0 (High Performance) ---
+let backgroundParticles = [];
+function initWorkspaceV2() {
+    const bgCanvas = document.getElementById('studio-bg-canvas');
+    if (bgCanvas) {
+        window.addEventListener('resize', () => {
+            bgCanvas.width = bgCanvas.offsetWidth;
+            bgCanvas.height = bgCanvas.offsetHeight;
+        });
+        bgCanvas.width = bgCanvas.offsetWidth;
+        bgCanvas.height = bgCanvas.offsetHeight;
+        
+        for(let i=0; i<50; i++) {
+            backgroundParticles.push({
+                x: Math.random() * bgCanvas.width,
+                y: Math.random() * bgCanvas.height,
+                size: Math.random() * 2 + 1,
+                speed: Math.random() * 0.5 + 0.2
+            });
+        }
+        requestAnimationFrame(workspaceLoop);
+    }
+}
+
+function workspaceLoop() {
+    const bgCanvas = document.getElementById('studio-bg-canvas');
+    const minimapCanvas = document.getElementById('minimap-canvas');
+    
+    if (bgCanvas) {
+        const ctx = bgCanvas.getContext('2d');
+        ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        
+        const gridSize = 60;
+        const offsetX = workspacePan.x % gridSize;
+        const offsetY = workspacePan.y % gridSize;
+        
+        ctx.strokeStyle = 'rgba(26, 36, 58, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for(let x = offsetX; x < bgCanvas.width; x += gridSize) {
+            ctx.moveTo(x, 0); ctx.lineTo(x, bgCanvas.height);
+        }
+        for(let y = offsetY; y < bgCanvas.height; y += gridSize) {
+            ctx.moveTo(0, y); ctx.lineTo(bgCanvas.width, y);
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(143, 160, 188, 0.1)';
+        backgroundParticles.forEach(p => {
+            p.y += p.speed;
+            if(p.y > bgCanvas.height) p.y = 0;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+        });
+    }
+
+    if (minimapCanvas) {
+        renderMinimap(minimapCanvas);
+    }
+    
+    requestAnimationFrame(workspaceLoop);
+}
+
+function renderMinimap(canvas) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const windows = Array.from(document.querySelectorAll('.window')).filter(w => w.style.display !== 'none');
+    
+    let minX = -workspacePan.x, maxX = -workspacePan.x + window.innerWidth;
+    let minY = -workspacePan.y, maxY = -workspacePan.y + window.innerHeight;
+    
+    windows.forEach(w => {
+        const wx = parseFloat(w.style.left) || 0;
+        const wy = parseFloat(w.style.top) || 0;
+        minX = Math.min(minX, wx);
+        maxX = Math.max(maxX, wx + w.offsetWidth);
+        minY = Math.min(minY, wy);
+        maxY = Math.max(maxY, wy + w.offsetHeight);
+    });
+
+    const padding = 500;
+    const worldW = maxX - minX + padding * 2;
+    const worldH = maxY - minY + padding * 2;
+    const scale = Math.min(canvas.width / worldW, canvas.height / worldH);
+
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.translate(-minX + padding, -minY + padding);
+
+    ctx.strokeStyle = 'rgba(241, 196, 15, 0.5)';
+    ctx.lineWidth = 10 / scale;
+    ctx.strokeRect(-workspacePan.x, -workspacePan.y, window.innerWidth, window.innerHeight);
+
+    windows.forEach(w => {
+        const wx = parseFloat(w.style.left) || 0;
+        const wy = parseFloat(w.style.top) || 0;
+        ctx.fillStyle = w.classList.contains('focused') ? '#f1c40f' : 'rgba(52, 73, 94, 0.8)';
+        ctx.fillRect(wx, wy, w.offsetWidth, w.offsetHeight);
+    });
+
+    ctx.restore();
+}
+
+function tileWindows() {
+    const windows = Array.from(document.querySelectorAll('.window')).filter(w => w.style.display !== 'none');
+    if (windows.length === 0) return;
+    
+    const cols = Math.ceil(Math.sqrt(windows.length));
+    const gutter = 40;
+    const winW = (window.innerWidth - (cols + 1) * gutter) / cols;
+    const winH = (window.innerHeight - (Math.ceil(windows.length / cols) + 1) * gutter) / Math.ceil(windows.length / cols);
+    
+    windows.forEach((w, i) => {
+        w.classList.remove('maximized');
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        w.style.width = Math.max(400, winW) + 'px';
+        w.style.height = Math.max(300, winH) + 'px';
+        w.style.left = (gutter + col * (winW + gutter)) - workspacePan.x + 'px';
+        w.style.top = (gutter + row * (winH + gutter)) - workspacePan.y + 'px';
+    });
+}
+
 let currentBuildTarget = 'win';
 let selectedTemplateId = null;
 let fileTreeData = [];
 let expandedDirs = new Set();
 let dragTarget = null;
 let offX, offY;
+let runtimeWindow = null;
+let runtimeWatchTimer = null;
 
 // --- BUILD WIZARD STATE ---
 let bwTarget = 'win';
@@ -74,9 +215,11 @@ function formatProjectName(name) {
 }
 
 async function studioInit() {
+    console.log("[Studio] Initializing Legacy Kernel...");
     // Populate Sidebar with Categories
     const list = document.getElementById('module-list');
     if (list) {
+        console.log("[Studio] Populating sidebar...");
         list.innerHTML = '';
         const categories = ['WORLD ARCHITECT', 'ENTITIES', 'LOGIC & AI', 'ASSETS', 'SYSTEM'];
         const grouped = {};
@@ -105,7 +248,7 @@ async function studioInit() {
                                 'script': ">> ANALYZING CODE... SYNTAX_EFFICIENCY: 84%. NEED OPTIMIZATION?",
                                 'pixel': ">> PIXEL_DENSITY_OPTIMAL. READY FOR MASTERPIECE_INIT.SH",
                                 'npc': ">> DETECTED VACANT_NPC_BRAINS. UPLOADING HEURISTICS...",
-                                'daw': ">> FREQUENCY_SPECTRUM_BALANCED. COMMENCING AUDIO_SYNTHESIS."
+                                'daw': ">> DISCOVERING GAME EVENTS... AUDIO_MAPPINGS OPTIMIZED. READY FOR SPATIAL_MIXING."
                             };
                             if (tips[tool.id]) window.KAI.showBalloon(tips[tool.id]);
                         }
@@ -124,6 +267,8 @@ async function studioInit() {
 
     setInterval(updateSystemMeter, 3000);
     updateSystemMeter();
+    
+    initWorkspaceV2();
     
     hookConsole();
     window.addEventListener('message', handleChildMessage);
@@ -146,23 +291,18 @@ async function determineStartupWindow() {
             console.log("[Studio] No project active (Root), redirecting to Launcher...");
             window.location.href = 'dashboard.html';
         } else {
-            console.log("[Studio] Project active, maximizing and opening Command Center...");
-            if (window.electronAPI) {
-                try {
-                    if (!sessionStorage.getItem('ketebe_studio_auto_maximized')) {
-                        window.electronAPI.maximize();
-                        sessionStorage.setItem('ketebe_studio_auto_maximized', '1');
-                    }
-                } catch (err) {
-                    window.electronAPI.maximize();
-                }
+            console.log("[Studio] Project active, opening Command Center...");
+            const dashboardTool = tools.find(t => t.id === 'project_dashboard');
+            if (dashboardTool) {
+                openWindow(dashboardTool);
+            } else {
+                console.warn("[Studio] project_dashboard tool not found in registry.");
             }
-            openWindow(tools.find(t => t.id === 'project_dashboard'));
         }
 
     } catch(e) {
         console.error("[Studio] Startup error:", e);
-        window.location.href = 'dashboard.html';
+        // window.location.href = 'dashboard.html'; // Don't redirect immediately to allow debugging
     }
 }
 
@@ -289,6 +429,7 @@ function applyTheme(themeName, options = {}) {
 
 // --- WINDOW MANAGEMENT ---
 function openWindow(tool) {
+    if (!tool) return;
     const winId = 'win-' + tool.id;
     let win = document.getElementById(winId);
 
@@ -313,11 +454,16 @@ function openWindow(tool) {
             </div>
         `;
         win.onmousedown = () => focusWindow(winId);
-        document.getElementById('workspace').appendChild(win);
+        
+        const container = document.getElementById('workspace-canvas') || document.getElementById('workspace');
+        if (container) container.appendChild(win);
+        
         const btn = document.getElementById('btn-' + tool.id);
         if (btn) btn.classList.add('opened');
     } else {
-        win.style.display = 'flex';
+        win.style.display = 'flex'; // Restore visibility for Keep-Alive
+        const btn = document.getElementById('btn-' + tool.id);
+        if (btn) btn.classList.add('opened');
     }
     
     if (window.KetebeProjectState) {
@@ -338,15 +484,24 @@ function openWindow(tool) {
 
 function closeWindow(id) {
     const win = document.getElementById(id);
-    if (win) win.remove();
+    if (win) {
+        win.style.display = 'none'; // Keep-Alive: just hide the element
+        win.classList.remove('focused');
+    }
     const toolId = id.replace('win-', '');
     const btn = document.getElementById('btn-' + toolId);
-    if (btn) { btn.classList.remove('opened'); btn.classList.remove('active'); }
+    if (btn) { 
+        btn.classList.remove('opened'); 
+        btn.classList.remove('active'); 
+    }
 }
 
 function minimizeWindow(id) {
     const win = document.getElementById(id);
-    if (win) win.style.display = 'none';
+    if (win) {
+        win.style.display = 'none';
+        win.classList.remove('focused');
+    }
     const btn = document.getElementById('btn-' + id.replace('win-',''));
     if (btn) btn.classList.remove('active');
 }
@@ -362,11 +517,16 @@ function toggleMaximize(id) {
 }
 
 function focusWindow(id) {
+    if (focusedWinId === id) return; // Skip if already focused
+    
     document.querySelectorAll('.window').forEach(w => w.classList.remove('focused'));
-    document.querySelectorAll('.module-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tool-btn-sidebar').forEach(b => b.classList.remove('active'));
+    
     const win = document.getElementById(id);
     if(win) {
-        win.style.display = 'flex'; win.classList.add('focused');
+        focusedWinId = id;
+        win.style.display = 'flex'; 
+        win.classList.add('focused');
         win.style.zIndex = ++zIndexCounter;
         const toolId = id.replace('win-', '');
         const btn = document.getElementById('btn-' + toolId);
@@ -391,53 +551,111 @@ function startDrag(e, id) {
     focusWindow(id);
 }
 
-window.addEventListener('mousemove', (e) => {
-    if (!dragTarget) return;
-    const workspace = document.getElementById('workspace');
-    const wsRect = workspace.getBoundingClientRect();
-    const ghost = document.getElementById('snap-ghost');
-    
-    let x = e.clientX - offX - wsRect.left;
-    let y = e.clientY - offY - wsRect.top;
-
-    const stickDist = 20;
-    snapMode = null;
-    ghost.style.display = 'none';
-
-    if (e.clientY < 40) {
-        snapMode = 'top'; ghost.style.display = 'block';
-        ghost.style.top = '0'; ghost.style.left = wsRect.left + 'px';
-        ghost.style.width = wsRect.width + 'px'; ghost.style.height = wsRect.height + 'px';
-    } else if (e.clientX < wsRect.left + 20) {
-        snapMode = 'left'; ghost.style.display = 'block';
-        ghost.style.top = wsRect.top + 'px'; ghost.style.left = wsRect.left + 'px';
-        ghost.style.width = (wsRect.width / 2) + 'px'; ghost.style.height = wsRect.height + 'px';
-    } else if (e.clientX > wsRect.right - 20) {
-        snapMode = 'right'; ghost.style.display = 'block';
-        ghost.style.top = wsRect.top + 'px'; ghost.style.left = (wsRect.left + wsRect.width / 2) + 'px';
-        ghost.style.width = (wsRect.width / 2) + 'px'; ghost.style.height = wsRect.height + 'px';
-    } 
-
-    if (!snapMode) {
-        const others = Array.from(document.querySelectorAll('.window')).filter(w => w !== dragTarget && w.style.display !== 'none');
-        others.forEach(other => {
-            const r = other.getBoundingClientRect();
-            const orX = r.left - wsRect.left, orY = r.top - wsRect.top;
-            if (Math.abs(x + dragTarget.offsetWidth - orX) < stickDist) x = orX - dragTarget.offsetWidth;
-            if (Math.abs(x - (orX + r.width)) < stickDist) x = orX + r.width;
-            if (Math.abs(y + dragTarget.offsetHeight - orY) < stickDist) y = orY - dragTarget.offsetHeight;
-            if (Math.abs(y - (orY + r.height)) < stickDist) y = orY + r.height;
-        });
-        if (Math.abs(x) < stickDist) x = 0;
-        if (Math.abs(y) < stickDist) y = 0;
-        if (Math.abs(x + dragTarget.offsetWidth - wsRect.width) < stickDist) x = wsRect.width - dragTarget.offsetWidth;
-        if (Math.abs(y + dragTarget.offsetHeight - wsRect.height) < stickDist) y = wsRect.height - dragTarget.offsetHeight;
+window.addEventListener('keydown', (e) => {
+    if (e.shiftKey) {
+        const speed = 40;
+        const key = e.key.toLowerCase();
+        let changed = false;
+        if (key === 'w') { workspacePan.y += speed; changed = true; }
+        if (key === 'a') { workspacePan.x += speed; changed = true; }
+        if (key === 's') { workspacePan.y -= speed; changed = true; }
+        if (key === 'd') { workspacePan.x -= speed; changed = true; }
+        if (changed) {
+            e.preventDefault();
+            updateWorkspaceTransform();
+        }
     }
-    dragTarget.style.left = x + 'px';
-    dragTarget.style.top = y + 'px';
+});
+
+window.addEventListener('mousedown', (e) => {
+    if (e.button === 1 || (e.button === 0 && e.altKey)) {
+        if (e.target.closest('.window')) return;
+        isPanning = true;
+        lastPanX = e.clientX;
+        lastPanY = e.clientY;
+        document.body.style.cursor = 'grabbing';
+    }
+});
+
+let animationFrameId = null;
+
+window.addEventListener('mousemove', (e) => {
+    if (isPanning) {
+        const dx = e.clientX - lastPanX;
+        const dy = e.clientY - lastPanY;
+        workspacePan.x += dx;
+        workspacePan.y += dy;
+        lastPanX = e.clientX;
+        lastPanY = e.clientY;
+        updateWorkspaceTransform();
+        return;
+    }
+    
+    if (!dragTarget) return;
+    
+    if (animationFrameId) return;
+    
+    animationFrameId = requestAnimationFrame(() => {
+        const workspace = document.getElementById('workspace');
+        const wsRect = workspace.getBoundingClientRect();
+        const ghost = document.getElementById('snap-ghost');
+        
+        let x = e.clientX - offX - wsRect.left;
+        let y = e.clientY - offY - wsRect.top;
+
+        const stickDist = 20;
+        snapMode = null;
+        if (ghost) ghost.style.display = 'none';
+
+        if (e.clientY < 40) {
+            snapMode = 'top'; 
+            if (ghost) {
+                ghost.style.display = 'block';
+                ghost.style.top = '0'; ghost.style.left = wsRect.left + 'px';
+                ghost.style.width = wsRect.width + 'px'; ghost.style.height = wsRect.height + 'px';
+            }
+        } else if (e.clientX < wsRect.left + 20) {
+            snapMode = 'left';
+            if (ghost) {
+                ghost.style.display = 'block';
+                ghost.style.top = wsRect.top + 'px'; ghost.style.left = wsRect.left + 'px';
+                ghost.style.width = (wsRect.width / 2) + 'px'; ghost.style.height = wsRect.height + 'px';
+            }
+        } else if (e.clientX > wsRect.right - 20) {
+            snapMode = 'right';
+            if (ghost) {
+                ghost.style.display = 'block';
+                ghost.style.top = wsRect.top + 'px'; ghost.style.left = (wsRect.left + wsRect.width / 2) + 'px';
+                ghost.style.width = (wsRect.width / 2) + 'px'; ghost.style.height = wsRect.height + 'px';
+            }
+        } 
+
+        if (!snapMode) {
+            const others = Array.from(document.querySelectorAll('.window')).filter(w => w !== dragTarget && w.style.display !== 'none');
+            others.forEach(other => {
+                const r = other.getBoundingClientRect();
+                const orX = r.left - wsRect.left, orY = r.top - wsRect.top;
+                if (Math.abs(x + dragTarget.offsetWidth - orX) < stickDist) x = orX - dragTarget.offsetWidth;
+                if (Math.abs(x - (orX + r.width)) < stickDist) x = orX + r.width;
+                if (Math.abs(y + dragTarget.offsetHeight - orY) < stickDist) y = orY - dragTarget.offsetHeight;
+                if (Math.abs(y - (orY + r.height)) < stickDist) y = orY + r.height;
+            });
+            if (Math.abs(x) < stickDist) x = 0;
+            if (Math.abs(y) < stickDist) y = 0;
+            if (Math.abs(x + dragTarget.offsetWidth - wsRect.width) < stickDist) x = wsRect.width - dragTarget.offsetWidth;
+            if (Math.abs(y + dragTarget.offsetHeight - wsRect.height) < stickDist) y = wsRect.height - dragTarget.offsetHeight;
+        }
+        dragTarget.style.left = x + 'px';
+        dragTarget.style.top = y + 'px';
+        animationFrameId = null;
+    });
 });
 
 window.addEventListener('mouseup', () => {
+    if (isPanning) {
+        isPanning = false;
+        document.body.style.cursor = 'default';
+    }
     if (dragTarget) {
         dragTarget.classList.remove('dragging');
         if (snapMode) {
@@ -478,9 +696,67 @@ function updateClock() {
     if (el) el.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function saveGlobalProject() {
-    showStatusMessage("SAVING PROJECT...");
-    setTimeout(() => showStatusMessage("PROJECT SAVED"), 800);
+function getOpenEditorFrames() {
+    return Array.from(document.querySelectorAll('#window-container iframe'))
+        .filter(frame => frame && frame.contentWindow && frame.closest('.window')?.style.display !== 'none');
+}
+
+async function runFrameSave(frameWindow) {
+    const saveHooks = [
+        () => (typeof frameWindow.saveToServer === 'function' ? frameWindow.saveToServer.bind(frameWindow) : null),
+        () => (typeof frameWindow.editor?.save === 'function' ? frameWindow.editor.save.bind(frameWindow.editor) : null),
+        () => (typeof frameWindow.studio?.save === 'function' ? frameWindow.studio.save.bind(frameWindow.studio) : null),
+        () => (typeof frameWindow.app?.save === 'function' ? frameWindow.app.save.bind(frameWindow.app) : null),
+        () => (typeof frameWindow.saveActiveFile === 'function' ? frameWindow.saveActiveFile.bind(frameWindow) : null),
+        () => (typeof frameWindow.save === 'function' ? frameWindow.save.bind(frameWindow) : null)
+    ];
+
+    for (const resolveHook of saveHooks) {
+        const invoke = resolveHook();
+        if (!invoke) continue;
+        try {
+            await Promise.resolve(invoke());
+            return true;
+        } catch (err) {
+            console.warn('[Studio] Save hook failed:', err?.message || err);
+        }
+    }
+
+    // Fallback for editors that only support command dispatch.
+    try {
+        frameWindow.postMessage({ type: 'execCommand', command: 'save' }, '*');
+        frameWindow.postMessage({ type: 'ketebe:save-request' }, '*');
+    } catch (err) {
+        console.warn('[Studio] Save fallback postMessage failed:', err?.message || err);
+    }
+
+    return false;
+}
+
+async function saveGlobalProject(options = {}) {
+    const silent = !!options.silent;
+    if (!silent) showStatusMessage("SAVING PROJECT...");
+
+    const frames = getOpenEditorFrames();
+    if (frames.length === 0) {
+        if (!silent) showStatusMessage("NO OPEN TOOLS TO SAVE");
+        return { total: 0, saved: 0, warned: 0 };
+    }
+
+    let saved = 0;
+    let warned = 0;
+    for (const frame of frames) {
+        const ok = await runFrameSave(frame.contentWindow);
+        if (ok) saved++;
+        else warned++;
+    }
+
+    if (!silent) {
+        if (warned > 0) showStatusMessage(`PROJECT SAVED (${saved}/${frames.length}, ${warned} PARTIAL)`);
+        else showStatusMessage(`PROJECT SAVED (${saved} TOOLS)`);
+    }
+
+    return { total: frames.length, saved, warned };
 }
 
 function confirmClose() {
@@ -489,15 +765,72 @@ function confirmClose() {
     }
 }
 
-function playGame() { 
+async function playGame() {
+    const saveResult = await saveGlobalProject({ silent: true });
+
+    if (runtimeWindow && !runtimeWindow.closed) {
+        runtimeWindow.focus();
+        setRunningState(true);
+        showStatusMessage(`GAME RUNNING (${saveResult.saved}/${saveResult.total} TOOLS SYNCED)`);
+        return;
+    }
+
+    const launchUrl = `launcher.html?studio_run=1&t=${Date.now()}`;
+    runtimeWindow = window.open(launchUrl, 'ketebe-runtime');
+
+    if (!runtimeWindow) {
+        setRunningState(false);
+        showStatusMessage("GAME LAUNCH FAILED");
+        return;
+    }
+
     setRunningState(true);
-    showStatusMessage("GAME RUNNING");
-    const gameWin = window.open('launcher.html', '_blank');
-    if (gameWin) {
-        const timer = setInterval(() => {
-            if (gameWin.closed) { clearInterval(timer); setRunningState(false); showStatusMessage("GAME STOPPED"); }
-        }, 1000);
-    } else { setRunningState(false); showStatusMessage("GAME LAUNCH FAILED"); }
+    showStatusMessage(`GAME RUNNING (${saveResult.saved}/${saveResult.total} TOOLS SYNCED)`);
+    if (runtimeWatchTimer) clearInterval(runtimeWatchTimer);
+    runtimeWatchTimer = setInterval(() => {
+        if (!runtimeWindow || runtimeWindow.closed) {
+            clearInterval(runtimeWatchTimer);
+            runtimeWatchTimer = null;
+            runtimeWindow = null;
+            setRunningState(false);
+            showStatusMessage("GAME STOPPED");
+        }
+    }, 1000);
+}
+
+function pauseGame() {
+    if (!runtimeWindow || runtimeWindow.closed) {
+        showStatusMessage("NO ACTIVE GAME WINDOW");
+        return;
+    }
+    try {
+        runtimeWindow.postMessage({ type: 'ketebe:runtime-pause-toggle' }, '*');
+        runtimeWindow.focus();
+        showStatusMessage("PAUSE SIGNAL SENT");
+    } catch (err) {
+        console.warn('[Studio] Pause signal failed:', err?.message || err);
+        showStatusMessage("PAUSE FAILED");
+    }
+}
+
+function stopGame() {
+    if (!runtimeWindow || runtimeWindow.closed) {
+        setRunningState(false);
+        showStatusMessage("GAME NOT RUNNING");
+        return;
+    }
+    try {
+        runtimeWindow.close();
+    } catch (err) {
+        console.warn('[Studio] Stop failed:', err?.message || err);
+    }
+    runtimeWindow = null;
+    if (runtimeWatchTimer) {
+        clearInterval(runtimeWatchTimer);
+        runtimeWatchTimer = null;
+    }
+    setRunningState(false);
+    showStatusMessage("GAME STOPPED");
 }
 
 function setRunningState(isRunning) {
@@ -508,6 +841,12 @@ function setRunningState(isRunning) {
 
 function toggleConsole() {
     const tool = tools.find(t => t.id === 'console');
+    if (tool) openWindow(tool);
+}
+
+function openTool(src) {
+    if (!src) return;
+    const tool = tools.find(t => t.src === src);
     if (tool) openWindow(tool);
 }
 
@@ -760,7 +1099,58 @@ window.bwSelectTarget = bwSelectTarget;
 window.bwStartBuild = bwStartBuild;
 window.closeBuildWizard = closeBuildWizard;
 window.setBuildTarget = setBuildTarget;
-function openExplorer(proj) { alert('Explorer coming soon for: ' + proj); }
+window.pauseGame = pauseGame;
+window.stopGame = stopGame;
+window.openTool = openTool;
+function handleMinimapClick(e) {
+    const minimap = document.getElementById('studio-minimap');
+    const canvas = document.getElementById('minimap-canvas');
+    if (!minimap || !canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // We need to reverse the scale and translation from renderMinimap
+    // For simplicity, let's just use the ratio of the click to the canvas size
+    const rx = x / canvas.width;
+    const ry = y / canvas.height;
+
+    // This is a rough estimation since the minimap scale is dynamic
+    // A better way is to store the scale and minX/minY in a global state
+    // But for V2.0, let's just make it "center the workspace" on click for now
+    // or implement a basic 'jump to origin' if clicked.
+    
+    // Better implementation:
+    // We'll calculate the bounds during render and store them.
+}
+
+window.handleMinimapClick = handleMinimapClick;
+window.tileWindows = tileWindows;
+async function openExplorer() {
+    try {
+        const res = await fetch('/api/projects/explore', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        if (!res.ok) throw new Error(`Explorer failed (${res.status})`);
+        showStatusMessage("OPENED PROJECT FOLDER");
+    } catch (err) {
+        console.error('[Studio] openExplorer failed:', err);
+        showStatusMessage("EXPLORER FAILED");
+    }
+}
 window.openExplorer = openExplorer;
-function cleanBuilds() { alert('Cleaning...'); }
+async function cleanBuilds() {
+    showStatusMessage("CLEANING BUILDS...");
+    try {
+        const res = await fetch('/api/build/clean', { method: 'POST' });
+        if (!res.ok) throw new Error(`Clean failed (${res.status})`);
+        showStatusMessage("BUILDS CLEANED");
+    } catch (err) {
+        console.error('[Studio] cleanBuilds failed:', err);
+        showStatusMessage("CLEAN FAILED");
+    }
+}
 window.cleanBuilds = cleanBuilds;

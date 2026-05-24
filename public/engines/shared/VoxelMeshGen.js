@@ -23,7 +23,7 @@ export default class VoxelMeshGen {
      * buildGroups() — standard greedy meshing sweep.
      * Returns meshes grouped by "color|textureId" for draw-call batching.
      */
-    buildGroups() {
+    buildGroups(atlas = null) {
         if (!this.grid || Object.keys(this.grid).length === 0) return {};
         
         const b = this._getBounds();
@@ -46,15 +46,16 @@ export default class VoxelMeshGen {
             return groups[key];
         };
 
-        const emitQuad = (voxel, nx, ny, nz, v0, v1, v2, v3) => {
+        const emitQuad = (rect, nx, ny, nz, v0, v1, v2, v3) => {
+            const { cell, bh, cw } = rect;
             let color = '#888888';
             let textureId = null;
 
-            if (typeof voxel === 'number') {
-                color = this.palette[voxel] || color;
-            } else if (voxel && typeof voxel === 'object') {
-                color = voxel.color || color;
-                textureId = voxel.textureId || null;
+            if (typeof cell === 'number') {
+                color = this.palette[cell] || color;
+            } else if (cell && typeof cell === 'object') {
+                color = cell.color || color;
+                textureId = cell.textureId || null;
             }
 
             const g  = getGroup(color, textureId);
@@ -65,7 +66,27 @@ export default class VoxelMeshGen {
                 g.normals.push(nx, ny, nz);
             }
             
-            g.uvs.push(0,1, 1,1, 1,0, 0,0);
+            // Add UVs - support tiling for greedy rects
+            if (textureId && atlas && atlas._config) {
+                // Determine face type for UV lookup
+                let faceType = 'side';
+                if (ny > 0.5) faceType = 'top';
+                else if (ny < -0.5) faceType = 'bottom';
+                
+                const blockCfg = atlas._config.blocks[textureId];
+                const tileName = blockCfg ? blockCfg[faceType] : textureId;
+                const rect = atlas._getUVRect(tileName);
+                
+                // For greedy quads, we tile the UVs by multiplying by width/height
+                const u0 = rect.u0, v0 = rect.v0, u1 = rect.u1, v1 = rect.v1;
+                const uw = (u1 - u0) * cw;
+                const vh = (v1 - v0) * bh;
+                
+                g.uvs.push(u0, v0 + vh, u0 + uw, v0 + vh, u0 + uw, v0, u0, v0);
+            } else {
+                g.uvs.push(0, 1, 1, 1, 1, 0, 0, 0);
+            }
+
             g.indices.push(bi, bi + 1, bi + 2, bi, bi + 2, bi + 3);
         };
 
@@ -114,8 +135,8 @@ export default class VoxelMeshGen {
                     // Outward winding:
                     // inv=false (+axis): v0,v1,v2,v3 is CCW
                     // inv=true  (-axis): v3,v2,v1,v0 is CCW
-                    if (inv) emitQuad(cell, n[0], n[1], n[2], v3, v2, v1, v0);
-                    else     emitQuad(cell, n[0], n[1], n[2], v0, v1, v2, v3);
+                    if (inv) emitQuad(rect, n[0], n[1], n[2], v3, v2, v1, v0);
+                    else     emitQuad(rect, n[0], n[1], n[2], v0, v1, v2, v3);
                 });
             }
         }
@@ -124,7 +145,7 @@ export default class VoxelMeshGen {
 
     /** Helper: convert groups to THREE.Mesh array */
     async buildMeshes(atlas = null) {
-        const groups = this.buildGroups();
+        const groups = this.buildGroups(atlas);
         const meshes = [];
         const matCache = {};
 
@@ -145,7 +166,6 @@ export default class VoxelMeshGen {
 
             let mat;
             if (data.textureId && atlas) {
-                atlas.applyBlockUVs(geo, data.textureId);
                 mat = atlas.getMaterial(THREE);
             } else {
                 const cacheKey = data.color || '#888888';

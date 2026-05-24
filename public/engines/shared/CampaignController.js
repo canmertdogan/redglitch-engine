@@ -56,12 +56,15 @@ class CampaignController {
                 'engines/rpg-topdown/postProcess.js',
                 'engines/rpg-topdown/logicRuntime.js',
                 'engines/rpg-topdown/BrainRuntime.js',
-                'engines/rpg-topdown/AlgorithmRuntime.js',
                 'engines/rpg-topdown/NPC.js',
+                'engines/rpg-topdown/MenuSystem.js',
+                'engines/rpg-topdown/Entities.js',
+                'engines/rpg-topdown/WeatherSystem.js',
                 'engines/rpg-topdown/InteractiveCutsceneEngine.js',
                 'engines/rpg-topdown/campaignSystem.js',
                 'engines/rpg-topdown/spatialHash.js',
                 'engines/rpg-topdown/stateMachine.js',
+                'engines/rpg-topdown/Core.js',
                 'engines/rpg-topdown/main.js'
             ],
             'iso-pixel': [
@@ -71,6 +74,9 @@ class CampaignController {
                 'shared/VFXBridge.js',
                 'shared/LocalizationSystem.js',
                 'shared/SoundManager.js',
+                'shared/LogicSystem.js',
+                'shared/LogicInterpreter.js',
+                'shared/BehaviorTreeRunner.js',
                 'strategies/IsoStrategy.js',
                 'engines/iso-pixel/renderer.js',
                 'engines/iso-pixel/fxSystem.js',
@@ -284,6 +290,17 @@ class CampaignController {
                     console.error(`[CampaignController] Module import failed for ${src}:`, err);
                 }
             } else {
+                const cleanSrc = src.split('?')[0];
+                const alreadyLoaded = Array.from(document.scripts).some(s => {
+                    const absSrc = s.src || '';
+                    const attrSrc = s.getAttribute('src') || '';
+                    return absSrc.includes(cleanSrc) || attrSrc.includes(cleanSrc);
+                });
+                if (alreadyLoaded) {
+                    console.log(`[CampaignController] Script already loaded, skipping: ${src}`);
+                    continue;
+                }
+
                 await new Promise((resolve) => {
                     const script = document.createElement('script');
                     // Add version/cache bust
@@ -371,11 +388,39 @@ class CampaignController {
     }
 
     async _handleDialogueNode(node) {
-        setTimeout(() => this.continueFlow(node), 1000);
+        if (window.DialogueSystem) {
+            const dialogue = new window.DialogueSystem();
+            await dialogue.init();
+            
+            // If node has speaker and text directly
+            if (node.text) {
+                dialogue.startCustom(node.text, node.speaker || "SYSTEM", () => {
+                    this.continueFlow(node);
+                });
+            } 
+            // If node references a dialogue ID
+            else if (node.dialogueId) {
+                dialogue.start(node.dialogueId, () => {
+                    this.continueFlow(node);
+                });
+            } else {
+                this.continueFlow(node);
+            }
+        } else {
+            console.warn("[Campaign] DialogueSystem not found, skipping dialogue node");
+            this.continueFlow(node);
+        }
     }
 
     async _handleCutsceneNode(node) {
-        setTimeout(() => this.continueFlow(node), 1000);
+        if (window.game && window.game.interactiveCutsceneEngine) {
+            await window.game.interactiveCutsceneEngine.play(node.cutsceneId || node.id);
+            this.continueFlow(node);
+        } else {
+            console.warn("[Campaign] CutsceneEngine not found, skipping cutscene node");
+            // Fallback for non-rpg engines or missing engine
+            setTimeout(() => this.continueFlow(node), 1000);
+        }
     }
 
     async _handleWaitNode(node) {

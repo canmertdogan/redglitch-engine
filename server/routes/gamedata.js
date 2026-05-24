@@ -23,12 +23,54 @@ function createDefinitionRoutes(typeName, fileName) {
     // GET
     router.get(`/${typeName}`, async (req, res) => {
         try {
-            const targetDir = projectService.getDunyalarPath();
-            const filePath = path.join(targetDir, 'definitions', fileName);
-            const data = await fs.readFile(filePath, 'utf8');
-            res.json(JSON.parse(data));
+            const isRoot = projectService.isRootProject();
+            const projectDir = projectService.getDunyalarPath();
+            const projectFilePath = path.join(projectDir, 'definitions', fileName);
+            
+            let mergedData = [];
+            
+            // 1. Try to load engine core definitions (fallback/base)
+            if (!isRoot) {
+                try {
+                    const engineFilePath = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions', fileName);
+                    const engineRaw = await fs.readFile(engineFilePath, 'utf8');
+                    mergedData = JSON.parse(engineRaw);
+                } catch (e) {
+                    // Engine core file missing or invalid, continue
+                }
+            }
+
+            // 2. Load project definitions and merge
+            try {
+                const projectRaw = await fs.readFile(projectFilePath, 'utf8');
+                const projectData = JSON.parse(projectRaw);
+                
+                if (Array.isArray(projectData)) {
+                    // Merge arrays by ID (project items override engine items)
+                    const itemMap = new Map();
+                    mergedData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
+                    projectData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
+                    mergedData = Array.from(itemMap.values());
+                } else {
+                    // If it's an object, just merge
+                    mergedData = { ...mergedData, ...projectData };
+                }
+            } catch (err) {
+                // If project file is missing, we just use engine data or empty array
+                if (isRoot) {
+                    // In root mode, if we failed to read project file (which is the engine file), we should try public
+                    try {
+                        const engineFilePath = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions', fileName);
+                        const engineRaw = await fs.readFile(engineFilePath, 'utf8');
+                        mergedData = JSON.parse(engineRaw);
+                    } catch(e) {}
+                }
+            }
+            
+            res.json(mergedData);
         } catch (err) {
-            res.json([]); // Return empty array if file not found
+            console.error(`[GameData:${typeName}] Load error:`, err.message);
+            res.json([]); // Return empty array if all else fails
         }
     });
 
@@ -37,8 +79,11 @@ function createDefinitionRoutes(typeName, fileName) {
         try {
             const targetDir = path.join(projectService.getDunyalarPath(), 'definitions');
             const filePath = path.join(targetDir, fileName);
+            const activeProject = projectService.getActiveProject();
+            
             await ensureDir(targetDir);
-            await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(req.body, null, 2), 'utf8');
+            // Always save to the active project's directory
+            await safeFs.safeWriteFullPath(activeProject, filePath, JSON.stringify(req.body, null, 2), 'utf8');
             res.json({ success: true });
         } catch (err) {
             console.error(`[GameData:${typeName}] Save error:`, err.message);
@@ -87,6 +132,52 @@ router.post('/fx/save', async (req, res) => {
         await safeFs.safeWriteFullPath(dir, path.join(dir, `${name}.json`), JSON.stringify(config, null, 2), 'utf8');
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: 'Save failed' }); }
+});
+
+// GET /api/templates/:category - Scan definitions for individual files to use as templates
+router.get('/templates/:category', async (req, res) => {
+    const { category } = req.params; // e.g., 'npc', 'enemy', 'item'
+    
+    try {
+        const isRoot = projectService.isRootProject();
+        const projectDir = path.join(projectService.getDunyalarPath(), 'definitions');
+        const engineDir = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions');
+        
+        const templates = new Map();
+
+        const scan = async (dir, source) => {
+            try {
+                const files = await fs.readdir(dir);
+                for (const file of files) {
+                    if (file.endsWith('.json') && 
+                        !['npcs.json', 'enemies.json', 'items.json', 'quests.json', 'skills.json', 'achievements.json', 'locales.json', 'variables.json', 'ui.json', 'music.json', 'campaign.json'].includes(file)) {
+                        
+                        try {
+                            const content = JSON.parse(await fs.readFile(path.join(dir, file), 'utf8'));
+                            // Basic heuristic to filter by category if needed, or just return all
+                            // For now, return all individual JSONs as templates
+                            templates.set(file.replace('.json', ''), {
+                                id: file.replace('.json', ''),
+                                name: content.name || file.replace('.json', ''),
+                                desc: content.description || `Template from ${source}`,
+                                data: content,
+                                source: source
+                            });
+                        } catch (e) {}
+                    }
+                }
+            } catch (e) {}
+        };
+
+        // 1. Scan engine
+        await scan(engineDir, 'engine');
+        // 2. Scan project (overrides engine)
+        if (!isRoot) await scan(projectDir, 'project');
+
+        res.json(Array.from(templates.values()));
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to list templates' });
+    }
 });
 
 module.exports = router;

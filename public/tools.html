@@ -93,13 +93,11 @@
             
             /* --- RUNNING STATE OVERRIDES --- */        .running-text { 
             color: #2ecc71 !important; 
-            text-shadow: 0 0 10px #27ae60 !important; 
-            filter: drop-shadow(0 0 2px #2ecc71) !important; 
             animation: green-glow 1.5s ease-in-out infinite alternate !important; 
         }
         @keyframes green-glow {
-            from { text-shadow: 0 0 5px #2ecc71, 0 0 10px #2ecc71; transform: scale(1); }
-            to { text-shadow: 0 0 10px #2ecc71, 0 0 20px #2ecc71, 0 0 30px #2ecc71; transform: scale(1.1); }
+            from { opacity: 0.8; }
+            to { opacity: 1; }
         }
         .running-btn { color: #2ecc71 !important; border-left-color: #2ecc71 !important; background: rgba(46, 204, 113, 0.1) !important; }
 
@@ -347,6 +345,7 @@
             flex-direction: column;
             transition: width 0.2s;
             overflow: hidden;
+            contain: layout;
         }
         #sidebar.collapsed { width: 0; border-right: none; }
         
@@ -359,6 +358,7 @@
             transition: width 0.2s;
             overflow-x: hidden;
             overflow-y: auto;
+            contain: layout;
         }
         #right-sidebar.collapsed { width: 0; border-left: none; }
 
@@ -524,49 +524,52 @@
         /* --- WORKSPACE --- */
         #workspace {
             flex-grow: 1;
-            background: var(--bg-deep);
+            background-color: #050508;
             position: relative;
             overflow: hidden;
-            background-image: radial-gradient(#182236 1px, transparent 1px);
-            background-size: 20px 20px;
             display: flex;
             flex-direction: column;
         }
 
-        #tab-bar {
-            height: 32px;
-            background: #0a0f1a;
-            border-bottom: 1px solid #1f2b42;
-            display: flex;
-            align-items: flex-end;
-            padding: 0 5px;
-            gap: 2px;
-            z-index: 5;
+        #studio-bg-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
         }
 
-        .tab {
-            padding: 0 15px;
-            height: 26px;
-            background: #162133;
-            border: 1px solid #1f2b42;
-            border-bottom: none;
-            color: #8fa0bc;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            border-radius: 4px 4px 0 0;
-            max-width: 150px;
-            white-space: nowrap;
+        #window-container {
+            flex-grow: 1;
+            position: relative;
             overflow: hidden;
-            text-overflow: ellipsis;
+            z-index: 2;
         }
-        .tab:hover { background: #1f2b42; color: #fff; }
-        .tab.active { background: #2c3e50; color: var(--accent); border-color: var(--accent); height: 28px; z-index: 2; }
-        .tab-close { font-size: 14px; color: #e74c3c; opacity: 0.5; }
-        .tab-close:hover { opacity: 1; }
 
+        #workspace-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+
+        #studio-minimap {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            width: 180px; height: 120px;
+            background: rgba(2,4,8,0.9);
+            border: 1px solid var(--accent);
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: crosshair;
+            display: flex; flex-direction: column;
+        }
+        #minimap-header {
+            height: 18px; background: #000; font-size: 9px; color: var(--accent);
+            display: flex; align-items: center; padding: 0 5px; text-transform: uppercase;
+            letter-spacing: 1px; border-bottom: 1px solid #1f2b42;
+        }
+        #minimap-canvas { flex-grow: 1; background: #020408; }
         /* --- INTERNAL WINDOWS --- */
         .window {
             position: absolute;
@@ -576,6 +579,8 @@
             display: flex;
             flex-direction: column;
             min-width: 200px; min-height: 150px; z-index: 10;
+            will-change: transform, left, top, width, height;
+            contain: layout;
         }
         .window.maximized {
             top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important;
@@ -594,15 +599,14 @@
         }
         .window-btn:hover { background: #34495e; }
         .window-btn.close:hover { background: #c0392b; }
-        .window-content { flex-grow: 1; background: #020408; }
-        iframe { width: 100%; height: 100%; border: none; }
+        .window-content { flex-grow: 1; background: #000; }
+        .window-content iframe { width: 100%; height: 100%; border: none; background: #000; display: block; }
         .window.dragging iframe { pointer-events: none; }
 
         /* --- PROJECT MODAL REDESIGN (PHASE 2) --- */
         #project-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2,4,8,0.95); z-index: 9999;
-            backdrop-filter: blur(8px);
+            background: rgba(2,4,8,0.98); z-index: 9999;
             display: flex; align-items: center; justify-content: center;
         }
         .modal-box {
@@ -731,8 +735,7 @@
         /* --- BUILD WIZARD MODAL --- */
         #build-wizard {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2,4,8,0.97); z-index: 10000;
-            backdrop-filter: blur(10px);
+            background: rgba(2,4,8,0.99); z-index: 10000;
             display: flex; align-items: center; justify-content: center;
         }
         .bw-box {
@@ -1255,7 +1258,7 @@
     <div id="quick-toolbar">
         <div class="toolbar-group">
             <button class="tool-btn" title="Open Project List (Ctrl+O)" onclick="openProjectManager()"><i class="fas fa-folder-open"></i></button>
-            <button class="tool-btn" title="Open Explorer" onclick="openExplorer(document.getElementById('sb-project-name').innerText.toLowerCase())"><i class="fas fa-folder"></i></button>
+            <button class="tool-btn" title="Open Explorer" onclick="openExplorer()"><i class="fas fa-folder"></i></button>
             <button class="tool-btn" title="Save All (Ctrl+S)" onclick="saveGlobalProject()"><i class="fas fa-save"></i></button>
             <button class="tool-btn" title="Project Settings" onclick="alert('Project Settings: Coming Soon')"><i class="fas fa-cog"></i></button>
         </div>
@@ -1270,8 +1273,8 @@
         
         <div class="toolbar-group">
             <button class="tool-btn primary" title="Run Game (F5)" onclick="playGame()"><i class="fas fa-play"></i></button>
-            <button class="tool-btn" title="Pause" onclick="alert('Pause functionality pending runtime link')"><i class="fas fa-pause"></i></button>
-            <button class="tool-btn" title="Stop" onclick="alert('Stop functionality pending runtime link')"><i class="fas fa-stop"></i></button>
+            <button class="tool-btn" title="Pause" onclick="pauseGame()"><i class="fas fa-pause"></i></button>
+            <button class="tool-btn" title="Stop" onclick="stopGame()"><i class="fas fa-stop"></i></button>
             <button class="tool-btn" title="Build Project" onclick="buildGame()"><i class="fas fa-hammer"></i></button>
         </div>
 
@@ -1281,6 +1284,7 @@
         </div>
 
         <div class="toolbar-group">
+            <button class="tool-btn" title="Tile Windows (Exposé)" onclick="tileWindows()"><i class="fas fa-th-large"></i></button>
             <button class="tool-btn" title="Toggle Left Sidebar" onclick="toggleSidebar()"><i class="fas fa-columns"></i></button>
             <button class="tool-btn" title="Toggle Right Sidebar" onclick="toggleRightSidebar()"><i class="fas fa-columns fa-flip-horizontal"></i></button>
             <button class="tool-btn" title="Fullscreen" onclick="toggleFullscreen()"><i class="fas fa-expand"></i></button>
@@ -1308,11 +1312,18 @@
 
         <!-- WORKSPACE -->
         <main id="workspace">
-            <div id="tab-bar">
-                <!-- Dynamic Tabs -->
+            <canvas id="studio-bg-canvas"></canvas>
+            
+            <div id="window-container">
+                <div id="workspace-canvas">
+                    <!-- Windows -->
+                </div>
             </div>
-            <div id="window-container" style="position:relative; flex-grow:1; overflow:hidden;">
-                <!-- Windows -->
+
+            <!-- STUDIO RADAR (Minimap) -->
+            <div id="studio-minimap" onclick="handleMinimapClick(event)">
+                <div id="minimap-header">Studio Radar</div>
+                <canvas id="minimap-canvas"></canvas>
             </div>
         </main>
 
@@ -1337,7 +1348,7 @@
                             <div class="cat-title">RUNTIME CONTROL</div>
                             <div class="dev-ops-grid">
                                 <div class="ops-btn" onclick="playGame()"><i class="fas fa-play" style="color:var(--green)"></i> PLAY</div>
-                                <div class="ops-btn" onclick="alert('Pause')"><i class="fas fa-pause" style="color:var(--accent)"></i> PAUSE</div>
+                                <div class="ops-btn" onclick="pauseGame()"><i class="fas fa-pause" style="color:var(--accent)"></i> PAUSE</div>
                                 <div class="ops-btn" onclick="location.reload()"><i class="fas fa-redo"></i> RESTART</div>
                                 <div class="ops-btn" onclick="toggleConsole()"><i class="fas fa-terminal"></i> LOGS</div>
                             </div>

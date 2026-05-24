@@ -114,6 +114,7 @@ class InteractiveCutsceneEditor {
         this.currentTool = 'select'; // Default tool
         this.selectedCharacter = null; // Currently selected character
         this.isDragging = false; // Drag state
+        this.currentBranch = 'main';
         
         this.assets = {
             sprites: new Map([
@@ -179,6 +180,42 @@ class InteractiveCutsceneEditor {
         
         console.log("Interactive Cutscene Editor ready");
         this.updateStatus("LOADED FOREST ENCOUNTER DEMO - PRESS SPACE TO PLAY");
+    }
+
+    getActiveTimeline() {
+        if (this.currentBranch && this.currentBranch !== 'main' && this.data.branches?.[this.currentBranch]) {
+            const branch = this.data.branches[this.currentBranch];
+            if (!Array.isArray(branch.tracks)) branch.tracks = [];
+            if (typeof branch.duration !== 'number' || branch.duration <= 0) {
+                branch.duration = this.data.timeline.duration || 30;
+            }
+            return branch;
+        }
+        if (!Array.isArray(this.data.timeline.tracks)) this.data.timeline.tracks = [];
+        return this.data.timeline;
+    }
+
+    getActiveTracks() {
+        return this.getActiveTimeline().tracks;
+    }
+
+    getActiveDuration() {
+        const duration = this.getActiveTimeline().duration;
+        return (typeof duration === 'number' && duration > 0) ? duration : (this.data.timeline.duration || 30);
+    }
+
+    getSelectedTrack() {
+        if (this.playback.selectedTrack === null) return null;
+        const tracks = this.getActiveTracks();
+        return tracks[this.playback.selectedTrack] || null;
+    }
+
+    sanitizeCutsceneId(raw) {
+        return String(raw || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]+/g, '_')
+            .replace(/^_+|_+$/g, '') || 'cutscene';
     }
     
     async loadExampleCutscene() {
@@ -366,7 +403,7 @@ class InteractiveCutsceneEditor {
             // Check if clicking on timeline scrub area (bottom 50px)
             if (y > this.dom.canvas.height - 50) {
                 const timePercentage = x / this.dom.canvas.width;
-                const seekTime = timePercentage * this.data.timeline.duration;
+                const seekTime = timePercentage * this.getActiveDuration();
                 this.seekTo(seekTime);
                 this.updateStatus(`SEEKED TO ${seekTime.toFixed(1)}s`);
                 return;
@@ -541,7 +578,7 @@ class InteractiveCutsceneEditor {
         this.dom.trackLanes.innerHTML = '<div id="playhead"></div>';
         
         // Add tracks
-        this.data.timeline.tracks.forEach((track, index) => {
+        this.getActiveTracks().forEach((track, index) => {
             this.addTrackToUI(track, index);
         });
     }
@@ -602,7 +639,7 @@ class InteractiveCutsceneEditor {
     
     updateTimeDisplay() {
         const current = this.formatTime(this.playback.currentTime);
-        const total = this.formatTime(this.data.timeline.duration);
+        const total = this.formatTime(this.getActiveDuration());
         this.dom.timeDisplay.textContent = `${current} / ${total}`;
     }
     
@@ -660,7 +697,8 @@ class InteractiveCutsceneEditor {
         
         if (this.playback.selectedKeyframe !== null && this.playback.selectedTrack !== null) {
             // Show keyframe properties
-            const track = this.data.timeline.tracks[this.playback.selectedTrack];
+            const track = this.getSelectedTrack();
+            if (!track) return;
             const keyframe = track.keyframes[this.playback.selectedKeyframe];
             
             inspector.innerHTML = `
@@ -668,25 +706,26 @@ class InteractiveCutsceneEditor {
                 <div class="form-group">
                     <label class="form-label">Time (seconds)</label>
                     <input type="number" class="form-input" value="${keyframe.time}" 
-                           onchange="this.editor.updateKeyframeProperty('time', parseFloat(this.value))">
+                           onchange="editor.updateKeyframeProperty('time', parseFloat(this.value))">
                 </div>
                 ${this.generatePropertiesUI(keyframe, track.type)}
             `;
         } else if (this.playback.selectedTrack !== null) {
             // Show track properties
-            const track = this.data.timeline.tracks[this.playback.selectedTrack];
+            const track = this.getSelectedTrack();
+            if (!track) return;
             
             inspector.innerHTML = `
                 <h4><i class="fas fa-cog"></i> Track Properties</h4>
                 <div class="form-group">
                     <label class="form-label">Name</label>
                     <input type="text" class="form-input" value="${track.name || ''}" 
-                           onchange="this.editor.updateTrackProperty('name', this.value)">
+                           onchange="editor.updateTrackProperty('name', this.value)">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Type</label>
                     <select class="form-select" value="${track.type}" 
-                            onchange="this.editor.updateTrackProperty('type', this.value)">
+                            onchange="editor.updateTrackProperty('type', this.value)">
                         <option value="actor">Actor</option>
                         <option value="interaction">Interaction</option>
                         <option value="audio">Audio</option>
@@ -695,7 +734,7 @@ class InteractiveCutsceneEditor {
                 <div class="form-group">
                     <label class="form-label">Visible</label>
                     <input type="checkbox" ${track.visible ? 'checked' : ''} 
-                           onchange="this.editor.updateTrackProperty('visible', this.checked)">
+                           onchange="editor.updateTrackProperty('visible', this.checked)">
                 </div>
             `;
         } else if (this.selectedCharacter) {
@@ -780,7 +819,7 @@ class InteractiveCutsceneEditor {
                     <h5><i class="fas fa-star"></i> DEMO: "${this.data.name}"</h5>
                     <p>${this.data.description}</p>
                     <div class="demo-stats">
-                        <span><i class="fas fa-clock"></i> ${this.data.timeline.duration}s</span>
+                        <span><i class="fas fa-clock"></i> ${this.getActiveDuration()}s</span>
                         <span><i class="fas fa-code-branch"></i> ${this.data.branches ? Object.keys(this.data.branches).length : 0} branches</span>
                         <span><i class="fas fa-list"></i> ${this.data.variables ? Object.keys(this.data.variables).length : 0} variables</span>
                     </div>
@@ -788,17 +827,17 @@ class InteractiveCutsceneEditor {
                 <div class="form-group">
                     <label class="form-label">Name</label>
                     <input type="text" class="form-input" value="${this.data.name}" 
-                           onchange="this.editor.updateCutsceneProperty('name', this.value)">
+                           onchange="editor.updateCutsceneProperty('name', this.value)">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Duration (seconds)</label>
-                    <input type="number" class="form-input" value="${this.data.timeline.duration}" 
-                           onchange="this.editor.updateCutsceneProperty('timeline.duration', parseFloat(this.value))">
+                    <input type="number" class="form-input" value="${this.getActiveDuration()}" 
+                           onchange="editor.updateCutsceneProperty('duration', parseFloat(this.value))">
                 </div>
                 <div class="form-group">
                     <label class="form-label">FPS</label>
                     <input type="number" class="form-input" value="${this.data.timeline.fps}" 
-                           onchange="this.editor.updateCutsceneProperty('timeline.fps', parseInt(this.value))">
+                           onchange="editor.updateCutsceneProperty('timeline.fps', parseInt(this.value, 10))">
                 </div>
             `;
         }
@@ -810,7 +849,7 @@ class InteractiveCutsceneEditor {
                 return `
                     <div class="form-group">
                         <label class="form-label">Sprite</label>
-                        <select class="form-select">
+                        <select class="form-select" onchange="editor.updateKeyframeProperty('properties.sprite', this.value)">
                             ${Array.from(this.assets.sprites.values()).map(sprite => 
                                 `<option value="${sprite.id}" ${keyframe.properties?.sprite === sprite.id ? 'selected' : ''}>${sprite.name}</option>`
                             ).join('')}
@@ -818,11 +857,13 @@ class InteractiveCutsceneEditor {
                     </div>
                     <div class="form-group">
                         <label class="form-label">X Position</label>
-                        <input type="number" class="form-input" value="${keyframe.properties?.x || 0}">
+                        <input type="number" class="form-input" value="${keyframe.properties?.x || 0}"
+                               onchange="editor.updateKeyframeProperty('properties.x', parseFloat(this.value))">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Y Position</label>
-                        <input type="number" class="form-input" value="${keyframe.properties?.y || 0}">
+                        <input type="number" class="form-input" value="${keyframe.properties?.y || 0}"
+                               onchange="editor.updateKeyframeProperty('properties.y', parseFloat(this.value))">
                     </div>
                 `;
             
@@ -830,7 +871,7 @@ class InteractiveCutsceneEditor {
                 return `
                     <div class="form-group">
                         <label class="form-label">Interaction Type</label>
-                        <select class="form-select">
+                        <select class="form-select" onchange="editor.updateKeyframeProperty('type', this.value)">
                             <option value="dialogue" ${keyframe.type === 'dialogue' ? 'selected' : ''}>Dialogue</option>
                             <option value="choice" ${keyframe.type === 'choice' ? 'selected' : ''}>Choice</option>
                             <option value="variable_set" ${keyframe.type === 'variable_set' ? 'selected' : ''}>Set Variable</option>
@@ -844,15 +885,16 @@ class InteractiveCutsceneEditor {
                 return `
                     <div class="form-group">
                         <label class="form-label">Audio File</label>
-                        <select class="form-select">
+                        <select class="form-select" onchange="editor.updateKeyframeProperty('properties.file', this.value)">
                             ${Array.from(this.assets.audio.values()).map(audio => 
-                                `<option value="${audio.id}" ${keyframe.properties?.file === audio.file ? 'selected' : ''}>${audio.name}</option>`
+                                `<option value="${audio.id}" ${(keyframe.properties?.file === audio.file || keyframe.properties?.file === audio.id) ? 'selected' : ''}>${audio.name}</option>`
                             ).join('')}
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Volume</label>
-                        <input type="range" min="0" max="1" step="0.1" value="${keyframe.properties?.volume || 1}">
+                        <input type="range" min="0" max="1" step="0.1" value="${keyframe.properties?.volume || 1}"
+                               onchange="editor.updateKeyframeProperty('properties.volume', parseFloat(this.value))">
                     </div>
                 `;
         }
@@ -863,7 +905,7 @@ class InteractiveCutsceneEditor {
         return `
             <div class="form-group">
                 <label class="form-label">Speaker</label>
-                <select class="form-select">
+                <select class="form-select" onchange="editor.updateKeyframeProperty('data.speaker', this.value)">
                     ${Array.from(this.assets.characters.values()).map(char => 
                         `<option value="${char.id}" ${data?.speaker === char.id ? 'selected' : ''}>${char.name}</option>`
                     ).join('')}
@@ -871,7 +913,17 @@ class InteractiveCutsceneEditor {
             </div>
             <div class="form-group">
                 <label class="form-label">Text</label>
-                <textarea class="form-input" rows="3">${data?.text || ''}</textarea>
+                <textarea class="form-input" rows="3" onchange="editor.updateKeyframeProperty('data.text', this.value)">${data?.text || ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Text Speed</label>
+                <input type="number" class="form-input" value="${data?.textSpeed ?? 35}" min="1" max="120"
+                       onchange="editor.updateKeyframeProperty('data.textSpeed', parseInt(this.value, 10))">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Auto Advance</label>
+                <input type="checkbox" ${data?.autoAdvance ? 'checked' : ''}
+                       onchange="editor.updateKeyframeProperty('data.autoAdvance', this.checked)">
             </div>
         `;
     }
@@ -939,7 +991,7 @@ class InteractiveCutsceneEditor {
         if (!character || !this.dom.ctx) return;
         
         const ctx = this.dom.ctx;
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (!track || track.keyframes.length < 2) return;
         
         // Draw path line connecting all keyframes
@@ -1014,7 +1066,7 @@ class InteractiveCutsceneEditor {
         const ctx = this.dom.ctx;
         
         // Find active keyframes at this time with interpolation
-        this.data.timeline.tracks.forEach(track => {
+        this.getActiveTracks().forEach(track => {
             if (track.type === 'actor') {
                 const position = this.getInterpolatedPosition(track, time);
                 if (position) {
@@ -1208,7 +1260,7 @@ class InteractiveCutsceneEditor {
     
     getActiveDialogue(time) {
         // Check interaction tracks for active dialogue
-        for (const track of this.data.timeline.tracks) {
+        for (const track of this.getActiveTracks()) {
             if (track.type === 'interaction') {
                 const keyframe = this.findActiveKeyframe(track, time);
                 if (keyframe && keyframe.type === 'dialogue') {
@@ -1365,7 +1417,8 @@ class InteractiveCutsceneEditor {
         ctx.strokeRect(20, scrubY, scrubWidth, scrubHeight);
         
         // Progress bar
-        const progress = time / this.data.timeline.duration;
+        const duration = this.getActiveDuration();
+        const progress = duration > 0 ? time / duration : 0;
         ctx.fillStyle = '#f1c40f';
         ctx.fillRect(20, scrubY, scrubWidth * progress, scrubHeight);
         
@@ -1380,7 +1433,7 @@ class InteractiveCutsceneEditor {
         ctx.textAlign = 'left';
         ctx.fillText('0s', 25, scrubY - 5);
         ctx.textAlign = 'right';
-        ctx.fillText(`${this.data.timeline.duration}s`, scrubWidth + 15, scrubY - 5);
+        ctx.fillText(`${duration}s`, scrubWidth + 15, scrubY - 5);
         
         // Click instruction
         ctx.textAlign = 'center';
@@ -1428,7 +1481,7 @@ class InteractiveCutsceneEditor {
         this.playback.selectedTrack = index;
         this.playback.selectedKeyframe = null;
         this.updateInspector();
-        this.updateStatus(`Track selected: ${this.data.timeline.tracks[index]?.name || `Track ${index + 1}`}`);
+        this.updateStatus(`Track selected: ${this.getActiveTracks()[index]?.name || `Track ${index + 1}`}`);
     }
     
     selectKeyframe(trackIndex, keyframeIndex) {
@@ -1441,7 +1494,7 @@ class InteractiveCutsceneEditor {
         let keyframeElement = null;
         let currentIndex = 0;
         
-        this.data.timeline.tracks.forEach((track, tIdx) => {
+        this.getActiveTracks().forEach((track, tIdx) => {
             track.keyframes?.forEach((kf, kIdx) => {
                 if (tIdx === trackIndex && kIdx === keyframeIndex) {
                     keyframeElement = keyframes[currentIndex];
@@ -1458,7 +1511,7 @@ class InteractiveCutsceneEditor {
         this.playback.selectedKeyframe = keyframeIndex;
         this.updateInspector();
         
-        const keyframe = this.data.timeline.tracks[trackIndex]?.keyframes[keyframeIndex];
+        const keyframe = this.getActiveTracks()[trackIndex]?.keyframes[keyframeIndex];
         this.updateStatus(`Keyframe selected: ${keyframe?.type || 'keyframe'} at ${keyframe?.time?.toFixed(1)}s`);
     }
     
@@ -1491,6 +1544,13 @@ class InteractiveCutsceneEditor {
             this.updateStatus(`Branch not found: ${branchId}`);
             this.currentBranch = oldBranch;
         }
+
+        if (this.playback.selectedTrack !== null && !this.getSelectedTrack()) {
+            this.playback.selectedTrack = null;
+            this.playback.selectedKeyframe = null;
+        }
+        this.seekTo(this.playback.currentTime);
+        this.updateUI();
     }
     
     deleteBranch(branchId) {
@@ -1562,7 +1622,7 @@ class InteractiveCutsceneEditor {
     }
     
     seekTo(time) {
-        this.playback.currentTime = Math.max(0, Math.min(time, this.data.timeline.duration));
+        this.playback.currentTime = Math.max(0, Math.min(time, this.getActiveDuration()));
         this.updatePlayhead();
         this.updateTimeDisplay();
         this.renderCanvasPreview(); // Update canvas when seeking
@@ -1573,7 +1633,7 @@ class InteractiveCutsceneEditor {
         
         this.playback.currentTime += 1/60; // 60 FPS
         
-        if (this.playback.currentTime >= this.data.timeline.duration) {
+        if (this.playback.currentTime >= this.getActiveDuration()) {
             this.stop();
             return;
         }
@@ -1598,6 +1658,126 @@ class InteractiveCutsceneEditor {
         const secs = (seconds % 60).toFixed(1);
         return `${mins.toString().padStart(2, '0')}:${secs.padStart(4, '0')}`;
     }
+
+    setValueAtPath(target, path, value) {
+        const parts = String(path || '').split('.');
+        if (!parts.length) return;
+        let cursor = target;
+        for (let i = 0; i < parts.length - 1; i++) {
+            const part = parts[i];
+            if (cursor[part] === undefined || cursor[part] === null || typeof cursor[part] !== 'object') {
+                cursor[part] = {};
+            }
+            cursor = cursor[part];
+        }
+        cursor[parts[parts.length - 1]] = value;
+    }
+
+    updateKeyframeProperty(path, value) {
+        const track = this.getSelectedTrack();
+        if (!track || this.playback.selectedKeyframe === null) return;
+        const keyframe = track.keyframes?.[this.playback.selectedKeyframe];
+        if (!keyframe) return;
+
+        this.setValueAtPath(keyframe, path, value);
+        if (!keyframe.data && track.type === 'interaction') {
+            keyframe.data = {};
+        }
+        this.updateUI();
+        this.updateStatus(`UPDATED KEYFRAME ${path.toUpperCase()}`);
+    }
+
+    updateTrackProperty(path, value) {
+        const track = this.getSelectedTrack();
+        if (!track) return;
+
+        this.setValueAtPath(track, path, value);
+        this.updateUI();
+        this.updateStatus(`UPDATED TRACK ${path.toUpperCase()}`);
+    }
+
+    updateCutsceneProperty(path, value) {
+        if (path === 'duration') {
+            this.getActiveTimeline().duration = Number(value) || 30;
+        } else if (path === 'timeline.fps') {
+            this.data.timeline.fps = Number(value) || 60;
+        } else {
+            this.setValueAtPath(this.data, path, value);
+        }
+        this.seekTo(this.playback.currentTime);
+        this.updateUI();
+        this.updateStatus(`UPDATED CUTSCENE ${path.toUpperCase()}`);
+    }
+
+    async listCutsceneFiles() {
+        const response = await fetch('/api/ide/list?dir=dunyalar/definitions/interactive_cutscenes');
+        if (!response.ok) {
+            throw new Error('Could not list cutscene files');
+        }
+        const files = await response.json();
+        return files
+            .filter(file => !file.isDirectory && file.name.endsWith('.json'))
+            .map(file => file.name)
+            .sort((a, b) => a.localeCompare(b));
+    }
+
+    normalizeLoadedCutscene(data, fallbackId = 'cutscene') {
+        const normalized = data && typeof data === 'object' ? data : {};
+        normalized.id = this.sanitizeCutsceneId(normalized.id || normalized.name || fallbackId);
+        normalized.name = normalized.name || normalized.id;
+        if (!normalized.timeline || typeof normalized.timeline !== 'object') {
+            normalized.timeline = { duration: 30, fps: 60, tracks: [] };
+        }
+        if (!Array.isArray(normalized.timeline.tracks)) normalized.timeline.tracks = [];
+        if (!normalized.timeline.duration) normalized.timeline.duration = 30;
+        if (!normalized.timeline.fps) normalized.timeline.fps = 60;
+        if (!normalized.variables || typeof normalized.variables !== 'object') normalized.variables = {};
+        if (!normalized.branches || typeof normalized.branches !== 'object') normalized.branches = {};
+        return normalized;
+    }
+
+    normalizeTimelineSchema(timeline) {
+        if (!timeline || !Array.isArray(timeline.tracks)) return;
+        timeline.tracks.forEach(track => {
+            if (!Array.isArray(track.keyframes)) track.keyframes = [];
+            track.keyframes.forEach(keyframe => {
+                if (typeof keyframe.time !== 'number') keyframe.time = Number(keyframe.time) || 0;
+                if (track.type === 'interaction') {
+                    if (!keyframe.data || typeof keyframe.data !== 'object') keyframe.data = {};
+                    if (keyframe.type && !keyframe.data.type) keyframe.data.type = keyframe.type;
+                    if (!keyframe.type && keyframe.data.type) keyframe.type = keyframe.data.type;
+                }
+            });
+            track.keyframes.sort((a, b) => a.time - b.time);
+        });
+    }
+
+    normalizeCutsceneSchema() {
+        this.normalizeTimelineSchema(this.data.timeline);
+        Object.keys(this.data.branches || {}).forEach(branchId => {
+            this.normalizeTimelineSchema(this.data.branches[branchId]);
+        });
+    }
+
+    async loadCutsceneFile(fileName) {
+        const filePath = `dunyalar/definitions/interactive_cutscenes/${fileName}`;
+        const response = await fetch(`/api/ide/read?file=${encodeURIComponent(filePath)}`);
+        if (!response.ok) {
+            throw new Error(`Could not read ${fileName}`);
+        }
+        const content = await response.text();
+        const parsed = JSON.parse(content);
+        const fallbackId = fileName.replace(/\.json$/i, '');
+        this.data = this.normalizeLoadedCutscene(parsed, fallbackId);
+        this.normalizeCutsceneSchema();
+        this.currentBranch = 'main';
+        this.playback.currentTime = 0;
+        this.playback.selectedTrack = null;
+        this.playback.selectedKeyframe = null;
+        this.selectedCharacter = null;
+        this.updateUI();
+        this.updateStatus(`LOADED: ${this.data.name}`);
+    }
     
     updateStatus(message) {
         document.getElementById('status-info').textContent = message.toUpperCase();
@@ -1610,11 +1790,68 @@ class InteractiveCutsceneEditor {
         }
     }
     
-    openCutscene() {
-        this.updateStatus("OPENING CUTSCENE - FEATURE COMING SOON");
+    async openCutscene() {
+        try {
+            const files = await this.listCutsceneFiles();
+            if (!files.length) {
+                this.updateStatus('NO SAVED CUTSCENES FOUND');
+                return;
+            }
+
+            const menu = files.map((name, idx) => `${idx + 1}. ${name}`).join('\n');
+            const pick = prompt(`OPEN CUTSCENE:\n${menu}\n\nEnter number or filename:`);
+            if (!pick) return;
+
+            const trimmed = pick.trim();
+            const index = Number.parseInt(trimmed, 10);
+            let fileName = Number.isInteger(index) && index > 0 && index <= files.length
+                ? files[index - 1]
+                : trimmed;
+            if (!fileName.endsWith('.json')) fileName += '.json';
+            if (!files.includes(fileName)) {
+                this.updateStatus(`CUTSCENE NOT FOUND: ${fileName}`);
+                return;
+            }
+
+            await this.loadCutsceneFile(fileName);
+        } catch (error) {
+            console.error('[InteractiveCutscene] Open failed:', error);
+            this.updateStatus('FAILED TO OPEN CUTSCENE');
+        }
     }
     
-    saveCutscene() {
+    async saveCutscene(saveAs = false) {
+        this.normalizeCutsceneSchema();
+        const currentId = this.sanitizeCutsceneId(this.data.id || this.data.name);
+        let fileStem = currentId;
+        if (saveAs) {
+            const input = prompt('SAVE CUTSCENE AS (without extension):', currentId);
+            if (!input) return;
+            fileStem = this.sanitizeCutsceneId(input);
+        }
+
+        this.data.id = fileStem;
+        if (!this.data.name) this.data.name = fileStem;
+        const fileName = `${fileStem}.json`;
+        const filePath = `dunyalar/definitions/interactive_cutscenes/${fileName}`;
+
+        const serialized = JSON.stringify(this.data, null, 2);
+        let savedToFile = false;
+
+        try {
+            const response = await fetch('/api/ide/write', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file: filePath, content: serialized })
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            savedToFile = true;
+        } catch (error) {
+            console.error('[InteractiveCutscene] Save to file failed:', error);
+        }
+
         // Save to shared project state
         if (projectState) {
             projectState.set(`cutscenes.${this.data.id}`, this.data);
@@ -1629,18 +1866,32 @@ class InteractiveCutsceneEditor {
             });
         }
         
-        // Legacy API fallback
-        if (window.cutsceneAPI) {
-            window.cutsceneAPI.saveCutscene(this.data).then(result => {
-                this.updateStatus(`SAVED: ${this.data.name}`);
-            });
-        } else {
-            this.updateStatus(`SAVED: ${this.data.name} (Local State)`);
+        if (!savedToFile && window.cutsceneAPI) {
+            try {
+                await window.cutsceneAPI.saveCutscene(this.data);
+            } catch (error) {
+                console.error('[InteractiveCutscene] Legacy save failed:', error);
+            }
         }
+
+        this.updateStatus(savedToFile
+            ? `SAVED: ${this.data.name} (${fileName})`
+            : `SAVED TO LOCAL STATE: ${this.data.name}`);
     }
     
     exportCutscene() {
-        this.updateStatus("EXPORT FEATURE COMING SOON");
+        this.normalizeCutsceneSchema();
+        const fileName = `${this.sanitizeCutsceneId(this.data.id || this.data.name)}.json`;
+        const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        this.updateStatus(`EXPORTED: ${fileName}`);
     }
     
     undo() {
@@ -1681,7 +1932,7 @@ class InteractiveCutsceneEditor {
     
     deleteSelected() {
         if (this.playback.selectedKeyframe !== null) {
-            const track = this.data.timeline.tracks[this.playback.selectedTrack];
+            const track = this.getSelectedTrack();
             if (track && track.keyframes) {
                 track.keyframes.splice(this.playback.selectedKeyframe, 1);
                 this.playback.selectedKeyframe = null;
@@ -1690,7 +1941,7 @@ class InteractiveCutsceneEditor {
             }
         } else if (this.playback.selectedTrack !== null) {
             if (confirm('DELETE SELECTED TRACK?')) {
-                this.data.timeline.tracks.splice(this.playback.selectedTrack, 1);
+                this.getActiveTracks().splice(this.playback.selectedTrack, 1);
                 this.playback.selectedTrack = null;
                 this.updateUI();
                 this.updateStatus("TRACK DELETED");
@@ -1700,7 +1951,7 @@ class InteractiveCutsceneEditor {
     
     clearTimeline() {
         if (confirm('CLEAR ENTIRE TIMELINE?')) {
-            this.data.timeline.tracks = [];
+            this.getActiveTimeline().tracks = [];
             this.playback.selectedTrack = null;
             this.playback.selectedKeyframe = null;
             this.updateUI();
@@ -1710,13 +1961,23 @@ class InteractiveCutsceneEditor {
     
     addKeyframe() {
         if (this.playback.selectedTrack !== null) {
-            const track = this.data.timeline.tracks[this.playback.selectedTrack];
+            const track = this.getSelectedTrack();
             if (track) {
                 const keyframe = {
                     time: this.playback.currentTime,
-                    properties: {},
-                    type: track.type === 'interaction' ? 'dialogue' : undefined
+                    properties: {}
                 };
+                if (track.type === 'interaction') {
+                    keyframe.type = 'dialogue';
+                    keyframe.data = {
+                        type: 'dialogue',
+                        speaker: 'Character',
+                        text: 'New dialogue text...',
+                        textSpeed: 35,
+                        autoAdvance: false,
+                        choices: []
+                    };
+                }
                 
                 if (!track.keyframes) track.keyframes = [];
                 track.keyframes.push(keyframe);
@@ -1787,7 +2048,12 @@ class InteractiveCutsceneEditor {
                 this.updateStatus(`VALIDATION FAILED: ${validation.errors.length} ERRORS`);
                 console.error("Validation errors:", validation.errors);
             }
+            return;
         }
+
+        const hasTracks = Array.isArray(this.getActiveTracks());
+        const hasDuration = typeof this.getActiveDuration() === 'number' && this.getActiveDuration() > 0;
+        this.updateStatus(hasTracks && hasDuration ? 'VALIDATION PASSED' : 'VALIDATION FAILED');
     }
     
     showDocs() {
@@ -1801,12 +2067,13 @@ class InteractiveCutsceneEditor {
     // New editing tools
     addDialogue() {
         if (this.playback.selectedTrack !== null) {
-            const track = this.data.timeline.tracks[this.playback.selectedTrack];
+            const track = this.getSelectedTrack();
             if (track && track.type === 'interaction') {
                 const dialogueKeyframe = {
                     time: this.playback.currentTime,
                     type: 'dialogue',
                     data: {
+                        type: 'dialogue',
                         speaker: 'Character',
                         text: 'New dialogue text...',
                         textSpeed: 35,
@@ -1831,7 +2098,7 @@ class InteractiveCutsceneEditor {
     
     addChoice() {
         if (this.playback.selectedTrack !== null && this.playback.selectedKeyframe !== null) {
-            const track = this.data.timeline.tracks[this.playback.selectedTrack];
+            const track = this.getSelectedTrack();
             const keyframe = track.keyframes[this.playback.selectedKeyframe];
             
             if (keyframe && keyframe.type === 'dialogue') {
@@ -1889,10 +2156,11 @@ class InteractiveCutsceneEditor {
     // Character movement methods
     getCharacterAt(x, y) {
         const tolerance = 20; // Click tolerance radius
+        const tracks = this.getActiveTracks();
         
         // Check each actor track for characters at current time
-        for (let i = 0; i < this.data.timeline.tracks.length; i++) {
-            const track = this.data.timeline.tracks[i];
+        for (let i = 0; i < tracks.length; i++) {
+            const track = tracks[i];
             if (track.type === 'actor') {
                 const position = this.getInterpolatedPosition(track, this.playback.currentTime);
                 if (position) {
@@ -1919,7 +2187,7 @@ class InteractiveCutsceneEditor {
         if (!character) return;
         
         // Update the character's current position for real-time feedback
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (track) {
             // Find or create keyframe at current time
             let keyframeIndex = -1;
@@ -1960,7 +2228,7 @@ class InteractiveCutsceneEditor {
     createMovementKeyframe(character) {
         if (!character) return;
         
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (track) {
             this.updateStatus(`MOVEMENT KEYFRAME CREATED FOR ${character.name} AT ${this.playback.currentTime.toFixed(1)}s`);
         }
@@ -2028,7 +2296,7 @@ class InteractiveCutsceneEditor {
         
         // Create keyframes for a curved movement path
         const character = this.selectedCharacter;
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (!track) return;
         
         const canvas = this.dom.canvas;
@@ -2073,7 +2341,7 @@ class InteractiveCutsceneEditor {
         }
         
         const character = this.selectedCharacter;
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (!track) return;
         
         // Find keyframe at current time
@@ -2097,7 +2365,7 @@ class InteractiveCutsceneEditor {
         }
         
         const character = this.selectedCharacter;
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (!track) return;
         
         // Find and remove keyframe at current time
@@ -2118,7 +2386,7 @@ class InteractiveCutsceneEditor {
         if (!this.selectedCharacter) return;
         
         const character = this.selectedCharacter;
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (!track) return;
         
         // Update easing for keyframe at current time
@@ -2137,7 +2405,7 @@ class InteractiveCutsceneEditor {
         if (!this.selectedCharacter) return;
         
         const character = this.selectedCharacter;
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (!track) return;
         
         // Update speed by adjusting time differences between keyframes
@@ -2170,7 +2438,7 @@ class InteractiveCutsceneEditor {
         }
         
         const character = this.selectedCharacter;
-        const track = this.data.timeline.tracks[character.trackIndex];
+        const track = this.getActiveTracks()[character.trackIndex];
         if (!track) return;
         
         // Create new keyframe at current time with clipboard data
@@ -2218,6 +2486,10 @@ function exportCutscene() {
     if (editor) editor.exportCutscene();
 }
 
+function saveCutsceneAs() {
+    if (editor) editor.saveCutscene(true);
+}
+
 function undo() {
     if (editor) editor.undo();
 }
@@ -2228,6 +2500,22 @@ function redo() {
 
 function deleteSelected() {
     if (editor) editor.deleteSelected();
+}
+
+function selectTool() {
+    if (editor) editor.selectTool();
+}
+
+function moveKeyframe() {
+    if (editor) editor.moveKeyframe();
+}
+
+function addDialogue() {
+    if (editor) editor.addDialogue();
+}
+
+function addChoice() {
+    if (editor) editor.addChoice();
 }
 
 function clearTimeline() {
@@ -2243,11 +2531,16 @@ function toggleGrid() {
 }
 
 // Integration helper functions
-function loadCutsceneById(cutsceneId) {
+async function loadCutsceneById(cutsceneId) {
     if (editor && projectState) {
         const cutsceneData = projectState.get(`cutscenes.${cutsceneId}`);
         if (cutsceneData) {
-            editor.data = cutsceneData;
+            editor.data = editor.normalizeLoadedCutscene(cutsceneData, cutsceneId);
+            editor.normalizeCutsceneSchema();
+            editor.currentBranch = 'main';
+            editor.playback.currentTime = 0;
+            editor.playback.selectedTrack = null;
+            editor.playback.selectedKeyframe = null;
             editor.updateUI();
             editor.updateStatus(`LOADED: ${cutsceneData.name}`);
             
@@ -2260,7 +2553,11 @@ function loadCutsceneById(cutsceneId) {
                 });
             }
         } else {
-            editor.updateStatus(`CUTSCENE NOT FOUND: ${cutsceneId}`);
+            try {
+                await editor.loadCutsceneFile(`${editor.sanitizeCutsceneId(cutsceneId)}.json`);
+            } catch {
+                editor.updateStatus(`CUTSCENE NOT FOUND: ${cutsceneId}`);
+            }
         }
     }
 }
@@ -2380,7 +2677,7 @@ function addTrack(type) {
         keyframes: []
     };
     
-    editor.data.timeline.tracks.push(track);
+    editor.getActiveTracks().push(track);
     editor.updateUI();
     editor.updateStatus(`${type.toUpperCase()} TRACK ADDED`);
 }
@@ -2388,7 +2685,8 @@ function addTrack(type) {
 function addBranch() {
     if (!editor) return;
     
-    const branchId = prompt('ENTER BRANCH NAME:');
+    const input = prompt('ENTER BRANCH NAME:');
+    const branchId = input ? editor.sanitizeCutsceneId(input) : '';
     if (branchId && !editor.data.branches[branchId]) {
         editor.data.branches[branchId] = {
             duration: 10.0,
@@ -2501,38 +2799,50 @@ async function importProjectAssets() {
     
     try {
         editor.updateStatus("IMPORTING PROJECT ASSETS...");
-        
-        // Try to load sprites from current project
-        const projectSprites = await fetch('/public/sprite-art').catch(() => null);
-        if (projectSprites && projectSprites.ok) {
-            // Implementation would scan the sprite-art directory
-            editor.updateStatus("PROJECT SPRITES IMPORTED");
-        }
-        
-        // Try to load audio from current project
-        const projectAudio = await fetch('/public/muzikler').catch(() => null);
-        if (projectAudio && projectAudio.ok) {
-            // Implementation would scan the muzikler directory
-            editor.updateStatus("PROJECT AUDIO IMPORTED");
-        }
-        
-        // For now, add some mock project assets as demonstration
-        const projectAssets = [
-            { type: 'sprite', id: 'project_hero', name: 'Project Hero', file: 'hero.png' },
-            { type: 'sprite', id: 'project_npc', name: 'Project NPC', file: 'npc.png' },
-            { type: 'audio', id: 'project_theme', name: 'Project Theme', file: 'theme.ogg' }
-        ];
-        
-        projectAssets.forEach(asset => {
-            if (asset.type === 'sprite') {
-                editor.assets.sprites.set(asset.id, { ...asset, type: 'project' });
-            } else if (asset.type === 'audio') {
-                editor.assets.audio.set(asset.id, { ...asset, type: 'project' });
-            }
-        });
+
+        const listDir = async (dir) => {
+            const response = await fetch(`/api/ide/list?dir=${encodeURIComponent(dir)}`);
+            if (!response.ok) return [];
+            const entries = await response.json();
+            return entries.filter(item => !item.isDirectory).map(item => item.name);
+        };
+
+        const spriteFiles = await listDir('sprite-art');
+        const audioFiles = await listDir('muzikler');
+
+        let importedCount = 0;
+        spriteFiles
+            .filter(name => /\.(png|jpe?g|gif|webp)$/i.test(name))
+            .forEach(name => {
+                const id = `project_sprite_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+                if (!editor.assets.sprites.has(id)) {
+                    editor.assets.sprites.set(id, {
+                        id,
+                        name: name.replace(/\.[^/.]+$/, ''),
+                        file: name,
+                        type: 'project'
+                    });
+                    importedCount++;
+                }
+            });
+
+        audioFiles
+            .filter(name => /\.(ogg|mp3|wav|m4a)$/i.test(name))
+            .forEach(name => {
+                const id = `project_audio_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+                if (!editor.assets.audio.has(id)) {
+                    editor.assets.audio.set(id, {
+                        id,
+                        name: name.replace(/\.[^/.]+$/, ''),
+                        file: name,
+                        type: 'project'
+                    });
+                    importedCount++;
+                }
+            });
         
         editor.updateAssetLists();
-        editor.updateStatus("PROJECT ASSETS IMPORTED SUCCESSFULLY");
+        editor.updateStatus(`PROJECT ASSETS IMPORTED: ${importedCount}`);
         
     } catch (error) {
         console.error("Error importing project assets:", error);

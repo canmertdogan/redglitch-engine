@@ -16,7 +16,7 @@
 ### 2. ✅ Enhanced Local AI Settings
 New settings panel includes:
 - **Model Selection**: 3 model options
-  - Qwen2.5-Coder-0.5B (Fast)
+  - Qwen2.5-Coder-3B (Powerful)
   - Phi-3-mini-4k (Balanced)
   - Llama-3.2-1B (Quality)
 - **Temperature Control**: 0-2 slider (creativity level)

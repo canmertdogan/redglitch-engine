@@ -20,7 +20,7 @@ class SharedProjectState {
             this.setupEventListeners();
         }
         
-        this.init();
+        this.ready = this.init();
     }
 
     async init() {
@@ -31,11 +31,26 @@ class SharedProjectState {
         // Start auto-save
         this.startAutoSave();
         
-        // Listen for window unload to save
+        // Listen for window unload to save safely
         if (typeof window !== 'undefined') {
             window.addEventListener('beforeunload', () => {
-                if (this.isDirty) {
-                    this.saveProject();
+                if (this.isDirty && this.projectName) {
+                    // Save to local storage synchronously as fallback
+                    const localData = {
+                        state: this.state,
+                        metadata: {
+                            ...this.metadata,
+                            lastModified: Date.now(),
+                            version: (this.metadata.version || 0) + 1
+                        }
+                    };
+                    localStorage.setItem(`ketebe_project_${this.projectName}_backup`, JSON.stringify(localData));
+                    
+                    // Attempt network save via sendBeacon (fire-and-forget, non-blocking)
+                    if (navigator.sendBeacon) {
+                        const url = `/api/project/${encodeURIComponent(this.projectName)}/state`;
+                        navigator.sendBeacon(url, JSON.stringify(localData));
+                    }
                 }
             });
         }

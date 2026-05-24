@@ -167,7 +167,7 @@
             'engines/rpg-topdown/input.js',
             'engines/rpg-topdown/saveSystem.js',
             'engines/rpg-topdown/mapSystem.js',
-            'engines/rpg-topdown/achievementSystem.js',
+            'shared/AchievementSystem.js',
             'engines/rpg-topdown/fxSystem.js',
             'engines/rpg-topdown/audioSystem.js',
             'engines/rpg-topdown/console.js',
@@ -176,6 +176,10 @@
             'engines/rpg-topdown/stateMachine.js',
             'engines/rpg-topdown/BrainRuntime.js',
             'engines/rpg-topdown/NPC.js',
+            'engines/rpg-topdown/MenuSystem.js',
+            'engines/rpg-topdown/Entities.js',
+            'engines/rpg-topdown/WeatherSystem.js',
+            'engines/rpg-topdown/Core.js',
             'engines/rpg-topdown/main.js'
         ],
         'iso-pixel': [

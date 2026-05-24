@@ -57,7 +57,7 @@ window.QuestSystem = class QuestSystem {
         // Start Quest
         this.active[questId] = { stage: 0, progress: 0 };
         this.game.uiSystem.showNotification(`Quest Accepted: ${def.title}`, 'success');
-        this.game.audio.play('quest_accept'); // Assuming generic sound exists or fallback
+        if (this.game.audio) this.game.audio.play('quest_accept'); // Assuming generic sound exists or fallback
         return true;
     }
 
@@ -81,7 +81,7 @@ window.QuestSystem = class QuestSystem {
         this.completed.push(questId);
         
         this.game.uiSystem.showNotification(`Quest Complete: ${def.title}`, 'gold');
-        this.game.audio.play('quest_complete');
+        if (this.game.audio) this.game.audio.play('quest_complete');
     }
 
     // --- EVENT HANDLING ---

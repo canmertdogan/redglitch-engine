@@ -143,6 +143,14 @@ window.IRAB = {
         };
         
         console.log("[IRAB] MSN UI Ready.");
+        
+        window.addEventListener('beforeunload', () => this.destroy());
+    },
+    
+    destroy() {
+        if (this.ismsInterval) clearInterval(this.ismsInterval);
+        if (this._flushInterval) clearInterval(this._flushInterval);
+        if (this.balloonTimer) clearTimeout(this.balloonTimer);
     },
 
     _directNavigate(target) {

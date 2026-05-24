@@ -218,6 +218,10 @@ class AssetManager {
         } = assetData;
 
         // Fix path: strip 'projects/Name/' prefix to use virtual server routes
+        // Ensure compatibility with Electron file:// protocol by avoiding absolute root '/'
+        const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
+        const prefix = isFileProtocol ? './' : '/';
+        
         let assetPath = rawPath;
         if (assetPath && assetPath.startsWith('projects/')) {
             const parts = assetPath.split('/');
@@ -225,11 +229,13 @@ class AssetManager {
             if (parts.length > 2) {
                 const folder = parts[2];
                 if (['dunyalar', 'muzikler', 'assets', 'data', 'sprite-art'].includes(folder)) {
-                    assetPath = '/' + parts.slice(2).join('/');
+                    assetPath = prefix + parts.slice(2).join('/');
                 }
             }
-        } else if (assetPath && !assetPath.startsWith('http') && !assetPath.startsWith('/')) {
-            assetPath = '/' + assetPath;
+        } else if (assetPath && !assetPath.startsWith('http') && !assetPath.startsWith('/') && !assetPath.startsWith('./')) {
+            assetPath = prefix + assetPath;
+        } else if (isFileProtocol && assetPath && assetPath.startsWith('/')) {
+            assetPath = '.' + assetPath;
         }
 
         const asset = {

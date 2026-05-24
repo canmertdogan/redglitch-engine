@@ -12,7 +12,7 @@ window.IRAB = {
         saveHistory: true,
         apiKey: '',
         // Local AI settings
-        localModel: 'onnx-community/Qwen2.5-Coder-0.5B-Instruct',
+        localModel: 'onnx-community/Qwen2.5-Coder-3B-Instruct',
         temperature: 0.7,
         maxTokens: 128,
         topP: 0.9,

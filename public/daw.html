@@ -2,259 +2,297 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>KETEBE AUDIO STUDIO</title>
+    <title>KETEBE AUDIO DIRECTOR PRO - ULTRA HD</title>
     <link href="fonts/fonts.css" rel="stylesheet">
-    <link rel="stylesheet" href="pixel_scrollbars.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="daw/pixel-theme.css">
+    <link rel="stylesheet" href="daw/v6-premium.css">
     <style>
-        /* Local Overrides */
-        #daw-logo {
-            color: var(--accent); font-weight: bold; padding: 0 15px; 
-            border-right: 2px solid var(--border); margin-right: 10px; 
-            font-size: 1.3rem; letter-spacing: 2px; display: flex; align-items: center; gap: 10px;
+        /* --- V6 COMPONENT OVERRIDES --- */
+        #top-bar {
+            height: 48px; background: var(--bg-header); border-bottom: 1px solid var(--border-premium);
+            display: flex; align-items: center; padding: 0 20px; justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        #main-container { flex: 1; display: flex; overflow: hidden; padding: 10px; gap: 10px; background: var(--bg-obsidian); }
+
+        .pane-v6 { 
+            display: flex; flex-direction: column; 
+            background: var(--bg-panel); border-radius: 8px; 
+            border: 1px solid var(--border-premium);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+
+        #left-explorer { width: 300px; }
+        #center-workspace { flex: 1; }
+        #right-inspector { width: 360px; }
+
+        #bottom-mixer {
+            height: 220px; margin: 0 10px 10px 10px;
+        }
+
+        .header-v6 {
+            height: 36px; padding: 0 15px; display: flex; align-items: center;
+            border-bottom: 1px solid var(--border-premium);
+            background: rgba(255,255,255,0.02);
+            font-family: var(--font-vignette); font-size: 20px; color: var(--gold);
+            letter-spacing: 1px;
+        }
+
+        /* --- INTERACTIVE GRID --- */
+        .grid-bg {
+            background-image: radial-gradient(rgba(241, 196, 15, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* --- KNOB STYLING --- */
+        .knob-value { font-family: var(--font-mono); font-size: 14px; color: var(--gold); margin-top: 5px; }
+
+        /* --- MIXER RE-SKIN --- */
+        .mixer-v6-strip {
+            width: 100px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-premium);
+            border-radius: 4px; display: flex; flex-direction: column; align-items: center; padding: 15px 5px;
+            position: relative;
+        }
+        .mixer-v6-strip::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .fader-slot {
+            width: 8px; height: 100px; background: #000; border-radius: 4px; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,1); position: relative; margin: 15px 0;
+        }
+        .fader-knob {
+            width: 32px; height: 16px; background: #333; border: 2px solid var(--gold);
+            border-radius: 3px; position: absolute; left: -12px; cursor: ns-resize;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+        }
+
+        /* --- SPECTRUM --- */
+        .spectrum-container {
+            height: 180px; background: #000; border: 1px solid var(--border-premium);
+            border-radius: 4px; position: relative; overflow: hidden; margin-bottom: 20px;
         }
         
-        /* Ensure Split View for Center Panel */
-        #center-panel { display: flex; flex-direction: column; overflow: hidden; }
+        /* --- UTILS --- */
+        .btn-v6 {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border-premium);
+            color: #fff; padding: 6px 20px; border-radius: 4px; font-family: var(--font-vignette);
+            font-size: 18px; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-v6:hover { background: var(--gold); color: #000; box-shadow: 0 0 20px var(--gold-glow); }
+        .btn-v6.primary { background: var(--gold); color: #000; font-weight: bold; }
         
-        /* Transport Controls in Toolbar */
-        .transport-group { display: flex; gap: 5px; align-items: center; }
-        
-        #timeline-ruler { flex-shrink: 0; }
-        
-        /* Custom Scrollbar for Tracks */
-        #track-headers::-webkit-scrollbar { width: 0; } /* Hide scrollbar for headers, sync with lanes via JS */
+        .tab-btn-v6 {
+            flex: 1; padding: 10px; border: none; background: transparent; color: #555;
+            font-family: var(--font-vignette); font-size: 16px; cursor: pointer;
+            border-bottom: 2px solid transparent; transition: all 0.3s;
+        }
+        .tab-btn-v6.active { color: var(--gold); border-bottom-color: var(--gold); background: rgba(241, 196, 15, 0.05); }
+
+        .variation-row {
+            background: rgba(255,255,255,0.02); border: 1px solid var(--border-premium);
+            padding: 10px 15px; border-radius: 4px; display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 8px; transition: background 0.2s;
+        }
+        .variation-row:hover { background: rgba(255,255,255,0.05); }
     </style>
 </head>
-<body>
+<body class="grid-bg">
 
-    <!-- MENUBAR -->
-    <div id="menubar">
-        <div id="daw-logo">
-            <i class="fas fa-music"></i> KETEBE AUDIO
-        </div>
-        <div class="menu-item-root">
-            <div class="menu-item">File</div>
-            <!-- Dropdown placeholder (JS would populate this in full studio, but keeping it simple for now) -->
-        </div>
-        <div class="menu-item-root">
-            <div class="menu-item">Edit</div>
-        </div>
-        <div class="menu-item-root">
-            <div class="menu-item">View</div>
-        </div>
-        <div class="menu-item-root">
-            <div class="menu-item">Help</div>
-        </div>
-        <div style="flex:1"></div>
-        <div style="font-size:0.9rem; color:#666;">AUDIO ENGINE: READY</div>
-    </div>
-
-    <!-- TOOLBAR -->
-    <div id="toolbar">
-        <button class="tool-btn" title="Save Project" onclick="daw.saveProject()"><i class="fas fa-save"></i></button>
-        <button class="tool-btn" title="Add Track" onclick="daw.openAddTrackModal()"><i class="fas fa-plus"></i></button>
-        <div class="tool-sep"></div>
-        
-        <div class="transport-group">
-            <button class="tool-btn" id="btn-play" onclick="daw.togglePlay()" title="Play [Space]"><i class="fas fa-play"></i></button>
-            <button class="tool-btn" id="btn-stop" onclick="daw.stop()" ondblclick="daw.resetPlayhead()" title="Stop [Esc] / Double-click to reset"><i class="fas fa-stop"></i></button>
-            <button class="tool-btn" id="btn-record" onclick="daw.toggleRecord()" title="Record"><i class="fas fa-circle"></i></button>
-            <button class="tool-btn" id="btn-loop" onclick="daw.toggleLoop()" title="Loop [L]"><i class="fas fa-sync-alt"></i></button>
-        </div>
-        
-        <div class="tool-sep"></div>
-        
-        <!-- LCD Displays -->
-        <div class="lcd-screen" id="lcd-bpm" onclick="daw.setBPM()" title="Click to set BPM" style="width: 80px; justify-content: center;">120</div>
-        <div class="lcd-screen" id="lcd-time" style="width: 100px; justify-content: center;">01.01.00</div>
-        
-        <div class="tool-sep"></div>
-        <div id="active-track-label" style="color:var(--accent); font-weight:bold; padding:0 10px;">NO TRACK SELECTED</div>
-    </div>
-
-    <!-- MAIN LAYOUT -->
-    <div id="layout">
-        
-        <!-- LEFT PANEL: BROWSER -->
-        <div id="left-panel" class="panel">
-            <div class="panel-header">
-                <span><i class="fas fa-folder"></i> BROWSER</span>
-                <button class="collapse-btn" onclick="daw.togglePanel('left')" title="Collapse"><i class="fas fa-chevron-left"></i></button>
-            </div>
-            <div class="panel-content" id="browser-panel">
-                <div class="browser-section">
-                    <div class="browser-section-title">INSTRUMENTS</div>
-                    <div id="browser-presets">
-                        <!-- Filled by JS -->
-                        <div class="browser-item" onclick="daw.openAddTrackModal()"><i class="fas fa-wave-square"></i> 8-BIT SYNTH</div>
-                        <div class="browser-item" onclick="daw.openAddTrackModal()"><i class="fas fa-keyboard"></i> 32-BIT SYNTH</div>
-                        <div class="browser-item" onclick="daw.openAddTrackModal()"><i class="fas fa-drum"></i> DRUM MACHINE</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- LEFT RESIZE HANDLE -->
-        <div class="resize-handle resize-handle-v" id="resize-left" data-panel="left"></div>
-
-        <!-- CENTER PANEL: TRACKS & PIANO ROLL -->
-        <div id="center-panel">
-            
-            <!-- TOP: TIMELINE & TRACKS -->
-            <div id="arrangement-area">
-                <div id="timeline-ruler">
-                    <!-- JS fills this -->
-                </div>
-                
-                <div id="tracks-area">
-                    <div id="track-headers">
-                        <div id="track-list"></div>
-                    </div>
-                    <div id="track-lanes">
-                        <div id="playhead"></div>
-                        <div id="lanes"></div>
-                    </div>
-                </div>
+    <!-- TOP BAR -->
+    <div id="top-bar">
+        <div style="display:flex; align-items:center; height: 100%;">
+            <div class="glow-text" style="font-weight:900; letter-spacing:2px; font-size:1.1rem; margin-right: 20px; text-transform: uppercase;">
+                <i class="fas fa-wave-square"></i> AUDIO DIRECTOR <span style="font-weight:100; opacity:0.5;">PRO</span>
             </div>
             
-            <!-- HORIZONTAL RESIZE HANDLE -->
-            <div class="resize-handle resize-handle-h" id="resize-bottom" data-panel="bottom"></div>
+            <!-- PROFESSIONAL MENU BAR -->
+            <div class="menu-bar-v7">
+                <div class="menu-item-v7">
+                    FILE
+                    <div class="menu-dropdown-v7">
+                        <div class="menu-sub-item-v7" onclick="pro.saveMap()">SYNC_ENGINE <span class="kb-shortcut">^S</span></div>
+                        <div class="menu-sub-item-v7" onclick="pro.bootstrapTemplate()">REBUILD_VFS</div>
+                        <div class="menu-sub-item-v7 divider" style="height:1px; background:#222; margin:2px 0;"></div>
+                        <div class="menu-sub-item-v7" onclick="window.close()">EXIT</div>
+                    </div>
+                </div>
+                <div class="menu-item-v7">
+                    EDIT
+                    <div class="menu-dropdown-v7">
+                        <div class="menu-sub-item-v7" onclick="pro.undo()">UNDO <span class="kb-shortcut">^Z</span></div>
+                        <div class="menu-sub-item-v7" onclick="pro.redo()">REDO <span class="kb-shortcut">^Y</span></div>
+                        <div class="menu-sub-item-v7 divider" style="height:1px; background:#222; margin:2px 0;"></div>
+                        <div class="menu-sub-item-v7" onclick="pro.resetMixer()">RESET_MIXER</div>
+                    </div>
+                </div>
+                <div class="menu-item-v7">
+                    VIEW
+                    <div class="menu-dropdown-v7">
+                        <div class="menu-sub-item-v7" onclick="pro.toggleSidebar('left')">EXPLORER <span class="kb-shortcut">^B</span></div>
+                        <div class="menu-sub-item-v7" onclick="pro.toggleSidebar('right')">INSPECTOR <span class="kb-shortcut">^I</span></div>
+                    </div>
+                </div>
+                <div class="menu-item-v7">
+                    ENGINE
+                    <div class="menu-dropdown-v7">
+                        <div class="menu-sub-item-v7" onclick="pro.panicStop()">PANIC_STOP <span class="kb-shortcut">ESC</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <!-- BOTTOM: PIANO ROLL / MIXER -->
-            <div id="bottom-panel" class="panel">
-                <div class="dock-tabs">
-                    <div class="dock-tab active" id="tab-piano" onclick="daw.switchTab('piano')">PIANO ROLL</div>
-                    <div class="dock-tab" id="tab-mixer" onclick="daw.switchTab('mixer')">MIXER</div>
-                    <div class="dock-tab" id="tab-device" onclick="daw.switchTab('device')">DEVICES</div>
-                    <div style="flex:1"></div>
-                    <!-- Tools for Piano Roll -->
-                    <div id="pr-toolbar">
-                        <button class="tool-btn" data-tool="pencil" onclick="daw.setTool('pencil')" title="Draw (D)"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="tool-btn" data-tool="erase" onclick="daw.setTool('erase')" title="Erase (E)"><i class="fas fa-eraser"></i></button>
-                        <button class="tool-btn" data-tool="select" onclick="daw.setTool('select')" title="Select (S)"><i class="fas fa-mouse-pointer"></i></button>
-                        <div class="tool-sep" style="height:20px; margin:0 8px;"></div>
-                        <select id="snap-select" onchange="daw.setSnap(this.value)" title="Snap Grid">
-                            <option value="1">1 Bar</option>
-                            <option value="0.5">1/2</option>
-                            <option value="0.25" selected>1/4 (Beat)</option>
-                            <option value="0.125">1/8</option>
-                            <option value="0.0625">1/16</option>
-                            <option value="0.03125">1/32</option>
-                            <option value="0">Off</option>
+        <div id="top-bar-actions" style="display:flex; align-items:center; gap:12px; height: 100%;">
+            <div id="connection-status" style="font-size:11px; color:var(--gold); opacity: 0.6; letter-spacing: 1px;">SYNC_READY</div>
+            <div style="width:1px; height:16px; background:#222;"></div>
+            <label class="inline-toggle" style="font-size:11px;">
+                <input id="auto-save-toggle" type="checkbox"> AUTO
+            </label>
+            <button class="btn-v6 primary" onclick="pro.saveMap()" style="padding: 2px 10px; font-size: 12px; height: 24px; border: none; box-shadow: none;">SYNC</button>
+        </div>
+    </div>
+
+    <div id="status-strip">
+        <span class="status-badge" id="badge-mapped">mapped:0</span>
+        <span class="status-badge" id="badge-unmapped">unmapped:0</span>
+        <span class="status-badge" id="badge-missing">missing:0</span>
+        <span class="status-badge" id="badge-dirty">state:synced</span>
+        <span class="status-badge" id="badge-history">undo:0 redo:0</span>
+    </div>
+
+    <!-- MAIN INTERFACE -->
+    <div id="main-container">
+        <button id="left-sidebar-handle" class="sidebar-handle left" onclick="pro.toggleSidebar('left')" title="Toggle left sidebar">◀</button>
+        <button id="right-sidebar-handle" class="sidebar-handle right" onclick="pro.toggleSidebar('right')" title="Toggle right sidebar">▶</button>
+        
+        <!-- LEFT: EXPLORER -->
+        <div id="left-explorer" class="pane-v6 glass-panel">
+            <div style="display:flex; border-bottom:1px solid var(--border-premium);">
+                <button class="tab-btn-v6 active" onclick="pro.switchExplorer('events')">EVENTS</button>
+                <button class="tab-btn-v6" onclick="pro.switchExplorer('assets')">ASSETS</button>
+                <button class="tab-btn-v6" onclick="pro.switchExplorer('templates')">LIB</button>
+            </div>
+            <div class="explorer-controls">
+                <div id="event-search-wrap">
+                    <input id="event-search" class="inspector-input" placeholder="search events..." />
+                    <div class="explorer-filter-row">
+                        <select id="category-filter" class="inspector-input">
+                            <option value="all">ALL_CATEGORIES</option>
                         </select>
+                        <label class="inline-toggle"><input id="mapped-only" type="checkbox"> MAPPED_ONLY</label>
                     </div>
                 </div>
+                <div id="asset-search-wrap" style="display:none;">
+                    <input id="asset-search" class="inspector-input" placeholder="search assets..." />
+                </div>
+                <div class="quick-event-row">
+                    <input id="quick-event-id" class="inspector-input" placeholder="new:event:id" />
+                    <button id="quick-event-create" class="btn-v6">CREATE</button>
+                </div>
+            </div>
+            <div class="pane-content" id="explorer-tree" style="flex:1; overflow-y:auto; padding:10px 0;">
+                <!-- Filled by pro.js -->
+            </div>
+        </div>
+
+        <!-- CENTER: WORKSPACE -->
+        <div id="center-workspace" class="pane-v6 glass-panel" style="background: rgba(0,0,0,0.5);">
+            <div class="header-v6" style="justify-content:space-between; background: #000;">
+                <span id="active-event-path" style="font-size: 14px; opacity: 0.8;">VFS://AUDIO/NULL</span>
+                <span style="opacity:0.3; font-size:12px; letter-spacing: 1px;">DIRECTOR_STABLE_v7.1</span>
+            </div>
+            
+            <div id="workspace-content" style="flex:1; overflow-y:auto; padding:24px;">
                 
-                <div class="panel-content" style="background: var(--bg-canvas); display: flex; flex-direction: column;">
-                    <!-- Piano Roll -->
-                    <div id="piano-roll" class="tab-content active" style="display: flex; flex-direction: column; flex: 1;">
-                        <div id="pr-main">
-                            <div id="pr-keys"></div>
-                            <div id="pr-grid">
-                                <div id="pr-grid-inner"></div>
-                                <div id="pr-playhead"></div>
-                            </div>
+                <div id="event-editor-view" class="hidden">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
+                        <div>
+                            <h1 id="view-event-name" class="glow-text" style="margin:0; font-size:3.5rem; letter-spacing:-2px; line-height:0.9; text-shadow: 4px 4px 0 #000;">player:jump</h1>
+                            <div style="margin-top:8px; color:var(--text-dim); font-size:14px; letter-spacing: 1px;">ROUTING_TARGET: <span id="view-event-group" style="color:var(--gold);">SFX_CORE</span></div>
                         </div>
-                        <div id="pr-velocity"></div>
+                        <button class="btn-icon pulse" style="font-size:4.5rem; color:var(--gold); background: transparent; border: none; cursor: pointer;" onclick="pro.triggerTest()"><i class="fas fa-play-circle"></i></button>
                     </div>
 
-                    <!-- Mixer -->
-                    <div id="mixer" class="tab-content" style="display: none;"></div>
+                    <div class="spectrum-container" id="drop-zone" ondragover="pro.handleDragOver(event)" ondrop="pro.handleDrop(event)" ondragleave="pro.handleDragLeave(event)" style="box-shadow: inset 4px 4px 0 #000; border: 1px solid var(--border-premium); margin-bottom: 24px;">
+                        <canvas id="waveform-canvas" width="1000" height="180" style="width:100%; height:100%;"></canvas>
+                        <div style="position:absolute; top:10px; left:15px; font-family:var(--font-mono); font-size:11px; color:var(--gold); background:rgba(0,0,0,0.85); padding:2px 10px; border:1px solid var(--gold-dim); letter-spacing: 1px;">SIGNAL_ANALYZER_v7</div>
+                    </div>
+
+                    <div style="font-family:var(--font-vignette); font-size:18px; color:var(--gold); margin-bottom:12px; display:flex; align-items:center; gap:10px; letter-spacing: 1px;">
+                        <i class="fas fa-layer-group"></i> VARIATION_STACK_VFS
+                    </div>
+                    <div id="variation-stack" style="display: flex; flexDirection: column; gap: 4px;"></div>
                     
-                    <!-- Device Panel (Mobile/Small Screen fallback or specific view) -->
-                    <div id="device-panel-tab" class="tab-content" style="display: none; padding:10px;">
-                        <div style="color:#666;">Select a track to view devices.</div>
+                    <button class="btn-v6" onclick="pro.addVariationPrompt()" style="width:100%; margin-top:16px; border-style:dashed; opacity:0.6; font-size: 14px;">
+                        + ATTACH_SIGNAL_SOURCE
+                    </button>
+
+                    <div class="preview-lab" style="margin-top: 32px; border-top: 1px solid var(--border-premium); padding-top: 24px;">
+                        <div class="preview-title" style="font-size: 16px; margin-bottom: 12px; opacity: 0.8;">SCENARIO_PREVIEW_LAB</div>
+                        <div class="preview-actions">
+                            <button class="btn-v6" onclick="pro.runPreviewScenario('ui')">UI_STRESS</button>
+                            <button class="btn-v6" onclick="pro.runPreviewScenario('traversal')">TRAVERSAL</button>
+                            <button class="btn-v6" onclick="pro.runPreviewScenario('combat')">COMBAT</button>
+                            <button class="btn-v6" onclick="pro.stopPreviewScenario()">STOP</button>
+                        </div>
+                        <div id="scenario-state" class="preview-state" style="font-family: monospace; font-size: 11px;">preview: idle</div>
                     </div>
                 </div>
-            </div>
 
+                <div id="empty-state" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-ghost);">
+                    <i class="fas fa-compact-disc fa-spin" style="font-size:8rem; margin-bottom:30px; opacity:0.1;"></i>
+                    <div style="font-family:var(--font-vignette); font-size:32px; letter-spacing:8px;">WAITING_FOR_INPUT</div>
+                </div>
+
+            </div>
         </div>
-        
-        <!-- RIGHT RESIZE HANDLE -->
-        <div class="resize-handle resize-handle-v" id="resize-right" data-panel="right"></div>
 
-        <!-- RIGHT PANEL: INSPECTOR / DEVICES -->
-        <div id="right-panel" class="panel">
-            <div class="panel-header">
-                <span><i class="fas fa-sliders-h"></i> DEVICES</span>
-                <button class="collapse-btn" onclick="daw.togglePanel('right')" title="Collapse"><i class="fas fa-chevron-right"></i></button>
+        <!-- RIGHT: INSPECTOR -->
+        <div id="right-inspector" class="pane-v6 glass-panel">
+            <div class="header-v6">SIGNAL_PROPERTIES</div>
+            <div id="inspector-pane-content" class="hidden" style="flex:1; overflow-y:auto; padding:25px;">
+                <!-- Filled by JS -->
             </div>
-            <div class="panel-content" id="device-panel">
-                <!-- Device controls will be injected here by daw.js -->
-                <div style="padding:20px; text-align:center; color:#555;">[NO TRACK SELECTED]</div>
+            <div id="inspector-empty" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#151515;">
+                <i class="fas fa-sliders-h" style="font-size:5rem;"></i>
+                <div style="font-family:var(--font-vignette); margin-top:20px;">NO_STREAM_ACTIVE</div>
             </div>
         </div>
 
     </div>
 
-    <!-- STATUS BAR -->
-    <div style="height:24px; background:#000; border-top:1px solid #333; display:flex; align-items:center; padding:0 10px; color:#555; font-size:0.9rem; justify-content:space-between;">
-        <span>READY</span>
-        <span>44.1kHz | 16-bit</span>
-    </div>
-
-    <!-- MODALS -->
-    <div id="add-track-modal" class="hidden">
-        <div class="modal-content">
-            <div class="modal-title">ADD TRACK</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('synth', null, '8bit'); daw.closeAddTrackModal();">
-                    <i class="fas fa-wave-square" style="font-size:24px;"></i>
-                    <span>8-BIT SYNTH</span>
-                </button>
-                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('synth', null, '32bit'); daw.closeAddTrackModal();">
-                    <i class="fas fa-keyboard" style="font-size:24px;"></i>
-                    <span>ANALOG SYNTH</span>
-                </button>
-                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('drum'); daw.closeAddTrackModal();">
-                    <i class="fas fa-drum" style="font-size:24px;"></i>
-                    <span>DRUM MACHINE</span>
-                </button>
-                <button class="tool-btn" style="width:100%; height:auto; padding:20px; display:flex; flex-direction:column; gap:10px;" onclick="daw.addTrack('sampler'); daw.closeAddTrackModal();">
-                    <i class="fas fa-microphone" style="font-size:24px;"></i>
-                    <span>SAMPLER</span>
-                </button>
+    <!-- BOTTOM: MIXER -->
+    <div id="bottom-mixer" class="pane-v6 glass-panel">
+        <div class="header-v6" style="justify-content:space-between;">
+            <span><i class="fas fa-sliders-h"></i> MIXING_STATION_V6</span>
+            <div style="display:flex; gap:12px; align-items:center; font-family:var(--font-vignette); font-size:12px;">
+                <div>STATE: <select onchange="window.Sound.setGameState(this.value)" style="border:none; background:transparent; color:var(--gold);"><option value="normal">NORMAL</option><option value="combat">COMBAT</option><option value="stealth">STEALTH</option></select></div>
+                <div>ENV: <select onchange="window.Sound.setEnvironment(this.value)" style="border:none; background:transparent; color:var(--gold);"><option value="dry">DRY</option><option value="cave">CAVE</option><option value="hall">HALL</option></select></div>
+                <button class="btn-v6" onclick="pro.resetMixer()">RESET</button>
+                <button class="btn-v6" onclick="pro.panicStop()">PANIC</button>
             </div>
-            <button class="tool-btn" style="width:100%; margin-top:15px;" onclick="daw.closeAddTrackModal()">CANCEL</button>
+        </div>
+        <div class="mixer-lanes" id="mixer-lanes" style="flex:1; display:flex; padding:20px; gap:12px; overflow-x:auto; align-items:flex-end;">
+            <!-- Master Strip -->
+            <div class="mixer-v6-strip" style="border-color:var(--gold);">
+                <div style="font-size:10px; font-weight:bold; color:var(--text-ghost); margin-bottom:10px;">MASTER</div>
+                <div class="meter-v6" id="meter-master">
+                    <!-- Filled by pro.js -->
+                </div>
+                <div class="fader-slot">
+                    <div class="fader-knob" id="fader-master" style="bottom:80%;" onmousedown="pro.startFaderDrag(event, 'master')"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="daw/audioEngine.js"></script>
-    <script src="daw/AudioRecorder.js"></script>
-    <script src="daw/plugins/AudioPlugin.js"></script>
-    <script src="daw/plugins/KDelay.js"></script>
-    <script src="daw/plugins/KVerb.js"></script>
-    <script src="daw/plugins/KComp.js"></script>
-    <script src="daw/plugins/KDrive.js"></script>
-    <script src="daw/plugins/KEQ3.js"></script>
-    <script src="daw/MixerChannel.js"></script>
-    <script src="daw/Track.js"></script>
-    <script src="daw/PianoRollController.js"></script>
-    <script src="daw/Synthesizer.js"></script>
-    <script src="daw/Synth8Bit.js"></script>
-    <script src="daw/Synth32Bit.js"></script>
-    <script src="daw/SynthWavetable.js"></script>
-    <script src="daw/DrumMachine.js"></script>
-    <script src="daw/Sampler.js"></script>
-    <script src="daw/InstrumentPresets.js"></script>
-    <script src="daw/ProjectManager.js"></script>
-    
-    <!-- Integration System -->
+    <!-- SCRIPTS -->
     <script src="/shared/EventBus.js"></script>
-    <script src="/shared/SharedProjectState.js"></script>
-    <script src="/shared/AssetManager.js"></script>
-    
+    <script src="/shared/SoundManager.js"></script>
+    <script src="daw/manifest.js"></script>
     <script src="daw.js"></script>
-
-    <script>
-        // Monkey-patch or helper for switching tabs since we changed ID structure slightly
-        // or ensure daw.js uses classes that we implemented.
-        
-        // Ensure browser panel is visible (JS might look for specific browser structure)
-        // daw.js populates 'browser-presets' ID if it exists.
-    </script>
 </body>
 </html>

@@ -86,9 +86,17 @@ class IsoGame {
             this.keysPressed[e.code] = false;
         };
         this.mousemoveHandler = e => {
-            const rect = this.canvas.getBoundingClientRect();
-            this.mouse.x = e.clientX - rect.left;
-            this.mouse.y = e.clientY - rect.top;
+            if (!this.canvas || !this.running) return;
+            // Cache rect to prevent layout thrashing race condition during render
+            if (!this._cachedRect || performance.now() - this._lastRectCache > 500) {
+                this._cachedRect = this.canvas.getBoundingClientRect();
+                this._lastRectCache = performance.now();
+            }
+            const rect = this._cachedRect;
+            const scaleX = this.canvas.width / rect.width || 1;
+            const scaleY = this.canvas.height / rect.height || 1;
+            this.mouse.x = (e.clientX - rect.left) * scaleX;
+            this.mouse.y = (e.clientY - rect.top) * scaleY;
         };
 
         window.addEventListener('keydown', this.keydownHandler);
@@ -98,7 +106,19 @@ class IsoGame {
         this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0 };
         this.canvas.addEventListener('mousemove', this.mousemoveHandler);
         this.canvas.style.cursor = 'none';
-        
+
+        // Initialize Logic System
+        if (window.LogicSystem) {
+            this.logicSystem = new window.LogicSystem(this);
+            console.log('[IsoEngine] LogicSystem initialized');
+        }
+
+        // Initialize VSL Engine
+        if (window.LogicInterpreter) {
+            this.vsl = new window.LogicInterpreter(this);
+            console.log('[IsoEngine] VSL Engine initialized');
+        }
+
         window.addEventListener('resize', this.resizeHandler);
         this.resize();
     }
@@ -111,6 +131,11 @@ class IsoGame {
         window.removeEventListener('keyup', this.keyupHandler);
         window.removeEventListener('resize', this.resizeHandler);
         this.canvas.removeEventListener('mousemove', this.mousemoveHandler);
+        
+        // Fix WebGL canvas DOM leak
+        if (this.webglCanvas && this.webglCanvas.parentNode) {
+            this.webglCanvas.parentNode.removeChild(this.webglCanvas);
+        }
         
         // Unsubscribe from EventBus
         const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
@@ -144,6 +169,10 @@ class IsoGame {
         this.lastFpsCheck = performance.now();
         
         this.perfInterval = setInterval(() => {
+            if (!this.running) {
+                clearInterval(this.perfInterval);
+                return;
+            }
             const now = performance.now();
             const elapsed = now - this.lastFpsCheck;
             const fps = Math.round((this.frameCount * 1000) / elapsed);

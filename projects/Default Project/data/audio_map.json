@@ -1,0 +1,59 @@
+{
+  "events": {
+    "ui:click": {
+      "group": "sfx",
+      "clips": [
+        "click.mp3"
+      ],
+      "priority": false,
+      "reverb": 0,
+      "filter": {
+        "type": "lowpass",
+        "freq": 2000
+      },
+      "playback": {
+        "mode": "random",
+        "volume": 0.5,
+        "volumeVar": 0.1,
+        "pitchVar": 0.05,
+        "cooldown": 0.1,
+        "fadeIn": 0,
+        "fadeOut": 0
+      },
+      "clipMeta": {
+        "click.mp3": {
+          "weight": 1,
+          "gain": 1,
+          "start": 0,
+          "end": 1
+        }
+      }
+    }
+  },
+  "buses": {
+    "master": {
+      "gain": 1,
+      "ducking": false
+    },
+    "music": {
+      "gain": 0.6,
+      "parent": "master",
+      "ducking": false
+    },
+    "sfx": {
+      "gain": 0.8,
+      "parent": "master",
+      "ducking": false
+    },
+    "ambience": {
+      "gain": 0.5,
+      "parent": "master",
+      "ducking": false
+    },
+    "voice": {
+      "gain": 0.9,
+      "parent": "master",
+      "ducking": false
+    }
+  }
+}

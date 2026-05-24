@@ -106,5 +106,13 @@ projects/*/
 !projects/My Awesome Game/
 !projects/Platformer Demo/
 !projects/FPS3D Demo/
-!projects/Topdown3D Demo/
 !projects/Platformer3D Demo/
+
+# Exclude Debug and Temp Files
+*.bak
+/temp_*.js
+/test*.html
+/a.png
+/b.png
+/test.png
+Ekran*

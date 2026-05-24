@@ -7,6 +7,16 @@
 // Integration system references
 let eventBus, projectState, assetManager;
 
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function initializeBehaviorIntegration() {
     if (typeof window !== 'undefined') {
         eventBus = window.KetebeEventBus;
@@ -2250,11 +2260,12 @@ Created for Ketebe Game Engine
             subgraphs: this.subgraphs  // Include all subgraphs
         });
         const js = this.compile();
+        const ast = this.compileToAST();
         try {
             await fetch('/api/brains/save', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ name, json, js })
+                body: JSON.stringify({ name, json, js, ast })
             });
             alert("BRAIN SAVED.");
             await this.fetchBrainList();
@@ -2389,7 +2400,7 @@ Created for Ketebe Game Engine
             
             div.innerHTML = `
                 <div class="node-header">
-                    <span><i class="fas fa-${icon}"></i> ${subgraphName.toUpperCase()}</span>
+                    <span><i class="fas fa-${icon}"></i> ${escapeHTML(subgraphName).toUpperCase()}</span>
                 </div>
                 <div class="node-body" style="padding: 10px;">
                     ${portsHTML}
@@ -2988,6 +2999,48 @@ Created for Ketebe Game Engine
     }
 
     // --- COMPILER (Export Logic) ---
+    compileToAST() {
+        const start = this.nodes.find(n => n.type === 'sensor_spawn') || this.nodes.find(n => n.cat === 'sensor') || this.nodes[0];
+        if (!start) return { error: "No start node found" };
+
+        return {
+            name: this.dom.nameInput.value,
+            generatedAt: new Date().toISOString(),
+            root: this.walkAST(start, 0)
+        };
+    }
+
+    walkAST(node, depth) {
+        if (!node || depth > 100) return null;
+        
+        const astNode = {
+            id: node.id,
+            type: node.type,
+            data: { ...node.data }
+        };
+
+        // Handle specific logic nodes with multiple outputs
+        if (node.type === 'logic_check' || node.type === 'logic_var_check') {
+            astNode.true = this.followAST(node.id, 'true', depth + 1);
+            astNode.false = this.followAST(node.id, 'false', depth + 1);
+        } else if (node.type === 'sensor_see_player' || node.type === 'sensor_near_player') {
+            astNode.next = this.followAST(node.id, 'out', depth + 1);
+        } else {
+            astNode.next = this.followAST(node.id, 'out', depth);
+        }
+
+        return astNode;
+    }
+
+    followAST(nid, port, depth) {
+        const wire = this.wires.find(w => w.from === nid && w.port === port);
+        if (wire) {
+            const nextNode = this.nodes.find(n => n.id === wire.to);
+            return this.walkAST(nextNode, depth);
+        }
+        return null;
+    }
+
     compile() {
         // Generate JS code for this behavior
         const start = this.nodes.find(n => n.type === 'sensor_spawn') || this.nodes[0];

@@ -8,9 +8,18 @@ function securityHeaders(req, res, next) {
 
 function requestLogger(req, res, next) {
     if (config.LOG_REQUESTS) {
-        const now = new Date();
-        const time = now.toLocaleTimeString('en-US', { hour12: false });
-        console.log(`[${time}] ${req.method} ${req.path}`);
+        // Skip noisy heartbeat/stat endpoints
+        const noisyEndpoints = [
+            '/api/system/stats',
+            '/api/projects/current',
+            '/api/ai/metrics'
+        ];
+        
+        if (!noisyEndpoints.includes(req.path)) {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', { hour12: false });
+            console.log(`[${time}] ${req.method} ${req.path}`);
+        }
     }
     next();
 }

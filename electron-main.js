@@ -9,10 +9,25 @@ class CortexManager {
         this.isRunning = false;
         this.heartbeatTimer = null;
         this.lastHeartbeat = Date.now();
+        this.restartCount = 0;
+        this.restartWindowStart = Date.now();
     }
 
     start() {
         if (this.isRunning) return;
+
+        const now = Date.now();
+        if (now - this.restartWindowStart > 60000) {
+            this.restartCount = 0;
+            this.restartWindowStart = now;
+        }
+
+        if (this.restartCount >= 5) {
+            console.error('[Cortex Critical] AI Brain crash loop detected. Restart aborted.');
+            return;
+        }
+
+        this.restartCount++;
 
         const backendDir = path.join(__dirname, 'backend');
         const scriptPath = path.join(backendDir, 'main.py');
@@ -56,8 +71,8 @@ class CortexManager {
             this.isRunning = false;
             this._stopHeartbeatMonitor();
             if (code !== 0 && code !== null) {
-                console.log('[Cortex] Unexpected exit, restarting in 3s...');
-                setTimeout(() => this.start(), 3000);
+                console.log('[Cortex] Unexpected exit, restarting...');
+                this.restart();
             }
         });
 
@@ -87,8 +102,18 @@ class CortexManager {
     }
 
     restart() {
-        this.stop();
-        setTimeout(() => this.start(), 1000);
+        if (this.process) {
+            console.log('[Cortex] Stopping AI Brain for restart...');
+            this._stopHeartbeatMonitor();
+            this.isRunning = false;
+            this.process.once('close', () => {
+                this.process = null;
+                setTimeout(() => this.start(), 100);
+            });
+            this.process.kill();
+        } else {
+            this.start();
+        }
     }
 
     stop() {
@@ -108,15 +133,7 @@ const cortex = new CortexManager();
 // If another instance is already running, show a warning and quit this one.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
-    app.whenReady().then(() => {
-        dialog.showMessageBoxSync({
-            type: 'warning',
-            buttons: ['OK'],
-            title: 'Ketebe Game Studio',
-            message: 'Another instance of Ketebe Studio is already running.\nThis instance will now close.'
-        });
-        app.quit();
-    });
+    app.quit();
 } else {
     app.on('second-instance', () => {
         // A second instance tried to launch — focus the existing window.
@@ -147,6 +164,7 @@ if (process.platform === 'darwin') {
 
 // Start the Express server (only loaded when we have the single instance lock)
 let expressApp, httpServer, PORT;
+const SPLASH_CLOSE_DELAY_MS = 900;
 
 let mainWindow;
 let splashWindow;
@@ -265,7 +283,7 @@ function createWindow() {
         setTimeout(() => {
             if (splashWindow) splashWindow.close();
             mainWindow.show();
-        }, 3500); // 3.5 seconds delay
+        }, SPLASH_CLOSE_DELAY_MS);
     });
 
     // IPC Handlers for custom title bar
@@ -304,12 +322,14 @@ function createWindow() {
     });
     ipcMain.on('show-item-in-folder', (event, filePath) => {
         if (!filePath) return;
-        const normalized = path.normalize(filePath);
+        const absolutePath = path.resolve(__dirname, filePath);
+        const projectsDir = path.join(__dirname, 'projects');
+        
         // Only allow showing files within the application's root directory or user projects
-        if (normalized.includes(__dirname) || normalized.includes('projects')) {
-            shell.showItemInFolder(normalized);
+        if (absolutePath.startsWith(__dirname) || absolutePath.startsWith(projectsDir)) {
+            shell.showItemInFolder(absolutePath);
         } else {
-            console.warn('[ipc] Blocked showItemInFolder for outside path:', normalized);
+            console.warn('[ipc] Blocked showItemInFolder for outside path:', absolutePath);
         }
     });
     ipcMain.on('open-devtools', () => mainWindow.webContents.openDevTools());
@@ -318,19 +338,24 @@ function createWindow() {
     createMenu();
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (url.includes('localhost') || url.includes('127.0.0.1')) {
-            return { 
-                action: 'allow',
-                overrideBrowserWindowOptions: {
-                    width: 1280,
-                    height: 720,
-                    autoHideMenuBar: true
-                }
-            };
-        }
-        if (url.startsWith('http:') || url.startsWith('https:')) {
-            shell.openExternal(url);
-            return { action: 'deny' };
+        try {
+            const parsedUrl = new URL(url);
+            if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') {
+                return { 
+                    action: 'allow',
+                    overrideBrowserWindowOptions: {
+                        width: 1280,
+                        height: 720,
+                        autoHideMenuBar: true
+                    }
+                };
+            }
+            if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+                shell.openExternal(url);
+                return { action: 'deny' };
+            }
+        } catch (e) {
+            console.error('[ipc] Invalid URL in window open handler:', url);
         }
         return { action: 'allow' };
     });

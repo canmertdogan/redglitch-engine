@@ -1,0 +1,163 @@
+:root {
+    --bg-root: #050505;
+    --bg-panel: #0a0a0f;
+    --bg-header: #000000;
+    --bg-canvas: #080808;
+    --bg-input: #000000;
+    --border: #333;
+    --accent: #f1c40f;
+    --accent-item: #2ecc71;
+    --accent-villain: #c0392b;
+    --text-main: #e0e0e0;
+    --text-muted: #888;
+    --font-pixel: 'VT323', monospace;
+}
+
+* {
+    box-sizing: border-box;
+    outline: none;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-root);
+    color: var(--text-main);
+    font-family: var(--font-pixel);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    font-size: 18px;
+    image-rendering: pixelated;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #050505;
+}
+::-webkit-scrollbar-thumb {
+    background: #222;
+    border: 2px solid #050505;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #333;
+}
+
+/* Common Layout Components */
+.panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    height: 100%;
+    overflow: hidden;
+}
+
+.panel-header {
+    height: 36px;
+    background: #000;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-weight: bold;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    font-size: 1rem;
+    justify-content: space-between;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+}
+
+.panel-content {
+    padding: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    min-height: 0;
+}
+
+.form-section {
+    background: #111;
+    border: 1px solid #333;
+    padding: 15px;
+    position: relative;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.section-title {
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    background: #111;
+    padding: 0 8px;
+    color: #888;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+input, select, textarea, button {
+    background: #000;
+    border: 1px solid #444;
+    color: var(--accent);
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 1rem;
+    outline: none;
+    width: 100%;
+    transition: all 0.1s;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+}
+
+button {
+    font-size: inherit;
+}
+
+label {
+    display: block;
+    color: #666;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tool-btn {
+    background: #111;
+    border: 1px solid #444;
+    color: #aaa;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1rem;
+    border-radius: 3px;
+    transition: all 0.1s;
+}
+
+.tool-btn:hover {
+    background: #222;
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.tool-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+}

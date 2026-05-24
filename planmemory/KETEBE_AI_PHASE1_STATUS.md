@@ -73,7 +73,7 @@
 ### ✅ Model Caching
 - Cache API for persistent storage
 - Checks if model cached before download
-- ~300MB LLM model (Qwen2.5-Coder-0.5B q4)
+- ~1.8GB LLM model (Qwen2.5-Coder-3B q4)
 - ~23MB embedding model (MiniLM-L6)
 
 ### ✅ Memory Management
@@ -109,7 +109,7 @@
 
 3. **Test sequence:**
    - Click "1. Initialize System" → should detect WebGPU/WASM
-   - Click "2. Load Model" → downloads Qwen 0.5B (~300MB, shows progress)
+   - Click "2. Load Model" → downloads Qwen 3B (~1.8GB, shows progress)
    - Click "3. Generate Hello" → should generate a greeting
    - Click "4. Dispose Model" → frees memory
    - "Clear Cache" → removes downloaded model

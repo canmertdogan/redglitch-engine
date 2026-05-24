@@ -3,16 +3,16 @@
  * Main orchestrator for Ketebe AI Micro Edition.
  */
 
-import { AI_CONFIG } from './config.js?v=8';
-import { ModelManager } from './model-manager.js?v=8';
-import { InferenceEngine } from './inference-engine.js?v=8';
-import { TokenizerUtils } from './tokenizer-utils.js?v=8';
-import { RAGEngine } from './rag-engine.js?v=8';
-import { ContextManager } from './context-manager.js?v=8';
-import { ToolRegistry } from './tool-registry.js?v=8';
-import { WorkflowManager } from './workflow-manager.js?v=8';
-import { CoPilot } from './co-pilot.js?v=8';
-import { EventBus } from './shim.js?v=8';
+import { AI_CONFIG } from './config.js';
+import { ModelManager } from './model-manager.js';
+import { InferenceEngine } from './inference-engine.js';
+import { TokenizerUtils } from './tokenizer-utils.js';
+import { RAGEngine } from './rag-engine.js';
+import { ContextManager } from './context-manager.js';
+import { ToolRegistry } from './tool-registry.js';
+import { WorkflowManager } from './workflow-manager.js';
+import { CoPilot } from './co-pilot.js';
+import { EventBus } from './shim.js';
 
 export class KetebeAI {
     constructor() {
@@ -78,7 +78,8 @@ export class KetebeAI {
         }
 
         this.isInitialized = true;
-        if (EventBus.instance) EventBus.emit('ai:status', this.getStatus());
+        const eBus = EventBus.instance;
+        if (eBus) eBus.emit('ai:status', this.getStatus());
     }
 
     /**

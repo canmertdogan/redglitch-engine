@@ -10,7 +10,7 @@ The **Ketebe AI Micro Edition** integration is complete. The system now features
 ### Key Features Delivered
 
 1.  **Local Intelligence**:
-    - Powered by `Qwen2.5-Coder-0.5B` running in-browser via Transformers.js (WebGPU enabled).
+    - Powered by `Qwen2.5-Coder-3B` running in-browser via Transformers.js (WebGPU enabled).
     - **Ghost Text**: Real-time code completions in the Script Editor (`script_editor.js`).
     - **Chat Interface**: Modern "Spotlight" UI triggered by `Ctrl+K`.
 

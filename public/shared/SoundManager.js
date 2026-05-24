@@ -1,18 +1,22 @@
 /**
- * Ketebe Engine - Unified Sound Manager
- * Standardized audio API for both 2D and 3D engines.
- * Handles spatial positioning, gain buses, and automatic AudioContext resuming.
+ * Ketebe Engine - Unified Sound Manager (v3.0)
+ * Data-driven audio system powered by AudioMap.json
  */
 class SoundManager {
     constructor() {
         this.ctx = null;
-        this.masterGain = null;
-        this.musicGain = null;
-        this.sfxGain = null;
+        this.buses = new Map(); // name -> GainNode
+        this.analysers = new Map(); // name -> AnalyserNode
+        this.compressors = new Map(); // name -> DynamicsCompressorNode (Ducking)
+        this.reverbNode = null; // Global Convolution Reverb
         
-        this.buffers = new Map();
+        this.audioMap = { events: {}, buses: {} };
+        this.gameState = 'normal';
+        this.currentEnvironment = 'dry';
+        
+        this.buffers = new Map(); // url -> AudioBuffer
         this.activeSources = new Set();
-        this.musicSource = null;
+        this.eventCooldowns = new Map(); // eventName -> timestamp
         
         this.is3D = false;
         this._ready = false;
@@ -26,180 +30,445 @@ class SoundManager {
         ['mousedown', 'touchstart', 'keydown'].forEach(ev =>
             window.addEventListener(ev, this._resumeHandler, { once: true })
         );
+
+        if (typeof window !== 'undefined' && window.KetebeEventBus) {
+            window.KetebeEventBus.on('audio:map_updated', (event) => {
+                console.log('[Sound] Map updated via EventBus');
+                this.applyAudioMap(event.data);
+            });
+        }
     }
 
     /**
-     * Initialize the audio context and gain buses
+     * Initialize the audio context and load the map
      */
     async init() {
         if (this.ctx) return;
         
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         
-        this.masterGain = this.ctx.createGain();
-        this.musicGain = this.ctx.createGain();
-        this.sfxGain = this.ctx.createGain();
+        // Setup Reverb Node
+        this.reverbNode = this.ctx.createConvolver();
         
-        this.musicGain.connect(this.masterGain);
-        this.sfxGain.connect(this.masterGain);
-        this.masterGain.connect(this.ctx.destination);
+        // Load Audio Map
+        try {
+            const res = await fetch('/api/audio/map');
+            if (res.ok) {
+                const map = await res.json();
+                this.applyAudioMap(map);
+            }
+        } catch (e) {
+            console.warn('[Sound] Failed to load audio map, using internal defaults');
+            this.setupDefaultBuses();
+        }
         
         console.log('[Sound] System initialized');
         if (this.ctx.state === 'running') this._ready = true;
     }
 
-    /**
-     * Set context mode (2D vs 3D)
-     * @param {boolean} enabled 
-     */
-    set3D(enabled) {
-        this.is3D = enabled;
-        if (this.ctx && this.ctx.listener) {
-            // Set distance model defaults
-            this.ctx.listener.panningModel = enabled ? 'HRTF' : 'equalpower';
+    setupDefaultBuses() {
+        this.createBus('master', null, 1.0);
+        this.createBus('music', 'master', 0.8, true); // Ducking enabled
+        this.createBus('ambience', 'master', 0.6, true); // Ducking enabled
+        this.createBus('sfx', 'master', 0.9);
+        this.createBus('voice', 'master', 1.0);
+    }
+
+    createBus(name, parentName, defaultGain = 1.0, hasDucking = false) {
+        if (!this.ctx) return;
+        
+        const gain = this.ctx.createGain();
+        gain.gain.value = defaultGain;
+        
+        const analyser = this.ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.5;
+        
+        let lastNode = gain;
+
+        // Add Sidechain Compressor if ducking enabled
+        if (hasDucking) {
+            const comp = this.ctx.createDynamicsCompressor();
+            comp.threshold.value = -10; // Only ducks when triggered manually
+            comp.knee.value = 40;
+            comp.ratio.value = 12;
+            comp.attack.value = 0;
+            comp.release.value = 0.25;
+            
+            lastNode.connect(comp);
+            lastNode = comp;
+            this.compressors.set(name, comp);
         }
+
+        lastNode.connect(analyser);
+        
+        if (name === 'master') {
+            // Final Master Limiter to prevent clipping
+            const limiter = this.ctx.createDynamicsCompressor();
+            limiter.threshold.value = -0.5;
+            limiter.knee.value = 0;
+            limiter.ratio.value = 20;
+            limiter.attack.value = 0.003;
+            limiter.release.value = 0.1;
+            
+            analyser.connect(limiter);
+            limiter.connect(this.ctx.destination);
+        } else if (parentName && this.buses.has(parentName)) {
+            analyser.connect(this.buses.get(parentName));
+        } else {
+            analyser.connect(this.buses.get('master') || this.ctx.destination);
+        }
+        
+        this.buses.set(name, gain);
+        this.analysers.set(name, analyser);
+    }
+
+    /**
+     * Trigger a sidechain ducking effect on music/ambience
+     */
+    triggerDucking(duration = 1.0) {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        
+        this.compressors.forEach(comp => {
+            comp.threshold.setTargetAtTime(-40, now, 0.05); // Duck down
+            comp.threshold.setTargetAtTime(-10, now + duration, 0.1); // Recover
+        });
+    }
+
+    /**
+     * Set the global environmental reverb
+     * @param {string} type - 'dry', 'cave', 'hall', 'room'
+     */
+    async setEnvironment(type) {
+        if (!this.ctx) await this.init();
+        if (this.currentEnvironment === type) return;
+        
+        this.currentEnvironment = type;
+        if (type === 'dry') {
+            this.reverbNode.buffer = null;
+            return;
+        }
+
+        // In a real build, we'd load an Impulse Response WAV here
+        // For now, we'll synthesize a fake one or try to load a known one
+        try {
+            const buffer = await this.load(`ir_${type}.wav`);
+            if (buffer) this.reverbNode.buffer = buffer;
+        } catch (e) {
+            console.warn(`[Sound] Failed to load reverb for ${type}`);
+        }
+    }
+
+    /**
+     * Global Game State Management (e.g. 'calm' -> 'combat')
+     */
+    setGameState(state) {
+        this.gameState = state;
+        console.log(`[Sound] Audio State: ${state}`);
+        // This could trigger EventBus signals to dynamic music managers
+        if (window.KetebeEventBus) {
+            window.KetebeEventBus.emit('audio:state_changed', { state });
+        }
+    }
+
+    applyAudioMap(map) {
+        this.audioMap = map;
+        if (!this.ctx) return;
+
+        // Setup Buses
+        for (const [name, config] of Object.entries(map.buses || {})) {
+            if (!this.buses.has(name)) {
+                this.createBus(name, config.parent, config.gain, config.ducking);
+            }
+            const bus = this.buses.get(name);
+            bus.gain.setTargetAtTime(config.gain || 1.0, this.ctx.currentTime, 0.1);
+        }
+    }
+
+    /**
+     * Get real-time volume level for a bus (0.0 to 1.0)
+     */
+    getBusLevel(name) {
+        const analyser = this.analysers.get(name);
+        if (!analyser) return 0;
+        
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) sum += data[i];
+        return sum / (data.length * 255);
+    }
+
+    /**
+     * Get frequency data for spectrum visualization
+     */
+    getSpectrumData(name) {
+        const analyser = this.analysers.get(name);
+        if (!analyser) return null;
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        return data;
     }
 
     /**
      * Load an audio asset
      */
-    async load(name, url) {
+    async load(url) {
         if (!this.ctx) await this.init();
-        if (this.buffers.has(name)) return;
+        if (this.buffers.has(url)) return this.buffers.get(url);
 
         try {
-            const response = await fetch(url);
+            // Support for relative paths
+            const fullUrl = url.startsWith('http') || url.startsWith('/') ? url : `/muzikler/${url}`;
+            const response = await fetch(fullUrl);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-            this.buffers.set(name, audioBuffer);
-            console.log(`[Sound] Loaded: ${name}`);
+            this.buffers.set(url, audioBuffer);
+            return audioBuffer;
         } catch (e) {
-            console.warn(`[Sound] Failed to load ${name}:`, e.message);
+            console.warn(`[Sound] Asset missing: ${url}. Generating high-quality synthetic placeholder.`);
+            
+            // Generate synthetic template based on filename or context
+            let type = 'click';
+            if (url.includes('step') || url.includes('thud')) type = 'thud';
+            if (url.includes('music') || url.includes('ambient')) type = 'ambient';
+            if (url.includes('success') || url.includes('coin')) type = 'chime';
+
+            const synthetic = this.generateSyntheticBuffer(type);
+            this.buffers.set(url, synthetic);
+            return synthetic;
         }
     }
 
     /**
-     * Play a standard sound effect
+     * Synthesis Engine: Create high-fidelity placeholders via Web Audio API
      */
-    play(name, options = {}) {
-        if (!this.ctx || !this.buffers.has(name)) return null;
-
-        const source = this.ctx.createBufferSource();
-        source.buffer = this.buffers.get(name);
-        source.loop = options.loop || false;
-
-        const gain = this.ctx.createGain();
-        gain.gain.value = options.volume !== undefined ? options.volume : 1.0;
-
-        source.connect(gain);
-        gain.connect(this.sfxGain);
+    generateSyntheticBuffer(type = 'click') {
+        if (!this.ctx) return null;
         
-        source.start(0);
-        this.activeSources.add(source);
-        source.onended = () => this.activeSources.delete(source);
-        
-        return { source, gain };
+        const duration = type === 'ambient' ? 2.0 : 0.2;
+        const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * duration, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < data.length; i++) {
+            const t = i / this.ctx.sampleRate;
+            
+            if (type === 'click') {
+                // Short percussive click
+                data[i] = Math.sin(2 * Math.PI * 1000 * t) * Math.exp(-50 * t);
+            } else if (type === 'thud') {
+                // Low frequency thud (white noise filtered)
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-20 * t) * 0.5;
+            } else if (type === 'chime') {
+                // Sine wave chime with harmonic
+                data[i] = (Math.sin(2 * Math.PI * 880 * t) + Math.sin(2 * Math.PI * 1320 * t) * 0.5) * Math.exp(-5 * t);
+            } else if (type === 'ambient') {
+                // Soft pink-noise loop
+                data[i] = (Math.random() * 2 - 1) * 0.1;
+            }
+        }
+        return buffer;
     }
 
     /**
-     * Play a spatialized sound effect
+     * Play a mapped audio event
      */
-    playSpatial(name, x, y, z = 0, options = {}) {
-        if (!this.ctx || !this.buffers.has(name)) return null;
+    async playEvent(eventName, options = {}) {
+        if (!this.ctx) await this.init();
+        
+        const config = this.audioMap.events[eventName];
+        if (!config || !config.clips || config.clips.length === 0) {
+            // Fallback: try to play as a direct filename if event name looks like one
+            if (eventName.includes('.') || options.direct) {
+                return this.playBuffer(eventName, options);
+            }
+            return null;
+        }
+
+        // Cooldown check
+        const now = Date.now();
+        const lastPlay = this.eventCooldowns.get(eventName) || 0;
+        if (now - lastPlay < (config.playback.cooldown * 1000 || 0)) return null;
+        this.eventCooldowns.set(eventName, now);
+
+        // Pick clip
+        let clip = config.clips[0];
+        if (config.playback.mode === 'random') {
+            clip = config.clips[Math.floor(Math.random() * config.clips.length)];
+        }
+
+        const buffer = await this.load(clip);
+        if (!buffer) return null;
+
+        // Calculate variation
+        const baseVol = config.playback.volume || 1.0;
+        const volVar = config.playback.volumeVar || 0;
+        const finalVol = baseVol + (Math.random() * 2 - 1) * volVar;
+
+        const pitchVar = config.playback.pitchVar || 0;
+        const finalPitch = 1.0 + (Math.random() * 2 - 1) * pitchVar;
+
+        // Play
+        const playOptions = {
+            ...options,
+            volume: finalVol * (options.volume !== undefined ? options.volume : 1.0),
+            playbackRate: finalPitch,
+            bus: config.group || 'sfx',
+            loop: config.playback.mode === 'loop' || options.loop
+        };
+
+        // Notify EventBus for visual feedback in studio
+        if (window.KetebeEventBus) {
+            window.KetebeEventBus.emit('audio:trigger', { name: eventName, clip });
+        }
+
+        if (options.x !== undefined && options.y !== undefined) {
+            return this.playSpatialBuffer(buffer, options.x, options.y, options.z || 0, playOptions);
+        } else {
+            return this.playBuffer(buffer, playOptions);
+        }
+    }
+
+    /**
+     * Internal: Play a raw buffer with routing
+     */
+    playBuffer(bufferOrUrl, options = {}) {
+        if (!this.ctx) return null;
+
+        const play = (buffer) => {
+            const source = this.ctx.createBufferSource();
+            source.buffer = buffer;
+            source.loop = options.loop || false;
+            source.playbackRate.value = options.playbackRate || 1.0;
+
+            const gain = this.ctx.createGain();
+            gain.gain.value = options.volume !== undefined ? options.volume : 1.0;
+
+            let lastNode = source;
+
+            // 1. Add Optional Biquad Filter
+            if (options.filter) {
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = options.filterType || 'lowpass';
+                filter.frequency.value = options.filterFreq || 2000;
+                lastNode.connect(filter);
+                lastNode = filter;
+            }
+
+            lastNode.connect(gain);
+            
+            const targetBus = this.buses.get(options.bus || 'sfx') || this.buses.get('master');
+            gain.connect(targetBus);
+
+            // 2. Add Reverb Send
+            if (options.reverb && this.reverbNode) {
+                const sendGain = this.ctx.createGain();
+                sendGain.gain.value = options.reverbAmount || 0.3;
+                gain.connect(sendGain);
+                sendGain.connect(this.reverbNode);
+            }
+
+            // 3. Trigger Ducking if Priority
+            if (options.priority) {
+                this.triggerDucking(buffer.duration);
+            }
+            
+            source.start(0);
+            this.activeSources.add(source);
+            source.onended = () => {
+                this.activeSources.delete(source);
+                if (options.onEnded) options.onEnded();
+            };
+            
+            return { source, gain };
+        };
+
+        if (typeof bufferOrUrl === 'string') {
+            this.load(bufferOrUrl).then(b => { if(b) play(b); });
+            return null;
+        } else {
+            return play(bufferOrUrl);
+        }
+    }
+
+    playSpatialBuffer(buffer, x, y, z = 0, options = {}) {
+        if (!this.ctx) return null;
 
         const source = this.ctx.createBufferSource();
-        source.buffer = this.buffers.get(name);
+        source.buffer = buffer;
         source.loop = options.loop || false;
+        source.playbackRate.value = options.playbackRate || 1.0;
 
         const panner = this.ctx.createPanner();
-        panner.panningModel = this.is3D ? 'HRTF' : 'equalpower';
+        panner.panningModel = 'HRTF';
         panner.distanceModel = 'exponential';
-        panner.refDistance = options.refDistance || 1;
-        panner.maxDistance = options.maxDistance || 1000;
-        panner.rolloffFactor = options.rolloff || 1.5;
-
-        // Position
-        if (panner.positionX) {
-            panner.positionX.value = x;
-            panner.positionY.value = y;
-            panner.positionZ.value = z;
-        } else {
-            panner.setPosition(x, y, z);
-        }
+        panner.positionX.value = x;
+        panner.positionY.value = y;
+        panner.positionZ.value = z;
 
         const gain = this.ctx.createGain();
         gain.gain.value = options.volume !== undefined ? options.volume : 1.0;
 
-        source.connect(panner);
+        let lastNode = source;
+
+        // 1. Filter
+        if (options.filter) {
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = options.filterType || 'lowpass';
+            filter.frequency.value = options.filterFreq || 2000;
+            lastNode.connect(filter);
+            lastNode = filter;
+        }
+
+        lastNode.connect(panner);
         panner.connect(gain);
-        gain.connect(this.sfxGain);
         
+        const targetBus = this.buses.get(options.bus || 'sfx') || this.buses.get('master');
+        gain.connect(targetBus);
+
+        // 2. Reverb Send
+        if (options.reverb && this.reverbNode) {
+            const sendGain = this.ctx.createGain();
+            sendGain.gain.value = options.reverbAmount || 0.3;
+            gain.connect(sendGain);
+            sendGain.connect(this.reverbNode);
+        }
+
+        // 3. Ducking
+        if (options.priority) this.triggerDucking(buffer.duration);
+
         source.start(0);
         this.activeSources.add(source);
-        source.onended = () => this.activeSources.delete(source);
-
         return { source, panner, gain };
     }
 
-    /**
-     * Play background music
-     */
-    async playMusic(url, volume = 0.5) {
-        if (this.musicSource) {
-            try { this.musicSource.stop(); } catch(e) {}
-        }
-
-        if (!this.buffers.has(url)) {
-            await this.load(url, url);
-        }
-
-        if (!this.buffers.has(url)) return;
-
-        this.musicSource = this.ctx.createBufferSource();
-        this.musicSource.buffer = this.buffers.get(url);
-        this.musicSource.loop = true;
-
-        this.musicGain.gain.setTargetAtTime(volume, this.ctx.currentTime, 0.1);
-        this.musicSource.connect(this.musicGain);
-        this.musicSource.start(0);
-        
-        console.log(`[Sound] Music playing: ${url}`);
-    }
-
-    /**
-     * Update the listener transform (call every frame)
-     */
-    updateListener(x, y, z = 0, fwd = {x:0, y:0, z:-1}, up = {x:0, y:1, z:0}) {
-        if (!this.ctx || !this.ctx.listener) return;
-        
-        const l = this.ctx.listener;
-        const t = this.ctx.currentTime;
-
-        if (l.positionX) {
-            l.positionX.setTargetAtTime(x, t, 0.05);
-            l.positionY.setTargetAtTime(y, t, 0.05);
-            l.positionZ.setTargetAtTime(z, t, 0.05);
-            l.forwardX.setTargetAtTime(fwd.x, t, 0.05);
-            l.forwardY.setTargetAtTime(fwd.y, t, 0.05);
-            l.forwardZ.setTargetAtTime(fwd.z, t, 0.05);
-            l.upX.setTargetAtTime(up.x, t, 0.05);
-            l.upY.setTargetAtTime(up.y, t, 0.05);
-            l.upZ.setTargetAtTime(up.z, t, 0.05);
-        } else {
-            l.setPosition(x, y, z);
-            l.setOrientation(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z);
-        }
-    }
-
-    setMasterVolume(v) { if (this.masterGain) this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.1); }
-    setMusicVolume(v) { if (this.musicGain) this.musicGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.1); }
-    setSfxVolume(v) { if (this.sfxGain) this.sfxGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.1); }
-
+    // --- LEGACY COMPATIBILITY ---
+    play(name, options = {}) { return this.playEvent(name, options); }
+    async playMusic(url, volume = 0.5) { return this.playEvent('music:' + url, { volume, bus: 'music', loop: true, direct: true }); }
     stopAll() {
         this.activeSources.forEach(s => { try { s.stop(); } catch(e) {} });
         this.activeSources.clear();
-        if (this.musicSource) { try { this.musicSource.stop(); } catch(e) {} this.musicSource = null; }
+    }
+
+    updateListener(x, y, z = 50) {
+        if (!this.ctx) return;
+        if (!this.ctx.listener) return;
+        const listener = this.ctx.listener;
+        if (listener.positionX) {
+            listener.positionX.setTargetAtTime(x, this.ctx.currentTime, 0.1);
+            listener.positionY.setTargetAtTime(y, this.ctx.currentTime, 0.1);
+            listener.positionZ.setTargetAtTime(z, this.ctx.currentTime, 0.1);
+        } else if (listener.setPosition) {
+            listener.setPosition(x, y, z);
+        }
+    }
+
+    updateSource(id, x, y, z = 0) {
+        // Find the active source or panner if needed. 
+        // In v3, we aren't tracking panners by ID in activeSources, but we provide a stub to prevent errors.
     }
 }
 

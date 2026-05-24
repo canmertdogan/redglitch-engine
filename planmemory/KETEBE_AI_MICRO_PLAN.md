@@ -88,7 +88,7 @@
 │  │  │ .js v3       │  │ Voy/Orama    │  │ addGameObject()   │  ││
 │  │  │              │  │              │  │ changeSettings()  │  ││
 │  │  │ Qwen2.5-     │  │ MiniLM-L6    │  │ navigateTo()     │  ││
-│  │  │ Coder-0.5B   │  │ (embeddings) │  │ editFile()       │  ││
+│  │  │ Coder-3B   │  │ (embeddings) │  │ editFile()       │  ││
 │  │  └──────┬──────┘  └──────┬───────┘  └────────┬──────────┘  ││
 │  │         │                │                    │              ││
 │  │         ▼                ▼                    ▼              ││
@@ -184,7 +184,7 @@ export const AI_CONFIG = {
     // Model configuration
     models: {
         llm: {
-            name: 'Qwen/Qwen2.5-Coder-0.5B-Instruct',
+            name: 'Qwen/Qwen2.5-Coder-3B-Instruct',
             quantization: 'q4f16',           // 4-bit quantized, ~300MB
             maxNewTokens: 512,
             temperature: 0.3,
@@ -200,7 +200,7 @@ export const AI_CONFIG = {
 
     // Runtime limits
     limits: {
-        contextWindow: 2048,                  // Total tokens for 0.5B model
+        contextWindow: 4096,                  // Total tokens for 3B model
         maxHistoryMessages: 6,                // Sliding window
         maxRAGChunks: 3,                      // Top-K retrieval
         ragChunkSize: 300,                    // Characters per chunk
@@ -1086,7 +1086,7 @@ Revamped chat panel that replaces IRAB's chat UI (while keeping the avatar).
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌─ Status Bar ──────────────────────────────────────────┐│
-│  │  Model: Qwen2.5-Coder-0.5B · Backend: WebGPU · 23ms  ││
+│  │  Model: Qwen2.5-Coder-3B · Backend: WebGPU · 23ms  ││
 │  └────────────────────────────────────────────────────────┘│
 └────────────────────────────────────────────────────────────┘
 ```
@@ -1298,7 +1298,7 @@ User sends message
 //   └──────(5 min idle)──── DISPOSING ◄────────────┘
 //
 // Memory budget targets:
-//   - LLM model (Qwen 0.5B q4): ~300MB VRAM/RAM
+//   - LLM model (Qwen 3B q4): ~1.8GB VRAM/RAM
 //   - Embedding model (MiniLM): ~23MB RAM
 //   - Vector store: ~5MB RAM (255 chunks × 384-dim vectors)
 //   - Chat history: ~50KB RAM
@@ -1357,7 +1357,7 @@ User sends message
 
 | Risk | Probability | Impact | Mitigation |
 |------|------------|--------|-----------|
-| 0.5B model hallucinate APIs | High | Medium | Strong system prompt + RAG forces correct API references |
+| 3B model hallucinate APIs | High | Medium | Strong system prompt + RAG forces correct API references |
 | Model generates unsafe code | Medium | Medium | All write ops require confirmation; sandboxed execution |
 | RAG returns irrelevant chunks | Medium | Low | Hybrid search (vector + keyword); tuned similarity threshold |
 | Tool calls with wrong args | Medium | Medium | JSON Schema validation before execution; type checking |
@@ -1482,7 +1482,7 @@ User sends message
 |---------|---------|-------------|---------|
 | `@xenova/transformers` | `^3.0.0` | ~1.5MB | LLM inference (WebGPU/WASM) |
 | `@orama/orama` | `^3.0.0` | ~15KB | Vector + full-text search |
-| Qwen2.5-Coder-0.5B-Instruct (ONNX q4) | - | ~300MB | LLM model weights (downloaded on demand) |
+| Qwen2.5-Coder-3B-Instruct (ONNX q4) | - | ~1.8GB | LLM model weights (downloaded on demand) |
 | all-MiniLM-L6-v2 (ONNX int8) | - | ~23MB | Embedding model (downloaded on demand) |
 
 ## Appendix B: Browser Compatibility

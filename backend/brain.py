@@ -13,9 +13,9 @@ class IrabBrain:
         self.n_threads = 8     
         self.available_tools = []
         
-        # Optimized for 1.5B Model
-        self.max_tokens = 450
-        self.temperature = 0.3 # Slightly up from 0.1 to prevent repetitive "dumb" loops
+        # Optimized for 3B Model
+        self.max_tokens = 600
+        self.temperature = 0.4 # Higher for more creative reasoning on 3B
         self.top_p = 0.95
         self.is_aborted = False
         self.custom_personality = ""

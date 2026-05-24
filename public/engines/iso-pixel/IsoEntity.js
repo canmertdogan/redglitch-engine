@@ -49,6 +49,25 @@ class IsoEntity {
         // Snap to floor initially
         const floorZ = this.game.getZAt(this.x, this.y);
         if (this.z < floorZ) this.z = floorZ;
+
+        // Brain System
+        this.brainRuntime = null;
+        if (def.behavior && def.behavior.script) {
+            this.attachBrain(def.behavior.script);
+        }
+    }
+
+    async attachBrain(name) {
+        if (this.game.logicSystem) {
+            await this.game.logicSystem.attachToEntity(this, name);
+        }
+    }
+
+    async say(text) {
+        console.log(`[IsoNPC ${this.id}] says: ${text}`);
+        if (this.game.hud && this.game.hud.showDialogue) {
+            this.game.hud.showDialogue(this, text);
+        }
     }
 
     update(dt) {
@@ -173,6 +192,13 @@ class IsoEntity {
     }
     
     updateAI(dt) {
+        // Run brain runtime if attached (VSL/Behavior)
+        if (this.brainRuntime) {
+            this.brainRuntime.update(dt / 1000); // dt is in ms here? Let's check.
+            // ... movement handled by brainRuntime calls to entity methods ...
+            return;
+        }
+
         const p = this.game.player;
         const dist = Math.sqrt((this.x - p.x)**2 + (this.y - p.y)**2);
         

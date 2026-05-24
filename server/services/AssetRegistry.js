@@ -29,7 +29,7 @@ class AssetRegistry {
     async _scanProject(projectPath) {
         const isRoot = projectService.isRootProject();
         const projectBase = path.basename(projectPath);
-        const assets = [];
+        const assets = new Map(); // Use Map to handle overrides (project wins)
         
         const scanDirs = [
             { dir: 'assets', type: 'image' },
@@ -39,45 +39,67 @@ class AssetRegistry {
             { dir: 'data', type: 'data' }
         ];
 
-        const baseScanPath = isRoot ? path.join(projectPath, 'public') : projectPath;
+        // 1. Scan CORE ENGINE (public/) if we are in a sub-project
+        if (!isRoot) {
+            const corePublic = path.join(__dirname, '..', '..', 'public');
+            for (const entry of scanDirs) {
+                const fullPath = path.join(corePublic, entry.dir);
+                try {
+                    const files = await this._walk(fullPath, entry.dir);
+                    for (const file of files) {
+                        const asset = this._mapFileToAsset(file, entry.type, true);
+                        assets.set(asset.id, asset);
+                    }
+                } catch (e) {}
+            }
+        }
 
+        // 2. Scan PROJECT (or public/ if root)
+        const baseScanPath = isRoot ? path.join(projectPath, 'public') : projectPath;
         for (const entry of scanDirs) {
             const fullPath = path.join(baseScanPath, entry.dir);
             try {
                 const files = await this._walk(fullPath, entry.dir);
                 for (const file of files) {
-                    const ext = path.extname(file.dirent.name).toLowerCase();
-                    let type = entry.type;
-                    if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) type = 'image';
-                    else if (['.mp3', '.wav', '.ogg'].includes(ext)) type = 'audio';
-                    else if (['.json', '.algorithm', '.3dmap'].includes(ext)) type = 'data';
-
-                    let assetPath = file.rel;
-                    if (!isRoot) {
-                        assetPath = `projects/${projectBase}/${assetPath}`;
-                    } else {
-                        assetPath = `/${assetPath}`;
-                    }
-
-                    let size = 0;
-                    try { size = (await fs.stat(file.full)).size; } catch(e){}
-
-                    assets.push({
-                        id: file.rel.replace(/\\/g, '/'),
-                        name: file.dirent.name,
-                        path: assetPath,
-                        type: type,
-                        metadata: {
-                            size: size,
-                            ext: ext
-                        }
-                    });
+                    const asset = this._mapFileToAsset(file, entry.type, false, isRoot, projectBase);
+                    // Project asset overrides core if ID is the same
+                    assets.set(asset.id, asset);
                 }
-            } catch (e) {
-                // Directory skip
-            }
+            } catch (e) {}
         }
-        return assets;
+        
+        return Array.from(assets.values());
+    }
+
+    _mapFileToAsset(file, defaultType, isEngineCore, isRoot = true, projectBase = '') {
+        const ext = path.extname(file.dirent.name).toLowerCase();
+        let type = defaultType;
+        if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) type = 'image';
+        else if (['.mp3', '.wav', '.ogg'].includes(ext)) type = 'audio';
+        else if (['.json', '.algorithm', '.3dmap'].includes(ext)) type = 'data';
+
+        let assetPath = file.rel;
+        if (isEngineCore) {
+            // Engine core files are served from / (e.g. /assets/foo.png)
+            assetPath = `/${assetPath}`;
+        } else if (!isRoot) {
+            // Project files are served from /projects/Name/ (e.g. /projects/my-game/assets/foo.png)
+            assetPath = `projects/${projectBase}/${assetPath}`;
+        } else {
+            // Root project (main engine) files are served from /
+            assetPath = `/${assetPath}`;
+        }
+
+        return {
+            id: file.rel.replace(/\\/g, '/'),
+            name: file.dirent.name,
+            path: assetPath,
+            type: type,
+            metadata: {
+                ext: ext,
+                source: isEngineCore ? 'engine' : 'project'
+            }
+        };
     }
 
     async _walk(dir, rel) {

@@ -19,5 +19,5 @@ module.exports = {
     WATCH_PATHS: [path.join(__dirname, '..', 'public')],
     
     // Logging
-    LOG_REQUESTS: true
+    LOG_REQUESTS: false
 };

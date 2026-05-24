@@ -168,9 +168,18 @@ export const PrimitiveFactory = {
         const hw = w / 2, hd = d / 2;
         const pos = new Float32Array([-hw,0,hd, hw,0,hd, hw,0,-hd, -hw,0,-hd, -hw,h,hd, hw,h,hd]);
         const idx = [0,1,5, 0,5,4, 1,2,5, 0,3,2, 0,2,1, 3,0,4, 4,5,2, 4,2,3, 2,3,4, 2,4,5];
+        // Wait, looking at the previous line: 1,2,5 and 0,3,2 and 0,2,1 and 3,0,4...
+        // Let's just normalize it to proper CCW.
+        const normalizedIdx = [
+            0,1,5, 0,5,4, // Front/Slope
+            1,2,5,        // Right side (1:R-F-B, 2:R-B-B, 5:R-F-T)
+            2,3,0, 2,0,1, // Bottom
+            3,0,4,        // Left side (3:L-B-B, 0:L-F-B, 4:L-F-T)
+            4,5,2, 4,2,3  // Back/Top
+        ];
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        geo.setIndex(idx); geo.computeVertexNormals(); return geo;
+        geo.setIndex(normalizedIdx); geo.computeVertexNormals(); return geo;
     },
 
     _buildWedge(w, h, d) {

@@ -17,7 +17,7 @@
 
 ### 3. Brain & Context (Phase 3)
 - **Context Manager**: Intelligent prompt assembly (System + RAG + Code + History).
-- **Token Budgeting**: Strict adherence to 2048 token window with sliding history.
+- **Token Budgeting**: Strict adherence to 4096 token window with sliding history.
 - **Response Parser**: Real-time extraction of tools and code blocks.
 
 ### 4. Agentic Tools (Phase 4)
@@ -29,7 +29,7 @@
 - **Token Streaming**: Visual character-by-character generation feedback.
 - **Event-Driven UI**: Real-time status updates via EventBus.
 
-| LLM Model | Qwen2.5-Coder-0.5B-Instruct (Q4) |
+| LLM Model | Qwen2.5-Coder-3B-Instruct (Q4) |
 | Embedding | all-MiniLM-L6-v2 (INT8) |
 | Inference | Transformers.js v3 (WebGPU/WASM) |
 | Vector DB | Orama 2.x |

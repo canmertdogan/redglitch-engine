@@ -622,5 +622,4 @@ window.addEventListener('load', () => {
 
     if (!window.game) window.game = new PlatformerGame();
     if (document.getElementById('demo-title')) window.game.init();
-    }
 });

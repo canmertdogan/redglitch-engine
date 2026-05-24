@@ -989,12 +989,3 @@ if (document.readyState === 'loading') {
 }
 
 console.log('KAI UI LOADED.');
-ingProgress(data);
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => window.AIChatUI.initialize().catch(console.error));
-} else {
-    window.AIChatUI.initialize().catch(console.error);
-}
-
-console.log('KAI UI LOADED.');

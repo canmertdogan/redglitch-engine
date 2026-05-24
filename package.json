@@ -1,7 +1,7 @@
 {
   "name": "ketebe-engine",
   "productName": "Ketebe Game Studio",
-  "version": "1.0.0",
+  "version": "7.0.1",
   "description": "Ketebe Engine Alpha - Professional Game Development Studio",
   "main": "electron-main.js",
   "scripts": {
@@ -15,7 +15,10 @@
     "build:game:win": "node build-game.js \"Default Project\" windows",
     "build:ai-worker": "node public/ai/build-worker.js",
     "build:corpus": "node public/ai/docs/build-corpus.js",
-    "engine:lockstep": "node scripts/engine-lockstep.js"
+    "engine:lockstep": "node scripts/engine-lockstep.js",
+    "studio:dev": "vite",
+    "studio:build": "vite build",
+    "studio:preview": "vite preview"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.1",
@@ -25,33 +28,44 @@
     "@capacitor/ios": "^8.0.2",
     "@capacitor/preferences": "^8.0.0",
     "@huggingface/transformers": "^3.0.0-alpha.19",
+    "@monaco-editor/react": "^4.7.0",
     "@orama/orama": "^3.0.0",
-    "@xenova/transformers": "^2.17.2",
     "cannon-es": "^0.20.0",
     "chokidar": "^5.0.0",
     "cors": "^2.8.6",
     "express": "^4.18.2",
+    "lucide-react": "^1.16.0",
+    "monaco-editor": "^0.55.1",
     "onnxruntime-web": "^1.19.2",
     "parse-magica-voxel": "^2.1.2",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "three": "^0.183.2",
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
     "electron": "^40.1.0",
     "electron-builder": "^24.9.1",
-    "electron-packager": "^17.1.2",
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13"
   },
   "build": {
     "appId": "com.ketebe.engine",
     "productName": "Ketebe Game Studio",
+    "asar": true,
     "directories": {
       "output": "dist"
     },
     "files": [
       "**/*",
       "!dist/*",
-      "!builds/*"
+      "!builds/*",
+      "!scratch/*",
+      "!backend/venv/*"
     ],
     "win": {
       "target": "nsis",
