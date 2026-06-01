@@ -1,5 +1,5 @@
 /**
- * KETEBE AUDIO DIRECTOR PRO - ULTRA HD (v7.0)
+ * REDGLITCH AUDIO DIRECTOR PRO - ULTRA HD (v7.0)
  * Expanded authoring workflows, diagnostics, preview simulation, and mixer control.
  */
 
@@ -263,8 +263,8 @@ class AudioDirectorUltraHD {
     }
 
     setupEventListeners() {
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.on('audio:trigger', (event) => {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('audio:trigger', (event) => {
                 this.addHistoryEntry(event.data?.name || 'unknown:event', event.data?.clip);
             });
         }
@@ -318,7 +318,7 @@ class AudioDirectorUltraHD {
                 return;
             }
 
-            if (window.KetebeEventBus) window.KetebeEventBus.emit('audio:map_updated', this.audioMap);
+            if (window.RedGlitchEventBus) window.RedGlitchEventBus.emit('audio:map_updated', this.audioMap);
             this.isDirty = false;
             this.lastSavedAt = Date.now();
             this.updateStatusBadges();

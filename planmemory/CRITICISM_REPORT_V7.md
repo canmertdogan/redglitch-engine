@@ -1,4 +1,4 @@
-# ketebe ENGINE v7.0 – Architectural Criticism Report
+# redglitch ENGINE v7.0 – Architectural Criticism Report
 
 **Date:** February 7, 2026
 **Scope:** v7.0 Core, Launcher, Backend, and Tool Suite

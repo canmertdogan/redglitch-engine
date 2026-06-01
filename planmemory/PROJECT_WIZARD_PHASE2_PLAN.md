@@ -21,7 +21,7 @@ Replacing the simple dropdown with a full-screen or large modal "Card Grid" layo
 *   **Categories:** Filter by "RPG", "Platformer", "Empty", "Examples".
 
 ### C. Project Metadata & Configuration
-Moving beyond just a folder name. We will introduce a standardized `ketebe.json` (or extend `package.json`) for every project.
+Moving beyond just a folder name. We will introduce a standardized `redglitch.json` (or extend `package.json`) for every project.
 *   **Fields:** Project Name, Author, Version, Description, Unique ID (UUID).
 *   **Settings:** Initial screen resolution, default inputs.
 
@@ -31,7 +31,7 @@ Moving beyond just a folder name. We will introduce a standardized `ketebe.json`
 
 ### Directory Structure Changes
 ```text
-ketebe-engine/
+redglitch-engine/
 ├── templates/                  <-- NEW DIRECTORY
 │   ├── base-rpg/               <-- Was "Default Project"
 │   │   ├── template.json       <-- Metadata
@@ -50,7 +50,7 @@ ketebe-engine/
 2.  **`POST /api/projects/create` (Updated)**
     *   Accepts: `{ name, templateId, metadata: { author, desc } }`.
     *   Copies files from `templates/[templateId]` to `projects/[name]`.
-    *   Injects/Creates `ketebe.json` with the provided metadata.
+    *   Injects/Creates `redglitch.json` with the provided metadata.
 
 ---
 
@@ -71,8 +71,8 @@ ketebe-engine/
 
 ### Step 3: Integration & Metadata
 - [ ] Update `server.js` creation logic to read from `templates/` instead of `projects/Default Project`.
-- [ ] Implement `ketebe.json` generation during creation.
-- [ ] Update the Dashboard (`project_dashboard.html`) to read project names/authors from `ketebe.json` instead of just folder names.
+- [ ] Implement `redglitch.json` generation during creation.
+- [ ] Update the Dashboard (`project_dashboard.html`) to read project names/authors from `redglitch.json` instead of just folder names.
 
 ---
 

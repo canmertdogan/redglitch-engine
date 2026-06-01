@@ -1,4 +1,4 @@
-# KETEBE PIXEL STUDIO - UI OVERHAUL MASTER PLAN
+# REDGLITCH PIXEL STUDIO - UI OVERHAUL MASTER PLAN
 
 ## 1. Executive Summary
 **Goal:** Rescue the DAW project by implementing a highly usable, "BandLab-style" workflow wrapped in a distinctive "Algorithm Studio" pixelated design language.

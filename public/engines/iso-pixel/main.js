@@ -138,7 +138,7 @@ class IsoGame {
         }
         
         // Unsubscribe from EventBus
-        const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
         if (eventBus && this.eventBusIds) {
             this.eventBusIds.forEach(id => eventBus.off('*', id));
         }
@@ -147,7 +147,7 @@ class IsoGame {
     }
 
     _setupEngineListeners() {
-        const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
         this.eventBusIds = [];
         if (eventBus) {
             const id1 = eventBus.on('engine:snapshot:request', (event) => {
@@ -179,7 +179,7 @@ class IsoGame {
             this.frameCount = 0;
             this.lastFpsCheck = now;
 
-            const eventBus = window.KetebeEventBus || (window.parent && window.parent.KetebeEventBus);
+            const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
             if (eventBus) {
                 eventBus.emit('system:metrics', {
                     fps,
@@ -364,7 +364,7 @@ class IsoGame {
                 levelData = this.levelMetadata;
             } else {
                 // Normal mode: load map from sessionStorage or default file
-                const playtestData = sessionStorage.getItem('ketebe_playtest_data') || sessionStorage.getItem('ketebe_playtest_map');
+                const playtestData = sessionStorage.getItem('redglitch_playtest_data') || sessionStorage.getItem('redglitch_playtest_map');
                 if (playtestData) {
                     levelData = JSON.parse(playtestData);
                 } else {
@@ -446,7 +446,7 @@ class IsoGame {
             }
         };
         
-        // Load Caterpillar/Worm sprites (matching 2D engine's "Ketebe Canavarı")
+        // Load Caterpillar/Worm sprites (matching 2D engine's "RedGlitch Canavarı")
         if (window.createPixelImage) {
             this.playerHead = window.createPixelImage('caterpillar_head');
             this.playerBody = window.createPixelImage('caterpillar_body');

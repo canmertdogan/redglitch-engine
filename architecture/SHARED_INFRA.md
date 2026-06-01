@@ -1,6 +1,6 @@
 # Shared Infrastructure (The Kernel)
 
-The "Kernel" of ketebe ENGINE consists of three singleton classes that manage the application's lifecycle, data, and communication. These reside in `public/shared/`.
+The "Kernel" of redglitch ENGINE consists of three singleton classes that manage the application's lifecycle, data, and communication. These reside in `public/shared/`.
 
 ## 1. AssetManager (`AssetManager.js`)
 **Role:** The single source of truth for all game assets.
@@ -15,10 +15,10 @@ The "Kernel" of ketebe ENGINE consists of three singleton classes that manage th
 ### API Snapshot
 ```javascript
 // Load an asset (handles caching and async fetching)
-const sprite = await window.KetebeAssetManager.loadAsset('my_sprite_id');
+const sprite = await window.RedGlitchAssetManager.loadAsset('my_sprite_id');
 
 // Register a new file dropped onto the browser
-window.KetebeAssetManager.importAsset(fileObject, 'assets/new_image.png');
+window.RedGlitchAssetManager.importAsset(fileObject, 'assets/new_image.png');
 ```
 
 ---
@@ -55,10 +55,10 @@ It is a **hybrid Pub/Sub system**:
 ### Usage
 ```javascript
 // Set a value (automatically triggers 'state:changed' event and adds to Undo stack)
-window.KetebeProjectState.set('settings.gravity', 9.8);
+window.RedGlitchProjectState.set('settings.gravity', 9.8);
 
 // Watch for changes
-window.KetebeProjectState.watch('settings.gravity', (newValue) => {
+window.RedGlitchProjectState.watch('settings.gravity', (newValue) => {
     console.log("Gravity changed to:", newValue);
 });
 ```

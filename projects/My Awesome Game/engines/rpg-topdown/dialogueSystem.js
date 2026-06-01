@@ -83,7 +83,7 @@ window.DialogueSystem = class DialogueSystem {
             if (!response.ok) throw new Error("Failed to load dialogues");
             this.db = await response.json();
         } catch (e) {
-            const saved = localStorage.getItem('ketebe_dialogue');
+            const saved = localStorage.getItem('redglitch_dialogue');
             if (saved) this.db = JSON.parse(saved);
         }
     }

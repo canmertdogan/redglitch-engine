@@ -1,12 +1,12 @@
 /**
- * Ketebe AI - Co-Pilot (Phase 10)
+ * RedGlitch AI - Co-Pilot (Phase 10)
  * Proactive, context-aware assistance.
  * Monitors EventBus for user patterns and suggests actions.
  */
 
 export class CoPilot {
-    constructor(ketebeAI, eventBus) {
-        this.ai = ketebeAI;
+    constructor(redglitchAI, eventBus) {
+        this.ai = redglitchAI;
         this.eventBus = eventBus;
         this.enabled = true;
         this.lastActionTime = Date.now();
@@ -152,13 +152,13 @@ export class CoPilot {
     suggest(text, actions = []) {
         this.eventBus.emit('ai:suggestion', { text, actions });
         // Also use TTS if available
-        if (window.KetebeThoughtVisualizer) {
-            window.KetebeThoughtVisualizer.speak(text);
+        if (window.RedGlitchThoughtVisualizer) {
+            window.RedGlitchThoughtVisualizer.speak(text);
         }
     }
 
     loadPreferences() {
-        const saved = localStorage.getItem('ketebe_ai_prefs');
+        const saved = localStorage.getItem('redglitch_ai_prefs');
         return saved ? JSON.parse(saved) : {
             namingStyle: 'snake_case',
             autoSave: true,
@@ -168,6 +168,6 @@ export class CoPilot {
 
     savePreference(key, value) {
         this.preferences[key] = value;
-        localStorage.setItem('ketebe_ai_prefs', JSON.stringify(this.preferences));
+        localStorage.setItem('redglitch_ai_prefs', JSON.stringify(this.preferences));
     }
 }

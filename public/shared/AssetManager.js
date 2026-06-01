@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Asset Manager
+ * RedGlitch Engine - Asset Manager
  * Unified asset management and dependency tracking
  */
 class AssetManager {
@@ -10,8 +10,8 @@ class AssetManager {
         this.watchers = new Set();
         this.eventBus = null;
         
-        if (typeof window !== 'undefined' && window.KetebeEventBus) {
-            this.eventBus = window.KetebeEventBus;
+        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
+            this.eventBus = window.RedGlitchEventBus;
             this.setupEventListeners();
         }
         
@@ -687,7 +687,7 @@ class AssetManager {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.KetebeAssetManager = window.KetebeAssetManager || new AssetManager();
+    window.RedGlitchAssetManager = window.RedGlitchAssetManager || new AssetManager();
 }
 
 // Export for Node.js

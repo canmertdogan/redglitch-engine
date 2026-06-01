@@ -1,5 +1,5 @@
 /**
- * KETEBE Sampler - Multi-sample playback engine
+ * REDGLITCH Sampler - Multi-sample playback engine
  * Features: Pitch shifting, velocity layers, loop points, ADSR
  */
 

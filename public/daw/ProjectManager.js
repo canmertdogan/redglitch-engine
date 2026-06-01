@@ -1,5 +1,5 @@
 /**
- * KETEBE Project Manager - Save/Load/Export DAW projects
+ * REDGLITCH Project Manager - Save/Load/Export DAW projects
  */
 
 class ProjectManager {
@@ -182,7 +182,7 @@ class ProjectManager {
         try {
             const projectData = this.serializeProject();
             const json = JSON.stringify(projectData);
-            localStorage.setItem('ketebe_daw_autosave', json);
+            localStorage.setItem('redglitch_daw_autosave', json);
             console.log('Auto-saved to localStorage');
         } catch (e) {
             console.warn('Auto-save failed:', e);
@@ -191,7 +191,7 @@ class ProjectManager {
     
     loadAutoSave() {
         try {
-            const json = localStorage.getItem('ketebe_daw_autosave');
+            const json = localStorage.getItem('redglitch_daw_autosave');
             if (json) {
                 const projectData = JSON.parse(json);
                 return this.deserializeProject(projectData);
@@ -203,7 +203,7 @@ class ProjectManager {
     }
     
     clearAutoSave() {
-        localStorage.removeItem('ketebe_daw_autosave');
+        localStorage.removeItem('redglitch_daw_autosave');
     }
     
     startAutoSave() {

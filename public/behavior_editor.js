@@ -1,5 +1,5 @@
 /**
- * KETEBE BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
+ * REDGLITCH BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
  * Visual Behavior Tree / FSM Editor for NPCs
  * Integrated with EventBus, SharedProjectState, and AssetManager
  */
@@ -19,9 +19,9 @@ function escapeHTML(str) {
 
 function initializeBehaviorIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for NPC/enemy behavior requests
@@ -775,7 +775,7 @@ Tools:
 BRAIN ARCHITECT v1.0
 ====================
 
-Visual NPC behavior programming tool for Ketebe Engine.
+Visual NPC behavior programming tool for RedGlitch Engine.
 
 Features:
   • Node-based behavior design
@@ -784,7 +784,7 @@ Features:
   • Multi-select & alignment tools
   • Collapsible UI panels
 
-Created for Ketebe Game Engine
+Created for RedGlitch Game Engine
         `.trim());
     }
     

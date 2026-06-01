@@ -2,7 +2,7 @@
 
 ## Launching
 
-From the Ketebe dashboard, select a project with `"engineType": "topdown-3d"` and click **Open Editor**.
+From the RedGlitch dashboard, select a project with `"engineType": "topdown-3d"` and click **Open Editor**.
 
 - **Editor files:** `public/topdown3d_editor.html` + `public/topdown3d_editor.js`
 - **Output:** `projects/<ProjectName>/dunyalar/<level>.json`
@@ -57,7 +57,7 @@ Place and configure units on the map.
 | `directional` | Color, intensity, position (direction vector), shadow toggle |
 | `point` | Color, intensity, position, distance, decay |
 
-Click **+ Add Light** and select a type. Multiple lights of each type are supported. Toggle **Cast Shadow** on directional lights to enable shadow maps (requires `shadowQuality: true` in `ketebe.json`).
+Click **+ Add Light** and select a type. Multiple lights of each type are supported. Toggle **Cast Shadow** on directional lights to enable shadow maps (requires `shadowQuality: true` in `redglitch.json`).
 
 ---
 

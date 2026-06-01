@@ -2,7 +2,7 @@
   "name": "Advanced Campaign Demo",
   "description": "Demonstrates all advanced node types: mini-games, hubs, challenges, boss rush, and exploration",
   "version": "1.0.0",
-  "author": "Ketebe Team",
+  "author": "RedGlitch Team",
   "nodes": [
     {
       "id": "start",

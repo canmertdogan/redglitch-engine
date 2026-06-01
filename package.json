@@ -1,8 +1,8 @@
 {
-  "name": "ketebe-engine",
-  "productName": "Ketebe Game Studio",
+  "name": "redglitch-engine",
+  "productName": "RedGlitch Game Studio",
   "version": "7.0.1",
-  "description": "Ketebe Engine Alpha - Professional Game Development Studio",
+  "description": "RedGlitch Engine Alpha - Professional Game Development Studio",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
@@ -54,8 +54,8 @@
     "vite": "^8.0.13"
   },
   "build": {
-    "appId": "com.ketebe.engine",
-    "productName": "Ketebe Game Studio",
+    "appId": "com.redglitch.engine",
+    "productName": "RedGlitch Game Studio",
     "asar": true,
     "directories": {
       "output": "dist"

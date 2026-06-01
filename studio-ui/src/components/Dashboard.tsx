@@ -13,8 +13,8 @@ const Dashboard: React.FC = () => {
     const [activeView, setActiveView] = useState('projects');
     const [projects, setProjects] = useState<Project[]>([]);
     const [stats, setStats] = useState({ cpu: 0, mem: 0 });
-    const [perfMode, setPerfMode] = useState(localStorage.getItem('ketebe_perf_mode') === 'true');
-    const [username, setUsername] = useState(localStorage.getItem('ketebe_username') || 'Developer');
+    const [perfMode, setPerfMode] = useState(localStorage.getItem('redglitch_perf_mode') === 'true');
+    const [username, setUsername] = useState(localStorage.getItem('redglitch_username') || 'Developer');
 
     const [wizardStep, setWizardStep] = useState(1);
     const [newProjectData, setNewProjectData] = useState({ name: '', author: '', blueprint: 'rpg' });
@@ -109,7 +109,7 @@ const Dashboard: React.FC = () => {
             {/* HEADER */}
             <header style={{ gridArea: '1 / 1 / 2 / 3', background: 'rgba(0,0,0,0.8)', borderBottom: '1px solid #1f2b42', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', zIndex: 10 }}>
                 <div style={{ color: 'var(--accent)', fontWeight: 'bold', letterSpacing: '2px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ borderRight: '1px solid var(--accent)', paddingRight: '10px' }}>KETEBE ENGINE</div>
+                    <div style={{ borderRight: '1px solid var(--accent)', paddingRight: '10px' }}>REDGLITCH ENGINE</div>
                     <span style={{ fontSize: '14px', color: '#555', fontWeight: 'normal' }}>v7.0 CORE STUDIO</span>
                 </div>
                 <div style={{ display: 'flex', gap: '20px', fontSize: '16px', color: '#666' }}>
@@ -316,13 +316,13 @@ const Dashboard: React.FC = () => {
                                     checked={perfMode} 
                                     onChange={(e) => {
                                         setPerfMode(e.target.checked);
-                                        localStorage.setItem('ketebe_perf_mode', String(e.target.checked));
+                                        localStorage.setItem('redglitch_perf_mode', String(e.target.checked));
                                     }}
                                     style={{ width: '40px', height: '20px' }}
                                 />
                             </div>
                             <button className="tool-btn" style={{ width: '100%', marginTop: '30px', padding: '10px' }} onClick={() => {
-                                localStorage.setItem('ketebe_username', username);
+                                localStorage.setItem('redglitch_username', username);
                                 alert('Settings Saved!');
                             }}>SAVE CONFIGURATION</button>
                         </div>

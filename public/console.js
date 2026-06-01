@@ -3,7 +3,7 @@ class Terminal {
     constructor() {
         this.input = document.getElementById('input');
         this.output = document.getElementById('output');
-        this.history = JSON.parse(localStorage.getItem('ketebe_terminal_history')) || [];
+        this.history = JSON.parse(localStorage.getItem('redglitch_terminal_history')) || [];
         this.historyIdx = this.history.length;
 
         this.init();
@@ -19,7 +19,7 @@ class Terminal {
                 if (cmd) {
                     this.history.push(cmd);
                     if (this.history.length > 100) this.history.shift();
-                    localStorage.setItem('ketebe_terminal_history', JSON.stringify(this.history));
+                    localStorage.setItem('redglitch_terminal_history', JSON.stringify(this.history));
                     this.historyIdx = this.history.length;
                     this.execute(cmd);
                     this.input.value = '';

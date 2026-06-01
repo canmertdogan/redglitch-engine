@@ -1,5 +1,5 @@
 /**
- * Ketebe AI - Workflow Manager (Phase 8)
+ * RedGlitch AI - Workflow Manager (Phase 8)
  * Handles tool call parsing, sequencing, and transactional execution.
  */
 

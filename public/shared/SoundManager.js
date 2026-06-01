@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Unified Sound Manager (v3.0)
+ * RedGlitch Engine - Unified Sound Manager (v3.0)
  * Data-driven audio system powered by AudioMap.json
  */
 class SoundManager {
@@ -31,8 +31,8 @@ class SoundManager {
             window.addEventListener(ev, this._resumeHandler, { once: true })
         );
 
-        if (typeof window !== 'undefined' && window.KetebeEventBus) {
-            window.KetebeEventBus.on('audio:map_updated', (event) => {
+        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('audio:map_updated', (event) => {
                 console.log('[Sound] Map updated via EventBus');
                 this.applyAudioMap(event.data);
             });
@@ -167,8 +167,8 @@ class SoundManager {
         this.gameState = state;
         console.log(`[Sound] Audio State: ${state}`);
         // This could trigger EventBus signals to dynamic music managers
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('audio:state_changed', { state });
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('audio:state_changed', { state });
         }
     }
 
@@ -321,8 +321,8 @@ class SoundManager {
         };
 
         // Notify EventBus for visual feedback in studio
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('audio:trigger', { name: eventName, clip });
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('audio:trigger', { name: eventName, clip });
         }
 
         if (options.x !== undefined && options.y !== undefined) {

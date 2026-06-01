@@ -1,7 +1,7 @@
 {
     "id": "base-rpg",
     "name": "Default RPG",
-    "author": "Ketebe Game Studio",
+    "author": "RedGlitch Game Studio",
     "description": "A fully featured Top-Down RPG template including sprites, basic enemies, UI system, and save functionality. Recommended for new users.",
     "version": "1.0.0",
     "category": "RPG"

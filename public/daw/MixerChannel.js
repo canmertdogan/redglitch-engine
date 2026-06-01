@@ -1,5 +1,5 @@
 /**
- * KETEBE AUDIO STUDIO - Mixer Channel
+ * REDGLITCH AUDIO STUDIO - Mixer Channel
  * Handles the audio signal chain for a single track:
  * Input -> Inserts (FX) -> Fader (Volume) -> Pan -> Output (Master/Bus)
  */

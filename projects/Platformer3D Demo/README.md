@@ -34,14 +34,14 @@ The platformer-3d engine uses **Save3D** (`public/engines/shared/Save3D.js`) for
 
 - Saves include collected coin IDs so re-loaded levels skip already-picked-up coins.
 - Checkpoint progress is preserved across sessions.
-- Schema key: `ketebe.3d.save.v3` — incompatible with 2D engine saves (gracefully ignored).
+- Schema key: `redglitch.3d.save.v3` — incompatible with 2D engine saves (gracefully ignored).
 
 ## Engine configuration
 
-`ketebe.json` — engine: `platformer-3d`, quality: `medium`, `physics3D: true`, `shadowQuality: true`.
+`redglitch.json` — engine: `platformer-3d`, quality: `medium`, `physics3D: true`, `shadowQuality: true`.
 
 ## Customizing
 
-- Open **Platformer3D Editor** from the Ketebe launcher to build levels visually.
-- Add a new level by creating a `dunyalar/<name>.pf3d.json` and updating `startLevel` in `ketebe.json`.
-- Extend the palette by editing `"palette"` in `ketebe.json` and the shared palette asset at `public/engines/platformer-3d/palette.js`.
+- Open **Platformer3D Editor** from the RedGlitch launcher to build levels visually.
+- Add a new level by creating a `dunyalar/<name>.pf3d.json` and updating `startLevel` in `redglitch.json`.
+- Extend the palette by editing `"palette"` in `redglitch.json` and the shared palette asset at `public/engines/platformer-3d/palette.js`.

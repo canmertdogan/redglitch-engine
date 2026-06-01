@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Central Event Bus
+ * RedGlitch Engine - Central Event Bus
  * Provides unified communication across all editors and tools
  */
 class EventBus {
@@ -32,7 +32,7 @@ class EventBus {
         // Listen for window messages (for Electron IPC compatibility)
         if (typeof window !== 'undefined') {
             window.addEventListener('message', (event) => {
-                if (event.data && event.data.sourceType === 'ketebe-event') {
+                if (event.data && event.data.sourceType === 'redglitch-event') {
                     this.handleRemoteEvent(event.data.event);
                 }
             });
@@ -274,7 +274,7 @@ class EventBus {
 
         // 2. Cross-Window postMessage Broadcast
         const message = {
-            sourceType: 'ketebe-event',
+            sourceType: 'redglitch-event',
             event: eventData
         };
 
@@ -375,7 +375,7 @@ class EventBus {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.KetebeEventBus = window.KetebeEventBus || new EventBus();
+    window.RedGlitchEventBus = window.RedGlitchEventBus || new EventBus();
 }
 
 // Export for Node.js

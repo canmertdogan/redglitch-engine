@@ -1,6 +1,6 @@
 /**
  * public/ai/config.js
- * Central configuration for Ketebe AI Micro Edition.
+ * Central configuration for RedGlitch AI Micro Edition.
  */
 
 export const AI_CONFIG = {
@@ -40,10 +40,10 @@ export const AI_CONFIG = {
 
     // Storage keys
     storage: {
-        modelCacheKey: 'ketebe-ai-model-cache',
-        vectorDBKey: 'ketebe-ai-vectors',
-        configKey: 'ketebe-ai-config',
-        historyKey: 'ketebe-ai-history',
+        modelCacheKey: 'redglitch-ai-model-cache',
+        vectorDBKey: 'redglitch-ai-vectors',
+        configKey: 'redglitch-ai-config',
+        historyKey: 'redglitch-ai-history',
     },
 
     // Feature flags

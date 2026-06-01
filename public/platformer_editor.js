@@ -642,7 +642,7 @@ window.editor = new PlatformerEditor();
 
 // --- AI Integration: StudioBridge + Tool Dispatch ---
 (function initPlatformerAI() {
-    const eventBus = window.KetebeEventBus;
+    const eventBus = window.RedGlitchEventBus;
     if (!eventBus || !window.StudioBridge) {
         console.log('[PlatformerEditor] EventBus or StudioBridge not available, AI integration skipped.');
         return;

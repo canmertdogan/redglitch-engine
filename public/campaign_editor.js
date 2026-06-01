@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeCampaignIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for quest updates
@@ -1990,12 +1990,12 @@ window.showAbout = () => {
             <h2 style="color:var(--accent); margin:10px 0;">CAMPAIGN STUDIO</h2>
             <p style="color:#888;">Version 7.0</p>
             <p style="color:#ccc; margin:20px 0;">
-                Visual campaign flow editor for Ketebe Engine.<br>
+                Visual campaign flow editor for RedGlitch Engine.<br>
                 Create branching storylines, connect levels, and design<br>
                 your game's progression with ease.
             </p>
             <div style="border-top:1px solid #333; padding-top:15px; margin-top:15px;">
-                <p style="color:#666; font-size:0.9rem;">Part of the Ketebe Game Development Suite</p>
+                <p style="color:#666; font-size:0.9rem;">Part of the RedGlitch Game Development Suite</p>
             </div>
         </div>
     `;

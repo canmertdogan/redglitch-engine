@@ -1,4 +1,4 @@
-# Ketebe AI Assistant - Integration Guide
+# RedGlitch AI Assistant - Integration Guide
 
 ## What Has Been Implemented
 
@@ -16,7 +16,7 @@
    - Build automation
    - Action preview system
 
-3. **AI Assistant Core** (`public/ai/ketebe-ai-assistant.js`)
+3. **AI Assistant Core** (`public/ai/redglitch-ai-assistant.js`)
    - Query processing and classification
    - Q&A system with RAG integration
    - Action execution with permission checks
@@ -240,7 +240,7 @@ async customAction(params) {
 
 ### Custom Knowledge:
 
-Add to knowledge JSON files or create new ones in `/ai/knowledge/` and update `ketebe-ai-assistant.js`:
+Add to knowledge JSON files or create new ones in `/ai/knowledge/` and update `redglitch-ai-assistant.js`:
 
 ```javascript
 const knowledgeFiles = [

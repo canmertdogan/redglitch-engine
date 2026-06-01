@@ -112,7 +112,7 @@ SHOULD I PROCEED? OR ARE YOU HAVING SECOND THOUGHTS? IT'S OKAY. I HAVE THEM TOO.
 
 ## Configuration (Android)
 
-Create `.ketebe/ai_config.json`:
+Create `.redglitch/ai_config.json`:
 ```json
 {
   "provider": "cerebras",
@@ -170,7 +170,7 @@ GRRR... THERE MAY BE SECRETS. OR MAYBE NOT. I'M NOT TELLING.
 
 ## Credits
 
-**IRAB**: Quirky AI personality created for Ketebe Studio
+**IRAB**: Quirky AI personality created for RedGlitch Studio
 **Steve**: The Bug. Now a Feature.
 **You**: The Creator. THE OPERATOR. THE ONE WHO TYPES.
 

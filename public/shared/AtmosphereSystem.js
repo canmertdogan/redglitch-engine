@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Shared Atmosphere System
+ * RedGlitch Engine - Shared Atmosphere System
  * Handles pixel-art island and cloud backgrounds
  */
 window.AtmosphereSystem = class AtmosphereSystem {

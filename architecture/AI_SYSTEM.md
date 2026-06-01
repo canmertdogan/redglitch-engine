@@ -1,6 +1,6 @@
-# Ketebe AI (Micro Edition)
+# RedGlitch AI (Micro Edition)
 
-Ketebe AI is a **browser-native, offline-capable AI assistant** integrated directly into the IDE. Unlike most AI tools that rely on cloud APIs (OpenAI/Anthropic), Ketebe AI runs **locally** on the user's GPU using WebGPU and WebAssembly.
+RedGlitch AI is a **browser-native, offline-capable AI assistant** integrated directly into the IDE. Unlike most AI tools that rely on cloud APIs (OpenAI/Anthropic), RedGlitch AI runs **locally** on the user's GPU using WebGPU and WebAssembly.
 
 ## Core Philosophy
 *   **Zero Latency**: No network round-trips for inference.
@@ -10,7 +10,7 @@ Ketebe AI is a **browser-native, offline-capable AI assistant** integrated direc
 ## Architecture
 
 ```ascii
-[ User ] <---> [ AI Chat UI ] <---> [ KetebeAI (Orchestrator) ]
+[ User ] <---> [ AI Chat UI ] <---> [ RedGlitchAI (Orchestrator) ]
                                           |
                     +---------------------+---------------------+
                     |                     |                     |
@@ -30,7 +30,7 @@ Ketebe AI is a **browser-native, offline-capable AI assistant** integrated direc
 *   **Streaming**: Tokens are streamed character-by-character to the UI.
 
 ### 2. RAG System (`public/ai/rag-engine.js`)
-*   **Goal**: Provide the model (3B) with accurate knowledge about ketebe ENGINE APIs to prevent hallucinations.
+*   **Goal**: Provide the model (3B) with accurate knowledge about redglitch ENGINE APIs to prevent hallucinations.
 *   **Vector Store**: Uses **Orama** (a browser-native vector database).
 *   **Process**:
     1.  **Ingestion**: Documentation and core engine files are chunked and embedded (using `all-MiniLM-L6-v2`) into a `corpus.json`.

@@ -1,7 +1,7 @@
 {
     "id": "platformer-starter",
     "name": "Jump-Core Starter",
-    "author": "Ketebe Game Studio",
+    "author": "RedGlitch Game Studio",
     "description": "A classic 2D Side-Scrolling Platformer kit with AABB physics, gravity, and tile-based collisions.",
     "version": "1.0.0",
     "category": "Platformer"

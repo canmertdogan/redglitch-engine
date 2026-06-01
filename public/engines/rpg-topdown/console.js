@@ -4,7 +4,7 @@ class DebugConsole {
     constructor(game) {
         this.game = game;
         this.isOpen = false;
-        this.history = JSON.parse(localStorage.getItem('ketebe_console_history')) || [];
+        this.history = JSON.parse(localStorage.getItem('redglitch_console_history')) || [];
         this.historyIdx = this.history.length;
         
         this.commands = {
@@ -26,13 +26,13 @@ class DebugConsole {
         
         this.createDOM();
         this.setupInput();
-        this.log("KETEBE ENGINE ALPHA // CONSOLE READY", 'system');
+        this.log("REDGLITCH ENGINE ALPHA // CONSOLE READY", 'system');
         this.log("Type 'help' for command list. Press [TAB] to autocomplete.", 'info');
     }
 
     createDOM() {
         this.el = document.createElement('div');
-        this.el.id = 'ketebe-console';
+        this.el.id = 'redglitch-console';
         this.el.style.cssText = `
             position: fixed; bottom: 0; left: 0; width: 100%; height: 40%;
             background: rgba(5, 8, 15, 0.95); color: #cfd8dc;
@@ -65,7 +65,7 @@ class DebugConsole {
         `;
         
         const prompt = document.createElement('span');
-        prompt.innerHTML = '<span style="color:#f1c40f">ketebe</span>@<span style="color:#00f3ff">engine</span>:~$ ';
+        prompt.innerHTML = '<span style="color:#f1c40f">redglitch</span>@<span style="color:#00f3ff">engine</span>:~$ ';
         prompt.style.marginRight = '10px';
         
         this.input = document.createElement('input');
@@ -99,7 +99,7 @@ class DebugConsole {
                 if (cmd) {
                     this.history.push(cmd);
                     if (this.history.length > 50) this.history.shift();
-                    localStorage.setItem('ketebe_console_history', JSON.stringify(this.history));
+                    localStorage.setItem('redglitch_console_history', JSON.stringify(this.history));
                     this.historyIdx = this.history.length;
                     this.exec(cmd);
                     this.input.value = '';

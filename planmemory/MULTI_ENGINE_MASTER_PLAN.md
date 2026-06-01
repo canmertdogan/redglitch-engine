@@ -1,4 +1,4 @@
-# MULTI-ENGINE MASTER PLAN: ketebe ENGINE Expansion
+# MULTI-ENGINE MASTER PLAN: redglitch ENGINE Expansion
 
 **Status:** Draft
 **Objective:** Introduce two new standalone game runtimes (Isometric 2.5D and 2D Platformer) alongside the existing Top-Down RPG engine, ensuring zero regression for existing projects.
@@ -28,7 +28,7 @@ public/
 
 ### B. Smart Bootstrap (`index.html` update)
 The game entry point (`index.html`) will no longer hardcode script tags. Instead, it will:
-1.  Fetch `ketebe.json` (Project Metadata).
+1.  Fetch `redglitch.json` (Project Metadata).
 2.  Read the `engineType` field (e.g., `"rpg"`, `"iso"`, `"platformer"`).
 3.  Dynamically inject the specific script bundles for that engine.
 
@@ -51,7 +51,7 @@ The game entry point (`index.html`) will no longer hardcode script tags. Instead
     *   Adapting input vectors to move along isometric diagonals.
 
 ### Template: `templates/iso-starter`
-*   Contains `ketebe.json` with `"engineType": "iso"`.
+*   Contains `redglitch.json` with `"engineType": "iso"`.
 *   Includes isometric sprite placeholders (diamond floor tiles, cube walls).
 
 ---
@@ -74,7 +74,7 @@ The game entry point (`index.html`) will no longer hardcode script tags. Instead
     *   Side-scrolling tracking with "Deadzone" (camera only moves when player pushes near edge).
 
 ### Template: `templates/platformer-starter`
-*   Contains `ketebe.json` with `"engineType": "platformer"`.
+*   Contains `redglitch.json` with `"engineType": "platformer"`.
 *   Includes side-view sprites.
 
 ---

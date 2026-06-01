@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Logger Hook
+ * RedGlitch Engine - Logger Hook
  * Integrates console logs with parent windows/editors
  */
 (function() {

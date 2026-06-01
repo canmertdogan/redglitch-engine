@@ -1,13 +1,13 @@
 /**
- * Ketebe AI Cluster Bridge
+ * RedGlitch AI Cluster Bridge
  * 
- * This module acts as the interface between the Ketebe AI Orchestrator 
+ * This module acts as the interface between the RedGlitch AI Orchestrator 
  * and a high-performance AI Cluster using a WASM-powered binary bridge.
  */
 
 export class ClusterBridge {
     constructor(config = {}) {
-        this.endpoint = config.endpoint || 'wss://ai-cluster.ketebe.studio';
+        this.endpoint = config.endpoint || 'wss://ai-cluster.redglitch.studio';
         this.wasmPath = config.wasmPath || '/ai/cluster_bridge.wasm';
         this.wasmModule = null;
         this.wasmInstance = null;

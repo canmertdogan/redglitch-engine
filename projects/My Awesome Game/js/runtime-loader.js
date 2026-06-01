@@ -39,7 +39,7 @@
             // In a built game, this file should exist at root or via API.
             // In dev mode, we might hit the API.
             let res = await fetch('/api/projects/current');
-            if(!res.ok) res = await fetch('ketebe.json'); // Fallback for static build
+            if(!res.ok) res = await fetch('redglitch.json'); // Fallback for static build
             
             if (res.ok) {
                 const config = await res.json();
@@ -76,9 +76,9 @@
         console.log('[Runtime] Campaign mode detected');
         
         // Read campaign settings from sessionStorage
-        const campaignId = sessionStorage.getItem('ketebe_campaign_id');
-        const shouldContinue = sessionStorage.getItem('ketebe_campaign_continue') === '1';
-        const saveSlot = sessionStorage.getItem('ketebe_save_slot') || '0';
+        const campaignId = sessionStorage.getItem('redglitch_campaign_id');
+        const shouldContinue = sessionStorage.getItem('redglitch_campaign_continue') === '1';
+        const saveSlot = sessionStorage.getItem('redglitch_save_slot') || '0';
         
         if (!campaignId) {
             console.error('[Runtime] Campaign mode but no campaign ID found');

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Levels in Ketebe Engine now support enhanced metadata for better campaign integration and multi-engine support.
+Levels in RedGlitch Engine now support enhanced metadata for better campaign integration and multi-engine support.
 
 ## Standard Level Format
 

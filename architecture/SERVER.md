@@ -1,6 +1,6 @@
 # Server Architecture (`server.js`)
 
-The ketebe ENGINE server is a Node.js Express application that acts as the bridge between the host operating system and the web-based client.
+The redglitch ENGINE server is a Node.js Express application that acts as the bridge between the host operating system and the web-based client.
 
 ## Core Responsibilities
 
@@ -36,7 +36,7 @@ This architecture allows:
 *   `GET /api/projects`: Lists all available projects in the `projects/` directory.
 *   `POST /api/projects`: Creates a new project from a template.
     *   **Templates**: Copies structure from `templates/` (e.g., `base-rpg`, `iso-pixel-demo`).
-    *   **Config**: Generates `ketebe.json`.
+    *   **Config**: Generates `redglitch.json`.
 *   `POST /api/projects/delete`: Deletes a project folder.
 *   `POST /api/projects/explore`: Opens the project folder in the OS file explorer (Finder/Explorer).
 

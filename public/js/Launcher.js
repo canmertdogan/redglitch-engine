@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Launcher UI Logic
+ * RedGlitch Engine - Launcher UI Logic
  * Manages login, main menu, and initial transitions
  */
 (function() {
@@ -38,7 +38,7 @@
         }
 
         // Store username
-        localStorage.setItem('ketebe_username', username);
+        localStorage.setItem('redglitch_username', username);
         const display = document.getElementById('current-user-display');
         if (display) display.textContent = username;
 
@@ -55,8 +55,8 @@
         }
 
         // Play intro sound if available
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('ui:login', { username });
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('ui:login', { username });
         }
     };
 
@@ -65,7 +65,7 @@
         const input = document.getElementById('username-input');
         const display = document.getElementById('current-user-display');
         
-        const savedUsername = localStorage.getItem('ketebe_username');
+        const savedUsername = localStorage.getItem('redglitch_username');
         if (savedUsername) {
             if (input) input.value = savedUsername;
             if (display) display.textContent = savedUsername;

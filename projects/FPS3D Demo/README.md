@@ -45,10 +45,10 @@ A demo project for the **fps-3d** engine — a first-person shooter runtime buil
 
 ## Engine configuration
 
-`ketebe.json` — engine: `fps-3d`, quality: `medium`, `physics3D: true`, `shadowQuality: true`.
+`redglitch.json` — engine: `fps-3d`, quality: `medium`, `physics3D: true`, `shadowQuality: true`.
 
 ## Customizing
 
-- Open **FPS Editor** from the Ketebe launcher to place enemies, triggers, and cover points visually.
+- Open **FPS Editor** from the RedGlitch launcher to place enemies, triggers, and cover points visually.
 - Replace the procedural room with a custom GLTF model by adding `"gltfUrl": "assets3d/level.glb"` to the level file — the engine loads it automatically if the key is present.
 - Add more weapon pickups in `triggers[]` with `"type": "pickup", "pickupType": "weapon"`.

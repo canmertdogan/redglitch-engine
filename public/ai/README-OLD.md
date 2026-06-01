@@ -1,4 +1,4 @@
-# Ketebe AI - Quick Start Guide
+# RedGlitch AI - Quick Start Guide
 
 ## Current Configuration
 

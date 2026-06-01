@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Shared Project State Management
+ * RedGlitch Engine - Shared Project State Management
  * Provides centralized state management across all editors
  */
 class SharedProjectState {
@@ -15,8 +15,8 @@ class SharedProjectState {
         this.isDirty = false;
         
         // Subscribe to EventBus if available
-        if (typeof window !== 'undefined' && window.KetebeEventBus) {
-            this.eventBus = window.KetebeEventBus;
+        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
+            this.eventBus = window.RedGlitchEventBus;
             this.setupEventListeners();
         }
         
@@ -44,7 +44,7 @@ class SharedProjectState {
                             version: (this.metadata.version || 0) + 1
                         }
                     };
-                    localStorage.setItem(`ketebe_project_${this.projectName}_backup`, JSON.stringify(localData));
+                    localStorage.setItem(`redglitch_project_${this.projectName}_backup`, JSON.stringify(localData));
                     
                     // Attempt network save via sendBeacon (fire-and-forget, non-blocking)
                     if (navigator.sendBeacon) {
@@ -588,7 +588,7 @@ class SharedProjectState {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.KetebeProjectState = window.KetebeProjectState || new SharedProjectState();
+    window.RedGlitchProjectState = window.RedGlitchProjectState || new SharedProjectState();
 }
 
 // Export for Node.js

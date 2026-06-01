@@ -40,15 +40,15 @@ if (!fs.existsSync(PROJECT_DIR)) {
 }
 
 // Read and validate project metadata
-const PROJECT_META_PATH = path.join(PROJECT_DIR, 'ketebe.json');
+const PROJECT_META_PATH = path.join(PROJECT_DIR, 'redglitch.json');
 let projectMeta = {};
 if (fs.existsSync(PROJECT_META_PATH)) {
     try { projectMeta = JSON.parse(fs.readFileSync(PROJECT_META_PATH, 'utf8')); }
-    catch (e) { console.warn('[WARN] Could not parse ketebe.json, using defaults.'); }
+    catch (e) { console.warn('[WARN] Could not parse redglitch.json, using defaults.'); }
 }
 const ENGINE_TYPE = projectMeta.engineType || 'rpg-topdown';
 if (!VALID_ENGINE_TYPES.has(ENGINE_TYPE)) {
-    console.error(`\x1b[31m[ERROR] Unsupported engineType "${ENGINE_TYPE}" in ketebe.json.\x1b[0m`);
+    console.error(`\x1b[31m[ERROR] Unsupported engineType "${ENGINE_TYPE}" in redglitch.json.\x1b[0m`);
     process.exit(1);
 }
 
@@ -201,7 +201,7 @@ app.on('window-all-closed', () => app.quit());
     fs.writeFileSync(path.join(DIST_DIR, 'main.js'), electronMain);
 
     // 6. Package.json
-    const pkg = { name: "ketebe-release", version: "1.0.0", main: "main.js", dependencies: { "express": "^4.18.2", "cors": "^2.8.5" } };
+    const pkg = { name: "redglitch-release", version: "1.0.0", main: "main.js", dependencies: { "express": "^4.18.2", "cors": "^2.8.5" } };
     fs.writeFileSync(path.join(DIST_DIR, 'package.json'), JSON.stringify(pkg, null, 2));
 
     console.log('\x1b[32m[DONE] Build complete.\x1b[0m');

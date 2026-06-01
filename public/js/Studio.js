@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Game Studio IDE Core
+ * RedGlitch Engine - Game Studio IDE Core
  * Orchestrates window management, tools, projects, and system status.
  */
 
@@ -282,7 +282,7 @@ async function determineStartupWindow() {
         const data = await res.json();
         const projName = data.name;
         console.log("[Studio] Active Project:", projName);
-        window._ketebeActiveProject = projName;
+        window._redglitchActiveProject = projName;
         
         const projNameEl = document.getElementById('sb-project-name');
         if (projNameEl) projNameEl.innerText = formatProjectName(projName);
@@ -339,7 +339,7 @@ function hookConsole() {
         updateDiagnosticsUI();
         const msg = args.map(a => String(a)).join(' ');
         capture(msg, 'error');
-        if (window.KetebeEventBus) window.KetebeEventBus.emit('editor:error', { message: msg });
+        if (window.RedGlitchEventBus) window.RedGlitchEventBus.emit('editor:error', { message: msg });
         originalError.apply(console, args);
     };
     
@@ -393,7 +393,7 @@ function showStatusMessage(msg) {
     el.innerText = msg;
     el.style.opacity = '1';
     setTimeout(() => {
-        el.innerText = 'ketebe STUDIO READY';
+        el.innerText = 'redglitch STUDIO READY';
         el.style.opacity = '0.8';
     }, 3000);
 }
@@ -413,7 +413,7 @@ function applyTheme(themeName, options = {}) {
     if (typeof window.setTheme === 'function') {
         window.setTheme(themeName);
     } else {
-        localStorage.setItem('ketebe_theme', themeName);
+        localStorage.setItem('redglitch_theme', themeName);
     }
 
     if (options.broadcast !== false) {
@@ -450,7 +450,7 @@ function openWindow(tool) {
                 </div>
             </div>
             <div class="window-content">
-                <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['topdown3d_studio', 'fps_studio', 'platformer3d_studio']; return (proj3dIds.includes(tool.id) && window._ketebeActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._ketebeActiveProject) : tool.src; })()}"></iframe>
+                <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['topdown3d_studio', 'fps_studio', 'platformer3d_studio']; return (proj3dIds.includes(tool.id) && window._redglitchActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._redglitchActiveProject) : tool.src; })()}"></iframe>
             </div>
         `;
         win.onmousedown = () => focusWindow(winId);
@@ -466,8 +466,8 @@ function openWindow(tool) {
         if (btn) btn.classList.add('opened');
     }
     
-    if (window.KetebeProjectState) {
-        window.KetebeProjectState.logActivity('tool', tool.title, { id: tool.id });
+    if (window.RedGlitchProjectState) {
+        window.RedGlitchProjectState.logActivity('tool', tool.title, { id: tool.id });
     }
     
     if (tool.id === 'console') {
@@ -725,7 +725,7 @@ async function runFrameSave(frameWindow) {
     // Fallback for editors that only support command dispatch.
     try {
         frameWindow.postMessage({ type: 'execCommand', command: 'save' }, '*');
-        frameWindow.postMessage({ type: 'ketebe:save-request' }, '*');
+        frameWindow.postMessage({ type: 'redglitch:save-request' }, '*');
     } catch (err) {
         console.warn('[Studio] Save fallback postMessage failed:', err?.message || err);
     }
@@ -760,7 +760,7 @@ async function saveGlobalProject(options = {}) {
 }
 
 function confirmClose() {
-    if (confirm("Are you sure you want to leave ketebe STUDIO? Unsaved changes might be lost.")) {
+    if (confirm("Are you sure you want to leave redglitch STUDIO? Unsaved changes might be lost.")) {
         if(window.electronAPI) window.electronAPI.close();
     }
 }
@@ -776,7 +776,7 @@ async function playGame() {
     }
 
     const launchUrl = `launcher.html?studio_run=1&t=${Date.now()}`;
-    runtimeWindow = window.open(launchUrl, 'ketebe-runtime');
+    runtimeWindow = window.open(launchUrl, 'redglitch-runtime');
 
     if (!runtimeWindow) {
         setRunningState(false);
@@ -804,7 +804,7 @@ function pauseGame() {
         return;
     }
     try {
-        runtimeWindow.postMessage({ type: 'ketebe:runtime-pause-toggle' }, '*');
+        runtimeWindow.postMessage({ type: 'redglitch:runtime-pause-toggle' }, '*');
         runtimeWindow.focus();
         showStatusMessage("PAUSE SIGNAL SENT");
     } catch (err) {
@@ -864,7 +864,7 @@ function toggleFullscreen() {
 // --- PROJECT WIZARD & ASSET SCAN ---
 async function openProjectManager() {
     document.getElementById('project-modal').style.display = 'flex';
-    const savedAuthor = localStorage.getItem('ketebe_author');
+    const savedAuthor = localStorage.getItem('redglitch_author');
     if(savedAuthor) document.getElementById('new-proj-author').value = savedAuthor;
     const container = document.getElementById('template-list');
     container.innerHTML = '<div style="color:#555; padding:20px;">Loading templates...</div>';
@@ -909,7 +909,7 @@ async function createNewProject() {
     if(!name) return alert("Project name is required.");
     if(!/^[a-zA-Z0-9 \-_]+$/.test(name)) return alert("Invalid name.");
     if(!selectedTemplateId) return alert("Select a template.");
-    localStorage.setItem('ketebe_author', author);
+    localStorage.setItem('redglitch_author', author);
     const btn = document.getElementById('btn-create-proj');
     btn.innerHTML = '<span>⏳</span> FORGING...'; btn.disabled = true;
     try {
@@ -986,7 +986,7 @@ window.createNewFile = async function() {
     const name = prompt("New file name:");
     if (!name) return;
     try {
-        const res = await fetch('/api/ide/write', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ file: name, content: "// Ketebe Script\n" }) });
+        const res = await fetch('/api/ide/write', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ file: name, content: "// RedGlitch Script\n" }) });
         if (res.ok) window.loadTree();
     } catch (e) { alert("Failed to create file"); }
 };

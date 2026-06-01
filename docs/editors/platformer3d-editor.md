@@ -2,7 +2,7 @@
 
 ## Launching
 
-From the Ketebe dashboard, select a project with `"engineType": "platformer-3d"` and click **Open Editor**.
+From the RedGlitch dashboard, select a project with `"engineType": "platformer-3d"` and click **Open Editor**.
 
 - **Editor files:** `public/platformer3d_editor.html` + `public/platformer3d_editor.js`
 - **Output:** `projects/<ProjectName>/dunyalar/<level>.pf3d.json` (schema v2.0)
@@ -132,7 +132,7 @@ Minimal valid `.pf3d.json`:
 
 ```jsonc
 {
-  "_schema": "ketebe.platformer3d.level.v2.0",
+  "_schema": "redglitch.platformer3d.level.v2.0",
   "spawnPoint": [0, 1, 0],
   "gravity": -20,
   "ambientColor": "#6080a0",

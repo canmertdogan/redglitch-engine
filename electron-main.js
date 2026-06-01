@@ -150,14 +150,14 @@ app.commandLine.appendSwitch('enable-unsafe-webgpu');
 
 // Set app name for macOS top bar - MUST BE DONE BEFORE READY
 if (process.platform === 'darwin') {
-    app.name = 'Ketebe Game Studio';
-    app.setName('Ketebe Game Studio');
+    app.name = 'RedGlitch Game Studio';
+    app.setName('RedGlitch Game Studio');
     console.log('App Name (Initial):', app.name);
     console.log('App Name via getName():', app.getName());
     app.setAboutPanelOptions({
-        applicationName: 'Ketebe Game Studio',
+        applicationName: 'RedGlitch Game Studio',
         applicationVersion: '1.0.0',
-        copyright: 'Copyright © 2026 Ketebe',
+        copyright: 'Copyright © 2026 RedGlitch',
         version: '1.0.0'
     });
 }
@@ -172,7 +172,7 @@ let splashWindow;
 function createMenu() {
     const template = [
         ...(process.platform === 'darwin' ? [{
-            label: 'Ketebe Game Studio',
+            label: 'RedGlitch Game Studio',
             submenu: [
                 { role: 'about' },
                 { type: 'separator' },
@@ -260,7 +260,7 @@ function createWindow() {
         minWidth: 800,
         minHeight: 450,
         show: false, // Don't show until ready
-        title: "Ketebe Game Studio",
+        title: "RedGlitch Game Studio",
         icon: path.join(__dirname, 'public/icons/favicon-6.png'),
         webPreferences: {
             nodeIntegration: false,

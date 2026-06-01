@@ -127,7 +127,7 @@ public/
 └── ai/
     ├── irab-personality.js         # Personality module
     ├── cerebras-adapter.js         # Cloud API adapter
-    ├── ketebe-ai-assistant.js      # Core IRAB brain
+    ├── redglitch-ai-assistant.js      # Core IRAB brain
     └── ui/
         ├── assistant-panel.html    # Enhanced chat UI
         └── assistant-panel.js      # UI controller
@@ -138,7 +138,7 @@ public/
 <!-- In assistant-panel.html -->
 <script src="../irab-personality.js"></script>
 <script src="../cerebras-adapter.js"></script>
-<script src="../ketebe-ai-assistant.js"></script>
+<script src="../redglitch-ai-assistant.js"></script>
 <script src="assistant-panel.js"></script>
 ```
 

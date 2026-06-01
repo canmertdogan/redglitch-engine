@@ -1,5 +1,5 @@
 /**
- * Ketebe AI - Studio Bridge (KAP)
+ * RedGlitch AI - Studio Bridge (KAP)
  * Helper for Studio tools to register their capabilities with the AI ToolRegistry.
  * 
  * Usage:
@@ -16,11 +16,11 @@
 export class StudioBridge {
     /**
      * @param {string} namespace - The namespace for this tool (e.g., 'isopixel', 'world')
-     * @param {ketebe.EventBus} eventBus - The global EventBus instance
+     * @param {redglitch.EventBus} eventBus - The global EventBus instance
      */
     constructor(namespace, eventBus = null) {
         this.namespace = namespace;
-        this.eventBus = eventBus || window.KetebeEventBus;
+        this.eventBus = eventBus || window.RedGlitchEventBus;
         this.tools = new Map();
         
         if (!this.eventBus) {
@@ -90,7 +90,7 @@ export class StudioBridge {
 
     /**
      * Register a tool capability.
-     * @param {ketebe.ai.ToolDefinition} toolDef 
+     * @param {redglitch.ai.ToolDefinition} toolDef 
      */
     register(toolDef) {
         const fullName = `${this.namespace}.${toolDef.name}`;

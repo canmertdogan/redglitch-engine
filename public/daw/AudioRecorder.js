@@ -1,5 +1,5 @@
 /**
- * KETEBE Audio Recorder
+ * REDGLITCH Audio Recorder
  * Handles microphone input, recording to buffer, and creating audio clips.
  */
 

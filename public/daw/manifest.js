@@ -1,6 +1,6 @@
 /**
  * MASTER ENGINE AUDIO MANIFEST
- * A complete catalog of every detectable event in the Ketebe Engine.
+ * A complete catalog of every detectable event in the RedGlitch Engine.
  */
 const ENGINE_AUDIO_MANIFEST = {
     PLAYER: [

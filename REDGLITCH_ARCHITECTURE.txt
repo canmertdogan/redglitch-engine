@@ -1,4 +1,4 @@
-                          KETEBE GAME STUDIO - SYSTEM ARCHITECTURE (v9.1 "The Hybrid Frontier")
+                          REDGLITCH GAME STUDIO - SYSTEM ARCHITECTURE (v9.1 "The Hybrid Frontier")
                           =====================================================================
 
   +-----------------------------------------------------------------------------------------------------------------------+
@@ -15,7 +15,7 @@
   |   | - NPC/Dialogue Weaver    |           +-------------------------------------+           | - IsoShaderSystem WebGL  |   |
   |   | - Pixel/FX Studio        |                        |                                    | - Fixed 60Hz Tick Rate   |   |
   |   |                          |           +-------------------------------------+           |                          |   |
-  |   | [3D-FIRST SUITE (v9)]    |           |      KETEBE AI BRAIN (Worker)       |           | [3D CORES (Three.js)]    |   |
+  |   | [3D-FIRST SUITE (v9)]    |           |      REDGLITCH AI BRAIN (Worker)       |           | [3D CORES (Three.js)]    |   |
   |   | - FPS Editor (Voxels)    |           +-------------------------------------+           | - Shared Renderer3D Pipe |   |
   |   | - TopDown3D Editor       |           | [INFERENCE] | [RAG / ORAMA DB]      |           |   (Public Resize Method) |   |
   |   | - Platformer3D Editor    |           | - WebGPU    | - Docs Corpus         |           | - FPS Core (6DOF)        |   |
@@ -58,11 +58,11 @@
   +-------------------------------------------------------------------------------------------------------------------+
   |                                             DATA STORAGE (Physical Disk)                                          |
   +-------------------------------------------------------------------------------------------------------------------+
-  | [SYSTEM FILES (.ketebe/)]    | [PROJECT DATA (projects/)]         | [EXTERNAL CACHE (data/)]                      |
+  | [SYSTEM FILES (.redglitch/)]    | [PROJECT DATA (projects/)]         | [EXTERNAL CACHE (data/)]                      |
   | - ai_config.json             | - levels/ (.json)                  | - models/ (GGUF/WebGPU)                       |
   | - user_profiles.json         | - sprites/ (.png)                  | - saves/ (.sav)                               |
   | - session_logs.txt           | - logic/ (.js)                     | - backend/vector_store.pkl                    |
-  | - ketebe.json (project cfg)  | - dunyalar/ (world/map data)       | - embeddings / corpus.json                    |
+  | - redglitch.json (project cfg)  | - dunyalar/ (world/map data)       | - embeddings / corpus.json                    |
   +------------------------------+------------------------------------+-----------------------------------------------+
 
   DATA FLOW & RECENT EVOLUTIONS:

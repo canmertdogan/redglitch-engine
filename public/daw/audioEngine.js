@@ -1,5 +1,5 @@
 /**
- * KETEBE Audio Engine - Core WebAudio System
+ * REDGLITCH Audio Engine - Core WebAudio System
  * Handles audio context, master bus, routing, timing, and scheduling
  */
 

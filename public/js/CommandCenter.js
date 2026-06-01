@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Project Command Center Logic
+ * RedGlitch Engine - Project Command Center Logic
  * Handles telemetry, latest activities, dev scratchpad, and system logs.
  */
 
@@ -47,7 +47,7 @@ function toggleAutoScroll() {
 
 // --- COMMAND INPUT & TERMINAL ---
 const Terminal = {
-    history: JSON.parse(localStorage.getItem('ketebe_cmd_history') || '[]'),
+    history: JSON.parse(localStorage.getItem('redglitch_cmd_history') || '[]'),
     historyIndex: -1,
     currentInput: '',
     aliases: {
@@ -60,7 +60,7 @@ const Terminal = {
     },
     
     saveHistory() {
-        localStorage.setItem('ketebe_cmd_history', JSON.stringify(this.history.slice(-50)));
+        localStorage.setItem('redglitch_cmd_history', JSON.stringify(this.history.slice(-50)));
     },
     
     addToHistory(cmd) {
@@ -116,7 +116,7 @@ const commandRegistry = {
                     Log.error(`No help available for: ${args[0]}`);
                 }
             } else {
-                Log.info('=== KETEBE TERMINAL COMMANDS ===');
+                Log.info('=== REDGLITCH TERMINAL COMMANDS ===');
                 Object.keys(commandRegistry).sort().forEach(cmd => {
                     Log.info(`  ${cmd.padEnd(15)} - ${commandRegistry[cmd].desc}`);
                 });
@@ -295,7 +295,7 @@ const commandRegistry = {
         usage: 'theme [name]',
         exec: (args) => {
             if (!args[0]) {
-                const current = localStorage.getItem('ketebe_theme') || 'modern-dark';
+                const current = localStorage.getItem('redglitch_theme') || 'modern-dark';
                 Log.info(`Current theme: ${current}`);
                 Log.info('Available: modern-light, modern-dark, cyberpunk, classic-dungeon');
                 return;
@@ -314,8 +314,8 @@ const commandRegistry = {
                 return;
             }
             if (args[0] === 'state') {
-                if (window.KetebeProjectState) {
-                    const data = window.KetebeProjectState.export();
+                if (window.RedGlitchProjectState) {
+                    const data = window.RedGlitchProjectState.export();
                     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -467,12 +467,12 @@ async function renderActivities() {
     list.innerHTML = '';
     
     let activities = [];
-    if (window.KetebeProjectState) {
-        activities = window.KetebeProjectState.get('activities', []);
+    if (window.RedGlitchProjectState) {
+        activities = window.RedGlitchProjectState.get('activities', []);
     }
     
     if (activities.length === 0) {
-        const legacy = JSON.parse(localStorage.getItem('ketebe_recent_files') || '[]');
+        const legacy = JSON.parse(localStorage.getItem('redglitch_recent_files') || '[]');
         activities = legacy.map(f => ({ type: 'file', name: f.name, data: { path: f.path }, timestamp: Date.now() }));
     }
 
@@ -562,8 +562,8 @@ function openTool(id) {
         if (tool) {
             window.parent.openWindow(tool);
             Log.info(`Opened tool: ${id}`);
-            if (window.KetebeProjectState) {
-                window.KetebeProjectState.logActivity('tool', tool.title, { id: tool.id });
+            if (window.RedGlitchProjectState) {
+                window.RedGlitchProjectState.logActivity('tool', tool.title, { id: tool.id });
             }
         }
     }
@@ -571,8 +571,8 @@ function openTool(id) {
 
 function openFileInParent(path) {
     Log.info(`Request to open: ${path}`);
-    if (window.KetebeProjectState) {
-        window.KetebeProjectState.logActivity('file', path.split('/').pop(), { path: path });
+    if (window.RedGlitchProjectState) {
+        window.RedGlitchProjectState.logActivity('file', path.split('/').pop(), { path: path });
     }
 }
 
@@ -584,21 +584,21 @@ const DASHBOARD_THEME_FALLBACKS = {
 };
 
 function setTheme(themeName, options = {}) {
-    const sourceThemes = (window.parent && window.parent !== window && window.parent.KETEBE_THEMES) || window.KETEBE_THEMES || DASHBOARD_THEME_FALLBACKS;
+    const sourceThemes = (window.parent && window.parent !== window && window.parent.REDGLITCH_THEMES) || window.REDGLITCH_THEMES || DASHBOARD_THEME_FALLBACKS;
     const theme = sourceThemes[themeName] || sourceThemes['modern-dark'] || DASHBOARD_THEME_FALLBACKS['modern-dark'];
     Object.keys(theme).forEach(key => { document.documentElement.style.setProperty(`--${key}`, theme[key]); });
     document.documentElement.setAttribute('data-theme', themeName);
-    localStorage.setItem('ketebe_theme', themeName);
+    localStorage.setItem('redglitch_theme', themeName);
     const selector = document.getElementById('theme-selector');
     if (selector) selector.value = themeName;
-    if (window.KetebeEventBus && options.source !== 'parent') window.KetebeEventBus.emit('theme:changed', { theme: themeName });
+    if (window.RedGlitchEventBus && options.source !== 'parent') window.RedGlitchEventBus.emit('theme:changed', { theme: themeName });
     if (options.source !== 'parent' && window.parent && window.parent.applyTheme) window.parent.applyTheme(themeName);
 }
 
 // Boot Command Center
 window.addEventListener('DOMContentLoaded', () => {
     Log.info("Command Center initialized.");
-    Log.info("Connecting to Ketebe Core...");
+    Log.info("Connecting to RedGlitch Core...");
     Log.info("Terminal ready. Type 'help' for available commands.");
     
     const cmdInput = document.getElementById('cmd-input');
@@ -632,13 +632,13 @@ window.addEventListener('DOMContentLoaded', () => {
     
     const scratchpad = document.getElementById('scratchpad');
     if (scratchpad) {
-        scratchpad.value = localStorage.getItem('ketebe_scratchpad') || '';
-        scratchpad.addEventListener('input', () => localStorage.setItem('ketebe_scratchpad', scratchpad.value));
+        scratchpad.value = localStorage.getItem('redglitch_scratchpad') || '';
+        scratchpad.addEventListener('input', () => localStorage.setItem('redglitch_scratchpad', scratchpad.value));
     }
 
-    if (window.KetebeEventBus) window.KetebeEventBus.on('activity:logged', () => renderActivities());
+    if (window.RedGlitchEventBus) window.RedGlitchEventBus.on('activity:logged', () => renderActivities());
     
-    const savedTheme = localStorage.getItem('ketebe_theme') || 'modern-dark';
+    const savedTheme = localStorage.getItem('redglitch_theme') || 'modern-dark';
     setTheme(savedTheme, { source: 'parent' });
 
     loadTelemetry();

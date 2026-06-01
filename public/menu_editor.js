@@ -7,9 +7,9 @@
 let eventBus, projectState, assetManager;
 function initUIStudioIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         if (eventBus) {
             eventBus.on('ui:request', (e) => console.log('[UIStudio] UI requested:', e.data));
             console.log('[UIStudio] EventBus connected');

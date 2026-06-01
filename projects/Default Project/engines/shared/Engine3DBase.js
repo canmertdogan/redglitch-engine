@@ -1,5 +1,5 @@
 /**
- * Engine3DBase.js — Abstract base class for all 3D engines in Ketebe.
+ * Engine3DBase.js — Abstract base class for all 3D engines in RedGlitch.
  *
  * Extends the existing EngineAdapter contract with a 3D lifecycle layer.
  * Shared by topdown-3d, fps-3d, and platformer-3d engine types.

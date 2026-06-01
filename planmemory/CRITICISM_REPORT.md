@@ -1,4 +1,4 @@
-# ketebe ENGINE: Problem Report & Technical Debt (Feb 2026)
+# redglitch ENGINE: Problem Report & Technical Debt (Feb 2026)
 
 ## 🚨 Critical Severity: Architectural Integrity
 

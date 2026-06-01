@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Main Studio Dashboard Logic
+ * RedGlitch Engine - Main Studio Dashboard Logic
  * Handles project management, the creation wizard, and view switching.
  */
 
@@ -21,7 +21,7 @@ const View = {
             if (id === 'projects') loadProjects();
             if (id === 'create') Wizard.reset();
             if (id === 'settings') {
-                const savedName = localStorage.getItem('ketebe_username') || '';
+                const savedName = localStorage.getItem('redglitch_username') || '';
                 document.getElementById('dev-name-input').value = savedName;
             }
         }
@@ -117,7 +117,7 @@ const Wizard = {
     },
     
     init() {
-        const savedAuthor = localStorage.getItem('ketebe_username') || '';
+        const savedAuthor = localStorage.getItem('redglitch_username') || '';
         const authorInput = document.getElementById('wizard-author');
         if (authorInput) authorInput.value = savedAuthor;
     },
@@ -367,7 +367,7 @@ const ConfirmModal = {
 function saveSettings() {
     const devName = document.getElementById('dev-name-input').value.trim();
     if (devName) {
-        localStorage.setItem('ketebe_username', devName);
+        localStorage.setItem('redglitch_username', devName);
         showToast('✅ Settings saved!', 'success');
         location.reload();
     }
@@ -390,8 +390,8 @@ function updateClock() {
 
 // Typing brand animation
 function startTypingBrand() {
-    const savedName = localStorage.getItem('ketebe_username') || 'Architect';
-    const brandText = `KETEBE STUDIO - ${savedName}`;
+    const savedName = localStorage.getItem('redglitch_username') || 'Architect';
+    const brandText = `REDGLITCH STUDIO - ${savedName}`;
     let charIndex = 0;
     const brandEl = document.getElementById('typing-brand');
     if (!brandEl) return;

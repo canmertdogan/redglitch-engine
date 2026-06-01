@@ -71,8 +71,8 @@ window.BehaviorTreeRunner = class BehaviorTreeRunner {
         this.currentNode = node;
 
         // Emit debug event for visual tracking in editor
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('vsl:node_exec', {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('vsl:node_exec', {
                 nodeId: node.id,
                 entityId: this.npc.id,
                 timestamp: Date.now()

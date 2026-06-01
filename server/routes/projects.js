@@ -16,7 +16,7 @@ const VALID_3D_ENGINE_TYPES = new Set(['topdown-3d', 'fps-3d', 'platformer-3d'])
 const VALID_RENDER_QUALITY  = new Set(['low', 'medium', 'high', 'ultra']);
 
 /**
- * Build a validated ketebe.json config from raw request body fields.
+ * Build a validated redglitch.json config from raw request body fields.
  * Returns the config object or throws if required fields are invalid.
  */
 function buildProjectConfig(fields) {
@@ -120,7 +120,7 @@ async function copyFileIfExists(src, dest) {
 }
 
 async function writeProjectConfig(projectPath, projectConfig) {
-    await safeFs.safeWriteFullPath(projectPath, path.join(projectPath, 'ketebe.json'), JSON.stringify(projectConfig, null, 2), 'utf8');
+    await safeFs.safeWriteFullPath(projectPath, path.join(projectPath, 'redglitch.json'), JSON.stringify(projectConfig, null, 2), 'utf8');
 }
 
 async function ensureProjectDataDirs(projectPath) {
@@ -262,7 +262,7 @@ router.get('/projects', async (req, res) => {
         
         const projects = await Promise.all(projectDirs.map(async (e) => {
             const projectPath = path.join(PROJECTS_ROOT, e.name);
-            const configPath = path.join(projectPath, 'ketebe.json');
+            const configPath = path.join(projectPath, 'redglitch.json');
             let meta = { name: e.name, path: projectPath };
             
             try {
@@ -294,12 +294,12 @@ router.post('/projects', async (req, res) => {
     try {
         const metadata = req.body.metadata || {};
         
-        // Prepare ketebe.json content
+        // Prepare redglitch.json content
         const projectConfig = {
             name: sanitizeProjectName(name), // Use sanitized name
             author: metadata.author || "Anonymous",
             version: "0.1.0",
-            description: metadata.description || "A new Ketebe Engine project.",
+            description: metadata.description || "A new RedGlitch Engine project.",
             template: templateId,
             created: new Date().toISOString(),
             engineVersion: "0.2.0"

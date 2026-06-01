@@ -327,11 +327,11 @@
   "generalConcepts": {
     "projectStructure": {
       "description": "Projects are organized with dunyalar/ (worlds), muzikler/ (music), data/ (logic), and sprites.js",
-      "content": "Each project in Ketebe has a standard structure:\n- dunyalar/ - World and map data\n- muzikler/ - Audio files\n- data/ - Game logic and configuration\n- sprites.js - Custom sprite definitions\n- ketebe.json - Project metadata"
+      "content": "Each project in RedGlitch has a standard structure:\n- dunyalar/ - World and map data\n- muzikler/ - Audio files\n- data/ - Game logic and configuration\n- sprites.js - Custom sprite definitions\n- redglitch.json - Project metadata"
     },
     "engineTypes": {
-      "description": "Ketebe supports three engine types: rpg-topdown, platformer-2d, and iso-pixel",
-      "content": "Choose your engine type in ketebe.json:\n- rpg-topdown: Classic 2D RPG with top-down view\n- platformer-2d: Side-scrolling platformer with physics\n- iso-pixel: Isometric pixel art games"
+      "description": "RedGlitch supports three engine types: rpg-topdown, platformer-2d, and iso-pixel",
+      "content": "Choose your engine type in redglitch.json:\n- rpg-topdown: Classic 2D RPG with top-down view\n- platformer-2d: Side-scrolling platformer with physics\n- iso-pixel: Isometric pixel art games"
     },
     "buildingGames": {
       "description": "Build your game for multiple platforms",

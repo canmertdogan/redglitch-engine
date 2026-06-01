@@ -1,6 +1,6 @@
 # UI Studio 2.0: The "Pixel-Perfect" Revamp
 
-**Objective:** Transform the current basic `menu_editor.html` into a professional, fully functional WYSIWYG interface builder that matches the "ketebe ENGINE" (Deep Navy/Gold/Pixel) aesthetic and provides robust tools for game UI creation.
+**Objective:** Transform the current basic `menu_editor.html` into a professional, fully functional WYSIWYG interface builder that matches the "redglitch ENGINE" (Deep Navy/Gold/Pixel) aesthetic and provides robust tools for game UI creation.
 
 ## 1. Aesthetic Overhaul ("The Neural Deck")
 *   **Theme:** Adopt the dark, high-contrast theme used in the new AI Assistant (`#050510` bg, `#f1c40f` accent).

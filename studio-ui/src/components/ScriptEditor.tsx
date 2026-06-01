@@ -34,7 +34,7 @@ const ScriptEditor: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [activePanel, setActivePanel] = useState<'files' | 'search' | 'terminal'>('files');
-    const [terminalOutput, setTerminalOutput] = useState<string[]>(['KETEBE CODE FORGE v7.0 INITIALIZED...', 'READY.']);
+    const [terminalOutput, setTerminalOutput] = useState<string[]>(['REDGLITCH CODE FORGE v7.0 INITIALIZED...', 'READY.']);
 
     // Expose openFile to be used by IRAB
     const openFileRef = useRef((path: string) => {});
@@ -155,7 +155,7 @@ const ScriptEditor: React.FC = () => {
 
     useEffect(() => {
         if (monaco) {
-            monaco.editor.defineTheme('ketebe-dark', {
+            monaco.editor.defineTheme('redglitch-dark', {
                 base: 'vs-dark',
                 inherit: true,
                 rules: [],
@@ -167,7 +167,7 @@ const ScriptEditor: React.FC = () => {
                     'editorIndentGuide.background': '#222222',
                 }
             });
-            monaco.editor.setTheme('ketebe-dark');
+            monaco.editor.setTheme('redglitch-dark');
         }
     }, [monaco]);
 
@@ -424,7 +424,7 @@ const ScriptEditor: React.FC = () => {
                                 path={currentTab.path}
                                 defaultLanguage="javascript"
                                 value={currentTab.content}
-                                theme="ketebe-dark"
+                                theme="redglitch-dark"
                                 onMount={(editor) => { editorRef.current = editor; }}
                                 onChange={(val) => {
                                     const newTabs = [...tabs];

@@ -3,7 +3,7 @@
 **Tool ID:** `editor`
 
 ### Purpose
-The Level Editor is the primary tool for designing 2D top-down and standard RPG environments in the Ketebe Engine.
+The Level Editor is the primary tool for designing 2D top-down and standard RPG environments in the RedGlitch Engine.
 
 ### Key Features
 - **Tile Placement:** Grid-based placement of environment tiles.

@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Unified VFX API
+ * RedGlitch Engine - Unified VFX API
  * Bridges 2D (Canvas) and 3D (Three.js) particle systems.
  */
 class VFXBridge {

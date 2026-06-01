@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.ketebe.engine',
-  appName: 'KetebeEngine',
+  appId: 'com.redglitch.engine',
+  appName: 'RedGlitchEngine',
   webDir: 'public'
 };
 

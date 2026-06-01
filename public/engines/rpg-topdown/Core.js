@@ -1,7 +1,7 @@
 window.Core = class Core {
     constructor() {
         this.canvas = document.getElementById('gameCanvas'); this.ctx = this.canvas.getContext('2d');
-        this.input = window.KetebeInput || new window.InputHandler(this.canvas); 
+        this.input = window.RedGlitchInput || new window.InputHandler(this.canvas); 
         this.mapSystem = new window.MapSystem(this.ctx);
         this.dialogueSystem = new window.DialogueSystem(); this.achievementSystem = new window.AchievementSystem(); this.saveSystem = new window.SaveSystem();
         this.questSystem = new window.QuestSystem(this);
@@ -83,10 +83,10 @@ window.Core = class Core {
     }
 
     setupHotReloading() {
-        if (!window.KetebeEventBus) return;
+        if (!window.RedGlitchEventBus) return;
 
         // Listen for asset updates
-        window.KetebeEventBus.on('file:changed', async (event) => {
+        window.RedGlitchEventBus.on('file:changed', async (event) => {
             const filePath = event.data.path;
             console.log('[Core:HotReload] File changed:', filePath);
 
@@ -107,7 +107,7 @@ window.Core = class Core {
         });
 
         // Listen for FX updates
-        window.KetebeEventBus.on('fx:updated', async (event) => {
+        window.RedGlitchEventBus.on('fx:updated', async (event) => {
             console.log('[Core:HotReload] FX updated:', event.data.id);
             if (this.fxSystem && this.fxSystem.reloadEffect) {
                 this.fxSystem.reloadEffect(event.data.id, event.data.config);
@@ -118,7 +118,7 @@ window.Core = class Core {
         if (window.VFX) window.VFX.setSystem(this.fx, '2d');
         
         // Phase 26: Performance Profiler
-        this.profiler = window.KetebeProfiler;
+        this.profiler = window.RedGlitchProfiler;
     }
 
     login(username) {
@@ -153,9 +153,9 @@ window.Core = class Core {
         let p = data;
         if (!p) {
             try {
-                p = JSON.parse(localStorage.getItem('ketebe_character')); 
+                p = JSON.parse(localStorage.getItem('redglitch_character')); 
             } catch(e) {
-                console.error("Failed to parse ketebe_character", e);
+                console.error("Failed to parse redglitch_character", e);
             }
         }
         if (p) { 
@@ -442,7 +442,7 @@ window.Core = class Core {
         this.prevCamera.x = this.camera.x;
         this.prevCamera.y = this.camera.y;
 
-        const input = window.KetebeInput || this.input;
+        const input = window.RedGlitchInput || this.input;
         if (this.dialogueSystem && this.dialogueSystem.active) { 
             if (input.actions.action && !this.dialogueSystem.justStarted) { 
                 if (this.dialogueSystem.choicesContainer.innerHTML === '') {

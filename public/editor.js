@@ -68,7 +68,7 @@ class WorldEditor {
             if (previewCanvas) prCtx = previewCanvas.getContext('2d');
         }
         let tileset = new Image();
-        const PLAYTEST_WINDOW_NAME = 'ketebe_topdown_playtest';
+        const PLAYTEST_WINDOW_NAME = 'redglitch_topdown_playtest';
         let playtestWindowRef = null;
             
             // Periodically clean up closed playtest windows
@@ -105,8 +105,8 @@ class WorldEditor {
         function initializeWorldIntegration() {
             initDOM();
             if (typeof window !== 'undefined') {
-                eventBus = window.KetebeEventBus;
-                projectState = window.KetebeProjectState;
+                eventBus = window.RedGlitchEventBus;
+                projectState = window.RedGlitchProjectState;
                 
                 if (eventBus) {
                     // Initialize StudioBridge for IRAB
@@ -1604,8 +1604,8 @@ class WorldEditor {
             const sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
         
             // Phase 28: Unified Session Storage
-            sessionStorage.setItem('ketebe_playtest_data', serializedMap);
-            localStorage.setItem('ketebe_test_session', sessionId);
+            sessionStorage.setItem('redglitch_playtest_data', serializedMap);
+            localStorage.setItem('redglitch_test_session', sessionId);
         
             const playtestUrl = `index.html?engine=rpg-topdown&playtest=true&session=${encodeURIComponent(sessionId)}&ts=${Date.now()}`;
             playtestWindowRef = window.open(playtestUrl, PLAYTEST_WINDOW_NAME);

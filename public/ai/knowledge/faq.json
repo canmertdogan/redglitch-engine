@@ -1,8 +1,8 @@
 [
   {
-    "id": "what-is-ketebe",
-    "question": "What is Ketebe Game Studio?",
-    "answer": "Ketebe Game Studio is a multi-platform game development environment for creating RPGs, platformers, and isometric pixel art games. It includes an Electron-based launcher, web editors, and three specialized game engines. You can build games for Windows (Electron), Web, and Android.",
+    "id": "what-is-redglitch",
+    "question": "What is RedGlitch Game Studio?",
+    "answer": "RedGlitch Game Studio is a multi-platform game development environment for creating RPGs, platformers, and isometric pixel art games. It includes an Electron-based launcher, web editors, and three specialized game engines. You can build games for Windows (Electron), Web, and Android.",
     "category": "general",
     "tags": ["basics", "overview"]
   },
@@ -16,7 +16,7 @@
   {
     "id": "engine-types",
     "question": "What engine types are available?",
-    "answer": "Ketebe offers three engine types: 1) rpg-topdown for classic 2D RPGs with top-down view, 2) platformer-2d for side-scrolling games with physics, and 3) iso-pixel for isometric pixel art games. Choose based on your game's perspective and genre.",
+    "answer": "RedGlitch offers three engine types: 1) rpg-topdown for classic 2D RPGs with top-down view, 2) platformer-2d for side-scrolling games with physics, and 3) iso-pixel for isometric pixel art games. Choose based on your game's perspective and genre.",
     "category": "engines",
     "tags": ["engines", "technical"]
   },
@@ -71,8 +71,8 @@
   },
   {
     "id": "multiplayer",
-    "question": "Does Ketebe support multiplayer?",
-    "answer": "Not natively. Ketebe engines are designed for single-player experiences. However, advanced users can implement networking using custom scripts and external libraries.",
+    "question": "Does RedGlitch support multiplayer?",
+    "answer": "Not natively. RedGlitch engines are designed for single-player experiences. However, advanced users can implement networking using custom scripts and external libraries.",
     "category": "features",
     "tags": ["multiplayer", "networking"]
   },
@@ -100,7 +100,7 @@
   {
     "id": "project-structure",
     "question": "What's the project folder structure?",
-    "answer": "Projects contain: dunyalar/ (worlds/maps), muzikler/ (audio), data/ (logic/config), sprites.js (custom sprites), and ketebe.json (metadata). This structure is standard across all engine types.",
+    "answer": "Projects contain: dunyalar/ (worlds/maps), muzikler/ (audio), data/ (logic/config), sprites.js (custom sprites), and redglitch.json (metadata). This structure is standard across all engine types.",
     "category": "technical",
     "tags": ["project", "structure", "files"]
   }

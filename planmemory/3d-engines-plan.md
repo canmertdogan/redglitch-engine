@@ -1,8 +1,8 @@
-# Ketebe Engine — 3D Game Modes: 60-Phase Implementation Plan
+# RedGlitch Engine — 3D Game Modes: 60-Phase Implementation Plan
 
 ## Problem Statement
 
-The Ketebe Engine currently supports three 2D engines: `rpg-topdown`, `platformer-2d`, and `iso-pixel`. This plan extends the engine with **three fully 3D game modes**, each with a dedicated map editor:
+The RedGlitch Engine currently supports three 2D engines: `rpg-topdown`, `platformer-2d`, and `iso-pixel`. This plan extends the engine with **three fully 3D game modes**, each with a dedicated map editor:
 
 - **`topdown-3d`** — Fixed isometric-perspective 3D (League of Legends style)
 - **`fps-3d`** — First-person shooter (DOOM/Quake style)
@@ -127,7 +127,7 @@ All three engines share a consistent aesthetic:
 - Define 3D level JSON schema: `{ version, engineType, geometry[], entities[], lights[], navmesh, skybox, physics }`
 - Extend `CrossEngineSerializer.js` with 3D transform serialization: `position[3]`, `rotation[4]` (quaternion), `scale[3]`
 - Add `GET /api/levels3d/:project/:level` and `POST /api/levels3d/:project/:level` server routes
-- Register 3D engine types in `ketebe.json` validator
+- Register 3D engine types in `redglitch.json` validator
 
 ---
 
@@ -211,7 +211,7 @@ All three engines share a consistent aesthetic:
 - Implement `screenToMap(x, y)` using terrain raycast
 - Register `TopDown3DAdapter extends Engine3DAdapter`
 - Wire to `CampaignController` factory: `case "topdown-3d": return new TopDown3DAdapter()`
-- Add demo level: `projects/Topdown3D Demo/ketebe.json` with `engineType: "topdown-3d"`
+- Add demo level: `projects/Topdown3D Demo/redglitch.json` with `engineType: "topdown-3d"`
 
 ---
 
@@ -222,7 +222,7 @@ All three engines share a consistent aesthetic:
 - Embed Three.js viewport (orbit camera, grid overlay)
 - Sidebar panels: Terrain, Objects, Lights, NavMesh, Settings
 - Toolbar: Select, Paint, Place, Erase, Test-Play
-- Connect to `KetebeEventBus` and `KetebeProjectState`
+- Connect to `RedGlitchEventBus` and `RedGlitchProjectState`
 - Register in launcher dashboard with LoL map icon
 
 **Phase 22 — Terrain Painting Tools (Voxel + Low-poly)**
@@ -343,7 +343,7 @@ All three engines share a consistent aesthetic:
 - `screenToMap(x, y)`: always returns player forward raycast hit
 - `FPS3DAdapter extends Engine3DAdapter`
 - Register in `CampaignController` factory: `case "fps-3d": return new FPS3DAdapter()`
-- Demo project: `projects/FPS Demo/ketebe.json` with `engineType: "fps-3d"`
+- Demo project: `projects/FPS Demo/redglitch.json` with `engineType: "fps-3d"`
 
 ---
 
@@ -492,7 +492,7 @@ All three engines share a consistent aesthetic:
 - Create `public/engines/platformer-3d/Platformer3DStrategy.js`
 - `Platformer3DAdapter extends Engine3DAdapter`
 - Register in factory: `case "platformer-3d": return new Platformer3DAdapter()`
-- Demo project: `projects/Platformer3D Demo/ketebe.json` with `engineType: "platformer-3d"`
+- Demo project: `projects/Platformer3D Demo/redglitch.json` with `engineType: "platformer-3d"`
 
 ---
 
@@ -546,8 +546,8 @@ All three engines share a consistent aesthetic:
 
 ### GROUP H — INTEGRATION & FINALIZATION
 
-**Phase 57 — ketebe.json Extensions & Validation**
-- Extend `ketebe.json` schema to accept new `engineType` values: `"topdown-3d"`, `"fps-3d"`, `"platformer-3d"`
+**Phase 57 — redglitch.json Extensions & Validation**
+- Extend `redglitch.json` schema to accept new `engineType` values: `"topdown-3d"`, `"fps-3d"`, `"platformer-3d"`
 - Add optional 3D fields: `renderQuality` (low/medium/high/ultra), `physics3D` (true/false), `shadowQuality`
 - Update project creation wizard to offer 3D engine selection with previews
 - Add engine-type icons to launcher dashboard cards

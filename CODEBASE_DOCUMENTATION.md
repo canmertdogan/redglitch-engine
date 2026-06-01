@@ -1,4 +1,4 @@
-# Ketebe Engine v7 — Complete Codebase Documentation
+# RedGlitch Engine v7 — Complete Codebase Documentation
 
 > **Last Updated:** May 2026 | **Engine Version:** 7.0.1 | **~82,000 lines of source code**
 >
@@ -15,7 +15,7 @@
 5. [Engine Cores](#5-engine-cores)
 6. [Editor Layer (Studio Tools)](#6-editor-layer-studio-tools)
 7. [Shared Systems](#7-shared-systems)
-8. [AI Subsystem (Ketebe AI / IRAB)](#8-ai-subsystem-ketebe-ai--irab)
+8. [AI Subsystem (RedGlitch AI / IRAB)](#8-ai-subsystem-redglitch-ai--irab)
 9. [Electron Shell](#9-electron-shell)
 10. [Build & Deployment](#10-build--deployment)
 11. [Security Audit](#11-security-audit)
@@ -28,7 +28,7 @@
 
 ## 1. Project Overview
 
-Ketebe Engine is a **browser-native, multi-engine game development studio** built on Electron + Express. It lets developers create games in six distinct engine types through specialized visual editors, then build and export to desktop (Electron), mobile (Capacitor/iOS/Android), or web.
+RedGlitch Engine is a **browser-native, multi-engine game development studio** built on Electron + Express. It lets developers create games in six distinct engine types through specialized visual editors, then build and export to desktop (Electron), mobile (Capacitor/iOS/Android), or web.
 
 ### Tech Stack
 
@@ -52,7 +52,7 @@ Ketebe Engine is a **browser-native, multi-engine game development studio** buil
 ## 2. Repository Structure
 
 ```
-ketebe/
+redglitch/
 ├── server.js                  # Express entry point (monolith, 322 lines)
 ├── electron-main.js           # Electron shell + CortexManager (382 lines)
 ├── preload.js                 # Electron IPC bridge
@@ -93,7 +93,7 @@ ketebe/
 │   │   ├── topdown-3d/        # 3D top-down (Three.js)
 │   │   └── fps-3d/            # FPS (Three.js)
 │   ├── shared/                # 18 shared systems (EventBus, AI, etc.)
-│   ├── ai/                    # Ketebe AI Micro Edition (30+ files)
+│   ├── ai/                    # RedGlitch AI Micro Edition (30+ files)
 │   ├── js/                    # Utility scripts
 │   ├── lib/                   # Third-party libs (Monaco, etc.)
 │   ├── css/                   # Stylesheets
@@ -141,7 +141,7 @@ ketebe/
               ├─► EventBus.js (WebSocket + postMessage bridge)
               ├─► SharedProjectState.js (cross-editor state)
               ├─► AssetManager.js (asset loading & caching)
-              └─► KetebeAI (Transformers.js + Orama RAG)
+              └─► RedGlitchAI (Transformers.js + Orama RAG)
 ```
 
 ### Data Flow for Editors
@@ -382,10 +382,10 @@ Any client can send any message to any other client. If one editor window is com
 ```
 Lines 561–593 are inside the `Core` constructor but appear to be **accidentally outside** `setupHotReloading()`. The indentation and comment style suggest they were meant to be part of the constructor body but got displaced during a refactor. This means `this.profiler`, `this.audio`, `this.console`, `this.entities`, `this.camera`, etc. are only initialized if `setupHotReloading()` is called (which it is, unconditionally), but visually this looks like dead code after a closing brace.
 
-#### 🔴 `loadProfileData` uses `localStorage.getItem('ketebe_character')` with no sanitization
+#### 🔴 `loadProfileData` uses `localStorage.getItem('redglitch_character')` with no sanitization
 ```js
 loadProfileData(data) {
-    const p = data || JSON.parse(localStorage.getItem('ketebe_character'));
+    const p = data || JSON.parse(localStorage.getItem('redglitch_character'));
     if (p) {
         if(p.hp) { this.player.hp = p.hp; this.player.maxHp = p.hp; }
         if(p.speed) this.player.speed = p.speed;
@@ -398,7 +398,7 @@ loadProfileData(data) {
 ```js
 // Line 108
 const p = await res.json();
-localStorage.setItem('ketebe_character', JSON.stringify(p));
+localStorage.setItem('redglitch_character', JSON.stringify(p));
 ```
 Then later `name` from the login input is set directly:
 ```js
@@ -524,7 +524,7 @@ If the DOM isn't ready when the script loads, this crashes. Relies entirely on s
 
 #### 🟠 `initializeIsoIntegration()` uses `await new Promise(r => setTimeout(r, 500))` as a timing hack (line 11)
 ```js
-if (!window.KetebeEventBus) {
+if (!window.RedGlitchEventBus) {
     await new Promise(r => setTimeout(r, 500));
 }
 ```
@@ -636,7 +636,7 @@ Some asset paths are built assuming the server serves from `/public/`. This brea
 
 ---
 
-## 8. AI Subsystem (Ketebe AI / IRAB)
+## 8. AI Subsystem (RedGlitch AI / IRAB)
 
 ### 8.1 Architecture
 
@@ -644,9 +644,9 @@ The AI system has **two separate implementations** that coexist:
 
 1. **IRAB Native (Python):** `backend/main.py` — Full LLM (DeepSeek-Coder-1.3B-GGUF) running as a separate process, proxied through Express at `/api/ai/*`. Managed by `CortexManager` in `electron-main.js`.
 
-2. **Ketebe AI Micro (Browser):** `public/ai/` — WebGPU/Transformers.js-based browser inference + Orama RAG. Designed as a fallback when Native is unavailable.
+2. **RedGlitch AI Micro (Browser):** `public/ai/` — WebGPU/Transformers.js-based browser inference + Orama RAG. Designed as a fallback when Native is unavailable.
 
-### 8.2 `public/ai/ketebe-ai.js` — Orchestrator
+### 8.2 `public/ai/redglitch-ai.js` — Orchestrator
 
 **What's good:**
 - Graceful provider switching (native vs WebGPU vs fallback)
@@ -666,7 +666,7 @@ Cache busting via query string on ES module imports is not standard and behaves 
 ```js
 if (EventBus.instance) EventBus.emit('ai:status', this.getStatus());
 ```
-`EventBus` from `shim.js` is a plain object with getters. `EventBus.instance` returns `window.KetebeEventBus`, but `EventBus.emit` calls `window.KetebeEventBus?.emit()`. These are two separate property accesses, creating a TOCTOU race if `window.KetebeEventBus` is assigned between the check and the call.
+`EventBus` from `shim.js` is a plain object with getters. `EventBus.instance` returns `window.RedGlitchEventBus`, but `EventBus.emit` calls `window.RedGlitchEventBus?.emit()`. These are two separate property accesses, creating a TOCTOU race if `window.RedGlitchEventBus` is assigned between the check and the call.
 
 ---
 
@@ -971,7 +971,7 @@ There are two audio systems in the shared directory. `SoundManager.js` (16KB) an
 3. **ES Modules with `import/export`** — `public/ai/*.js`
 4. **CommonJS `require()`** — all server files
 
-This makes cross-system dependencies implicit (you have to know that "the `EventBus` class is available as `window.KetebeEventBus` because some `<script>` tag loaded `shared/EventBus.js` before this script ran").
+This makes cross-system dependencies implicit (you have to know that "the `EventBus` class is available as `window.RedGlitchEventBus` because some `<script>` tag loaded `shared/EventBus.js` before this script ran").
 
 ### 14.2 Projects Duplicate Engine Files
 

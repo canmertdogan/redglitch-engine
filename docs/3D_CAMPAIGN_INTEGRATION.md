@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide explains how the 3D engines (topdown-3d, fps-3d, platformer-3d) integrate with the Ketebe campaign runtime system, enabling seamless transitions between 2D and 3D gameplay within a single campaign.
+This guide explains how the 3D engines (topdown-3d, fps-3d, platformer-3d) integrate with the RedGlitch campaign runtime system, enabling seamless transitions between 2D and 3D gameplay within a single campaign.
 
 ## Architecture
 
@@ -295,7 +295,7 @@ curl http://localhost:3000/api/monitor/engine-stats/topdown-3d
 Responses include header:
 
 ```text
-X-Ketebe-Monitor-Mode: simulated
+X-RedGlitch-Monitor-Mode: simulated
 ```
 
 ## Extending the System

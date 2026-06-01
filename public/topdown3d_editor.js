@@ -7,7 +7,7 @@
  *  - Tool system: select / paint / place / erase / height
  *  - Sidebar panels: Terrain, Objects, Lights, NavMesh, Settings
  *  - Level JSON serialization (same schema as demo_level_01.json)
- *  - KetebeEventBus + KetebeProjectState integration
+ *  - RedGlitchEventBus + RedGlitchProjectState integration
  *  - Undo/redo command stack
  *  - Launcher dashboard registration
  */
@@ -45,8 +45,8 @@
     }
 
     // ── 2. Globals ────────────────────────────────────────────────────────────
-    let eventBus    = window.KetebeEventBus    ?? null;
-    let projectState = window.KetebeProjectState ?? null;
+    let eventBus    = window.RedGlitchEventBus    ?? null;
+    let projectState = window.RedGlitchProjectState ?? null;
 
     const DEFAULT_PALETTE = [
         '#2e7d32', '#388e3c', '#4caf50', '#81c784',  // greens
@@ -822,7 +822,7 @@
 
     function updateTitle() {
         const dirty = state.dirty ? '• ' : '';
-        document.title = `${dirty}${state.level.name ?? 'TOPDOWN-3D EDITOR'} — ketebe`;
+        document.title = `${dirty}${state.level.name ?? 'TOPDOWN-3D EDITOR'} — redglitch`;
     }
 
     function markDirty() {
@@ -1186,7 +1186,7 @@
         selRectDiv.style.display = 'none';
     });
 
-    // ── 41. KetebeEventBus integration ────────────────────────────────────────
+    // ── 41. RedGlitchEventBus integration ────────────────────────────────────────
     if (eventBus) {
         eventBus.on('project:loaded', ({ project }) => {
             state.projectName = project;
@@ -1201,13 +1201,13 @@
     }
 
     // ── 42. Register editor in launcher (if opened from launcher) ─────────────
-    if (window.opener?.KetebeEventBus) {
-        window.opener.KetebeEventBus.emit('editor:opened', {
+    if (window.opener?.RedGlitchEventBus) {
+        window.opener.RedGlitchEventBus.emit('editor:opened', {
             editorType: 'topdown3d',
             capabilities: ['level-editor', 'terrain', 'navmesh', 'entities', 'lights'],
         });
     }
-    const _ps = window.opener?.KetebeProjectState ?? window.parent?.KetebeProjectState ?? null;
+    const _ps = window.opener?.RedGlitchProjectState ?? window.parent?.RedGlitchProjectState ?? null;
     if (_ps) {
         projectState = _ps;
         const pn = projectState.currentProject ?? projectState.get?.('projectName');

@@ -1,4 +1,4 @@
-// quest_editor.js - KETEBE QUEST STUDIO
+// quest_editor.js - REDGLITCH QUEST STUDIO
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeQuestIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for NPC updates (quests reference NPCs)

@@ -1,4 +1,4 @@
-// questSystem.js - Ketebe Quest Runtime
+// questSystem.js - RedGlitch Quest Runtime
 
 window.QuestSystem = class QuestSystem {
     constructor(game) {

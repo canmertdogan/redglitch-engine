@@ -1,8 +1,8 @@
-# Ketebe AI - Phase 2: RAG System Development Plan
+# RedGlitch AI - Phase 2: RAG System Development Plan
 
 **Status:** Planned
 **Target Date:** Feb 8, 2026
-**Goal:** Implement a local Retrieval-Augmented Generation (RAG) system to allow Ketebe AI to answer questions using project documentation and code context.
+**Goal:** Implement a local Retrieval-Augmented Generation (RAG) system to allow RedGlitch AI to answer questions using project documentation and code context.
 
 ---
 
@@ -22,7 +22,7 @@ The RAG system consists of three main components:
     - `public/docs.html` (HTML parsing)
     - `public/docs/*.md` (Markdown parsing)
     - `public/engines/**/*.js` (JSDoc extraction)
-    - `public/lib/monaco/ketebe.d.ts` (Type definitions)
+    - `public/lib/monaco/redglitch.d.ts` (Type definitions)
 - **Output:** `public/ai/docs/corpus.json` containing array of chunks: `{ id, text, source, tags, type }`.
 - **Action:** Add `npm run build:corpus` to `package.json`.
 
@@ -62,10 +62,10 @@ The RAG system consists of three main components:
 3.  **Create Workers:** Implement `embedding-worker.js`.
 4.  **Create Runtime Store:** Implement `vector-store.js`.
 5.  **Create Engine:** Implement `rag-engine.js`.
-6.  **Integration:** Wire it all up in `ketebe-ai.js` (from Phase 1) and test.
+6.  **Integration:** Wire it all up in `redglitch-ai.js` (from Phase 1) and test.
 
 ## 4. Verification
 
 -   **Build Test:** Run `npm run build:corpus` and verify `corpus.json` structure/size.
--   **Search Test:** In the browser console, manually query the RAG Engine: `await ketebeAI.rag.search("How do I create an NPC?")`.
--   **End-to-End:** Ask the Chat UI a question about Ketebe-specific API (e.g., "How does EventBus work?") and verify the response includes details from the docs.
+-   **Search Test:** In the browser console, manually query the RAG Engine: `await redglitchAI.rag.search("How do I create an NPC?")`.
+-   **End-to-End:** Ask the Chat UI a question about RedGlitch-specific API (e.g., "How does EventBus work?") and verify the response includes details from the docs.

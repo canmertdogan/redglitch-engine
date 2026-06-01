@@ -160,7 +160,7 @@ const StudioApp: React.FC = () => {
                 color: 'var(--accent)', fontFamily: 'VT323, monospace'
             }}>
                 <Loader2 size={64} className="spin" style={{ marginBottom: '20px' }} />
-                <div style={{ fontSize: '1.5rem', letterSpacing: '4px' }}>BOOTING KETEBE KERNEL...</div>
+                <div style={{ fontSize: '1.5rem', letterSpacing: '4px' }}>BOOTING REDGLITCH KERNEL...</div>
             </div>
         );
     }
@@ -186,7 +186,7 @@ const StudioApp: React.FC = () => {
                 </div>
                 
                 <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontWeight: 'bold', letterSpacing: '2px', color: 'var(--accent)', fontSize: '14px', whiteSpace: 'nowrap' }}>
-                    KETEBE STUDIO <span style={{ color: '#444', fontWeight: 'normal', margin: '0 10px' }}>|</span> {activeProject}
+                    REDGLITCH STUDIO <span style={{ color: '#444', fontWeight: 'normal', margin: '0 10px' }}>|</span> {activeProject}
                 </div>
 
                 <div style={{ display: 'flex', height: '100%' }}>

@@ -1,10 +1,10 @@
 # IRAB AI Assistant System
 
-> **GRRR... LOCAL AI ASSISTANT FOR KETEBE GAME STUDIO**
+> **GRRR... LOCAL AI ASSISTANT FOR REDGLITCH GAME STUDIO**
 
 ## What Is This?
 
-IRAB (formerly "Ketebe AI Assistant") is your quirky AI helper with:
+IRAB (formerly "RedGlitch AI Assistant") is your quirky AI helper with:
 
 - 📚 **Knowledge Base Q&A** - I ATE THE DOCS
 - 🎓 **Interactive Tutorials** - STEP-BY-STEP GUIDES  
@@ -38,7 +38,7 @@ IRAB IS:
 ```
 public/ai/
 ├── permission-gate.js          # SAFETY (BLACKLIST + AUDIT)
-├── ketebe-ai-assistant.js      # IRAB CORE
+├── redglitch-ai-assistant.js      # IRAB CORE
 ├── irab-personality.js         # PERSONALITY MODULE (NEW!)
 ├── cerebras-adapter.js         # CLOUD API FOR ANDROID (NEW!)
 ├── tools/editor-tools.js       # AUTOMATION API
@@ -81,13 +81,13 @@ IRAB WILL RESPOND IN ALL CAPS OCCASIONALLY. IT'S NORMAL.
 - `cerebras-adapter.js` - CLOUD INFERENCE
 
 **Updated Files**:
-- `ketebe-ai-assistant.js` → Now uses IRAB personality + hybrid inference
+- `redglitch-ai-assistant.js` → Now uses IRAB personality + hybrid inference
 - `ui/assistant-panel.js` → IRAB branding
 - `ui/assistant-panel.html` → Purple theme, 👾 icon
 
 ## Configuration
 
-For Android Cerebras API, create `.ketebe/ai_config.json`:
+For Android Cerebras API, create `.redglitch/ai_config.json`:
 
 ```json
 {

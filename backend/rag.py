@@ -179,7 +179,7 @@ class RAGSystem:
         ignore_dirs = {'.git', 'node_modules', 'dist', 'build', 'backend', '.gemini',
                        '__pycache__', '.vscode', '.idea', 'android', 'ios', 'chroma_db'}
         valid_exts = {'.js', '.json', '.md', '.html', '.css', '.py', '.vsl'}
-        manifesto_files = {'README.md', 'MANIFESTO.md', 'package.json', 'ketebe.json'}
+        manifesto_files = {'README.md', 'MANIFESTO.md', 'package.json', 'redglitch.json'}
 
         batch_docs, batch_meta, batch_ids = [], [], []
         BATCH_SIZE = 10
@@ -249,7 +249,7 @@ class RAGSystem:
 
         filename = os.path.basename(file_path)
         valid_exts = {'.js', '.json', '.md', '.html', '.css', '.py', '.vsl'}
-        manifesto_files = {'README.md', 'MANIFESTO.md', 'package.json', 'ketebe.json'}
+        manifesto_files = {'README.md', 'MANIFESTO.md', 'package.json', 'redglitch.json'}
         is_manifesto = filename in manifesto_files or 'architecture' in file_path or 'planmemory' in file_path
 
         if not is_manifesto and (filename.startswith('.') or not any(file_path.endswith(ext) for ext in valid_exts)):

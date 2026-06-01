@@ -1,10 +1,10 @@
 /**
- * Ketebe Engine - Unified Localization (i18n) System
+ * RedGlitch Engine - Unified Localization (i18n) System
  * Provides multi-language support across all engine types.
  */
 class LocalizationSystem {
     constructor() {
-        this.currentLang = localStorage.getItem('ketebe_lang') || 'EN';
+        this.currentLang = localStorage.getItem('redglitch_lang') || 'EN';
         this.data = {};
         this.loaded = false;
         
@@ -37,7 +37,7 @@ class LocalizationSystem {
     setLanguage(lang) {
         if (!lang) return;
         this.currentLang = lang.toUpperCase();
-        localStorage.setItem('ketebe_lang', this.currentLang);
+        localStorage.setItem('redglitch_lang', this.currentLang);
         
         // Update document direction for Right-to-Left support
         document.body.dir = (this.currentLang === 'AR') ? 'rtl' : 'ltr';
@@ -45,8 +45,8 @@ class LocalizationSystem {
         this.apply();
 
         // Broadcast change for engines that need to re-render text
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('ui:language_changed', { lang: this.currentLang });
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('ui:language_changed', { lang: this.currentLang });
         }
     }
 

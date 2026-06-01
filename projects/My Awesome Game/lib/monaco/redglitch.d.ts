@@ -1,9 +1,9 @@
 /**
- * Ketebe Engine Core Type Definitions
- * Providing intelligence to the Ketebe Code Studio
+ * RedGlitch Engine Core Type Definitions
+ * Providing intelligence to the RedGlitch Code Studio
  */
 
-declare namespace ketebe {
+declare namespace redglitch {
     /**
      * The global event communication hub.
      */
@@ -63,11 +63,11 @@ declare namespace ketebe {
     }
 
     /**
-     * Ketebe AI Micro Edition API
-     * Local-first AI Assistant for the Ketebe Studio
+     * RedGlitch AI Micro Edition API
+     * Local-first AI Assistant for the RedGlitch Studio
      */
     namespace ai {
-        interface KetebeAI {
+        interface RedGlitchAI {
             /**
              * Initialize the AI system (lazy-loaded).
              */
@@ -149,8 +149,8 @@ declare namespace ketebe {
     }
 }
 
-declare const eventBus: ketebe.EventBus;
-declare const assetManager: ketebe.AssetManager;
-declare const sharedProjectState: ketebe.SharedProjectState;
-declare const ketebeAI: ketebe.ai.KetebeAI;
+declare const eventBus: redglitch.EventBus;
+declare const assetManager: redglitch.AssetManager;
+declare const sharedProjectState: redglitch.SharedProjectState;
+declare const redglitchAI: redglitch.ai.RedGlitchAI;
 

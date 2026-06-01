@@ -10,9 +10,9 @@ let eventBus, projectState, assetManager;
 
 function initializeAlgorithmIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for script requests

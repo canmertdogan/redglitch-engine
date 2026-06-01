@@ -958,9 +958,6 @@ const AudioStudio: React.FC = () => {
                                 </button>
                             </div>
                         ))}
-                    </div>
-                </div>
-
                         {activeExplorerTab === 'templates' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <div style={{ padding: '10px', border: `1px solid ${THEME.border}`, background: THEME.bgPanelAlt }}>
@@ -1288,7 +1285,7 @@ const AudioStudio: React.FC = () => {
                                     {triggerHistory.map(log => (
                                         <div key={log.id} style={{ borderBottom: '1px solid #1a1d26', paddingBottom: '6px', marginBottom: '6px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', color: THEME.accent }}>
-                                                <span>> {log.name}</span>
+                                                <span>&gt; {log.name}</span>
                                                 <span style={{ color: THEME.textMute, fontSize: '10px' }}>{log.time}</span>
                                             </div>
                                             {log.clip && <div style={{ color: THEME.textMute, fontSize: '10px', marginLeft: '12px' }}>SOURCE: {log.clip}</div>}

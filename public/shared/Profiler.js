@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Performance Profiler
+ * RedGlitch Engine - Performance Profiler
  * Lightweight real-time monitoring for all engines.
  */
 class PerformanceProfiler {
@@ -21,8 +21,8 @@ class PerformanceProfiler {
         this._setupUI();
         
         // Listen for debug toggle
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.on('debug:toggle_profiler', () => this.toggle());
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('debug:toggle_profiler', () => this.toggle());
         }
         
         // Check URL params
@@ -33,7 +33,7 @@ class PerformanceProfiler {
 
     _setupUI() {
         this.ui = document.createElement('div');
-        this.ui.id = 'ketebe-profiler';
+        this.ui.id = 'redglitch-profiler';
         this.ui.style.cssText = `
             position: fixed; top: 10px; right: 10px;
             background: rgba(0, 0, 0, 0.8); color: #00ff00;
@@ -78,7 +78,7 @@ class PerformanceProfiler {
 
     _updateUI() {
         if (!this.ui) return;
-        let html = `<b>KETEBE PROFILER</b><br>`;
+        let html = `<b>REDGLITCH PROFILER</b><br>`;
         html += `FPS: ${this.stats.fps}<br>`;
         html += `Frame: ${this.stats.frameTime}ms<br>`;
         if (this.stats.drawCalls) html += `Draws: ${this.stats.drawCalls}<br>`;
@@ -94,11 +94,11 @@ class PerformanceProfiler {
     }
 
     _broadcast() {
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('engine:performance_metrics', this.stats);
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('engine:performance_metrics', this.stats);
         }
     }
 }
 
 // Make globally available
-window.KetebeProfiler = new PerformanceProfiler();
+window.RedGlitchProfiler = new PerformanceProfiler();

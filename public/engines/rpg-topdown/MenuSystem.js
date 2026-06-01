@@ -35,13 +35,13 @@ window.MenuSystem = class MenuSystem {
             return;
         }
 
-        const savedName = localStorage.getItem('ketebe_username'); 
+        const savedName = localStorage.getItem('redglitch_username'); 
         if (savedName) this.login(savedName); 
     }
     async startTestMode(urlParams = new URLSearchParams(window.location.search)) {
         // Phase 28: Unified playtest data from sessionStorage
-        const raw = sessionStorage.getItem('ketebe_playtest_data') || 
-                   localStorage.getItem('ketebe_test_map') || 
+        const raw = sessionStorage.getItem('redglitch_playtest_data') || 
+                   localStorage.getItem('redglitch_test_map') || 
                    localStorage.getItem('temp_playtest');
         if (!raw) {
             console.error('[RPG Playtest] No map data found in localStorage.');
@@ -49,7 +49,7 @@ window.MenuSystem = class MenuSystem {
         }
 
         const requestedSession = urlParams.get('session');
-        const latestSession = localStorage.getItem('ketebe_test_session');
+        const latestSession = localStorage.getItem('redglitch_test_session');
         if (requestedSession && latestSession && requestedSession !== latestSession) {
             console.log(`[RPG Playtest] Ignoring stale playtest session: ${requestedSession}`);
             return;
@@ -108,7 +108,7 @@ window.MenuSystem = class MenuSystem {
 
         const langSelect = document.getElementById('lang-select'); 
         if (langSelect) { 
-            langSelect.value = localStorage.getItem('ketebe_lang') || 'EN'; 
+            langSelect.value = localStorage.getItem('redglitch_lang') || 'EN'; 
             langSelect.addEventListener('change', (e) => { window.LOCALE.setLanguage(e.target.value); }); 
         }
 
@@ -142,8 +142,8 @@ window.MenuSystem = class MenuSystem {
     }
     async playMusic() { }
     stopMusic() { if (this.music) { this.music.pause(); this.music.currentTime = 0; } if (this.game && this.game.audio) this.game.audio.stopAll(); }
-    async login(name) { this.currentUser = name; localStorage.setItem('ketebe_username', name); const display = document.getElementById('current-user-display'); if (display) display.textContent = name; localStorage.removeItem('ketebe_character'); try { const res = await fetch(`/api/profile/${name}`); if (res.ok) { const p = await res.json(); localStorage.setItem('ketebe_character', JSON.stringify(p)); if (this.game) this.game.loadProfileData(p); } } catch (e) {} this.switchScreen('mainMenu'); }
-    logout() { this.currentUser = "GUEST"; localStorage.removeItem('ketebe_username'); localStorage.removeItem('ketebe_character'); document.getElementById('username-input').value = ""; this.switchScreen('login'); }
+    async login(name) { this.currentUser = name; localStorage.setItem('redglitch_username', name); const display = document.getElementById('current-user-display'); if (display) display.textContent = name; localStorage.removeItem('redglitch_character'); try { const res = await fetch(`/api/profile/${name}`); if (res.ok) { const p = await res.json(); localStorage.setItem('redglitch_character', JSON.stringify(p)); if (this.game) this.game.loadProfileData(p); } } catch (e) {} this.switchScreen('mainMenu'); }
+    logout() { this.currentUser = "GUEST"; localStorage.removeItem('redglitch_username'); localStorage.removeItem('redglitch_character'); document.getElementById('username-input').value = ""; this.switchScreen('login'); }
     switchScreen(screenName) {
         Object.values(this.screens).forEach(el => { if (el) { el.classList.remove('active'); el.classList.add('hidden'); } });
         const target = this.screens[screenName]; if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
@@ -258,13 +258,13 @@ window.MenuSystem = class MenuSystem {
         const campaignData = window.CAMPAIGN_DATA;
         
         // Auto-login with username (use saved or default)
-        let username = sessionStorage.getItem('ketebe_username');
+        let username = sessionStorage.getItem('redglitch_username');
         if (!username) {
-            username = localStorage.getItem('ketebe_username') || 'PLAYER';
+            username = localStorage.getItem('redglitch_username') || 'PLAYER';
         }
         
         this.currentUser = username;
-        localStorage.setItem('ketebe_username', username);
+        localStorage.setItem('redglitch_username', username);
         
         // Skip login screen, go straight to loading
         this.screens.login.classList.add('hidden');

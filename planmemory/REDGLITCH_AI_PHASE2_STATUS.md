@@ -1,4 +1,4 @@
-# Ketebe AI - Phase 2 Status: RAG System
+# RedGlitch AI - Phase 2 Status: RAG System
 
 **Date:** 2026-02-08
 **Status:** Implemented ✅
@@ -23,7 +23,7 @@
 - ✅ **Store:** `public/ai/vector-store.js`
   - Powered by **Orama** (via CDN ESM).
   - Hybrid Search: Combines vector similarity with keyword BM25.
-  - Persistence: Automatically saves/loads index to IndexedDB (`ketebe_ai_vector_db`).
+  - Persistence: Automatically saves/loads index to IndexedDB (`redglitch_ai_vector_db`).
   - Versioning: Checks corpus chunk count to decide if re-indexing is needed.
 
 ### 4. Orchestration

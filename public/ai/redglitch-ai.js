@@ -1,6 +1,6 @@
 /**
- * public/ai/ketebe-ai.js
- * Main orchestrator for Ketebe AI Micro Edition.
+ * public/ai/redglitch-ai.js
+ * Main orchestrator for RedGlitch AI Micro Edition.
  */
 
 import { AI_CONFIG } from './config.js';
@@ -14,7 +14,7 @@ import { WorkflowManager } from './workflow-manager.js';
 import { CoPilot } from './co-pilot.js';
 import { EventBus } from './shim.js';
 
-export class KetebeAI {
+export class RedGlitchAI {
     constructor() {
         this.config = { ...AI_CONFIG };
         this.loadSavedSettings();
@@ -36,7 +36,7 @@ export class KetebeAI {
             const parsed = JSON.parse(raw);
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (e) {
-            console.warn('[KetebeAI] Invalid kai_settings JSON, using defaults.');
+            console.warn('[RedGlitchAI] Invalid kai_settings JSON, using defaults.');
             return {};
         }
     }
@@ -50,14 +50,14 @@ export class KetebeAI {
         if (s.historyLimit !== undefined) this.config.limits.maxHistoryMessages = s.historyLimit;
         if (s.ragEnabled !== undefined) this.config.features.enableRAG = s.ragEnabled;
         if (Object.keys(s).length > 0) {
-            console.log('[KetebeAI] Saved settings loaded into kernel.');
+            console.log('[RedGlitchAI] Saved settings loaded into kernel.');
         }
     }
 
     async initialize() {
         if (this.isInitialized) return;
         
-        console.log('[KetebeAI] Initializing Kernel...');
+        console.log('[RedGlitchAI] Initializing Kernel...');
         
         // Determine Provider
         const savedSettings = this._getKaiSettings();
@@ -65,16 +65,16 @@ export class KetebeAI {
 
         // 1. If Native, we don't need to load local weights (300MB save!)
         if (provider === 'native') {
-            console.log('[KetebeAI] Native Cortex detected. Skipping local model load.');
+            console.log('[RedGlitchAI] Native Cortex detected. Skipping local model load.');
         } else if (this.config.features.enableWebGPU) {
             // Only load WebGPU if specifically requested or native is unavailable
             await this.inferenceEngine.initialize().catch(e => {
-                console.warn('[KetebeAI] WebGPU Init Failed, falling back to Native:', e);
+                console.warn('[RedGlitchAI] WebGPU Init Failed, falling back to Native:', e);
             });
         }
         
         if (this.config.features.enableRAG) {
-            this.ragEngine.initialize().catch(e => console.error('[KetebeAI] RAG Init Failed:', e));
+            this.ragEngine.initialize().catch(e => console.error('[RedGlitchAI] RAG Init Failed:', e));
         }
 
         this.isInitialized = true;
@@ -133,7 +133,7 @@ export class KetebeAI {
         const provider = this._getKaiSettings().provider || 'native';
         
         if (provider === 'native' && irabBridge && irabBridge.isConnected) {
-            console.log('[KetebeAI] Routing to Native Cortex...');
+            console.log('[RedGlitchAI] Routing to Native Cortex...');
             const nativeResult = await new Promise((resolve) => {
                 irabBridge.send({
                     type: "CHAT",
@@ -154,7 +154,7 @@ export class KetebeAI {
 
         // 2. SECONDARY: Local WebGPU (Micro Edition)
         if (this.inferenceEngine.isModelReady && !options.forceNative) {
-            console.log('[KetebeAI] Using Local Inference...');
+            console.log('[RedGlitchAI] Using Local Inference...');
             return await this._localChat(message, options);
         }
 
@@ -168,7 +168,7 @@ export class KetebeAI {
             try {
                 ragContext = await this.ragEngine.retrieveContext(message);
             } catch (e) {
-                console.warn('[KetebeAI] RAG Retrieval Failed:', e);
+                console.warn('[RedGlitchAI] RAG Retrieval Failed:', e);
             }
         }
 
@@ -197,7 +197,7 @@ export class KetebeAI {
             
             return { text: responseText, toolCalls: [], source: 'local' };
         } catch (error) {
-            console.error('[KetebeAI] Local Chat Failed:', error);
+            console.error('[RedGlitchAI] Local Chat Failed:', error);
             return this.fallbackToServer(message);
         }
     }
@@ -209,7 +209,7 @@ export class KetebeAI {
         if (!this.config.features.enableGhostText) return null;
 
         const prompt = `<|im_start|>system
-You are a Ghost Text autocomplete provider for Ketebe Code Forge.
+You are a Ghost Text autocomplete provider for RedGlitch Code Forge.
 Generate a SHORT (1-5 lines) code completion based on the prefix and suffix.
 Respond ONLY with the code to be inserted. Do not use markdown blocks.
 File: ${filePath}<|im_end|>
@@ -263,7 +263,7 @@ ${suffix}<|im_end|>
     }
 
     async fallbackToServer(message) {
-        console.log('[KetebeAI] Falling back to server API...');
+        console.log('[RedGlitchAI] Falling back to server API...');
         try {
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -292,7 +292,7 @@ ${suffix}<|im_end|>
 }
 
 // Safe auto-instantiation
-if (typeof window !== 'undefined' && !window.KetebeAIInstance) {
-    console.log("[KetebeAI] Creating global instance...");
-    window.KetebeAIInstance = new KetebeAI();
+if (typeof window !== 'undefined' && !window.RedGlitchAIInstance) {
+    console.log("[RedGlitchAI] Creating global instance...");
+    window.RedGlitchAIInstance = new RedGlitchAI();
 }

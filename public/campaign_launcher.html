@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campaign Launcher - Ketebe Engine</title>
+    <title>Campaign Launcher - RedGlitch Engine</title>
     <link rel="stylesheet" href="base_game/style.css">
     <link href="fonts/fonts.css" rel="stylesheet">
     <style>
@@ -365,7 +365,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>🎮 KETEBE ENGINE</h1>
+            <h1>🎮 REDGLITCH ENGINE</h1>
             <p class="subtitle">SELECT A CAMPAIGN TO BEGIN YOUR ADVENTURE</p>
         </div>
 
@@ -399,7 +399,7 @@
                 this.campaigns = [];
                 this.selectedCampaign = null;
                 this.selectedSlot = 1;
-                this.username = localStorage.getItem('ketebe_username') || 'guest';
+                this.username = localStorage.getItem('redglitch_username') || 'guest';
                 this.campaignState = null;
                 
                 this.init();
@@ -608,9 +608,9 @@
 
             startCampaign(continueMode) {
                 // Store campaign info in sessionStorage for the game to read
-                sessionStorage.setItem('ketebe_campaign_id', this.selectedCampaign);
-                sessionStorage.setItem('ketebe_campaign_continue', continueMode ? '1' : '0');
-                sessionStorage.setItem('ketebe_save_slot', this.selectedSlot.toString());
+                sessionStorage.setItem('redglitch_campaign_id', this.selectedCampaign);
+                sessionStorage.setItem('redglitch_campaign_continue', continueMode ? '1' : '0');
+                sessionStorage.setItem('redglitch_save_slot', this.selectedSlot.toString());
                 
                 // Redirect to game
                 window.location.href = 'index.html?mode=campaign';

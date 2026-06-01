@@ -80,7 +80,7 @@ public/
 └── ai/
     ├── irab-personality.js        # Personality
     ├── cerebras-adapter.js        # Cloud API
-    ├── ketebe-ai-assistant.js     # Core brain
+    ├── redglitch-ai-assistant.js     # Core brain
     └── ui/
         ├── assistant-panel.html   # Enhanced UI
         └── assistant-panel.js     # UI controller

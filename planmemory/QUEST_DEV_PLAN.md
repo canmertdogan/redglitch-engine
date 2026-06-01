@@ -1,7 +1,7 @@
 # Quest Studio & System Development Plan
 
 ## 1. Overview
-The goal is to build a fully integrated Quest System for the ketebe ENGINE. This involves upgrading the **Quest Studio** (Editor) to handle complex quest logic and creating a runtime **QuestSystem** (Engine) to track progress and rewards.
+The goal is to build a fully integrated Quest System for the redglitch ENGINE. This involves upgrading the **Quest Studio** (Editor) to handle complex quest logic and creating a runtime **QuestSystem** (Engine) to track progress and rewards.
 
 ## 2. Data Architecture
 Quests will be stored in `dunyalar/definitions/quests.json`.
@@ -35,7 +35,7 @@ Quests will be stored in `dunyalar/definitions/quests.json`.
 **File:** `public/quest_editor.html`, `public/quest_editor.js`
 
 ### 3.1 UI/UX Overhaul
-*   [ ] **Theme:** Apply Ketebe "Pixel Gold" theme (`VT323` font, `#f1c40f` accents, solid borders).
+*   [ ] **Theme:** Apply RedGlitch "Pixel Gold" theme (`VT323` font, `#f1c40f` accents, solid borders).
 *   [ ] **Layout:** Split into "Quest Details" (Left) and "Stages/Rewards" (Right).
 *   [ ] **Search:** Add search bar for the quest list.
 

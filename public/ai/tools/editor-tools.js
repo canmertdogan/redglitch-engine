@@ -1,5 +1,5 @@
 /**
- * Ketebe AI - Editor Tools
+ * RedGlitch AI - Editor Tools
  * Safe automation layer for interacting with studio editors
  * All write operations go through PermissionGate
  */

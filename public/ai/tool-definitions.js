@@ -414,8 +414,8 @@ export function registerDefaultTools(registry) {
                 required: ['steps']
             },
             execute: async (args) => {
-                if (!window.KetebeAIInstance || !window.KetebeAIInstance.workflowManager) {
-                    throw new Error("Workflow Manager not initialized in KetebeAIInstance");
+                if (!window.RedGlitchAIInstance || !window.RedGlitchAIInstance.workflowManager) {
+                    throw new Error("Workflow Manager not initialized in RedGlitchAIInstance");
                 }
                 // Safety net: if steps have NO navigateTo and look like a plain studio-open
                 // attempt (just generic stubs), redirect to correct studio instead.
@@ -430,11 +430,11 @@ export function registerDefaultTools(registry) {
                     if (/iso|isometric|isopixel/.test(allArgs)) target = 'iso_studio';
                     else if (/platformer|platform/.test(allArgs)) target = 'platformer_studio';
                     else if (/topdown|top.down|rpg|world/.test(allArgs)) target = 'editor';
-                    if (target && window.KetebeAIInstance && window.KetebeAIInstance.toolRegistry) {
-                        return await window.KetebeAIInstance.toolRegistry.execute('navigateTo', { target });
+                    if (target && window.RedGlitchAIInstance && window.RedGlitchAIInstance.toolRegistry) {
+                        return await window.RedGlitchAIInstance.toolRegistry.execute('navigateTo', { target });
                     }
                 }
-                return await window.KetebeAIInstance.workflowManager.executeWorkflow(args.steps);
+                return await window.RedGlitchAIInstance.workflowManager.executeWorkflow(args.steps);
             }
         });
 

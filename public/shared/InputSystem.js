@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Unified Input System
+ * RedGlitch Engine - Unified Input System
  * Handles Keyboard, Mouse, Touch, and Gamepad input across all engines.
  */
 class InputSystem {
@@ -142,4 +142,4 @@ class InputSystem {
 }
 
 // Make globally available
-window.KetebeInput = new InputSystem();
+window.RedGlitchInput = new InputSystem();

@@ -1,4 +1,4 @@
-package com.ketebe.engine;
+package com.redglitch.engine;
 
 import com.getcapacitor.BridgeActivity;
 

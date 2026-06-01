@@ -1550,7 +1550,7 @@ const Pf3dEditor = (() => {
         const overlay = document.getElementById('test-overlay');
         const iframe  = document.getElementById('test-iframe');
         const payload = _buildLevelPayload();
-        const key     = 'ketebe_playtest_data';
+        const key     = 'redglitch_playtest_data';
         sessionStorage.setItem(key, JSON.stringify(payload));
         localStorage.setItem('temp_playtest_platformer3d', JSON.stringify(payload)); // Legacy fallback
         const params = new URLSearchParams({ playtest: '1' });

@@ -1,6 +1,6 @@
 # Tools Catalog
 
-The `public/` directory contains a vast array of specialized tools. ketebe ENGINE follows the "Unix Philosophy": write programs that do one thing and do it well, communicating via the Event Bus.
+The `public/` directory contains a vast array of specialized tools. redglitch ENGINE follows the "Unix Philosophy": write programs that do one thing and do it well, communicating via the Event Bus.
 
 ## Core Workbench
 *   **Dashboard (`dashboard.html`)**: The entry point. Lists recent projects, recent activity, and provides quick access to all other tools.

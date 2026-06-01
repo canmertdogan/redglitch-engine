@@ -12,7 +12,7 @@ The status bar will be divided into three logical sections:
 - **Diagnostics**: Error and Warning counts (e.g., `ⓧ 0 ⚠ 2`) linked to the Console tool.
 
 ### Center Section (Notifications)
-- **Toast Area**: Transient messages (e.g., "File Saved", "Build Started") that appear and fade out, replacing the static "KETEBE STUDIO" text.
+- **Toast Area**: Transient messages (e.g., "File Saved", "Build Started") that appear and fade out, replacing the static "REDGLITCH STUDIO" text.
 
 ### Right Section (Environment & Stats)
 - **Cursor Position**: `Ln 12, Col 45` (Updates when a script/code editor is focused).

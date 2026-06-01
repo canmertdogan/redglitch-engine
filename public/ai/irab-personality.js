@@ -1,6 +1,6 @@
 /**
  * Kai Personality Module
- * Nerd as fuck, but cool as fuck AI assistant for Ketebe Studio
+ * Nerd as fuck, but cool as fuck AI assistant for RedGlitch Studio
  */
 
 class KaiPersonality {

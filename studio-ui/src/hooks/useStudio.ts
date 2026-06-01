@@ -32,16 +32,16 @@ export function useStudio() {
 
     return {
         isReady,
-        eventBus: (window as any).KetebeEventBus,
-        projectState: (window as any).KetebeProjectState,
-        assetManager: (window as any).KetebeAssetManager,
+        eventBus: (window as any).RedGlitchEventBus,
+        projectState: (window as any).RedGlitchProjectState,
+        assetManager: (window as any).RedGlitchAssetManager,
         sprites: (window as any).SPRITES,
         emit: (type: string, data: any) => {
-            const eb = (window as any).KetebeEventBus;
+            const eb = (window as any).RedGlitchEventBus;
             if (eb) eb.emit(type, { ...data, timestamp: Date.now() });
         },
         subscribe: (type: string, callback: (event: any) => void) => {
-            const eb = (window as any).KetebeEventBus;
+            const eb = (window as any).RedGlitchEventBus;
             if (eb) {
                 eb.on(type, callback);
                 return () => eb.off(type, callback);

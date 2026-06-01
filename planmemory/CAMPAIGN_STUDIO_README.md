@@ -2,7 +2,7 @@
 
 ## 🎮 Overview
 
-**Campaign Studio** is a powerful visual node-based editor for creating multi-engine game campaigns in ketebe ENGINE. It enables seamless transitions between RPG-TopDown, ISO-Pixel, and Platformer-2D engines while maintaining player state, inventory, quests, and achievements throughout the journey.
+**Campaign Studio** is a powerful visual node-based editor for creating multi-engine game campaigns in redglitch ENGINE. It enables seamless transitions between RPG-TopDown, ISO-Pixel, and Platformer-2D engines while maintaining player state, inventory, quests, and achievements throughout the journey.
 
 ## ✨ Key Features
 
@@ -64,7 +64,7 @@ data/
 
 ### Opening Campaign Studio
 
-1. Start ketebe ENGINE launcher
+1. Start redglitch ENGINE launcher
 2. Click **"Campaign Editor"** from main menu
 3. The visual editor will open
 
@@ -465,7 +465,7 @@ Campaign Studio is feature-complete and production-ready. Future enhancements:
 
 ## 📝 License
 
-Part of ketebe ENGINE project.
+Part of redglitch ENGINE project.
 
 ## 🎉 Acknowledgments
 
@@ -475,5 +475,5 @@ Campaign Studio enables game creators to build rich, multi-engine experiences wi
 
 ---
 
-*Campaign Studio - Multi-Engine Game Development for ketebe ENGINE*
+*Campaign Studio - Multi-Engine Game Development for redglitch ENGINE*
 *Version 1.0.0 - Production Ready*

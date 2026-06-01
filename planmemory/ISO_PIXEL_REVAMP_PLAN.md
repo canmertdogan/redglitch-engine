@@ -7,7 +7,7 @@
 ## Phase 1: Immediate World Transition
 **Goal:** When the user launches the game (`index.html`), it should immediately load the Isometric engine.
 
-*   **Action:** Update `ketebe.json`.
+*   **Action:** Update `redglitch.json`.
 *   **Change:** Set `"engineType": "iso-pixel"`.
 *   **Verification:** Open `index.html` (or use the preview) and verify it loads the Iso engine (indicated by the specialized UI or 3D view).
 
@@ -48,7 +48,7 @@ The Top-Down editor has "Type" (Dungeon/Village) and "Density". Iso has "Terrain
     *   Pass these new parameters to the `IsoGenerator`.
 
 ## Execution Order
-1.  **Transition:** Modify `ketebe.json` immediately.
+1.  **Transition:** Modify `redglitch.json` immediately.
 2.  **UI Port:** Copy HTML structures from `editor.html` to `iso_editor.html` (Props grid, Collision buttons).
 3.  **Logic Port:** Copy/Adapt JS functions from `editor.js` to `iso_editor.js` (`selectProp`, `selectCollisionType`).
 4.  **Integration:** Ensure the new UI elements trigger the ported logic correctly.

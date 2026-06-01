@@ -1,4 +1,4 @@
-// main.js - ketebe ENGINE v5.2 - HYBRID CORE (Robust Legacy Logic + New Architecture)
+// main.js - redglitch ENGINE v5.2 - HYBRID CORE (Robust Legacy Logic + New Architecture)
 
 // Inject Logger Hook for DevTools Integration
 (function() {
@@ -656,18 +656,18 @@ window.MenuSystem = class MenuSystem {
             return;
         }
 
-        const savedName = localStorage.getItem('ketebe_username'); 
+        const savedName = localStorage.getItem('redglitch_username'); 
         if (savedName) this.login(savedName); 
     }
     async startTestMode(urlParams = new URLSearchParams(window.location.search)) {
-        const raw = localStorage.getItem('ketebe_test_map') || localStorage.getItem('temp_playtest');
+        const raw = localStorage.getItem('redglitch_test_map') || localStorage.getItem('temp_playtest');
         if (!raw) {
             console.error('[RPG Playtest] No map data found in localStorage.');
             return;
         }
 
         const requestedSession = urlParams.get('session');
-        const latestSession = localStorage.getItem('ketebe_test_session');
+        const latestSession = localStorage.getItem('redglitch_test_session');
         if (requestedSession && latestSession && requestedSession !== latestSession) {
             console.log(`[RPG Playtest] Ignoring stale playtest session: ${requestedSession}`);
             return;
@@ -703,7 +703,7 @@ window.MenuSystem = class MenuSystem {
         add('pause-btn', () => this.togglePause()); add('btn-resume', () => this.togglePause());
         add('btn-options', () => { if(this.pauseState.main) this.pauseState.main.classList.add('hidden'); if(this.pauseState.options) this.pauseState.options.classList.remove('hidden'); });
         add('btn-quit', () => this.quitGame()); add('btn-options-back', () => { if(this.pauseState.options) this.pauseState.options.classList.add('hidden'); if(this.pauseState.main) this.pauseState.main.classList.remove('hidden'); });
-        const langSelect = get('lang-select'); if (langSelect) { langSelect.value = localStorage.getItem('ketebe_lang') || 'EN'; langSelect.addEventListener('change', (e) => { window.LOCALE.setLanguage(e.target.value); }); }
+        const langSelect = get('lang-select'); if (langSelect) { langSelect.value = localStorage.getItem('redglitch_lang') || 'EN'; langSelect.addEventListener('change', (e) => { window.LOCALE.setLanguage(e.target.value); }); }
         const touchBtn = get('opt-touch-toggle'); if (touchBtn) { touchBtn.addEventListener('click', () => { const mc = get('mobile-controls'); if (touchBtn.innerText === "ON") { touchBtn.innerText = "OFF"; if(mc) mc.classList.add('hidden'); } else { touchBtn.innerText = "ON"; if(mc) mc.classList.remove('hidden'); } }); }
         const invSlots = document.querySelectorAll('.inv-slot'); invSlots.forEach((slot, idx) => { slot.addEventListener('click', () => { const item = this.game.inventory[idx]; if (item) this.game.useItem(idx); else { invSlots.forEach(s => s.classList.remove('selected')); slot.classList.add('selected'); } }); });
         window.addEventListener('keydown', (e) => { 
@@ -713,8 +713,8 @@ window.MenuSystem = class MenuSystem {
     }
     async playMusic() { }
     stopMusic() { if (this.music) { this.music.pause(); this.music.currentTime = 0; } if (this.game && this.game.audio) this.game.audio.stopAll(); }
-    async login(name) { this.currentUser = name; localStorage.setItem('ketebe_username', name); const display = document.getElementById('current-user-display'); if (display) display.innerText = name; localStorage.removeItem('ketebe_character'); try { const res = await fetch(`/api/profile/${name}`); if (res.ok) { const p = await res.json(); localStorage.setItem('ketebe_character', JSON.stringify(p)); if (this.game) this.game.loadProfileData(p); } } catch (e) {} this.switchScreen('mainMenu'); }
-    logout() { this.currentUser = "GUEST"; localStorage.removeItem('ketebe_username'); localStorage.removeItem('ketebe_character'); document.getElementById('username-input').value = ""; this.switchScreen('login'); }
+    async login(name) { this.currentUser = name; localStorage.setItem('redglitch_username', name); const display = document.getElementById('current-user-display'); if (display) display.innerText = name; localStorage.removeItem('redglitch_character'); try { const res = await fetch(`/api/profile/${name}`); if (res.ok) { const p = await res.json(); localStorage.setItem('redglitch_character', JSON.stringify(p)); if (this.game) this.game.loadProfileData(p); } } catch (e) {} this.switchScreen('mainMenu'); }
+    logout() { this.currentUser = "GUEST"; localStorage.removeItem('redglitch_username'); localStorage.removeItem('redglitch_character'); document.getElementById('username-input').value = ""; this.switchScreen('login'); }
     switchScreen(screenName) {
         Object.values(this.screens).forEach(el => { if (el) { el.classList.remove('active'); el.classList.add('hidden'); } });
         const target = this.screens[screenName]; if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
@@ -812,13 +812,13 @@ window.MenuSystem = class MenuSystem {
         const campaignData = window.CAMPAIGN_DATA;
         
         // Auto-login with username (use saved or default)
-        let username = sessionStorage.getItem('ketebe_username');
+        let username = sessionStorage.getItem('redglitch_username');
         if (!username) {
-            username = localStorage.getItem('ketebe_username') || 'PLAYER';
+            username = localStorage.getItem('redglitch_username') || 'PLAYER';
         }
         
         this.currentUser = username;
-        localStorage.setItem('ketebe_username', username);
+        localStorage.setItem('redglitch_username', username);
         
         // Skip login screen, go straight to loading
         this.screens.login.classList.add('hidden');
@@ -1183,7 +1183,7 @@ window.Core = class Core {
     die() { this.isRunning = false; const deathScreen = document.getElementById('death-screen'); if (deathScreen) { deathScreen.classList.remove('hidden'); document.getElementById('revive-count').innerText = this.revives; document.getElementById('respawn-count').innerText = this.respawns; document.getElementById('btn-revive').style.display = this.revives > 0 ? 'block' : 'none'; document.getElementById('btn-respawn').style.display = this.respawns > 0 ? 'block' : 'none'; } }
     revive() { if (this.revives > 0) { this.revives--; this.player.hp = this.player.maxHp; this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
     async respawn() { if (this.respawns > 0) { this.respawns--; this.inventory = []; this.updateInventoryHUD(); this.player.hp = this.player.maxHp; this.player.mana = this.player.maxMana; this.player.stamina = this.player.maxStamina; await this.loadLevel(this.currentLevelId || 'level1'); this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
-    loadProfileData(data) { const p = data || JSON.parse(localStorage.getItem('ketebe_character')); if (p) { if(p.hp) { this.player.hp = p.hp; this.player.maxHp = p.hp; } if(p.stamina) { this.player.stamina = p.stamina; this.player.maxStamina = p.stamina; } if(p.mana) { this.player.mana = p.mana; this.player.maxMana = p.mana; } if(p.speed) this.player.speed = p.speed; if(p.jumpForce) this.player.jumpForce = -p.jumpForce; if(p.segmentCount) this.player.segmentCount = p.segmentCount; if(p.segmentSpacing) this.player.segmentSpacing = p.segmentSpacing; this.player.glowColor = p.glowColor || '#e74c3c'; if (p.headData) { const img = new Image(); img.src = p.headData; this.playerHead = img; } if (p.bodyData) { const img = new Image(); img.src = p.bodyData; this.playerBody = img; } } }
+    loadProfileData(data) { const p = data || JSON.parse(localStorage.getItem('redglitch_character')); if (p) { if(p.hp) { this.player.hp = p.hp; this.player.maxHp = p.hp; } if(p.stamina) { this.player.stamina = p.stamina; this.player.maxStamina = p.stamina; } if(p.mana) { this.player.mana = p.mana; this.player.maxMana = p.mana; } if(p.speed) this.player.speed = p.speed; if(p.jumpForce) this.player.jumpForce = -p.jumpForce; if(p.segmentCount) this.player.segmentCount = p.segmentCount; if(p.segmentSpacing) this.player.segmentSpacing = p.segmentSpacing; this.player.glowColor = p.glowColor || '#e74c3c'; if (p.headData) { const img = new Image(); img.src = p.headData; this.playerHead = img; } if (p.bodyData) { const img = new Image(); img.src = p.bodyData; this.playerBody = img; } } }
     
     spawnFireball(x, y, dx, dy, sprite) {
         // Ring Buffer Strategy: O(1) and never fails
@@ -1846,7 +1846,7 @@ async function initRPGEngine() {
     }
 
     console.log("[RPG Core] Initializing Top-Down Engine...");
-    window.LOCALE.setLanguage(localStorage.getItem('ketebe_lang') || 'EN'); 
+    window.LOCALE.setLanguage(localStorage.getItem('redglitch_lang') || 'EN'); 
     
     try { 
         const res = await fetch('dunyalar/definitions/music.json'); 

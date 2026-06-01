@@ -1,5 +1,5 @@
 /**
- * KETEBE Instrument Presets - Pre-configured synth and sampler settings
+ * REDGLITCH Instrument Presets - Pre-configured synth and sampler settings
  */
 
 class InstrumentPresets {

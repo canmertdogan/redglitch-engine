@@ -39,7 +39,7 @@
             // In a built game, this file should exist at root or via API.
             // In dev mode, we might hit the API.
             let res = await fetch('/api/projects/current');
-            if(!res.ok) res = await fetch('ketebe.json'); // Fallback for static build
+            if(!res.ok) res = await fetch('redglitch.json'); // Fallback for static build
             
             if (res.ok) {
                 const config = await res.json();

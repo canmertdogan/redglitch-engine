@@ -77,11 +77,11 @@
     // Error notification system (replaces alerts)
     window.showNotification = function(message, type = 'info', duration = 3000) {
         // Remove existing notifications
-        const existing = document.querySelectorAll('.ketebe-notification');
+        const existing = document.querySelectorAll('.redglitch-notification');
         existing.forEach(n => n.remove());
 
         const notification = document.createElement('div');
-        notification.className = 'ketebe-notification notification';
+        notification.className = 'redglitch-notification notification';
         notification.style.cssText = `
             position: fixed;
             top: 20px;

@@ -49,7 +49,7 @@ export default class VFX_Platformer3D {
     /**
      * @param {object} opts
      * @param {THREE.Scene}  opts.scene
-     * @param {object}       [opts.palette]     — Ketebe palette (array of hex ints)
+     * @param {object}       [opts.palette]     — RedGlitch palette (array of hex ints)
      * @param {HTMLElement}  [opts.hudContainer] — DIV to host screen flash overlay
      */
     constructor({ scene, palette = null, hudContainer = null }) {

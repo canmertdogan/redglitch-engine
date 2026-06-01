@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>KETEBE CONFIG</title>
+    <title>REDGLITCH CONFIG</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -223,7 +223,7 @@
                         <span>Primary system highlight</span>
                     </div>
                     <select id="pref-theme" onchange="previewTheme(this.value)">
-                        <option value="gold">Ketebe Gold</option>
+                        <option value="gold">RedGlitch Gold</option>
                         <option value="midnight">Midnight Slate</option>
                         <option value="red">System Red</option>
                         <option value="purple">Grimoire Purple</option>
@@ -292,7 +292,7 @@
                         <strong>Factory Reset</strong>
                         <span>Restore all settings to default</span>
                     </div>
-                    <button class="btn" onclick="if(confirm('Reset all prefs?')) localStorage.removeItem('ketebe_prefs'); location.reload();">RESET</button>
+                    <button class="btn" onclick="if(confirm('Reset all prefs?')) localStorage.removeItem('redglitch_prefs'); location.reload();">RESET</button>
                 </div>
             </div>
         </div>
@@ -323,7 +323,7 @@
         const VALUES = ['autosave', 'wire', 'theme', 'scale'];
 
         function load() {
-            const data = JSON.parse(localStorage.getItem('ketebe_prefs') || '{}');
+            const data = JSON.parse(localStorage.getItem('redglitch_prefs') || '{}');
             
             TOGGLES.forEach(k => {
                 const el = document.getElementById('tog-'+k);
@@ -346,7 +346,7 @@
                 data[k] = document.getElementById('pref-'+k).value;
             });
 
-            localStorage.setItem('ketebe_prefs', JSON.stringify(data));
+            localStorage.setItem('redglitch_prefs', JSON.stringify(data));
             
             // Notify System
             // In a real app, we'd postMessage or call parent

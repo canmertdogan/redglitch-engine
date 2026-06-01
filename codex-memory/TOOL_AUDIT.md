@@ -76,7 +76,7 @@ Files: `public/dashboard.html`
   - Lazy-load heavy visual effects when idle.
 
 ### 2.2 Code Forge (Script Editor)
-Files: `public/script_editor.html`, `public/script_editor.js`, `public/lib/monaco/ketebe.d.ts`
+Files: `public/script_editor.html`, `public/script_editor.js`, `public/lib/monaco/redglitch.d.ts`
 - Role: Monaco-based code editor for game scripts.
 - Behaviors:
   - EventBus integration, project tracking, multi-tab support, auto-save.

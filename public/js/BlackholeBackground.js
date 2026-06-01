@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Blackhole Cinematic Background
+ * RedGlitch Engine - Blackhole Cinematic Background
  * A high-performance WebGL/Three.js shader background
  */
 class BlackholeBackground {

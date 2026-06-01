@@ -1,4 +1,4 @@
-// shader_editor.js - KETEBE SHADER LAB PRO
+// shader_editor.js - REDGLITCH SHADER LAB PRO
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -6,9 +6,9 @@ let eventBus, projectState, assetManager;
 
 function initializeShaderIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for shader requests

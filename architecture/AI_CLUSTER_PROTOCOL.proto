@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ketebe.ai.cluster;
+package redglitch.ai.cluster;
 
 // The AI Cluster Service
 service AIClusterService {

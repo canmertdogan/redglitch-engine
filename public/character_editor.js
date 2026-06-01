@@ -1,4 +1,4 @@
-// character_editor.js - Enhanced Ketebe Hero Studio
+// character_editor.js - Enhanced RedGlitch Hero Studio
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -8,9 +8,9 @@ let characterId = null; // Current character being edited
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for external character load requests
@@ -171,7 +171,7 @@ window.onload = async () => {
     }
     
     if (!loaded) {
-        const saved = localStorage.getItem('ketebe_character');
+        const saved = localStorage.getItem('redglitch_character');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -366,7 +366,7 @@ function renderLoop(timestamp) {
 // --- IO ---
 window.saveToBrowser = function() {
     updateDataFromUI();
-    localStorage.setItem('ketebe_character', JSON.stringify(charData));
+    localStorage.setItem('redglitch_character', JSON.stringify(charData));
     
     // Also save to shared state
     saveCharacterToState();

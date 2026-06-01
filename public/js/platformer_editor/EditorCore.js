@@ -41,8 +41,8 @@ class EditorCore {
         await this.renderer.loadTileset('WORLD_PIXEL_ART');
         
         // 2c. Initialize Shared State for Undo/Redo
-        if (window.KetebeProjectState) {
-            window.KetebeProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)), { skipUndo: true });
+        if (window.RedGlitchProjectState) {
+            window.RedGlitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)), { skipUndo: true });
         }
 
         // 2d. Initialize Parallax
@@ -237,7 +237,7 @@ class EditorCore {
         // Play
         document.getElementById('btn-play').addEventListener('click', () => {
             console.log('[PlatformerStudio] Launching Playtest...');
-            sessionStorage.setItem('ketebe_playtest_data', JSON.stringify(this.map));
+            sessionStorage.setItem('redglitch_playtest_data', JSON.stringify(this.map));
             localStorage.setItem('temp_playtest_platformer', JSON.stringify(this.map)); // Legacy fallback
             window.open('engines/platformer-2d/index.html?playtest=true', '_blank');
         });
@@ -332,16 +332,16 @@ class EditorCore {
     }
 
     pushState() {
-        if (window.KetebeProjectState) {
+        if (window.RedGlitchProjectState) {
             // Sync current map to shared state for undo point
-            window.KetebeProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
+            window.RedGlitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
         }
     }
 
     undo() {
-        if (window.KetebeProjectState) {
-            if (window.KetebeProjectState.undo()) {
-                const undoneMap = window.KetebeProjectState.get('platformer.currentMap');
+        if (window.RedGlitchProjectState) {
+            if (window.RedGlitchProjectState.undo()) {
+                const undoneMap = window.RedGlitchProjectState.get('platformer.currentMap');
                 if (undoneMap) {
                     this.map = JSON.parse(JSON.stringify(undoneMap));
                     this.renderer.invalidateCache();
@@ -351,9 +351,9 @@ class EditorCore {
     }
 
     redo() {
-        if (window.KetebeProjectState) {
-            if (window.KetebeProjectState.redo()) {
-                const redoneMap = window.KetebeProjectState.get('platformer.currentMap');
+        if (window.RedGlitchProjectState) {
+            if (window.RedGlitchProjectState.redo()) {
+                const redoneMap = window.RedGlitchProjectState.get('platformer.currentMap');
                 if (redoneMap) {
                     this.map = JSON.parse(JSON.stringify(redoneMap));
                     this.renderer.invalidateCache();

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ketebe Game Studio</title>
+    <title>RedGlitch Game Studio</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -1244,7 +1244,7 @@
         </div>
         
         <div class="app-caption">
-            <span class="brand-gold">KETEBE GAME STUDIO</span>
+            <span class="brand-gold">REDGLITCH GAME STUDIO</span>
         </div>
 
         <div class="win-controls">
@@ -1565,7 +1565,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Author</label>
-                            <input type="text" id="new-proj-author" class="form-input" value="Ketebe User">
+                            <input type="text" id="new-proj-author" class="form-input" value="RedGlitch User">
                         </div>
                     </div>
 
@@ -1596,7 +1596,7 @@
         </div>
 
         <div class="sb-section" style="flex-grow:1; justify-content:center;">
-            <div id="sb-message" style="opacity:0.8;">ketebe ENGINE AND V8 CORE READY</div>
+            <div id="sb-message" style="opacity:0.8;">redglitch ENGINE AND V8 CORE READY</div>
         </div>
 
         <div class="sb-section">
@@ -1626,10 +1626,10 @@
     <script src="ai/error-watcher.js?v=1"></script>
     <script type="module">
         import { ThoughtVisualizer } from 'ai/ui/thought-visualizer.js';
-        window.KetebeThoughtVisualizer = new ThoughtVisualizer(window.KetebeEventBus);
+        window.RedGlitchThoughtVisualizer = new ThoughtVisualizer(window.RedGlitchEventBus);
     </script>
     
-    <!-- KAI AI Assistant (Ketebe AI Micro Edition) -->
+    <!-- KAI AI Assistant (RedGlitch AI Micro Edition) -->
     <iframe id="kai-ai-panel" src="ai/ui/assistant-panel.html?v=8" 
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                    border: none; pointer-events: none; z-index: 9998;">
@@ -1712,9 +1712,9 @@
     
     <script type="module">
         // Initialize AI Micro for ghost-text and Command Bus (ToolRegistry)
-        import { KetebeAI } from './ai/ketebe-ai.js?v=7';
-        if (window.KetebeAIInstance) {
-            window.KetebeAIInstance.initialize().catch(err => {
+        import { RedGlitchAI } from './ai/redglitch-ai.js?v=7';
+        if (window.RedGlitchAIInstance) {
+            window.RedGlitchAIInstance.initialize().catch(err => {
                 console.error("❌ AI Brain failed to initialize:", err);
             });
         }

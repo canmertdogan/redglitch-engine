@@ -1,6 +1,6 @@
 # Game Engines
 
-ketebe ENGINE is a multi-paradigm system. It does not force a single rendering or logic style. Instead, it provides three distinct "Cores" or "Engines" that share the same Asset Manager and Event Bus.
+redglitch ENGINE is a multi-paradigm system. It does not force a single rendering or logic style. Instead, it provides three distinct "Cores" or "Engines" that share the same Asset Manager and Event Bus.
 
 ## 1. IsoPixel Engine (`engines/iso-pixel`)
 **Target Genre:** 2.5D Isometric RPGs, Strategy, Simulation.

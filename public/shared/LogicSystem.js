@@ -1,5 +1,5 @@
 /**
- * Ketebe Engine - Shared Logic System
+ * RedGlitch Engine - Shared Logic System
  * Manages entity logic, visual scripts, and algorithm runtimes
  */
 window.LogicSystem = class LogicSystem {

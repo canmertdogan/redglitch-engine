@@ -4,7 +4,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' http://localhost:3000 ws://localhost:3000 http://localhost:8000 ws://localhost:8000; img-src 'self' data:;">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ketebe Terminal // Puzzle Node</title>
+    <title>RedGlitch Terminal // Puzzle Node</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link href="fonts/fonts.css" rel="stylesheet">
     <script src="shared/LoggerHook.js"></script>
@@ -187,14 +187,14 @@
 
     <main class="layout">
         <header class="topbar">
-            <strong>Ketebe Puzzle Terminal</strong>
+            <strong>RedGlitch Puzzle Terminal</strong>
             <span class="chip" id="status-chip">locked</span>
         </header>
 
         <pre id="terminal-output" aria-live="polite"></pre>
 
         <div class="prompt">
-            <span class="prompt-label">operator@ketebe:~$</span>
+            <span class="prompt-label">operator@redglitch:~$</span>
             <input id="command-input" type="text" autocomplete="off" spellcheck="false" placeholder="type help">
         </div>
     </main>
@@ -213,7 +213,7 @@
             const input = document.getElementById('command-input');
             const statusChip = document.getElementById('status-chip');
 
-            let unlocked = localStorage.getItem('ketebe_terminal_unlocked') === '1';
+            let unlocked = localStorage.getItem('redglitch_terminal_unlocked') === '1';
             let clueStep = 0;
             let history = [];
             let historyIndex = 0;
@@ -228,7 +228,7 @@
             }
 
             function boot() {
-                line("KETEBE SECURE NODE // RETRO TERMINAL INTERFACE", "warn");
+                line("REDGLITCH SECURE NODE // RETRO TERMINAL INTERFACE", "warn");
                 line("Build 1.0.43 // Session initialized.", "dim");
                 line("Type 'help' to list commands.", "dim");
                 line("");
@@ -246,7 +246,7 @@
 
             function unlock() {
                 unlocked = true;
-                localStorage.setItem('ketebe_terminal_unlocked', '1');
+                localStorage.setItem('redglitch_terminal_unlocked', '1');
                 statusChip.textContent = "unlocked";
                 line("PASSCODE ACCEPTED. Secret channel unlocked.", "warn");
                 line("Now available: run secret, run credits, run campaign, run quick, run editor, run tools");
@@ -304,7 +304,7 @@
                     return;
                 }
                 if (clueStep === 3) {
-                    line("CLUE[3]: End with another separator and 'KETEBE'.", "warn");
+                    line("CLUE[3]: End with another separator and 'REDGLITCH'.", "warn");
                     line("Submit with: pass <phrase>", "dim");
                     return;
                 }
@@ -314,7 +314,7 @@
             function resetLock() {
                 unlocked = false;
                 clueStep = 0;
-                localStorage.removeItem('ketebe_terminal_unlocked');
+                localStorage.removeItem('redglitch_terminal_unlocked');
                 statusChip.textContent = "locked";
                 line("Terminal lock restored.", "warn");
             }
@@ -326,14 +326,14 @@
                 history.push(command);
                 historyIndex = history.length;
 
-                line("operator@ketebe:~$ " + command, "dim");
+                line("operator@redglitch:~$ " + command, "dim");
                 const [cmd, ...rest] = command.split(/\s+/);
                 const arg = rest.join(" ");
 
                 if (cmd === "help") return listHelp();
                 if (cmd === "clear") return clearOutput();
                 if (cmd === "whoami") {
-                    const user = localStorage.getItem('ketebe_username') || "guest";
+                    const user = localStorage.getItem('redglitch_username') || "guest";
                     line("active-profile: " + user);
                     return;
                 }
@@ -342,7 +342,7 @@
                 if (cmd === "reset") return resetLock();
                 if (cmd === "run") return doRun(arg.toLowerCase());
                 if (cmd === "pass") {
-                    if (arg.toUpperCase() === "V8-EASTER-KETEBE") unlock();
+                    if (arg.toUpperCase() === "V8-EASTER-REDGLITCH") unlock();
                     else line("Invalid passphrase.", "error");
                     return;
                 }

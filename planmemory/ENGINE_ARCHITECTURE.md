@@ -1,7 +1,7 @@
-# ketebe ENGINE Architecture Documentation
+# redglitch ENGINE Architecture Documentation
 
 ## Overview
-ketebe ENGINE is a multi-paradigm game development environment supporting six distinct game engines across 2D, 2.5D, and 3D perspectives. Each engine is specialized for a specific genre but shares a common infrastructure for asset management, tool integration, and AI assistance.
+redglitch ENGINE is a multi-paradigm game development environment supporting six distinct game engines across 2D, 2.5D, and 3D perspectives. Each engine is specialized for a specific genre but shares a common infrastructure for asset management, tool integration, and AI assistance.
 
 ### Available Engines
 1.  **IsoPixel (iso-pixel)**: An isometric 2.5D engine focused on beautiful pixel art visuals, dynamic lighting, and atmospheric effects.

@@ -1,4 +1,4 @@
-// theme.js - Unified Theme System for Ketebe Engine
+// theme.js - Unified Theme System for RedGlitch Engine
 
 const THEMES = {
     'modern-dark': {
@@ -44,12 +44,12 @@ function setTheme(themeId) {
         root.style.setProperty(`--${key}`, theme[key]);
     });
     
-    localStorage.setItem('ketebe_theme', themeId);
+    localStorage.setItem('redglitch_theme', themeId);
     console.log(`[Theme] Switched to ${themeId}`);
 }
 
 function loadSavedTheme() {
-    const saved = localStorage.getItem('ketebe_theme') || 'modern-dark';
+    const saved = localStorage.getItem('redglitch_theme') || 'modern-dark';
     setTheme(saved);
 }
 

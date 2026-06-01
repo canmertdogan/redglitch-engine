@@ -13,7 +13,7 @@ async function initRPGEngine() {
     }
 
     console.log("[RPG Core] Initializing Top-Down Engine...");
-    window.LOCALE.setLanguage(localStorage.getItem('ketebe_lang') || 'EN'); 
+    window.LOCALE.setLanguage(localStorage.getItem('redglitch_lang') || 'EN'); 
     
     try { 
         const res = await fetch('dunyalar/definitions/music.json'); 

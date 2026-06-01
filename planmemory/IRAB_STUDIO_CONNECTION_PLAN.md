@@ -1,6 +1,6 @@
 # 🧠 IRAB ↔ Studio Connection: Master Development Plan
 
-**Objective:** Transform IRAB from a "Chatbot" into a fully agentic "Studio Operator" capable of manipulating the Ketebe Engine tools (IsoPixel, Code Forge, World Builder) directly to fulfill user requests.
+**Objective:** Transform IRAB from a "Chatbot" into a fully agentic "Studio Operator" capable of manipulating the RedGlitch Engine tools (IsoPixel, Code Forge, World Builder) directly to fulfill user requests.
 
 **Philosophy:** "You say it, IRAB does it." — Zero-friction automation with maximum safety and feedback.
 
@@ -8,16 +8,16 @@
 
 ## 📋 Executive Summary
 
-This plan outlines the evolution of the **Ketebe Action Protocol (KAP)**, a standardized bridge allowing the AI to "drive" the Studio interface. We will move from simple text responses to complex, multi-step workflows where IRAB can generate assets, write code, build levels, and configure game systems autonomously, always under user supervision.
+This plan outlines the evolution of the **RedGlitch Action Protocol (KAP)**, a standardized bridge allowing the AI to "drive" the Studio interface. We will move from simple text responses to complex, multi-step workflows where IRAB can generate assets, write code, build levels, and configure game systems autonomously, always under user supervision.
 
 ---
 
-## 🗓️ Phase 1: The Ketebe Action Protocol (KAP)
+## 🗓️ Phase 1: The RedGlitch Action Protocol (KAP)
 **Goal:** Define the language and security contract for AI ↔ Studio communication.
 
 1.  **Schema Definition:**
     *   Define the JSON-RPC compatible schema for all tool calls (e.g., `{"method": "isopixel.draw", "params": {...}}`).
-    *   Create `ActionRequest`, `ActionResponse`, and `ActionError` type definitions in `ketebe.d.ts`.
+    *   Create `ActionRequest`, `ActionResponse`, and `ActionError` type definitions in `redglitch.d.ts`.
 2.  **Security Levels:**
     *   Classify all potential actions into security tiers:
         *   🟢 **Safe:** Read-only (list files, inspect nodes, check status).

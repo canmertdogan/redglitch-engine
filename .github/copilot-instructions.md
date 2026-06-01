@@ -1,8 +1,8 @@
-# Copilot Instructions for Ketebe Engine
+# Copilot Instructions for RedGlitch Engine
 
 ## Project Overview
 
-**Ketebe Engine** is a multi-platform game development studio and launcher built with Electron, capable of creating games across RPG, platformer, and isometric pixel art styles. It consists of:
+**RedGlitch Engine** is a multi-platform game development studio and launcher built with Electron, capable of creating games across RPG, platformer, and isometric pixel art styles. It consists of:
 
 - **Launcher & Studio**: Electron-based IDE with HTML/JS editors for game creation
 - **Game Engines**: Three specialized runtime engines (rpg-topdown, platformer-2d, iso-pixel)
@@ -94,7 +94,7 @@ The `server.js` (built by `build-game.js` or as root entry) handles:
 ## Key Conventions
 
 ### Project Metadata
-- Each project has a `ketebe.json` file specifying:
+- Each project has a `redglitch.json` file specifying:
   - `engineType`: "rpg-topdown" | "platformer-2d" | "iso-pixel"
   - `name`, `author`, `version`, `description`
 
@@ -127,7 +127,7 @@ Each editor (*_editor.js) follows a consistent pattern:
 - **Excludes**: Editor tools and launcher-specific files
 
 ### Engine Strategy Pattern
-Engine selection is determined by `engineType` in ketebe.json:
+Engine selection is determined by `engineType` in redglitch.json:
 - Engines expose `Strategy` classes (TopDownStrategy, PlatformerStrategy, IsoStrategy)
 - Each strategy defines rendering, physics, and input handling
 - Used by the state machine to swap behaviors at runtime
@@ -161,7 +161,7 @@ Profiles stored as `profile_{username}.json` with character stats (hp, mana, sta
 4. Test via demo project with matching `engineType`
 
 ### Deploying a Game
-1. Verify project has valid `ketebe.json` with correct `engineType`
+1. Verify project has valid `redglitch.json` with correct `engineType`
 2. Run: `npm run build:game "ProjectName" [electron|android|all]`
 3. For Electron: outputs to `dist/game/release/`
 4. For Android: opens Android Studio with Capacitor sync complete

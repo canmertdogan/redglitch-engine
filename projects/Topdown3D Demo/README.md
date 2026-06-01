@@ -36,10 +36,10 @@ A demo project showcasing the **topdown-3d** engine — a real-time strategy / t
 
 ## Engine configuration
 
-`ketebe.json` — engine: `topdown-3d`, quality: `medium`, `physics3D: true`, `shadowQuality: true`.
+`redglitch.json` — engine: `topdown-3d`, quality: `medium`, `physics3D: true`, `shadowQuality: true`.
 
 ## Customizing
 
-- Edit `dunyalar/demo_level_01.json` directly, or use **Topdown3D Editor** from the Ketebe launcher.
+- Edit `dunyalar/demo_level_01.json` directly, or use **Topdown3D Editor** from the RedGlitch launcher.
 - Add new unit types by extending `entities[]` with a matching `type` registered in the engine's unit registry.
 - Swap terrain to `mode: "voxel"` and provide `chunks[]` for a Minecraft-style world.

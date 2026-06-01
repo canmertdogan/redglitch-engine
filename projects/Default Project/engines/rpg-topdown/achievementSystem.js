@@ -7,14 +7,14 @@ window.AchievementSystem = class AchievementSystem {
         this.username = null;
         
         // Load Definitions from localStorage (Editor might have set them)
-        const defs = localStorage.getItem('ketebe_achievements_data');
+        const defs = localStorage.getItem('redglitch_achievements_data');
         if (defs) this.definitions = JSON.parse(defs);
         
         this.createUI();
 
         // Hot Reload Listener
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.on('achievements:updated', (event) => {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('achievements:updated', (event) => {
                 console.log("[AchievementSystem] Definitions Updated!");
                 this.definitions = event.data;
             });
@@ -45,7 +45,7 @@ window.AchievementSystem = class AchievementSystem {
             }
         } catch (e) {
             console.warn("Backend achievements load failed, using local if available");
-            const prog = localStorage.getItem('ketebe_achievements_progress');
+            const prog = localStorage.getItem('redglitch_achievements_progress');
             if (prog) this.unlocked = JSON.parse(prog);
         }
     }
@@ -147,7 +147,7 @@ window.AchievementSystem = class AchievementSystem {
     }
 
     async saveProgress() {
-        localStorage.setItem('ketebe_achievements_progress', JSON.stringify(this.unlocked));
+        localStorage.setItem('redglitch_achievements_progress', JSON.stringify(this.unlocked));
         
         if (this.username) {
             try {

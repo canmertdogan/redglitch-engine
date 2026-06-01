@@ -125,7 +125,7 @@ The server already has the necessary endpoints:
 - `server.js:1925-1949` - POST /api/ai/config
 - `server.js:1988-2100` - POST /api/ai/chat
 
-Config stored at: `.ketebe/ai_config.json`
+Config stored at: `.redglitch/ai_config.json`
 
 ## Testing Checklist
 

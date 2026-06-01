@@ -1,7 +1,7 @@
 /**
  * Web Worker for LLM inference using Transformers.js v3 (ESM).
  */
-console.log('--- KETEBE AI FINAL WORKER INITIALIZING ---');
+console.log('--- REDGLITCH AI FINAL WORKER INITIALIZING ---');
 
 // Import Transformers.js from CDN as an ES module (Browser-compatible)
 import { 

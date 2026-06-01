@@ -1,4 +1,4 @@
-# Ketebe (Ketebe) Engine - Codex Memory Report Card
+# RedGlitch (RedGlitch) Engine - Codex Memory Report Card
 
 Date: 2026-02-26
 Scope: Full repository scan with emphasis on `public/`, `server/`, `backend/`, `architecture/`, and `planmemory/`.
@@ -77,7 +77,7 @@ Server:
 ### 5.1 Vision and Product Cohesion - Grade A-
 - Strong, consistent intent: a studio-grade game creation ecosystem, not just a runtime.
 - Clear identity: hybrid editor + runtime, multi-engine, and AI-assisted creation.
-- Naming inconsistency persists (Ketebe vs Ketebe) and shows up across docs and config.
+- Naming inconsistency persists (RedGlitch vs RedGlitch) and shows up across docs and config.
 
 ### 5.2 Architecture and Modularity - Grade B+
 - Good separation of concerns between Node server, browser tools, and Python AI.
@@ -138,7 +138,7 @@ Server:
 - Backend footprint is very large due to local model storage and dataset indexing.
 
 ## 8) Tech Debt Summary
-- Inconsistent naming across Ketebe/Ketebe, Turkish vs English naming in paths.
+- Inconsistent naming across RedGlitch/RedGlitch, Turkish vs English naming in paths.
 - Mixed sync/async file IO and error handling patterns.
 - Duplicate logic across editors and tools.
 - Possible misconfigured WebSocket file-watcher startup.
@@ -169,7 +169,7 @@ Server:
 - `CODE_REVIEW.md`
 
 ## 12) Verdict
-Ketebe is already a feature-rich game studio environment with a distinct and ambitious architecture. The strongest pillars are the multi-engine design and AI integration. The most urgent work is to reduce duplication, harden tooling interfaces, and make the realtime update pipeline reliable. With those addressed, the codebase is positioned to transition from alpha to a more production-grade toolchain.
+RedGlitch is already a feature-rich game studio environment with a distinct and ambitious architecture. The strongest pillars are the multi-engine design and AI integration. The most urgent work is to reduce duplication, harden tooling interfaces, and make the realtime update pipeline reliable. With those addressed, the codebase is positioned to transition from alpha to a more production-grade toolchain.
 
 ## 13) Follow-Up Artifacts
 - Tool and runtime audit: `codex-memory/TOOL_AUDIT.md`\n- Refactor plan and milestones: `codex-memory/REFACTOR_PLAN.md`\n- Dependency and license audit: `codex-memory/DEPENDENCY_AUDIT.md`

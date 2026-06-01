@@ -12,7 +12,7 @@
  */
 
 export const SAVE_FORMAT_VERSION = '3.0.0';
-export const SAVE_3D_SCHEMA      = 'ketebe.3d.save.v3';
+export const SAVE_3D_SCHEMA      = 'redglitch.3d.save.v3';
 
 // ── Namespace helpers ─────────────────────────────────────────────────────────
 

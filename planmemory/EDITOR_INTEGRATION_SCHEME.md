@@ -1,8 +1,8 @@
-# ketebe ENGINE - Editor Integration Scheme
+# redglitch ENGINE - Editor Integration Scheme
 
 ## Overview
 
-This document maps all 23 editors in ketebe ENGINE, showing their relationships, data flows, and integration priorities. The goal is to establish which editors should work together and how they should share data through our new integration system (EventBus, SharedProjectState, AssetManager).
+This document maps all 23 editors in redglitch ENGINE, showing their relationships, data flows, and integration priorities. The goal is to establish which editors should work together and how they should share data through our new integration system (EventBus, SharedProjectState, AssetManager).
 
 ---
 
@@ -10,7 +10,7 @@ This document maps all 23 editors in ketebe ENGINE, showing their relationships,
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           KETEBE ENGINE EDITOR ECOSYSTEM                         │
+│                           REDGLITCH ENGINE EDITOR ECOSYSTEM                         │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐          │

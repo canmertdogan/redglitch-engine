@@ -229,7 +229,7 @@ class IsoGame {
                 levelData = this.levelMetadata;
             } else {
                 // Normal mode: load map from sessionStorage or default file
-                const playtestData = sessionStorage.getItem('ketebe_playtest_map');
+                const playtestData = sessionStorage.getItem('redglitch_playtest_map');
                 if (playtestData) {
                     levelData = JSON.parse(playtestData);
                 } else {
@@ -294,7 +294,7 @@ class IsoGame {
             }
         };
         
-        // Load Caterpillar/Worm sprites (matching 2D engine's "Ketebe Canavarı")
+        // Load Caterpillar/Worm sprites (matching 2D engine's "RedGlitch Canavarı")
         if (window.createPixelImage) {
             this.playerHead = window.createPixelImage('caterpillar_head');
             this.playerBody = window.createPixelImage('caterpillar_body');

@@ -2,13 +2,13 @@ import { PermissionGate } from './permission-gate.js?v=6';
 import { NAMESPACE_ALIAS } from './namespace-router.js';
 
 /**
- * Ketebe AI - Tool Registry (KAP)
+ * RedGlitch AI - Tool Registry (KAP)
  * Registry of Command Bus actions that the AI can invoke across the Studio.
  */
 
 export class ToolRegistry {
     constructor(eventBus = null) {
-        this.eventBus = eventBus || window.KetebeEventBus;
+        this.eventBus = eventBus || window.RedGlitchEventBus;
         this.permissionGate = new PermissionGate();
         this.tools = new Map();
         this.NAMESPACE_ALIAS = NAMESPACE_ALIAS;
@@ -227,7 +227,7 @@ export class ToolRegistry {
      * @param {string} name - The tool method name.
      * @param {Record<string, any>} args - Arguments for the tool.
      * @param {string} requestId - Optional ID for tracking.
-     * @returns {Promise<ketebe.ai.ActionResponse>}
+     * @returns {Promise<redglitch.ai.ActionResponse>}
      */
     async execute(name, args, requestId = null) {
         const id = requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

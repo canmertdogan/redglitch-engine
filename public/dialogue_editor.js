@@ -1,4 +1,4 @@
-// dialogue_editor.js - KETEBE DIALOGUE STUDIO v3.0
+// dialogue_editor.js - REDGLITCH DIALOGUE STUDIO v3.0
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeDialogueIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for NPC updates (dialogues reference NPCs as speakers)

@@ -1,8 +1,8 @@
-# Ketebe 3D Engines — Architecture & API Reference
+# RedGlitch 3D Engines — Architecture & API Reference
 
 ## Overview
 
-Ketebe ships three 3D engine types built on a shared foundation:
+RedGlitch ships three 3D engine types built on a shared foundation:
 
 | Engine Type | Entry Class | Use Case |
 |-------------|-------------|----------|
@@ -18,7 +18,7 @@ Ketebe ships three 3D engine types built on a shared foundation:
 - **ES module pattern** — each engine is a self-contained `<type>/main.js` module
 - **Shared modules** — common utilities live in `public/engines/shared/`
 
-**Common `ketebe.json` keys for 3D projects:**
+**Common `redglitch.json` keys for 3D projects:**
 
 | Key | Type | Values |
 |-----|------|--------|
@@ -35,7 +35,7 @@ Ketebe ships three 3D engine types built on a shared foundation:
 |--------|---------|---------|
 | `Renderer3D.js` | ES module | Shared WebGL pipeline (Cel/Outline) with `.resize(w, h)` support |
 | `CrossEngineSerializer.js` | Classic-script global | Serializes 3D entities and levels for campaign runtime |
-| `Save3D.js` | ES module | Schema-guarded save/load for all 3D engines. Schema: `ketebe.3d.save.v3` |
+| `Save3D.js` | ES module | Schema-guarded save/load for all 3D engines. Schema: `redglitch.3d.save.v3` |
 | `LayerMask.js` | ES module | Bit-flag layer constants |
 | `CollisionGroups.js` | ES module | cannon-es collision filter groups and masks |
 | `PhysicsDebugRenderer.js` | ES module | Wireframe overlay for cannon-es bodies |
@@ -58,7 +58,7 @@ export const PROJECTILE  = 16;
 
 All 3D engines use `Save3D.js` for save/load. Saves are schema-versioned to prevent cross-engine corruption.
 
-**Schema identifier:** `ketebe.3d.save.v3`
+**Schema identifier:** `redglitch.3d.save.v3`
 
 ### Exports
 
@@ -77,13 +77,13 @@ import {
 
 | Export | Signature | Description |
 |--------|-----------|-------------|
-| `SAVE_3D_SCHEMA` | `string` | Schema constant `'ketebe.3d.save.v3'` |
+| `SAVE_3D_SCHEMA` | `string` | Schema constant `'redglitch.3d.save.v3'` |
 | `serializeSavePayload3D` | `(engineType, slotData) → object` | Wraps payload with schema header and engine type |
 | `deserializeSavePayload3D` | `(raw, expectedEngineType) → object\|null` | Validates schema; returns `null` on mismatch or missing fields |
 | `migrateSavePayload` | `(payload) → payload` | Migration chain — normalizes missing fields from older saves |
 | `serialize3DPlayerState` | `(pos3, quat4, vel3, vitals) → object` | Snapshots player transform and vitals |
 | `deserialize3DPlayerState` | `(obj) → { pos3, quat4, vel3, vitals }` | Restores player snapshot |
-| `isSave3D` | `(raw) → boolean` | Type guard — true if payload has `ketebe.3d.save.v3` schema |
+| `isSave3D` | `(raw) → boolean` | Type guard — true if payload has `redglitch.3d.save.v3` schema |
 | `isSave2D` | `(raw) → boolean` | Type guard — true if payload is a legacy 2D save |
 
 ### Usage Example
@@ -323,7 +323,7 @@ Extends the base format with FPS-specific fields:
 
 ```jsonc
 {
-  "_schema": "ketebe.platformer3d.level.v2.0",
+  "_schema": "redglitch.platformer3d.level.v2.0",
 
   "spawnPoint": [0, 1, 0],
   "gravity": -20,
@@ -367,7 +367,7 @@ Collected item IDs are stored in the save file via `Save3D.js`. On level reload:
 
 ## Build System — 3D Projects
 
-`npm run build:game "ProjectName"` auto-detects 3D engines from `ketebe.json`:
+`npm run build:game "ProjectName"` auto-detects 3D engines from `redglitch.json`:
 
 ```js
 const IS_3D_ENGINE = ['topdown-3d', 'fps-3d', 'platformer-3d']

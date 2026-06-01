@@ -1,5 +1,5 @@
 /**
- * KETEBE Synthesizer - Base class for all synthesizer instruments
+ * REDGLITCH Synthesizer - Base class for all synthesizer instruments
  */
 
 class Synthesizer {

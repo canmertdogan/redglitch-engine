@@ -5,7 +5,7 @@
 
 class SlotManager {
     static TOTAL_SLOTS = 5;
-    static STORAGE_KEY_PREFIX = 'ketebe_slot_';
+    static STORAGE_KEY_PREFIX = 'redglitch_slot_';
 
     /**
      * Get all slots

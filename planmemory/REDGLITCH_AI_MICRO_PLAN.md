@@ -1,4 +1,4 @@
-# 🧠 Ketebe AI Micro Edition — Comprehensive Development Plan
+# 🧠 RedGlitch AI Micro Edition — Comprehensive Development Plan
 
 **Status:** Final Draft v1.0  
 **Target:** Browser-Native (Client-Side) AI Assistant  
@@ -52,7 +52,7 @@
 | AssetManager | `public/shared/AssetManager.js` | Asset registry, preloading, dependency graph, thumbnails |
 | Monaco Editor | CDN v0.34.0 + `public/lib/monaco/` | Code editing, models, DiffEditor API (unused but available) |
 | Theme System | `public/theme.js` | 3 themes with CSS custom properties |
-| Type Definitions | `public/lib/monaco/ketebe.d.ts` | 69 lines of core interface types |
+| Type Definitions | `public/lib/monaco/redglitch.d.ts` | 69 lines of core interface types |
 | Documentation | `public/docs.html` + `public/docs/` | ~1500 lines of structured docs content |
 | Server API | `server.js` | 70+ REST endpoints, `/api/ide/*` for file ops |
 | tools.html | `public/tools.html` | Main studio workspace where assistant.js is loaded |
@@ -63,7 +63,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Ketebe Studio (Electron / Browser)            │
+│                    RedGlitch Studio (Electron / Browser)            │
 │                                                                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │
 │  │  Monaco       │  │  Map Editor  │  │  Other Editors        │ │
@@ -78,7 +78,7 @@
 │                            │                                    │
 │                            ▼                                    │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │              🧠 KetebeAI Module (NEW)                       ││
+│  │              🧠 RedGlitchAI Module (NEW)                       ││
 │  │                                                             ││
 │  │  ┌─────────────┐  ┌──────────────┐  ┌───────────────────┐  ││
 │  │  │ InferenceEng │  │ RAG Engine   │  │ Tool Registry     │  ││
@@ -127,7 +127,7 @@ All new files live under `public/ai/`. No existing files are deleted — only mo
 ```
 public/
 ├── ai/                              # NEW — All AI module code
-│   ├── ketebe-ai.js                 # Main orchestrator (entry point)
+│   ├── redglitch-ai.js                 # Main orchestrator (entry point)
 │   ├── inference-engine.js          # Transformers.js wrapper + WebGPU/WASM fallback
 │   ├── inference-worker.js          # Web Worker for model inference (off main thread)
 │   ├── rag-engine.js                # RAG pipeline: embed → search → retrieve
@@ -146,7 +146,7 @@ public/
 ├── ai-chat-ui.js                    # NEW — Revamped chat panel UI (replaces IRAB chat parts)
 ├── ai-chat-ui.css                   # NEW — Chat panel styles
 │
-├── assistant.js                     # MODIFIED — Keep avatar/personality, delegate AI to ketebe-ai.js
+├── assistant.js                     # MODIFIED — Keep avatar/personality, delegate AI to redglitch-ai.js
 ├── shared/
 │   └── EventBus.js                  # UNCHANGED — Used as command transport
 │   └── SharedProjectState.js        # UNCHANGED — Used for undo/redo integration
@@ -154,7 +154,7 @@ public/
 │
 ├── lib/
 │   └── monaco/
-│       └── ketebe.d.ts              # MODIFIED — Add AI API type definitions
+│       └── redglitch.d.ts              # MODIFIED — Add AI API type definitions
 │
 └── tools.html                       # MODIFIED — Load new AI modules
 ```
@@ -163,9 +163,9 @@ public/
 
 | File | Change | Reason |
 |------|--------|--------|
-| `public/assistant.js` | Add `KetebeAI` integration hooks, keep personality/avatar | Bridge old IRAB to new AI engine |
+| `public/assistant.js` | Add `RedGlitchAI` integration hooks, keep personality/avatar | Bridge old IRAB to new AI engine |
 | `public/tools.html` | Add `<script>` tags for AI modules | Load the AI system |
-| `public/lib/monaco/ketebe.d.ts` | Add AI-related type definitions | Monaco IntelliSense |
+| `public/lib/monaco/redglitch.d.ts` | Add AI-related type definitions | Monaco IntelliSense |
 | `public/script_editor.js` | Add ghost-text completion provider | Inline code suggestions |
 | `public/ide.js` | Add ghost-text completion provider | Inline code suggestions |
 | `server.js` | Add `/api/ai/docs` endpoint for corpus serving | Serve pre-built doc corpus |
@@ -215,10 +215,10 @@ export const AI_CONFIG = {
 
     // Storage keys
     storage: {
-        modelCacheKey: 'ketebe-ai-model-cache',
-        vectorDBKey: 'ketebe-ai-vectors',
-        configKey: 'ketebe-ai-config',
-        historyKey: 'ketebe-ai-history',
+        modelCacheKey: 'redglitch-ai-model-cache',
+        vectorDBKey: 'redglitch-ai-vectors',
+        configKey: 'redglitch-ai-config',
+        historyKey: 'redglitch-ai-history',
     },
 
     // Feature flags
@@ -543,7 +543,7 @@ export class TokenizerUtils {
 | `public/docs/campaign_studio_guide.md` | guide | ~30 |
 | `public/copilot-instructions.md` | architecture | ~15 |
 | `public/engines/shared/LEVEL_FORMAT.md` | spec | ~25 |
-| `public/lib/monaco/ketebe.d.ts` | type | ~10 |
+| `public/lib/monaco/redglitch.d.ts` | type | ~10 |
 | `public/shared/EventBus.js` (JSDoc) | api | ~15 |
 | `public/shared/SharedProjectState.js` (JSDoc) | api | ~20 |
 | `public/shared/AssetManager.js` (JSDoc) | api | ~25 |
@@ -782,13 +782,13 @@ export class ContextManager {
 **System Prompt (hardcoded in context-manager.js):**
 
 ```
-You are IRAB, the AI assistant for Ketebe Game Studio.
-You are an expert in the ketebe ENGINE, which supports three game types:
+You are IRAB, the AI assistant for RedGlitch Game Studio.
+You are an expert in the redglitch ENGINE, which supports three game types:
 rpg-topdown, platformer-2d, and iso-pixel.
 
 RULES:
-1. Only use ketebe ENGINE APIs. Never invent functions that don't exist.
-2. When suggesting code, use JavaScript and follow Ketebe conventions.
+1. Only use redglitch ENGINE APIs. Never invent functions that don't exist.
+2. When suggesting code, use JavaScript and follow RedGlitch conventions.
 3. If you don't know something, say so. Never hallucinate API methods.
 4. When the user asks you to perform an action, use the available tools.
 5. Format code in ```javascript blocks.
@@ -1058,7 +1058,7 @@ Revamped chat panel that replaces IRAB's chat UI (while keeping the avatar).
 ┌─ Ctrl+K Spotlight Modal ──────────────────────────────────┐
 │                                                            │
 │  ┌─ Header ──────────────────────────────────────────────┐│
-│  │  🧠 IRAB · Ketebe AI        [WebGPU ✓]  [RAG ✓]  [×] ││
+│  │  🧠 IRAB · RedGlitch AI        [WebGPU ✓]  [RAG ✓]  [×] ││
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌─ Chat History (scrollable) ───────────────────────────┐│
@@ -1117,7 +1117,7 @@ Added to `public/script_editor.js` and `public/ide.js`.
 monaco.languages.registerInlineCompletionsProvider('javascript', {
     provideInlineCompletions: async (model, position, context, token) => {
         // 1. Get surrounding code context (±20 lines around cursor)
-        // 2. Send to KetebeAI.complete() for short completion
+        // 2. Send to RedGlitchAI.complete() for short completion
         // 3. Return as inline suggestion
         // 4. Debounce to avoid spamming the model
     },
@@ -1138,7 +1138,7 @@ Minimal changes to bridge IRAB v11 with the new AI system:
 
 ```javascript
 // What changes in assistant.js:
-// 1. Replace the fetch('/api/ai/chat') call with KetebeAI.chat()
+// 1. Replace the fetch('/api/ai/chat') call with RedGlitchAI.chat()
 // 2. Keep all personality, avatar, proactive triggers intact
 // 3. Use ai-chat-ui.js for the chat panel instead of inline HTML
 // 4. Add event listeners for AI state changes (model loading, etc.)
@@ -1153,9 +1153,9 @@ Minimal changes to bridge IRAB v11 with the new AI system:
 <!-- Add before </body>, after assistant.js -->
 <link rel="stylesheet" href="ai-chat-ui.css">
 <script type="module">
-    import { KetebeAI } from './ai/ketebe-ai.js';
-    window.KetebeAI = new KetebeAI();
-    // KetebeAI auto-registers with IRAB (assistant.js) via EventBus
+    import { RedGlitchAI } from './ai/redglitch-ai.js';
+    window.RedGlitchAI = new RedGlitchAI();
+    // RedGlitchAI auto-registers with IRAB (assistant.js) via EventBus
 </script>
 ```
 
@@ -1163,11 +1163,11 @@ Minimal changes to bridge IRAB v11 with the new AI system:
 
 ## 9. Technical Specifications
 
-### 9.1 — `public/ai/ketebe-ai.js` (Main Orchestrator)
+### 9.1 — `public/ai/redglitch-ai.js` (Main Orchestrator)
 
 ```javascript
 /**
- * KetebeAI — Main entry point and orchestrator for the AI system.
+ * RedGlitchAI — Main entry point and orchestrator for the AI system.
  *
  * Coordinates all subsystems:
  *   - InferenceEngine (LLM)
@@ -1179,7 +1179,7 @@ Minimal changes to bridge IRAB v11 with the new AI system:
  *
  * Public API (used by assistant.js and editors):
  */
-export class KetebeAI {
+export class RedGlitchAI {
     constructor() { ... }
 
     /**
@@ -1314,16 +1314,16 @@ User sends message
 | `ai:model:ready` | `{ modelId, backend }` | ModelManager |
 | `ai:model:disposed` | `{ modelId }` | ModelManager |
 | `ai:token` | `{ token, partial }` | InferenceEngine |
-| `ai:response:complete` | `{ text, toolCalls }` | KetebeAI |
+| `ai:response:complete` | `{ text, toolCalls }` | RedGlitchAI |
 | `ai:tool:request` | `{ toolName, args }` | ContextManager |
 | `ai:tool:approved` | `{ toolName, args }` | PermissionGate |
 | `ai:tool:rejected` | `{ toolName }` | PermissionGate |
 | `ai:tool:executed` | `{ toolName, result }` | ToolRegistry |
 | `ai:tool:error` | `{ toolName, error }` | ToolRegistry |
 | `ai:error` | `{ message, code }` | Any |
-| `ai:status` | `{ state, backend, ragReady }` | KetebeAI |
+| `ai:status` | `{ state, backend, ragReady }` | RedGlitchAI |
 | `ai:rag:indexed` | `{ filePath }` | RAGEngine |
-| `ai:ghost:suggest` | `{ text, position }` | KetebeAI |
+| `ai:ghost:suggest` | `{ text, position }` | RedGlitchAI |
 
 ### 9.5 — Error Handling Strategy
 
@@ -1416,7 +1416,7 @@ User sends message
 - [ ] **3.5** Implement editor context extraction (current file, cursor, selection)
 - [ ] **3.6** Implement tool call parsing from LLM response
 - [ ] **3.7** Test: Full prompt fits within 2048 token window
-- [ ] **3.8** Test: Model responds correctly about Ketebe APIs with RAG context
+- [ ] **3.8** Test: Model responds correctly about RedGlitch APIs with RAG context
 - [ ] **3.9** Test: Model doesn't hallucinate non-existent APIs
 - [ ] **3.10** Test: History pruning keeps most recent relevant messages
 
@@ -1447,7 +1447,7 @@ User sends message
 - [ ] **5.4** Add code block rendering with syntax highlighting
 - [ ] **5.5** Add "Copy" and "Apply" buttons for code blocks
 - [ ] **5.6** Add inline action buttons for tool confirmations
-- [ ] **5.7** Add model download progress UI (progress bar + tips/Ketebe facts)
+- [ ] **5.7** Add model download progress UI (progress bar + tips/RedGlitch facts)
 - [ ] **5.8** Add status bar (model info, backend, inference time)
 - [ ] **5.9** Add keyboard navigation (Ctrl+K open, Escape close, Enter send, Up history)
 - [ ] **5.10** Modify `public/assistant.js` — bridge IRAB avatar to new AI backend
@@ -1469,7 +1469,7 @@ User sends message
 - [ ] **6.5** Performance profiling and optimization
 - [ ] **6.6** Cross-browser testing (Chrome, Edge, Firefox, Safari)
 - [ ] **6.7** Electron environment testing
-- [ ] **6.8** Update `public/lib/monaco/ketebe.d.ts` with AI type definitions
+- [ ] **6.8** Update `public/lib/monaco/redglitch.d.ts` with AI type definitions
 - [ ] **6.9** Update `public/copilot-instructions.md` with AI architecture docs
 - [ ] **6.10** Add `@xenova/transformers` and `orama` to package.json dependencies
 - [ ] **6.11** Final integration test: full conversation with RAG + tool use + undo
@@ -1511,7 +1511,7 @@ User sends message
 ## Appendix D: File Modification Summary
 
 ### New Files (14)
-1. `public/ai/ketebe-ai.js`
+1. `public/ai/redglitch-ai.js`
 2. `public/ai/inference-engine.js`
 3. `public/ai/inference-worker.js`
 4. `public/ai/rag-engine.js`
@@ -1531,10 +1531,10 @@ User sends message
 16. `public/ai/docs/corpus.json` (generated)
 
 ### Modified Files (7)
-17. `public/assistant.js` — Bridge to KetebeAI
+17. `public/assistant.js` — Bridge to RedGlitchAI
 18. `public/tools.html` — Load AI modules
 19. `public/script_editor.js` — Ghost text provider
 20. `public/ide.js` — Ghost text provider
-21. `public/lib/monaco/ketebe.d.ts` — AI type definitions
+21. `public/lib/monaco/redglitch.d.ts` — AI type definitions
 22. `server.js` — Corpus serving endpoint
 23. `package.json` — New dependencies

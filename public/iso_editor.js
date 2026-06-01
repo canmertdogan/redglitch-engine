@@ -8,14 +8,14 @@ async function initializeIsoIntegration() {
     if (typeof window !== 'undefined') {
         // Wait for EventBus to be ready with polling and timeout
         let retries = 20;
-        while (!window.KetebeEventBus && retries > 0) {
+        while (!window.RedGlitchEventBus && retries > 0) {
             await new Promise(r => setTimeout(r, 100));
             retries--;
         }
 
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Initialize StudioBridge for IRAB
@@ -1849,7 +1849,7 @@ window.loadLevelFromServer = window.loadWorld;
 
 window.playtest = () => {
     map.tilesetPath = CONFIG.tilesetPath;
-    sessionStorage.setItem('ketebe_playtest_data', JSON.stringify(map));
+    sessionStorage.setItem('redglitch_playtest_data', JSON.stringify(map));
     window.open('iso_play.html', '_blank', 'width=1280,height=720');
 };
 

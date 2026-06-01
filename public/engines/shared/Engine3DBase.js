@@ -1,5 +1,5 @@
 /**
- * Engine3DBase.js — Abstract base class for all 3D engines in Ketebe.
+ * Engine3DBase.js — Abstract base class for all 3D engines in RedGlitch.
  *
  * Extends the existing EngineAdapter contract with a 3D lifecycle layer.
  * Shared by topdown-3d, fps-3d, and platformer-3d engine types.
@@ -187,11 +187,11 @@ class Engine3DBase extends EngineAdapter {
         if (!this._running) return;
 
         // Phase 26: Performance Profiling
-        if (window.KetebeProfiler) window.KetebeProfiler.beginFrame();
+        if (window.RedGlitchProfiler) window.RedGlitchProfiler.beginFrame();
 
         this._rafId = requestAnimationFrame(() => this._loop());
         if (this._paused) {
-            if (window.KetebeProfiler) window.KetebeProfiler.endFrame();
+            if (window.RedGlitchProfiler) window.RedGlitchProfiler.endFrame();
             return;
         }
 
@@ -201,12 +201,12 @@ class Engine3DBase extends EngineAdapter {
         this.update3D(delta);
         this.render3D();
 
-        if (window.KetebeProfiler) {
+        if (window.RedGlitchProfiler) {
             // Update 3D specific stats
-            window.KetebeProfiler.updateStats({
+            window.RedGlitchProfiler.updateStats({
                 drawCalls: this.renderer ? this.renderer.info.render.calls : 0
             });
-            window.KetebeProfiler.endFrame();
+            window.RedGlitchProfiler.endFrame();
         }
     }
 

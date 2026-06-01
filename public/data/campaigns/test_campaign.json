@@ -2,7 +2,7 @@
   "name": "Test Campaign",
   "description": "A simple test campaign for slot system testing",
   "version": "1.0.0",
-      "author": "Ketebe Engine",  "metadata": {
+      "author": "RedGlitch Engine",  "metadata": {
     "pattern": "linear",
     "difficulty": "easy",
     "estimatedPlaytime": "10-15 minutes"

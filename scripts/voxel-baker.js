@@ -111,7 +111,7 @@ function bakeVoxToGlb(voxPath) {
         for (let c = 0; c < 3; c++) { minP[c] = Math.min(minP[c], positions[i+c]); maxP[c] = Math.max(maxP[c], positions[i+c]); }
 
     const gltf = {
-        asset: { version: '2.0', generator: 'Ketebe Build System Voxel Baker' },
+        asset: { version: '2.0', generator: 'RedGlitch Build System Voxel Baker' },
         scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
         meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1, COLOR_0: 2 }, mode: 4 }] }],
         accessors: [

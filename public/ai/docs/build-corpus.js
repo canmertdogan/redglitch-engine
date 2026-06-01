@@ -15,7 +15,7 @@ const CONFIG = {
         { type: 'api', path: '../../shared/AssetManager.js', parser: 'jsdoc' },
         { type: 'api', path: '../../shared/SharedProjectState.js', parser: 'jsdoc' },
         { type: 'api', path: '../../engines/iso-pixel/main.js', parser: 'jsdoc' },
-        { type: 'type', path: '../../lib/monaco/ketebe.d.ts', parser: 'dts' }
+        { type: 'type', path: '../../lib/monaco/redglitch.d.ts', parser: 'dts' }
     ]
 };
 
@@ -23,7 +23,7 @@ const CONFIG = {
  * Main Build Function
  */
 async function buildCorpus() {
-    console.log('📚 Building Ketebe AI Knowledge Corpus...');
+    console.log('📚 Building RedGlitch AI Knowledge Corpus...');
     const chunks = [];
 
     for (const source of CONFIG.sources) {

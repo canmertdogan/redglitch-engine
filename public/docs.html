@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>KETEBE GRIMOIRE</title>
+    <title>REDGLITCH GRIMOIRE</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -161,7 +161,7 @@
                 <a href="#welcome" class="nav-item active"><i class="fas fa-star"></i> Welcome</a>
                 <a href="#getting-started" class="nav-item"><i class="fas fa-play"></i> Quick Start</a>
                 <a href="#project-structure" class="nav-item"><i class="fas fa-folder-tree"></i> Project Structure</a>
-                <a href="#ketebe-json" class="nav-item"><i class="fas fa-file-code"></i> ketebe.json</a>
+                <a href="#redglitch-json" class="nav-item"><i class="fas fa-file-code"></i> redglitch.json</a>
             </div>
 
             <div class="nav-group">
@@ -258,8 +258,8 @@
 
             <!-- WELCOME -->
             <section id="welcome" class="active">
-                <h1><i class="fas fa-book-open"></i> Welcome to Ketebe</h1>
-                <p><b>Ketebe Engine</b> is a multi-platform game development studio built with Electron. It lets you build 2D and 3D games and export them to Windows desktop, Android, and web — all without leaving the studio.</p>
+                <h1><i class="fas fa-book-open"></i> Welcome to RedGlitch</h1>
+                <p><b>RedGlitch Engine</b> is a multi-platform game development studio built with Electron. It lets you build 2D and 3D games and export them to Windows desktop, Android, and web — all without leaving the studio.</p>
 
                 <div class="note">
                     <i class="fas fa-info-circle"></i>
@@ -306,7 +306,7 @@ npm start          # launches Electron studio</code></pre>
                 </ol>
 
                 <h2>3. Open the Right Editor</h2>
-                <p>From the dashboard, select your project and click the editor button. The studio opens the editor matching the <code>engineType</code> in <code>ketebe.json</code>.</p>
+                <p>From the dashboard, select your project and click the editor button. The studio opens the editor matching the <code>engineType</code> in <code>redglitch.json</code>.</p>
 
                 <h2>4. Design &amp; Playtest</h2>
                 <p>Build your level, then click <b>▶ PLAYTEST</b> to launch in a preview window. Logs route back to the editor console automatically.</p>
@@ -331,7 +331,7 @@ npm run build:game "ProjectName" android</code></pre>
             <section id="project-structure">
                 <h1><i class="fas fa-folder-open"></i> Project Structure</h1>
                 <pre><code>MyProject/
-├── ketebe.json            # Engine config (required)
+├── redglitch.json            # Engine config (required)
 ├── dunyalar/              # Level files
 │   ├── level01.json       # 2D/3D level data
 │   ├── level01.pf3d.json  # Platformer-3D levels
@@ -355,10 +355,10 @@ npm run build:game "ProjectName" android</code></pre>
                 </div>
             </section>
 
-            <!-- KETEBE.JSON -->
-            <section id="ketebe-json">
-                <h1><i class="fas fa-file-code"></i> ketebe.json Reference</h1>
-                <p>Every project has a <code>ketebe.json</code> at its root defining engine type and settings.</p>
+            <!-- REDGLITCH.JSON -->
+            <section id="redglitch-json">
+                <h1><i class="fas fa-file-code"></i> redglitch.json Reference</h1>
+                <p>Every project has a <code>redglitch.json</code> at its root defining engine type and settings.</p>
 
                 <h2>Example</h2>
                 <pre><code>{
@@ -399,7 +399,7 @@ npm run build:game "ProjectName" android</code></pre>
                 <p>The main studio launcher. Opens via <code>npm start</code> or from the Electron window.</p>
                 <ul>
                     <li><b>Project List</b> — all projects in <code>projects/</code> are listed with engine type badges.</li>
-                    <li><b>New Project</b> — creates folder + <code>ketebe.json</code> + blank level.</li>
+                    <li><b>New Project</b> — creates folder + <code>redglitch.json</code> + blank level.</li>
                     <li><b>Open Editor</b> — launches the matching editor iframe for the selected project.</li>
                     <li><b>Build</b> — triggers <code>npm run build:game</code> for the active project.</li>
                     <li><b>Playtest</b> — opens the game in a preview window with DevTools linked.</li>
@@ -861,7 +861,7 @@ npm run build:game "ProjectName" android</code></pre>
 
                 <h2>Level JSON Schema (v2.0)</h2>
                 <pre><code>{
-  "_schema": "ketebe.platformer3d.level.v2.0",
+  "_schema": "redglitch.platformer3d.level.v2.0",
   "spawnPoint": [0, 1, 0], "gravity": -20, "ambientColor": "#6080a0",
   "platforms": [{ "position": [0,0,0], "size": [6,0.5,6], "paletteIndex": 2 }],
   "collectibles": [{ "id": "c1", "type": "coin", "position": [2,1,0], "value": 10 }],
@@ -892,9 +892,9 @@ npm run build:game "ProjectName" android</code></pre>
                     <tr><td><code>Input3D.js</code></td><td>ES module</td><td>Keyboard + gamepad action bindings; Pointer Lock API</td></tr>
                     <tr><td><code>AudioSpatial3D.js</code></td><td>ES module</td><td>Web Audio API spatial sound (PannerNode, HRTF, Doppler)</td></tr>
                     <tr><td><code>Raycast3D.js</code></td><td>ES module</td><td>Three.js + cannon-es dual raycast for hitscan</td></tr>
-                    <tr><td><code>Engine3DAdapter.js</code></td><td>ES module</td><td>Glue layer: binds Ketebe project API to 3D engine</td></tr>
+                    <tr><td><code>Engine3DAdapter.js</code></td><td>ES module</td><td>Glue layer: binds RedGlitch project API to 3D engine</td></tr>
                     <tr><td><code>CrossEngineSerializer.js</code></td><td>Global script</td><td>Serializes entities/levels for campaign runtime</td></tr>
-                    <tr><td><code>Save3D.js</code></td><td>ES module</td><td>Schema-versioned save/load; schema = <code>ketebe.3d.save.v3</code></td></tr>
+                    <tr><td><code>Save3D.js</code></td><td>ES module</td><td>Schema-versioned save/load; schema = <code>redglitch.3d.save.v3</code></td></tr>
                     <tr><td><code>VoxelPalette.js</code></td><td>ES module</td><td>8-color shared flat-shaded color palette for all 3D assets</td></tr>
                     <tr><td><code>LayerMask.js</code></td><td>ES module</td><td>Bit-flag layer constants (TERRAIN=1, ENTITY=2, PROP=4…)</td></tr>
                     <tr><td><code>CollisionGroups.js</code></td><td>ES module</td><td>cannon-es collision filter groups and masks</td></tr>
@@ -1034,7 +1034,7 @@ const THREE = (typeof globalThis !== 'undefined' &amp;&amp; globalThis.THREE) ||
                 <h2>Enable / Disable</h2>
                 <ul>
                     <li>In any 3D editor: click the <b>🧱 TILESET</b> button in the toolbar.</li>
-                    <li>In <code>ketebe.json</code>: set <code>"tilesetEnabled": true</code>.</li>
+                    <li>In <code>redglitch.json</code>: set <code>"tilesetEnabled": true</code>.</li>
                     <li>In code: call <code>engine.enableTileset()</code> / <code>engine.disableTileset()</code>.</li>
                 </ul>
 
@@ -1170,7 +1170,7 @@ game.audio.stop('dungeon_theme');         // stop a track</code></pre>
                 <h1><i class="fas fa-save"></i> Save / Load System</h1>
 
                 <h2>3D Save Format (Save3D.js)</h2>
-                <p>Schema: <code>ketebe.3d.save.v3</code>. Saves are stored at <code>/api/save/:username/:slot</code>.</p>
+                <p>Schema: <code>redglitch.3d.save.v3</code>. Saves are stored at <code>/api/save/:username/:slot</code>.</p>
                 <pre><code>import { serializeSavePayload3D, deserializeSavePayload3D,
          serialize3DPlayerState, isSave3D } from '../shared/Save3D.js';
 
@@ -1556,8 +1556,8 @@ Object.entries(game._flags).forEach(([k,v]) => console.log(k, '=', v));</code></
 
             <section id="sys-eventbus">
                 <h1><i class="fas fa-broadcast-tower"></i> EventBus — Cross-Tool Communication</h1>
-                <p><b>File:</b> <code>public/shared/EventBus.js</code> — Auto-instantiated as <code>window.KetebeEventBus</code></p>
-                <p>The EventBus is the backbone of all inter-tool communication in Ketebe. It operates on three channels simultaneously: <b>local listeners</b> within the same window, <b>cross-window postMessage</b> for iframes and popups, and <b>WebSocket broadcast</b> for real-time sync between multiple editor tabs.</p>
+                <p><b>File:</b> <code>public/shared/EventBus.js</code> — Auto-instantiated as <code>window.RedGlitchEventBus</code></p>
+                <p>The EventBus is the backbone of all inter-tool communication in RedGlitch. It operates on three channels simultaneously: <b>local listeners</b> within the same window, <b>cross-window postMessage</b> for iframes and popups, and <b>WebSocket broadcast</b> for real-time sync between multiple editor tabs.</p>
 
                 <h2>Core API</h2>
                 <table>
@@ -1572,7 +1572,7 @@ Object.entries(game._flags).forEach(([k,v]) => console.log(k, '=', v));</code></
                 </table>
 
                 <h2>Usage Examples</h2>
-                <pre><code>const bus = window.KetebeEventBus;
+                <pre><code>const bus = window.RedGlitchEventBus;
 
 // Subscribe to an event
 const listenerId = bus.on('enemy:updated', (event) => {
@@ -1610,10 +1610,10 @@ bus.on('asset:*', (event) => {
                 <p>On load, EventBus connects to <code>ws://localhost:3000/ws</code>. Any event you emit is serialized to JSON and sent over the socket to all other connected windows. Events arriving from remote sources are deserialized and dispatched to local listeners — but <b>your own events are ignored</b> (checked by <code>source</code> ID) to prevent echo loops. On disconnect, it auto-reconnects with exponential backoff (max 5 attempts, up to 30 s delay).</p>
 
                 <h2>Transport: postMessage</h2>
-                <p>Every emitted event is also broadcast via <code>postMessage</code> to three targets: the parent window (if inside an iframe), all child iframes, and <code>window.opener</code> (if opened as a popup). The message is wrapped as <code>{ sourceType: 'ketebe-event', event: {...} }</code>. This is how the game window logs route back to the editor console.</p>
+                <p>Every emitted event is also broadcast via <code>postMessage</code> to three targets: the parent window (if inside an iframe), all child iframes, and <code>window.opener</code> (if opened as a popup). The message is wrapped as <code>{ sourceType: 'redglitch-event', event: {...} }</code>. This is how the game window logs route back to the editor console.</p>
 
                 <h2>Full Event Catalog</h2>
-                <p>All events used across the Ketebe tool suite:</p>
+                <p>All events used across the RedGlitch tool suite:</p>
                 <table>
                     <tr><th>Event</th><th>Emitted By</th><th>Consumed By</th><th>Payload Fields</th></tr>
                     <tr><td><code>project:loaded</code></td><td>Dashboard</td><td>All tools</td><td><code>name</code></td></tr>
@@ -1681,9 +1681,9 @@ bus.on('asset:*', (event) => {
 let eventBus, projectState, assetManager;
 
 function initializeIntegration() {
-    eventBus     = window.KetebeEventBus;
-    projectState = window.KetebeProjectState;
-    assetManager = window.KetebeAssetManager;
+    eventBus     = window.RedGlitchEventBus;
+    projectState = window.RedGlitchProjectState;
+    assetManager = window.RedGlitchAssetManager;
 
     if (!eventBus) return;
 
@@ -2129,7 +2129,7 @@ ITEM_HEALTH_POTION_DESC,Restores 50 HP,50 HP geri yükler,Stellt 50 HP wieder he
                 </ul>
                 <h2>Output</h2>
                 <p>Each table saves as <code>data/tables/{table_name}.json</code>. Access in logic scripts via:</p>
-                <pre><code>const table = ketebe.data.table('shop_items');
+                <pre><code>const table = redglitch.data.table('shop_items');
 const row = table.find(r => r.id === 'health_potion');
 // → { id: 'health_potion', price: 25, stock: 10, ... }</code></pre>
             </section>

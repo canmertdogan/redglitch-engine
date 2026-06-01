@@ -1,6 +1,6 @@
 /**
  * AdvancedGenerator.js
- * Next-gen procedural level generator for Ketebe Platformer Engine.
+ * Next-gen procedural level generator for RedGlitch Platformer Engine.
  * Features: Biomes, Segment Composition, and Layered Visuals.
  */
 

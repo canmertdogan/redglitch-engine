@@ -1,9 +1,9 @@
-# Ketebe Studio v10: The Self-Evolving Engine
+# RedGlitch Studio v10: The Self-Evolving Engine
 ## Master Development Plan
 
 **Version:** 1.0 (Draft)
 **Date:** February 7, 2026
-**Vision:** To integrate a live, local Micro-LLM into the Ketebe Studio environment, empowering the engine to autonomously build specialized tools, editors, and workflows based on user needs, effectively creating a "Self-Evolving" IDE.
+**Vision:** To integrate a live, local Micro-LLM into the RedGlitch Studio environment, empowering the engine to autonomously build specialized tools, editors, and workflows based on user needs, effectively creating a "Self-Evolving" IDE.
 
 ---
 
@@ -29,7 +29,7 @@ The AI **CANNOT** modify these systems directly:
 ### 2.2. The Mutable Extension Layer (The "Forge")
 The AI operates strictly within a Plugin API. It generates self-contained modules that the Core loads dynamically.
 
-**The Extension API (`window.KetebeAPI`):**
+**The Extension API (`window.RedGlitchAPI`):**
 - `registerTool(id, title, icon, htmlTemplate, initFunction)`
 - `registerNode(type, properties, executionLogic)` (For Campaign Studio)
 - `registerAssetType(extension, loaderFunction)`
@@ -50,7 +50,7 @@ We will leverage high-performance Micro-LLMs optimized for coding, running local
 ### 3.2. The Memory (RAG System)
 The LLM cannot read the entire codebase. We will implement **Retrieval-Augmented Generation (RAG)**.
 - **Vector Store:** A local vector database (e.g., `LangChain.js` with `TensorFlow.js` embeddings) indexing:
-  - The Ketebe Plugin API Documentation.
+  - The RedGlitch Plugin API Documentation.
   - Existing Tool Source Code (as examples).
   - The User's current project context.
 
@@ -61,14 +61,14 @@ The LLM cannot read the entire codebase. We will implement **Retrieval-Augmented
 ### Phase 1: The Foundation (API Standardization)
 **Goal:** Make the Studio modular enough to accept dynamic plugins without crashing.
 1.  **Refactor `server.js`:** Break the monolith into modular routes to allow dynamic endpoint registration.
-2.  **Define `KetebeAPI`:** Create the strict interface that plugins will use.
+2.  **Define `RedGlitchAPI`:** Create the strict interface that plugins will use.
 3.  **Plugin Loader:** Build a system in `dashboard.html` that scans a `plugins/` directory and hot-loads `.js` files safely (using `try/catch` blocks).
 
 ### Phase 2: The Context (RAG & Knowledge Base)
-**Goal:** Teach the AI how to code for Ketebe.
+**Goal:** Teach the AI how to code for RedGlitch.
 1.  **Documentation Generator:** Auto-generate API docs from source code comments.
 2.  **Vector Indexing:** Create a build step that chunks API docs and indexes them.
-3.  **Prompt Engineering:** Design the System Prompt: *"You are an expert Ketebe Plugin Developer. Use `KetebeAPI.registerTool` to fulfill requests..."*
+3.  **Prompt Engineering:** Design the System Prompt: *"You are an expert RedGlitch Plugin Developer. Use `RedGlitchAPI.registerTool` to fulfill requests..."*
 
 ### Phase 3: The Integration (The "Code Forge")
 **Goal:** Connect the LLM to the File System.
@@ -98,4 +98,4 @@ The LLM cannot read the entire codebase. We will implement **Retrieval-Augmented
 
 ## 6. Conclusion
 
-Ketebe Studio v10 represents a shift from "Software" to "Organism." By strictly sandboxing the AI's creative capabilities to an Extension Layer, we can offer the dream of a "Self-Evolving Studio" without sacrificing the stability of a professional engine.
+RedGlitch Studio v10 represents a shift from "Software" to "Organism." By strictly sandboxing the AI's creative capabilities to an Extension Layer, we can offer the dream of a "Self-Evolving Studio" without sacrificing the stability of a professional engine.

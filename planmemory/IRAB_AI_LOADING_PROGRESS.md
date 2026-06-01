@@ -232,7 +232,7 @@ async initialize() {
 
 ### 2. Trigger AI Model Download
 - Send any message that requires AI inference
-- Example: "What is ketebe ENGINE?"
+- Example: "What is redglitch ENGINE?"
 - If this is the first time, model download will start
 
 ### 3. Observe Loading Progress

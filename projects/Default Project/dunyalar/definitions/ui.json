@@ -59,7 +59,7 @@
         {
           "id": "title",
           "type": "label",
-          "text": "REVENGE OF THE\nKETEBE CANAVARI",
+          "text": "REVENGE OF THE\nREDGLITCH CANAVARI",
           "rect": {
             "x": 190,
             "y": 60,
@@ -498,7 +498,7 @@
         {
           "id": "inv_title",
           "type": "label",
-          "text": "KETEBE SACK",
+          "text": "REDGLITCH SACK",
           "rect": {
             "x": 310,
             "y": 40,

@@ -1,5 +1,5 @@
 /**
- * KETEBE AUDIO STUDIO - Audio Plugin Base Class
+ * REDGLITCH AUDIO STUDIO - Audio Plugin Base Class
  * Standard interface for all internal effects.
  */
 

@@ -1,4 +1,4 @@
-# Solution Plan: ketebe ENGINE Evolution
+# Solution Plan: redglitch ENGINE Evolution
 **Goal:** Transform the current prototype into a commercially viable, "Granny-proof" game creation tool using Web Technologies.
 
 **Philosophy:** Your choice of stack (JavaScript/HTML5) is **not** the problem. Massive hits like *Vampire Survivors* (Phaser/Electron), *CrossCode* (HTML5), and apps like *Discord* and *VS Code* (Electron) prove this stack works. The issue is *architecture*.

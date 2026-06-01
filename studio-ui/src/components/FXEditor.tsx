@@ -172,17 +172,6 @@ const FXEditor: React.FC = () => {
         return () => cancelAnimationFrame(frame);
     }, [isPlaying, effects, currentIndex]);
 
-    const loadEffects = async () => {
-        try {
-            const res = await fetch('/api/assets?type=fx');
-            if (res.ok) {
-                const data = await res.json();
-                setEffects(data.length > 0 ? data : [getDefaultFX()]);
-            }
-        } catch (e) {
-            setEffects([getDefaultFX()]);
-        }
-    };
 
     const getDefaultFX = (): FXConfig => ({
         id: 'fx_' + Date.now(),
@@ -238,16 +227,13 @@ const FXEditor: React.FC = () => {
                     <Zap size={16} style={{ marginRight: '8px', display: 'inline' }} /> FX MASTER v2.0
                 </div>
             </div>
-<div id="toolbar" style={{ height: '44px', background: '#000', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '8px' }}>
-    <button className="tool-btn" onClick={triggerBurst} title="Play Effect"><Play size={16} /></button>
-    <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
-    <button className="tool-btn" onClick={saveToServer} disabled={isSaving} title="Save Effect"><Save size={16} /></button>
-</div>
-                <button className="tool-btn" onClick={() => setIsPlaying(false)}><Square size={16} /></button>
+            <div id="toolbar" style={{ height: '44px', background: '#000', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '8px' }}>
+                <button className="tool-btn" onClick={triggerBurst} title="Play Effect"><Play size={16} /></button>
+                <button className="tool-btn" onClick={() => setIsPlaying(false)} title="Stop"><Square size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
-                <button className="tool-btn"><Save size={16} /></button>
-                <button className="tool-btn" onClick={() => setEffects([...effects, getDefaultFX()])}><Plus size={16} /></button>
-                <button className="tool-btn" style={{ color: '#e74c3c' }}><Trash2 size={16} /></button>
+                <button className="tool-btn" onClick={saveToServer} disabled={isSaving} title="Save Effect"><Save size={16} /></button>
+                <button className="tool-btn" onClick={() => setEffects([...effects, getDefaultFX()])} title="New Effect"><Plus size={16} /></button>
+                <button className="tool-btn" style={{ color: '#e74c3c' }} title="Delete Effect"><Trash2 size={16} /></button>
             </div>
 
             <div style={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>

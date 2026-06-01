@@ -2,7 +2,7 @@
 
 class LocalizationSystem {
     constructor() {
-        this.currentLang = localStorage.getItem('ketebe_lang') || 'EN';
+        this.currentLang = localStorage.getItem('redglitch_lang') || 'EN';
         this.data = {};
         this.loaded = false;
         this.init();
@@ -21,7 +21,7 @@ class LocalizationSystem {
 
     setLanguage(lang) {
         this.currentLang = lang;
-        localStorage.setItem('ketebe_lang', lang);
+        localStorage.setItem('redglitch_lang', lang);
         this.apply();
         // Update document direction for Arabic
         document.body.dir = (lang === 'AR') ? 'rtl' : 'ltr';

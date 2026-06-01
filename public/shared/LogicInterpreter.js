@@ -144,8 +144,8 @@ window.LogicInterpreter = class LogicInterpreter {
         const currentCtx = { ...ctx, node: node, depth: ctx.depth + 1 };
 
         // Debugging
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.emit('vsl:node_exec', {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('vsl:node_exec', {
                 nodeId: node.id,
                 entityId: ctx.entity.id,
                 timestamp: Date.now()

@@ -399,7 +399,7 @@ const ItemEditor: React.FC = () => {
                             <canvas ref={previewCanvasRef} width={256} height={256} style={{ width: '192px', height: '192px', imageRendering: 'pixelated' }} />
                         </div>
                         <div style={{ padding: '20px', textAlign: 'center' }}>
-                            <div style={{ color: '#444', fontSize: '0.8rem', letterSpacing: '1px' }}>KETEBE ITEM RENDERER</div>
+                            <div style={{ color: '#444', fontSize: '0.8rem', letterSpacing: '1px' }}>REDGLITCH ITEM RENDERER</div>
                             <button className="tool-btn" style={{ width: '100%', marginTop: '20px', gap: '8px' }} onClick={() => {
                                 if (window.parent && window.parent.editSpriteInStudio) {
                                     window.parent.editSpriteInStudio(currentItem.sprite);

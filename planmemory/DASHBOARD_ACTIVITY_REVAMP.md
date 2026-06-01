@@ -10,8 +10,8 @@ Revamp the "Recent Files" section in the Project Dashboard to become a comprehen
 *   **Broadcasting:** Emit an event `activity:logged` when a new item is added so the dashboard can update in real-time.
 
 ## 2. Tool Integration (All Editors/Tools)
-*   **Instrument `openTool`:** In the parent window (IDE) or wherever tools are launched, call `KetebeProjectState.logActivity('tool', toolName, toolId)`.
-*   **Instrument File Opening:** When files are opened in editors (Code Forge, Level Editor, etc.), call `KetebeProjectState.logActivity('file', fileName, filePath)`.
+*   **Instrument `openTool`:** In the parent window (IDE) or wherever tools are launched, call `RedGlitchProjectState.logActivity('tool', toolName, toolId)`.
+*   **Instrument File Opening:** When files are opened in editors (Code Forge, Level Editor, etc.), call `RedGlitchProjectState.logActivity('file', fileName, filePath)`.
 
 ## 3. Dashboard UI Update (`project_dashboard.html`)
 *   **Rename Widget:** Change "Recent Files" to "Latest Activities".
@@ -21,7 +21,7 @@ Revamp the "Recent Files" section in the Project Dashboard to become a comprehen
     *   **Sub Text:** "Opened just now", "Opened 5m ago", etc. (Relative timestamp).
 *   **Logic:**
     *   Subscribe to `activity:logged` (via EventBus or State listener).
-    *   `renderActivities()` function to pull from `KetebeProjectState.get('activities')` and render the list.
+    *   `renderActivities()` function to pull from `RedGlitchProjectState.get('activities')` and render the list.
     *   Auto-refresh relative timestamps every minute.
 
 ## Execution Order

@@ -1,4 +1,4 @@
-// ide.js - Ketebe Code Studio Logic
+// ide.js - RedGlitch Code Studio Logic
 
 let editor = null;
 let openTabs = new Map(); // path -> { model, state }
@@ -132,13 +132,13 @@ require.config({ paths: { 'vs': 'lib/monaco/vs' }});
 
 window.editorInit = function() {
     require(['vs/editor/editor.main'], async function() {
-        // Load Ketebe Type Definitions
+        // Load RedGlitch Type Definitions
         try {
-            const dtsRes = await fetch('lib/monaco/ketebe.d.ts');
+            const dtsRes = await fetch('lib/monaco/redglitch.d.ts');
             if (dtsRes.ok) {
                 const dtsContent = await dtsRes.text();
-                monaco.languages.typescript.javascriptDefaults.addExtraLib(dtsContent, 'ketebe.d.ts');
-                console.log("Ketebe intelligence loaded.");
+                monaco.languages.typescript.javascriptDefaults.addExtraLib(dtsContent, 'redglitch.d.ts');
+                console.log("RedGlitch intelligence loaded.");
             }
         } catch (e) { console.error("Failed to load type definitions", e); }
 
@@ -170,10 +170,10 @@ window.editorInit = function() {
 
         // --- AI INTEGRATION: Ghost-Text Autocomplete ---
         try {
-            const { KetebeAI } = await import('/ai/ketebe-ai.js');
+            const { RedGlitchAI } = await import('/ai/redglitch-ai.js');
             const { EventBus } = await import('/ai/shim.js');
-            const ai = new KetebeAI();
-            window.KetebeAIInstance = ai;
+            const ai = new RedGlitchAI();
+            window.RedGlitchAIInstance = ai;
 
             monaco.languages.registerInlineCompletionsProvider('javascript', {
                 provideInlineCompletions: async (model, position, context, token) => {
@@ -217,14 +217,14 @@ window.editorInit = function() {
                 },
                 freeInlineCompletions: () => {}
             });
-            console.log("Ketebe AI Ghost-Text enabled.");
+            console.log("RedGlitch AI Ghost-Text enabled.");
         } catch (e) {
             console.error("Failed to initialize AI Ghost-Text:", e);
         }
 
         // --- AI INTEGRATION: Code Injection ---
-        if (window.KetebeEventBus) {
-            window.KetebeEventBus.on('ai:inject-code', (data) => {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('ai:inject-code', (data) => {
                 if (!editor) return;
                 const model = editor.getModel();
                 if (!model) return;

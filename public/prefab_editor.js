@@ -1,5 +1,5 @@
 /**
- * KETEBE PREFAB CONSTRUCTOR - v2.0
+ * REDGLITCH PREFAB CONSTRUCTOR - v2.0
  * Specialized tool for entity composition and prefab definition.
  * Integrated with EventBus, SharedProjectState, and AssetManager
  */
@@ -9,9 +9,9 @@ let eventBus, projectState, assetManager;
 
 function initializePrefabIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.KetebeEventBus;
-        projectState = window.KetebeProjectState;
-        assetManager = window.KetebeAssetManager;
+        eventBus = window.RedGlitchEventBus;
+        projectState = window.RedGlitchProjectState;
+        assetManager = window.RedGlitchAssetManager;
         
         if (eventBus) {
             // Listen for sprite updates

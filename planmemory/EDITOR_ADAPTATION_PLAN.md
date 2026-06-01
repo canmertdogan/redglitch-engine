@@ -30,7 +30,7 @@ We will define a common interface that specific editor modes must implement:
 *   [ ] **Analyze `editor.js`**: Identify all direct canvas drawing calls and coordinate math.
 *   [ ] **Create `strategies/`**: Create a new folder for editor strategies.
 *   [ ] **Extract TopDown Logic**: Move current rendering code into `TopDownStrategy.js`.
-*   [ ] **Engine Detection**: Update `editor.js` initialization to fetch `ketebe.json` and instantiate the correct strategy.
+*   [ ] **Engine Detection**: Update `editor.js` initialization to fetch `redglitch.json` and instantiate the correct strategy.
 
 ### Phase 2: Isometric Mode Integration
 *   [ ] **Implement `IsoStrategy.js`**:
