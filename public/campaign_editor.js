@@ -358,7 +358,7 @@ class CampaignEditor {
                     break;
                 case 'branch': icon = 'code-branch'; color = '#9b59b6'; break;
                 case 'battle': icon = 'skull'; color = '#e74c3c'; break;
-                case 'reward': icon = 'gift'; color = '#f1c40f'; break;
+                case 'reward': icon = 'gift'; color = '#ff0000'; break;
                 case 'variable': icon = 'pen'; color = '#e67e22'; break;
                 case 'dialogue': icon = 'comment-dots'; color = '#fff'; break;
                 case 'cutscene': icon = 'film'; color = '#1abc9c'; break;
@@ -442,7 +442,7 @@ class CampaignEditor {
                 height = (n.h || 300) * scale;
                 ctx.fillStyle = 'rgba(255,255,255,0.1)';
             } else if (n.type === 'comment') {
-                ctx.fillStyle = '#f1c40f';
+                ctx.fillStyle = '#ff0000';
             } else {
                 ctx.fillStyle = n.id === this.selection ? '#fff' : '#666';
             }
@@ -455,7 +455,7 @@ class CampaignEditor {
         const vw = (this.dom.workspace.clientWidth / this.transform.scale) * scale;
         const vh = (this.dom.workspace.clientHeight / this.transform.scale) * scale;
         
-        ctx.strokeStyle = '#f1c40f';
+        ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 2;
         ctx.strokeRect(vx, vy, vw, vh);
     }
@@ -1318,7 +1318,7 @@ class CampaignEditor {
     showToast(msg, isErr, isSucc) {
         this.dom.toastMsg.innerText = msg;
         this.dom.toast.style.display = 'block';
-        this.dom.toast.style.backgroundColor = isErr ? '#e74c3c' : (isSucc ? '#2ecc71' : '#f1c40f');
+        this.dom.toast.style.backgroundColor = isErr ? '#e74c3c' : (isSucc ? '#2ecc71' : '#ff0000');
         setTimeout(() => this.dom.toast.style.display = 'none', 3000);
     }
     search(q) {
@@ -1962,8 +1962,8 @@ window.showNodeHelp = () => {
                 <strong style="color:#e74c3c;">BATTLE</strong><br>
                 <span style="color:#888;">Initiate combat with selected enemies.</span>
             </div>
-            <div style="margin-bottom:15px; padding:10px; background:#111; border-left:3px solid #f1c40f;">
-                <strong style="color:#f1c40f;">REWARD</strong><br>
+            <div style="margin-bottom:15px; padding:10px; background:#111; border-left:3px solid #ff0000;">
+                <strong style="color:#ff0000;">REWARD</strong><br>
                 <span style="color:#888;">Give items to the player.</span>
             </div>
             <div style="margin-bottom:15px; padding:10px; background:#111; border-left:3px solid #e67e22;">

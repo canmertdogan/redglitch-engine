@@ -11,8 +11,8 @@
     --bg-canvas: #080808;
     --bg-input: #000000;
     --border: #333;
-    --accent: #f1c40f; /* Retro Gold */
-    --accent-dim: rgba(241, 196, 15, 0.2);
+    --accent: #ff0000; /* Retro Gold */
+    --accent-dim: rgba(255, 0, 0, 0.2);
     --text-main: #e0e0e0;
     --text-muted: #888;
     --grid-line: #1a1a1a;
@@ -25,10 +25,10 @@
     /* Legacy Pixel Mappings (for JS compatibility) */
     --px-blue: #2980b9;
     --px-green: #27ae60;
-    --px-yellow: #f1c40f;
+    --px-yellow: #ff0000;
     --px-red: #c0392b;
     --px-cyan: #3498db;
-    --px-highlight: #f1c40f;
+    --px-highlight: #ff0000;
     --px-bg-darkest: var(--bg-root);
     --px-bg-dark: var(--bg-panel);
     --px-bg-mid: #141414;
@@ -397,9 +397,9 @@ body {
     box-shadow: 0 0 6px rgba(74, 158, 255, 0.5);
 }
 .note.selected {
-    background: linear-gradient(180deg, #f1c40f 0%, #d4a80a 100%);
+    background: linear-gradient(180deg, #ff0000 0%, #d4a80a 100%);
     border-color: #fff;
-    box-shadow: 0 0 10px rgba(241, 196, 15, 0.6);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
     z-index: 10;
 }
 .note:active { cursor: grabbing; }
@@ -429,7 +429,7 @@ body {
 /* --- SELECTION BOX --- */
 .selection-box {
     position: absolute;
-    background: rgba(241, 196, 15, 0.15);
+    background: rgba(255, 0, 0, 0.15);
     border: 1px dashed var(--accent);
     pointer-events: none;
     z-index: 100;
@@ -568,7 +568,7 @@ body {
 }
 .pixel-clip.selected {
     border-color: var(--accent);
-    box-shadow: 0 0 12px rgba(241, 196, 15, 0.5);
+    box-shadow: 0 0 12px rgba(255, 0, 0, 0.5);
 }
 .pixel-clip-header {
     background: var(--px-blue);

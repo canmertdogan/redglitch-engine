@@ -112,7 +112,7 @@ function refreshCharList() {
 function syncNPCs() {
     npcDefs.forEach(npc => {
         if (!data.characters.find(c => c.id === npc.id)) {
-            data.characters.push({ id: npc.id, name: npc.name, sprite: npc.sprite, color: '#f1c40f' });
+            data.characters.push({ id: npc.id, name: npc.name, sprite: npc.sprite, color: '#ff0000' });
         }
     });
     refreshCharList();

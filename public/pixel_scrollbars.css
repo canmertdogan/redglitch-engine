@@ -10,7 +10,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #f1c40f;
+    background: #ff0000;
     border: 2px solid #000;
     box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.4);
 }

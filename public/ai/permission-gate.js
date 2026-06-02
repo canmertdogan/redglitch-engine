@@ -304,20 +304,20 @@ export class PermissionGate {
                     pointer-events: auto !important;
                 }
                 .ai-permission-content.irab-styled {
-                    background: #080c18; border: 2px solid #f1c40f; padding: 0;
+                    background: #080c18; border: 2px solid #ff0000; padding: 0;
                     width: 95%; max-width: 900px; color: #cfd8dc; 
-                    box-shadow: 0 0 30px rgba(241, 196, 15, 0.2);
+                    box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);
                     display: flex; flex-direction: column;
                     max-height: 95vh; overflow: hidden;
                 }
                 .ai-modal-header {
-                    background: #f1c40f; color: #000; padding: 10px 15px;
+                    background: #ff0000; color: #000; padding: 10px 15px;
                     display: flex; justify-content: space-between; align-items: center;
                     font-weight: bold; font-size: 1.1em;
                     flex-shrink: 0;
                 }
                 .ai-security-tag {
-                    font-size: 0.8em; padding: 2px 6px; background: #000; color: #f1c40f;
+                    font-size: 0.8em; padding: 2px 6px; background: #000; color: #ff0000;
                     border-radius: 2px;
                 }
                 .ai-permission-details { 
@@ -339,7 +339,7 @@ export class PermissionGate {
                     flex: 1; min-width: 0;
                 }
                 .ai-diff-label { font-size: 0.9em; color: #888; margin-bottom: 5px; text-transform: uppercase; }
-                .ai-diff-label.proposed { color: #f1c40f; }
+                .ai-diff-label.proposed { color: #ff0000; }
                 .ai-code-preview { border-left: 3px solid #333 !important; }
                 .ai-code-preview.original { border-left: 3px solid #e74c3c !important; opacity: 0.7; }
                 .ai-code-preview.proposed { border-left: 3px solid #2ecc71 !important; }
@@ -357,7 +357,7 @@ export class PermissionGate {
                     font-family: inherit; font-size: 1.1em; transition: all 0.1s;
                     pointer-events: auto !important;
                 }
-                .ai-btn-primary { background: #f1c40f; color: #000; font-weight: bold; border-color: #f1c40f !important; }
+                .ai-btn-primary { background: #ff0000; color: #000; font-weight: bold; border-color: #ff0000 !important; }
                 .ai-btn-danger { background: #1a0a0a; color: #e74c3c; }
                 .ai-btn-secondary { background: #121a2b; color: #8fa0bc; }
                 .ai-btn-primary:hover { background: #fff; transform: translateY(-2px); }

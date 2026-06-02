@@ -23,7 +23,7 @@ class PlatformerGame {
         this.uiSystem = {
             showNotification: (msg, type) => {
                 if (this.fx && this.fx.popText) {
-                    this.fx.popText(this.player.x, this.player.y - 50, msg, type === 'error' ? '#e74c3c' : '#f1c40f');
+                    this.fx.popText(this.player.x, this.player.y - 50, msg, type === 'error' ? '#e74c3c' : '#ff0000');
                 }
                 console.log(`[Notification:${type}] ${msg}`);
             }

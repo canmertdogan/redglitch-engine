@@ -3,7 +3,7 @@
     --bg-deep: #060910;
     --bg-main: #121a2b;
     --bg-ui: #1f2b42;
-    --accent: #f1c40f; /* Gold */
+    --accent: #ff0000; /* Gold */
     --text: #cfd8dc;
     --border-color: #020408;
     
@@ -287,7 +287,7 @@ body, html {
 /* Functional Colors */
 .btn-atk { background: #c0392b !important; color: #fff !important; font-size: 2rem !important; }
 .btn-act { background: #2ecc71 !important; color: #fff !important; }
-.btn-run { background: #f1c40f !important; color: #000 !important; text-shadow: none !important; }
+.btn-run { background: #ff0000 !important; color: #000 !important; text-shadow: none !important; }
 .btn-skill { background: #3498db !important; color: #fff !important; }
 
 /* === PIXEL SCROLLBARS === */

@@ -147,7 +147,7 @@ const PrefabEditor: React.FC = () => {
                         <div style={{
                             padding: '10px', cursor: 'pointer', borderBottom: '1px solid #1a1a1a',
                             color: active ? 'var(--accent)' : '#888',
-                            background: active ? 'rgba(241, 196, 15, 0.05)' : 'transparent',
+                            background: active ? 'rgba(255, 0, 0, 0.05)' : 'transparent',
                             borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent'
                         }}>
                             {p.name || 'Unnamed Prefab'}
@@ -174,7 +174,7 @@ const PrefabEditor: React.FC = () => {
                                 style={{ 
                                     padding: '8px 15px', borderBottom: '1px solid #111', cursor: 'pointer',
                                     color: selectedCompIdx === i ? 'var(--accent)' : '#666',
-                                    background: selectedCompIdx === i ? 'rgba(241, 196, 15, 0.05)' : 'transparent'
+                                    background: selectedCompIdx === i ? 'rgba(255, 0, 0, 0.05)' : 'transparent'
                                 }}
                             >
                                 <ChevronRight size={12} style={{ marginRight: '8px', display: 'inline' }} /> {c.type}

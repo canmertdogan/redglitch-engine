@@ -2994,7 +2994,7 @@ Created for RedGlitch Game Engine
             <div class="prop-row">
                 <label class="prop-label">Code Preview:</label>
             </div>
-            <pre style="background: #000; padding: 10px; border: 1px solid #f1c40f; color: #0f0; font-family: VT323; font-size: 16px; overflow-x: auto; margin: 10px;">${codeSnippet}</pre>
+            <pre style="background: #000; padding: 10px; border: 1px solid #ff0000; color: #0f0; font-family: VT323; font-size: 16px; overflow-x: auto; margin: 10px;">${codeSnippet}</pre>
         `;
     }
 

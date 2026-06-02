@@ -115,7 +115,7 @@ export class ThoughtVisualizer {
         const hud = document.getElementById('irab-status-text');
         if (hud) {
             hud.textContent = text;
-            hud.style.color = '#f1c40f'; // Gold
+            hud.style.color = '#ff0000'; // Gold
         }
     }
 }

@@ -63,7 +63,7 @@ const config = {
     life: { min: 0.5, max: 1.0 },
     speed: { min: 50, max: 150 },
     size: { start: 10, end: 0 },
-    color: { start: "#f1c40f", end: "#e74c3c" },
+    color: { start: "#ff0000", end: "#e74c3c" },
     physics: {
         gravity: 0,
         drag: 0.95,

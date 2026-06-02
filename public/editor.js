@@ -50,7 +50,7 @@ class WorldEditor {
             0: { name: 'Passable', color: 'transparent', key: '0' },
             1: { name: 'Solid (Shadowed)', color: 'rgba(231, 76, 60, 0.5)', key: '1' },
             2: { name: 'Shadowless Wall', color: 'rgba(52, 152, 219, 0.5)', key: '2' },
-            3: { name: 'Half-Height', color: 'rgba(241, 196, 15, 0.5)', key: '3' },
+            3: { name: 'Half-Height', color: 'rgba(255, 0, 0, 0.5)', key: '3' },
             4: { name: 'One-Way Up', color: 'rgba(46, 204, 113, 0.5)', arrow: '↑', key: '4' },
             5: { name: 'One-Way Down', color: 'rgba(46, 204, 113, 0.5)', arrow: '↓', key: '5' },
             6: { name: 'One-Way Left', color: 'rgba(46, 204, 113, 0.5)', arrow: '←', key: '6' },
@@ -699,11 +699,11 @@ class WorldEditor {
                 const w = (Math.abs(editorState.dragEnd.x - editorState.dragStart.x) + 1) * ts;
                 const h = (Math.abs(editorState.dragEnd.y - editorState.dragStart.y) + 1) * ts;
                 
-                ctx.strokeStyle = '#f1c40f';
+                ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 2;
                 
                 if (editorState.fillRect) {
-                    ctx.fillStyle = 'rgba(241, 196, 15, 0.2)';
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
                     ctx.fillRect(x, y, w, h);
                 }
                 ctx.strokeRect(x, y, w, h);
@@ -788,7 +788,7 @@ class WorldEditor {
                 const { x, y } = editorState.aiGhost;
                 ctx.save();
                 ctx.globalAlpha = 0.6;
-                ctx.fillStyle = '#f1c40f'; // Gold
+                ctx.fillStyle = '#ff0000'; // Gold
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(x * ts, y * ts, ts, ts);
@@ -853,8 +853,8 @@ class WorldEditor {
             
             // Lighting
             else if (d.type === 'torch') { ctx.fillStyle = '#e67e22'; ctx.fillText('🔥', cx, cy); }
-            else if (d.type === 'candle') { ctx.fillStyle = '#f1c40f'; ctx.fillText('🕯️', cx, cy); }
-            else if (d.type === 'lamp') { ctx.fillStyle = '#f1c40f'; ctx.fillText('🏮', cx, cy); }
+            else if (d.type === 'candle') { ctx.fillStyle = '#ff0000'; ctx.fillText('🕯️', cx, cy); }
+            else if (d.type === 'lamp') { ctx.fillStyle = '#ff0000'; ctx.fillText('🏮', cx, cy); }
             else if (d.type === 'brazier') { ctx.fillStyle = '#e74c3c'; ctx.fillText('🔥', cx, cy); }
             else if (d.type === 'glow') { ctx.fillStyle = '#00f3ff'; ctx.fillText('✨', cx, cy); }
             
@@ -873,7 +873,7 @@ class WorldEditor {
             else if (d.type === 'bookshelf') { ctx.fillStyle = '#8b4513'; ctx.fillText('📚', cx, cy); }
             
             // Interactive
-            else if (d.type === 'sign') { ctx.fillStyle = '#f1c40f'; ctx.fillText('🪧', cx, cy); }
+            else if (d.type === 'sign') { ctx.fillStyle = '#ff0000'; ctx.fillText('🪧', cx, cy); }
             else if (d.type === 'switch') { ctx.fillStyle = '#3498db'; ctx.fillText('🔌', cx, cy); }
             else if (d.type === 'lever') { ctx.fillStyle = '#95a5a6'; ctx.fillText('🎚️', cx, cy); }
             else if (d.type === 'button') { ctx.fillStyle = '#e74c3c'; ctx.fillText('🔘', cx, cy); }
@@ -891,7 +891,7 @@ class WorldEditor {
             else if (d.type === 'pit') { ctx.fillStyle = '#000'; ctx.fillText('🕳️', cx, cy); }
             
             // Triggers
-            else if (d.type === 'area_trigger') { ctx.fillStyle = 'rgba(241, 196, 15, 0.5)'; ctx.fillText('🎯', cx, cy); }
+            else if (d.type === 'area_trigger') { ctx.fillStyle = 'rgba(255, 0, 0, 0.5)'; ctx.fillText('🎯', cx, cy); }
             else if (d.type === 'dialogue_trigger') { ctx.fillStyle = '#9b59b6'; ctx.fillText('💬', cx, cy); }
             else if (d.type === 'camera_trigger') { ctx.fillStyle = '#34495e'; ctx.fillText('📽️', cx, cy); }
             else if (d.type === 'script_trigger') { ctx.fillStyle = '#1abc9c'; ctx.fillText('📜', cx, cy); }

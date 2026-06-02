@@ -505,10 +505,10 @@ class EditorCore {
                 <input type="text" value="${entity.type}" disabled>
             </div>
             ${isTrigger ? `
-                <div class="prop-group" style="border:1px solid #f1c40f; padding:10px; background:rgba(241,196,15,0.05);">
-                    <label style="color:#f1c40f;">TRIGGER TARGET (ID)</label>
+                <div class="prop-group" style="border:1px solid #ff0000; padding:10px; background:rgba(241,196,15,0.05);">
+                    <label style="color:#ff0000;">TRIGGER TARGET (ID)</label>
                     <input type="text" id="prop-ent-target" value="${entity.targetId || ''}">
-                    <label style="color:#f1c40f; margin-top:10px;">ACTION</label>
+                    <label style="color:#ff0000; margin-top:10px;">ACTION</label>
                     <select id="prop-ent-action">
                         <option value="toggle" ${entity.action === 'toggle' ? 'selected' : ''}>TOGGLE</option>
                         <option value="start" ${entity.action === 'start' ? 'selected' : ''}>START</option>

@@ -61,8 +61,8 @@ const Dashboard: React.FC = () => {
                 onClick={() => { setActiveView('create'); setWizardStep(1); }}
                 style={{ 
                     borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', 
-                    opacity: 0.8, background: 'rgba(241, 196, 15, 0.02)',
-                    borderColor: 'rgba(241, 196, 15, 0.3)'
+                    opacity: 0.8, background: 'rgba(255, 0, 0, 0.02)',
+                    borderColor: 'rgba(255, 0, 0, 0.3)'
                 }}
             >
                 <div className="plus-icon-container">
@@ -136,7 +136,7 @@ const Dashboard: React.FC = () => {
                         style={{
                             padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
                             color: activeView === item.id ? 'var(--accent)' : '#888',
-                            background: activeView === item.id ? 'rgba(241, 196, 15, 0.05)' : 'transparent',
+                            background: activeView === item.id ? 'rgba(255, 0, 0, 0.05)' : 'transparent',
                             borderLeft: `2px solid ${activeView === item.id ? 'var(--accent)' : 'transparent'}`,
                             transition: 'all 0.1s'
                         }}
@@ -366,12 +366,12 @@ const Dashboard: React.FC = () => {
                     border-color: var(--accent);
                     background: rgba(20, 26, 40, 0.95);
                     transform: translateY(-5px) scale(1.02);
-                    box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 20px rgba(241, 196, 15, 0.1);
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 20px rgba(255, 0, 0, 0.1);
                 }
 
                 .project-card.premium.active {
                     border-color: var(--accent);
-                    background: rgba(241, 196, 15, 0.05);
+                    background: rgba(255, 0, 0, 0.05);
                 }
 
                 .project-card.premium:hover .card-glow {
@@ -381,7 +381,7 @@ const Dashboard: React.FC = () => {
                 .card-glow {
                     position: absolute;
                     top: 0; left: 0; right: 0; bottom: 0;
-                    background: radial-gradient(circle at top right, rgba(241, 196, 15, 0.1), transparent 70%);
+                    background: radial-gradient(circle at top right, rgba(255, 0, 0, 0.1), transparent 70%);
                     opacity: 0;
                     transition: opacity 0.3s;
                     pointer-events: none;
@@ -468,7 +468,7 @@ const Dashboard: React.FC = () => {
                     outline: none;
                     transition: all 0.2s;
                 }
-                input:focus { border-color: var(--accent); background: rgba(241, 196, 15, 0.05); }
+                input:focus { border-color: var(--accent); background: rgba(255, 0, 0, 0.05); }
                 label { display: block; color: #555; margin-bottom: 8px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
                 
                 .wizard-step { animation: slideIn 0.3s ease-out; }

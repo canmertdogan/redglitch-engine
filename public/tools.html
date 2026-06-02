@@ -12,7 +12,7 @@
             --bg-deep: #050508;
             --bg-main: #080c18;
             --bg-ui: #121a2b;
-            --accent: #f1c40f;
+            --accent: #ff0000;
             --text: #cfd8dc;
             --header-h: 40px;
             --sidebar-w: 220px;
@@ -75,7 +75,7 @@
                 color: var(--accent);
             }
             .tool-btn.primary:hover {
-                background: rgba(241, 196, 15, 0.1);
+                background: rgba(255, 0, 0, 0.1);
                 border-color: var(--accent);
                 color: #fff;
             }
@@ -670,7 +670,7 @@
             position: relative;
         }
         .template-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); border-color: #34495e; }
-        .template-card.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(241, 196, 15, 0.2); }
+        .template-card.active { border-color: var(--accent); box-shadow: 0 0 15px rgba(255, 0, 0, 0.2); }
         
         .template-thumb {
             height: 100px; background: #000;
@@ -785,7 +785,7 @@
             transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 8px;
         }
         .bw-target-card:hover { border-color: #34495e; background: #162133; }
-        .bw-target-card.selected { border-color: var(--accent); background: #1a1e0a; box-shadow: 0 0 12px rgba(241,196,15,0.15); }
+        .bw-target-card.selected { border-color: var(--accent); background: #1a1e0a; box-shadow: 0 0 12px rgba(255, 0, 0,0.15); }
         .bw-target-card .tc-icon { font-size: 1.8rem; }
         .bw-target-card .tc-label { color: #cfd8dc; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; }
         .bw-target-card .tc-sub { color: #5d6d7e; font-size: 0.7rem; }
@@ -884,13 +884,13 @@
 
     /* Snap Ghost (Keep existing) */
     #snap-ghost {
-        position: absolute; background: rgba(241, 196, 15, 0.15);
+        position: absolute; background: rgba(255, 0, 0, 0.15);
         border: 2px dashed var(--accent); display: none; z-index: 5; pointer-events: none;
     }
 
     /* --- RETRO SIDEBAR DESIGN --- */
     :root {
-        --gold: #f1c40f;
+        --gold: #ff0000;
         --gold-dim: #b7950b;
         --cyan: #40e0d0;
         --cyan-dim: #16a085;

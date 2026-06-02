@@ -301,7 +301,7 @@ const NPCEditor: React.FC = () => {
                             cursor: 'pointer',
                             borderBottom: '1px solid #1a1a1a',
                             color: active ? 'var(--accent)' : '#888',
-                            background: active ? 'rgba(241, 196, 15, 0.05)' : 'transparent',
+                            background: active ? 'rgba(255, 0, 0, 0.05)' : 'transparent',
                             borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent'
                         }}>
                             <div style={{ fontSize: '1rem' }}>{item.name || 'Unnamed NPC'}</div>

@@ -1544,7 +1544,7 @@ function render() {
         
         targetCtx.save();
         targetCtx.globalAlpha = 0.5;
-        targetCtx.fillStyle = '#f1c40f'; // IRAB Gold
+        targetCtx.fillStyle = '#ff0000'; // IRAB Gold
         targetCtx.strokeStyle = '#fff';
         targetCtx.lineWidth = 2;
         targetCtx.setLineDash([2, 2]);

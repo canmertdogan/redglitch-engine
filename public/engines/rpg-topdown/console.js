@@ -38,7 +38,7 @@ class DebugConsole {
             background: rgba(5, 8, 15, 0.95); color: #cfd8dc;
             font-family: 'VT323', 'Consolas', monospace; font-size: 18px;
             z-index: 1000000; display: none; flex-direction: column;
-            border-top: 3px solid #f1c40f; box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+            border-top: 3px solid #ff0000; box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
             backdrop-filter: blur(5px); transition: transform 0.2s ease-out;
             transform: translateY(100%);
         `;
@@ -65,7 +65,7 @@ class DebugConsole {
         `;
         
         const prompt = document.createElement('span');
-        prompt.innerHTML = '<span style="color:#f1c40f">redglitch</span>@<span style="color:#00f3ff">engine</span>:~$ ';
+        prompt.innerHTML = '<span style="color:#ff0000">redglitch</span>@<span style="color:#00f3ff">engine</span>:~$ ';
         prompt.style.marginRight = '10px';
         
         this.input = document.createElement('input');
@@ -140,7 +140,7 @@ class DebugConsole {
         if (!val) { this.hint.innerText = ''; return; }
         const match = Object.keys(this.commands).find(c => c.startsWith(val));
         if (match) {
-            this.hint.innerHTML = `<span style="color:#f1c40f">Suggestion:</span> ${match} - ${this.commands[match].desc}`;
+            this.hint.innerHTML = `<span style="color:#ff0000">Suggestion:</span> ${match} - ${this.commands[match].desc}`;
         } else {
             this.hint.innerText = '';
         }
@@ -178,7 +178,7 @@ class DebugConsole {
         if (type === 'warn') { color = '#ffd740'; prefix = 'WRN'; }
         if (type === 'success') { color = '#69f0ae'; prefix = 'OK '; }
         if (type === 'system') { color = '#40c4ff'; prefix = 'SYS'; }
-        if (type === 'exec') { color = '#f1c40f'; prefix = 'EXE'; }
+        if (type === 'exec') { color = '#ff0000'; prefix = 'EXE'; }
 
         line.style.color = color;
         line.innerHTML = `<span style="color:#555">[${timestamp}] [${prefix}]</span> ${msg}`;
@@ -211,7 +211,7 @@ class DebugConsole {
         this.log("AVAILABLE COMMANDS:", "system");
         Object.keys(this.commands).sort().forEach(key => {
             const c = this.commands[key];
-            this.log(`<span style="color:#f1c40f">${key.padEnd(10)}</span> - ${c.desc} <span style="color:#555">(${c.usage})</span>`);
+            this.log(`<span style="color:#ff0000">${key.padEnd(10)}</span> - ${c.desc} <span style="color:#555">(${c.usage})</span>`);
         });
     }
 

@@ -113,7 +113,7 @@ const AssetManager: React.FC = () => {
                                 style={{
                                     padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
                                     color: activeCategory === cat.id ? 'var(--accent)' : '#888',
-                                    background: activeCategory === cat.id ? 'rgba(241, 196, 15, 0.05)' : 'transparent',
+                                    background: activeCategory === cat.id ? 'rgba(255, 0, 0, 0.05)' : 'transparent',
                                     borderLeft: activeCategory === cat.id ? '3px solid var(--accent)' : '3px solid transparent',
                                     borderBottom: '1px solid #111'
                                 }}
@@ -144,7 +144,7 @@ const AssetManager: React.FC = () => {
                                     background: '#0a0a0f', border: `1px solid ${selectedAssetId === asset.id ? 'var(--accent)' : '#222'}`,
                                     padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
                                     cursor: 'pointer', transition: 'all 0.1s', position: 'relative',
-                                    boxShadow: selectedAssetId === asset.id ? '0 0 15px rgba(241, 196, 15, 0.2)' : 'none'
+                                    boxShadow: selectedAssetId === asset.id ? '0 0 15px rgba(255, 0, 0, 0.2)' : 'none'
                                 }}
                             >
                                 <div style={{ 

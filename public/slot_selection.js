@@ -258,7 +258,7 @@ async function showSlotInfo(slotId) {
                     </div>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                         ${slot.player.achievements.map(achievement => 
-                            `<span style="padding: 5px 12px; background: rgba(241, 196, 15, 0.2); border: 1px solid #f1c40f; border-radius: 12px; font-size: 0.7rem; color: #f1c40f;">
+                            `<span style="padding: 5px 12px; background: rgba(255, 0, 0, 0.2); border: 1px solid #ff0000; border-radius: 12px; font-size: 0.7rem; color: #ff0000;">
                                 ${escapeHtml(achievement)}
                             </span>`
                         ).join('')}

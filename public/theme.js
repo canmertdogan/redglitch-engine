@@ -14,7 +14,7 @@ const THEMES = {
         'border': '#1f2b42',
         'border-highlight': '#34495e',
         'edge-border': '2px solid #020408',
-        'accent': '#f1c40f',
+        'accent': '#ff0000',
         'text-main': '#e0e0e0',
         'text-muted': '#888',
         'text': '#cfd8dc'

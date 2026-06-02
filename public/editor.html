@@ -14,7 +14,7 @@
             --bg-canvas: #080808;
             --bg-input: #000000;
             --border: #333;
-            --accent: #f1c40f;
+            --accent: #ff0000;
             --text-main: #e0e0e0;
             --text-muted: #888;
         }
@@ -105,7 +105,7 @@
         }
         .collision-type-btn:hover {
             transform: translateX(5px);
-            box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
         }
         .collision-type-btn.active {
             border-width: 2px !important;
@@ -217,7 +217,7 @@
             color: #000; 
             border-color: var(--accent); 
             font-weight: bold;
-            box-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         }
         
         .prop-btn {
@@ -267,13 +267,13 @@
             <div id="word-spitter" style="position:absolute; top:50%; left:50%; width:0; height:0; transform-style: preserve-3d;"></div>
         </div>
 
-        <div style="font-size:2rem; color:#f1c40f; margin-bottom:10px; text-shadow:0 0 10px #f1c40f; font-weight:bold; letter-spacing:2px;">
+        <div style="font-size:2rem; color:#ff0000; margin-bottom:10px; text-shadow:0 0 10px #ff0000; font-weight:bold; letter-spacing:2px;">
             <i class="fas fa-map"></i> LEVEL EDITOR
         </div>
         <div style="font-size:1.2rem; color:#888; margin-bottom:15px;" id="loading-text">INITIALIZING...</div>
         
         <div style="width:400px; height:20px; background:#111; border:2px solid #333; padding:2px;">
-            <div id="loading-bar" style="width:0%; height:100%; background:#f1c40f; transition:width 0.2s; box-shadow:0 0 10px #f1c40f;"></div>
+            <div id="loading-bar" style="width:0%; height:100%; background:#ff0000; transition:width 0.2s; box-shadow:0 0 10px #ff0000;"></div>
         </div>
         
         <style>
@@ -286,9 +286,9 @@
             .atom-ring {
                 position: absolute; top: 0; left: 0;
                 width: 100%; height: 100%;
-                border: 2px solid rgba(241, 196, 15, 0.6);
+                border: 2px solid rgba(255, 0, 0, 0.6);
                 border-radius: 50%;
-                box-shadow: 0 0 5px rgba(241, 196, 15, 0.2);
+                box-shadow: 0 0 5px rgba(255, 0, 0, 0.2);
             }
 
             /* 3D Orbits */
@@ -299,10 +299,10 @@
             .atom-nucleus {
                 position: absolute; top: 50%; left: 50%;
                 width: 20px; height: 20px;
-                background: radial-gradient(circle at 30% 30%, #fff, #f1c40f);
+                background: radial-gradient(circle at 30% 30%, #fff, #ff0000);
                 border-radius: 50%;
                 transform: translate(-50%, -50%);
-                box-shadow: 0 0 15px #f1c40f, 0 0 30px rgba(241, 196, 15, 0.5);
+                box-shadow: 0 0 15px #ff0000, 0 0 30px rgba(255, 0, 0, 0.5);
                 animation: pulse-nuc 2s ease-in-out infinite alternate;
             }
 
@@ -314,12 +314,12 @@
             @keyframes spin-ring-3 { from { transform: rotateY(120deg) rotateX(65deg) rotateZ(0deg); } to { transform: rotateY(120deg) rotateX(65deg) rotateZ(360deg); } }
             
             @keyframes pulse-nuc { 
-                from { box-shadow: 0 0 15px #f1c40f; transform: translate(-50%, -50%) scale(0.9); } 
-                to { box-shadow: 0 0 25px #f1c40f, 0 0 5px #fff; transform: translate(-50%, -50%) scale(1.1); } 
+                from { box-shadow: 0 0 15px #ff0000; transform: translate(-50%, -50%) scale(0.9); } 
+                to { box-shadow: 0 0 25px #ff0000, 0 0 5px #fff; transform: translate(-50%, -50%) scale(1.1); } 
             }
 
             .spit-word {
-                position: absolute; color: #f1c40f; font-weight: bold; font-size: 1.2rem;
+                position: absolute; color: #ff0000; font-weight: bold; font-size: 1.2rem;
                 pointer-events: none; white-space: nowrap;
                 text-shadow: 0 0 5px #000;
             }
@@ -632,7 +632,7 @@
                             <button id="collision-type-2" class="collision-type-btn" onclick="selectCollisionType(2)" style="background:rgba(52,152,219,0.3); color:#fff; padding:8px; border:1px solid #3498db; cursor:pointer;">
                                 <strong>2</strong> - Shadowless Wall
                             </button>
-                            <button id="collision-type-3" class="collision-type-btn" onclick="selectCollisionType(3)" style="background:rgba(241,196,15,0.3); color:#fff; padding:8px; border:1px solid #f1c40f; cursor:pointer;">
+                            <button id="collision-type-3" class="collision-type-btn" onclick="selectCollisionType(3)" style="background:rgba(255, 0, 0,0.3); color:#fff; padding:8px; border:1px solid #ff0000; cursor:pointer;">
                                 <strong>3</strong> - Half-Height
                             </button>
                             <button id="collision-type-4" class="collision-type-btn" onclick="selectCollisionType(4)" style="background:rgba(46,204,113,0.3); color:#fff; padding:8px; border:1px solid #2ecc71; cursor:pointer;">

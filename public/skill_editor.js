@@ -186,7 +186,7 @@ function renderPreview() {
             img.onload = () => draw(img);
         }
     } else {
-        ctx.fillStyle = '#f1c40f';
+        ctx.fillStyle = '#ff0000';
         ctx.fillRect(16, 16, 32, 32);
     }
 }

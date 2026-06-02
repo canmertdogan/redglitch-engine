@@ -253,7 +253,7 @@ class InteractiveCutsceneEditor {
                             id: npc.id,
                             name: npc.name,
                             sprite: npc.sprite,
-                            color: '#f1c40f'
+                            color: '#ff0000'
                         });
                     }
                 });
@@ -995,7 +995,7 @@ class InteractiveCutsceneEditor {
         if (!track || track.keyframes.length < 2) return;
         
         // Draw path line connecting all keyframes
-        ctx.strokeStyle = 'rgba(241, 196, 15, 0.6)'; // Yellow path
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)'; // Yellow path
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]); // Dashed line
         
@@ -1017,7 +1017,7 @@ class InteractiveCutsceneEditor {
                 // Draw keyframe markers
                 ctx.save();
                 ctx.setLineDash([]); // Remove dashes for markers
-                ctx.fillStyle = 'rgba(241, 196, 15, 0.8)';
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
                 ctx.beginPath();
                 ctx.arc(x, y, 4, 0, 2 * Math.PI);
                 ctx.fill();
@@ -1142,7 +1142,7 @@ class InteractiveCutsceneEditor {
         
         // Selection highlight
         if (isSelected) {
-            ctx.strokeStyle = '#f1c40f';
+            ctx.strokeStyle = '#ff0000';
             ctx.lineWidth = 3;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
@@ -1151,7 +1151,7 @@ class InteractiveCutsceneEditor {
             ctx.setLineDash([]); // Reset dash
             
             // Selection crosshairs
-            ctx.strokeStyle = '#f1c40f';
+            ctx.strokeStyle = '#ff0000';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(x - 25, y);
@@ -1170,7 +1170,7 @@ class InteractiveCutsceneEditor {
         ctx.fill();
         
         // Character outline
-        ctx.strokeStyle = isSelected ? '#f1c40f' : '#000';
+        ctx.strokeStyle = isSelected ? '#ff0000' : '#000';
         ctx.lineWidth = isSelected ? 3 : 2;
         ctx.setLineDash([]);
         ctx.stroke();
@@ -1187,14 +1187,14 @@ class InteractiveCutsceneEditor {
         
         // Hover/interaction indicator
         if (this.currentTool === 'move') {
-            ctx.fillStyle = 'rgba(241,196,15,0.3)';
+            ctx.fillStyle = 'rgba(255, 0, 0,0.3)';
             ctx.beginPath();
             ctx.arc(x, y, radius + 5, 0, 2 * Math.PI);
             ctx.fill();
         }
         
         // Character label
-        ctx.fillStyle = isSelected ? '#f1c40f' : '#f1c40f';
+        ctx.fillStyle = isSelected ? '#ff0000' : '#ff0000';
         ctx.font = `${12 * scale}px VT323`;
         ctx.textAlign = 'center';
         ctx.strokeStyle = '#000';
@@ -1204,7 +1204,7 @@ class InteractiveCutsceneEditor {
         
         // Position coordinates (when selected)
         if (isSelected) {
-            ctx.fillStyle = '#f1c40f';
+            ctx.fillStyle = '#ff0000';
             ctx.font = '10px VT323';
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 2;
@@ -1234,13 +1234,13 @@ class InteractiveCutsceneEditor {
         ctx.fillRect(margin, boxY, canvas.width - margin*2, boxHeight);
         
         // Border
-        ctx.strokeStyle = '#f1c40f';
+        ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 3;
         ctx.strokeRect(margin, boxY, canvas.width - margin*2, boxHeight);
         
         // Speaker name
         if (activeDialogue.speaker) {
-            ctx.fillStyle = '#f1c40f';
+            ctx.fillStyle = '#ff0000';
             ctx.font = '16px VT323';
             ctx.textAlign = 'left';
             ctx.fillText(activeDialogue.speaker.toUpperCase(), margin + 15, boxY + 25);
@@ -1314,16 +1314,16 @@ class InteractiveCutsceneEditor {
             const y = choiceY - totalHeight + 15 + index * (choiceHeight + choiceSpacing);
             
             // Choice background
-            ctx.fillStyle = index === 0 ? 'rgba(241,196,15,0.2)' : 'rgba(50,50,50,0.8)';
+            ctx.fillStyle = index === 0 ? 'rgba(255, 0, 0,0.2)' : 'rgba(50,50,50,0.8)';
             ctx.fillRect(canvas.width - 290, y - 15, 260, choiceHeight);
             
             // Choice border
-            ctx.strokeStyle = index === 0 ? '#f1c40f' : '#666';
+            ctx.strokeStyle = index === 0 ? '#ff0000' : '#666';
             ctx.lineWidth = 1;
             ctx.strokeRect(canvas.width - 290, y - 15, 260, choiceHeight);
             
             // Choice text
-            ctx.fillStyle = index === 0 ? '#f1c40f' : '#ccc';
+            ctx.fillStyle = index === 0 ? '#ff0000' : '#ccc';
             ctx.font = '12px VT323';
             ctx.textAlign = 'left';
             ctx.fillText(`${index + 1}. ${choice.text}`, canvas.width - 280, y);
@@ -1385,11 +1385,11 @@ class InteractiveCutsceneEditor {
         // Time indicator
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
         ctx.fillRect(10, 10, 120, 30);
-        ctx.strokeStyle = '#f1c40f';
+        ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 2;
         ctx.strokeRect(10, 10, 120, 30);
         
-        ctx.fillStyle = '#f1c40f';
+        ctx.fillStyle = '#ff0000';
         ctx.font = '14px VT323';
         ctx.textAlign = 'left';
         ctx.fillText(`TIME: ${time.toFixed(1)}s`, 20, 30);
@@ -1397,10 +1397,10 @@ class InteractiveCutsceneEditor {
         // Scene title
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
         ctx.fillRect(canvas.width-200, 10, 190, 30);
-        ctx.strokeStyle = '#f1c40f';
+        ctx.strokeStyle = '#ff0000';
         ctx.strokeRect(canvas.width-200, 10, 190, 30);
         
-        ctx.fillStyle = '#f1c40f';
+        ctx.fillStyle = '#ff0000';
         ctx.textAlign = 'right';
         ctx.fillText('FOREST ENCOUNTER', canvas.width-10, 30);
         
@@ -1419,7 +1419,7 @@ class InteractiveCutsceneEditor {
         // Progress bar
         const duration = this.getActiveDuration();
         const progress = duration > 0 ? time / duration : 0;
-        ctx.fillStyle = '#f1c40f';
+        ctx.fillStyle = '#ff0000';
         ctx.fillRect(20, scrubY, scrubWidth * progress, scrubHeight);
         
         // Playhead indicator
@@ -1450,9 +1450,9 @@ class InteractiveCutsceneEditor {
         
         // Tool indicator
         if (this.currentTool !== 'select') {
-            ctx.fillStyle = 'rgba(241,196,15,0.9)';
+            ctx.fillStyle = 'rgba(255, 0, 0,0.9)';
             ctx.fillRect(10, 50, 80, 20);
-            ctx.strokeStyle = '#f1c40f';
+            ctx.strokeStyle = '#ff0000';
             ctx.strokeRect(10, 50, 80, 20);
             
             ctx.fillStyle = '#000';

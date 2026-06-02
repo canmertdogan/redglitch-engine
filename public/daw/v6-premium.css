@@ -4,8 +4,8 @@
    =================================== */
 
 :root {
-    --gold: #f1c40f;
-    --gold-glow: rgba(241, 196, 15, 0.4);
+    --gold: #ff0000;
+    --gold-glow: rgba(255, 0, 0, 0.4);
     --gold-dim: #9a7d0a;
     --bg-obsidian: #050508;
     --bg-panel: #12151c;
@@ -252,7 +252,7 @@ body {
 
 .grid-bg::before {
     content: ''; position: fixed; inset: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(241, 196, 15, 0.05) 0%, transparent 70%);
+    background: radial-gradient(circle at 50% 50%, rgba(255, 0, 0, 0.05) 0%, transparent 70%);
     pointer-events: none;
 }
 
@@ -403,7 +403,7 @@ body {
 }
 
 .btn-icon-small:hover {
-    background: rgba(241, 196, 15, 0.1);
+    background: rgba(255, 0, 0, 0.1);
 }
 
 .inspector-block {
@@ -583,7 +583,7 @@ body {
 .sidebar-toggle.is-collapsed {
     border-color: var(--gold);
     color: var(--gold);
-    background: rgba(241, 196, 15, 0.08);
+    background: rgba(255, 0, 0, 0.08);
 }
 
 #main-container {
@@ -615,7 +615,7 @@ body {
 }
 
 .sidebar-handle:hover {
-    background: rgba(241, 196, 15, 0.18);
+    background: rgba(255, 0, 0, 0.18);
     color: #fff;
 }
 

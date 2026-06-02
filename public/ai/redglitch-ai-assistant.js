@@ -237,7 +237,7 @@ class IRABAssistantSimple {
     }
 
     _debug(msg, data) {
-        console.log(`%c[Kai:Assistant]%c ${msg}`, 'background: #f1c40f; color: #000; padding: 2px 5px;', '', data || '');
+        console.log(`%c[Kai:Assistant]%c ${msg}`, 'background: #ff0000; color: #000; padding: 2px 5px;', '', data || '');
     }
 
     async processQuery(query) {

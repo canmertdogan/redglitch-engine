@@ -49,7 +49,7 @@ class AbilityDefinitions {
             damage: 35,
             sprite: 'skillIcon_lightning',
             projectileSprite: 'projectile_lightning',
-            color: '#f1c40f',
+            color: '#ff0000',
             speed: 400,
             lifetime: 2.0,
             icon: '⚡'

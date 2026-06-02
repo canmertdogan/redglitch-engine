@@ -255,7 +255,7 @@ const FPSEditor = (() => {
         const map = {
             'player-spawn': '#27ae60',
             'enemy-grunt': '#e74c3c', 'enemy-shooter': '#c0392b', 'enemy-patrol': '#922b21',
-            'pickup-health': '#2ecc71', 'pickup-ammo': '#f1c40f', 'pickup-armor': '#3498db', 'pickup-weapon': '#9b59b6',
+            'pickup-health': '#2ecc71', 'pickup-ammo': '#ff0000', 'pickup-armor': '#3498db', 'pickup-weapon': '#9b59b6',
             'door': '#e67e22', 'switch': '#f39c12', 'level-exit': '#ff6b35',
         };
         return map[type] || '#aaa';

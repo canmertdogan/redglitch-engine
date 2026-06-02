@@ -20,7 +20,7 @@ class PlatformerTrigger extends PlatformerEntity {
         this.cooldown = 0;
         this.cooldownMax = 0.5;
 
-        this.color = '#f1c40f';
+        this.color = '#ff0000';
         this.spriteName = config.triggerType === 'switch' ? 'switch_off' : 'trigger_zone';
     }
 
@@ -80,7 +80,7 @@ class PlatformerTrigger extends PlatformerEntity {
             // Don't draw zone in-game, only in editor (handled by EditorCore)
             if (window.DEBUG_MODE) {
                 const ctx = renderer.ctx;
-                ctx.strokeStyle = 'rgba(241, 196, 15, 0.5)';
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
                 ctx.setLineDash([5, 5]);
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
                 ctx.setLineDash([]);

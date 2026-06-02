@@ -246,7 +246,7 @@ window.IRAB = {
             this.currentBotMsg = null; // Ensure new bubble for prompt response
         } else if (state === 'CONNECTING') {
             dot.className = 'irab-status-dot';
-            dot.style.background = '#f1c40f'; // Yellow
+            dot.style.background = '#ff0000'; // Yellow
             st.textContent = 'Connecting...';
         } else if (state === 'OFFLINE') {
             dot.className = 'irab-status-dot';

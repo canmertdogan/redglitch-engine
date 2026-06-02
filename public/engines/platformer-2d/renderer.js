@@ -741,7 +741,7 @@ class PlatformerRenderer {
         const x = goal.x * this.tileSize;
         const y = goal.y * this.tileSize;
         this.ctx.save();
-        this.ctx.fillStyle = '#f1c40f';
+        this.ctx.fillStyle = '#ff0000';
         this.ctx.beginPath();
         for(let i = 0; i < 5; i++) {
             const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;

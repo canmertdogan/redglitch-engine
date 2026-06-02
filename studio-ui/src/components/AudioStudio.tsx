@@ -67,8 +67,8 @@ interface TriggerLog {
 }
 
 const THEME = {
-    accent: '#f1c40f',
-    accentSoft: 'rgba(241, 196, 15, 0.08)',
+    accent: '#ff0000',
+    accentSoft: 'rgba(255, 0, 0, 0.08)',
     bgRoot: '#050608',
     bgDeep: '#080a0f',
     bgPanel: '#12151c',
@@ -1056,7 +1056,7 @@ const AudioStudio: React.FC = () => {
                                     WAVEFORM_ANALYZER_v7
                                 </div>
                                 {isDraggingOver && (
-                                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(241, 196, 15, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px dashed ${THEME.accent}` }}>
+                                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 0, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px dashed ${THEME.accent}` }}>
                                         <div style={{ background: '#000', padding: '10px 20px', color: THEME.accent, fontWeight: 'bold' }}>DROP TO ATTACH</div>
                                     </div>
                                 )}

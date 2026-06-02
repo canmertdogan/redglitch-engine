@@ -20,7 +20,7 @@ class AssetSynthesizer {
         if (tags.includes('red') || tags.includes('health') || tags.includes('fire')) color = '#e74c3c';
         if (tags.includes('blue') || tags.includes('mana') || tags.includes('water')) color = '#3498db';
         if (tags.includes('green') || tags.includes('poison') || tags.includes('grass')) color = '#2ecc71';
-        if (tags.includes('yellow') || tags.includes('gold') || tags.includes('coin')) color = '#f1c40f';
+        if (tags.includes('yellow') || tags.includes('gold') || tags.includes('coin')) color = '#ff0000';
         if (tags.includes('purple') || tags.includes('void') || tags.includes('magic')) color = '#9b59b6';
 
         // Disable smoothing for pixel art

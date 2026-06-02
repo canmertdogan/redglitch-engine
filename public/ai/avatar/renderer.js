@@ -151,7 +151,7 @@ class IrabAvatar {
         ctx.translate(60, 60 + bob);
 
         // Draw Body (Simple procedural shape for now)
-        ctx.fillStyle = this.state === 'THINKING' ? '#f1c40f' : '#e74c3c';
+        ctx.fillStyle = this.state === 'THINKING' ? '#ff0000' : '#e74c3c';
         ctx.beginPath();
         ctx.arc(0, 0, 40, 0, Math.PI * 2);
         ctx.fill();

@@ -2085,7 +2085,7 @@ export class AlgorithmStudio {
         if(type === 'exec') return '#fff';
         if(type === 'bool') return '#e74c3c';
         if(type === 'num') return '#2ecc71';
-        if(type === 'string') return '#f1c40f';
+        if(type === 'string') return '#ff0000';
         if(type === 'entity') return '#3498db';
         return '#888';
     }

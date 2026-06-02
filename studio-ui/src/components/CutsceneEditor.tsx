@@ -186,7 +186,7 @@ const CutsceneEditor: React.FC = () => {
                                 <div key={track.id} style={{ display: 'flex', borderBottom: '1px solid #111', minHeight: '40px' }}>
                                     <div style={{ width: '200px', flexShrink: 0, borderRight: '1px solid #222', background: '#000', padding: '10px 15px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
                                         {track.type === 'actor' ? <User size={14} color="#3498db" /> : 
-                                         track.type === 'audio' ? <Music size={14} color="#2ecc71" /> : <MessageSquare size={14} color="#f1c40f" />}
+                                         track.type === 'audio' ? <Music size={14} color="#2ecc71" /> : <MessageSquare size={14} color="#ff0000" />}
                                         {track.name.toLowerCase()}
                                     </div>
                                     <div style={{ flexGrow: 1, background: 'rgba(0,0,0,0.2)', position: 'relative' }}>

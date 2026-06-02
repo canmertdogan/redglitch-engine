@@ -462,7 +462,7 @@ class IsoStrategy {
                     } else if (sprites && sprites[item.data.animState]) {
                         this.drawCharacter(ctx, item.data, pos.x, pos.y, dims, sprites);
                     } else {
-                        ctx.fillStyle = item.data.color || '#f1c40f';
+                        ctx.fillStyle = item.data.color || '#ff0000';
                         const pH = dims.h * 1.5;
                         ctx.fillRect(pos.x - 8, pos.y - pH, 16, pH);
                     }
@@ -787,12 +787,12 @@ class IsoStrategy {
         if (mx < 0 || my < 0 || mx >= map.width || my >= map.height) return;
         const basePos = this.project(mx, my, 0, dims);
         const topPos = this.project(mx, my, mz, dims);
-        ctx.strokeStyle = 'rgba(241, 196, 15, 0.5)'; ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(basePos.x, basePos.y); ctx.lineTo(basePos.x + dims.w/2, basePos.y + dims.h/2); ctx.lineTo(basePos.x, basePos.y + dims.h); ctx.lineTo(basePos.x - dims.w/2, basePos.y + dims.h/2); ctx.closePath(); ctx.stroke();
         ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(basePos.x, basePos.y + dims.h/2); ctx.lineTo(topPos.x, topPos.y + dims.h/2); ctx.stroke(); ctx.setLineDash([]);
         ctx.beginPath(); ctx.moveTo(topPos.x, topPos.y); ctx.lineTo(topPos.x + dims.w/2, topPos.y + dims.h/2); ctx.lineTo(topPos.x, topPos.y + dims.h); ctx.lineTo(topPos.x - dims.w/2, topPos.y + dims.h/2); ctx.closePath();
-        ctx.fillStyle = 'rgba(241, 196, 15, 0.2)'; ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#f1c40f"; ctx.font = "12px monospace"; ctx.fillText(`Z: ${mz}`, topPos.x + dims.w/2 + 5, topPos.y + dims.h/2);
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.2)'; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#ff0000"; ctx.font = "12px monospace"; ctx.fillText(`Z: ${mz}`, topPos.x + dims.w/2 + 5, topPos.y + dims.h/2);
     }
 
     draw3DBox(ctx, t, dims, color) {

@@ -262,7 +262,7 @@
         }
         #levelcomplete-overlay.hidden { display: none; }
         #levelcomplete-title {
-            color: #f1c40f;
+            color: #ff0000;
             font-size: 64px;
             letter-spacing: 6px;
         }
@@ -462,7 +462,7 @@
         game.onLevelComplete = (stats) => {
             if (hud) hud.classList.add('hidden');
             if (levelCompleteOverlay) levelCompleteOverlay.classList.remove('hidden');
-            flashScreen('#f1c40f', 600);
+            flashScreen('#ff0000', 600);
             const statsEl = document.getElementById('levelcomplete-stats');
             if (statsEl) {
                 statsEl.innerHTML = `COINS: ${stats.coins ?? 0}<br>SCORE: ${stats.score ?? 0}`;

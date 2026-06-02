@@ -190,7 +190,7 @@ class PrefabEditor {
             case 'Stats': return { hp: 100, maxHp: 100, damage: 10, speed: 50, xpValue: 20 };
             case 'Collider': return { width: 16, height: 16, offsetX: 0, offsetY: 0, isTrigger: false };
             case 'Script': return { scriptId: 'demo', onDeath: '', onSpawn: '' };
-            case 'Light': return { radius: 100, color: '#f1c40f', intensity: 0.5, pulse: false };
+            case 'Light': return { radius: 100, color: '#ff0000', intensity: 0.5, pulse: false };
             case 'Loot': return { table: 'common', chance: 1.0, goldMin: 0, goldMax: 5 };
             case 'Particle': return { system: 'fire', active: true, offset: {x:0, y:0} };
             case 'Prefab': return { ref: '', x: 0, y: 0, scale: 1, rotation: 0 };
@@ -476,7 +476,7 @@ class PrefabEditor {
                     }
                     
                     if (isSelected) {
-                        ctx.strokeStyle = '#f1c40f';
+                        ctx.strokeStyle = '#ff0000';
                         ctx.lineWidth = 2 / finalScale;
                         ctx.strokeRect(-20, -20, 40, 40);
                     }
@@ -485,7 +485,7 @@ class PrefabEditor {
                     // Placeholder
                     ctx.save();
                     ctx.translate(comp.x, comp.y);
-                    ctx.strokeStyle = isSelected ? '#f1c40f' : '#444';
+                    ctx.strokeStyle = isSelected ? '#ff0000' : '#444';
                     ctx.setLineDash([4, 2]);
                     ctx.strokeRect(-16, -16, 32, 32);
                     ctx.restore();

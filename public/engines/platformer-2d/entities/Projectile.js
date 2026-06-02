@@ -11,7 +11,7 @@ class PlatformerProjectile extends PlatformerEntity {
         this.vy = vy;
         this.damage = config.damage || 10;
         this.lifetime = config.lifetime || 2.0;
-        this.color = config.color || '#f1c40f';
+        this.color = config.color || '#ff0000';
         this.type = 'projectile';
         this.ignoreGravity = config.ignoreGravity !== false;
         this.isEnemy = config.isEnemy || false;

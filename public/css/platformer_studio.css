@@ -2,7 +2,7 @@
     --bg-deep: #0a0a0a;
     --bg-panel: #1a1a1a;
     --bg-hover: #2a2a2a;
-    --accent: #f1c40f;
+    --accent: #ff0000;
     --accent-dim: #9a7d0a;
     --text: #ffffff;
     --text-dim: #888888;
@@ -276,7 +276,7 @@ body {
 .asset-card.active {
     border-color: var(--accent);
     background: var(--accent-dim);
-    box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
 }
 
 .asset-card .icon {

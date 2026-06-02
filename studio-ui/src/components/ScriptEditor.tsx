@@ -162,8 +162,8 @@ const ScriptEditor: React.FC = () => {
                 colors: {
                     'editor.background': '#050505',
                     'editor.lineHighlightBackground': '#111111',
-                    'editorCursor.foreground': '#f1c40f',
-                    'editor.selectionBackground': '#f1c40f33',
+                    'editorCursor.foreground': '#ff0000',
+                    'editor.selectionBackground': '#ff000033',
                     'editorIndentGuide.background': '#222222',
                 }
             });
@@ -290,7 +290,7 @@ const ScriptEditor: React.FC = () => {
                             fontSize: '0.9rem'
                         }}
                     >
-                        {isDir ? (isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : <FileCode size={14} color="#f1c40f" />}
+                        {isDir ? (isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : <FileCode size={14} color="#ff0000" />}
                         {node.name.toLowerCase()}
                     </div>
                     {isDir && isExpanded && node.children && renderTreeNodes(node.children, depth + 1)}
@@ -299,7 +299,7 @@ const ScriptEditor: React.FC = () => {
         });
     };
 
-    if (!isReady) return <div style={{ color: '#f1c40f', padding: '20px' }}>BOOTING FORGE KERNEL...</div>;
+    if (!isReady) return <div style={{ color: 'var(--accent)', padding: '20px' }}>BOOTING FORGE KERNEL...</div>;
 
     const currentTab = tabs[activeTabIdx];
 

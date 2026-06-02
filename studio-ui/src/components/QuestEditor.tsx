@@ -221,7 +221,7 @@ const QuestEditor: React.FC = () => {
                         <div style={{
                             padding: '10px', cursor: 'pointer', borderBottom: '1px solid #1a1a1a',
                             color: active ? 'var(--accent)' : '#888',
-                            background: active ? 'rgba(241, 196, 15, 0.05)' : 'transparent',
+                            background: active ? 'rgba(255, 0, 0, 0.05)' : 'transparent',
                             borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent'
                         }}>
                             <div style={{ fontSize: '0.9rem' }}>{q.title.toUpperCase() || 'UNNAMED'}</div>
@@ -408,7 +408,7 @@ const QuestEditor: React.FC = () => {
                                 <div style={{ fontSize: '0.75rem', color: '#444', letterSpacing: '1px' }}>REWARDS:</div>
                                 <div style={{ display: 'flex', gap: '15px' }}>
                                     <span style={{ color: '#2ecc71', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px' }}><ShieldCheck size={14}/> {currentQuest.rewards.xp}</span>
-                                    <span style={{ color: '#f1c40f', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px' }}><Gift size={14}/> {currentQuest.rewards.gold}</span>
+                                    <span style={{ color: '#ff0000', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px' }}><Gift size={14}/> {currentQuest.rewards.gold}</span>
                                 </div>
                             </div>
                         </div>

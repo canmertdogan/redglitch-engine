@@ -394,7 +394,7 @@ class InteractiveCutsceneChoices {
             position: absolute; top: 50%; left: 50%; 
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.9);
-            border: 2px solid #f1c40f;
+            border: 2px solid #ff0000;
             border-radius: 8px;
             padding: 20px;
             display: none;
@@ -407,7 +407,7 @@ class InteractiveCutsceneChoices {
         console.log("Showing choices:", choiceData);
         
         this.choicesUI.innerHTML = `
-            <h3 style="color: #f1c40f; margin-top: 0;">${choiceData.prompt || 'Choose:'}</h3>
+            <h3 style="color: #ff0000; margin-top: 0;">${choiceData.prompt || 'Choose:'}</h3>
         `;
         
         choiceData.choices.forEach((choice, index) => {
@@ -416,7 +416,7 @@ class InteractiveCutsceneChoices {
             button.style.cssText = `
                 display: block; width: 100%; margin: 10px 0;
                 padding: 10px; background: #2c3e50; color: white;
-                border: 1px solid #f1c40f; cursor: pointer;
+                border: 1px solid #ff0000; cursor: pointer;
             `;
             
             button.addEventListener('click', () => {

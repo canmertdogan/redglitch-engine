@@ -92,7 +92,7 @@ class AudioDirectorUltraHD {
     }
 
     async init() {
-        console.log('%c[AudioDirector:V7] Booting Expanded Feature Set...', 'color:#f1c40f;font-weight:900;');
+        console.log('%c[AudioDirector:V7] Booting Expanded Feature Set...', 'color:#ff0000;font-weight:900;');
         await this.loadData();
         this.normalizeMap();
         this.ensureBusUiState();
@@ -1088,7 +1088,7 @@ class AudioDirectorUltraHD {
         const amp = canvas.height / 2;
 
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(241, 196, 15, 0.35)';
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.35)';
         ctx.lineWidth = 1;
         ctx.moveTo(0, amp);
         for (let i = 0; i < canvas.width; i++) {
@@ -1117,8 +1117,8 @@ class AudioDirectorUltraHD {
         for (let i = 0; i < data.length; i++) {
             const h = (data[i] / 255) * canvas.height;
             const grad = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - h);
-            grad.addColorStop(0, 'rgba(241, 196, 15, 0.0)');
-            grad.addColorStop(1, 'rgba(241, 196, 15, 0.4)');
+            grad.addColorStop(0, 'rgba(255, 0, 0, 0.0)');
+            grad.addColorStop(1, 'rgba(255, 0, 0, 0.4)');
             ctx.fillStyle = grad;
             ctx.fillRect(x, canvas.height - h, barWidth, h);
             x += barWidth + 1;

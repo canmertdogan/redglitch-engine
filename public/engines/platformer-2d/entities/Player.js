@@ -119,7 +119,7 @@ class PlatformerPlayer extends PlatformerEntity {
         if (window.game?.combat) {
             window.game.combat.spawnProjectile(this, this.x + this.w/2, this.y + this.h/2, vx, vy, {
                 damage: 15,
-                color: '#f1c40f',
+                color: '#ff0000',
                 w: 12, h: 12
             });
         }

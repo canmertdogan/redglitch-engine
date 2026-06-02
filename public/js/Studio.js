@@ -156,14 +156,14 @@ function renderMinimap(canvas) {
     ctx.scale(scale, scale);
     ctx.translate(-minX + padding, -minY + padding);
 
-    ctx.strokeStyle = 'rgba(241, 196, 15, 0.5)';
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
     ctx.lineWidth = 10 / scale;
     ctx.strokeRect(-workspacePan.x, -workspacePan.y, window.innerWidth, window.innerHeight);
 
     windows.forEach(w => {
         const wx = parseFloat(w.style.left) || 0;
         const wy = parseFloat(w.style.top) || 0;
-        ctx.fillStyle = w.classList.contains('focused') ? '#f1c40f' : 'rgba(52, 73, 94, 0.8)';
+        ctx.fillStyle = w.classList.contains('focused') ? '#ff0000' : 'rgba(52, 73, 94, 0.8)';
         ctx.fillRect(wx, wy, w.offsetWidth, w.offsetHeight);
     });
 
@@ -954,7 +954,7 @@ window.renderTree = function() {
         let icon = isDir ? `<i class="fas ${expandedDirs.has(node.path) ? 'fa-folder-open' : 'fa-folder'}" style="color:#3498db"></i>` : '<i class="far fa-file"></i>';
         if (node.type === 'file') {
             const ext = node.name.split('.').pop();
-            if (ext === 'js') icon = '<i class="fab fa-js" style="color:#f1c40f"></i>';
+            if (ext === 'js') icon = '<i class="fab fa-js" style="color:#ff0000"></i>';
             else if (ext === 'json') icon = '<i class="fas fa-cog" style="color:#aaa"></i>';
             else if (ext === 'html') icon = '<i class="fas fa-code" style="color:#e44d26"></i>';
         }

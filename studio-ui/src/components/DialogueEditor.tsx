@@ -92,7 +92,7 @@ const DialogueEditor: React.FC = () => {
                         const npcs = await nRes.json();
                         npcs.forEach((npc: any) => {
                             if (!loadedChars.find((c: any) => c.id === npc.id)) {
-                                loadedChars.push({ id: npc.id, name: npc.name || npc.id, sprite: npc.sprite || 'player', color: '#f1c40f' });
+                                loadedChars.push({ id: npc.id, name: npc.name || npc.id, sprite: npc.sprite || 'player', color: '#ff0000' });
                             }
                         });
                     }

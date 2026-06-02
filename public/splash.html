@@ -8,7 +8,7 @@
     <style>
         :root {
             --bg: #000;
-            --accent: #f1c40f;
+            --accent: #ff0000;
             --text: #cfd8dc;
             --dim: #444;
             --hud-blue: rgba(64, 224, 208, 0.3);
@@ -93,10 +93,34 @@
             font-size: 2rem;
             letter-spacing: 6px;
             color: #fff;
-            text-shadow: 0 0 6px rgba(241, 196, 15, 0.25);
+            text-shadow: 0 0 6px rgba(255, 0, 0, 0.25);
             pointer-events: none;
         }
-        .glitch span { color: var(--accent); }
+        .glitch span.brand-studio { color: var(--accent); }
+        .brand-red {
+            color: #ff0000;
+            text-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+        }
+        .brand-glitch {
+            background: linear-gradient(
+                to right,
+                #ff0055,
+                #ffdd00,
+                #00ff77,
+                #00bbff,
+                #ff00bb,
+                #ff0055
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow-anim 3s linear infinite;
+            display: inline-block;
+        }
+        @keyframes rainbow-anim {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
 
         .subtitle {
             font-size: 0.9rem;
@@ -204,8 +228,8 @@
 
     <!-- CORNER BRANDING -->
     <div class="glitch" style="z-index:100;">
-        REDGLITCH GAME <span>STUDIO</span>
-        <div class="subtitle" style="margin:0; letter-spacing:2px; opacity:0.6;">redglitch ENGINE V7</div>
+        <span class="brand-red">RED</span><span class="brand-glitch">GLITCH</span> GAME <span class="brand-studio">STUDIO</span>
+        <div class="subtitle" style="margin:0; letter-spacing:2px; opacity:0.6;"><span class="brand-red" style="font-size:inherit; text-shadow:none;">red</span><span class="brand-glitch" style="font-size:inherit;">glitch</span> ENGINE V7</div>
     </div>
 
     <div style="position:fixed; top:35px; right:40px; z-index:100; text-align:right; pointer-events: none;">

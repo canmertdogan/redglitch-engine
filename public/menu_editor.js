@@ -44,13 +44,13 @@ const ELEMENT_DEFAULTS = {
     label: {
         text: 'TEXT LABEL',
         rect: { x: 50, y: 50, w: 200, h: 40 },
-        style: { backgroundColor: 'transparent', color: '#f1c40f', fontSize: 24, textAlign: 'left', borderWidth: 0, borderColor: 'transparent' },
+        style: { backgroundColor: 'transparent', color: '#ff0000', fontSize: 24, textAlign: 'left', borderWidth: 0, borderColor: 'transparent' },
         props: {}
     },
     button: {
         text: 'BUTTON',
         rect: { x: 50, y: 50, w: 140, h: 44 },
-        style: { backgroundColor: '#333', color: '#f1c40f', borderWidth: 2, borderColor: '#fff', fontSize: 20, textAlign: 'center' },
+        style: { backgroundColor: '#333', color: '#ff0000', borderWidth: 2, borderColor: '#fff', fontSize: 20, textAlign: 'center' },
         script: '',
         props: {}
     },

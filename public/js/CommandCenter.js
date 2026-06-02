@@ -577,7 +577,7 @@ function openFileInParent(path) {
 }
 
 const DASHBOARD_THEME_FALLBACKS = {
-    'modern-dark': { 'bg-root': '#050508', 'bg-widget': '#0a0e14', 'bg-input': '#000000', 'border': '#1f2b42', 'border-highlight': '#34495e', 'accent': '#f1c40f', 'cyan': '#40e0d0', 'green': '#2ecc71', 'red': '#e74c3c' },
+    'modern-dark': { 'bg-root': '#050508', 'bg-widget': '#0a0e14', 'bg-input': '#000000', 'border': '#1f2b42', 'border-highlight': '#34495e', 'accent': '#ff0000', 'cyan': '#40e0d0', 'green': '#2ecc71', 'red': '#e74c3c' },
     'cyberpunk': { 'bg-root': '#0d0221', 'bg-widget': '#130a24', 'bg-input': '#241734', 'border': '#ff0055', 'border-highlight': '#ff4d88', 'accent': '#00f3ff', 'cyan': '#00f3ff', 'green': '#39ff88', 'red': '#ff3366' },
     'classic-dungeon': { 'bg-root': '#1a1a1a', 'bg-widget': '#252525', 'bg-input': '#0f0f0f', 'border': '#4a4a4a', 'border-highlight': '#666666', 'accent': '#e67e22', 'cyan': '#a2c4c9', 'green': '#7cb342', 'red': '#c0392b' },
     'modern-light': { 'bg-root': '#f3f6fb', 'bg-widget': '#ffffff', 'bg-input': '#ffffff', 'border': '#b8c7db', 'border-highlight': '#8ea6c5', 'accent': '#2563eb', 'cyan': '#0ea5e9', 'green': '#16a34a', 'red': '#dc2626' }

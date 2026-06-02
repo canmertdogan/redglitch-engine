@@ -56,7 +56,7 @@ const EntitySpawner = (() => {
         'enemy-shooter': { icon: '🎯', label: 'Shooter',       color: '#c0392b', cat: 'enemy'   },
         'enemy-patrol':  { icon: '🚶', label: 'Patrol Route',  color: '#922b21', cat: 'enemy'   },
         'pickup-health': { icon: '❤️',  label: 'Health Pack',   color: '#2ecc71', cat: 'pickup'  },
-        'pickup-ammo':   { icon: '📦', label: 'Ammo Crate',    color: '#f1c40f', cat: 'pickup'  },
+        'pickup-ammo':   { icon: '📦', label: 'Ammo Crate',    color: '#ff0000', cat: 'pickup'  },
         'pickup-armor':  { icon: '🛡️',  label: 'Armor Shard',  color: '#3498db', cat: 'pickup'  },
         'pickup-weapon': { icon: '🔫', label: 'Weapon Spawn',  color: '#9b59b6', cat: 'pickup'  },
         'door':          { icon: '🚪', label: 'Door',          color: '#e67e22', cat: 'prop'    },

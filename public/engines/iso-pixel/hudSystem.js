@@ -148,7 +148,7 @@ window.IsoHUDSystem = class IsoHUDSystem {
         
         // Background (matches 2D ui.json clock style)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.strokeStyle = '#f1c40f';
+        ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 2;
         ctx.fillRect(x, y, width, height);
         ctx.strokeRect(x, y, width, height);
@@ -157,7 +157,7 @@ window.IsoHUDSystem = class IsoHUDSystem {
         const hours = String(this.gameHour).padStart(2, '0');
         const mins = String(this.gameMinute).padStart(2, '0');
         
-        ctx.fillStyle = '#f1c40f';
+        ctx.fillStyle = '#ff0000';
         ctx.font = 'bold 24px "VT323", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -184,7 +184,7 @@ window.IsoHUDSystem = class IsoHUDSystem {
             
             // Slot background
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.strokeStyle = skill ? '#f1c40f' : '#333';
+            ctx.strokeStyle = skill ? '#ff0000' : '#333';
             ctx.lineWidth = 2;
             ctx.fillRect(sx, y, slotSize, slotSize);
             ctx.strokeRect(sx, y, slotSize, slotSize);
@@ -240,7 +240,7 @@ window.IsoHUDSystem = class IsoHUDSystem {
             ctx.font = 'bold 16px "VT323", monospace';
             const textWidth = ctx.measureText(notif.text).width;
             ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-            ctx.strokeStyle = notif.borderColor || '#f1c40f';
+            ctx.strokeStyle = notif.borderColor || '#ff0000';
             ctx.lineWidth = 2;
             ctx.fillRect(centerX - textWidth/2 - 15, y + yOffset - 15, textWidth + 30, 30);
             ctx.strokeRect(centerX - textWidth/2 - 15, y + yOffset - 15, textWidth + 30, 30);
@@ -301,7 +301,7 @@ window.IsoHUDSystem = class IsoHUDSystem {
         const colors = {
             success: { color: '#2ecc71', border: '#27ae60' },
             error: { color: '#e74c3c', border: '#c0392b' },
-            gold: { color: '#f1c40f', border: '#f39c12' },
+            gold: { color: '#ff0000', border: '#f39c12' },
             info: { color: '#fff', border: '#3498db' }
         };
         const style = colors[type] || colors.info;

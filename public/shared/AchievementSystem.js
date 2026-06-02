@@ -56,11 +56,11 @@ window.AchievementSystem = class AchievementSystem {
         this.toast.id = 'ach-toast';
         this.toast.style.cssText = `
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-200px);
-            background: #222; border: 2px solid #f1c40f;
+            background: #222; border: 2px solid #ff0000;
             color: white; padding: 15px; font-family: 'VT323', monospace;
             display: flex; align-items: center; gap: 15px;
             transition: transform 0.5s; z-index: 9999; pointer-events: none;
-            box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
             min-width: 300px;
         `;
         document.body.appendChild(this.toast);
@@ -100,7 +100,7 @@ window.AchievementSystem = class AchievementSystem {
             } else if (game && game.player) {
                 game.player.xp = (game.player.xp || 0) + amount;
             }
-            this._popText(`+${amount} XP`, '#f1c40f');
+            this._popText(`+${amount} XP`, '#ff0000');
         }
         else if (ach.rewardType === 'STAT') {
             const parts = val.split(' ');
@@ -142,7 +142,7 @@ window.AchievementSystem = class AchievementSystem {
         this.toast.innerHTML = `
             <div style="font-size: 3rem;">${ach.icon}</div>
             <div style="text-align: left;">
-                <div style="color: #f1c40f; font-size: 1.2rem;">ACHIEVEMENT UNLOCKED!</div>
+                <div style="color: #ff0000; font-size: 1.2rem;">ACHIEVEMENT UNLOCKED!</div>
                 <div style="font-size: 1.5rem;">${ach.title}</div>
                 <div style="font-size: 1rem; color: #aaa;">${ach.desc}</div>
             </div>

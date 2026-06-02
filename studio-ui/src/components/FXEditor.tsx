@@ -184,7 +184,7 @@ const FXEditor: React.FC = () => {
         life: { min: 0.5, max: 1.0 },
         speed: { min: 100, max: 200 },
         size: { start: 5, end: 0 },
-        color: { start: '#f1c40f', end: '#e74c3c' },
+        color: { start: '#ff0000', end: '#e74c3c' },
         physics: { gravity: 500, drag: 0.98, spread: 45 }
     });
 
@@ -246,7 +246,7 @@ const FXEditor: React.FC = () => {
                         <div style={{
                             padding: '10px', cursor: 'pointer', borderBottom: '1px solid #1a1a1a',
                             color: active ? 'var(--accent)' : '#888',
-                            background: active ? 'rgba(241, 196, 15, 0.05)' : 'transparent',
+                            background: active ? 'rgba(255, 0, 0, 0.05)' : 'transparent',
                             borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent'
                         }}>
                             {f.name || 'Unnamed FX'}

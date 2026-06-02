@@ -91,11 +91,11 @@ class TopDownStrategy {
             const w = (Math.abs(state.dragEnd.x - state.dragStart.x) + 1) * ts;
             const h = (Math.abs(state.dragEnd.y - state.dragStart.y) + 1) * ts;
             
-            ctx.strokeStyle = '#f1c40f';
+            ctx.strokeStyle = '#ff0000';
             ctx.lineWidth = 2;
             
             if (state.fillRect) {
-                ctx.fillStyle = 'rgba(241, 196, 15, 0.2)';
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
                 ctx.fillRect(x, y, w, h);
             }
             ctx.strokeRect(x, y, w, h);

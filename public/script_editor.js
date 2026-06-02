@@ -677,7 +677,7 @@ function stopAutoSave() {
 function setStatus(msg, isError = false, isWarn = false) {
     const el = document.getElementById('status-msg');
     el.innerText = msg;
-    el.style.color = isError ? '#e74c3c' : (isWarn ? '#f1c40f' : 'var(--accent)');
+    el.style.color = isError ? '#e74c3c' : (isWarn ? '#ff0000' : 'var(--accent)');
 }
 
 function getMonacoLanguage(ext) {

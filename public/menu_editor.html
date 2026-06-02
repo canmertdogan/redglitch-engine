@@ -14,10 +14,10 @@
             --bg-canvas: #080808;
             --bg-input: #000000;
             --border: #333;
-            --accent: #f1c40f;
+            --accent: #ff0000;
             --text-main: #e0e0e0;
             --text-muted: #888;
-            --highlight: rgba(241, 196, 15, 0.1);
+            --highlight: rgba(255, 0, 0, 0.1);
             --danger: #c0392b;
             --success: #2ecc71;
         }
@@ -206,7 +206,7 @@
             justify-content: center; font-size: 0.9rem; color: #ccc;
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .comp-card:hover { border-color: var(--accent); background: #1a1a2a; color: #fff; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(241, 196, 15, 0.2); }
+        .comp-card:hover { border-color: var(--accent); background: #1a1a2a; color: #fff; transform: translateY(-2px); box-shadow: 0 2px 4px rgba(255, 0, 0, 0.2); }
         .comp-card:active { transform: translateY(0); }
         .comp-card i { font-size: 1.3rem; margin-bottom: 4px; color: var(--accent); }
 
@@ -253,7 +253,7 @@
             position: absolute; cursor: pointer; box-sizing: border-box;
             transition: outline-color 0.1s;
         }
-        .ui-el:hover { outline: 1px dashed rgba(241,196,15,0.4); }
+        .ui-el:hover { outline: 1px dashed rgba(255, 0, 0,0.4); }
         .ui-el.selected { outline: 2px solid var(--accent); z-index: 1000; }
         .ui-el.multi-selected { outline: 2px solid #3498db; z-index: 999; }
 
@@ -281,7 +281,7 @@
 
         /* Marquee selection box */
         .marquee {
-            position: absolute; border: 1px dashed var(--accent); background: rgba(241,196,15,0.05);
+            position: absolute; border: 1px dashed var(--accent); background: rgba(255, 0, 0,0.05);
             pointer-events: none; z-index: 3000;
         }
 
@@ -551,7 +551,7 @@
             display: flex; flex-direction: column;
         }
         .screen-map-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-        .screen-map-card.active { border-color: var(--accent); box-shadow: 0 0 12px rgba(241,196,15,0.25); }
+        .screen-map-card.active { border-color: var(--accent); box-shadow: 0 0 12px rgba(255, 0, 0,0.25); }
         .smc-header {
             padding: 8px 12px; background: var(--bg-header); color: var(--accent);
             font-family: VT323, monospace; font-size: 1rem;

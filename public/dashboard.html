@@ -11,7 +11,7 @@
             --bg-deep: #050508;
             --bg-main: #080c18;
             --bg-ui: #121a2b;
-            --accent: #f1c40f;
+            --accent: #ff0000;
             --text: #cfd8dc;
             --border: 1px solid #1f2b42;
             --font-pixel: 'VT323', monospace;
@@ -110,7 +110,7 @@
         }
         .nav-btn:hover { background: rgba(255,255,255,0.02); color: #fff; }
         .nav-btn.active {
-            background: rgba(241, 196, 15, 0.05); color: var(--accent); border-left-color: var(--accent);
+            background: rgba(255, 0, 0, 0.05); color: var(--accent); border-left-color: var(--accent);
         }
         .nav-btn i { width: 20px; text-align: center; font-size: 14px; }
         
@@ -151,7 +151,7 @@
             cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
             transition: all 0.1s;
         }
-        .btn-action:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+        .btn-action:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
 
         /* --- LOG MODAL --- */
         #log-modal {
@@ -179,7 +179,7 @@
         .wizard-steps::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: #1f2b42; z-index: 0; }
         .wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; z-index: 1; }
         .wizard-step-circle { width: 30px; height: 30px; border-radius: 50%; background: #1f2b42; color: #666; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; transition: all 0.2s; }
-        .wizard-step.active .wizard-step-circle { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(241, 196, 15, 0.5); }
+        .wizard-step.active .wizard-step-circle { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.5); }
         .wizard-step.completed .wizard-step-circle { background: #2ecc71; color: #fff; }
         .wizard-step-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
         .wizard-step.active .wizard-step-label { color: var(--accent); }
@@ -191,8 +191,8 @@
         .engine-selection { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
         .engine-selection.six-col { grid-template-columns: repeat(3, 1fr); }
         .engine-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; text-align: center; position: relative; }
-        .engine-card:hover { border-color: var(--accent); background: rgba(241, 196, 15, 0.05); }
-        .engine-card.selected { border-color: var(--accent); background: rgba(241, 196, 15, 0.1); box-shadow: 0 0 20px rgba(241, 196, 15, 0.3); }
+        .engine-card:hover { border-color: var(--accent); background: rgba(255, 0, 0, 0.05); }
+        .engine-card.selected { border-color: var(--accent); background: rgba(255, 0, 0, 0.1); box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
         .engine-card i { font-size: 48px; color: #666; margin-bottom: 15px; display: block; }
         .engine-card.selected i { color: var(--accent); }
         .engine-card-badge { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 1px; }
@@ -210,7 +210,7 @@
         .template-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
         .template-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; }
         .template-card:hover { border-color: var(--accent); }
-        .template-card.selected { border-color: var(--accent); background: rgba(241, 196, 15, 0.1); }
+        .template-card.selected { border-color: var(--accent); background: rgba(255, 0, 0, 0.1); }
         
         .wizard-actions { display: flex; justify-content: space-between; align-items: center; }
         
@@ -279,7 +279,7 @@
             </div>
 
             <div class="nav-group-label">Studio</div>
-            <div class="nav-btn" id="btn-launch-studio" onclick="window.location.href='tools.html'" style="color:var(--accent); background:rgba(241, 196, 15, 0.05); border-left: 4px solid var(--accent);">
+            <div class="nav-btn" id="btn-launch-studio" onclick="window.location.href='tools.html'" style="color:var(--accent); background:rgba(255, 0, 0, 0.05); border-left: 4px solid var(--accent);">
                 <i class="fas fa-rocket"></i> Open Studio
             </div>
             <div class="nav-btn" onclick="View.show('assets')">

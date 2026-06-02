@@ -87,7 +87,7 @@ window.UISystem = class UISystem {
             }
             
             const name = document.createElement('div');
-            name.innerText = skill.name; name.style.marginTop = '10px'; name.style.color = '#f1c40f';
+            name.innerText = skill.name; name.style.marginTop = '10px'; name.style.color = '#ff0000';
             
             card.appendChild(name);
             

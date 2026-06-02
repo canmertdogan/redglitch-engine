@@ -85,7 +85,7 @@ if (termInput) {
         if (e.key === 'Enter') {
             const cmd = termInput.value;
             termInput.value = '';
-            appendLog(`$ ${cmd}`, '#f1c40f');
+            appendLog(`$ ${cmd}`, '#ff0000');
             
             try {
                 const res = await fetch('/api/ide/terminal', {

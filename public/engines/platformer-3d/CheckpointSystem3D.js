@@ -319,7 +319,7 @@ export default class CheckpointSystem3D {
     }
 
     _spawnExitPortal(x, y, z) {
-        const portal = this._buildPortal('#f1c40f', 1.3, false);
+        const portal = this._buildPortal('#ff0000', 1.3, false);
         portal.position.set(x, y + 0.1, z);
         this._scene.add(portal);
         this._exitPortal = { mesh: portal, triggered: false };

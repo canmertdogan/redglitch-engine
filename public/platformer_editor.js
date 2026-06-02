@@ -4,7 +4,7 @@ const COLLISION_TYPES = {
     0: { name: 'Passable', color: 'transparent', key: '0' },
     1: { name: 'Solid (Shadowed)', color: 'rgba(231, 76, 60, 0.3)', key: '1' },
     2: { name: 'Shadowless Wall', color: 'rgba(52, 152, 219, 0.3)', key: '2' },
-    3: { name: 'Half-Height', color: 'rgba(241, 196, 15, 0.3)', key: '3' },
+    3: { name: 'Half-Height', color: 'rgba(255, 0, 0, 0.3)', key: '3' },
     4: { name: 'One-Way Up', color: 'rgba(46, 204, 113, 0.3)', arrow: '↑', key: '4' },
     5: { name: 'One-Way Down', color: 'rgba(46, 204, 113, 0.3)', arrow: '↓', key: '5' },
     6: { name: 'One-Way Left', color: 'rgba(46, 204, 113, 0.3)', arrow: '←', key: '6' },
@@ -335,7 +335,7 @@ class PlatformerEditor {
                 if (this.currentMode === 'collision') this.setMode('decoration');
                 this.selectedTile = i + 1;
                 document.querySelectorAll('.palette-tile').forEach(t => t.style.border = '1px solid #444');
-                tileDiv.style.border = '2px solid #f1c40f';
+                tileDiv.style.border = '2px solid #ff0000';
                 this.currentTool = 'paint';
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 document.querySelector('.tool-btn[data-tool="paint"]')?.classList.add('active');
@@ -556,7 +556,7 @@ class PlatformerEditor {
             }
         });
         ctx.fillStyle = '#2ecc71'; ctx.fillRect(this.spawn.x * 32 + 4, this.spawn.y * 32 + 4, 24, 24);
-        ctx.fillStyle = '#f1c40f'; ctx.fillRect(this.goal.x * 32 + 4, this.goal.y * 32 + 4, 24, 24);
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(this.goal.x * 32 + 4, this.goal.y * 32 + 4, 24, 24);
         ctx.restore();
     }
     

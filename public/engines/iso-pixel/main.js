@@ -24,7 +24,7 @@ class IsoGame {
             // Render position for interpolation (smooth display)
             renderX: 5, renderY: 5, renderZ: 0,
             velocity: { x: 0, y: 0, z: 0 }, 
-            color: '#f1c40f',
+            color: '#ff0000',
             // Size (matching 2D engine defaults)
             width: 16,
             height: 16,

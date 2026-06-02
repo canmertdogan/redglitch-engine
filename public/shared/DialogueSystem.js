@@ -14,7 +14,7 @@ window.DialogueSystem = class DialogueSystem {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             width: 80%; min-height: 160px; max-height: 250px;
             background: rgba(10, 15, 25, 0.98);
-            border: 3px solid #f1c40f; border-radius: 8px;
+            border: 3px solid #ff0000; border-radius: 8px;
             color: #fff; padding: 20px; z-index: 2000;
             display: none; font-family: 'VT323', monospace;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
@@ -28,7 +28,7 @@ window.DialogueSystem = class DialogueSystem {
         this.portrait.id = 'dialogue-portrait';
         this.portrait.style.cssText = `
             width: 120px; height: 120px;
-            background: #000; border: 2px solid #f1c40f;
+            background: #000; border: 2px solid #ff0000;
             image-rendering: pixelated; flex-shrink: 0;
             display: none; border-radius: 4px;
             overflow: hidden;
@@ -40,9 +40,9 @@ window.DialogueSystem = class DialogueSystem {
         this.nameTag = document.createElement('div');
         this.nameTag.id = 'dialogue-nametag';
         this.nameTag.style.cssText = `
-            font-size: 1.8rem; font-weight: bold; color: #f1c40f;
+            font-size: 1.8rem; font-weight: bold; color: #ff0000;
             text-transform: uppercase; letter-spacing: 1px;
-            border-bottom: 1px solid rgba(241, 196, 15, 0.3);
+            border-bottom: 1px solid rgba(255, 0, 0, 0.3);
             padding-bottom: 5px;
         `;
         
@@ -151,10 +151,10 @@ window.DialogueSystem = class DialogueSystem {
         
         const node = this.queue.shift();
         // Fallback for speaker lookup if character DB is missing ID
-        const char = (this.db.characters && this.db.characters.find(c => c.id === node.speaker)) || { name: node.speaker || "???", color: "#f1c40f" };
+        const char = (this.db.characters && this.db.characters.find(c => c.id === node.speaker)) || { name: node.speaker || "???", color: "#ff0000" };
         
         this.nameTag.innerText = char.name;
-        this.nameTag.style.color = char.color || "#f1c40f";
+        this.nameTag.style.color = char.color || "#ff0000";
         this.textBox.innerText = node.text;
 
         // Portrait

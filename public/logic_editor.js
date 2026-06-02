@@ -521,7 +521,7 @@ Blockly.Blocks['fx_spawn'] = {
 };
 
 // ============================================================
-// AUDIO (3 blocks) - Color: #f1c40f (yellow)
+// AUDIO (3 blocks) - Color: #ff0000 (yellow)
 // ============================================================
 
 Blockly.Blocks['audio_play_sound'] = {
@@ -532,7 +532,7 @@ Blockly.Blocks['audio_play_sound'] = {
     this.appendValueInput("VOLUME").setCheck("Number").appendField("volume");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour('#f1c40f');
+    this.setColour('#ff0000');
     this.setTooltip("Play sound effect (0.0-1.0)");
   }
 };
@@ -544,7 +544,7 @@ Blockly.Blocks['audio_stop_sound'] = {
         .appendField(new Blockly.FieldTextInput("music"), "NAME");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour('#f1c40f');
+    this.setColour('#ff0000');
     this.setTooltip("Stop playing sound");
   }
 };
@@ -556,7 +556,7 @@ Blockly.Blocks['audio_fade_music'] = {
     this.appendDummyInput().appendField("sec");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour('#f1c40f');
+    this.setColour('#ff0000');
     this.setTooltip("Fade music volume");
   }
 };
@@ -960,7 +960,7 @@ const RedGlitchStudioTheme = Blockly.Theme.defineTheme('redglitch_studio', {
     'insertionMarkerColour': '#fff',
     'insertionMarkerOpacity': 0.3,
     'scrollbarColour': '#222',
-    'cursorColour': '#f1c40f'
+    'cursorColour': '#ff0000'
   }
 });
 

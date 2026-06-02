@@ -558,8 +558,8 @@ window.Core = class Core {
                     if (entity.hp !== undefined && entity.maxHp !== undefined) {
                         if (Math.sqrt((fb.x - entity.x - 24) ** 2 + (fb.y - entity.y - 24) ** 2) < 30) { 
                             entity.hp -= 25; fb.life = 0; 
-                            if(this.fx) this.fx.popText(entity.x + 24, entity.y, "25", "#f1c40f");
-                            this.createExplosion(fb.x, fb.y, '#f1c40f', 5); 
+                            if(this.fx) this.fx.popText(entity.x + 24, entity.y, "25", "#ff0000");
+                            this.createExplosion(fb.x, fb.y, '#ff0000', 5); 
                             if (entity.hp <= 0) { 
                                 this.createExplosion(entity.x + 24, entity.y + 24, '#e74c3c', 15); 
                                 const idx = this.enemies.indexOf(entity);
@@ -595,7 +595,7 @@ window.Core = class Core {
                 } 
             } 
         });
-        this.mapSystem.decorations.forEach(deco => { if (deco.type === 'sign') { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { this.dialogueSystem.db.conversations.push({ id: "_sign_temp", nodes: [{ speaker: "sign", text: deco.data || "A blank sign." }] }); this.dialogueSystem.start("_sign_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_sign_temp"); }); input.actions.action = false; } } } if (deco.type === 'chest' && !deco.opened) { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { deco.opened = true; this.createExplosion(dx, dy, '#f1c40f', 20); const itemIds = deco.data ? deco.data.split(',').map(s => s.trim()) : ["apple"]; itemIds.forEach(id => { const itemDef = this.itemDefs.find(i => i.id === id) || this.itemDefs[Math.floor(Math.random()*this.itemDefs.length)]; if (itemDef) { this.inventory.push({...itemDef}); console.log("Gained item:", itemDef.name); } }); this.updateInventoryHUD(); this.dialogueSystem.db.conversations.push({ id: "_chest_temp", nodes: [{ speaker: "hero", text: `You found: ${itemIds.join(", ")}!` }] }); this.dialogueSystem.start("_chest_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_chest_temp"); }); input.actions.action = false; } } } });
+        this.mapSystem.decorations.forEach(deco => { if (deco.type === 'sign') { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { this.dialogueSystem.db.conversations.push({ id: "_sign_temp", nodes: [{ speaker: "sign", text: deco.data || "A blank sign." }] }); this.dialogueSystem.start("_sign_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_sign_temp"); }); input.actions.action = false; } } } if (deco.type === 'chest' && !deco.opened) { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { deco.opened = true; this.createExplosion(dx, dy, '#ff0000', 20); const itemIds = deco.data ? deco.data.split(',').map(s => s.trim()) : ["apple"]; itemIds.forEach(id => { const itemDef = this.itemDefs.find(i => i.id === id) || this.itemDefs[Math.floor(Math.random()*this.itemDefs.length)]; if (itemDef) { this.inventory.push({...itemDef}); console.log("Gained item:", itemDef.name); } }); this.updateInventoryHUD(); this.dialogueSystem.db.conversations.push({ id: "_chest_temp", nodes: [{ speaker: "hero", text: `You found: ${itemIds.join(", ")}!` }] }); this.dialogueSystem.start("_chest_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_chest_temp"); }); input.actions.action = false; } } } });
         if (this.interactionHint) { if (nearNPC && !this.dialogueSystem.active) { this.interactionHint.classList.remove('hidden'); } else { this.interactionHint.classList.add('hidden'); } }
         let mx = axis.x, my = axis.y; if (this.mapSystem.type === 'isometric') { mx = axis.x + axis.y; my = axis.y - axis.x; } 
         if (mx > 0) this.player.direction = 1; if (mx < 0) this.player.direction = -1;
@@ -828,7 +828,7 @@ window.Core = class Core {
                     x: fb.x + (fb.width*fb.scale)/2,
                     y: fb.y + (fb.height*fb.scale)/2,
                     radius: 80,
-                    color: fb.isEnemy ? 'rgba(142, 68, 173, 0.5)' : 'rgba(241, 196, 15, 0.5)',
+                    color: fb.isEnemy ? 'rgba(142, 68, 173, 0.5)' : 'rgba(255, 0, 0, 0.5)',
                     intensity: 0.8
                 });
             });
@@ -839,7 +839,7 @@ window.Core = class Core {
                     // Culling lights
                     if (lx > viewX - 200 && lx < viewX + viewW + 200 && ly > viewY - 200 && ly < viewY + viewH + 200) {
                         if (d.type === 'torch') { lights.push({ x: lx, y: ly, radius: 120 + Math.random()*5, color: 'rgba(230, 126, 34, 0.3)', intensity: 0.5 }); }
-                        if (d.type === 'candle') { lights.push({ x: lx, y: ly, radius: 60 + Math.random()*2, color: 'rgba(241, 196, 15, 0.2)', intensity: 0.4 }); }
+                        if (d.type === 'candle') { lights.push({ x: lx, y: ly, radius: 60 + Math.random()*2, color: 'rgba(255, 0, 0, 0.2)', intensity: 0.4 }); }
                     }
                 }); 
             } 
