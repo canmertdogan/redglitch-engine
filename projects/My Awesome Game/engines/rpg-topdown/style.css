@@ -197,37 +197,127 @@ body, html {
 
 /* ... (Keep existing Death Screen / Mobile styles) ... */
 #death-screen {
-    background: radial-gradient(circle, rgba(139, 0, 0, 0.6) 0%, rgba(6, 9, 16, 0.95) 100%);
-    animation: blood-pulse 4s infinite alternate;
+    background: #000000 !important;
+    box-shadow: inset 0 0 150px rgba(180, 0, 0, 0.6);
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
 }
 
-@keyframes blood-pulse {
-    0% { background-color: rgba(6, 9, 16, 0.9); }
-    100% { background-color: rgba(40, 0, 0, 0.95); }
+/* Slanted sliding red grid */
+#death-screen::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: 
+        linear-gradient(rgba(255, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    background-position: center;
+    transform: perspective(500px) rotateX(60deg);
+    animation: grid-slide 18s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Ambient glowing red core */
+.death-glow-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(220, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+    pointer-events: none;
+    z-index: 0;
+    animation: pulse-glow 2.5s ease-in-out infinite alternate;
+}
+
+/* CRT scanlines overlay */
+#death-screen::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+    background-size: 100% 4px;
+    z-index: 10;
+    pointer-events: none;
 }
 
 .death-title {
-    position: absolute; width: 100%; text-align: center; top: 60px;
-    font-size: 7rem; color: #ff0000; text-shadow: 5px 5px 0 #000, 0 0 20px #ff0000;
-    letter-spacing: 10px; font-weight: bold;
-    animation: death-glitch 0.2s infinite;
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 70px;
+    font-size: 6.5rem;
+    color: #ff1e27;
+    text-shadow: 0 0 15px rgba(255, 30, 39, 0.8), 0 0 30px rgba(255, 30, 39, 0.4);
+    letter-spacing: 12px;
+    font-weight: bold;
+    animation: death-glitch 2s infinite ease-in-out;
+    z-index: 2;
 }
 
 @keyframes death-glitch {
-    0% { transform: translate(0,0); }
-    25% { transform: translate(2px, -1px); }
-    50% { transform: translate(-1px, 2px); }
-    75% { transform: translate(1px, -2px); }
-    100% { transform: translate(0,0); }
+    0%, 100% { transform: translate(0, 0); text-shadow: 2px -1px 0 rgba(255,0,0,0.8), -2px 1px 0 rgba(0,255,255,0.5), 0 0 10px rgba(255, 30, 39, 0.8); }
+    92% { transform: translate(0, 0); }
+    93% { transform: translate(3px, -2px); text-shadow: -3px 2px 0 rgba(255,0,0,0.9), 3px -2px 0 rgba(0,255,255,0.6); }
+    94% { transform: translate(-2px, 3px); text-shadow: 2px -3px 0 rgba(255,0,0,0.9), -2px 3px 0 rgba(0,255,255,0.6); }
+    95% { transform: translate(0, 0); }
 }
 
 .death-btn {
-    border-color: #ff0000 !important;
-    color: #ff0000 !important;
-    box-shadow: 4px 4px 0 #400 !important;
-    background: #100 !important;
+    background: #110002 !important;
+    border: 3px solid #ff1e27 !important;
+    color: #ff1e27 !important;
+    box-shadow: 0 0 15px rgba(255, 30, 39, 0.4), inset 0 0 10px rgba(255, 30, 39, 0.2) !important;
+    transition: all 0.2s cubic-bezier(0.1, 0.8, 0.3, 1) !important;
+    font-family: 'VT323', monospace !important;
+    z-index: 2;
 }
-.death-btn:hover { background: #ff0000 !important; color: #000 !important; }
+.death-btn:hover {
+    background: #ff1e27 !important;
+    color: #000000 !important;
+    box-shadow: 0 0 25px rgba(255, 30, 39, 0.8), inset 0 0 5px rgba(255, 255, 255, 0.5) !important;
+    transform: translateY(-2px) scale(1.05);
+}
+.death-btn:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 0 5px rgba(255, 30, 39, 0.3) !important;
+}
+
+#btn-death-quit {
+    background: #050505 !important;
+    border: 2px solid #551113 !important;
+    color: #885557 !important;
+    box-shadow: 0 4px 0 #000 !important;
+    transition: all 0.2s ease !important;
+    z-index: 2;
+}
+#btn-death-quit:hover {
+    background: #150507 !important;
+    border-color: #aa2225 !important;
+    color: #ff6668 !important;
+    box-shadow: 0 0 10px rgba(170, 34, 37, 0.4) !important;
+}
+#btn-death-quit:active {
+    transform: translate(0px, 2px);
+    box-shadow: 0 2px 0 #000 !important;
+}
 
 /* === MOBILE CONTROLS === */
 .touch-btn {

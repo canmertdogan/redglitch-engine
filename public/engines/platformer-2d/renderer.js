@@ -354,7 +354,7 @@ class PlatformerRenderer {
                     x: ent.x + ent.w/2, 
                     y: ent.y + ent.h/2, 
                     radius: ent.light.radius || 150, 
-                    color: ent.light.color || 'rgba(255, 200, 100, 0.2)',
+                    color: ent.light.color || 'rgba(255, 30, 39, 0.2)', // RedGlitch hue
                     intensity: ent.light.intensity || 0.6
                 });
             });
@@ -364,14 +364,27 @@ class PlatformerRenderer {
                 lights.push({
                     x: player.x + player.w/2,
                     y: player.y + player.h/2,
-                    radius: player.isWorm ? 150 : 200,
-                    color: player.isWorm ? 'rgba(231, 76, 60, 0.4)' : 'rgba(255, 255, 200, 0.3)',
-                    intensity: 0.8
+                    radius: player.isWorm ? 150 : 250,
+                    color: player.isWorm ? 'rgba(255, 30, 39, 0.4)' : 'rgba(255, 30, 39, 0.25)',
+                    intensity: 0.9
                 });
             }
 
             window.game?.fx?.renderSoftLighting?.(this.camera.x, this.camera.y, lights);
         }
+
+        // 11.5 CRT Scanlines & Vignette (Screen Space)
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        for (let i = 0; i < this.viewH; i += 4) {
+            this.ctx.fillRect(0, i, this.viewW, 1);
+        }
+        const grad = this.ctx.createRadialGradient(this.viewW/2, this.viewH/2, this.viewH/4, this.viewW/2, this.viewH/2, this.viewW);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.8)');
+        this.ctx.fillStyle = grad;
+        this.ctx.fillRect(0, 0, this.viewW, this.viewH);
+        this.ctx.restore();
 
         // 12. HUD
         this.drawHUD(player);
@@ -632,9 +645,9 @@ class PlatformerRenderer {
         this.ctx.globalAlpha = ghost.alpha;
         
         if (ghost.isWorm) {
-            this.ctx.shadowColor = '#e74c3c';
+            this.ctx.shadowColor = '#ff1e27';
             this.ctx.shadowBlur = 10;
-            this.ctx.fillStyle = '#e74c3c';
+            this.ctx.fillStyle = '#ff1e27';
             this.ctx.beginPath();
             this.ctx.arc(ghost.x + 12, ghost.y + 16, 10, 0, Math.PI * 2);
             this.ctx.fill();
@@ -647,7 +660,12 @@ class PlatformerRenderer {
             if (img) {
                 this.ctx.translate(Math.floor(ghost.x + gw/2), Math.floor(ghost.y + gh/2));
                 this.ctx.scale(ghost.facingRight ? 1 : -1, 1);
+                
+                // RedGlitch tint overlay for sprites
                 this.ctx.drawImage(img, -gw/2, -gh/2, gw, gh);
+                this.ctx.globalCompositeOperation = 'source-atop';
+                this.ctx.fillStyle = `rgba(255, 30, 39, ${ghost.alpha * 0.8})`;
+                this.ctx.fillRect(-gw/2, -gh/2, gw, gh);
             }
         }
         this.ctx.restore();
@@ -757,27 +775,50 @@ class PlatformerRenderer {
 
     drawHUD(player) {
         this.ctx.save();
-        this.ctx.font = '24px VT323, monospace';
-        this.ctx.fillStyle = '#fff';
-        this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 3;
-        const coinText = `COINS: ${player.coins || 0}`;
-        this.ctx.strokeText(coinText, 20, 40);
-        this.ctx.fillText(coinText, 20, 40);
-        const hpBarW = 200;
-        const hpBarH = 20;
-        const hpBarX = 20;
-        const hpBarY = 50;
-        this.ctx.fillStyle = '#000';
-        this.ctx.fillRect(hpBarX - 2, hpBarY - 2, hpBarW + 4, hpBarH + 4);
-        const hpPercent = (player.hp || 100) / (player.maxHp || 100);
-        this.ctx.fillStyle = hpPercent > 0.5 ? '#2ecc71' : hpPercent > 0.25 ? '#f39c12' : '#e74c3c';
-        this.ctx.fillRect(hpBarX, hpBarY, hpBarW * hpPercent, hpBarH);
-        this.ctx.strokeStyle = '#fff';
+        
+        // HUD Container (Glassmorphism)
+        this.ctx.fillStyle = 'rgba(10, 10, 15, 0.7)';
+        this.ctx.strokeStyle = 'rgba(255, 30, 39, 0.4)';
         this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.roundRect(20, 20, 240, 80, 8);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.font = '22px VT323, monospace';
+        
+        // Coins
+        const coinText = `COINS: ${player.coins || 0}`;
+        this.ctx.fillStyle = '#ffcc00';
+        this.ctx.shadowColor = 'rgba(255, 204, 0, 0.5)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.fillText(coinText, 35, 45);
+
+        // HP Bar
+        const hpBarW = 180;
+        const hpBarH = 14;
+        const hpBarX = 35;
+        const hpBarY = 65;
+        
+        this.ctx.shadowBlur = 0;
+        this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        this.ctx.fillRect(hpBarX, hpBarY, hpBarW, hpBarH);
+        
+        const hpPercent = (player.hp || 100) / (player.maxHp || 100);
+        this.ctx.fillStyle = hpPercent > 0.5 ? '#ff1e27' : '#ff0055';
+        this.ctx.shadowColor = this.ctx.fillStyle;
+        this.ctx.shadowBlur = 10;
+        this.ctx.fillRect(hpBarX, hpBarY, hpBarW * hpPercent, hpBarH);
+        
+        this.ctx.shadowBlur = 0;
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        this.ctx.lineWidth = 1;
         this.ctx.strokeRect(hpBarX, hpBarY, hpBarW, hpBarH);
+        
         this.ctx.fillStyle = '#fff';
-        this.ctx.fillText(`HP: ${Math.floor(player.hp || 100)}/${player.maxHp || 100}`, hpBarX + 5, hpBarY + 15);
+        this.ctx.font = '16px VT323, monospace';
+        this.ctx.fillText(`${Math.floor(player.hp || 100)} / ${player.maxHp || 100}`, hpBarX + hpBarW + 10, hpBarY + 12);
+        
         this.ctx.restore();
     }
 }

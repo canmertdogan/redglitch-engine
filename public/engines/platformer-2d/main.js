@@ -591,7 +591,12 @@ class PlatformerGame {
         dt = Math.max(minDt, Math.min(dt, maxDt));
         this._lastTime = nowTime;
 
-        this.update(dt);
+        if (this.freezeFrames && this.freezeFrames > 0) {
+            this.freezeFrames--;
+        } else {
+            this.update(dt);
+        }
+        
         this.draw();
         requestAnimationFrame((t) => this.loop(t));
     }

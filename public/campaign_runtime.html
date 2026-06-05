@@ -17,120 +17,293 @@
             font-family: 'Press Start 2P', monospace;
         }
 
-        /* Loading Screen */
-        #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0a0e27;
+        /* ═══════════════════════════════════════════════════════════
+           SHARED SCREEN BASE — Loading, Transition, Game Over
+           ═══════════════════════════════════════════════════════════ */
+        .rg-fullscreen {
+            position: fixed; inset: 0;
+            background: #000;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 10000;
             color: #fff;
+            font-family: 'VT323', monospace;
             overflow: hidden;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
         }
 
-        #loading-screen::before {
+        .rg-fullscreen.hidden { display: none; }
+
+        /* ── Animated perspective grid ── */
+        .rg-fullscreen::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle, #fff 1px, transparent 1px),
-                radial-gradient(circle, #fff 1px, transparent 1px),
-                radial-gradient(circle, #fff 1px, transparent 1px);
-            background-size: 50px 50px, 80px 80px, 100px 100px;
-            background-position: 0 0, 40px 60px, 130px 270px;
-            opacity: 0.3;
-            animation: twinkle 4s infinite;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background:
+                linear-gradient(rgba(255, 0, 0, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg);
+            animation: rg-grid-slide 10s linear infinite;
         }
 
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.6; }
+        /* ── CRT scanlines ── */
+        .rg-fullscreen::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
         }
 
-        #loading-screen.hidden {
-            display: none;
+        /* ── Pulsing glow core ── */
+        .rg-glow-core {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(255, 0, 0, 0.12) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+            animation: rg-glow-pulse 3s ease-in-out infinite alternate;
         }
 
-        .loading-content {
-            position: relative;
-            z-index: 1;
+        /* ── Content wrapper ── */
+        .rg-screen-content {
+            position: relative; z-index: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 24px;
+        }
+
+        /* ── Title with glitch ── */
+        .rg-screen-title {
+            font-size: 42px;
+            color: #ff1e27;
+            text-shadow:
+                0 0 10px rgba(255, 30, 39, 0.8),
+                0 0 30px rgba(255, 30, 39, 0.3);
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            animation: rg-glitch 2.5s infinite ease-in-out;
+        }
+
+        /* ── Subtitle / engine name ── */
+        .rg-screen-subtitle {
+            font-size: 36px;
+            color: #fff;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+            background: rgba(255, 0, 0, 0.05);
+            border-left: 3px solid #ff1e27;
+            border-right: 3px solid #ff1e27;
+            padding: 10px 40px;
+            box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.1);
+            animation: rg-target-glow 1.5s ease-in-out infinite alternate;
+            text-transform: uppercase;
+        }
+
+        /* ── Status text ── */
+        .rg-screen-status {
+            font-size: 22px;
+            color: #ff8888;
+            text-shadow: 0 0 5px rgba(255, 30, 39, 0.5);
+            letter-spacing: 3px;
+            animation: rg-text-pulse 1s infinite alternate;
+        }
+
+        /* ── Spinner — cyber hex ── */
+        .rg-spinner {
+            position: relative;
+            width: 56px; height: 56px;
+            margin-bottom: 8px;
+        }
+
+        .rg-spinner::before,
+        .rg-spinner::after {
+            content: '';
+            position: absolute; inset: 0;
+            border: 2px solid transparent;
+            border-radius: 50%;
+        }
+
+        .rg-spinner::before {
+            border-top-color: #ff1e27;
+            border-bottom-color: #ff1e27;
+            animation: rg-spin-outer 1.8s linear infinite;
+        }
+
+        .rg-spinner::after {
+            inset: 6px;
+            border-left-color: #ff0055;
+            border-right-color: #00ffff;
+            animation: rg-spin-inner 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite reverse;
+        }
+
+        /* ── Progress bar ── */
+        .rg-progress-wrap {
+            width: 420px; height: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 30, 39, 0.25);
+            overflow: hidden;
+            border-radius: 4px;
+        }
+
+        .rg-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg,
+                #ff0055, #ff5500, #ffcc00, #33ff00,
+                #00ffcc, #0055ff, #7f00ff, #ff00ff, #ff0055
+            );
+            background-size: 200% 100%;
+            animation: rg-rainbow-flow 1.2s linear infinite;
+            transition: width 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
+            border-radius: 4px;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           GAME OVER SCREEN
+           ═══════════════════════════════════════════════════════════ */
+        #gameover-screen .rg-glow-core {
+            background: radial-gradient(circle, rgba(255, 0, 0, 0.2) 0%, transparent 55%);
+        }
+
+        .gameover-big-text {
+            font-size: 80px;
+            color: #ff1e27;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            text-shadow:
+                0 0 20px rgba(255, 30, 39, 0.9),
+                0 0 60px rgba(255, 30, 39, 0.4),
+                4px 4px 0 #000;
+            animation: rg-glitch 1.5s infinite ease-in-out, rg-gameover-shake 0.3s ease-in-out;
+        }
+
+        .gameover-divider {
+            width: 200px; height: 3px;
+            background: linear-gradient(90deg,
+                transparent, #ff0055, #ffcc00, #33ff00, #00ffcc, #0055ff, #ff00ff, transparent
+            );
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .gameover-stats {
+            display: flex;
             gap: 40px;
+            font-size: 20px;
+            color: #888;
+            letter-spacing: 2px;
         }
 
-        .loading-logo {
+        .gameover-stat-val {
+            color: #ff8888;
+        }
+
+        .gameover-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .gameover-btn {
+            padding: 14px 36px;
+            background: transparent;
+            border: 1px solid rgba(255, 30, 39, 0.3);
+            color: var(--accent, #ff1e27);
             font-family: 'VT323', monospace;
-            font-size: 72px;
-            color: #ffd700;
-            text-shadow: 4px 4px 0 #000;
-            letter-spacing: 8px;
-            image-rendering: pixelated;
+            font-size: 22px;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
         }
 
-        .loading-spinner {
-            width: 64px;
-            height: 64px;
-            border: 8px solid #1a1a2e;
-            border-top: 8px solid #ffd700;
-            border-right: 8px solid #ffd700;
-            background: #000;
-            animation: spin 0.8s steps(4) infinite;
-            box-shadow: 0 0 0 4px #ffd700;
+        .gameover-btn:hover {
+            background: #ff1e27;
+            color: #000;
+            border-color: #ff1e27;
+            box-shadow: 0 0 25px rgba(255, 30, 39, 0.5);
+            transform: translateY(-2px);
         }
 
-        @keyframes spin {
+        .gameover-btn.secondary {
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #666;
+        }
+
+        .gameover-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ccc;
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           SHARED KEYFRAMES
+           ═══════════════════════════════════════════════════════════ */
+        @keyframes rg-grid-slide {
+            0%   { background-position: 0 0; }
+            100% { background-position: 0 200px; }
+        }
+
+        @keyframes rg-glow-pulse {
+            from { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
+            to   { opacity: 1.0; transform: translate(-50%, -50%) scale(1.15); }
+        }
+
+        @keyframes rg-glitch {
+            0%, 100% { text-shadow: 3px -1px 0 rgba(255,0,0,0.7), -3px 1px 0 rgba(0,255,255,0.4), 0 0 15px rgba(255,30,39,0.8); }
+            25%      { text-shadow: -2px 2px 0 rgba(255,0,0,0.7), 2px -2px 0 rgba(0,255,255,0.4), 0 0 20px rgba(255,30,39,0.9); }
+            50%      { text-shadow: 1px -3px 0 rgba(255,0,0,0.7), -1px 3px 0 rgba(0,255,255,0.4), 0 0 10px rgba(255,30,39,0.7); }
+            75%      { text-shadow: -3px 0px 0 rgba(255,0,0,0.7), 3px 0px 0 rgba(0,255,255,0.4), 0 0 25px rgba(255,30,39,1.0); }
+        }
+
+        @keyframes rg-target-glow {
+            from { box-shadow: inset 0 0 15px rgba(255,0,0,0.08); border-color: #ff1e27; }
+            to   { box-shadow: inset 0 0 30px rgba(255,0,0,0.25); border-color: #ff5555; }
+        }
+
+        @keyframes rg-text-pulse {
+            from { opacity: 0.5; }
+            to   { opacity: 1.0; }
+        }
+
+        @keyframes rg-spin-outer {
             to { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            font-family: 'VT323', monospace;
-            font-size: 32px;
-            color: #ffd700;
-            text-align: center;
-            letter-spacing: 4px;
-            text-shadow: 3px 3px 0 #000;
+        @keyframes rg-spin-inner {
+            to { transform: rotate(360deg); }
         }
 
-        .loading-bar-container {
-            width: 480px;
-            height: 48px;
-            background: #1a1a2e;
-            border: 4px solid #ffd700;
-            box-shadow: 0 0 0 2px #000;
-            position: relative;
-            image-rendering: pixelated;
+        @keyframes rg-rainbow-flow {
+            0%   { background-position: 0% 0%; }
+            100% { background-position: -200% 0%; }
         }
 
-        .loading-bar {
-            height: 100%;
-            background: #ffd700;
-            width: 0%;
-            transition: width 0.2s steps(20);
-            position: relative;
-            box-shadow: inset 0 -8px 0 rgba(0, 0, 0, 0.3);
+        @keyframes rg-gameover-shake {
+            0%, 100% { transform: translateX(0); }
+            20%  { transform: translateX(-8px); }
+            40%  { transform: translateX(8px); }
+            60%  { transform: translateX(-4px); }
+            80%  { transform: translateX(4px); }
         }
 
         @media (max-width: 768px) {
-            .loading-logo {
-                font-size: 48px;
-            }
-            .loading-bar-container {
-                width: 90%;
-            }
+            .rg-screen-title { font-size: 28px; letter-spacing: 3px; }
+            .rg-screen-subtitle { font-size: 24px; padding: 8px 20px; }
+            .rg-progress-wrap { width: 85%; }
+            .gameover-big-text { font-size: 48px; letter-spacing: 6px; }
+            .gameover-stats { flex-direction: column; gap: 12px; text-align: center; }
+            .gameover-actions { flex-direction: column; }
         }
 
         /* Game Container */
@@ -308,91 +481,7 @@
             }
         }
 
-        /* Engine Transition Screen */
-        #engine-transition-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0a0e27;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            color: #fff;
-            font-family: 'VT323', monospace;
-            image-rendering: pixelated;
-        }
-
-        #engine-transition-screen.hidden {
-            display: none;
-        }
-
-        #engine-transition-screen::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle, #fff 1px, transparent 1px),
-                radial-gradient(circle, #fff 1px, transparent 1px),
-                radial-gradient(circle, #fff 1px, transparent 1px);
-            background-size: 50px 50px, 80px 80px, 100px 100px;
-            background-position: 0 0, 40px 60px, 130px 270px;
-            opacity: 0.3;
-            animation: twinkle 4s infinite;
-        }
-
-        .transition-title {
-            position: relative;
-            z-index: 1;
-            font-size: 32px;
-            color: #ffd700;
-            text-shadow: 3px 3px 0 #000;
-            margin-bottom: 20px;
-        }
-
-        #transition-target-engine {
-            position: relative;
-            z-index: 1;
-            font-size: 48px;
-            color: #fff;
-            text-shadow: 3px 3px 0 #000;
-            margin-bottom: 40px;
-            text-transform: uppercase;
-        }
-
-        .transition-progress {
-            position: relative;
-            z-index: 1;
-            width: 400px;
-            height: 40px;
-            background: #000;
-            border: 4px solid #ffd700;
-            box-shadow: 0 0 0 2px #000;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-
-        #transition-progress-bar {
-            height: 100%;
-            background: #ffd700;
-            width: 0%;
-            transition: width 0.3s steps(10);
-            image-rendering: pixelated;
-        }
-
-        #transition-status-text {
-            position: relative;
-            z-index: 1;
-            font-size: 24px;
-            color: #fff;
-            text-shadow: 2px 2px 0 #000;
-        }
+        /* (Old transition CSS removed — now uses shared .rg-fullscreen system) */
 
         /* Player Stats HUD */
         #player-stats-hud {
@@ -1021,13 +1110,14 @@
 </head>
 <body>
     <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loading-content">
-            <div class="loading-logo">REDGLITCH ENGINE</div>
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Loading Campaign...</div>
-            <div class="loading-bar-container">
-                <div class="loading-bar" id="loading-bar"></div>
+    <div id="loading-screen" class="rg-fullscreen">
+        <div class="rg-glow-core"></div>
+        <div class="rg-screen-content">
+            <div class="rg-spinner"></div>
+            <div class="rg-screen-title">LOADING ENGINE</div>
+            <div class="rg-screen-status" id="loading-status">Preparing...</div>
+            <div class="rg-progress-wrap">
+                <div class="rg-progress-fill" id="loading-bar"></div>
             </div>
         </div>
     </div>
@@ -1167,13 +1257,34 @@
     </div>
 
     <!-- Engine Transition Screen -->
-    <div id="engine-transition-screen" class="hidden">
-        <div class="transition-title">SWITCHING ENGINE...</div>
-        <div id="transition-target-engine">RPG TOP-DOWN</div>
-        <div class="transition-progress">
-            <div id="transition-progress-bar"></div>
+    <div id="engine-transition-screen" class="rg-fullscreen hidden">
+        <div class="rg-glow-core"></div>
+        <div class="rg-screen-content">
+            <div class="rg-spinner"></div>
+            <div class="rg-screen-title">SWITCHING ENGINE</div>
+            <div class="rg-screen-subtitle" id="transition-target-engine">RPG TOP-DOWN</div>
+            <div class="rg-progress-wrap">
+                <div class="rg-progress-fill" id="transition-progress-bar"></div>
+            </div>
+            <div class="rg-screen-status" id="transition-status-text">Preparing transition...</div>
         </div>
-        <div id="transition-status-text">Preparing transition...</div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="rg-fullscreen hidden">
+        <div class="rg-glow-core"></div>
+        <div class="rg-screen-content">
+            <div class="gameover-big-text">GAME OVER</div>
+            <div class="gameover-divider"></div>
+            <div class="gameover-stats">
+                <div>TIME: <span class="gameover-stat-val" id="gameover-time">0:00</span></div>
+                <div>PROGRESS: <span class="gameover-stat-val" id="gameover-progress">0%</span></div>
+            </div>
+            <div class="gameover-actions">
+                <button class="gameover-btn" onclick="retryLevel()">RETRY</button>
+                <button class="gameover-btn secondary" onclick="quitToMenu()">QUIT</button>
+            </div>
+        </div>
     </div>
 
     <!-- Inventory Modal -->
@@ -1396,10 +1507,10 @@
          */
         function updateLoadingBar(percent, text) {
             const bar = document.getElementById('loading-bar');
-            const textEl = document.querySelector('.loading-text');
+            const statusEl = document.getElementById('loading-status');
             
             if (bar) bar.style.width = percent + '%';
-            if (textEl) textEl.textContent = text;
+            if (statusEl) statusEl.textContent = text;
         }
 
         /**
@@ -2246,6 +2357,55 @@
         }
 
         // Initialize on load
+        /**
+         * Show game over screen
+         */
+        function showGameOver() {
+            const screen = document.getElementById('gameover-screen');
+            if (!screen) return;
+
+            // Populate stats
+            const timeEl = document.getElementById('gameover-time');
+            const progressEl = document.getElementById('gameover-progress');
+
+            if (campaignController) {
+                if (timeEl) timeEl.textContent = campaignController.getPlayTimeFormatted();
+                const prog = campaignController.getProgress();
+                if (progressEl) progressEl.textContent = prog.percentComplete + '%';
+            }
+
+            screen.classList.remove('hidden');
+        }
+
+        /**
+         * Retry from game over
+         */
+        function retryLevel() {
+            const screen = document.getElementById('gameover-screen');
+            if (screen) screen.classList.add('hidden');
+
+            if (campaignController && campaignController.currentAdapter) {
+                try {
+                    campaignController.currentAdapter.restart();
+                } catch (e) {
+                    console.warn('[GameOver] Restart not supported, reloading...');
+                    window.location.reload();
+                }
+            } else {
+                window.location.reload();
+            }
+        }
+
+        /**
+         * Quit to menu from game over
+         */
+        function quitToMenu() {
+            window.location.href = 'slot_selection.html';
+        }
+
+        // Expose showGameOver globally so engines can call it
+        window.showGameOver = showGameOver;
+
         window.addEventListener('load', init);
 
         // Save on unload

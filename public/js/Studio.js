@@ -14,9 +14,7 @@ const tools = [
     
     // WORLD ARCHITECT
     { id: 'editor', category: 'WORLD ARCHITECT', title: 'Level Editor', icon: 'fa-map', src: 'editor.html', w: 1000, h: 700 },
-    { id: 'topdown3d_studio', category: 'WORLD ARCHITECT', title: 'Topdown 3D Studio', icon: 'fa-map', src: 'topdown3d_editor.html', w: 1400, h: 900 },
-    { id: 'fps_studio', category: 'WORLD ARCHITECT', title: 'FPS 3D Studio', icon: 'fa-crosshairs', src: 'fps_editor.html', w: 1400, h: 900 },
-    { id: 'platformer3d_studio', category: 'WORLD ARCHITECT', title: 'Platformer 3D Studio', icon: 'fa-star', src: 'platformer3d_editor.html', w: 1400, h: 900 },
+    { id: 'studio_3d', category: 'WORLD ARCHITECT', title: '3D Studio', icon: 'fa-cube', src: 'editor3d.html', w: 1400, h: 900 },
     { id: 'iso_studio', category: 'WORLD ARCHITECT', title: 'IsoPixel Studio', icon: 'fa-cubes', src: 'iso_editor.html', w: 1000, h: 700 },
     { id: 'platformer_studio', category: 'WORLD ARCHITECT', title: 'Platformer Studio', icon: 'fa-running', src: 'platformer_editor.html', w: 1200, h: 800 },
     { id: 'background', category: 'WORLD ARCHITECT', title: 'Backgrounds', icon: 'fa-image', src: 'background_editor.html', w: 900, h: 600 },
@@ -450,7 +448,7 @@ function openWindow(tool) {
                 </div>
             </div>
             <div class="window-content">
-                <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['topdown3d_studio', 'fps_studio', 'platformer3d_studio']; return (proj3dIds.includes(tool.id) && window._redglitchActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._redglitchActiveProject) : tool.src; })()}"></iframe>
+                <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['studio_3d']; return (proj3dIds.includes(tool.id) && window._redglitchActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._redglitchActiveProject) : tool.src; })()}"></iframe>
             </div>
         `;
         win.onmousedown = () => focusWindow(winId);

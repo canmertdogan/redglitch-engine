@@ -1109,7 +1109,10 @@ class CampaignController {
         const engineNames = {
             'rpg-topdown': 'RPG Top-Down Engine',
             'iso-pixel': 'Isometric Pixel Engine',
-            'platformer-2d': 'Platformer 2D Engine'
+            'platformer-2d': 'Platformer 2D Engine',
+            'topdown-3d': 'Top-Down 3D Engine',
+            'fps-3d': 'FPS 3D Engine',
+            'platformer-3d': 'Platformer 3D Engine'
         };
         
         if (targetText) targetText.innerText = engineNames[engineType] || engineType;

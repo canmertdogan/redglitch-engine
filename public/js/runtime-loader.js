@@ -30,7 +30,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const forcedEngine = urlParams.get('engine');
     
-    if (forcedEngine && ['rpg-topdown', 'iso-pixel', 'platformer-2d'].includes(forcedEngine)) {
+    if (forcedEngine && ['rpg-topdown', 'iso-pixel', 'platformer-2d', 'fps-3d', 'topdown-3d', 'platformer-3d'].includes(forcedEngine)) {
         engineType = forcedEngine;
         console.log(`[Runtime] Engine Override via URL: ${engineType}`);
     } else {
@@ -233,7 +233,19 @@
             'shared/LoggerHook.js',
             'shared/EventBus.js',
             'shared/AssetManager.js',
-            'engines/fps-3d/main.js'
+            'engines/3d/main.js'
+        ],
+        'topdown-3d': [
+            'shared/LoggerHook.js',
+            'shared/EventBus.js',
+            'shared/AssetManager.js',
+            'engines/3d/main.js'
+        ],
+        'platformer-3d': [
+            'shared/LoggerHook.js',
+            'shared/EventBus.js',
+            'shared/AssetManager.js',
+            'engines/3d/main.js'
         ]
     };
 
@@ -247,8 +259,7 @@
             'engines/shared/TopDownAdapter.js',
             'engines/shared/IsoPixelAdapter.js',
             'engines/shared/PlatformerAdapter.js',
-            'engines/fps-3d/FPS3DAdapter.js',
-            'engines/platformer-3d/Platformer3DAdapter.js',
+            'engines/3d/Unified3DAdapter.js',           // Merged 3D adapter
             'engines/shared/CampaignController.js'
         ];
         scripts = [...campaignScripts, ...scripts];

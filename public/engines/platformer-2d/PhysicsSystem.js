@@ -26,10 +26,18 @@ class PhysicsSystem {
         // 1. Moving Platform Carrier Logic
         this.handlePlatforms(entity, platforms);
 
-        // 2. Apply Gravity (scaled)
+        // 2. Apply Gravity (scaled) & Variable Jump Height
         if (!entity.ignoreGravity) {
             entity.vy += this.gravity * scale;
             if (entity.vy > this.terminalVelocity) entity.vy = this.terminalVelocity;
+            
+            // Variable jump height: cut velocity if jump key is released while moving up
+            if (entity.vy < 0 && entity.keys) {
+                const jumpHeld = entity.keys['ArrowUp'] || entity.keys['Space'] || entity.keys['KeyW'];
+                if (!jumpHeld) {
+                    entity.vy *= 0.5; // Cut velocity by half
+                }
+            }
         }
         
         // 3. Apply Friction (Horizontal) - approximate per-tick multiplicative friction using pow

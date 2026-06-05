@@ -2,297 +2,646 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>REDGLITCH AUDIO DIRECTOR PRO - ULTRA HD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedGlitch Audio Studio — RedGlitch Engine</title>
+    <meta name="description" content="Professional audio event mapping, mixing, and sound design for RedGlitch Engine games.">
     <link href="fonts/fonts.css" rel="stylesheet">
-    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="daw/v6-premium.css">
-    <style>
-        /* --- V6 COMPONENT OVERRIDES --- */
-        #top-bar {
-            height: 48px; background: var(--bg-header); border-bottom: 1px solid var(--border-premium);
-            display: flex; align-items: center; padding: 0 20px; justify-content: space-between;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
-
-        #main-container { flex: 1; display: flex; overflow: hidden; padding: 10px; gap: 10px; background: var(--bg-obsidian); }
-
-        .pane-v6 { 
-            display: flex; flex-direction: column; 
-            background: var(--bg-panel); border-radius: 8px; 
-            border: 1px solid var(--border-premium);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-        }
-
-        #left-explorer { width: 300px; }
-        #center-workspace { flex: 1; }
-        #right-inspector { width: 360px; }
-
-        #bottom-mixer {
-            height: 220px; margin: 0 10px 10px 10px;
-        }
-
-        .header-v6 {
-            height: 36px; padding: 0 15px; display: flex; align-items: center;
-            border-bottom: 1px solid var(--border-premium);
-            background: rgba(255,255,255,0.02);
-            font-family: var(--font-vignette); font-size: 20px; color: var(--gold);
-            letter-spacing: 1px;
-        }
-
-        /* --- INTERACTIVE GRID --- */
-        .grid-bg {
-            background-image: radial-gradient(rgba(255, 0, 0, 0.05) 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-
-        /* --- KNOB STYLING --- */
-        .knob-value { font-family: var(--font-mono); font-size: 14px; color: var(--gold); margin-top: 5px; }
-
-        /* --- MIXER RE-SKIN --- */
-        .mixer-v6-strip {
-            width: 100px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-premium);
-            border-radius: 4px; display: flex; flex-direction: column; align-items: center; padding: 15px 5px;
-            position: relative;
-        }
-        .mixer-v6-strip::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%;
-            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
-            pointer-events: none;
-        }
-
-        .fader-slot {
-            width: 8px; height: 100px; background: #000; border-radius: 4px; 
-            box-shadow: inset 0 2px 5px rgba(0,0,0,1); position: relative; margin: 15px 0;
-        }
-        .fader-knob {
-            width: 32px; height: 16px; background: #333; border: 2px solid var(--gold);
-            border-radius: 3px; position: absolute; left: -12px; cursor: ns-resize;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
-        }
-
-        /* --- SPECTRUM --- */
-        .spectrum-container {
-            height: 180px; background: #000; border: 1px solid var(--border-premium);
-            border-radius: 4px; position: relative; overflow: hidden; margin-bottom: 20px;
-        }
-        
-        /* --- UTILS --- */
-        .btn-v6 {
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border-premium);
-            color: #fff; padding: 6px 20px; border-radius: 4px; font-family: var(--font-vignette);
-            font-size: 18px; cursor: pointer; transition: all 0.2s;
-        }
-        .btn-v6:hover { background: var(--gold); color: #000; box-shadow: 0 0 20px var(--gold-glow); }
-        .btn-v6.primary { background: var(--gold); color: #000; font-weight: bold; }
-        
-        .tab-btn-v6 {
-            flex: 1; padding: 10px; border: none; background: transparent; color: #555;
-            font-family: var(--font-vignette); font-size: 16px; cursor: pointer;
-            border-bottom: 2px solid transparent; transition: all 0.3s;
-        }
-        .tab-btn-v6.active { color: var(--gold); border-bottom-color: var(--gold); background: rgba(255, 0, 0, 0.05); }
-
-        .variation-row {
-            background: rgba(255,255,255,0.02); border: 1px solid var(--border-premium);
-            padding: 10px 15px; border-radius: 4px; display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 8px; transition: background 0.2s;
-        }
-        .variation-row:hover { background: rgba(255,255,255,0.05); }
-    </style>
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
 </head>
-<body class="grid-bg">
+<body>
 
-    <!-- TOP BAR -->
-    <div id="top-bar">
-        <div style="display:flex; align-items:center; height: 100%;">
-            <div class="glow-text" style="font-weight:900; letter-spacing:2px; font-size:1.1rem; margin-right: 20px; text-transform: uppercase;">
-                <i class="fas fa-wave-square"></i> AUDIO DIRECTOR <span style="font-weight:100; opacity:0.5;">PRO</span>
-            </div>
-            
-            <!-- PROFESSIONAL MENU BAR -->
-            <div class="menu-bar-v7">
-                <div class="menu-item-v7">
-                    FILE
-                    <div class="menu-dropdown-v7">
-                        <div class="menu-sub-item-v7" onclick="pro.saveMap()">SYNC_ENGINE <span class="kb-shortcut">^S</span></div>
-                        <div class="menu-sub-item-v7" onclick="pro.bootstrapTemplate()">REBUILD_VFS</div>
-                        <div class="menu-sub-item-v7 divider" style="height:1px; background:#222; margin:2px 0;"></div>
-                        <div class="menu-sub-item-v7" onclick="window.close()">EXIT</div>
-                    </div>
-                </div>
-                <div class="menu-item-v7">
-                    EDIT
-                    <div class="menu-dropdown-v7">
-                        <div class="menu-sub-item-v7" onclick="pro.undo()">UNDO <span class="kb-shortcut">^Z</span></div>
-                        <div class="menu-sub-item-v7" onclick="pro.redo()">REDO <span class="kb-shortcut">^Y</span></div>
-                        <div class="menu-sub-item-v7 divider" style="height:1px; background:#222; margin:2px 0;"></div>
-                        <div class="menu-sub-item-v7" onclick="pro.resetMixer()">RESET_MIXER</div>
-                    </div>
-                </div>
-                <div class="menu-item-v7">
-                    VIEW
-                    <div class="menu-dropdown-v7">
-                        <div class="menu-sub-item-v7" onclick="pro.toggleSidebar('left')">EXPLORER <span class="kb-shortcut">^B</span></div>
-                        <div class="menu-sub-item-v7" onclick="pro.toggleSidebar('right')">INSPECTOR <span class="kb-shortcut">^I</span></div>
-                    </div>
-                </div>
-                <div class="menu-item-v7">
-                    ENGINE
-                    <div class="menu-dropdown-v7">
-                        <div class="menu-sub-item-v7" onclick="pro.panicStop()">PANIC_STOP <span class="kb-shortcut">ESC</span></div>
-                    </div>
-                </div>
+<div id="kas-shell">
+
+    <!-- ═══════════ TOP BAR ═══════════ -->
+    <div id="kas-topbar">
+
+        <!-- Logo -->
+        <div class="kas-logo">
+            <div class="kas-logo-icon" style="color: #ff1e27;">🎚</div>
+            <div>
+                <div class="kas-logo-text">Audio Studio</div>
+                <div class="kas-logo-sub">RedGlitch Engine</div>
             </div>
         </div>
 
-        <div id="top-bar-actions" style="display:flex; align-items:center; gap:12px; height: 100%;">
-            <div id="connection-status" style="font-size:11px; color:var(--gold); opacity: 0.6; letter-spacing: 1px;">SYNC_READY</div>
-            <div style="width:1px; height:16px; background:#222;"></div>
-            <label class="inline-toggle" style="font-size:11px;">
-                <input id="auto-save-toggle" type="checkbox"> AUTO
+        <!-- Workspace Tabs -->
+        <div id="kas-tabs">
+            <button class="kas-tab active" data-tab="events" id="tab-btn-events">
+                <span class="kas-tab-icon">⚡</span> Events
+            </button>
+            <button class="kas-tab" data-tab="music" id="tab-btn-music">
+                <span class="kas-tab-icon">🎵</span> Music
+            </button>
+            <button class="kas-tab" data-tab="buses" id="tab-btn-buses">
+                <span class="kas-tab-icon">📡</span> Buses
+            </button>
+            <button class="kas-tab" data-tab="synth" id="tab-btn-synth">
+                <span class="kas-tab-icon">🎹</span> Synth
+            </button>
+            <button class="kas-tab" data-tab="drum" id="tab-btn-drum">
+                <span class="kas-tab-icon">🥁</span> Drum
+            </button>
+        </div>
+
+        <!-- Right controls -->
+        <div id="kas-topbar-right">
+            <div class="kas-status-pill">
+                <div class="kas-status-dot" id="kas-sync-dot"></div>
+                <span id="kas-sync-label">SYNCED</span>
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);cursor:pointer;">
+                <span class="kas-toggle">
+                    <input type="checkbox" id="kas-autosave">
+                    <span class="kas-toggle-slider"></span>
+                </span>
+                AUTO
             </label>
-            <button class="btn-v6 primary" onclick="pro.saveMap()" style="padding: 2px 10px; font-size: 12px; height: 24px; border: none; box-shadow: none;">SYNC</button>
+            <button class="kas-btn primary" id="kas-btn-sync">
+                <i class="fas fa-cloud-upload-alt"></i> SYNC
+            </button>
+            <button class="kas-btn icon" onclick="window.location.href='tools.html'" title="Back to Tools">
+                <i class="fas fa-arrow-left"></i>
+            </button>
         </div>
     </div>
 
-    <div id="status-strip">
-        <span class="status-badge" id="badge-mapped">mapped:0</span>
-        <span class="status-badge" id="badge-unmapped">unmapped:0</span>
-        <span class="status-badge" id="badge-missing">missing:0</span>
-        <span class="status-badge" id="badge-dirty">state:synced</span>
-        <span class="status-badge" id="badge-history">undo:0 redo:0</span>
+    <!-- ═══════════ STATUS BAR ═══════════ -->
+    <div id="kas-statusbar">
+        <span class="kas-badge" id="sb-events">events: 0</span>
+        <span class="kas-badge accent" id="sb-mapped">mapped: 0</span>
+        <span class="kas-badge" id="sb-unmapped">unmapped: 0</span>
+        <span class="kas-badge" id="sb-assets">assets: 0</span>
+        <span style="flex:1;"></span>
+        <span class="kas-badge" id="sb-history">undo:0 redo:0</span>
+        <span class="kas-badge" id="sb-state">state: NORMAL</span>
+        <span class="kas-badge" id="sb-env">env: DRY</span>
+        <span class="kas-badge" id="sb-voices">voices: 0</span>
     </div>
 
-    <!-- MAIN INTERFACE -->
-    <div id="main-container">
-        <button id="left-sidebar-handle" class="sidebar-handle left" onclick="pro.toggleSidebar('left')" title="Toggle left sidebar">◀</button>
-        <button id="right-sidebar-handle" class="sidebar-handle right" onclick="pro.toggleSidebar('right')" title="Toggle right sidebar">▶</button>
-        
-        <!-- LEFT: EXPLORER -->
-        <div id="left-explorer" class="pane-v6 glass-panel">
-            <div style="display:flex; border-bottom:1px solid var(--border-premium);">
-                <button class="tab-btn-v6 active" onclick="pro.switchExplorer('events')">EVENTS</button>
-                <button class="tab-btn-v6" onclick="pro.switchExplorer('assets')">ASSETS</button>
-                <button class="tab-btn-v6" onclick="pro.switchExplorer('templates')">LIB</button>
-            </div>
-            <div class="explorer-controls">
-                <div id="event-search-wrap">
-                    <input id="event-search" class="inspector-input" placeholder="search events..." />
-                    <div class="explorer-filter-row">
-                        <select id="category-filter" class="inspector-input">
-                            <option value="all">ALL_CATEGORIES</option>
-                        </select>
-                        <label class="inline-toggle"><input id="mapped-only" type="checkbox"> MAPPED_ONLY</label>
-                    </div>
-                </div>
-                <div id="asset-search-wrap" style="display:none;">
-                    <input id="asset-search" class="inspector-input" placeholder="search assets..." />
-                </div>
-                <div class="quick-event-row">
-                    <input id="quick-event-id" class="inspector-input" placeholder="new:event:id" />
-                    <button id="quick-event-create" class="btn-v6">CREATE</button>
-                </div>
-            </div>
-            <div class="pane-content" id="explorer-tree" style="flex:1; overflow-y:auto; padding:10px 0;">
-                <!-- Filled by pro.js -->
-            </div>
-        </div>
+    <!-- ═══════════ MAIN WORKSPACE ═══════════ -->
+    <div id="kas-main">
 
-        <!-- CENTER: WORKSPACE -->
-        <div id="center-workspace" class="pane-v6 glass-panel" style="background: rgba(0,0,0,0.5);">
-            <div class="header-v6" style="justify-content:space-between; background: #000;">
-                <span id="active-event-path" style="font-size: 14px; opacity: 0.8;">VFS://AUDIO/NULL</span>
-                <span style="opacity:0.3; font-size:12px; letter-spacing: 1px;">DIRECTOR_STABLE_v7.1</span>
-            </div>
-            
-            <div id="workspace-content" style="flex:1; overflow-y:auto; padding:24px;">
-                
-                <div id="event-editor-view" class="hidden">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
-                        <div>
-                            <h1 id="view-event-name" class="glow-text" style="margin:0; font-size:3.5rem; letter-spacing:-2px; line-height:0.9; text-shadow: 4px 4px 0 #000;">player:jump</h1>
-                            <div style="margin-top:8px; color:var(--text-dim); font-size:14px; letter-spacing: 1px;">ROUTING_TARGET: <span id="view-event-group" style="color:var(--gold);">SFX_CORE</span></div>
-                        </div>
-                        <button class="btn-icon pulse" style="font-size:4.5rem; color:var(--gold); background: transparent; border: none; cursor: pointer;" onclick="pro.triggerTest()"><i class="fas fa-play-circle"></i></button>
-                    </div>
-
-                    <div class="spectrum-container" id="drop-zone" ondragover="pro.handleDragOver(event)" ondrop="pro.handleDrop(event)" ondragleave="pro.handleDragLeave(event)" style="box-shadow: inset 4px 4px 0 #000; border: 1px solid var(--border-premium); margin-bottom: 24px;">
-                        <canvas id="waveform-canvas" width="1000" height="180" style="width:100%; height:100%;"></canvas>
-                        <div style="position:absolute; top:10px; left:15px; font-family:var(--font-mono); font-size:11px; color:var(--gold); background:rgba(0,0,0,0.85); padding:2px 10px; border:1px solid var(--gold-dim); letter-spacing: 1px;">SIGNAL_ANALYZER_v7</div>
-                    </div>
-
-                    <div style="font-family:var(--font-vignette); font-size:18px; color:var(--gold); margin-bottom:12px; display:flex; align-items:center; gap:10px; letter-spacing: 1px;">
-                        <i class="fas fa-layer-group"></i> VARIATION_STACK_VFS
-                    </div>
-                    <div id="variation-stack" style="display: flex; flexDirection: column; gap: 4px;"></div>
-                    
-                    <button class="btn-v6" onclick="pro.addVariationPrompt()" style="width:100%; margin-top:16px; border-style:dashed; opacity:0.6; font-size: 14px;">
-                        + ATTACH_SIGNAL_SOURCE
+        <!-- LEFT PANEL -->
+        <div class="kas-panel" id="kas-left">
+            <div class="kas-panel-header">
+                <span class="kas-panel-title" id="left-panel-title">Explorer</span>
+                <div style="display:flex;gap:4px;">
+                    <button class="kas-btn icon" id="kas-btn-collapse-left" title="Toggle sidebar">
+                        <i class="fas fa-columns"></i>
                     </button>
+                </div>
+            </div>
 
-                    <div class="preview-lab" style="margin-top: 32px; border-top: 1px solid var(--border-premium); padding-top: 24px;">
-                        <div class="preview-title" style="font-size: 16px; margin-bottom: 12px; opacity: 0.8;">SCENARIO_PREVIEW_LAB</div>
-                        <div class="preview-actions">
-                            <button class="btn-v6" onclick="pro.runPreviewScenario('ui')">UI_STRESS</button>
-                            <button class="btn-v6" onclick="pro.runPreviewScenario('traversal')">TRAVERSAL</button>
-                            <button class="btn-v6" onclick="pro.runPreviewScenario('combat')">COMBAT</button>
-                            <button class="btn-v6" onclick="pro.stopPreviewScenario()">STOP</button>
+            <!-- Tab content: EVENTS left panel (event tree) -->
+            <div class="kas-tab-content active" id="left-events">
+                <!-- Sub-tab: Events vs Assets -->
+                <div style="display:flex;border-bottom:1px solid var(--border-subtle);">
+                    <button class="kas-tab active" style="flex:1;padding:8px;" data-subtab="event-tree" id="stab-tree">
+                        Events
+                    </button>
+                    <button class="kas-tab" style="flex:1;padding:8px;" data-subtab="asset-list" id="stab-assets">
+                        Assets
+                    </button>
+                </div>
+
+                <!-- Event Tree -->
+                <div id="subtab-event-tree" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+                    <div class="kas-search-row">
+                        <input type="text" class="kas-input" id="kas-event-search" placeholder="search events…">
+                        <button class="kas-btn icon" id="kas-btn-filter" title="Filter">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </div>
+                    <div style="padding:6px 8px;border-bottom:1px solid var(--border-subtle);display:flex;gap:6px;flex-shrink:0;">
+                        <select class="kas-input" id="kas-category-filter" style="flex:1;">
+                            <option value="all">All Categories</option>
+                        </select>
+                        <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);white-space:nowrap;cursor:pointer;">
+                            <input type="checkbox" id="kas-mapped-only"> Mapped
+                        </label>
+                    </div>
+                    <div class="kas-panel-body" id="kas-event-tree">
+                        <div class="kas-empty-state">
+                            <div class="kas-empty-icon">⚡</div>
+                            <div class="kas-empty-title">Loading events…</div>
                         </div>
-                        <div id="scenario-state" class="preview-state" style="font-family: monospace; font-size: 11px;">preview: idle</div>
+                    </div>
+                    <div class="kas-quick-form">
+                        <input type="text" class="kas-input" id="kas-new-event-id" placeholder="new:event:id">
+                        <button class="kas-btn primary" id="kas-btn-create-event">+</button>
                     </div>
                 </div>
 
-                <div id="empty-state" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-ghost);">
-                    <i class="fas fa-compact-disc fa-spin" style="font-size:8rem; margin-bottom:30px; opacity:0.1;"></i>
-                    <div style="font-family:var(--font-vignette); font-size:32px; letter-spacing:8px;">WAITING_FOR_INPUT</div>
+                <!-- Asset List (hidden by default) -->
+                <div id="subtab-asset-list" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+                    <div class="kas-search-row">
+                        <input type="text" class="kas-input" id="kas-asset-search" placeholder="search assets…">
+                        <button class="kas-btn icon" id="kas-btn-refresh-assets" title="Refresh">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="kas-panel-body" id="kas-asset-list">
+                        <div class="kas-empty-state">
+                            <div class="kas-empty-icon">🔊</div>
+                            <div class="kas-empty-title">No assets found</div>
+                            <div class="kas-empty-sub">Place audio files in your project's muzikler/ folder</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab content: MUSIC left panel (context list) -->
+            <div class="kas-tab-content" id="left-music">
+                <div class="kas-search-row">
+                    <input type="text" class="kas-input" id="kas-context-search" placeholder="search contexts…">
+                </div>
+                <div style="padding:6px 8px;display:flex;gap:6px;flex-shrink:0;border-bottom:1px solid var(--border-subtle);">
+                    <button class="kas-btn" style="flex:1;" id="kas-btn-add-level">
+                        <i class="fas fa-plus"></i> Level
+                    </button>
+                    <button class="kas-btn" style="flex:1;" id="kas-btn-add-event">
+                        <i class="fas fa-plus"></i> Event
+                    </button>
+                </div>
+                <div class="kas-panel-body kas-p-3" id="kas-context-list">
+                    <div class="kas-empty-state">
+                        <div class="kas-empty-icon">🎵</div>
+                        <div class="kas-empty-title">Loading contexts…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab content: BUSES left panel -->
+            <div class="kas-tab-content" id="left-buses">
+                <div class="kas-panel-body kas-p-3" id="kas-bus-list">
+                    <div class="kas-empty-state">
+                        <div class="kas-empty-icon">📡</div>
+                        <div class="kas-empty-title">Bus graph</div>
+                    </div>
+                </div>
+                <div style="padding:8px;border-top:1px solid var(--border-subtle);flex-shrink:0;">
+                    <button class="kas-btn" style="width:100%;" id="kas-btn-add-bus">
+                        <i class="fas fa-plus"></i> Add Bus
+                    </button>
+                </div>
+            </div>
+
+            <!-- SYNTH / DRUM left panels (empty placeholders) -->
+            <div class="kas-tab-content" id="left-synth">
+                <div class="kas-panel-body kas-p-3">
+                    <div class="kas-empty-state">
+                        <div class="kas-empty-icon">🎹</div>
+                        <div class="kas-empty-title">Synth Presets</div>
+                        <div class="kas-empty-sub">Select a synth type from the workspace</div>
+                    </div>
+                </div>
+            </div>
+            <div class="kas-tab-content" id="left-drum">
+                <div class="kas-panel-body kas-p-3" id="kas-drum-kit-list">
+                    <div class="kas-empty-state">
+                        <div class="kas-empty-icon">🥁</div>
+                        <div class="kas-empty-title">Drum Kits</div>
+                        <div class="kas-empty-sub">Load sounds into each pad row</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER WORKSPACE -->
+        <div class="kas-panel kas-full" id="kas-center" style="background:var(--bg-deep);">
+
+            <!-- CENTER: EVENTS tab -->
+            <div class="kas-tab-content active" id="center-events" style="flex:1;overflow:hidden;">
+                <!-- Empty state -->
+                <div id="events-empty" class="kas-empty-state" style="height:100%;">
+                    <div class="kas-empty-icon" style="font-size:64px;opacity:0.15;">⚡</div>
+                    <div class="kas-empty-title">Select an event</div>
+                    <div class="kas-empty-sub">Choose an event from the explorer, or create a new one.</div>
                 </div>
 
+                <!-- Event detail editor (hidden until event selected) -->
+                <div id="events-editor" class="kas-hidden" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;">
+
+                    <div class="kas-event-header">
+                        <div>
+                            <div class="kas-event-title" id="ev-name">player:jump</div>
+                            <div class="kas-event-bus-tag" id="ev-bus-tag">⚡ SFX</div>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button class="kas-btn icon" id="ev-btn-test" title="Audition event (Space)">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="kas-btn danger icon" id="ev-btn-delete" title="Delete event">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Waveform display / drop zone -->
+                    <div class="kas-waveform-container" id="ev-drop-zone">
+                        <canvas id="ev-waveform-canvas"></canvas>
+                        <div class="kas-waveform-label">SIGNAL PREVIEW</div>
+                        <div class="kas-waveform-empty" id="ev-waveform-empty">
+                            <i class="fas fa-wave-square" style="font-size:24px;opacity:0.3;"></i>
+                            <span>Drop audio file here or double-click an asset</span>
+                        </div>
+                    </div>
+
+                    <!-- Clip Stack -->
+                    <div>
+                        <div class="kas-section-label">
+                            <i class="fas fa-layer-group" style="color:var(--kas-red);"></i>
+                            CLIP STACK
+                            <span id="ev-clip-count" class="kas-chip">0 clips</span>
+                        </div>
+                        <div id="ev-clip-stack"></div>
+                        <button class="kas-btn" style="width:100%;margin-top:6px;opacity:0.6;border-style:dashed;" id="ev-btn-add-clip">
+                            <i class="fas fa-plus"></i> Attach Sound File
+                        </button>
+                    </div>
+
+                    <!-- Preview Lab -->
+                    <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:14px;">
+                        <div class="kas-section-label" style="margin-bottom:12px;">
+                            <i class="fas fa-flask" style="color:var(--kas-amber);"></i>
+                            SCENARIO PREVIEW
+                        </div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+                            <button class="kas-btn" id="prev-ui">UI Stress</button>
+                            <button class="kas-btn" id="prev-traversal">Traversal</button>
+                            <button class="kas-btn" id="prev-combat">Combat</button>
+                            <button class="kas-btn danger" id="prev-stop">Stop</button>
+                        </div>
+                        <div id="prev-state" style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);">preview: idle</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER: MUSIC tab -->
+            <div class="kas-tab-content" id="center-music" style="flex:1;overflow:hidden;">
+                <div id="music-editor" style="overflow-y:auto;padding:20px;flex:1;display:flex;flex-direction:column;gap:14px;">
+                    <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:14px;">
+                        <div class="kas-section-label" style="margin-bottom:12px;">
+                            <i class="fas fa-play-circle" style="color:var(--kas-red);"></i> PREVIEW PLAYER
+                        </div>
+                        <div class="kas-preview-bar">
+                            <button class="kas-btn icon" id="music-btn-play"><i class="fas fa-play"></i></button>
+                            <button class="kas-btn icon" id="music-btn-stop"><i class="fas fa-stop"></i></button>
+                            <span class="kas-preview-name" id="music-now-playing">Nothing selected</span>
+                            <input type="range" class="kas-range" id="music-vol" min="0" max="1" step="0.01" value="0.7" style="width:100px;">
+                        </div>
+                    </div>
+
+                    <div id="music-assign-panel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:14px;">
+                        <div class="kas-section-label" style="margin-bottom:12px;">
+                            <i class="fas fa-link" style="color:var(--kas-amber);"></i> ASSIGNMENT
+                        </div>
+                        <div id="music-assign-status" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+                            Select a context on the left and a track on the right to link them.
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="kas-btn primary" style="flex:1;" id="music-btn-assign" disabled>
+                                <i class="fas fa-link"></i> Link Track
+                            </button>
+                            <button class="kas-btn danger" id="music-btn-clear">
+                                <i class="fas fa-unlink"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="music-library-panel" style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:14px;">
+                        <div class="kas-section-label" style="margin-bottom:10px;">
+                            <i class="fas fa-music" style="color:var(--kas-blue);"></i> MUSIC LIBRARY
+                        </div>
+                        <div class="kas-search-row" style="padding:0;margin-bottom:8px;">
+                            <input type="text" class="kas-input" id="music-asset-search" placeholder="filter tracks…">
+                            <button class="kas-btn icon" id="music-btn-refresh"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <div id="music-asset-list" style="max-height:300px;overflow-y:auto;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER: BUSES tab -->
+            <div class="kas-tab-content" id="center-buses" style="flex:1;overflow:hidden;">
+                <div style="overflow-y:auto;padding:20px;flex:1;">
+                    <div class="kas-section-label" style="margin-bottom:12px;">
+                        <i class="fas fa-sitemap" style="color:var(--kas-red);"></i> BUS ROUTING GRAPH
+                    </div>
+                    <div id="kas-bus-graph"></div>
+                </div>
+            </div>
+
+            <!-- CENTER: SYNTH tab -->
+            <div class="kas-tab-content" id="center-synth" style="flex:1;overflow:hidden;">
+                <div style="overflow-y:auto;padding:20px;flex:1;">
+                    <div class="kas-section-label" style="margin-bottom:16px;">
+                        <i class="fas fa-microchip" style="color:var(--kas-red);"></i> SFX SYNTHESIZER
+                    </div>
+                    <div class="kas-synth-grid" id="kas-synth-grid">
+                        <!-- Generated by JS -->
+                    </div>
+                    <div id="kas-synth-editor" class="kas-hidden" style="margin-top:20px;"></div>
+                    <canvas id="kas-synth-canvas" width="800" height="80" style="width:100%;height:80px;background:var(--bg-deep);border-radius:var(--radius-md);border:1px solid var(--border-subtle);margin-top:12px;display:block;"></canvas>
+                    <div style="display:flex;gap:8px;margin-top:10px;">
+                        <button class="kas-btn primary" id="synth-btn-preview"><i class="fas fa-play"></i> Preview</button>
+                        <button class="kas-btn success" id="synth-btn-export"><i class="fas fa-download"></i> Export WAV</button>
+                        <button class="kas-btn" id="synth-btn-attach" disabled><i class="fas fa-link"></i> Attach to Event</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER: DRUM tab -->
+            <div class="kas-tab-content" id="center-drum" style="flex:1;overflow:hidden;">
+                <div style="overflow-y:auto;padding:20px;flex:1;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <div class="kas-section-label">
+                            <i class="fas fa-drum" style="color:var(--kas-red);"></i> DRUM MACHINE
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <label style="font-size:11px;color:var(--text-secondary);">BPM</label>
+                            <input type="number" class="kas-input" id="drum-bpm" value="120" min="40" max="300" style="width:65px;">
+                            <button class="kas-btn primary" id="drum-btn-play"><i class="fas fa-play"></i> Play</button>
+                            <button class="kas-btn" id="drum-btn-stop"><i class="fas fa-stop"></i></button>
+                            <button class="kas-btn" id="drum-btn-clear">Clear</button>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:12px;margin-bottom:12px;">
+                        <div style="display:flex;gap:4px;margin-bottom:8px;font-size:9px;color:var(--text-muted);font-family:var(--font-mono);">
+                            <div style="width:80px;"></div>
+                            <!-- Beat labels generated by JS -->
+                            <div id="drum-beat-labels" style="display:flex;flex:1;gap:3px;"></div>
+                        </div>
+                        <div id="drum-grid" class="kas-drum-grid"></div>
+                    </div>
+
+                    <div style="display:flex;gap:8px;">
+                        <button class="kas-btn" id="drum-btn-randomize"><i class="fas fa-dice"></i> Randomize</button>
+                        <button class="kas-btn success" id="drum-btn-export"><i class="fas fa-download"></i> Export Pattern</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- RIGHT: INSPECTOR -->
-        <div id="right-inspector" class="pane-v6 glass-panel">
-            <div class="header-v6">SIGNAL_PROPERTIES</div>
-            <div id="inspector-pane-content" class="hidden" style="flex:1; overflow-y:auto; padding:25px;">
-                <!-- Filled by JS -->
+        <!-- RIGHT PANEL (Inspector) -->
+        <div class="kas-panel" id="kas-right">
+            <div class="kas-panel-header">
+                <span class="kas-panel-title">Inspector</span>
+                <button class="kas-btn icon" id="kas-btn-collapse-right" title="Toggle inspector">
+                    <i class="fas fa-columns"></i>
+                </button>
             </div>
-            <div id="inspector-empty" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#151515;">
-                <i class="fas fa-sliders-h" style="font-size:5rem;"></i>
-                <div style="font-family:var(--font-vignette); margin-top:20px;">NO_STREAM_ACTIVE</div>
+
+            <!-- Events Inspector -->
+            <div class="kas-tab-content active" id="right-events" style="flex:1;overflow:hidden;">
+                <div id="right-events-empty" class="kas-empty-state" style="height:100%;">
+                    <div class="kas-empty-icon">🎛</div>
+                    <div class="kas-empty-title">No stream active</div>
+                    <div class="kas-empty-sub">Select an event to edit its properties</div>
+                </div>
+                <div id="right-events-content" class="kas-hidden" style="flex:1;overflow-y:auto;">
+
+                    <!-- Identity block -->
+                    <div class="kas-prop-group" id="insp-identity">
+                        <div class="kas-prop-group-title">Event Identity</div>
+                        <div style="font-size:13px;font-weight:600;font-family:var(--font-mono);color:var(--kas-red);margin-bottom:4px;" id="insp-id"></div>
+                        <div style="font-size:11px;color:var(--text-muted);" id="insp-desc"></div>
+                    </div>
+
+                    <!-- Routing -->
+                    <div class="kas-prop-group">
+                        <div class="kas-prop-group-title">Routing & Mix</div>
+                        <div class="kas-prop-row">
+                            <span class="kas-prop-label">Bus</span>
+                            <select class="kas-input kas-prop-value" id="insp-group">
+                                <option value="sfx">SFX</option>
+                                <option value="music">Music</option>
+                                <option value="ambience">Ambience</option>
+                                <option value="voice">Voice</option>
+                                <option value="ui">UI</option>
+                            </select>
+                        </div>
+                        <div class="kas-prop-row">
+                            <span class="kas-prop-label">Priority / Duck</span>
+                            <label class="kas-toggle">
+                                <input type="checkbox" id="insp-priority">
+                                <span class="kas-toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Playback Engine -->
+                    <div class="kas-prop-group">
+                        <div class="kas-prop-group-title">Playback Engine</div>
+                        <div class="kas-prop-row">
+                            <span class="kas-prop-label">Mode</span>
+                            <select class="kas-input kas-prop-value" id="insp-mode">
+                                <option value="random">Random</option>
+                                <option value="sequential">Sequential</option>
+                                <option value="loop">Loop</option>
+                            </select>
+                        </div>
+                        <div class="kas-divider"></div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Volume</span>
+                                <span class="kas-slider-val" id="insp-vol-val">100%</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-vol" min="0" max="2" step="0.01" value="1">
+                        </div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Vol Variation</span>
+                                <span class="kas-slider-val" id="insp-volvar-val">0%</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-volvar" min="0" max="0.5" step="0.01" value="0">
+                        </div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Pitch Variation</span>
+                                <span class="kas-slider-val" id="insp-pitch-val">0%</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-pitch" min="0" max="0.5" step="0.01" value="0">
+                        </div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Cooldown</span>
+                                <span class="kas-slider-val" id="insp-cooldown-val">0.05s</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-cooldown" min="0" max="2" step="0.01" value="0.05">
+                        </div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Fade In</span>
+                                <span class="kas-slider-val" id="insp-fadein-val">0s</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-fadein" min="0" max="3" step="0.05" value="0">
+                        </div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Fade Out</span>
+                                <span class="kas-slider-val" id="insp-fadeout-val">0s</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-fadeout" min="0" max="3" step="0.05" value="0">
+                        </div>
+                    </div>
+
+                    <!-- Filter / Reverb -->
+                    <div class="kas-prop-group">
+                        <div class="kas-prop-group-title">Signal Processing</div>
+                        <div class="kas-prop-row">
+                            <span class="kas-prop-label">Filter</span>
+                            <select class="kas-input kas-prop-value" id="insp-filter-type">
+                                <option value="lowpass">Lowpass</option>
+                                <option value="highpass">Highpass</option>
+                                <option value="bandpass">Bandpass</option>
+                                <option value="notch">Notch</option>
+                            </select>
+                        </div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Cutoff Freq</span>
+                                <span class="kas-slider-val" id="insp-freq-val">20kHz</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-freq" min="20" max="20000" step="10" value="20000">
+                        </div>
+                        <div class="kas-slider-row">
+                            <div class="kas-slider-header">
+                                <span class="kas-slider-name">Reverb Send</span>
+                                <span class="kas-slider-val" id="insp-reverb-val">0%</span>
+                            </div>
+                            <input type="range" class="kas-range" id="insp-reverb" min="0" max="1" step="0.01" value="0">
+                        </div>
+                    </div>
+
+                    <!-- FX Insert Chain -->
+                    <div class="kas-prop-group">
+                        <div class="kas-prop-group-title">FX Insert Chain</div>
+                        <div id="insp-insert-chain"></div>
+                        <button class="kas-btn" style="width:100%;margin-top:6px;border-style:dashed;opacity:0.6;font-size:11px;" id="insp-btn-add-fx">
+                            + Add Plugin
+                        </button>
+                    </div>
+
+                    <!-- Trigger History -->
+                    <div class="kas-prop-group">
+                        <div class="kas-prop-group-title">Trigger History</div>
+                        <div id="insp-trigger-history" style="max-height:120px;overflow-y:auto;background:var(--bg-deep);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+                            <div style="padding:8px;font-size:10px;color:var(--text-muted);text-align:center;">No triggers yet</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Music Inspector -->
+            <div class="kas-tab-content" id="right-music">
+                <div class="kas-panel-body kas-p-3">
+                    <div class="kas-section-label" style="margin-bottom:10px;">Game State</div>
+                    <select class="kas-input" id="music-game-state" style="margin-bottom:12px;">
+                        <option value="normal">Normal</option>
+                        <option value="combat">Combat</option>
+                        <option value="stealth">Stealth</option>
+                    </select>
+                    <div class="kas-section-label" style="margin-bottom:10px;margin-top:8px;">Environment</div>
+                    <select class="kas-input" id="music-environment">
+                        <option value="dry">Dry</option>
+                        <option value="room">Room</option>
+                        <option value="cave">Cave</option>
+                        <option value="hall">Hall</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Buses Inspector -->
+            <div class="kas-tab-content" id="right-buses">
+                <div class="kas-panel-body kas-p-3" id="right-bus-inspector">
+                    <div class="kas-empty-state">
+                        <div class="kas-empty-icon">📡</div>
+                        <div class="kas-empty-title">Select a bus</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Synth Inspector -->
+            <div class="kas-tab-content" id="right-synth">
+                <div class="kas-panel-body kas-p-3" id="right-synth-params">
+                    <div class="kas-empty-state">
+                        <div class="kas-empty-icon">🎹</div>
+                        <div class="kas-empty-title">Select a synth type</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drum Inspector -->
+            <div class="kas-tab-content" id="right-drum">
+                <div class="kas-panel-body kas-p-3" id="right-drum-params">
+                    <div class="kas-empty-state">
+                        <div class="kas-empty-icon">🥁</div>
+                        <div class="kas-empty-title">Drum settings</div>
+                    </div>
+                </div>
             </div>
         </div>
 
+    </div><!-- end #kas-main -->
+
+    <!-- ═══════════ BOTTOM MIXER ═══════════ -->
+    <div id="kas-mixer">
+        <div id="kas-mixer-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);">
+                    <i class="fas fa-sliders-h" style="color:var(--kas-red);"></i> Mixing Station
+                </span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted);">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    State:
+                    <select class="kas-input" id="mixer-game-state" style="padding:2px 6px;font-size:10px;">
+                        <option value="normal">Normal</option>
+                        <option value="combat">Combat</option>
+                        <option value="stealth">Stealth</option>
+                    </select>
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    Env:
+                    <select class="kas-input" id="mixer-environment" style="padding:2px 6px;font-size:10px;">
+                        <option value="dry">Dry</option>
+                        <option value="room">Room</option>
+                        <option value="cave">Cave</option>
+                        <option value="hall">Hall</option>
+                    </select>
+                </label>
+                <button class="kas-btn" id="mixer-btn-reset" style="font-size:10px;padding:3px 10px;">Reset</button>
+                <button class="kas-btn danger" id="mixer-btn-panic" style="font-size:10px;padding:3px 10px;">
+                    <i class="fas fa-stop"></i> Panic
+                </button>
+            </div>
+        </div>
+        <div id="kas-mixer-strips">
+            <!-- Dynamically populated by AudioStudio -->
+        </div>
     </div>
 
-    <!-- BOTTOM: MIXER -->
-    <div id="bottom-mixer" class="pane-v6 glass-panel">
-        <div class="header-v6" style="justify-content:space-between;">
-            <span><i class="fas fa-sliders-h"></i> MIXING_STATION_V6</span>
-            <div style="display:flex; gap:12px; align-items:center; font-family:var(--font-vignette); font-size:12px;">
-                <div>STATE: <select onchange="window.Sound.setGameState(this.value)" style="border:none; background:transparent; color:var(--gold);"><option value="normal">NORMAL</option><option value="combat">COMBAT</option><option value="stealth">STEALTH</option></select></div>
-                <div>ENV: <select onchange="window.Sound.setEnvironment(this.value)" style="border:none; background:transparent; color:var(--gold);"><option value="dry">DRY</option><option value="cave">CAVE</option><option value="hall">HALL</option></select></div>
-                <button class="btn-v6" onclick="pro.resetMixer()">RESET</button>
-                <button class="btn-v6" onclick="pro.panicStop()">PANIC</button>
-            </div>
-        </div>
-        <div class="mixer-lanes" id="mixer-lanes" style="flex:1; display:flex; padding:20px; gap:12px; overflow-x:auto; align-items:flex-end;">
-            <!-- Master Strip -->
-            <div class="mixer-v6-strip" style="border-color:var(--gold);">
-                <div style="font-size:10px; font-weight:bold; color:var(--text-ghost); margin-bottom:10px;">MASTER</div>
-                <div class="meter-v6" id="meter-master">
-                    <!-- Filled by pro.js -->
-                </div>
-                <div class="fader-slot">
-                    <div class="fader-knob" id="fader-master" style="bottom:80%;" onmousedown="pro.startFaderDrag(event, 'master')"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+</div><!-- end #kas-shell -->
 
-    <!-- SCRIPTS -->
-    <script src="/shared/EventBus.js"></script>
-    <script src="/shared/SoundManager.js"></script>
-    <script src="daw/manifest.js"></script>
-    <script src="daw.js"></script>
+<!-- Scripts -->
+<script src="/shared/EventBus.js"></script>
+<script src="/shared/SoundManager.js"></script>
+<script src="daw/manifest.js"></script>
+<script src="daw/MixerChannel.js"></script>
+<script src="daw/plugins/AudioPlugin.js"></script>
+<script src="daw/plugins/KEQ3.js"></script>
+<script src="daw/plugins/KComp.js"></script>
+<script src="daw/plugins/KVerb.js"></script>
+<script src="daw/plugins/KDelay.js"></script>
+<script src="daw/plugins/KDrive.js"></script>
+<script src="daw/Synthesizer.js"></script>
+<script src="daw/Synth8Bit.js"></script>
+<script src="daw/Synth32Bit.js"></script>
+<script src="daw/DrumMachine.js"></script>
+<script src="daw.js"></script>
+
 </body>
 </html>

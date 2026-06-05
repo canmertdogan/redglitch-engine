@@ -131,15 +131,29 @@ class PlatformerPlayer extends PlatformerEntity {
 
     startAttack() {
         this.isAttacking = true;
+        
+        const now = performance.now();
+        if (now - (this.lastAttackTime || 0) < 600) {
+            this.comboStep = ((this.comboStep || 0) + 1) % 3;
+        } else {
+            this.comboStep = 0;
+        }
+        this.lastAttackTime = now;
+
         this.setAnimation('attack', 0.08);
         
-        // Spawn hitbox
+        // Dynamic hitbox based on combo step
+        const damages = [15, 20, 35];
+        const widths = [48, 56, 72];
+        const dmg = damages[this.comboStep];
+        const w = widths[this.comboStep];
+
         if (window.game?.combat) {
-            window.game.combat.spawnMeleeHitbox(this, 8, 0, 48, 32, 10, 0.2);
+            window.game.combat.spawnMeleeHitbox(this, 8, 0, w, 32, dmg, 0.2);
         }
 
-        // Auto-reset after animation (roughly)
-        setTimeout(() => {
+        if (this.attackTimeout) clearTimeout(this.attackTimeout);
+        this.attackTimeout = setTimeout(() => {
             this.isAttacking = false;
         }, 320);
     }
@@ -274,6 +288,7 @@ class PlatformerPlayer extends PlatformerEntity {
                 
                 if (pressingWall) {
                     this.isWallSliding = true;
+                    this.canDash = true; // Reset dash on wall slide
                     const slideSpeed = window.PlatformerConfig?.WALL_SLIDE_SPEED || 2;
                     if (this.vy > slideSpeed) this.vy = slideSpeed;
                 }

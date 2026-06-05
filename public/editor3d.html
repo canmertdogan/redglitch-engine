@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified 3D Editor — RedGlitch Engine</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary:   #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-panel:     #0d0d0d;
+            --border:       #222;
+            --accent:       #e74c3c;
+            --accent-hover: #ff6b5b;
+            --text:         #ccc;
+            --text-dim:     #666;
+            --font:         'VT323', monospace;
+        }
+
+        body {
+            background: var(--bg-primary);
+            font-family: var(--font);
+            color: var(--text);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ── Layout ────────────────────────────────────────────── */
+        #editor-root {
+            display: grid;
+            grid-template-columns: 240px 1fr 260px;
+            grid-template-rows: 44px 1fr 28px;
+            grid-template-areas:
+                "toolbar toolbar toolbar"
+                "left    viewport right"
+                "status  status   status";
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ── Toolbar ───────────────────────────────────────────── */
+        #toolbar {
+            grid-area: toolbar;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 16px;
+        }
+
+        #toolbar-title {
+            color: var(--accent);
+            font-size: 18px;
+            letter-spacing: 4px;
+            margin-right: 16px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            padding: 4px 12px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .toolbar-btn:hover { border-color: var(--accent); color: #fff; }
+        .toolbar-btn.active { border-color: var(--accent); background: rgba(231,76,60,0.15); color: var(--accent); }
+
+        #mode-selector {
+            background: #111;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            font-family: var(--font);
+            font-size: 16px;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+
+        .toolbar-sep {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 6px;
+        }
+
+        /* ── Left Panel ────────────────────────────────────────── */
+        #left-panel {
+            grid-area: left;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .panel-header {
+            padding: 10px 12px;
+            color: var(--accent);
+            font-size: 14px;
+            letter-spacing: 3px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #scene-tree {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+        }
+
+        .tree-group { margin-bottom: 8px; }
+        .tree-group-label {
+            font-size: 14px;
+            color: var(--text-dim);
+            padding: 4px 0;
+            letter-spacing: 2px;
+        }
+
+        .tree-item {
+            padding: 3px 8px;
+            font-size: 16px;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+        }
+        .tree-item:hover { background: rgba(255,255,255,0.04); }
+        .tree-item.selected { border-left-color: var(--accent); background: rgba(231,76,60,0.08); color: #fff; }
+
+        .panel-empty {
+            color: var(--text-dim);
+            padding: 16px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* ── Viewport ──────────────────────────────────────────── */
+        #viewport {
+            grid-area: viewport;
+            background: #000;
+            position: relative;
+        }
+
+        #viewport canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ── Right Panel ───────────────────────────────────────── */
+        #right-panel {
+            grid-area: right;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        #properties-panel {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .prop-group { margin-bottom: 10px; }
+        .prop-label {
+            font-size: 13px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+        .prop-input {
+            width: 100%;
+            background: #111;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            padding: 4px 8px;
+        }
+        .prop-input:focus { border-color: var(--accent); outline: none; }
+        .prop-vec3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+        }
+        .prop-vec3 input {
+            background: #111;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            padding: 3px 4px;
+            width: 100%;
+        }
+        .prop-vec3 input:focus { border-color: var(--accent); outline: none; }
+
+        #mode-tools {
+            flex: 1;
+            padding: 8px;
+            overflow-y: auto;
+        }
+
+        /* ── Mode Tools styling ────────────────────────────────── */
+        .tool-section {
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tool-section:last-child { border-bottom: none; }
+
+        .tool-section-title {
+            font-size: 12px;
+            color: var(--accent);
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .tool-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .tool-btn {
+            background: #111;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 18px;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .tool-btn:hover { border-color: var(--accent); }
+        .tool-btn.active { border-color: var(--accent); background: rgba(231,76,60,0.15); }
+
+        .draw-btn {
+            background: #111;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            padding: 4px 10px;
+            cursor: pointer;
+        }
+        .draw-btn.active { border-color: var(--accent); background: rgba(231,76,60,0.15); color: var(--accent); }
+
+        .tool-select, .tool-select-sm {
+            width: 100%;
+            background: #111;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            padding: 4px 8px;
+        }
+        .tool-select-sm { width: auto; }
+
+        .tool-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .tool-input-sm {
+            width: 50px;
+            background: #111;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            padding: 2px 4px;
+        }
+
+        .tool-buttons-col {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .action-btn {
+            background: #111;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            padding: 6px 12px;
+            cursor: pointer;
+            text-align: left;
+        }
+        .action-btn:hover { border-color: var(--accent); color: #fff; }
+
+        /* ── Status Bar ────────────────────────────────────────── */
+        #status-bar {
+            grid-area: status;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            color: var(--text-dim);
+            gap: 24px;
+        }
+
+        #status-mode { color: var(--accent); }
+        #status-dirty { color: #e67e22; }
+
+        /* ── Scrollbar ─────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-panel); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+    </style>
+</head>
+<body>
+    <div id="editor-root">
+        <!-- Toolbar -->
+        <div id="toolbar">
+            <span id="toolbar-title">REDGLITCH 3D EDITOR</span>
+            <select id="mode-selector">
+                <option value="fps-3d">FPS 3D</option>
+                <option value="topdown-3d">TOP-DOWN 3D</option>
+                <option value="platformer-3d">PLATFORMER 3D</option>
+            </select>
+            <div class="toolbar-sep"></div>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="btn-new" title="New Level">📄 New</button>
+                <button class="toolbar-btn" id="btn-save" title="Save (Ctrl+S)">💾 Save</button>
+                <button class="toolbar-btn" id="btn-load" title="Load Level">📂 Load</button>
+            </div>
+            <div class="toolbar-sep"></div>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="btn-undo" title="Undo (Ctrl+Z)">↩ Undo</button>
+                <button class="toolbar-btn" id="btn-redo" title="Redo (Ctrl+Y)">↪ Redo</button>
+            </div>
+            <div class="toolbar-sep"></div>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="btn-playtest" title="Playtest (F5)">▶ Play</button>
+            </div>
+        </div>
+
+        <!-- Left Panel: Scene Tree -->
+        <div id="left-panel">
+            <div class="panel-header">SCENE TREE</div>
+            <div id="scene-tree">
+                <div class="panel-empty">No level loaded</div>
+            </div>
+        </div>
+
+        <!-- 3D Viewport -->
+        <div id="viewport"></div>
+
+        <!-- Right Panel: Properties + Mode Tools -->
+        <div id="right-panel">
+            <div class="panel-header">PROPERTIES</div>
+            <div id="properties-panel">
+                <div class="panel-empty">No selection</div>
+            </div>
+            <div class="panel-header">MODE TOOLS</div>
+            <div id="mode-tools">
+                <div class="panel-empty">Select a mode</div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div id="status-bar">
+            <span id="status-mode">FPS 3D</span>
+            <span id="status-project">No project</span>
+            <span id="status-dirty"></span>
+            <span style="flex:1"></span>
+            <span id="status-info">Ctrl+S: Save | F5: Play | Del: Delete</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js';
+
+        // ── Mode panel registry ───────────────────────────────────────────
+        const PANEL_REGISTRY = {
+            'fps-3d':        () => import('/engines/unified-3d/editor/FPSEditorPanel.js'),
+            'topdown-3d':    () => import('/engines/unified-3d/editor/TopDownEditorPanel.js'),
+            'platformer-3d': () => import('/engines/unified-3d/editor/PlatformerEditorPanel.js'),
+        };
+
+        const MODE_NAMES = {
+            'fps-3d':        'FPS 3D',
+            'topdown-3d':    'TOP-DOWN 3D',
+            'platformer-3d': 'PLATFORMER 3D',
+        };
+
+        // ── URL params ────────────────────────────────────────────────────
+        const params  = new URLSearchParams(window.location.search);
+        const mode    = params.get('mode')    || 'fps-3d';
+        const project = params.get('project') || '';
+        const level   = params.get('level')   || '';
+
+        // ── DOM refs ──────────────────────────────────────────────────────
+        const modeSelector = document.getElementById('mode-selector');
+        const statusMode   = document.getElementById('status-mode');
+        const statusProject = document.getElementById('status-project');
+
+        // ── Init editor ───────────────────────────────────────────────────
+        const viewport = document.getElementById('viewport');
+        const editor = new Editor3DCore(viewport, { mode, project, levelId: level });
+
+        editor.init().then(async () => {
+            console.log('[Editor3D] Core initialised');
+
+            // Set initial mode
+            modeSelector.value = mode;
+            statusMode.textContent = MODE_NAMES[mode] || mode;
+            statusProject.textContent = project ? `Project: ${project}` : 'No project';
+
+            // Load mode panel
+            await loadModePanel(mode);
+
+            // Load level if specified
+            if (project && level) {
+                await editor.loadLevel(project, level);
+            }
+        });
+
+        // ── Mode switching ────────────────────────────────────────────────
+        async function loadModePanel(modeId) {
+            const loader = PANEL_REGISTRY[modeId];
+            if (!loader) return;
+            const mod = await loader();
+            const PanelClass = mod.default;
+            editor.setModePanel(new PanelClass());
+            await editor.setMode(modeId);
+        }
+
+        modeSelector.addEventListener('change', async () => {
+            const newMode = modeSelector.value;
+            statusMode.textContent = MODE_NAMES[newMode] || newMode;
+            await loadModePanel(newMode);
+            // Update URL without reload
+            const url = new URL(window.location);
+            url.searchParams.set('mode', newMode);
+            history.replaceState(null, '', url);
+        });
+
+        // ── Toolbar buttons ───────────────────────────────────────────────
+        document.getElementById('btn-new')?.addEventListener('click', () => {
+            editor.newLevel();
+        });
+        document.getElementById('btn-save')?.addEventListener('click', () => {
+            editor.saveLevel();
+        });
+        document.getElementById('btn-undo')?.addEventListener('click', () => {
+            editor.undo();
+        });
+        document.getElementById('btn-redo')?.addEventListener('click', () => {
+            editor.redo();
+        });
+        document.getElementById('btn-playtest')?.addEventListener('click', () => {
+            editor.playtest();
+        });
+        document.getElementById('btn-load')?.addEventListener('click', () => {
+            const proj = prompt('Project name:');
+            const lvl  = prompt('Level ID:');
+            if (proj && lvl) editor.loadLevel(proj, lvl);
+        });
+
+        // ── Keyboard shortcuts ────────────────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 's') { e.preventDefault(); editor.saveLevel(); }
+                if (e.key === 'z') { e.preventDefault(); editor.undo(); }
+                if (e.key === 'y') { e.preventDefault(); editor.redo(); }
+            }
+            if (e.key === 'F5') { e.preventDefault(); editor.playtest(); }
+            if (e.key === 'Delete') { editor.deleteSelected?.(); }
+        });
+
+        // ── Expose for debugging ──────────────────────────────────────────
+        window.editor3d = editor;
+    </script>
+</body>
+</html>

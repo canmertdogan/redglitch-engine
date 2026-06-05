@@ -3,345 +3,801 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REDGLITCH CREDITS // EASTER LOG</title>
+    <title>REDGLITCH CREDITS</title>
     <link href="fonts/fonts.css" rel="stylesheet">
-    <script src="theme.js"></script>
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <style>
         :root {
-            --bg: #05060d;
-            --panel: rgba(10, 14, 30, 0.85);
-            --line: rgba(100, 217, 255, 0.2);
-            --text: #e2f6ff;
-            --muted: #8fb8cc;
-            --accent: #64d9ff;
-            --accent2: #62ffa0;
+            --bg: #000;
+            --accent: #ff1e27;
+            --accent-glow: rgba(255,30,39,0.5);
+            --text: #e0e0e0;
+            --dim: #555;
+            --muted: #888;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         html, body {
-            margin: 0;
             height: 100%;
             overflow: hidden;
-            background: radial-gradient(circle at 30% 0%, #1c264f 0%, #0a0f24 35%, #04060f 100%);
+            background: var(--bg);
             color: var(--text);
-            font-family: "VT323", monospace;
+            font-family: 'VT323', monospace;
         }
 
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background-image: linear-gradient(transparent 95%, rgba(100, 217, 255, 0.12) 96%);
+        /* ═══ CRT SCANLINES ═══ */
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.2) 50%);
             background-size: 100% 4px;
             pointer-events: none;
-            z-index: 0;
+            z-index: 1000;
         }
 
+        /* ═══ WARP STARFIELD CANVAS ═══ */
         #starfield {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
+            position: fixed; inset: 0; z-index: 0;
         }
 
+        /* ═══ PARTICLE CANVAS (click sparks) ═══ */
+        #sparkCanvas {
+            position: fixed; inset: 0; z-index: 1;
+            pointer-events: none;
+        }
+
+        /* ═══ BACK BUTTON ═══ */
+        .back-btn {
+            position: fixed; bottom: 24px; left: 24px; z-index: 100;
+            text-decoration: none;
+            border: 1px solid rgba(255,30,39,0.3);
+            color: var(--muted);
+            padding: 8px 20px;
+            font-family: 'VT323', monospace;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* ═══ MAIN FRAME ═══ */
         .frame {
-            position: relative;
-            z-index: 2;
-            width: min(980px, 92vw);
-            margin: 24px auto;
-            height: calc(100vh - 48px);
-            border-radius: 14px;
-            border: 1px solid var(--line);
-            background: var(--panel);
-            box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45), inset 0 0 60px rgba(0, 0, 0, 0.35);
+            position: relative; z-index: 2;
+            width: min(960px, 94vw);
+            margin: 20px auto;
+            height: calc(100vh - 40px);
+            border: 1px solid rgba(255,30,39,0.2);
+            background: rgba(5,5,10,0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             display: grid;
             grid-template-rows: auto 1fr auto;
             overflow: hidden;
         }
 
+        /* ═══ TOP BAR ═══ */
         .topbar {
-            padding: 16px 22px 12px;
-            border-bottom: 1px solid var(--line);
+            padding: 14px 24px;
+            border-bottom: 1px solid rgba(255,30,39,0.15);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            text-transform: uppercase;
-            letter-spacing: 0.1rem;
+            background: rgba(255,0,0,0.02);
         }
 
         .topbar h1 {
             margin: 0;
             color: var(--accent);
-            font-size: clamp(1.7rem, 4vw, 2.6rem);
-            text-shadow: 0 0 15px rgba(100, 217, 255, 0.45);
+            font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px var(--accent-glow);
+            animation: title-glitch 4s ease-in-out infinite;
+        }
+
+        @keyframes title-glitch {
+            0%,100% { text-shadow: 2px -1px 0 rgba(0,255,255,0.3), -2px 1px 0 rgba(255,0,0,0.5), 0 0 20px var(--accent-glow); }
+            25%     { text-shadow: -2px 2px 0 rgba(0,255,255,0.3), 2px -2px 0 rgba(255,0,0,0.5), 0 0 30px var(--accent-glow); }
+            50%     { text-shadow: 1px -3px 0 rgba(0,255,255,0.3), -1px 3px 0 rgba(255,0,0,0.5), 0 0 15px var(--accent-glow); }
+            75%     { text-shadow: -1px 1px 0 rgba(0,255,255,0.3), 1px -1px 0 rgba(255,0,0,0.5), 0 0 25px var(--accent-glow); }
         }
 
         .status-chip {
-            border: 1px solid rgba(98, 255, 160, 0.4);
-            color: var(--accent2);
-            background: rgba(0, 26, 13, 0.44);
-            padding: 4px 10px;
-            border-radius: 7px;
+            border: 1px solid rgba(255,30,39,0.3);
+            color: #fff;
+            background: rgba(255,30,39,0.1);
+            padding: 4px 14px;
             font-size: 0.95rem;
+            letter-spacing: 2px;
+            animation: chip-pulse 2s infinite alternate;
         }
 
-        .scroll-zone {
-            padding: 10px 22px 0;
+        @keyframes chip-pulse {
+            from { opacity: 0.6; box-shadow: 0 0 0 transparent; }
+            to   { opacity: 1.0; box-shadow: 0 0 12px var(--accent-glow); }
+        }
+
+        /* ═══ TERMINAL LAYOUT ═══ */
+        .terminal-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            height: 100%;
             overflow: hidden;
-            mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 90%, transparent 100%);
         }
 
-        .credits-scroll {
+        /* ═══ SIDEBAR ═══ */
+        .terminal-sidebar {
+            border-right: 1px solid rgba(255,30,39,0.1);
+            background: rgba(0,0,0,0.3);
+            padding: 20px 10px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 28px;
-            text-align: center;
-            animation: roll 52s linear infinite;
-            padding-bottom: 120px;
-        }
-
-        @keyframes roll {
-            0% { transform: translateY(100%); }
-            100% { transform: translateY(-145%); }
-        }
-
-        .block h2 {
-            margin: 0 0 6px;
-            color: var(--accent2);
-            letter-spacing: 0.08rem;
-            text-transform: uppercase;
-            font-size: 2rem;
-        }
-
-        .block p {
-            margin: 2px 0;
-            color: var(--muted);
-            font-size: 1.2rem;
-        }
-
-        .name {
-            color: #fff;
-            font-size: 1.6rem;
-            letter-spacing: 0.04rem;
-        }
-
-        .stack {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
             gap: 8px;
-            max-width: 680px;
         }
 
-        .chip {
-            border: 1px solid var(--line);
-            border-radius: 7px;
-            background: rgba(0, 0, 0, 0.25);
-            color: var(--text);
-            padding: 6px 10px;
-            font-size: 1rem;
+        .sidebar-tab {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.04);
+            color: var(--dim);
+            font-family: inherit;
+            font-size: 1.2rem;
+            padding: 10px 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 1px;
         }
 
-        .runes {
-            padding: 12px 22px 18px;
-            border-top: 1px solid var(--line);
+        .sidebar-tab:hover {
+            color: var(--accent);
+            border-color: rgba(255,30,39,0.2);
+            background: rgba(255,30,39,0.03);
+            transform: translateX(4px);
+        }
+
+        .sidebar-tab.active {
+            color: #fff;
+            border-color: rgba(255,30,39,0.3);
+            background: rgba(255,30,39,0.08);
+            box-shadow: 0 0 15px rgba(255,30,39,0.15);
+        }
+
+        .tab-icon { font-size: 1.1rem; }
+
+        /* ═══ VIEWPORT ═══ */
+        .terminal-viewport {
+            padding: 28px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .terminal-viewport::-webkit-scrollbar { width: 4px; }
+        .terminal-viewport::-webkit-scrollbar-track { background: transparent; }
+        .terminal-viewport::-webkit-scrollbar-thumb { background: rgba(255,30,39,0.15); border-radius: 2px; }
+
+        /* ═══ PANELS ═══ */
+        .viewport-panel {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            animation: panel-in 0.3s ease forwards;
+        }
+
+        .viewport-panel.active { display: flex; }
+
+        @keyframes panel-in {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel-header {
+            margin: 0 0 8px 0;
+            font-size: 1.6rem;
+            color: var(--accent);
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(255,30,39,0.3);
+        }
+
+        .panel-desc {
+            margin: 0 0 24px 0;
+            font-size: 1.1rem;
+            color: var(--dim);
+            letter-spacing: 1px;
+        }
+
+        /* ═══ CREDIT CARDS ═══ */
+        .cards-container {
             display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .credit-card {
+            border: 1px solid rgba(255,30,39,0.12);
+            background: rgba(0,0,0,0.4);
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .credit-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            transform: translateX(-100%);
+            animation: card-sweep 4s ease-in-out infinite;
+        }
+
+        @keyframes card-sweep {
+            0%,100% { transform: translateX(-100%); }
+            50%     { transform: translateX(100%); }
+        }
+
+        .credit-card:hover {
+            border-color: rgba(255,30,39,0.3);
+            background: rgba(255,30,39,0.03);
+            box-shadow: 0 0 20px rgba(255,30,39,0.08);
+        }
+
+        .card-icon { font-size: 2rem; margin-bottom: 6px; }
+
+        .card-title {
+            margin: 0 0 4px 0;
+            font-size: 1.8rem;
+            color: #fff;
+        }
+
+        .card-subtitle {
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+        }
+
+        .card-desc {
+            font-size: 1.05rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ═══ TECH GRID ═══ */
+        .binary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 10px;
         }
 
-        .runes p {
-            margin: 0;
-            text-transform: uppercase;
-            letter-spacing: 0.07rem;
+        .binary-badge {
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 12px;
+            font-size: 1.1rem;
+            background: rgba(0,0,0,0.3);
+            text-align: center;
             color: var(--muted);
+            cursor: default;
+            transition: all 0.25s ease;
         }
 
-        .rune-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+        .binary-badge:hover {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent-glow);
+            transform: translateY(-3px);
         }
 
-        .rune {
-            border: 1px solid var(--line);
-            background: rgba(100, 217, 255, 0.08);
+        /* ═══ SYNTH PADS ═══ */
+        .synth-pads {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .synth-pad {
+            background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,30,39,0.2);
             color: var(--text);
-            border-radius: 7px;
-            min-width: 44px;
-            height: 36px;
-            font: inherit;
-            font-size: 1.2rem;
+            font-family: inherit;
+            padding: 22px 14px;
             cursor: pointer;
-            transition: transform 0.14s ease, border-color 0.14s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
         }
 
-        .rune:hover {
-            transform: translateY(-1px);
-            border-color: var(--accent2);
+        .synth-pad:hover {
+            border-color: var(--accent);
+            background: rgba(255,30,39,0.05);
+            box-shadow: 0 0 20px rgba(255,30,39,0.15);
+            transform: translateY(-3px);
         }
 
-        #secret-line {
+        .synth-pad:active {
+            transform: translateY(1px);
+            background: var(--accent);
+            color: #000;
+        }
+
+        .pad-symbol { font-size: 2.5rem; }
+        .pad-label { font-size: 1.2rem; letter-spacing: 2px; }
+
+        /* ─── Visualizer ─── */
+        .synth-visualizer {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 5px;
+            height: 60px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,30,39,0.1);
+            padding: 8px;
+        }
+
+        .visualizer-bar {
+            width: 20px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.08s ease;
+        }
+
+        /* ═══ THEME BUTTONS ═══ */
+        .theme-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .theme-btn {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 1.3rem;
+            padding: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.25s;
+            letter-spacing: 1px;
+        }
+
+        .theme-btn:hover {
+            border-color: rgba(255,255,255,0.15);
+            color: var(--text);
+        }
+
+        .theme-btn.active {
+            border-color: var(--accent);
+            background: rgba(255,30,39,0.08);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(255,30,39,0.15);
+        }
+
+        .theme-preview {
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* ═══ FOOTER ═══ */
+        .terminal-footer {
+            padding: 10px 24px;
+            border-top: 1px solid rgba(255,30,39,0.1);
+            background: rgba(0,0,0,0.4);
+            text-align: center;
+        }
+
+        .terminal-footer p {
             margin: 0;
-            color: #ffd98e;
-            opacity: 0;
-            transform: translateY(4px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            font-size: 1rem;
+            color: var(--dim);
+            letter-spacing: 2px;
         }
 
-        #secret-line.visible {
-            opacity: 1;
-            transform: translateY(0);
+        /* ═══ RAINBOW TEXT ═══ */
+        @keyframes rainbow-text {
+            0%,100% { color: #ff0055; text-shadow: 0 0 8px rgba(255,0,85,0.5); }
+            20%     { color: #ffcc00; text-shadow: 0 0 8px rgba(255,204,0,0.5); }
+            40%     { color: #33ff00; text-shadow: 0 0 8px rgba(51,255,0,0.5); }
+            60%     { color: #00ffff; text-shadow: 0 0 8px rgba(0,255,255,0.5); }
+            80%     { color: #7f00ff; text-shadow: 0 0 8px rgba(127,0,255,0.5); }
         }
 
-        .back-btn {
-            position: fixed;
-            left: 20px;
-            bottom: 20px;
-            z-index: 5;
-            text-decoration: none;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            color: var(--accent);
-            padding: 7px 12px;
-            font-size: 1.2rem;
-            background: rgba(0, 0, 0, 0.35);
+        /* Flash for theme switch */
+        body.theme-flash {
+            animation: glitch-flash 0.1s ease-out;
+        }
+
+        @keyframes glitch-flash {
+            0%   { filter: invert(1); }
+            100% { filter: invert(0); }
+        }
+
+        /* ═══ RESPONSIVE ═══ */
+        @media (max-width: 768px) {
+            .terminal-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            .terminal-sidebar {
+                border-right: none;
+                border-bottom: 1px solid rgba(255,30,39,0.1);
+                flex-direction: row;
+                overflow-x: auto;
+                padding: 8px;
+            }
+            .sidebar-tab { white-space: nowrap; font-size: 1rem; padding: 8px 12px; }
+            .synth-pads { grid-template-columns: 1fr; }
+            .theme-options { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <canvas id="starfield"></canvas>
-    <a href="index.html" class="back-btn">&lt; return to archive</a>
+    <canvas id="sparkCanvas"></canvas>
+    <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> RETURN</a>
 
     <section class="frame">
         <header class="topbar">
-            <h1>redglitch credits</h1>
-            <span class="status-chip">secret log mode</span>
+            <h1 id="title-text">REDGLITCH CREDITS</h1>
+            <span class="status-chip">v7.0 // ACTIVE</span>
         </header>
 
-        <div class="scroll-zone">
-            <div class="credits-scroll">
-                <div class="block">
-                    <h2>RedGlitch Game Studio</h2>
-                    <p>EST. 2026</p>
-                </div>
+        <div class="terminal-layout">
+            <!-- Sidebar -->
+            <div class="terminal-sidebar">
+                <button class="sidebar-tab active" data-tab="creative">
+                    <span class="tab-icon"><i class="fas fa-brain"></i></span> CREATIVE DIR
+                </button>
+                <button class="sidebar-tab" data-tab="stack">
+                    <span class="tab-icon"><i class="fas fa-bolt"></i></span> SYSTEM STACK
+                </button>
+                <button class="sidebar-tab" data-tab="synth">
+                    <span class="tab-icon"><i class="fas fa-music"></i></span> BEAT SYNTH
+                </button>
+                <button class="sidebar-tab" data-tab="theme">
+                    <span class="tab-icon"><i class="fas fa-palette"></i></span> THEME MATRIX
+                </button>
+            </div>
 
-                <div class="block">
-                    <h2>Core Architect</h2>
-                    <p class="name">Seref Can MERTDOGAN</p>
-                    <p>Engine architecture, core systems, shaders</p>
-                </div>
-
-                <div class="block">
-                    <h2>Art and Design</h2>
-                    <p class="name">RedGlitch Team</p>
-                    <p>Pixel art, animation, world building</p>
-                </div>
-
-                <div class="block">
-                    <h2>Runtime Stack</h2>
-                    <div class="stack">
-                        <span class="chip">Electron</span>
-                        <span class="chip">Node.js</span>
-                        <span class="chip">V8</span>
-                        <span class="chip">Chromium</span>
-                        <span class="chip">Express</span>
-                        <span class="chip">WebGL</span>
-                        <span class="chip">WebAudio</span>
-                        <span class="chip">GitHub</span>
+            <!-- Content -->
+            <div class="terminal-viewport">
+                <!-- Panel: Creative -->
+                <div class="viewport-panel active" id="panel-creative">
+                    <h2 class="panel-header">// CREATIVE SYSTEM OPERATORS</h2>
+                    <p class="panel-desc">The humans behind the machine.</p>
+                    <div class="cards-container">
+                        <div class="credit-card">
+                            <div class="card-icon"><i class="fas fa-brain"></i></div>
+                            <h3 class="card-title">Şeref Can MERTDOĞAN</h3>
+                            <p class="card-subtitle">CORE ARCHITECT</p>
+                            <p class="card-desc">Engine architecture, logic interpreters, WebGL shaders & core systems.</p>
+                        </div>
+                        <div class="credit-card">
+                            <div class="card-icon"><i class="fas fa-paint-brush"></i></div>
+                            <h3 class="card-title">REDGLITCH TEAM</h3>
+                            <p class="card-subtitle">ART & WORLD DESIGN</p>
+                            <p class="card-desc">Pixel artwork, spritesheet animations, world building & level design.</p>
+                        </div>
+                        <div class="credit-card">
+                            <div class="card-icon"><i class="fas fa-robot"></i></div>
+                            <h3 class="card-title">AI CO-PILOT</h3>
+                            <p class="card-subtitle">ASSISTED DEVELOPMENT</p>
+                            <p class="card-desc">AI-assisted code generation, debugging, architectural planning & documentation.</p>
+                        </div>
                     </div>
                 </div>
 
-                <div class="block">
-                    <h2>Special Thanks</h2>
-                    <p>To all explorers of the RedGlitch multiverse.</p>
-                    <p>To open-source builders everywhere.</p>
+                <!-- Panel: Stack -->
+                <div class="viewport-panel" id="panel-stack">
+                    <h2 class="panel-header">// SYSTEM ENGINE INTEGRATION STACK</h2>
+                    <p class="panel-desc">Hover to interface with integrated engine subsystems.</p>
+                    <div class="binary-grid">
+                        <div class="binary-badge">ELECTRON JS</div>
+                        <div class="binary-badge">NODE.JS</div>
+                        <div class="binary-badge">V8 ENGINE</div>
+                        <div class="binary-badge">CHROMIUM</div>
+                        <div class="binary-badge">EXPRESS.JS</div>
+                        <div class="binary-badge">NPM</div>
+                        <div class="binary-badge">GIT</div>
+                        <div class="binary-badge">VT323 FONT</div>
+                        <div class="binary-badge">WEBAUDIO API</div>
+                        <div class="binary-badge">WEBGL 2.0</div>
+                        <div class="binary-badge">CANVAS 2D</div>
+                        <div class="binary-badge">THREE.JS</div>
+                        <div class="binary-badge">MONACO</div>
+                        <div class="binary-badge">GITHUB</div>
+                    </div>
                 </div>
 
-                <div class="block">
-                    <h2>Transmission End</h2>
-                    <p>Copyright 2026 RedGlitch Game Studio</p>
-                    <p>Stay retro. Stay curious.</p>
+                <!-- Panel: Synth -->
+                <div class="viewport-panel" id="panel-synth">
+                    <h2 class="panel-header">// RETRO AUDIO BEAT SYNTHESIZER</h2>
+                    <p class="panel-desc">Click pads to trigger synthesized soundwaves.</p>
+                    <div class="synth-pads">
+                        <button class="synth-pad" data-sound="laser">
+                            <span class="pad-symbol"><i class="fas fa-crosshairs"></i></span>
+                            <span class="pad-label">LASER PULSE</span>
+                        </button>
+                        <button class="synth-pad" data-sound="coin">
+                            <span class="pad-symbol"><i class="fas fa-coins"></i></span>
+                            <span class="pad-label">COIN GET</span>
+                        </button>
+                        <button class="synth-pad" data-sound="rise">
+                            <span class="pad-symbol"><i class="fas fa-rocket"></i></span>
+                            <span class="pad-label">POWER RISE</span>
+                        </button>
+                    </div>
+                    <div class="synth-visualizer">
+                        <div class="visualizer-bar bar-1"></div>
+                        <div class="visualizer-bar bar-2"></div>
+                        <div class="visualizer-bar bar-3"></div>
+                        <div class="visualizer-bar bar-4"></div>
+                        <div class="visualizer-bar bar-5"></div>
+                        <div class="visualizer-bar bar-6"></div>
+                        <div class="visualizer-bar bar-7"></div>
+                        <div class="visualizer-bar bar-8"></div>
+                    </div>
+                </div>
+
+                <!-- Panel: Theme -->
+                <div class="viewport-panel" id="panel-theme">
+                    <h2 class="panel-header">// GRAPHICS MATRIX PALETTE</h2>
+                    <p class="panel-desc">Select a color matrix to modify terminal output.</p>
+                    <div class="theme-options">
+                        <button class="theme-btn active" data-theme="red">
+                            <span class="theme-preview" style="background:#ff1e27;"></span>
+                            RED GLITCH
+                        </button>
+                        <button class="theme-btn" data-theme="green">
+                            <span class="theme-preview" style="background:#33ff00;"></span>
+                            EMERALD CODE
+                        </button>
+                        <button class="theme-btn" data-theme="cyan">
+                            <span class="theme-preview" style="background:#00ffff;"></span>
+                            CYBER WAVE
+                        </button>
+                        <button class="theme-btn" data-theme="rainbow">
+                            <span class="theme-preview" style="background:linear-gradient(45deg,#ff0055,#00ffff);"></span>
+                            RAINBOW ARCADE
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <footer class="runes">
-            <p>Enter the rune sequence from index hint:</p>
-            <div class="rune-buttons">
-                <button class="rune" data-rune="K">K</button>
-                <button class="rune" data-rune="E">E</button>
-                <button class="rune" data-rune="T">T</button>
-                <button class="rune" data-rune="B">B</button>
-                <button class="rune" data-rune="X">X</button>
-                <button class="rune" data-rune="A">A</button>
-                <button class="rune" data-rune="R">R</button>
-                <button class="rune" data-rune="O">O</button>
-            </div>
-            <p id="secret-line">Decoded: "Every tool is an easter egg when curiosity is the key."</p>
+        <footer class="terminal-footer">
+            <p>COPYRIGHT © 2026 REDGLITCH GAME STUDIO. ALL RUNTIMES SECURED.</p>
         </footer>
     </section>
 
     <script>
-        initTheme();
-
+        // ═══════════ WARP STARFIELD ═══════════
         const canvas = document.getElementById('starfield');
         const ctx = canvas.getContext('2d');
         let stars = [];
+        let mouseX = 0, mouseY = 0;
+        let isWarping = false;
 
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            sparkCanvas.width = window.innerWidth;
+            sparkCanvas.height = window.innerHeight;
+            initStars();
+        }
+
+        function initStars() {
             stars = [];
-            for (let i = 0; i < 190; i += 1) {
+            for (let i = 0; i < 180; i++) {
                 stars.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    s: Math.random() * 2 + 0.2,
-                    v: Math.random() * 0.35 + 0.05,
-                    o: Math.random() * 0.7 + 0.3
+                    x: (Math.random() - 0.5) * canvas.width,
+                    y: (Math.random() - 0.5) * canvas.height,
+                    z: Math.random() * canvas.width,
+                    color: Math.random() > 0.85 ? '#ff1e27' : '#ffffff'
                 });
             }
         }
 
-        function animateStars() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const star of stars) {
-                ctx.globalAlpha = star.o;
-                ctx.fillStyle = '#c8ebff';
-                ctx.fillRect(star.x, star.y, star.s, star.s);
-                star.y += star.v;
-                if (star.y > canvas.height) {
-                    star.y = -2;
-                    star.x = Math.random() * canvas.width;
+        window.addEventListener('mousemove', e => {
+            mouseX = e.clientX - canvas.width / 2;
+            mouseY = e.clientY - canvas.height / 2;
+        });
+
+        window.addEventListener('mousedown', () => { isWarping = true; });
+        window.addEventListener('mouseup', () => { isWarping = false; });
+
+        function drawStars() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2, cy = canvas.height / 2;
+            const speed = isWarping ? 20 : 3;
+
+            stars.forEach(star => {
+                star.z -= speed;
+                if (star.z <= 0) {
+                    star.z = canvas.width;
+                    star.x = (Math.random() - 0.5) * canvas.width;
+                    star.y = (Math.random() - 0.5) * canvas.height;
                 }
+                const px = (star.x - mouseX * 0.08) * (canvas.width / star.z) + cx;
+                const py = (star.y - mouseY * 0.08) * (canvas.width / star.z) + cy;
+                const sz = (1 - star.z / canvas.width) * 3;
+
+                if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+                    ctx.globalAlpha = 1 - star.z / canvas.width;
+                    ctx.fillStyle = star.color;
+                    ctx.fillRect(px, py, sz, sz);
+                }
+            });
+            ctx.globalAlpha = 1;
+            requestAnimationFrame(drawStars);
+        }
+
+        // ═══════════ CLICK SPARK PARTICLES ═══════════
+        const sparkCanvas = document.getElementById('sparkCanvas');
+        const sCtx = sparkCanvas.getContext('2d');
+        let sparks = [];
+        const sparkColors = ['#ff1e27','#ff0055','#ffcc00','#33ff00','#00ffff','#7f00ff','#ff00ff'];
+
+        window.addEventListener('click', e => {
+            for (let i = 0; i < 20; i++) {
+                sparks.push({
+                    x: e.clientX, y: e.clientY,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8 - 3,
+                    size: Math.random() * 3 + 1,
+                    color: sparkColors[Math.floor(Math.random() * sparkColors.length)],
+                    alpha: 1,
+                    decay: Math.random() * 0.03 + 0.02
+                });
             }
-            requestAnimationFrame(animateStars);
+        });
+
+        function drawSparks() {
+            sCtx.clearRect(0, 0, sparkCanvas.width, sparkCanvas.height);
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                const s = sparks[i];
+                sCtx.globalAlpha = s.alpha;
+                sCtx.fillStyle = s.color;
+                sCtx.fillRect(s.x, s.y, s.size, s.size);
+                s.x += s.vx;
+                s.y += s.vy;
+                s.vy += 0.1;
+                s.alpha -= s.decay;
+                if (s.alpha <= 0) sparks.splice(i, 1);
+            }
+            sCtx.globalAlpha = 1;
+            requestAnimationFrame(drawSparks);
         }
 
         resize();
-        animateStars();
+        drawStars();
+        drawSparks();
         window.addEventListener('resize', resize);
 
-        (function setupRuneEgg() {
-            const target = ['K', 'E', 'T', 'E', 'B', 'E'];
-            let progress = 0;
-            const line = document.getElementById('secret-line');
-            const runes = document.querySelectorAll('.rune');
+        // ═══════════ TAB SWITCHING ═══════════
+        const tabs = document.querySelectorAll('.sidebar-tab');
+        const panels = document.querySelectorAll('.viewport-panel');
 
-            runes.forEach((button) => {
-                button.addEventListener('click', () => {
-                    const rune = button.dataset.rune;
-                    if (rune === target[progress]) {
-                        progress += 1;
-                        if (progress === target.length) {
-                            line.classList.add('visible');
-                            progress = 0;
-                        }
-                        return;
-                    }
-                    progress = rune === target[0] ? 1 : 0;
-                });
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                panels.forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
             });
-        })();
+        });
+
+        // ═══════════ THEMES ═══════════
+        const themes = {
+            red:     { accent: '#ff1e27', accentGlow: 'rgba(255,30,39,0.5)', text: '#e0e0e0', dim: '#555', muted: '#888' },
+            green:   { accent: '#33ff00', accentGlow: 'rgba(51,255,0,0.5)',  text: '#e0e0e0', dim: '#555', muted: '#888' },
+            cyan:    { accent: '#00ffff', accentGlow: 'rgba(0,255,255,0.5)', text: '#e0e0e0', dim: '#555', muted: '#888' },
+            rainbow: { accent: '#ff00ff', accentGlow: 'rgba(255,0,255,0.5)', text: '#ffffff', dim: '#666', muted: '#ccc' }
+        };
+
+        function selectTheme(name) {
+            const t = themes[name];
+            if (!t) return;
+            document.body.classList.add('theme-flash');
+            setTimeout(() => document.body.classList.remove('theme-flash'), 120);
+            const r = document.documentElement;
+            r.style.setProperty('--accent', t.accent);
+            r.style.setProperty('--accent-glow', t.accentGlow);
+            r.style.setProperty('--text', t.text);
+            r.style.setProperty('--dim', t.dim);
+            r.style.setProperty('--muted', t.muted);
+
+            document.getElementById('title-text').style.animation =
+                name === 'rainbow' ? 'rainbow-text 3s linear infinite' : '';
+        }
+
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectTheme(btn.dataset.theme);
+            });
+        });
+
+        // ═══════════ BEAT SYNTH ═══════════
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const visualizerBars = document.querySelectorAll('.visualizer-bar');
+
+        function animateVisualizer() {
+            visualizerBars.forEach(bar => {
+                bar.style.height = `${Math.random() * 45 + 5}px`;
+            });
+        }
+
+        document.querySelectorAll('.synth-pad').forEach(pad => {
+            pad.addEventListener('click', () => {
+                triggerSynthSound(pad.dataset.sound);
+                let c = 0;
+                const iv = setInterval(() => {
+                    animateVisualizer();
+                    if (++c > 10) {
+                        clearInterval(iv);
+                        visualizerBars.forEach(b => b.style.height = '4px');
+                    }
+                }, 80);
+            });
+        });
+
+        function triggerSynthSound(type) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'laser') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(900, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.35);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now); osc.stop(now + 0.35);
+                } else if (type === 'coin') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.09);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now); osc.stop(now + 0.3);
+                } else if (type === 'rise') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.linearRampToValueAtTime(1000, now + 0.5);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now); osc.stop(now + 0.5);
+                }
+            } catch (e) {
+                console.warn('AudioContext failed:', e);
+            }
+        }
     </script>
 </body>
 </html>
+</style>

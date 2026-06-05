@@ -116,17 +116,17 @@ class CampaignController {
             'topdown-3d': [
                 'engines/shared/Engine3DBase.js',
                 'engines/shared/Engine3DAdapter.js',
-                'engines/topdown-3d/TopDown3DAdapter.js'
+                'engines/3d/Unified3DAdapter.js'
             ],
             'fps-3d': [
                 'engines/shared/Engine3DBase.js',
                 'engines/shared/Engine3DAdapter.js',
-                'engines/fps-3d/FPS3DAdapter.js'
+                'engines/3d/Unified3DAdapter.js'
             ],
             'platformer-3d': [
                 'engines/shared/Engine3DBase.js',
                 'engines/shared/Engine3DAdapter.js',
-                'engines/platformer-3d/Platformer3DAdapter.js'
+                'engines/3d/Unified3DAdapter.js'
             ]
         };
         this.loadedEngines = new Set();
@@ -322,36 +322,56 @@ class CampaignController {
         if (this.isTransitioning) return;
         this.isTransitioning = true;
         try {
-            if (this.currentAdapter) {
+            // Check if we can hot-swap between 3D modes via Unified3DAdapter
+            const is3DSwap = this._is3DEngine(newEngineType)
+                          && this._is3DEngine(this.currentEngineType)
+                          && this.currentAdapter
+                          && typeof this.currentAdapter.switchMode === 'function';
+
+            if (is3DSwap) {
+                // Hot-swap: reuse the existing Unified3DAdapter, just switch mode
+                console.log(`[CampaignController] Hot-swapping 3D mode: ${this.currentEngineType} → ${newEngineType}`);
+                this._showTransitionScreen(newEngineType);
                 this.playerData = this.currentAdapter.getPlayerData();
-                await this.currentAdapter.unloadLevel();
-                this.currentAdapter.destroy();
-                this.currentAdapter = null;
-            }
-            this._showTransitionScreen(newEngineType);
-            await this._loadEngineScripts(newEngineType);
+                await this.currentAdapter.switchMode(newEngineType);
+                this.currentEngineType = newEngineType;
+                if (this.onEngineSwitch) this.onEngineSwitch(newEngineType);
+            } else {
+                // Full engine swap (2D ↔ 3D or between 2D engines)
+                if (this.currentAdapter) {
+                    this.playerData = this.currentAdapter.getPlayerData();
+                    await this.currentAdapter.unloadLevel();
+                    this.currentAdapter.destroy();
+                    this.currentAdapter = null;
+                }
+                this._showTransitionScreen(newEngineType);
+                await this._loadEngineScripts(newEngineType);
 
-            // Phase 24: Toggle 2D Atmosphere based on engine type
-            if (window.atmosphere) {
-            }
+                // Phase 24: Toggle 2D Atmosphere based on engine type
+                if (window.atmosphere) {
+                }
 
-            let adapter;
-            switch (newEngineType) {
-                case 'rpg-topdown': adapter = new TopDownAdapter(); break;
-                case 'iso-pixel': adapter = new IsoPixelAdapter(); break;
-                case 'platformer-2d': adapter = new PlatformerAdapter(); break;
-                case 'topdown-3d': adapter = new TopDown3DAdapter(); break;
-                case 'fps-3d': adapter = new FPS3DAdapter(); break;
-                case 'platformer-3d': adapter = new Platformer3DAdapter(); break;
-                default: throw new Error(`Unknown engine: ${newEngineType}`);
-            }
+                let adapter;
+                switch (newEngineType) {
+                    case 'rpg-topdown': adapter = new TopDownAdapter(); break;
+                    case 'iso-pixel': adapter = new IsoPixelAdapter(); break;
+                    case 'platformer-2d': adapter = new PlatformerAdapter(); break;
+                    // All 3D modes use the Unified3DAdapter
+                    case 'topdown-3d':
+                    case 'fps-3d':
+                    case 'platformer-3d':
+                        adapter = new Unified3DAdapter(newEngineType);
+                        break;
+                    default: throw new Error(`Unknown engine: ${newEngineType}`);
+                }
 
-            if (adapter.setCampaignController) adapter.setCampaignController(this);
-            await adapter.initialize();
-            if (this.playerData) adapter.setPlayerData(this.playerData);
-            this.currentAdapter = adapter;
-            this.currentEngineType = newEngineType;
-            if (this.onEngineSwitch) this.onEngineSwitch(newEngineType);
+                if (adapter.setCampaignController) adapter.setCampaignController(this);
+                await adapter.initialize();
+                if (this.playerData) adapter.setPlayerData(this.playerData);
+                this.currentAdapter = adapter;
+                this.currentEngineType = newEngineType;
+                if (this.onEngineSwitch) this.onEngineSwitch(newEngineType);
+            }
         } finally {
             this.isTransitioning = false;
         }
@@ -484,14 +504,67 @@ class CampaignController {
         this._showCompletionScreen();
     }
 
-    _showTransitionScreen(type) {
-        const el = document.getElementById('engine-transition-screen');
-        if (el) el.classList.remove('hidden');
-        setTimeout(() => el && el.classList.add('hidden'), 2000);
+    _showTransitionScreen(engineType) {
+        const screen = document.getElementById('engine-transition-screen');
+        const targetText = document.getElementById('transition-target-engine');
+        const progressBar = document.getElementById('transition-progress-bar');
+        const statusText = document.getElementById('transition-status-text');
+        
+        if (!screen) {
+            console.log(`[UI] Transitioning to ${engineType}...`);
+            return;
+        }
+        
+        // Engine name mapping
+        const engineNames = {
+            'rpg-topdown': 'RPG Top-Down Engine',
+            'iso-pixel': 'Isometric Pixel Engine',
+            'platformer-2d': 'Platformer 2D Engine',
+            'topdown-3d': 'Top-Down 3D Engine',
+            'fps-3d': 'FPS 3D Engine',
+            'platformer-3d': 'Platformer 3D Engine'
+        };
+        
+        if (targetText) targetText.innerText = engineNames[engineType] || engineType;
+        if (progressBar) progressBar.style.width = '0%';
+        if (statusText) statusText.innerText = 'Preparing transition...';
+        
+        // Show screen
+        screen.classList.remove('hidden');
+        
+        // Simulate progress
+        setTimeout(() => {
+            if (progressBar) progressBar.style.width = '30%';
+            if (statusText) statusText.innerText = 'Saving current state...';
+        }, 200);
+        
+        setTimeout(() => {
+            if (progressBar) progressBar.style.width = '60%';
+            if (statusText) statusText.innerText = 'Loading new engine...';
+        }, 600);
+        
+        setTimeout(() => {
+            if (progressBar) progressBar.style.width = '90%';
+            if (statusText) statusText.innerText = 'Initializing...';
+        }, 1200);
+        
+        // Hide after engine loads
+        setTimeout(() => {
+            if (progressBar) progressBar.style.width = '100%';
+            if (statusText) statusText.innerText = 'Ready!';
+            setTimeout(() => {
+                screen.classList.add('hidden');
+            }, 500);
+        }, 2000);
     }
 
     _showCompletionScreen() {
-        alert('Campaign Complete!');
+        // Use the game-over screen if available, otherwise fall back
+        if (typeof window.showGameOver === 'function') {
+            window.showGameOver();
+        } else {
+            alert('Campaign Complete!');
+        }
     }
 
     async manualSave() {

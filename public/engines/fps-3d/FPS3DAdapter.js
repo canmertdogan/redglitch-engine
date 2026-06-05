@@ -2,6 +2,9 @@
  * FPS3DAdapter.js
  * Adapter for the fps-3d engine.
  * ESM Version.
+ * 
+ * @deprecated Use Unified3DAdapter from engines/unified-3d/Unified3DAdapter.js instead.
+ *             This adapter is retained for backward compatibility only.
  */
 
 import EngineAdapter from '../shared/EngineAdapter.js';

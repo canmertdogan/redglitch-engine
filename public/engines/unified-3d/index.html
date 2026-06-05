@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified 3D Engine — RedGlitch</title>
+    <link href="../../fonts/fonts.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            margin: 0; padding: 0; box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* ── Loading Screen ─────────────────────────────────── */
+        #loading-screen {
+            position: fixed; inset: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 10000;
+        }
+        #loading-screen.hidden { display: none; }
+
+        #loading-title {
+            color: #e74c3c;
+            font-size: 48px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+        }
+
+        #loading-subtitle {
+            color: rgba(255,255,255,0.5);
+            font-size: 20px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        #loading-text {
+            color: #888;
+            font-size: 22px;
+            letter-spacing: 3px;
+        }
+
+        #loading-bar-wrap {
+            width: 320px;
+            height: 6px;
+            background: #111;
+            border: 1px solid #333;
+        }
+        #loading-bar {
+            height: 100%;
+            background: #e74c3c;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* ── Login / Click-to-start Screen ─────────────────── */
+        #login-screen {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.97);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 5000;
+            cursor: crosshair;
+        }
+        #login-screen.hidden { display: none; }
+
+        #login-box {
+            background: #0a0a0a;
+            border: 2px solid #e74c3c;
+            padding: 48px 56px;
+            text-align: center;
+            min-width: 360px;
+        }
+
+        #login-logo {
+            color: #e74c3c;
+            font-size: 14px;
+            letter-spacing: 6px;
+            margin-bottom: 8px;
+            opacity: 0.6;
+        }
+
+        #login-title {
+            color: #fff;
+            font-size: 52px;
+            letter-spacing: 4px;
+            margin-bottom: 36px;
+        }
+
+        #username-input {
+            background: #000;
+            border: 2px solid #333;
+            color: #e74c3c;
+            font-family: 'VT323', monospace;
+            font-size: 26px;
+            padding: 10px 20px;
+            width: 100%;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            text-align: center;
+            outline: none;
+            letter-spacing: 3px;
+        }
+        #username-input:focus { border-color: #e74c3c; }
+
+        #login-btn {
+            background: #e74c3c;
+            border: none;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            padding: 12px 48px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            transition: background 0.1s, transform 0.1s;
+            width: 100%;
+        }
+        #login-btn:hover  { background: #ff6b5b; }
+        #login-btn:active { transform: scale(0.97); }
+
+        /* ── Game Container ─────────────────────────────────── */
+        #game-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: none;
+        }
+        #game-container.active { display: block; }
+
+        /* Three.js injects its own canvas — fill container */
+        #game-container canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ── HUD overlay ────────────────────────────────────── */
+        #hud {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #hud.hidden { display: none; }
+
+        /* Crosshair (FPS only — hidden by default) */
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px; height: 20px;
+            pointer-events: none;
+            display: none;  /* shown by FPS mode */
+        }
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255,255,255,0.85);
+        }
+        #crosshair::before {
+            width: 2px; height: 100%;
+            left: 50%; transform: translateX(-50%);
+        }
+        #crosshair::after {
+            width: 100%; height: 2px;
+            top: 50%; transform: translateY(-50%);
+        }
+
+        /* Health / ammo bars (FPS / Platformer HUD) */
+        #hud-bottom-left {
+            position: absolute;
+            bottom: 20px; left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .hud-stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            letter-spacing: 2px;
+        }
+        .hud-stat-label { color: rgba(255,255,255,0.5); width: 50px; }
+        .hud-stat-bar {
+            width: 140px; height: 8px;
+            background: #111;
+            border: 1px solid #333;
+        }
+        .hud-stat-fill { height: 100%; transition: width 0.2s; }
+        #hud-health-fill { background: #e74c3c; width: 100%; }
+        #hud-ammo-text   { color: #e74c3c; font-size: 26px; letter-spacing: 2px; }
+
+        #hud-top-left {
+            position: absolute;
+            top: 16px; left: 16px;
+            font-size: 18px;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 2px;
+        }
+
+        /* Platformer HUD — lives + coins */
+        #hud-top-right {
+            position: absolute;
+            top: 16px; right: 16px;
+            display: flex;
+            gap: 24px;
+            font-size: 26px;
+            color: #e74c3c;
+            letter-spacing: 2px;
+        }
+        #hud-top-right.hidden { display: none; }
+
+        /* ── Pointer-lock overlay (click to capture mouse — FPS) ── */
+        #pointer-lock-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 1500;
+            cursor: crosshair;
+        }
+        #pointer-lock-overlay.hidden { display: none; }
+        #pointer-lock-title {
+            color: #e74c3c;
+            font-size: 52px;
+            letter-spacing: 6px;
+        }
+        #pointer-lock-hint {
+            color: rgba(255,255,255,0.6);
+            font-size: 26px;
+            letter-spacing: 3px;
+        }
+
+        /* ── Pause overlay ──────────────────────────────────── */
+        #pause-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 28px;
+            z-index: 2000;
+        }
+        #pause-overlay.hidden { display: none; }
+        #pause-text {
+            color: #e74c3c;
+            font-size: 64px;
+            letter-spacing: 8px;
+            animation: blink 1.2s step-end infinite;
+        }
+        #pause-hint {
+            color: rgba(255,255,255,0.5);
+            font-size: 24px;
+            letter-spacing: 4px;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* ── Game Over overlay ──────────────────────────────── */
+        #gameover-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 3000;
+        }
+        #gameover-overlay.hidden { display: none; }
+        #gameover-text {
+            color: #e74c3c;
+            font-size: 72px;
+            letter-spacing: 8px;
+        }
+        #gameover-hint {
+            color: rgba(255,255,255,0.5);
+            font-size: 24px;
+            letter-spacing: 4px;
+        }
+
+        /* ── Error banner ───────────────────────────────────── */
+        #error-banner {
+            position: fixed;
+            top: 16px; left: 50%; transform: translateX(-50%);
+            background: #c0392b;
+            color: #fff;
+            font-size: 18px;
+            padding: 10px 28px;
+            letter-spacing: 2px;
+            z-index: 20000;
+        }
+        #error-banner.hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div id="loading-title">REDGLITCH</div>
+        <div id="loading-subtitle">UNIFIED 3D ENGINE</div>
+        <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+        <div id="loading-text">LOADING...</div>
+    </div>
+
+    <!-- Login / Start Screen -->
+    <div id="login-screen" class="hidden">
+        <div id="login-box">
+            <div id="login-logo">REDGLITCH ENGINE</div>
+            <div id="login-title">3D ENGINE</div>
+            <input type="text" id="username-input" placeholder="ENTER USERNAME" maxlength="16" autocomplete="off">
+            <button id="login-btn" onclick="attemptLogin()">START GAME</button>
+        </div>
+    </div>
+
+    <!-- Game Container (Three.js canvas injected here) -->
+    <div id="game-container">
+        <!-- HUD overlay -->
+        <div id="hud" class="hidden">
+            <div id="crosshair"></div>
+            <div id="hud-top-left">
+                <span id="hud-project"></span>
+            </div>
+            <div id="hud-bottom-left">
+                <div class="hud-stat">
+                    <span class="hud-stat-label">HP</span>
+                    <div class="hud-stat-bar"><div id="hud-health-fill" class="hud-stat-fill"></div></div>
+                </div>
+                <div class="hud-stat">
+                    <span class="hud-stat-label">AMMO</span>
+                    <span id="hud-ammo-text">30/90</span>
+                </div>
+            </div>
+            <div id="hud-top-right" class="hidden">
+                <span id="hud-lives">♥ 3</span>
+                <span id="hud-coins">★ 0</span>
+                <span id="hud-score">SCORE: 0</span>
+            </div>
+        </div>
+
+        <!-- Click-to-capture pointer-lock overlay -->
+        <div id="pointer-lock-overlay" class="hidden">
+            <div id="pointer-lock-title">PAUSED</div>
+            <div id="pointer-lock-hint">CLICK TO RESUME</div>
+        </div>
+    </div>
+
+    <!-- Pause overlay (ESC menu) -->
+    <div id="pause-overlay" class="hidden">
+        <div id="pause-text">PAUSED</div>
+        <div id="pause-hint">ESC — RESUME &nbsp;|&nbsp; F5 — SAVE</div>
+    </div>
+
+    <!-- Game Over overlay -->
+    <div id="gameover-overlay" class="hidden">
+        <div id="gameover-text">GAME OVER</div>
+        <div id="gameover-hint">PRESS R TO RESTART</div>
+    </div>
+
+    <!-- Error banner -->
+    <div id="error-banner" class="hidden"></div>
+
+    <!-- Engine bootstrap (ES module) -->
+    <script type="module">
+        import Unified3DGame from './Unified3DGame.js';
+
+        // ── DOM refs ──────────────────────────────────────────────────────
+        const loadingScreen       = document.getElementById('loading-screen');
+        const loadingBar          = document.getElementById('loading-bar');
+        const loadingText         = document.getElementById('loading-text');
+        const loadingSubtitle     = document.getElementById('loading-subtitle');
+        const loginScreen         = document.getElementById('login-screen');
+        const loginTitle          = document.getElementById('login-title');
+        const gameContainer       = document.getElementById('game-container');
+        const hud                 = document.getElementById('hud');
+        const pauseOverlay        = document.getElementById('pause-overlay');
+        const pointerLockOverlay  = document.getElementById('pointer-lock-overlay');
+        const gameoverOverlay     = document.getElementById('gameover-overlay');
+        const errorBanner         = document.getElementById('error-banner');
+        const hudProject          = document.getElementById('hud-project');
+        const hudHealthFill       = document.getElementById('hud-health-fill');
+        const hudAmmoText         = document.getElementById('hud-ammo-text');
+        const crosshair           = document.getElementById('crosshair');
+        const hudTopRight         = document.getElementById('hud-top-right');
+
+        // ── Mode display names ────────────────────────────────────────────
+        const MODE_NAMES = {
+            'fps-3d':        'FPS 3D',
+            'topdown-3d':    'TOP-DOWN 3D',
+            'platformer-3d': 'PLATFORMER 3D',
+        };
+
+        function setLoadingProgress(pct, text) {
+            loadingBar.style.width = `${pct}%`;
+            if (text) loadingText.textContent = text;
+        }
+
+        function showError(msg) {
+            errorBanner.textContent = msg;
+            errorBanner.classList.remove('hidden');
+            setTimeout(() => errorBanner.classList.add('hidden'), 6000);
+            console.error('[Unified3D Launcher]', msg);
+        }
+
+        function showModeHUD(engineType) {
+            const isFPS  = engineType === 'fps-3d';
+            const isPlat = engineType === 'platformer-3d';
+            // FPS: show crosshair + ammo, hide lives/coins
+            crosshair.style.display    = isFPS ? 'block' : 'none';
+            hudAmmoText.style.display  = isFPS ? '' : 'none';
+            gameContainer.style.cursor = isFPS ? 'none' : '';
+            // Platformer: show lives/coins/score
+            hudTopRight.classList.toggle('hidden', !isPlat);
+        }
+
+        // ── URL params ────────────────────────────────────────────────────
+        const params      = new URLSearchParams(window.location.search);
+        const engineType  = params.get('engine') || params.get('engineType') || 'fps-3d';
+        const levelId     = params.get('level');
+        const project     = params.get('project');
+        const pt          = params.get('playtest');
+        const isPlaytest  = pt === 'true' || pt === '1';
+        const username    = params.get('username') || null;
+
+        // ── Update loading screen to show which mode ──────────────────────
+        const modeName = MODE_NAMES[engineType] || engineType.toUpperCase();
+        loadingSubtitle.textContent = `${modeName} ENGINE`;
+        loginTitle.textContent = modeName;
+        document.title = `${modeName} — RedGlitch`;
+
+        // ── Create game ───────────────────────────────────────────────────
+        setLoadingProgress(10, 'CREATING ENGINE...');
+        const game = new Unified3DGame(gameContainer, { engineType });
+
+        game.core && (game.core.onReady = () => {
+            setLoadingProgress(80, 'ENGINE READY');
+        });
+
+        // ── Init ──────────────────────────────────────────────────────────
+        setLoadingProgress(20, 'INITIALISING SYSTEMS...');
+
+        game.init(engineType).then(async () => {
+            setLoadingProgress(50, 'SYSTEMS ONLINE');
+            showModeHUD(engineType);
+
+            // Wire game-over callback for platformer
+            if (game.mode?.onGameOver === undefined || game.mode?.onGameOver === null) {
+                game.mode.onGameOver = () => {
+                    gameoverOverlay.classList.remove('hidden');
+                };
+            }
+
+            // Wire core onLevelReady
+            game.core.onLevelReady = (level) => {
+                setLoadingProgress(100, `LEVEL: ${level?.name || '?'}`);
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    gameContainer.classList.add('active');
+                    hud.classList.remove('hidden');
+                    if (engineType === 'fps-3d') {
+                        pointerLockOverlay.classList.remove('hidden');
+                        pointerLockOverlay.querySelector('#pointer-lock-title').textContent = 'READY';
+                        pointerLockOverlay.querySelector('#pointer-lock-hint').textContent  = 'CLICK TO START';
+                    }
+                    if (hudProject) hudProject.textContent = project || '';
+                }, 300);
+            };
+
+            if (isPlaytest) {
+                const raw = sessionStorage.getItem('redglitch_playtest_data')
+                         || localStorage.getItem('temp_playtest_fps3d')
+                         || localStorage.getItem('temp_playtest_topdown3d')
+                         || localStorage.getItem('temp_playtest_platformer3d');
+                if (!raw) { showError('No playtest data found'); return; }
+                try {
+                    const levelData = JSON.parse(raw);
+                    game.core.username = username || 'TEST_USER';
+                    setLoadingProgress(70, 'LOADING PLAYTEST LEVEL...');
+                    await game.loadLevelFromData(levelData);
+                    game.core._startLoop();
+                } catch (e) {
+                    showError('Playtest load failed: ' + e.message);
+                }
+
+            } else if (levelId && project) {
+                game.core.username       = username || 'PLAYER';
+                game.core.currentProject = project;
+                setLoadingProgress(70, `LOADING ${project.toUpperCase()}...`);
+                try {
+                    await game.loadProject(project, levelId);
+                    game.core._startLoop();
+                } catch (e) {
+                    showError('Level load failed: ' + e.message);
+                }
+
+            } else {
+                setLoadingProgress(100, 'READY');
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
+                }, 400);
+            }
+
+        }).catch(e => {
+            showError('Init failed: ' + e.message);
+            console.error(e);
+        });
+
+        // ── Login ─────────────────────────────────────────────────────────
+        window.attemptLogin = function() {
+            const input = document.getElementById('username-input');
+            const name  = (input?.value || '').trim().toUpperCase();
+            if (!name) return;
+
+            loginScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            setLoadingProgress(60, 'STARTING...');
+
+            game.login(name).then(() => {
+                setLoadingProgress(100, 'WELCOME ' + name);
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    gameContainer.classList.add('active');
+                    hud.classList.remove('hidden');
+                    if (engineType === 'fps-3d') {
+                        pointerLockOverlay.classList.remove('hidden');
+                        pointerLockOverlay.querySelector('#pointer-lock-title').textContent = 'READY';
+                        pointerLockOverlay.querySelector('#pointer-lock-hint').textContent  = 'CLICK TO START';
+                    }
+                }, 400);
+            }).catch(e => showError('Login failed: ' + e.message));
+        };
+
+        document.getElementById('username-input')?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') window.attemptLogin();
+        });
+
+        // ── Pointer lock (FPS mode) ──────────────────────────────────────
+        const requestLock = () => {
+            if (game.isPaused || engineType !== 'fps-3d') return;
+            game.core?.requestPointerLock();
+        };
+
+        gameContainer.addEventListener('click', requestLock);
+        pointerLockOverlay.addEventListener('click', requestLock);
+
+        document.addEventListener('pointerlockchange', () => {
+            const locked = document.pointerLockElement === document.body
+                        || document.pointerLockElement === gameContainer
+                        || document.pointerLockElement?.closest('#game-container') != null;
+            pointerLockOverlay.classList.toggle('hidden', locked || engineType !== 'fps-3d');
+        });
+
+        document.addEventListener('pointerlockerror', () => {
+            showError('Pointer lock failed — click the game window to try again');
+        });
+
+        // ── Keyboard shortcuts ────────────────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                game.toggle();
+                pauseOverlay.classList.toggle('hidden', !game.isPaused);
+                if (engineType === 'fps-3d') {
+                    pointerLockOverlay.classList.toggle('hidden', !game.isPaused);
+                    if (!game.isPaused) {
+                        pointerLockOverlay.querySelector('#pointer-lock-title').textContent = 'RESUME';
+                        pointerLockOverlay.querySelector('#pointer-lock-hint').textContent  = 'CLICK TO CONTINUE';
+                    }
+                }
+            }
+            if (e.key === 'F5') {
+                e.preventDefault();
+                game.saveGame().catch(err => showError('Save failed: ' + err.message));
+            }
+            // Restart on Game Over
+            if (e.key === 'r' || e.key === 'R') {
+                if (!gameoverOverlay.classList.contains('hidden')) {
+                    gameoverOverlay.classList.add('hidden');
+                    window.location.reload();
+                }
+            }
+        });
+
+        // ── Expose for debugging ──────────────────────────────────────────
+        window.game = game;
+    </script>
+</body>
+</html>

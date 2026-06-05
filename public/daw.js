@@ -1,1191 +1,1777 @@
 /**
- * REDGLITCH AUDIO DIRECTOR PRO - ULTRA HD (v7.0)
- * Expanded authoring workflows, diagnostics, preview simulation, and mixer control.
+ * ╔═══════════════════════════════════════════════════════════╗
+ * ║  KETEBE AUDIO STUDIO (KAS) — AudioStudio Controller      ║
+ * ║  Full rebuild of the Audio Director                       ║
+ * ╚═══════════════════════════════════════════════════════════╝
  */
 
-const DEFAULT_EVENT_PLAYBACK = {
-    mode: 'random',
-    volume: 1.0,
-    volumeVar: 0.1,
-    pitchVar: 0.05,
-    cooldown: 0.1,
-    fadeIn: 0.0,
-    fadeOut: 0.0
+// ─── CONSTANTS ──────────────────────────────────────────────
+
+const MANIFEST = window.ENGINE_AUDIO_MANIFEST || {};
+
+const DEFAULT_PLAYBACK = {
+    mode: 'random', volume: 1.0, volumeVar: 0.05,
+    pitchVar: 0.05, cooldown: 0.05, fadeIn: 0, fadeOut: 0
 };
 
-const DEFAULT_EVENT_FILTER = {
-    type: 'lowpass',
-    freq: 2000
+const DEFAULT_FILTER = { type: 'lowpass', freq: 20000 };
+
+const PLUGIN_REGISTRY = {
+    'KEQ3':   { name: 'EQ 3-Band',  icon: '📊', ctor: () => typeof KEQ3   !== 'undefined' ? new KEQ3(window.KAE?.ctx)   : null },
+    'KComp':  { name: 'Compressor', icon: '🔊', ctor: () => typeof KComp  !== 'undefined' ? new KComp(window.KAE?.ctx)  : null },
+    'KVerb':  { name: 'Reverb',     icon: '🌊', ctor: () => typeof KVerb  !== 'undefined' ? new KVerb(window.KAE?.ctx)  : null },
+    'KDelay': { name: 'Delay',      icon: '🔄', ctor: () => typeof KDelay !== 'undefined' ? new KDelay(window.KAE?.ctx) : null },
+    'KDrive': { name: 'Distortion', icon: '🎸', ctor: () => typeof KDrive !== 'undefined' ? new KDrive(window.KAE?.ctx) : null }
 };
 
-const DEFAULT_BUSES = {
-    master: { gain: 1.0 },
-    music: { gain: 0.7, parent: 'master', ducking: true },
-    sfx: { gain: 0.9, parent: 'master' },
-    ambience: { gain: 0.6, parent: 'master', ducking: true },
-    voice: { gain: 0.9, parent: 'master' }
+const SYNTH_TYPES = [
+    { id: 'click',     name: 'Click',     icon: '👆', desc: 'Sharp UI click' },
+    { id: 'thud',      name: 'Thud',      icon: '💥', desc: 'Impact / footstep' },
+    { id: 'chime',     name: 'Chime',     icon: '🔔', desc: 'Success / pickup' },
+    { id: 'buzz',      name: 'Buzz',      icon: '⚡', desc: 'Error / alarm' },
+    { id: 'ambient',   name: 'Ambient',   icon: '🌊', desc: 'Atmospheric loop' },
+    { id: 'explosion', name: 'Explosion', icon: '💣', desc: 'Explosion / boom' }
+];
+
+const DRUM_ROWS = ['Kick', 'Snare', 'Hi-Hat', 'Clap', 'Tom', 'Crash'];
+const DRUM_SOUNDS = {
+    Kick:   { type: 'thud',   params: { freq: 60, decay: 12 } },
+    Snare:  { type: 'click',  params: { freq: 200, decay: 30 } },
+    'Hi-Hat': { type: 'click', params: { freq: 8000, decay: 60 } },
+    Clap:   { type: 'click',  params: { freq: 1200, decay: 40 } },
+    Tom:    { type: 'thud',   params: { freq: 100, decay: 10 } },
+    Crash:  { type: 'chime',  params: { freq: 3000, decay: 3 } }
 };
 
-const EVENT_PRESETS = {
-    sfx_punch: {
-        group: 'sfx',
-        playback: { mode: 'random', volume: 1.0, volumeVar: 0.15, pitchVar: 0.08, cooldown: 0.08, fadeIn: 0, fadeOut: 0 }
-    },
-    ui_micro: {
-        group: 'sfx',
-        playback: { mode: 'random', volume: 0.8, volumeVar: 0.02, pitchVar: 0.02, cooldown: 0.03, fadeIn: 0, fadeOut: 0 }
-    },
-    ambience_loop: {
-        group: 'ambience',
-        playback: { mode: 'loop', volume: 0.65, volumeVar: 0.03, pitchVar: 0.02, cooldown: 0, fadeIn: 0.5, fadeOut: 0.5 }
-    },
-    music_layer: {
-        group: 'music',
-        playback: { mode: 'loop', volume: 0.8, volumeVar: 0, pitchVar: 0, cooldown: 0, fadeIn: 0.7, fadeOut: 0.7 }
-    },
-    voice_dialogue: {
-        group: 'voice',
-        playback: { mode: 'sequential', volume: 1.0, volumeVar: 0, pitchVar: 0.01, cooldown: 0.05, fadeIn: 0, fadeOut: 0.05 }
-    }
-};
+// ─── MAIN CLASS ──────────────────────────────────────────────
 
-class AudioDirectorUltraHD {
+class AudioStudio {
+
     constructor() {
-        this.audioMap = { events: {}, buses: {} };
-        this.availableAssets = [];
-        this.activeEventId = null;
-        this.triggerHistory = [];
-        this.activeExplorerTab = 'events';
+        // Data
+        this.audioMap    = { events: {}, buses: {} };
+        this.musicConfig = { global: {}, levels: {}, events: {} };
+        this.assets      = [];
+        this.manifest    = MANIFEST;
 
-        this.explorerSearch = '';
-        this.assetSearch = '';
+        // UI state
+        this.activeTab       = 'events';
+        this.activeEventId   = null;
+        this.activeContextKey = null;
+        this.activeContextGroup = null;
+        this.selectedAsset   = null;
+        this.selectedMusicTrack = null;
+        this.explorerSubTab  = 'event-tree';
+
+        // Filter state
+        this.eventSearch   = '';
+        this.assetSearch   = '';
+        this.contextSearch = '';
         this.categoryFilter = 'all';
-        this.mappedOnly = false;
-        this.isDirty = false;
-        this.lastSavedAt = null;
-        this.autoSaveEnabled = false;
-        this.autoSaveIntervalMs = 30000;
-        this.autoSaveTimer = null;
+        this.mappedOnly    = false;
 
-        this.historyStack = [];
-        this.futureStack = [];
-        this.maxHistoryEntries = 80;
+        // Dirty / history
+        this.isDirty      = false;
+        this.autoSave     = false;
+        this._autoTimer   = null;
+        this.history      = [];
+        this.future       = [];
+        this.maxHistory   = 60;
 
-        this.knobDrag = null;
-        this.faderDrag = null;
-        this.pendingDragDirty = false;
+        // Trigger log
+        this.triggerLog = [];
 
-        this.busUiState = {};
-        this.previewRunner = { mode: null, timer: null, step: 0 };
-        this.loadedManifest = null;
-        this.sidebarState = { left: false, right: false };
+        // Fader drag state
+        this._faderDrag = null;
 
-        try {
-            const savedSidebarState = JSON.parse(localStorage.getItem('daw_sidebar_state') || '{}');
-            this.sidebarState.left = !!savedSidebarState.left;
-            this.sidebarState.right = !!savedSidebarState.right;
-        } catch (e) {
-            console.warn('[AudioPro:V7] Failed to restore sidebar state', e);
-        }
+        // Drum machine
+        this._drumPattern = {};
+        DRUM_ROWS.forEach(r => { this._drumPattern[r] = new Array(16).fill(false); });
+        this._drumBpm     = 120;
+        this._drumPlaying = false;
+        this._drumTimer   = null;
+        this._drumStep    = 0;
 
-        this.init();
+        // Synth
+        this._synthType   = null;
+        this._synthBuf    = null;
+
+        // Preview scenario
+        this._previewTimer = null;
+
+        // VU meter RAF
+        this._meterRaf = null;
+
+        this._init();
     }
 
-    async init() {
-        console.log('%c[AudioDirector:V7] Booting Expanded Feature Set...', 'color:#ff0000;font-weight:900;');
-        await this.loadData();
-        this.normalizeMap();
-        this.ensureBusUiState();
-        this.bindStaticUI();
-        this.setupEventListeners();
-        this.recordHistory(false);
-        this.renderAll();
-        this.applySidebarState();
-        this.populateCategoryFilter();
-        this.updateStatusBadges();
-        this.updateConnectionStatus('KERNEL_ACTIVE: EXTENDED_MODE_READY');
-        this.startAutoSaveLoop();
-        requestAnimationFrame(() => this.meterLoop());
-    }
+    // ─────────────────────────────────────────────
+    //  BOOT
+    // ─────────────────────────────────────────────
 
-    async loadData() {
-        try {
-            const [mapRes, assetRes] = await Promise.all([
-                fetch('/api/audio/map'),
-                fetch('/api/assets?type=audio')
-            ]);
+    async _init() {
+        console.log('%c[KAS] Audio Studio booting…', 'color:#e53e3e;font-weight:bold;font-size:14px;');
+        await Promise.all([this._loadAudioMap(), this._loadMusicConfig(), this._loadAssets()]);
+        this._normalizeMap();
+        this._bindAllUI();
+        this._recordHistory(false);
+        this._renderAll();
+        this._populateCategoryFilter();
+        this._startMeterLoop();
+        this._startAutoSave();
+        this._syncStatus('STUDIO READY', 'green');
+        console.log('%c[KAS] Boot complete.', 'color:#48bb78;font-weight:bold;');
 
-            if (mapRes.ok) {
-                this.audioMap = await mapRes.json();
-            }
-
-            if (assetRes.ok) {
-                const data = await assetRes.json();
-                this.availableAssets = (data || []).map(a => a.id || a.name || a);
-            }
-
-            this.loadedManifest = window.ENGINE_AUDIO_MANIFEST || {};
-            Object.values(this.loadedManifest).flat().forEach(ev => {
-                if (!this.audioMap.events[ev.id]) {
-                    this.audioMap.events[ev.id] = this.makeDefaultEventConfig();
-                }
+        // Subscribe to EventBus for live trigger feedback
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('audio:trigger', (e) => {
+                this._logTrigger(e.data?.name, e.data?.clip);
             });
-        } catch (e) {
-            console.error('[AudioPro:V7] loadData failed', e);
         }
+        window.addEventListener('audio:trigger', (e) => {
+            this._logTrigger(e.detail?.name, e.detail?.clip);
+        });
     }
 
-    makeDefaultEventConfig(group = 'sfx') {
+    // ─────────────────────────────────────────────
+    //  DATA LOADING
+    // ─────────────────────────────────────────────
+
+    async _loadAudioMap() {
+        try {
+            const r = await fetch('/api/audio/map');
+            if (r.ok) this.audioMap = await r.json();
+        } catch (e) { console.warn('[KAS] audioMap load failed'); }
+    }
+
+    async _loadMusicConfig() {
+        try {
+            const r = await fetch('/api/audio/music-config');
+            if (r.ok) this.musicConfig = await r.json();
+        } catch (e) { console.warn('[KAS] musicConfig load failed'); }
+        if (!this.musicConfig.global) this.musicConfig.global = {};
+        if (!this.musicConfig.levels) this.musicConfig.levels = {};
+        if (!this.musicConfig.events) this.musicConfig.events = {};
+    }
+
+    async _loadAssets() {
+        try {
+            const r = await fetch('/api/audio/assets');
+            if (r.ok) this.assets = await r.json();
+        } catch(e) { console.warn('[KAS] assets load failed'); }
+    }
+
+    // ─────────────────────────────────────────────
+    //  NORMALIZATION
+    // ─────────────────────────────────────────────
+
+    _normalizeMap() {
+        const events = {};
+        // Pull in manifest events first
+        for (const [cat, list] of Object.entries(this.manifest)) {
+            for (const ev of list) {
+                if (!this.audioMap.events?.[ev.id]) {
+                    this.audioMap.events[ev.id] = this._defaultEventCfg();
+                }
+            }
+        }
+        // Normalize each event
+        for (const [id, raw] of Object.entries(this.audioMap.events || {})) {
+            const cfg = raw || {};
+            const clips = Array.isArray(cfg.clips) ? [...cfg.clips] : [];
+            const clipMeta = {};
+            clips.forEach(c => {
+                clipMeta[c] = cfg.clipMeta?.[c] || { weight: 1, gain: 1 };
+            });
+            events[id] = {
+                group:    cfg.group    || 'sfx',
+                clips,
+                clipMeta,
+                priority: !!cfg.priority,
+                reverb:   typeof cfg.reverb === 'number' ? cfg.reverb : 0,
+                filter:   { type: cfg.filter?.type || 'lowpass', freq: cfg.filter?.freq ?? 20000 },
+                playback: {
+                    mode:      cfg.playback?.mode      || 'random',
+                    volume:    cfg.playback?.volume    ?? 1.0,
+                    volumeVar: cfg.playback?.volumeVar ?? 0.05,
+                    pitchVar:  cfg.playback?.pitchVar  ?? 0.05,
+                    cooldown:  cfg.playback?.cooldown  ?? 0.05,
+                    fadeIn:    cfg.playback?.fadeIn    ?? 0,
+                    fadeOut:   cfg.playback?.fadeOut   ?? 0
+                }
+            };
+        }
+        this.audioMap.events = events;
+
+        // Default buses if missing
+        const defaultBuses = {
+            master:   { gain: 1.0 },
+            music:    { gain: 0.7, parent: 'master', ducking: true },
+            sfx:      { gain: 0.9, parent: 'master' },
+            ambience: { gain: 0.6, parent: 'master', ducking: true },
+            voice:    { gain: 1.0, parent: 'master' },
+            ui:       { gain: 0.8, parent: 'master' }
+        };
+        this.audioMap.buses = { ...defaultBuses, ...(this.audioMap.buses || {}) };
+
+        // Hot-load into KAE
+        if (window.KAE) window.KAE.loadMap(this.audioMap);
+    }
+
+    _defaultEventCfg(group = 'sfx') {
         return {
             group,
             clips: [],
+            clipMeta: {},
             priority: false,
             reverb: 0,
-            filter: { ...DEFAULT_EVENT_FILTER },
-            playback: { ...DEFAULT_EVENT_PLAYBACK },
-            clipMeta: {}
+            filter: { ...DEFAULT_FILTER },
+            playback: { ...DEFAULT_PLAYBACK }
         };
     }
 
-    normalizeMap() {
-        const normalizedEvents = {};
-        Object.entries(this.audioMap.events || {}).forEach(([eventId, rawCfg]) => {
-            const cfg = rawCfg || {};
-            const clips = Array.isArray(cfg.clips) ? [...cfg.clips] : [];
-            const clipMeta = cfg.clipMeta && typeof cfg.clipMeta === 'object' ? { ...cfg.clipMeta } : {};
+    // ─────────────────────────────────────────────
+    //  SAVE
+    // ─────────────────────────────────────────────
 
-            clips.forEach(clip => {
-                if (!clipMeta[clip]) {
-                    clipMeta[clip] = { weight: 1, gain: 1, start: 0, end: 1 };
-                }
-            });
-
-            normalizedEvents[eventId] = {
-                group: cfg.group || 'sfx',
-                clips,
-                priority: !!cfg.priority,
-                reverb: typeof cfg.reverb === 'number' ? cfg.reverb : 0,
-                filter: {
-                    type: cfg.filter?.type || DEFAULT_EVENT_FILTER.type,
-                    freq: typeof cfg.filter?.freq === 'number' ? cfg.filter.freq : DEFAULT_EVENT_FILTER.freq
-                },
-                playback: {
-                    mode: cfg.playback?.mode || DEFAULT_EVENT_PLAYBACK.mode,
-                    volume: typeof cfg.playback?.volume === 'number' ? cfg.playback.volume : DEFAULT_EVENT_PLAYBACK.volume,
-                    volumeVar: typeof cfg.playback?.volumeVar === 'number' ? cfg.playback.volumeVar : DEFAULT_EVENT_PLAYBACK.volumeVar,
-                    pitchVar: typeof cfg.playback?.pitchVar === 'number' ? cfg.playback.pitchVar : DEFAULT_EVENT_PLAYBACK.pitchVar,
-                    cooldown: typeof cfg.playback?.cooldown === 'number' ? cfg.playback.cooldown : DEFAULT_EVENT_PLAYBACK.cooldown,
-                    fadeIn: typeof cfg.playback?.fadeIn === 'number' ? cfg.playback.fadeIn : DEFAULT_EVENT_PLAYBACK.fadeIn,
-                    fadeOut: typeof cfg.playback?.fadeOut === 'number' ? cfg.playback.fadeOut : DEFAULT_EVENT_PLAYBACK.fadeOut
-                },
-                clipMeta
-            };
-        });
-        this.audioMap.events = normalizedEvents;
-
-        const normalizedBuses = { ...DEFAULT_BUSES };
-        Object.entries(this.audioMap.buses || {}).forEach(([name, bus]) => {
-            normalizedBuses[name] = {
-                gain: typeof bus.gain === 'number' ? bus.gain : 1.0,
-                parent: bus.parent || (name === 'master' ? undefined : 'master'),
-                ducking: !!bus.ducking
-            };
-        });
-        this.audioMap.buses = normalizedBuses;
-
-        if (!this.activeEventId) {
-            this.activeEventId = Object.keys(this.audioMap.events)[0] || null;
-        } else if (!this.audioMap.events[this.activeEventId]) {
-            this.activeEventId = Object.keys(this.audioMap.events)[0] || null;
-        }
-    }
-
-    ensureBusUiState() {
-        Object.keys(this.audioMap.buses).forEach(name => {
-            if (!this.busUiState[name]) this.busUiState[name] = { muted: false, solo: false };
-        });
-    }
-
-    bindStaticUI() {
-        const byId = (id) => document.getElementById(id);
-        const searchInput = byId('event-search');
-        const assetSearchInput = byId('asset-search');
-        const categoryFilter = byId('category-filter');
-        const mappedOnly = byId('mapped-only');
-        const quickEventInput = byId('quick-event-id');
-        const quickEventBtn = byId('quick-event-create');
-        const autoSaveToggle = byId('auto-save-toggle');
-
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.explorerSearch = e.target.value.toLowerCase();
-                this.renderExplorer();
-            });
-        }
-
-        if (assetSearchInput) {
-            assetSearchInput.addEventListener('input', (e) => {
-                this.assetSearch = e.target.value.toLowerCase();
-                if (this.activeExplorerTab === 'assets') this.renderExplorer();
-            });
-        }
-
-        if (categoryFilter) {
-            categoryFilter.addEventListener('change', (e) => {
-                this.categoryFilter = e.target.value;
-                this.renderExplorer();
-            });
-        }
-
-        if (mappedOnly) {
-            mappedOnly.addEventListener('change', (e) => {
-                this.mappedOnly = !!e.target.checked;
-                this.renderExplorer();
-            });
-        }
-
-        if (quickEventBtn) {
-            quickEventBtn.addEventListener('click', () => this.createQuickEvent());
-        }
-
-        if (quickEventInput) {
-            quickEventInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') this.createQuickEvent();
-            });
-        }
-
-        if (autoSaveToggle) {
-            autoSaveToggle.addEventListener('change', (e) => {
-                this.autoSaveEnabled = !!e.target.checked;
-                this.updateConnectionStatus(this.autoSaveEnabled ? 'AUTOSAVE_ENABLED' : 'AUTOSAVE_DISABLED');
-            });
-        }
-    }
-
-    setupEventListeners() {
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('audio:trigger', (event) => {
-                this.addHistoryEntry(event.data?.name || 'unknown:event', event.data?.clip);
-            });
-        }
-
-        window.addEventListener('mousemove', (e) => this.handleGlobalMove(e));
-        window.addEventListener('mouseup', () => this.handleGlobalUp());
-        window.addEventListener('keydown', (e) => this.handleKeyboardShortcut(e));
-    }
-
-    handleKeyboardShortcut(e) {
-        if (!(e.ctrlKey || e.metaKey)) return;
-        const key = e.key.toLowerCase();
-        if (key === 's') {
-            e.preventDefault();
-            this.saveMap();
-            return;
-        }
-        if (key === 'z') {
-            e.preventDefault();
-            this.undo();
-            return;
-        }
-        if (key === 'y') {
-            e.preventDefault();
-            this.redo();
-        }
-    }
-
-    startAutoSaveLoop() {
-        if (this.autoSaveTimer) clearInterval(this.autoSaveTimer);
-        this.autoSaveTimer = setInterval(() => {
-            if (!this.autoSaveEnabled || !this.isDirty) return;
-            this.saveMap({ silent: true, source: 'autosave' });
-        }, this.autoSaveIntervalMs);
-    }
-
-    updateConnectionStatus(text) {
-        const statusEl = document.getElementById('connection-status');
-        if (statusEl) statusEl.textContent = `>> ${text}`;
-    }
-
-    async saveMap(options = {}) {
+    async save(opts = {}) {
+        this._syncStatus('SAVING…');
         try {
-            const res = await fetch('/api/audio/map', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.audioMap)
-            });
-            if (!res.ok) {
-                this.updateConnectionStatus('SYNC_FAILED');
-                return;
+            const [r1, r2] = await Promise.all([
+                fetch('/api/audio/map', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.audioMap) }),
+                fetch('/api/audio/music-config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.musicConfig) })
+            ]);
+            if (r1.ok && r2.ok) {
+                this.isDirty = false;
+                this._syncStatus('SYNCED', 'green');
+                if (window.KAE) window.KAE.loadMap(this.audioMap);
+                if (window.RedGlitchEventBus) window.RedGlitchEventBus.emit('audio:map_updated', this.audioMap);
+                if (!opts.silent) this._updateStatusBar();
+            } else {
+                this._syncStatus('SYNC FAILED', 'red');
             }
-
-            if (window.RedGlitchEventBus) window.RedGlitchEventBus.emit('audio:map_updated', this.audioMap);
-            this.isDirty = false;
-            this.lastSavedAt = Date.now();
-            this.updateStatusBadges();
-            this.updateConnectionStatus(options.source === 'autosave' ? 'AUTOSAVE_OK' : 'ENGINE_SYNC_OK');
-            if (!options.silent) console.log('[AudioPro:V7] Map synced');
         } catch (e) {
-            console.error('[AudioPro:V7] saveMap failed', e);
-            this.updateConnectionStatus('SYNC_FAILURE');
+            console.error('[KAS] Save failed:', e);
+            this._syncStatus('SYNC ERROR', 'red');
         }
     }
 
-    recordHistory(markDirty = true) {
-        const snap = JSON.stringify(this.audioMap);
-        if (this.historyStack[this.historyStack.length - 1] !== snap) {
-            this.historyStack.push(snap);
-            if (this.historyStack.length > this.maxHistoryEntries) this.historyStack.shift();
-            this.futureStack = [];
-        }
-        if (markDirty) this.isDirty = true;
-        this.updateStatusBadges();
+    // ─────────────────────────────────────────────
+    //  HISTORY (Undo / Redo)
+    // ─────────────────────────────────────────────
+
+    _recordHistory(dirty = true) {
+        const snap = JSON.stringify({ audioMap: this.audioMap, musicConfig: this.musicConfig });
+        if (this.history[this.history.length - 1] === snap) return;
+        this.history.push(snap);
+        if (this.history.length > this.maxHistory) this.history.shift();
+        this.future = [];
+        if (dirty) { this.isDirty = true; this._updateStatusBar(); }
     }
 
     undo() {
-        if (this.historyStack.length < 2) return;
-        const current = this.historyStack.pop();
-        this.futureStack.push(current);
-        const prev = this.historyStack[this.historyStack.length - 1];
-        this.audioMap = JSON.parse(prev);
-        this.normalizeMap();
-        this.ensureBusUiState();
+        if (this.history.length < 2) return;
+        const cur = this.history.pop();
+        this.future.push(cur);
+        const prev = JSON.parse(this.history[this.history.length - 1]);
+        this.audioMap    = prev.audioMap;
+        this.musicConfig = prev.musicConfig;
+        this._normalizeMap();
         this.isDirty = true;
-        this.renderAll();
-        this.updateStatusBadges();
-        this.updateConnectionStatus('UNDO_APPLIED');
+        this._renderAll();
+        this._syncStatus('UNDO');
     }
 
     redo() {
-        if (this.futureStack.length === 0) return;
-        const next = this.futureStack.pop();
-        this.historyStack.push(next);
-        this.audioMap = JSON.parse(next);
-        this.normalizeMap();
-        this.ensureBusUiState();
+        if (!this.future.length) return;
+        const next = this.future.pop();
+        this.history.push(next);
+        const state = JSON.parse(next);
+        this.audioMap    = state.audioMap;
+        this.musicConfig = state.musicConfig;
+        this._normalizeMap();
         this.isDirty = true;
-        this.renderAll();
-        this.updateStatusBadges();
-        this.updateConnectionStatus('REDO_APPLIED');
+        this._renderAll();
+        this._syncStatus('REDO');
     }
 
-    renderAll() {
-        this.renderExplorer();
-        this.renderWorkspace();
-        this.renderInspector();
-        this.renderMixer();
-        this.applySidebarState();
-        this.updateStatusBadges();
-    }
+    // ─────────────────────────────────────────────
+    //  UI BINDING
+    // ─────────────────────────────────────────────
 
-    toggleSidebar(side) {
-        if (side !== 'left' && side !== 'right') return;
-        this.sidebarState[side] = !this.sidebarState[side];
-        localStorage.setItem('daw_sidebar_state', JSON.stringify(this.sidebarState));
-        this.applySidebarState();
-    }
+    _bindAllUI() {
+        const $ = id => document.getElementById(id);
 
-    applySidebarState() {
-        const left = document.getElementById('left-explorer');
-        const right = document.getElementById('right-inspector');
-        const leftBtn = document.getElementById('toggle-left-sidebar');
-        const rightBtn = document.getElementById('toggle-right-sidebar');
-        const leftHandle = document.getElementById('left-sidebar-handle');
-        const rightHandle = document.getElementById('right-sidebar-handle');
+        // Top-level tab buttons
+        document.querySelectorAll('.kas-tab[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => this._switchTab(btn.dataset.tab));
+        });
 
-        if (left) left.classList.toggle('sidebar-hidden', this.sidebarState.left);
-        if (right) right.classList.toggle('sidebar-hidden', this.sidebarState.right);
+        // Sub-tab buttons in left panel (events/assets)
+        document.querySelectorAll('.kas-tab[data-subtab]').forEach(btn => {
+            btn.addEventListener('click', () => this._switchSubTab(btn.dataset.subtab));
+        });
 
-        if (leftBtn) {
-            leftBtn.textContent = this.sidebarState.left ? 'SHOW LEFT' : 'HIDE LEFT';
-            leftBtn.classList.toggle('is-collapsed', this.sidebarState.left);
+        // Sync button
+        $('kas-btn-sync')?.addEventListener('click', () => this.save());
+
+        // Auto-save toggle
+        $('kas-autosave')?.addEventListener('change', e => {
+            this.autoSave = e.target.checked;
+        });
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', e => {
+            if (!(e.ctrlKey || e.metaKey)) return;
+            if (e.key === 's') { e.preventDefault(); this.save(); }
+            if (e.key === 'z') { e.preventDefault(); this.undo(); }
+            if (e.key === 'y') { e.preventDefault(); this.redo(); }
+            if (e.key === ' ') { e.preventDefault(); this._auditionActiveEvent(); }
+        });
+
+        // Event tree search
+        $('kas-event-search')?.addEventListener('input', e => {
+            this.eventSearch = e.target.value.toLowerCase();
+            this._renderEventTree();
+        });
+
+        // Category filter
+        $('kas-category-filter')?.addEventListener('change', e => {
+            this.categoryFilter = e.target.value;
+            this._renderEventTree();
+        });
+
+        // Mapped only toggle
+        $('kas-mapped-only')?.addEventListener('change', e => {
+            this.mappedOnly = e.target.checked;
+            this._renderEventTree();
+        });
+
+        // Asset search
+        $('kas-asset-search')?.addEventListener('input', e => {
+            this.assetSearch = e.target.value.toLowerCase();
+            this._renderAssetList();
+        });
+
+        // Refresh assets
+        $('kas-btn-refresh-assets')?.addEventListener('click', async () => {
+            await this._loadAssets();
+            this._renderAssetList();
+        });
+
+        // Create event
+        $('kas-btn-create-event')?.addEventListener('click', () => this._createEvent());
+        $('kas-new-event-id')?.addEventListener('keydown', e => {
+            if (e.key === 'Enter') this._createEvent();
+        });
+
+        // Collapse sidebars
+        $('kas-btn-collapse-left')?.addEventListener('click', () => {
+            $('kas-left')?.classList.toggle('collapsed');
+        });
+        $('kas-btn-collapse-right')?.addEventListener('click', () => {
+            $('kas-right')?.classList.toggle('collapsed');
+        });
+
+        // Drop zone for clips
+        const dropZone = $('ev-drop-zone');
+        if (dropZone) {
+            dropZone.addEventListener('dragover', e => {
+                e.preventDefault();
+                dropZone.querySelector('#ev-waveform-empty')?.classList.add('drag-over');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.querySelector('#ev-waveform-empty')?.classList.remove('drag-over');
+            });
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault();
+                dropZone.querySelector('#ev-waveform-empty')?.classList.remove('drag-over');
+                const asset = e.dataTransfer.getData('text/plain');
+                if (asset && this.activeEventId) this._addClipToEvent(this.activeEventId, asset);
+            });
         }
-        if (rightBtn) {
-            rightBtn.textContent = this.sidebarState.right ? 'SHOW RIGHT' : 'HIDE RIGHT';
-            rightBtn.classList.toggle('is-collapsed', this.sidebarState.right);
-        }
-        if (leftHandle) {
-            leftHandle.textContent = this.sidebarState.left ? '▶' : '◀';
-            leftHandle.classList.toggle('docked', !this.sidebarState.left);
-        }
-        if (rightHandle) {
-            rightHandle.textContent = this.sidebarState.right ? '◀' : '▶';
-            rightHandle.classList.toggle('docked', !this.sidebarState.right);
-        }
+
+        // Event buttons
+        $('ev-btn-test')?.addEventListener('click', () => this._auditionActiveEvent());
+        $('ev-btn-delete')?.addEventListener('click', () => this._deleteActiveEvent());
+        $('ev-btn-add-clip')?.addEventListener('click', () => this._switchSubTab('asset-list'));
+
+        // Inspector sliders / selects
+        this._bindInspectorControls();
+
+        // Music tab
+        this._bindMusicTab();
+
+        // Synth tab
+        this._buildSynthGrid();
+
+        // Drum tab
+        this._buildDrumGrid();
+        $('drum-btn-play')?.addEventListener('click', () => this._drumPlay());
+        $('drum-btn-stop')?.addEventListener('click', () => this._drumStop());
+        $('drum-btn-clear')?.addEventListener('click', () => this._drumClear());
+        $('drum-btn-randomize')?.addEventListener('click', () => this._drumRandomize());
+        $('drum-bpm')?.addEventListener('change', e => {
+            this._drumBpm = parseInt(e.target.value) || 120;
+        });
+
+        // Mixer
+        $('mixer-btn-panic')?.addEventListener('click', () => {
+            if (window.KAE) window.KAE.stopAll();
+        });
+        $('mixer-btn-reset')?.addEventListener('click', () => this._resetMixer());
+        $('mixer-game-state')?.addEventListener('change', e => {
+            if (window.KAE) window.KAE.setGameState(e.target.value);
+            this._updateStatusBar();
+        });
+        $('mixer-environment')?.addEventListener('change', e => {
+            if (window.KAE) window.KAE.setEnvironment(e.target.value);
+            this._updateStatusBar();
+        });
+
+        // Context search
+        $('kas-context-search')?.addEventListener('input', e => {
+            this.contextSearch = e.target.value.toLowerCase();
+            this._renderContextList();
+        });
+
+        // Add music context buttons
+        $('kas-btn-add-level')?.addEventListener('click', () => {
+            const id = prompt('Enter Level ID (e.g. level_3):');
+            if (id && !this.musicConfig.levels[id]) {
+                this.musicConfig.levels[id] = '';
+                this._recordHistory();
+                this._renderContextList();
+            }
+        });
+        $('kas-btn-add-event')?.addEventListener('click', () => {
+            const id = prompt('Enter Event ID (e.g. boss_fight):');
+            if (id && !this.musicConfig.events[id]) {
+                this.musicConfig.events[id] = '';
+                this._recordHistory();
+                this._renderContextList();
+            }
+        });
+
+        // Preview scenarios
+        $('prev-ui')?.addEventListener('click', () => this._runScenario('ui'));
+        $('prev-traversal')?.addEventListener('click', () => this._runScenario('traversal'));
+        $('prev-combat')?.addEventListener('click', () => this._runScenario('combat'));
+        $('prev-stop')?.addEventListener('click', () => this._stopScenario());
+
+        // Global mouse events for fader drag
+        window.addEventListener('mousemove', e => this._onFaderMove(e));
+        window.addEventListener('mouseup', () => this._onFaderUp());
     }
 
-    switchExplorer(tab) {
-        this.activeExplorerTab = tab;
-        const btns = document.querySelectorAll('.tab-btn-v6');
-        btns.forEach(b => b.classList.remove('active'));
-        const activeIdx = tab === 'events' ? 0 : (tab === 'assets' ? 1 : 2);
-        if (btns[activeIdx]) btns[activeIdx].classList.add('active');
+    _bindInspectorControls() {
+        const $ = id => document.getElementById(id);
+        const bind = (id, path, transform) => {
+            $(id)?.addEventListener('input', e => {
+                const val = transform ? transform(e.target.value) : e.target.value;
+                this._setEventProp(path, val);
+            });
+        };
 
-        const eventSearchWrap = document.getElementById('event-search-wrap');
-        const assetSearchWrap = document.getElementById('asset-search-wrap');
-        if (eventSearchWrap) eventSearchWrap.style.display = tab === 'events' ? 'block' : 'none';
-        if (assetSearchWrap) assetSearchWrap.style.display = tab === 'assets' ? 'block' : 'none';
+        bind('insp-group',        'group',           v => v);
+        bind('insp-mode',         'playback.mode',   v => v);
+        bind('insp-vol',          'playback.volume', parseFloat);
+        bind('insp-volvar',       'playback.volumeVar', parseFloat);
+        bind('insp-pitch',        'playback.pitchVar',  parseFloat);
+        bind('insp-cooldown',     'playback.cooldown',  parseFloat);
+        bind('insp-fadein',       'playback.fadeIn',    parseFloat);
+        bind('insp-fadeout',      'playback.fadeOut',   parseFloat);
+        bind('insp-filter-type',  'filter.type',    v => v);
+        bind('insp-freq',         'filter.freq',    parseFloat);
+        bind('insp-reverb',       'reverb',         parseFloat);
 
-        this.renderExplorer();
+        $('insp-priority')?.addEventListener('change', e => {
+            this._setEventProp('priority', e.target.checked);
+        });
+
+        // Slider display values (live)
+        const sliderMap = [
+            ['insp-vol',      'insp-vol-val',      v => Math.round(v * 100) + '%'],
+            ['insp-volvar',   'insp-volvar-val',   v => Math.round(v * 100) + '%'],
+            ['insp-pitch',    'insp-pitch-val',    v => Math.round(v * 100) + '%'],
+            ['insp-cooldown', 'insp-cooldown-val', v => parseFloat(v).toFixed(2) + 's'],
+            ['insp-fadein',   'insp-fadein-val',   v => parseFloat(v).toFixed(2) + 's'],
+            ['insp-fadeout',  'insp-fadeout-val',  v => parseFloat(v).toFixed(2) + 's'],
+            ['insp-freq',     'insp-freq-val',     v => (v >= 1000 ? (v/1000).toFixed(1) + 'kHz' : Math.round(v) + 'Hz')],
+            ['insp-reverb',   'insp-reverb-val',   v => Math.round(v * 100) + '%']
+        ];
+        sliderMap.forEach(([sliderId, valId, fmt]) => {
+            $(sliderId)?.addEventListener('input', e => {
+                const el = $(valId);
+                if (el) el.textContent = fmt(e.target.value);
+            });
+        });
+
+        // FX insert chain
+        $('insp-btn-add-fx')?.addEventListener('click', () => this._showAddFxMenu());
     }
 
-    populateCategoryFilter() {
-        const select = document.getElementById('category-filter');
-        if (!select) return;
-        const categories = Object.keys(this.loadedManifest || {});
-        const existing = new Set(Array.from(select.options).map(o => o.value));
-        categories.forEach(category => {
-            if (existing.has(category)) return;
-            const option = document.createElement('option');
-            option.value = category;
-            option.textContent = category;
-            select.appendChild(option);
+    _bindMusicTab() {
+        const $ = id => document.getElementById(id);
+
+        $('music-btn-play')?.addEventListener('click', () => {
+            if (this.selectedMusicTrack && window.KAE) {
+                window.KAE.playMusic(this.selectedMusicTrack, { volume: parseFloat($('music-vol')?.value || '0.7') });
+            }
+        });
+        $('music-btn-stop')?.addEventListener('click', () => {
+            if (window.KAE) window.KAE.stopMusic();
+        });
+
+        $('music-btn-assign')?.addEventListener('click', () => this._assignMusicContext());
+        $('music-btn-clear')?.addEventListener('click', () => this._clearMusicContext());
+
+        $('music-asset-search')?.addEventListener('input', e => {
+            this.assetSearch = e.target.value.toLowerCase();
+            this._renderMusicAssets();
+        });
+        $('music-btn-refresh')?.addEventListener('click', async () => {
+            await this._loadAssets();
+            this._renderMusicAssets();
+        });
+
+        $('music-game-state')?.addEventListener('change', e => {
+            if (window.KAE) window.KAE.setGameState(e.target.value);
+        });
+        $('music-environment')?.addEventListener('change', e => {
+            if (window.KAE) window.KAE.setEnvironment(e.target.value);
         });
     }
 
-    renderExplorer() {
-        const container = document.getElementById('explorer-tree');
+    // ─────────────────────────────────────────────
+    //  TAB ROUTING
+    // ─────────────────────────────────────────────
+
+    _switchTab(tab) {
+        this.activeTab = tab;
+
+        // Top tab buttons
+        document.querySelectorAll('.kas-tab[data-tab]').forEach(b => {
+            b.classList.toggle('active', b.dataset.tab === tab);
+        });
+
+        // Left/center/right tab content panels
+        const areas = ['left', 'center', 'right'];
+        areas.forEach(area => {
+            document.querySelectorAll(`[id^="${area}-"]`).forEach(el => {
+                if (!el.dataset.subtab) {
+                    el.classList.toggle('active', el.id === `${area}-${tab}`);
+                }
+            });
+        });
+
+        document.getElementById('left-panel-title').textContent =
+            { events: 'Explorer', music: 'Music Contexts', buses: 'Bus Graph',
+              synth: 'Synth', drum: 'Drum Machine' }[tab] || tab;
+    }
+
+    _switchSubTab(subtab) {
+        this.explorerSubTab = subtab;
+
+        document.querySelectorAll('.kas-tab[data-subtab]').forEach(b => {
+            b.classList.toggle('active', b.dataset.subtab === subtab);
+        });
+
+        const panels = { 'event-tree': 'subtab-event-tree', 'asset-list': 'subtab-asset-list' };
+        for (const [key, id] of Object.entries(panels)) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = key === subtab ? 'flex' : 'none';
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    //  RENDER ALL
+    // ─────────────────────────────────────────────
+
+    _renderAll() {
+        this._renderEventTree();
+        this._renderAssetList();
+        this._renderEventEditor();
+        this._renderInspector();
+        this._renderMixer();
+        this._renderContextList();
+        this._renderMusicAssets();
+        this._renderBusGraph();
+        this._updateStatusBar();
+    }
+
+    // ─────────────────────────────────────────────
+    //  EVENT TREE
+    // ─────────────────────────────────────────────
+
+    _renderEventTree() {
+        const container = document.getElementById('kas-event-tree');
         if (!container) return;
         container.innerHTML = '';
 
-        if (this.activeExplorerTab === 'events') {
-            this.renderManifestTree();
-            return;
-        }
+        const search  = this.eventSearch;
+        const catFilt = this.categoryFilter;
 
-        if (this.activeExplorerTab === 'assets') {
-            this.renderAssetsGrid();
-            return;
-        }
+        let total = 0;
 
-        container.innerHTML = `
-            <div class="template-card">
-                <div class="template-title">CLOUD_TEMPLATE_BANK</div>
-                <div class="template-desc">Premium packs are simulated locally in this build.</div>
-                <button class="btn-v6" onclick="pro.bootstrapTemplate()">APPLY_CORE_PACK</button>
-            </div>
-        `;
-    }
+        for (const [cat, evList] of Object.entries(this.manifest)) {
+            if (catFilt !== 'all' && cat !== catFilt) continue;
 
-    getManifestEntries() {
-        const entries = [];
-        Object.entries(this.loadedManifest || {}).forEach(([category, events]) => {
-            (events || []).forEach(ev => {
-                entries.push({ category, id: ev.id, desc: ev.desc || '' });
-            });
-        });
-        return entries;
-    }
-
-    renderManifestTree() {
-        const container = document.getElementById('explorer-tree');
-        if (!container) return;
-
-        const manifest = this.loadedManifest || {};
-        const search = this.explorerSearch || '';
-        const categoryFilter = this.categoryFilter;
-        const mappedOnly = this.mappedOnly;
-
-        Object.entries(manifest).forEach(([category, events]) => {
-            if (categoryFilter !== 'all' && category !== categoryFilter) return;
-
-            const visibleEvents = (events || []).filter(ev => {
-                const config = this.audioMap.events[ev.id];
-                const isMapped = !!(config?.clips?.length);
-                const text = `${ev.id} ${ev.desc || ''}`.toLowerCase();
+            const visible = evList.filter(ev => {
+                const cfg    = this.audioMap.events[ev.id];
+                const mapped = !!(cfg?.clips?.length);
+                const text   = `${ev.id} ${ev.desc || ''}`.toLowerCase();
                 if (search && !text.includes(search)) return false;
-                if (mappedOnly && !isMapped) return false;
+                if (this.mappedOnly && !mapped) return false;
                 return true;
             });
 
-            if (visibleEvents.length === 0) return;
+            if (!visible.length) continue;
 
-            const header = document.createElement('div');
-            header.className = 'tree-item-v6 tree-category';
-            header.innerHTML = `<i class="fas fa-folder"></i> ${category} <span class="tree-count">${visibleEvents.length}</span>`;
-            container.appendChild(header);
+            const catEl = document.createElement('div');
+            catEl.className = 'kas-tree-category';
+            catEl.innerHTML = `<i class="fas fa-folder" style="opacity:0.5;font-size:10px;"></i> ${cat}
+                <span class="kas-chip" style="margin-left:auto;">${visible.length}</span>`;
+            container.appendChild(catEl);
 
-            visibleEvents.forEach(ev => {
+            for (const ev of visible) {
+                const cfg    = this.audioMap.events[ev.id];
+                const mapped = !!(cfg?.clips?.length);
+                total++;
+
                 const item = document.createElement('div');
-                const config = this.audioMap.events[ev.id];
-                const isMapped = !!(config?.clips?.length);
-                item.className = `tree-item-v6 ${this.activeEventId === ev.id ? 'active' : ''}`;
-                item.style.paddingLeft = '30px';
+                item.className = 'kas-tree-item' + (this.activeEventId === ev.id ? ' active' : '');
                 item.innerHTML = `
-                    <div class="tree-main">
-                        <span><i class="fas ${isMapped ? 'fa-bolt' : 'fa-circle'} tree-icon"></i> ${ev.id}</span>
-                        <span class="tree-tags">${isMapped ? `${config.clips.length} clip` : 'unmapped'}</span>
+                    <i class="fas ${mapped ? 'fa-bolt' : 'fa-circle'}" style="font-size:9px;opacity:0.6;color:${mapped ? 'var(--kas-red)' : ''};"></i>
+                    <span class="kas-tree-item-name">${ev.id}</span>
+                    <div class="kas-tree-item-meta">
+                        ${mapped ? `<span class="kas-chip mapped">${cfg.clips.length}</span>` : '<span class="kas-chip unmapped">—</span>'}
                     </div>
-                    <div class="tree-sub">${ev.desc || 'No description'}</div>
                 `;
-                item.onclick = () => this.selectEvent(ev.id);
+                item.title = ev.desc || ev.id;
+                item.onclick = () => this._selectEvent(ev.id);
+                container.appendChild(item);
+            }
+        }
+
+        // Show custom events not in manifest
+        const manifestIds = new Set(Object.values(this.manifest).flat().map(e => e.id));
+        const customIds = Object.keys(this.audioMap.events).filter(id => !manifestIds.has(id) && (!search || id.includes(search)));
+        if (customIds.length) {
+            const catEl = document.createElement('div');
+            catEl.className = 'kas-tree-category';
+            catEl.innerHTML = `<i class="fas fa-star" style="opacity:0.5;font-size:10px;"></i> CUSTOM
+                <span class="kas-chip" style="margin-left:auto;">${customIds.length}</span>`;
+            container.appendChild(catEl);
+
+            customIds.forEach(id => {
+                const cfg    = this.audioMap.events[id];
+                const mapped = !!(cfg?.clips?.length);
+                total++;
+                const item = document.createElement('div');
+                item.className = 'kas-tree-item' + (this.activeEventId === id ? ' active' : '');
+                item.innerHTML = `
+                    <i class="fas ${mapped ? 'fa-bolt' : 'fa-circle'}" style="font-size:9px;opacity:0.6;"></i>
+                    <span class="kas-tree-item-name">${id}</span>
+                    <div class="kas-tree-item-meta">
+                        ${mapped ? `<span class="kas-chip mapped">${cfg.clips.length}</span>` : '<span class="kas-chip unmapped">—</span>'}
+                    </div>
+                `;
+                item.onclick = () => this._selectEvent(id);
                 container.appendChild(item);
             });
-        });
+        }
+
+        if (total === 0) {
+            container.innerHTML = `<div class="kas-empty-state"><div class="kas-empty-icon">🔍</div><div class="kas-empty-title">No events match</div></div>`;
+        }
     }
 
-    renderAssetsGrid() {
-        const container = document.getElementById('explorer-tree');
-        if (!container) return;
-        const search = this.assetSearch || '';
+    _populateCategoryFilter() {
+        const sel = document.getElementById('kas-category-filter');
+        if (!sel) return;
+        const existing = new Set(Array.from(sel.options).map(o => o.value));
+        for (const cat of Object.keys(this.manifest)) {
+            if (!existing.has(cat)) {
+                const opt = document.createElement('option');
+                opt.value = cat; opt.textContent = cat;
+                sel.appendChild(opt);
+            }
+        }
+    }
 
-        const assets = this.availableAssets.filter(asset => asset.toLowerCase().includes(search));
-        if (assets.length === 0) {
-            container.innerHTML = '<div class="empty-note">No assets match current filter.</div>';
+    // ─────────────────────────────────────────────
+    //  ASSET LIST
+    // ─────────────────────────────────────────────
+
+    _renderAssetList() {
+        const container = document.getElementById('kas-asset-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const search = this.assetSearch;
+        const filtered = this.assets.filter(a => !search || a.name.toLowerCase().includes(search));
+
+        if (!filtered.length) {
+            container.innerHTML = `<div class="kas-empty-state"><div class="kas-empty-icon">🔊</div><div class="kas-empty-title">No assets</div><div class="kas-empty-sub">Place audio files in muzikler/</div></div>`;
             return;
         }
 
-        assets.forEach(asset => {
+        filtered.forEach(asset => {
             const item = document.createElement('div');
-            item.className = 'tree-item-v6';
+            item.className = 'kas-asset-item' + (this.selectedAsset === asset.name ? ' active' : '');
             item.draggable = true;
+
+            const ext = asset.ext?.replace('.', '') || 'wav';
+            const extIcons = { mp3: '🎵', ogg: '🎵', wav: '🎼', json: '📄', flac: '🎼' };
+            const icon = extIcons[ext] || '🔊';
+
             item.innerHTML = `
-                <div class="tree-main">
-                    <span><i class="fas fa-file-audio tree-icon"></i> ${asset}</span>
-                    <span class="tree-tags">drag/link</span>
-                </div>
+                <div class="kas-asset-icon">${icon}</div>
+                <span class="kas-asset-name">${asset.name}</span>
+                ${asset.sizeMb ? `<span class="kas-asset-size">${asset.sizeMb}MB</span>` : ''}
             `;
-            item.ondragstart = (e) => {
-                e.dataTransfer.setData('text/plain', asset);
+
+            item.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', asset.name);
                 e.dataTransfer.effectAllowed = 'copy';
-            };
-            item.onmousedown = () => window.Sound?.playEvent(asset, { direct: true });
-            item.ondblclick = () => {
-                if (!this.activeEventId) return;
-                this.addClip(this.activeEventId, asset);
-            };
+            });
+            item.addEventListener('click', () => {
+                this.selectedAsset = asset.name;
+                this._previewAsset(asset.name);
+                this._renderAssetList();
+            });
+            item.addEventListener('dblclick', () => {
+                if (this.activeEventId) this._addClipToEvent(this.activeEventId, asset.name);
+            });
+
             container.appendChild(item);
         });
+
+        this._updateStatusBar();
     }
 
-    renderWorkspace() {
-        const empty = document.getElementById('empty-state');
-        const view = document.getElementById('event-editor-view');
-        const pathLabel = document.getElementById('active-event-path');
-        const scenarioState = document.getElementById('scenario-state');
+    async _previewAsset(assetName) {
+        if (!window.KAE) return;
+        const buf = await window.KAE.loadBuffer(assetName);
+        if (buf) {
+            window.KAE._playBuffer(buf, { volume: 0.8, bus: 'sfx' });
+            this._drawWaveformBuffer(buf);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    //  EVENT EDITOR (Center - Events tab)
+    // ─────────────────────────────────────────────
+
+    _selectEvent(id) {
+        if (!this.audioMap.events[id]) {
+            this.audioMap.events[id] = this._defaultEventCfg();
+        }
+        this.activeEventId = id;
+        this._renderEventEditor();
+        this._renderInspector();
+        this._renderEventTree();
+    }
+
+    _renderEventEditor() {
+        const empty  = document.getElementById('events-empty');
+        const editor = document.getElementById('events-editor');
+        if (!empty || !editor) return;
 
         if (!this.activeEventId || !this.audioMap.events[this.activeEventId]) {
-            if (empty) empty.classList.remove('hidden');
-            if (view) view.classList.add('hidden');
-            if (pathLabel) pathLabel.textContent = 'IDLE';
-            if (scenarioState) scenarioState.textContent = 'preview: idle';
+            empty.style.display = 'flex';
+            editor.classList.add('kas-hidden');
             return;
         }
 
-        if (empty) empty.classList.add('hidden');
-        if (view) view.classList.remove('hidden');
-        if (pathLabel) pathLabel.textContent = `VFS://AUDIO/STREAMS/${this.activeEventId.toUpperCase()}`;
-        if (scenarioState) scenarioState.textContent = this.previewRunner.mode ? `preview: ${this.previewRunner.mode}` : 'preview: idle';
+        empty.style.display = 'none';
+        editor.classList.remove('kas-hidden');
 
-        const config = this.audioMap.events[this.activeEventId];
-        const nameEl = document.getElementById('view-event-name');
-        const groupEl = document.getElementById('view-event-group');
-        if (nameEl) nameEl.textContent = this.activeEventId;
-        if (groupEl) groupEl.textContent = (config.group || 'sfx').toUpperCase() + '_BUS';
+        const cfg = this.audioMap.events[this.activeEventId];
+        const $ = id => document.getElementById(id);
 
-        const stack = document.getElementById('variation-stack');
+        $('ev-name').textContent    = this.activeEventId;
+        $('ev-bus-tag').innerHTML   = `⚡ ${(cfg.group || 'sfx').toUpperCase()} BUS`;
+
+        // Waveform
+        if (cfg.clips?.length) {
+            $('ev-waveform-empty').style.display = 'none';
+            this._loadAndDrawWaveform(cfg.clips[0]);
+        } else {
+            $('ev-waveform-empty').style.display = 'flex';
+            this._clearWaveform();
+        }
+
+        // Clip stack
+        const stack = $('ev-clip-stack');
         if (stack) {
-            stack.innerHTML = (config.clips || []).map((clip, idx) => {
-                const meta = config.clipMeta?.[clip] || { weight: 1, gain: 1 };
+            stack.innerHTML = (cfg.clips || []).map((clip, idx) => {
+                const meta = cfg.clipMeta?.[clip] || { weight: 1, gain: 1 };
                 return `
-                    <div class="variation-row" style="background: #000; border: 1px solid var(--border-premium); padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 2px 2px 0 rgba(0,0,0,0.5);">
-                        <div style="display:flex; align-items:center; gap:12px; min-width:0;">
-                            <i class="fas fa-file-audio" style="color:var(--gold); opacity: 0.6;"></i>
-                            <div style="min-width:0;">
-                                <div class="clip-name" style="font-size: 15px; font-weight: bold; color: #fff;">${clip}</div>
-                                <div class="clip-meta" style="font-size: 11px; color: var(--text-dim); letter-spacing: 1px;">WEIGHT: ${(meta.weight || 1).toFixed(2)} | GAIN: ${(meta.gain || 1).toFixed(2)}</div>
-                            </div>
+                    <div class="kas-clip-row" data-clip="${clip}" data-idx="${idx}">
+                        <span class="kas-clip-row-icon">🎵</span>
+                        <div style="flex:1;min-width:0;">
+                            <div class="kas-clip-row-name">${clip}</div>
+                            <div class="kas-clip-row-meta">weight: ${meta.weight?.toFixed(2)} | gain: ${meta.gain?.toFixed(2)}</div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button class="btn-icon-small" title="Audition clip" onclick="pro.auditionClip('${this.activeEventId}', '${clip}')" style="background: #111; border: 1px solid #333; color: var(--gold); padding: 4px 8px; cursor: pointer;"><i class="fas fa-play"></i></button>
-                            <button class="btn-icon-small" title="Set weight" onclick="pro.setClipWeight('${this.activeEventId}', '${clip}')" style="background: #111; border: 1px solid #333; color: #aaa; padding: 4px 8px; cursor: pointer;"><i class="fas fa-balance-scale"></i></button>
-                            <button class="btn-icon-small danger" title="Remove clip" onclick="pro.removeClip('${this.activeEventId}', ${idx})" style="background: #111; border: 1px solid #333; color: var(--danger); padding: 4px 8px; cursor: pointer;"><i class="fas fa-trash"></i></button>
+                        <div class="kas-clip-row-actions">
+                            <button class="kas-btn icon" onclick="kas._auditionClip('${this.activeEventId}','${clip}')" title="Audition"><i class="fas fa-play"></i></button>
+                            <button class="kas-btn icon" onclick="kas._editClipWeight('${this.activeEventId}','${clip}')" title="Edit weight"><i class="fas fa-balance-scale"></i></button>
+                            <button class="kas-btn icon danger" onclick="kas._removeClip('${this.activeEventId}',${idx})" title="Remove"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        if (config.clips && config.clips.length > 0) {
-            this.drawWaveform(config.clips[0]);
-        } else {
-            this.clearWaveform();
-        }
+        $('ev-clip-count').textContent = `${(cfg.clips || []).length} clip${(cfg.clips?.length !== 1) ? 's' : ''}`;
     }
 
-    renderInspector() {
-        const content = document.getElementById('inspector-pane-content');
-        const empty = document.getElementById('inspector-empty');
-        if (!content || !empty) return;
+    // ─────────────────────────────────────────────
+    //  INSPECTOR
+    // ─────────────────────────────────────────────
+
+    _renderInspector() {
+        const emptyEl   = document.getElementById('right-events-empty');
+        const contentEl = document.getElementById('right-events-content');
+        if (!emptyEl || !contentEl) return;
 
         if (!this.activeEventId || !this.audioMap.events[this.activeEventId]) {
-            empty.classList.remove('hidden');
-            content.classList.add('hidden');
+            emptyEl.style.display  = 'flex';
+            contentEl.classList.add('kas-hidden');
             return;
         }
 
-        const config = this.audioMap.events[this.activeEventId];
-        const missingForEvent = (config.clips || []).filter(clip => !this.availableAssets.includes(clip));
-        const desc = this.getManifestDescription(this.activeEventId);
+        emptyEl.style.display = 'none';
+        contentEl.classList.remove('kas-hidden');
 
-        empty.classList.add('hidden');
-        content.classList.remove('hidden');
-        content.innerHTML = `
-            <div class="inspector-block" style="border-bottom: 2px solid #000; padding-bottom: 16px;">
-                <div class="inspector-title" style="font-size: 14px; opacity: 0.6; letter-spacing: 2px; margin-bottom: 8px;">EVENT_IDENTITY</div>
-                <div style="font-size: 20px; color: var(--gold); font-weight: bold; margin-bottom: 4px; text-shadow: 2px 2px 0 #000;">${this.activeEventId}</div>
-                <div class="inspector-help" style="font-size: 12px; color: #666; line-height: 1.4;">${desc || 'No manifest description available'}</div>
-            </div>
+        const cfg = this.audioMap.events[this.activeEventId];
+        const $   = id => document.getElementById(id);
 
-            <div class="inspector-block" style="padding-top: 16px;">
-                <div class="inspector-title" style="font-size: 13px; color: var(--gold); margin-bottom: 12px; letter-spacing: 1px;">ROUTING_&_MIX</div>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <select onchange="pro.updateActiveEvent('group', this.value)" class="glass-panel inspector-input" style="background: #000; border: 1px solid #333; color: #fff;">
-                        <option value="sfx" ${config.group === 'sfx' ? 'selected' : ''}>SFX_CORE</option>
-                        <option value="music" ${config.group === 'music' ? 'selected' : ''}>MUSIC_ORCHESTRA</option>
-                        <option value="ambience" ${config.group === 'ambience' ? 'selected' : ''}>ENV_AMBIENCE</option>
-                        <option value="voice" ${config.group === 'voice' ? 'selected' : ''}>VOICE_OVER</option>
-                    </select>
-                    <label class="inline-toggle" style="font-size: 12px; color: #888;"><input type="checkbox" ${config.priority ? 'checked' : ''} onchange="pro.updateActiveEvent('priority', this.checked)"> ENABLE_SIDECHAIN_DUCKING</label>
-                </div>
-            </div>
+        // Identity
+        $('insp-id').textContent = this.activeEventId;
+        const desc = this._getManifestDesc(this.activeEventId);
+        $('insp-desc').textContent = desc || 'Custom event — no manifest description.';
 
-            <div class="inspector-block" style="padding-top: 16px;">
-                <div class="inspector-title" style="font-size: 13px; color: var(--gold); margin-bottom: 12px; letter-spacing: 1px;">PLAYBACK_ENGINE</div>
-                <div class="inspector-grid" style="margin-bottom: 12px;">
-                    <div>
-                        <label style="font-size: 11px; color: #555;">MODE</label>
-                        <select onchange="pro.updateActiveEvent('playback.mode', this.value)" class="glass-panel inspector-input" style="background: #000; border: 1px solid #333;">
-                            <option value="random" ${config.playback.mode === 'random' ? 'selected' : ''}>RANDOM</option>
-                            <option value="sequential" ${config.playback.mode === 'sequential' ? 'selected' : ''}>SEQUENTIAL</option>
-                            <option value="loop" ${config.playback.mode === 'loop' ? 'selected' : ''}>LOOP</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size: 11px; color: #555;">FILTER</label>
-                        <select onchange="pro.updateActiveEvent('filter.type', this.value)" class="glass-panel inspector-input" style="background: #000; border: 1px solid #333;">
-                            <option value="lowpass" ${config.filter.type === 'lowpass' ? 'selected' : ''}>LOWPASS</option>
-                            <option value="highpass" ${config.filter.type === 'highpass' ? 'selected' : ''}>HIGHPASS</option>
-                            <option value="bandpass" ${config.filter.type === 'bandpass' ? 'selected' : ''}>BANDPASS</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div>
-                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #888;"><span>VOLUME</span><span>${Math.round(config.playback.volume * 100)}%</span></div>
-                        <input type="range" min="0" max="2" step="0.01" value="${config.playback.volume}" oninput="pro.updateActiveEvent('playback.volume', parseFloat(this.value), true)" style="width: 100%;">
-                    </div>
-                    <div>
-                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #888;"><span>VOL_VARIATION</span><span>${Math.round(config.playback.volumeVar * 100)}%</span></div>
-                        <input type="range" min="0" max="0.5" step="0.01" value="${config.playback.volumeVar}" oninput="pro.updateActiveEvent('playback.volumeVar', parseFloat(this.value), true)" style="width: 100%;">
-                    </div>
-                    <div>
-                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #888;"><span>PITCH_VARIATION</span><span>${Math.round(config.playback.pitchVar * 100)}%</span></div>
-                        <input type="range" min="0" max="0.5" step="0.01" value="${config.playback.pitchVar}" oninput="pro.updateActiveEvent('playback.pitchVar', parseFloat(this.value), true)" style="width: 100%;">
-                    </div>
-                    <div>
-                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #888;"><span>COOLDOWN</span><span>${config.playback.cooldown.toFixed(2)}s</span></div>
-                        <input type="range" min="0" max="1" step="0.01" value="${config.playback.cooldown}" oninput="pro.updateActiveEvent('playback.cooldown', parseFloat(this.value), true)" style="width: 100%;">
-                    </div>
-                </div>
-            </div>
+        // Routing
+        const grpEl = $('insp-group');
+        if (grpEl) grpEl.value = cfg.group || 'sfx';
+        const priEl = $('insp-priority');
+        if (priEl) priEl.checked = !!cfg.priority;
 
-            <div class="inspector-block" style="padding-top: 16px; border-top: 1px solid #222; margin-top: 16px;">
-                <div class="inspector-title" style="font-size: 13px; color: var(--gold); margin-bottom: 12px; letter-spacing: 1px;">TRIGGER_HISTORY</div>
-                <div id="trigger-history" class="trigger-history" style="height: 140px; border: 1px solid #222; background: #000; box-shadow: inset 2px 2px 0 #000;"></div>
-            </div>
-        `;
+        // Playback
+        const p = cfg.playback;
+        const setSlider = (id, valId, val, fmt) => {
+            const el = $(id); if (el) el.value = val;
+            const ve = $(valId); if (ve) ve.textContent = fmt(val);
+        };
 
-        this.renderHistoryPanel();
+        $('insp-mode') && ($('insp-mode').value = p.mode || 'random');
+        setSlider('insp-vol',      'insp-vol-val',      p.volume,    v => Math.round(v * 100) + '%');
+        setSlider('insp-volvar',   'insp-volvar-val',   p.volumeVar, v => Math.round(v * 100) + '%');
+        setSlider('insp-pitch',    'insp-pitch-val',    p.pitchVar,  v => Math.round(v * 100) + '%');
+        setSlider('insp-cooldown', 'insp-cooldown-val', p.cooldown,  v => parseFloat(v).toFixed(2) + 's');
+        setSlider('insp-fadein',   'insp-fadein-val',   p.fadeIn,    v => parseFloat(v).toFixed(2) + 's');
+        setSlider('insp-fadeout',  'insp-fadeout-val',  p.fadeOut,   v => parseFloat(v).toFixed(2) + 's');
+
+        // Filter
+        const fEl = $('insp-filter-type');
+        if (fEl) fEl.value = cfg.filter?.type || 'lowpass';
+        setSlider('insp-freq', 'insp-freq-val', cfg.filter?.freq ?? 20000,
+            v => (v >= 1000 ? (v/1000).toFixed(1) + 'kHz' : Math.round(v) + 'Hz'));
+        setSlider('insp-reverb', 'insp-reverb-val', cfg.reverb ?? 0, v => Math.round(v * 100) + '%');
+
+        // Trigger history
+        this._renderTriggerHistory();
     }
 
-    renderHistoryPanel() {
-        const log = document.getElementById('trigger-history');
+    _renderTriggerHistory() {
+        const log = document.getElementById('insp-trigger-history');
         if (!log) return;
-        log.innerHTML = this.triggerHistory.map(h => `
-            <div class="history-row">
-                <span style="color:var(--gold);">> ${h.name}</span>
-                <span style="color:#444; font-size:10px;">${h.time}</span>
+        const relevant = this.triggerLog.filter(h => h.name === this.activeEventId).slice(-10);
+        if (!relevant.length) {
+            log.innerHTML = '<div style="padding:8px;font-size:10px;color:var(--text-muted);text-align:center;">No triggers yet</div>';
+            return;
+        }
+        log.innerHTML = relevant.reverse().map(h => `
+            <div class="kas-history-row">
+                <span class="kas-history-name">${h.name}</span>
+                <span class="kas-history-clip">${h.clip || '—'}</span>
+                <span class="kas-history-time">${h.time}</span>
             </div>
         `).join('');
     }
 
-    renderMixer() {
-        const container = document.getElementById('mixer-lanes');
+    _logTrigger(name, clip) {
+        this.triggerLog.push({ name, clip, time: new Date().toLocaleTimeString() });
+        if (this.triggerLog.length > 200) this.triggerLog.shift();
+        if (name === this.activeEventId) this._renderTriggerHistory();
+    }
+
+    // ─────────────────────────────────────────────
+    //  MIXER
+    // ─────────────────────────────────────────────
+
+    _renderMixer() {
+        const container = document.getElementById('kas-mixer-strips');
         if (!container) return;
         container.innerHTML = '';
 
-        Object.entries(this.audioMap.buses).forEach(([name, bus]) => {
-            const ui = this.busUiState[name] || { muted: false, solo: false };
+        const busOrder = ['master', 'music', 'sfx', 'ambience', 'voice', 'ui'];
+        const extraBuses = Object.keys(this.audioMap.buses).filter(b => !busOrder.includes(b));
+        const allBuses = [...busOrder, ...extraBuses];
+
+        allBuses.forEach(name => {
+            const bus = this.audioMap.buses[name];
+            if (!bus) return;
+
+            const gain    = bus.gain ?? 1.0;
+            const pct     = Math.round(gain * 100);
+            const isMaster = name === 'master';
+
             const strip = document.createElement('div');
-            strip.className = `mixer-v6-strip ${name === 'master' ? 'master' : ''}`;
-            strip.style.background = '#000';
-            strip.style.border = `1px solid ${name === 'master' ? 'var(--gold)' : 'var(--border-premium)'}`;
-            strip.style.boxShadow = '2px 2px 0 rgba(0,0,0,0.5)';
-            
+            strip.className = 'kas-strip' + (isMaster ? ' master-strip' : '');
+            strip.id = `mixer-strip-${name}`;
+
             strip.innerHTML = `
-                <div class="mixer-name" style="font-size: 11px; letter-spacing: 1px; color: ${name === 'master' ? 'var(--gold)' : 'var(--text-dim)'};">${name.toUpperCase()}</div>
-                <div class="meter-v6" id="meter-${name}" style="background: #000; border: 1px solid #222; padding: 2px; height: 120px; box-shadow: inset 1px 1px 0 #000;">
-                    ${Array(20).fill('<div class="seg" style="height: 4px; margin-bottom: 2px; background: #111;"></div>').join('')}
-                </div>
-                <div class="fader-slot" style="background: #000; border: 1px solid #222; width: 6px; height: 100px; box-shadow: inset 1px 1px 0 #000;">
-                    <div class="fader-knob" id="fader-${name}" style="bottom:${Math.round((bus.gain || 0) * 100)}%; background: #222; border: 2px solid var(--gold); border-radius: 2px;" onmousedown="pro.startFaderDrag(event, '${name}')"></div>
-                </div>
-                <div class="mixer-percent" style="font-family: monospace; font-size: 11px; color: var(--gold);">${Math.round((bus.gain || 0) * 100)}%</div>
-                ${name === 'master' ? '' : `
-                    <div class="mixer-btn-row" style="display: flex; gap: 4px; margin-top: 8px;">
-                        <button class="mixer-mini ${ui.muted ? 'active danger' : ''}" onclick="pro.toggleBusMute('${name}')" style="width: 24px; height: 24px; background: #111; border: 1px solid #333; color: #888; cursor: pointer; font-size: 10px;">M</button>
-                        <button class="mixer-mini ${ui.solo ? 'active' : ''}" onclick="pro.toggleBusSolo('${name}')" style="width: 24px; height: 24px; background: #111; border: 1px solid #333; color: #888; cursor: pointer; font-size: 10px;">S</button>
+                <div class="kas-strip-name">${name.toUpperCase()}</div>
+                <div class="kas-strip-meters">
+                    <div class="kas-meter" id="meter-${name}-L">
+                        ${Array(16).fill(0).map((_, i) => `<div class="kas-meter-seg" data-seg="${i}"></div>`).join('')}
                     </div>
-                `}
+                    <div class="kas-meter" id="meter-${name}-R">
+                        ${Array(16).fill(0).map((_, i) => `<div class="kas-meter-seg" data-seg="${i}"></div>`).join('')}
+                    </div>
+                </div>
+                <div class="kas-fader-track" id="fader-track-${name}" data-bus="${name}">
+                    <div class="kas-fader-fill" id="fader-fill-${name}" style="height:${pct}%;"></div>
+                    <div class="kas-fader-thumb" id="fader-thumb-${name}" style="bottom:${pct}%;"></div>
+                </div>
+                <div class="kas-strip-val" id="fader-val-${name}">${pct}%</div>
+                ${!isMaster ? `
+                    <div class="kas-strip-btns">
+                        <button class="kas-strip-btn mute" id="strip-mute-${name}" data-bus="${name}" onclick="kas._toggleBusMute('${name}')">M</button>
+                        <button class="kas-strip-btn solo" id="strip-solo-${name}" data-bus="${name}" onclick="kas._toggleBusSolo('${name}')">S</button>
+                    </div>
+                ` : ''}
             `;
+
             container.appendChild(strip);
+
+            // Fader drag
+            const track = strip.querySelector('.kas-fader-track');
+            track?.addEventListener('mousedown', e => this._onFaderDown(e, name, track));
+        });
+    }
+
+    _onFaderDown(e, busName, trackEl) {
+        e.preventDefault();
+        const rect = trackEl.getBoundingClientRect();
+        this._faderDrag = { busName, trackEl, rect };
+    }
+
+    _onFaderMove(e) {
+        if (!this._faderDrag) return;
+        const { busName, trackEl, rect } = this._faderDrag;
+        const relY  = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+        const gain  = parseFloat(relY.toFixed(2));
+        const pct   = Math.round(gain * 100);
+
+        // Update UI
+        const fill  = document.getElementById(`fader-fill-${busName}`);
+        const thumb = document.getElementById(`fader-thumb-${busName}`);
+        const val   = document.getElementById(`fader-val-${busName}`);
+        if (fill)  fill.style.height = pct + '%';
+        if (thumb) thumb.style.bottom = pct + '%';
+        if (val)   val.textContent = pct + '%';
+
+        // Apply to engine and map
+        if (window.KAE) window.KAE.setBusGain(busName, gain);
+        if (this.audioMap.buses[busName]) this.audioMap.buses[busName].gain = gain;
+        this.isDirty = true;
+    }
+
+    _onFaderUp() {
+        if (this._faderDrag) {
+            this._recordHistory();
+            this._faderDrag = null;
+        }
+    }
+
+    _toggleBusMute(name) {
+        const btn = document.getElementById(`strip-mute-${name}`);
+        if (!btn) return;
+        const on = btn.classList.toggle('on');
+        if (window.KAE) window.KAE.muteBus(name, on);
+    }
+
+    _toggleBusSolo(name) {
+        document.getElementById(`strip-solo-${name}`)?.classList.toggle('on');
+    }
+
+    _resetMixer() {
+        const defaults = { master: 1.0, music: 0.7, sfx: 0.9, ambience: 0.6, voice: 1.0, ui: 0.8 };
+        for (const [name, gain] of Object.entries(defaults)) {
+            this.audioMap.buses[name] = { ...(this.audioMap.buses[name] || {}), gain };
+            if (window.KAE) window.KAE.setBusGain(name, gain);
+        }
+        this._renderMixer();
+        this._recordHistory();
+    }
+
+    // ─────────────────────────────────────────────
+    //  VU METERS (RAF Loop)
+    // ─────────────────────────────────────────────
+
+    _startMeterLoop() {
+        const loop = () => {
+            this._updateMeters();
+            this._meterRaf = requestAnimationFrame(loop);
+        };
+        loop();
+    }
+
+    _updateMeters() {
+        if (!window.KAE) return;
+        const buses = Object.keys(this.audioMap.buses || {});
+
+        buses.forEach(name => {
+            const level = window.KAE.getBusLevel(name);
+            const segs  = 16;
+            const on    = Math.round(level * segs);
+
+            ['L', 'R'].forEach(ch => {
+                const meter = document.getElementById(`meter-${name}-${ch}`);
+                if (!meter) return;
+                const segEls = meter.querySelectorAll('.kas-meter-seg');
+                segEls.forEach((seg, i) => {
+                    seg.classList.remove('on-low', 'on-mid', 'on-high');
+                    if (i < on) {
+                        if (i >= segs - 2) seg.classList.add('on-high');
+                        else if (i >= segs - 4) seg.classList.add('on-mid');
+                        else seg.classList.add('on-low');
+                    }
+                });
+            });
         });
 
-        this.applyMixerState();
+        // Update voice count
+        const voices = window.KAE.activeVoices?.size ?? 0;
+        const el = document.getElementById('sb-voices');
+        if (el) el.textContent = `voices: ${voices}`;
     }
 
-    selectEvent(id) {
-        if (!this.audioMap.events[id]) this.audioMap.events[id] = this.makeDefaultEventConfig();
-        this.activeEventId = id;
-        this.renderAll();
+    // ─────────────────────────────────────────────
+    //  WAVEFORM RENDERING
+    // ─────────────────────────────────────────────
+
+    async _loadAndDrawWaveform(url) {
+        if (!window.KAE) return;
+        try {
+            const buf = await window.KAE.loadBuffer(url);
+            if (buf) this._drawWaveformBuffer(buf);
+        } catch (e) {}
     }
 
-    createQuickEvent() {
-        const input = document.getElementById('quick-event-id');
-        if (!input) return;
-        const id = input.value.trim();
-        if (!id) return;
+    _drawWaveformBuffer(audioBuffer) {
+        const canvas = document.getElementById('ev-waveform-canvas');
+        if (!canvas || !audioBuffer) return;
 
-        if (!this.audioMap.events[id]) {
-            this.audioMap.events[id] = this.makeDefaultEventConfig();
-            this.recordHistory(true);
+        const ctx    = canvas.getContext('2d');
+        const W      = canvas.offsetWidth || 600;
+        const H      = canvas.offsetHeight || 120;
+        canvas.width = W * (window.devicePixelRatio || 1);
+        canvas.height = H * (window.devicePixelRatio || 1);
+        ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+        ctx.clearRect(0, 0, W, H);
+
+        // Background gradient
+        const bg = ctx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, 'rgba(229,62,62,0.05)');
+        bg.addColorStop(1, 'rgba(13,16,23,0.0)');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        // Center line
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, H / 2);
+        ctx.lineTo(W, H / 2);
+        ctx.stroke();
+
+        // Waveform
+        const data       = audioBuffer.getChannelData(0);
+        const step       = Math.ceil(data.length / W);
+        const halfH      = H / 2;
+        const amp        = halfH * 0.9;
+
+        // Draw filled waveform
+        ctx.beginPath();
+        ctx.moveTo(0, halfH);
+        for (let x = 0; x < W; x++) {
+            let max = 0;
+            for (let i = x * step; i < (x + 1) * step && i < data.length; i++) {
+                if (Math.abs(data[i]) > max) max = Math.abs(data[i]);
+            }
+            const y = halfH - max * amp;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
+        for (let x = W - 1; x >= 0; x--) {
+            let max = 0;
+            for (let i = x * step; i < (x + 1) * step && i < data.length; i++) {
+                if (Math.abs(data[i]) > max) max = Math.abs(data[i]);
+            }
+            const y = halfH + max * amp;
+            ctx.lineTo(x, y);
+        }
+        ctx.closePath();
 
-        this.activeEventId = id;
-        input.value = '';
-        this.renderAll();
-        this.updateConnectionStatus(`EVENT_CREATED: ${id}`);
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, 'rgba(229,62,62,0.6)');
+        grad.addColorStop(0.5, 'rgba(229,62,62,0.3)');
+        grad.addColorStop(1, 'rgba(229,62,62,0.6)');
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Outline
+        ctx.strokeStyle = 'rgba(229,62,62,0.9)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        document.getElementById('ev-waveform-empty').style.display = 'none';
     }
 
-    getManifestDescription(eventId) {
-        for (const events of Object.values(this.loadedManifest || {})) {
-            const hit = (events || []).find(ev => ev.id === eventId);
+    _clearWaveform() {
+        const canvas = document.getElementById('ev-waveform-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ─────────────────────────────────────────────
+    //  CLIP MANAGEMENT
+    // ─────────────────────────────────────────────
+
+    _addClipToEvent(eventId, assetName) {
+        const cfg = this.audioMap.events[eventId];
+        if (!cfg) return;
+        if (!cfg.clips.includes(assetName)) {
+            cfg.clips.push(assetName);
+            cfg.clipMeta[assetName] = { weight: 1, gain: 1 };
+            this._recordHistory();
+            this._renderEventEditor();
+            this._renderInspector();
+            this._renderEventTree();
+            this._syncStatus(`CLIP ADDED: ${assetName}`);
+        }
+    }
+
+    _removeClip(eventId, idx) {
+        const cfg = this.audioMap.events[eventId];
+        if (!cfg?.clips) return;
+        const removed = cfg.clips.splice(idx, 1)[0];
+        delete cfg.clipMeta[removed];
+        this._recordHistory();
+        this._renderEventEditor();
+        this._renderInspector();
+        this._renderEventTree();
+    }
+
+    _editClipWeight(eventId, clipName) {
+        const cfg = this.audioMap.events[eventId];
+        if (!cfg) return;
+        const meta    = cfg.clipMeta[clipName] || { weight: 1, gain: 1 };
+        const newW    = parseFloat(prompt(`Weight for "${clipName}" (current: ${meta.weight}):`, meta.weight));
+        if (!isNaN(newW) && newW > 0) {
+            cfg.clipMeta[clipName] = { ...meta, weight: newW };
+            this._recordHistory();
+            this._renderEventEditor();
+        }
+    }
+
+    async _auditionClip(eventId, clipName) {
+        if (!window.KAE) return;
+        const buf = await window.KAE.loadBuffer(clipName);
+        if (buf) {
+            window.KAE._playBuffer(buf, { volume: 0.9, bus: 'sfx' });
+            this._drawWaveformBuffer(buf);
+        }
+    }
+
+    async _auditionActiveEvent() {
+        if (!this.activeEventId || !window.KAE) return;
+        await window.KAE.playEvent(this.activeEventId);
+    }
+
+    // ─────────────────────────────────────────────
+    //  EVENT CRUD
+    // ─────────────────────────────────────────────
+
+    _createEvent() {
+        const input = document.getElementById('kas-new-event-id');
+        const id    = input?.value.trim();
+        if (!id) return;
+        if (!this.audioMap.events[id]) {
+            this.audioMap.events[id] = this._defaultEventCfg();
+            this._recordHistory();
+        }
+        if (input) input.value = '';
+        this._selectEvent(id);
+        this._syncStatus(`EVENT CREATED: ${id}`);
+    }
+
+    _deleteActiveEvent() {
+        if (!this.activeEventId) return;
+        if (!confirm(`Delete event "${this.activeEventId}"?`)) return;
+        delete this.audioMap.events[this.activeEventId];
+        this.activeEventId = null;
+        this._recordHistory();
+        this._renderAll();
+    }
+
+    // ─────────────────────────────────────────────
+    //  INSPECTOR PROP SETTER
+    // ─────────────────────────────────────────────
+
+    _setEventProp(path, value) {
+        if (!this.activeEventId) return;
+        const cfg   = this.audioMap.events[this.activeEventId];
+        const parts = path.split('.');
+        if (parts.length === 1) cfg[parts[0]] = value;
+        else if (parts.length === 2) { if (!cfg[parts[0]]) cfg[parts[0]] = {}; cfg[parts[0]][parts[1]] = value; }
+
+        this.isDirty = true;
+        this._renderEventEditor();
+        this._renderEventTree();
+        this._updateStatusBar();
+        if (window.KAE) window.KAE.loadMap(this.audioMap);
+    }
+
+    _getManifestDesc(id) {
+        for (const list of Object.values(this.manifest)) {
+            const hit = list.find(e => e.id === id);
             if (hit) return hit.desc;
         }
         return '';
     }
 
-    updateActiveEvent(path, value, live = false) {
-        if (!this.activeEventId || !this.audioMap.events[this.activeEventId]) return;
-        const cfg = this.audioMap.events[this.activeEventId];
-        const parts = path.split('.');
-        if (parts.length === 1) {
-            cfg[parts[0]] = value;
-        } else if (parts.length === 2) {
-            const [root, leaf] = parts;
-            if (!cfg[root]) cfg[root] = {};
-            cfg[root][leaf] = value;
-        }
+    // ─────────────────────────────────────────────
+    //  MUSIC CONTEXTS TAB
+    // ─────────────────────────────────────────────
 
-        this.normalizeMap();
-        if (live) {
-            this.isDirty = true;
-            this.renderInspector();
-            this.renderWorkspace();
-            this.updateStatusBadges();
+    _renderContextList() {
+        const container = document.getElementById('kas-context-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const search = this.contextSearch;
+
+        const renderGroup = (groupName, groupData, icon) => {
+            const header = document.createElement('div');
+            header.className = 'kas-tree-category';
+            header.innerHTML = `${icon} ${groupName.toUpperCase()}`;
+            container.appendChild(header);
+
+            for (const [key, val] of Object.entries(groupData || {})) {
+                if (search && !key.toLowerCase().includes(search) && !(val || '').toLowerCase().includes(search)) continue;
+                const isActive = this.activeContextGroup === groupName && this.activeContextKey === key;
+
+                const card = document.createElement('div');
+                card.className = 'kas-context-card' + (isActive ? ' active' : '');
+                card.innerHTML = `
+                    <div class="kas-context-icon">${icon}</div>
+                    <div class="kas-context-info">
+                        <div class="kas-context-name">${key}</div>
+                        <div class="kas-context-track ${val ? 'assigned' : ''}">${val || 'No track assigned'}</div>
+                    </div>
+                    <button class="kas-btn icon danger" style="font-size:10px;padding:4px 6px;" onclick="event.stopPropagation();kas._deleteMusicContext('${groupName}','${key}')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                card.onclick = () => {
+                    this.activeContextGroup = groupName;
+                    this.activeContextKey   = key;
+                    this._renderContextList();
+                    this._updateMusicAssignUI();
+                };
+                container.appendChild(card);
+            }
+        };
+
+        renderGroup('global', this.musicConfig.global, '🌐');
+        renderGroup('levels', this.musicConfig.levels, '🗺');
+        renderGroup('events', this.musicConfig.events, '⚡');
+    }
+
+    _renderMusicAssets() {
+        const container = document.getElementById('music-asset-list');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const search   = this.assetSearch;
+        const allFiles = this.assets.filter(a => {
+            const audioExts = ['.mp3', '.ogg', '.wav', '.m4a', '.json', '.flac'];
+            if (!audioExts.includes(a.ext)) return false;
+            return !search || a.name.toLowerCase().includes(search);
+        });
+
+        if (!allFiles.length) {
+            container.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--text-muted);">No music files found.</div>';
             return;
         }
 
-        this.recordHistory(true);
-        this.renderWorkspace();
-        this.renderInspector();
-    }
-
-    addClip(eventId, clip) {
-        const cfg = this.audioMap.events[eventId];
-        if (!cfg || !clip) return;
-        if (!cfg.clips.includes(clip)) cfg.clips.push(clip);
-        if (!cfg.clipMeta) cfg.clipMeta = {};
-        if (!cfg.clipMeta[clip]) cfg.clipMeta[clip] = { weight: 1, gain: 1, start: 0, end: 1 };
-        this.recordHistory(true);
-        this.renderWorkspace();
-        this.renderInspector();
-    }
-
-    addVariationPrompt() {
-        if (!this.activeEventId) return;
-        const suggestion = this.availableAssets[0] || '';
-        const clip = prompt('ATTACH_SIGNAL_SOURCE (filename)', suggestion);
-        if (!clip) return;
-        this.addClip(this.activeEventId, clip.trim());
-    }
-
-    removeClip(eventId, idx) {
-        const cfg = this.audioMap.events[eventId];
-        if (!cfg || !cfg.clips[idx]) return;
-        const [clip] = cfg.clips.splice(idx, 1);
-        if (cfg.clipMeta && cfg.clipMeta[clip]) delete cfg.clipMeta[clip];
-        this.recordHistory(true);
-        this.renderWorkspace();
-        this.renderInspector();
-    }
-
-    setClipWeight(eventId, clip) {
-        const cfg = this.audioMap.events[eventId];
-        if (!cfg || !clip) return;
-        if (!cfg.clipMeta) cfg.clipMeta = {};
-        if (!cfg.clipMeta[clip]) cfg.clipMeta[clip] = { weight: 1, gain: 1, start: 0, end: 1 };
-        const current = cfg.clipMeta[clip].weight || 1;
-        const val = prompt('Set clip weight (0.1 - 5.0)', String(current));
-        if (val === null) return;
-        const num = Math.max(0.1, Math.min(5, parseFloat(val)));
-        if (Number.isNaN(num)) return;
-        cfg.clipMeta[clip].weight = num;
-        this.recordHistory(true);
-        this.renderWorkspace();
-    }
-
-    auditionClip(eventId, clip) {
-        if (!window.Sound) return;
-        window.Sound.playEvent(clip, { direct: true });
-        this.addHistoryEntry(`${eventId}::clip`, clip);
-    }
-
-    triggerTest() {
-        if (!this.activeEventId || !window.Sound) return;
-        window.Sound.playEvent(this.activeEventId);
-        this.addHistoryEntry(this.activeEventId, 'manual_test');
-    }
-
-    addHistoryEntry(name, clip) {
-        this.triggerHistory.unshift({ name, clip, time: new Date().toLocaleTimeString() });
-        this.triggerHistory = this.triggerHistory.slice(0, 30);
-        this.renderHistoryPanel();
-    }
-
-    applyPresetFromUI() {
-        const sel = document.getElementById('preset-select');
-        if (!sel || !sel.value) return;
-        this.applyPreset(sel.value);
-    }
-
-    applyPreset(presetKey) {
-        if (!this.activeEventId || !EVENT_PRESETS[presetKey]) return;
-        const preset = EVENT_PRESETS[presetKey];
-        const cfg = this.audioMap.events[this.activeEventId];
-        cfg.group = preset.group || cfg.group;
-        cfg.playback = { ...cfg.playback, ...(preset.playback || {}) };
-        this.normalizeMap();
-        this.recordHistory(true);
-        this.renderWorkspace();
-        this.renderInspector();
-        this.updateConnectionStatus(`PRESET_APPLIED: ${presetKey.toUpperCase()}`);
-    }
-
-    handleDragOver(e) {
-        e.preventDefault();
-        const zone = document.getElementById('drop-zone');
-        if (zone) zone.classList.add('drop-active');
-    }
-
-    handleDragLeave(e) {
-        e.preventDefault();
-        const zone = document.getElementById('drop-zone');
-        if (zone) zone.classList.remove('drop-active');
-    }
-
-    handleDrop(e) {
-        e.preventDefault();
-        const zone = document.getElementById('drop-zone');
-        if (zone) zone.classList.remove('drop-active');
-        if (!this.activeEventId) return;
-        const clip = e.dataTransfer.getData('text/plain');
-        if (clip) this.addClip(this.activeEventId, clip);
-    }
-
-    startKnobDrag(e, prop) {
-        if (!this.activeEventId) return;
-        const playback = this.audioMap.events[this.activeEventId].playback;
-        this.knobDrag = {
-            prop,
-            startY: e.clientY,
-            startVal: playback[prop] || 0
-        };
-        this.pendingDragDirty = false;
-        document.body.style.cursor = 'ns-resize';
-    }
-
-    startFaderDrag(e, busName) {
-        if (!this.audioMap.buses[busName]) return;
-        this.faderDrag = {
-            busName,
-            startY: e.clientY,
-            startVal: this.audioMap.buses[busName].gain || 0
-        };
-        this.pendingDragDirty = false;
-        document.body.style.cursor = 'ns-resize';
-    }
-
-    handleGlobalMove(e) {
-        if (this.knobDrag && this.activeEventId) {
-            const cfg = this.audioMap.events[this.activeEventId];
-            const dy = this.knobDrag.startY - e.clientY;
-            let val = this.knobDrag.startVal + dy * 0.005;
-
-            if (this.knobDrag.prop === 'volume') val = Math.max(0, Math.min(2.0, val));
-            if (this.knobDrag.prop === 'pitchVar') val = Math.max(0, Math.min(0.5, val));
-            if (this.knobDrag.prop === 'cooldown') val = Math.max(0, Math.min(1.0, val));
-
-            cfg.playback[this.knobDrag.prop] = val;
-            this.pendingDragDirty = true;
-            this.isDirty = true;
-            this.renderInspector();
-            this.renderWorkspace();
-            this.updateStatusBadges();
-        }
-
-        if (this.faderDrag) {
-            const dy = this.faderDrag.startY - e.clientY;
-            const val = Math.max(0, Math.min(1.2, this.faderDrag.startVal + dy * 0.01));
-            this.audioMap.buses[this.faderDrag.busName].gain = val;
-            this.pendingDragDirty = true;
-            this.isDirty = true;
-            this.renderMixer();
-            this.updateStatusBadges();
-        }
-    }
-
-    handleGlobalUp() {
-        const wasDragging = !!(this.knobDrag || this.faderDrag);
-        this.knobDrag = null;
-        this.faderDrag = null;
-        document.body.style.cursor = 'default';
-        if (wasDragging && this.pendingDragDirty) {
-            this.recordHistory(true);
-            this.pendingDragDirty = false;
-        }
-    }
-
-    toggleBusMute(busName) {
-        if (!this.busUiState[busName]) this.busUiState[busName] = { muted: false, solo: false };
-        this.busUiState[busName].muted = !this.busUiState[busName].muted;
-        this.applyMixerState();
-        this.renderMixer();
-    }
-
-    toggleBusSolo(busName) {
-        if (!this.busUiState[busName]) this.busUiState[busName] = { muted: false, solo: false };
-        this.busUiState[busName].solo = !this.busUiState[busName].solo;
-        this.applyMixerState();
-        this.renderMixer();
-    }
-
-    applyMixerState() {
-        const hasSolo = Object.entries(this.busUiState).some(([name, state]) => name !== 'master' && state.solo);
-
-        Object.entries(this.audioMap.buses).forEach(([name, bus]) => {
-            const state = this.busUiState[name] || { muted: false, solo: false };
-            let targetGain = bus.gain || 0;
-
-            if (name !== 'master') {
-                if (state.muted) targetGain = 0;
-                if (hasSolo && !state.solo) targetGain = 0;
-            }
-
-            if (window.Sound?.buses?.has(name)) {
-                const gainNode = window.Sound.buses.get(name);
-                gainNode.gain.setTargetAtTime(targetGain, window.Sound.ctx.currentTime, 0.03);
-            }
+        allFiles.forEach(asset => {
+            const item = document.createElement('div');
+            item.className = 'kas-asset-item' + (this.selectedMusicTrack === asset.name ? ' active' : '');
+            item.innerHTML = `
+                <div class="kas-asset-icon">🎵</div>
+                <span class="kas-asset-name">${asset.name}</span>
+            `;
+            item.onclick = () => {
+                this.selectedMusicTrack = asset.name;
+                document.getElementById('music-now-playing').textContent = asset.name;
+                this._renderMusicAssets();
+                this._updateMusicAssignUI();
+            };
+            item.ondblclick = () => {
+                this.selectedMusicTrack = asset.name;
+                this._assignMusicContext();
+            };
+            container.appendChild(item);
         });
     }
 
-    resetMixer() {
-        Object.entries(DEFAULT_BUSES).forEach(([name, cfg]) => {
-            if (!this.audioMap.buses[name]) this.audioMap.buses[name] = {};
-            this.audioMap.buses[name].gain = cfg.gain;
-            this.audioMap.buses[name].parent = cfg.parent;
-            this.audioMap.buses[name].ducking = !!cfg.ducking;
-        });
-        Object.keys(this.busUiState).forEach(name => {
-            this.busUiState[name] = { muted: false, solo: false };
-        });
-        this.recordHistory(true);
-        this.renderMixer();
-        this.updateConnectionStatus('MIXER_RESET');
+    _updateMusicAssignUI() {
+        const btn    = document.getElementById('music-btn-assign');
+        const status = document.getElementById('music-assign-status');
+        if (!btn || !status) return;
+
+        if (this.activeContextKey && this.selectedMusicTrack) {
+            btn.disabled = false;
+            status.innerHTML = `Link <strong style="color:var(--kas-red)">${this.selectedMusicTrack}</strong> → <strong style="color:var(--text-primary)">${this.activeContextKey}</strong>?`;
+        } else if (this.activeContextKey) {
+            btn.disabled = true;
+            status.textContent = 'Now select a track from the library.';
+        } else {
+            btn.disabled = true;
+            status.textContent = 'Select a context on the left, then a track.';
+        }
     }
 
-    panicStop() {
-        try {
-            if (window.Sound?.activeSources) {
-                window.Sound.activeSources.forEach(source => {
-                    try { source.stop(0); } catch (_) {}
+    _assignMusicContext() {
+        if (!this.activeContextGroup || !this.activeContextKey || !this.selectedMusicTrack) return;
+        this.musicConfig[this.activeContextGroup][this.activeContextKey] = this.selectedMusicTrack;
+        this._recordHistory();
+        this._renderContextList();
+        this._syncStatus(`LINKED: ${this.activeContextKey} → ${this.selectedMusicTrack}`);
+    }
+
+    _clearMusicContext() {
+        if (!this.activeContextGroup || !this.activeContextKey) return;
+        this.musicConfig[this.activeContextGroup][this.activeContextKey] = '';
+        this._recordHistory();
+        this._renderContextList();
+    }
+
+    _deleteMusicContext(group, key) {
+        delete this.musicConfig[group][key];
+        this._recordHistory();
+        this._renderContextList();
+    }
+
+    // ─────────────────────────────────────────────
+    //  BUS GRAPH (Buses Tab)
+    // ─────────────────────────────────────────────
+
+    _renderBusGraph() {
+        const container = document.getElementById('kas-bus-graph');
+        if (!container) return;
+        container.innerHTML = '';
+
+        for (const [name, cfg] of Object.entries(this.audioMap.buses || {})) {
+            const level = window.KAE?.getBusLevel(name) ?? 0;
+            const pct   = Math.round((cfg.gain ?? 1) * 100);
+
+            const card = document.createElement('div');
+            card.className = 'kas-bus-card';
+            card.innerHTML = `
+                <div class="kas-bus-card-header">
+                    <div class="kas-bus-name">${name.toUpperCase()}</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        ${cfg.parent ? `<span class="kas-chip">→ ${cfg.parent}</span>` : '<span class="kas-chip" style="color:var(--kas-red);">ROOT</span>'}
+                        ${cfg.ducking ? '<span class="kas-chip mapped">duck</span>' : ''}
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <canvas class="kas-spectrum" id="bus-spectrum-${name}" height="48"></canvas>
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:var(--kas-red);">${pct}%</div>
+                        <div style="font-size:10px;color:var(--text-muted);">gain</div>
+                    </div>
+                </div>
+                <div style="margin-top:8px;">
+                    <input type="range" class="kas-range" min="0" max="1.5" step="0.01" value="${cfg.gain ?? 1}" 
+                        oninput="kas._onBusGainInput('${name}', parseFloat(this.value))">
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    }
+
+    _onBusGainInput(name, gain) {
+        if (this.audioMap.buses[name]) this.audioMap.buses[name].gain = gain;
+        if (window.KAE) window.KAE.setBusGain(name, gain);
+        this.isDirty = true;
+    }
+
+    // ─────────────────────────────────────────────
+    //  SYNTH TAB
+    // ─────────────────────────────────────────────
+
+    _buildSynthGrid() {
+        const grid = document.getElementById('kas-synth-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        SYNTH_TYPES.forEach(st => {
+            const card = document.createElement('div');
+            card.className = 'kas-synth-card';
+            card.innerHTML = `
+                <div class="kas-synth-card-icon">${st.icon}</div>
+                <div class="kas-synth-card-name">${st.name}</div>
+                <div class="kas-synth-card-desc">${st.desc}</div>
+            `;
+            card.onclick = () => this._selectSynthType(st.id);
+            grid.appendChild(card);
+        });
+    }
+
+    _selectSynthType(type) {
+        this._synthType = type;
+        this._generateSynthPreview(type);
+
+        const editorEl = document.getElementById('kas-synth-editor');
+        const attachBtn = document.getElementById('synth-btn-attach');
+        if (editorEl) {
+            editorEl.classList.remove('kas-hidden');
+            editorEl.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:14px;">
+                    <div class="kas-section-label" style="margin-bottom:12px;">⚙ ${type.toUpperCase()} GENERATOR</div>
+                    <div class="kas-slider-row">
+                        <div class="kas-slider-header"><span class="kas-slider-name">Frequency (Hz)</span><span class="kas-slider-val" id="synth-freq-val">440Hz</span></div>
+                        <input type="range" class="kas-range" id="synth-freq" min="40" max="12000" step="10" value="440">
+                    </div>
+                    <div class="kas-slider-row">
+                        <div class="kas-slider-header"><span class="kas-slider-name">Decay</span><span class="kas-slider-val" id="synth-decay-val">20</span></div>
+                        <input type="range" class="kas-range" id="synth-decay" min="1" max="100" step="1" value="20">
+                    </div>
+                    <div class="kas-slider-row">
+                        <div class="kas-slider-header"><span class="kas-slider-name">Duration (s)</span><span class="kas-slider-val" id="synth-dur-val">0.3s</span></div>
+                        <input type="range" class="kas-range" id="synth-dur" min="0.05" max="3" step="0.05" value="0.3">
+                    </div>
+                </div>
+            `;
+
+            // Bind live preview on param change
+            ['synth-freq', 'synth-decay', 'synth-dur'].forEach(id => {
+                document.getElementById(id)?.addEventListener('input', e => {
+                    const valId = id + '-val';
+                    const valEl = document.getElementById(valId);
+                    if (valEl) {
+                        if (id === 'synth-freq')  valEl.textContent = Math.round(e.target.value) + 'Hz';
+                        if (id === 'synth-decay')  valEl.textContent = e.target.value;
+                        if (id === 'synth-dur')    valEl.textContent = parseFloat(e.target.value).toFixed(2) + 's';
+                    }
+                    this._generateSynthPreview(type);
                 });
-                window.Sound.activeSources.clear();
-            }
-            this.stopPreviewScenario();
-            this.updateConnectionStatus('PANIC_STOP_EXECUTED');
-        } catch (e) {
-            console.error('[AudioPro:V7] panicStop failed', e);
+            });
         }
+
+        if (attachBtn) attachBtn.disabled = !this.activeEventId;
     }
 
-    runPreviewScenario(mode) {
-        this.stopPreviewScenario();
-        this.previewRunner.mode = mode;
-        this.previewRunner.step = 0;
-
-        const sequences = {
-            ui: ['ui:hover', 'ui:click', 'ui:open', 'ui:close', 'ui:success', 'ui:error'],
-            traversal: ['player:footstep', 'player:footstep', 'player:jump', 'player:land', 'item:pickup'],
-            combat: ['enemy:alert', 'enemy:attack', 'projectile:fire', 'projectile:hit', 'enemy:hurt', 'enemy:death']
+    _getSynthParams() {
+        return {
+            freq:     parseFloat(document.getElementById('synth-freq')?.value || '440'),
+            decay:    parseFloat(document.getElementById('synth-decay')?.value || '20'),
+            duration: parseFloat(document.getElementById('synth-dur')?.value || '0.3')
         };
-
-        const events = sequences[mode] || sequences.ui;
-        const intervalMs = mode === 'combat' ? 260 : mode === 'traversal' ? 320 : 180;
-
-        this.previewRunner.timer = setInterval(() => {
-            const eventId = events[this.previewRunner.step % events.length];
-            this.previewRunner.step += 1;
-            if (window.Sound) window.Sound.playEvent(eventId);
-            this.addHistoryEntry(eventId, `preview:${mode}`);
-        }, intervalMs);
-
-        this.updateConnectionStatus(`PREVIEW_RUNNING: ${mode.toUpperCase()}`);
-        this.renderWorkspace();
     }
 
-    stopPreviewScenario() {
-        if (this.previewRunner.timer) clearInterval(this.previewRunner.timer);
-        this.previewRunner = { mode: null, timer: null, step: 0 };
-        this.updateConnectionStatus('PREVIEW_STOPPED');
-        this.renderWorkspace();
+    _generateSynthPreview(type) {
+        if (!window.KAE) return;
+        const params = this._getSynthParams();
+        const buf = window.KAE._generateSynthetic(type, params);
+        this._synthBuf = buf;
+        if (buf) this._drawSynthWaveform(buf);
     }
 
-    clearWaveform() {
-        const canvas = document.getElementById('waveform-canvas');
-        if (!canvas) return;
+    _drawSynthWaveform(buf) {
+        const canvas = document.getElementById('kas-synth-canvas');
+        if (!canvas || !buf) return;
         const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#020202';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+        const W = canvas.offsetWidth || 800;
+        const H = 80;
+        canvas.width = W; canvas.height = H;
+        ctx.clearRect(0, 0, W, H);
 
-    async drawWaveform(clipUrl) {
-        const canvas = document.getElementById('waveform-canvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const data = buf.getChannelData(0);
+        const step = Math.ceil(data.length / W);
+        const halfH = H / 2;
 
-        if (!window.Sound) return;
-        const buffer = await window.Sound.load(clipUrl);
-        if (!buffer) return;
-
-        const data = buffer.getChannelData(0);
-        const step = Math.ceil(data.length / canvas.width);
-        const amp = canvas.height / 2;
-
+        ctx.strokeStyle = '#e53e3e';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.35)';
-        ctx.lineWidth = 1;
-        ctx.moveTo(0, amp);
-        for (let i = 0; i < canvas.width; i++) {
-            let min = 1.0;
-            let max = -1.0;
-            for (let j = 0; j < step; j++) {
-                const d = data[(i * step) + j];
-                if (d < min) min = d;
-                if (d > max) max = d;
-            }
-            ctx.lineTo(i, (1 + min) * amp);
-            ctx.lineTo(i, (1 + max) * amp);
+        for (let x = 0; x < W; x++) {
+            let sum = 0;
+            for (let i = x * step; i < (x + 1) * step && i < data.length; i++) sum += data[i];
+            const avg = sum / step;
+            const y = halfH - avg * halfH * 0.9;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.stroke();
     }
 
-    drawSpectrum() {
-        const canvas = document.getElementById('waveform-canvas');
-        if (!canvas || !window.Sound) return;
-        const ctx = canvas.getContext('2d');
-        const data = window.Sound.getSpectrumData('master');
-        if (!data) return;
+    // Synth tab button bindings
+    _bindSynthButtons() {
+        document.getElementById('synth-btn-preview')?.addEventListener('click', () => {
+            if (this._synthBuf && window.KAE) {
+                window.KAE._playBuffer(this._synthBuf, { volume: 0.9, bus: 'sfx' });
+            }
+        });
+        document.getElementById('synth-btn-export')?.addEventListener('click', () => {
+            if (this._synthBuf) this._exportBufferAsWav(this._synthBuf, `${this._synthType || 'synth'}.wav`);
+        });
+        document.getElementById('synth-btn-attach')?.addEventListener('click', () => {
+            if (this._synthType && this.activeEventId) {
+                const assetName = `synth_${this._synthType}_${Date.now()}.wav`;
+                alert(`In a full export flow, this WAV would be saved as:\n${assetName}\nand attached to "${this.activeEventId}"`);
+            }
+        });
+    }
 
-        const barWidth = (canvas.width / data.length) * 1.5;
-        let x = 0;
-        for (let i = 0; i < data.length; i++) {
-            const h = (data[i] / 255) * canvas.height;
-            const grad = ctx.createLinearGradient(0, canvas.height, 0, canvas.height - h);
-            grad.addColorStop(0, 'rgba(255, 0, 0, 0.0)');
-            grad.addColorStop(1, 'rgba(255, 0, 0, 0.4)');
-            ctx.fillStyle = grad;
-            ctx.fillRect(x, canvas.height - h, barWidth, h);
-            x += barWidth + 1;
+    _exportBufferAsWav(audioBuffer, filename) {
+        if (!audioBuffer) return;
+        const wav  = this._encodeWav(audioBuffer);
+        const blob = new Blob([wav], { type: 'audio/wav' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    _encodeWav(buffer) {
+        const numChannels = buffer.numberOfChannels;
+        const sampleRate  = buffer.sampleRate;
+        const samples     = buffer.length;
+        const byteLength  = 44 + samples * numChannels * 2;
+        const arrayBuffer = new ArrayBuffer(byteLength);
+        const view        = new DataView(arrayBuffer);
+
+        const writeStr = (offset, str) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+        writeStr(0, 'RIFF');
+        view.setUint32(4, byteLength - 8, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * numChannels * 2, true);
+        view.setUint16(32, numChannels * 2, true);
+        view.setUint16(34, 16, true);
+        writeStr(36, 'data');
+        view.setUint32(40, samples * numChannels * 2, true);
+
+        let offset = 44;
+        for (let i = 0; i < samples; i++) {
+            for (let ch = 0; ch < numChannels; ch++) {
+                const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                offset += 2;
+            }
+        }
+        return arrayBuffer;
+    }
+
+    // ─────────────────────────────────────────────
+    //  DRUM MACHINE
+    // ─────────────────────────────────────────────
+
+    _buildDrumGrid() {
+        const grid = document.getElementById('drum-grid');
+        const labels = document.getElementById('drum-beat-labels');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        if (labels) {
+            labels.innerHTML = Array(16).fill(0).map((_, i) => `<div style="flex:1;text-align:center;font-size:9px;">${i + 1}</div>`).join('');
+        }
+
+        DRUM_ROWS.forEach(rowName => {
+            const label = document.createElement('div');
+            label.className = 'kas-drum-label';
+            label.textContent = rowName;
+            grid.appendChild(label);
+
+            const pads = document.createElement('div');
+            pads.style.cssText = 'display:flex;flex:1;gap:3px;';
+            grid.appendChild(pads);
+
+            for (let i = 0; i < 16; i++) {
+                const pad = document.createElement('div');
+                pad.className = 'kas-drum-pad' + (i % 4 === 0 ? ' beat-4' : '') + (this._drumPattern[rowName][i] ? ' on' : '');
+                pad.dataset.row  = rowName;
+                pad.dataset.step = i;
+                pad.onclick = () => {
+                    this._drumPattern[rowName][i] = !this._drumPattern[rowName][i];
+                    pad.classList.toggle('on', this._drumPattern[rowName][i]);
+                };
+                pads.appendChild(pad);
+            }
+        });
+    }
+
+    _drumPlay() {
+        if (this._drumPlaying) return;
+        this._drumPlaying = true;
+        this._drumStep    = 0;
+        const bpm  = this._drumBpm || 120;
+        const ms   = (60000 / bpm) / 4; // 16th note
+
+        const tick = () => {
+            if (!this._drumPlaying) return;
+            const step = this._drumStep % 16;
+
+            DRUM_ROWS.forEach(row => {
+                if (this._drumPattern[row][step] && window.KAE) {
+                    const snd = DRUM_SOUNDS[row];
+                    const buf = window.KAE._generateSynthetic(snd.type, snd.params);
+                    if (buf) window.KAE._playBuffer(buf, { volume: 0.85, bus: 'sfx' });
+                }
+            });
+
+            // Highlight active column
+            document.querySelectorAll('.kas-drum-pad').forEach(p => {
+                p.style.outline = (parseInt(p.dataset.step) === step) ? '1px solid var(--kas-red)' : '';
+            });
+
+            this._drumStep++;
+            this._drumTimer = setTimeout(tick, ms);
+        };
+        tick();
+    }
+
+    _drumStop() {
+        this._drumPlaying = false;
+        if (this._drumTimer) clearTimeout(this._drumTimer);
+        document.querySelectorAll('.kas-drum-pad').forEach(p => { p.style.outline = ''; });
+    }
+
+    _drumClear() {
+        this._drumStop();
+        DRUM_ROWS.forEach(r => { this._drumPattern[r] = new Array(16).fill(false); });
+        this._buildDrumGrid();
+    }
+
+    _drumRandomize() {
+        DRUM_ROWS.forEach(r => {
+            this._drumPattern[r] = Array(16).fill(0).map(() => Math.random() > 0.75);
+        });
+        this._buildDrumGrid();
+    }
+
+    // ─────────────────────────────────────────────
+    //  PREVIEW SCENARIOS
+    // ─────────────────────────────────────────────
+
+    _runScenario(mode) {
+        this._stopScenario();
+        const el = document.getElementById('prev-state');
+        if (el) el.textContent = `preview: ${mode}…`;
+
+        const events = {
+            ui:         ['ui:click', 'ui:hover', 'ui:open'],
+            traversal:  ['player:footstep', 'player:jump', 'player:land'],
+            combat:     ['player:attack', 'enemy:hurt', 'projectile:fire', 'enemy:death']
+        }[mode] || [];
+
+        let i = 0;
+        const tick = () => {
+            if (window.KAE && events.length) {
+                window.KAE.playEvent(events[i % events.length]);
+                i++;
+            }
+            this._previewTimer = setTimeout(tick, 300 + Math.random() * 400);
+        };
+        tick();
+    }
+
+    _stopScenario() {
+        if (this._previewTimer) clearTimeout(this._previewTimer);
+        const el = document.getElementById('prev-state');
+        if (el) el.textContent = 'preview: idle';
+    }
+
+    // ─────────────────────────────────────────────
+    //  FX PLUGIN CHOOSER
+    // ─────────────────────────────────────────────
+
+    _showAddFxMenu() {
+        const names = Object.keys(PLUGIN_REGISTRY);
+        const choice = prompt(`Choose a plugin:\n${names.map((n, i) => `${i + 1}. ${PLUGIN_REGISTRY[n].name}`).join('\n')}`);
+        const idx = parseInt(choice) - 1;
+        if (!isNaN(idx) && names[idx]) {
+            this._syncStatus(`FX: ${PLUGIN_REGISTRY[names[idx]].name} (wired in full build)`);
         }
     }
 
-    meterLoop() {
-        Object.keys(this.audioMap.buses || {}).forEach(name => {
-            const meter = document.getElementById(`meter-${name}`);
-            if (!meter) return;
-            const level = window.Sound ? window.Sound.getBusLevel(name) : 0;
-            const segments = meter.children;
-            const onCount = Math.floor(level * 25);
-            for (let i = 0; i < segments.length; i++) {
-                if (i < onCount) segments[i].classList.add('active');
-                else segments[i].classList.remove('active');
-                if (i > 18) segments[i].classList.add('warn');
-                if (i > 22) segments[i].classList.add('clip');
+    // ─────────────────────────────────────────────
+    //  STATUS / AUTOSAVE
+    // ─────────────────────────────────────────────
+
+    _syncStatus(msg, color = null) {
+        const label = document.getElementById('kas-sync-label');
+        const dot   = document.getElementById('kas-sync-dot');
+        if (label) label.textContent = msg;
+        if (dot && color) {
+            dot.style.background = color === 'green' ? 'var(--kas-green)'
+                : color === 'red' ? 'var(--kas-red)' : 'var(--kas-amber)';
+            dot.style.boxShadow = `0 0 6px ${dot.style.background}`;
+        }
+    }
+
+    _updateStatusBar() {
+        const all     = Object.keys(this.audioMap.events || {}).length;
+        const mapped  = Object.values(this.audioMap.events || {}).filter(c => c.clips?.length).length;
+        const assets  = this.assets.length;
+
+        const sb = id => document.getElementById(id);
+        if (sb('sb-events'))   sb('sb-events').textContent   = `events: ${all}`;
+        if (sb('sb-mapped'))   sb('sb-mapped').textContent   = `mapped: ${mapped}`;
+        if (sb('sb-unmapped')) sb('sb-unmapped').textContent = `unmapped: ${all - mapped}`;
+        if (sb('sb-assets'))   sb('sb-assets').textContent   = `assets: ${assets}`;
+        if (sb('sb-history'))  sb('sb-history').textContent  = `undo:${this.history.length} redo:${this.future.length}`;
+        if (sb('sb-state'))    sb('sb-state').textContent    = `state: ${(window.KAE?.gameState || 'normal').toUpperCase()}`;
+        if (sb('sb-env'))      sb('sb-env').textContent      = `env: ${(window.KAE?.environment || 'dry').toUpperCase()}`;
+    }
+
+    _startAutoSave() {
+        setInterval(() => {
+            if (this.autoSave && this.isDirty) {
+                this.save({ silent: true });
             }
-        });
-
-        this.drawSpectrum();
-        requestAnimationFrame(() => this.meterLoop());
-    }
-
-    bootstrapTemplate() {
-        if (!confirm('RESTORE_MANIFEST_DEFAULTS.EXE - Populate all engine events?')) return;
-        Object.values(this.loadedManifest || {}).flat().forEach(ev => {
-            if (!this.audioMap.events[ev.id]) this.audioMap.events[ev.id] = this.makeDefaultEventConfig();
-        });
-        this.normalizeMap();
-        this.recordHistory(true);
-        this.renderAll();
-        this.updateConnectionStatus('BOOTSTRAP_COMPLETE');
-    }
-
-    updateStatusBadges() {
-        const manifestEntries = this.getManifestEntries();
-        const manifestIds = new Set(manifestEntries.map(e => e.id));
-        const eventEntries = Object.entries(this.audioMap.events || {});
-
-        const mappedCount = eventEntries.filter(([, cfg]) => (cfg.clips || []).length > 0).length;
-        const unmappedManifestCount = Array.from(manifestIds).filter(id => {
-            const cfg = this.audioMap.events[id];
-            return !cfg || !(cfg.clips || []).length;
-        }).length;
-
-        let missingClipCount = 0;
-        eventEntries.forEach(([, cfg]) => {
-            (cfg.clips || []).forEach(clip => {
-                if (!this.availableAssets.includes(clip)) missingClipCount += 1;
-            });
-        });
-
-        const mappedEl = document.getElementById('badge-mapped');
-        const unmappedEl = document.getElementById('badge-unmapped');
-        const missingEl = document.getElementById('badge-missing');
-        const dirtyEl = document.getElementById('badge-dirty');
-        const historyEl = document.getElementById('badge-history');
-
-        if (mappedEl) mappedEl.textContent = `mapped:${mappedCount}`;
-        if (unmappedEl) unmappedEl.textContent = `unmapped:${unmappedManifestCount}`;
-        if (missingEl) missingEl.textContent = `missing:${missingClipCount}`;
-        if (dirtyEl) dirtyEl.textContent = this.isDirty ? 'state:dirty' : 'state:synced';
-        if (historyEl) historyEl.textContent = `undo:${Math.max(0, this.historyStack.length - 1)} redo:${this.futureStack.length}`;
+        }, 30000);
     }
 }
 
-window.pro = new AudioDirectorUltraHD();
-window.daw = window.pro;
+// ─── GLOBAL BOOT ────────────────────────────────────────────
+
+const kas = new AudioStudio();
+window.kas = kas; // expose for inline onclick handlers
+
+// Bind synth buttons after DOM is ready
+window.addEventListener('load', () => { kas._bindSynthButtons(); });

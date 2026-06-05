@@ -10,16 +10,14 @@
     <link rel="stylesheet" href="transitions.css">
     <style>
         :root {
-            --accent: #ff0000;
-            --bg: #0a0a0f;
+            --accent: #ff1e27;
+            --accent-glow: rgba(255,30,39,0.4);
+            --bg: #000;
             --text: #e0e0e0;
+            --dim: #555;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: var(--bg);
@@ -30,163 +28,376 @@
             height: 100vh;
         }
 
-        .screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            justify-content: center;
-            align-items: center;
+        /* ═══ ANIMATED BACKGROUND ═══ */
+        body::before {
+            content: '';
+            position: fixed; inset: 0; z-index: 0;
+            background:
+                linear-gradient(rgba(255,30,39,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,30,39,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: bg-grid-slide 50s linear infinite;
+            pointer-events: none;
         }
 
-        .screen.active {
-            display: flex;
+        body::after {
+            content: '';
+            position: fixed; top: 0; left: 0; right: 0; height: 50vh; z-index: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(255,30,39,0.05) 0%, transparent 70%);
+            pointer-events: none;
         }
 
-        .terminal-window {
-            background: rgba(10, 10, 15, 0.95);
-            border: 3px solid var(--accent);
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
-            min-width: 400px;
+        @keyframes bg-grid-slide {
+            0%   { background-position: 0 0; }
+            100% { background-position: 60px 60px; }
         }
 
-        .terminal-window h1 {
-            color: var(--accent);
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 2.5rem;
-        }
-
-        .terminal-window p {
-            color: #888;
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid #333;
-            color: var(--accent);
-            font-family: 'VT323', monospace;
-            font-size: 1.5rem;
-            border-radius: 4px;
-            margin-bottom: 15px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .retro-btn {
-            width: 100%;
-            padding: 15px;
-            background: rgba(255, 0, 0, 0.1);
-            border: 2px solid var(--accent);
-            color: var(--accent);
-            font-family: 'VT323', monospace;
-            font-size: 1.5rem;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .retro-btn:hover {
-            background: rgba(255, 0, 0, 0.2);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .retro-btn:active {
-            transform: translateY(0);
-        }
-
-        .menu-container {
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .menu-title {
-            font-size: 3.5rem;
-            color: var(--accent);
-            text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
-            margin-bottom: 10px;
-        }
-
-        .menu-subtitle {
-            font-size: 1.2rem;
-            color: #888;
-            margin-bottom: 40px;
-        }
-
-        .menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .user-display {
-            position: fixed;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: #555;
-            font-size: 1.2rem;
-        }
-
-        .user-display span {
-            color: var(--accent);
-        }
-
-        .exit-btn {
-            border-color: #555 !important;
-            color: #888 !important;
-        }
-
-        .exit-btn:hover {
-            border-color: #777 !important;
-            color: #aaa !important;
-        }
-
+        /* ═══ SPLASH SCREEN ═══ */
         #splash-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed; inset: 0;
             background: #000;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 10000;
-            color: #fff;
             overflow: hidden;
-            image-rendering: pixelated;
+            transition: opacity 0.7s ease;
+        }
+
+        #splash-screen.fade-out { opacity: 0; pointer-events: none; }
+
+        /* Perspective grid */
+        #splash-screen::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background:
+                linear-gradient(rgba(255,0,0,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,0,0,0.06) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg);
+            animation: splash-grid 10s linear infinite;
+        }
+
+        /* CRT scanlines */
+        #splash-screen::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        @keyframes splash-grid {
+            0%   { background-position: 0 0; }
+            100% { background-position: 0 200px; }
+        }
+
+        /* Glow core */
+        .splash-glow {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(255,0,0,0.12) 0%, transparent 65%);
+            animation: splash-glow-pulse 3s ease-in-out infinite alternate;
+            z-index: 0;
+        }
+
+        @keyframes splash-glow-pulse {
+            from { opacity: 0.5; transform: translate(-50%,-50%) scale(0.85); }
+            to   { opacity: 1.0; transform: translate(-50%,-50%) scale(1.15); }
+        }
+
+        /* Splash content */
+        .splash-content {
+            position: relative; z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        /* Logo text */
+        .splash-logo {
+            font-size: 56px;
+            color: var(--accent);
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            text-shadow:
+                0 0 15px var(--accent-glow),
+                0 0 40px rgba(255,30,39,0.2);
+            animation: splash-glitch 2.5s ease-in-out infinite;
+        }
+
+        @keyframes splash-glitch {
+            0%,100% { text-shadow: 3px -1px 0 rgba(255,0,0,0.7), -3px 1px 0 rgba(0,255,255,0.4), 0 0 15px var(--accent-glow); }
+            25%     { text-shadow: -2px 2px 0 rgba(255,0,0,0.7), 2px -2px 0 rgba(0,255,255,0.4), 0 0 25px var(--accent-glow); }
+            50%     { text-shadow: 1px -3px 0 rgba(255,0,0,0.7), -1px 3px 0 rgba(0,255,255,0.4), 0 0 10px var(--accent-glow); }
+            75%     { text-shadow: -3px 0 0 rgba(255,0,0,0.7), 3px 0 0 rgba(0,255,255,0.4), 0 0 30px var(--accent-glow); }
+        }
+
+        /* Spinner */
+        .splash-spinner {
+            position: relative;
+            width: 48px; height: 48px;
+        }
+
+        .splash-spinner::before,
+        .splash-spinner::after {
+            content: '';
+            position: absolute; inset: 0;
+            border: 2px solid transparent;
+            border-radius: 50%;
+        }
+
+        .splash-spinner::before {
+            border-top-color: var(--accent);
+            border-bottom-color: var(--accent);
+            animation: spin-outer 1.8s linear infinite;
+        }
+
+        .splash-spinner::after {
+            inset: 5px;
+            border-left-color: #ff0055;
+            border-right-color: #00ffff;
+            animation: spin-inner 1.2s cubic-bezier(0.68,-0.55,0.27,1.55) infinite reverse;
+        }
+
+        @keyframes spin-outer { to { transform: rotate(360deg); } }
+        @keyframes spin-inner { to { transform: rotate(360deg); } }
+
+        /* Status text */
+        .splash-status {
+            font-size: 18px;
+            color: #ff8888;
+            letter-spacing: 3px;
+            text-shadow: 0 0 5px rgba(255,30,39,0.4);
+            animation: splash-text-pulse 1s infinite alternate;
+        }
+
+        @keyframes splash-text-pulse {
+            from { opacity: 0.5; }
+            to   { opacity: 1.0; }
+        }
+
+        /* Progress bar */
+        .splash-progress-wrap {
+            width: 350px; height: 6px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,30,39,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .splash-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg,
+                #ff0055, #ff5500, #ffcc00, #33ff00,
+                #00ffcc, #0055ff, #7f00ff, #ff00ff, #ff0055
+            );
+            background-size: 200% 100%;
+            animation: rainbow-flow 1.2s linear infinite;
+            transition: width 0.2s cubic-bezier(0.1,0.8,0.3,1);
+            border-radius: 3px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+
+        @keyframes rainbow-flow {
+            0%   { background-position: 0% 0%; }
+            100% { background-position: -200% 0%; }
+        }
+
+        /* Version tag */
+        .splash-version {
+            font-size: 14px;
+            color: var(--dim);
+            letter-spacing: 3px;
+        }
+
+        /* ═══ SCREENS ═══ */
+        .screen {
+            position: absolute; inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .screen.active { display: flex; }
+
+        /* ═══ TERMINAL WINDOW ═══ */
+        .terminal-window {
+            background: rgba(8,8,14,0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,30,39,0.15);
+            padding: 40px;
+            min-width: 400px;
+            box-shadow: 0 0 60px rgba(255,30,39,0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Top accent line */
+        .terminal-window::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+
+        .terminal-window h1 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 2.2rem;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .terminal-window p {
+            color: var(--dim);
+            margin-bottom: 15px;
+            font-size: 1.15rem;
+            letter-spacing: 1px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: var(--accent);
+            font-family: 'VT323', monospace;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        input::placeholder { color: var(--dim); letter-spacing: 2px; }
+
+        input:focus {
+            outline: none;
+            border-color: rgba(255,30,39,0.3);
+            box-shadow: 0 0 15px rgba(255,30,39,0.08);
+        }
+
+        /* ═══ BUTTONS ═══ */
+        .retro-btn {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255,30,39,0.04);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: var(--accent);
+            font-family: 'VT323', monospace;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            letter-spacing: 2px;
+        }
+
+        .retro-btn:hover {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            box-shadow: 0 0 25px var(--accent-glow);
+            transform: translateY(-2px);
+        }
+
+        .retro-btn:active {
+            transform: translateY(0);
+        }
+
+        /* ═══ MENU ═══ */
+        .menu-container {
+            text-align: center;
+            max-width: 460px;
+            width: 90%;
+        }
+
+        .menu-title {
+            font-size: 3rem;
+            color: var(--accent);
+            letter-spacing: 6px;
+            text-shadow: 0 0 30px var(--accent-glow);
+            margin-bottom: 8px;
+        }
+
+        .menu-subtitle {
+            font-size: 1.1rem;
+            color: var(--dim);
+            margin-bottom: 12px;
+            letter-spacing: 3px;
+        }
+
+        .menu-divider {
+            width: 120px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            margin: 0 auto 32px;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .user-display {
+            position: fixed;
+            bottom: 24px;
+            width: 100%;
+            text-align: center;
+            color: var(--dim);
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            z-index: 1;
+        }
+
+        .user-display span { color: var(--accent); }
+
+        .exit-btn {
+            border-color: rgba(255,255,255,0.06) !important;
+            color: var(--dim) !important;
+            background: transparent !important;
+        }
+
+        .exit-btn:hover {
+            border-color: rgba(255,255,255,0.15) !important;
+            color: #ccc !important;
+            background: rgba(255,255,255,0.04) !important;
+            box-shadow: none !important;
+        }
+
+        /* ═══ RESPONSIVE ═══ */
+        @media (max-width: 520px) {
+            .terminal-window { min-width: auto; width: 92%; padding: 28px; }
+            .splash-logo { font-size: 36px; letter-spacing: 4px; }
+            .splash-progress-wrap { width: 80%; }
+            .menu-title { font-size: 2.2rem; }
         }
     </style>
 </head>
 <body>
     <!-- ENGINE LOADING SPLASH -->
     <div id="splash-screen">
-        <div style="position:relative; z-index:4; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-            <div style="margin-top:40px; width:300px; text-align:center;">
-                <div id="splash-progress-text" style="color:#888; font-size:14px; margin-bottom:10px; letter-spacing:2px; text-transform:uppercase;">LOADING REDGLITCH...</div>
-                <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
-                    <div id="splash-progress-bar" style="width:0%; height:100%; background:var(--accent); box-shadow:0 0 10px var(--accent); transition:width 0.3s;"></div>
-                </div>
+        <div class="splash-glow"></div>
+        <div class="splash-content">
+            <div class="splash-logo">REDGLITCH</div>
+            <div class="splash-spinner"></div>
+            <div class="splash-status" id="splash-progress-text">BOOTING CORE</div>
+            <div class="splash-progress-wrap">
+                <div class="splash-progress-fill" id="splash-progress-bar"></div>
             </div>
+            <div class="splash-version">v7.0</div>
         </div>
     </div>
 
@@ -206,7 +417,8 @@
     <div id="main-menu" class="screen">
         <div class="menu-container">
             <h1 class="menu-title">REDGLITCH ENGINE</h1>
-            <p class="menu-subtitle">Multi-Engine Game Platform</p>
+            <p class="menu-subtitle">MULTI-ENGINE GAME PLATFORM</p>
+            <div class="menu-divider"></div>
 
             <div class="menu-buttons">
                 <button class="retro-btn" onclick="smoothNavigate('slot_selection.html')">
@@ -238,13 +450,12 @@
     <script src="js/Launcher.js"></script>
     
     <script>
-        // Global safety: remove splash
+        // Splash screen animation
         const clearSplash = () => {
             const splash = document.getElementById('splash-screen');
             if (splash) {
-                splash.style.transition = 'opacity 0.6s';
-                splash.style.opacity = '0';
-                setTimeout(() => { if(splash.parentNode) splash.remove(); }, 650);
+                splash.classList.add('fade-out');
+                setTimeout(() => { if(splash.parentNode) splash.remove(); }, 750);
             }
         };
 
@@ -252,17 +463,17 @@
             let progress = 0;
             const pBar = document.getElementById('splash-progress-bar');
             const pText = document.getElementById('splash-progress-text');
-            const steps = ["BOOTING CORE", "MOUNTING SYSTEMS", "READY"];
+            const steps = ['BOOTING CORE', 'MOUNTING SYSTEMS', 'LOADING ASSETS', 'INITIALIZING', 'READY'];
             
             const interval = setInterval(() => {
-                progress += Math.random() * 5;
+                progress += Math.random() * 4 + 1;
                 if (progress >= 100) {
                     progress = 100;
                     clearInterval(interval);
-                    clearSplash();
+                    setTimeout(clearSplash, 300);
                 }
                 if (pBar) pBar.style.width = progress + '%';
-                if (pText) pText.innerText = steps[Math.floor((progress/101) * steps.length)];
+                if (pText) pText.innerText = steps[Math.min(Math.floor((progress / 100) * steps.length), steps.length - 1)];
             }, 50);
         });
     </script>

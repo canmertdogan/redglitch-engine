@@ -65,6 +65,7 @@
 
     <!-- SCREEN: DEATH -->
     <div id="death-screen" class="screen hidden">
+        <div class="death-glow-core"></div>
         <div class="ui-scaler">
             <h1 class="death-title">YOU DIED</h1>
             
@@ -128,14 +129,413 @@
     </div>
 
     <!-- SCREEN: LOADING -->
-    <div id="loading-screen" class="screen hidden" style="background:#000; z-index:9999;">
+    <div id="loading-screen" class="screen hidden" style="z-index: 9999;">
+        <style>
+            #loading-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: #000000 !important;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-family: 'VT323', monospace;
+                image-rendering: pixelated;
+                box-shadow: inset 0 0 100px rgba(255, 0, 0, 0.4);
+                overflow: hidden;
+            }
+
+            /* Slanted sliding red grid */
+            #loading-screen::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: 
+                    linear-gradient(rgba(255, 0, 0, 0.08) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.08) 1px, transparent 1px);
+                background-size: 50px 50px;
+                background-position: center;
+                transform: perspective(500px) rotateX(60deg);
+                animation: grid-slide 12s linear infinite;
+            }
+
+            /* Ambient glowing red core */
+            .loading-glow-core {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 600px;
+                height: 600px;
+                background: radial-gradient(circle, rgba(255, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+                pointer-events: none;
+                z-index: 0;
+                animation: pulse-glow 3s ease-in-out infinite alternate;
+            }
+
+            /* CRT scanlines overlay */
+            #loading-screen::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+                background-size: 100% 4px;
+                z-index: 10;
+                pointer-events: none;
+            }
+
+            /* 3D Rotating Diamond Spinner style for loading-spinner */
+            .loading-spinner {
+                position: relative;
+                z-index: 1;
+                width: 48px;
+                height: 48px;
+                margin-bottom: 25px;
+                transform-style: preserve-3d;
+                animation: spin3D 2.5s linear infinite;
+            }
+
+            .loading-spinner::before,
+            .loading-spinner::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border: 3px solid transparent;
+                border-top-color: #ff1e27;
+                border-bottom-color: #ff1e27;
+                border-radius: 50%;
+            }
+
+            .loading-spinner::before {
+                animation: spin3DInner 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+            }
+
+            .loading-spinner::after {
+                border-top-color: transparent;
+                border-bottom-color: transparent;
+                border-left-color: #ff0055;
+                border-right-color: #00ffff;
+                transform: rotateZ(45deg);
+                animation: spin3DOuter 2.0s ease-in-out infinite alternate;
+            }
+
+            .loading-title {
+                position: relative;
+                z-index: 1;
+                font-size: 36px;
+                color: #ff1e27;
+                text-shadow: 0 0 10px rgba(255, 30, 39, 0.8), 0 0 20px rgba(255, 30, 39, 0.4);
+                margin-bottom: 15px;
+                letter-spacing: 3px;
+                animation: glitch-red 2s infinite ease-in-out;
+            }
+
+            .loading-progress {
+                position: relative;
+                z-index: 1;
+                width: 450px;
+                height: 30px;
+                background: #050505;
+                border: 3px solid #ff1e27;
+                box-shadow: 0 0 20px rgba(255, 30, 39, 0.5);
+                overflow: hidden;
+                margin-bottom: 20px;
+                padding: 3px;
+                box-sizing: border-box;
+            }
+
+            #game-loading-bar {
+                height: 100%;
+                background: linear-gradient(90deg, 
+                    #ff0055 0%, 
+                    #ff5500 12.5%, 
+                    #ffcc00 25%, 
+                    #33ff00 37.5%, 
+                    #00ffcc 50%, 
+                    #0055ff 62.5%, 
+                    #7f00ff 75%, 
+                    #ff00ff 87.5%, 
+                    #ff0055 100%
+                );
+                background-size: 200% 100%;
+                width: 0%;
+                transition: width 0.1s linear;
+                animation: rainbow-flow 1.5s linear infinite;
+                box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+            }
+
+            #game-loading-text {
+                position: relative;
+                z-index: 1;
+                font-size: 24px;
+                color: #ff8888;
+                text-shadow: 0 0 5px rgba(255, 30, 39, 0.5);
+                letter-spacing: 2px;
+                animation: text-pulse 1s infinite alternate;
+            }
+        </style>
+        <div class="ui-scaler" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
+            <div class="loading-glow-core"></div>
+            <div class="loading-spinner"></div>
+            <h1 class="loading-title">LOADING ASSETS...</h1>
+            <div class="loading-progress">
+                <div id="game-loading-bar" style="width:0%;"></div>
+            </div>
+            <div id="game-loading-text">0%</div>
+        </div>
+    </div>
+
+    <!-- SCREEN: ENGINE TRANSITION -->
+    <div id="engine-transition-screen" class="screen hidden" style="z-index: 10000;">
+        <style>
+            #engine-transition-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: #000000 !important;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-family: 'VT323', monospace;
+                image-rendering: pixelated;
+                box-shadow: inset 0 0 100px rgba(255, 0, 0, 0.4);
+                overflow: hidden;
+            }
+
+            /* Slanted sliding red grid */
+            #engine-transition-screen::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: 
+                    linear-gradient(rgba(255, 0, 0, 0.08) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.08) 1px, transparent 1px);
+                background-size: 50px 50px;
+                background-position: center;
+                transform: perspective(500px) rotateX(60deg);
+                animation: grid-slide 12s linear infinite;
+            }
+
+            /* Ambient glowing red core */
+            .transition-glow-core {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 600px;
+                height: 600px;
+                background: radial-gradient(circle, rgba(255, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+                pointer-events: none;
+                z-index: 0;
+                animation: pulse-glow 3s ease-in-out infinite alternate;
+            }
+
+            /* CRT scanlines overlay */
+            #engine-transition-screen::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+                background-size: 100% 4px;
+                z-index: 10;
+                pointer-events: none;
+            }
+
+            @keyframes grid-slide {
+                0% { background-position: 0 0; }
+                100% { background-position: 0 200px; }
+            }
+
+            @keyframes pulse-glow {
+                from { opacity: 0.6; transform: translate(-50%, -50%) scale(0.9); }
+                to { opacity: 1.0; transform: translate(-50%, -50%) scale(1.1); }
+            }
+
+            /* 3D Rotating Diamond Spinner */
+            .transition-spinner {
+                position: relative;
+                z-index: 1;
+                width: 48px;
+                height: 48px;
+                margin-bottom: 25px;
+                transform-style: preserve-3d;
+                animation: spin3D 2.5s linear infinite;
+            }
+
+            .transition-spinner::before,
+            .transition-spinner::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border: 3px solid transparent;
+                border-top-color: #ff1e27;
+                border-bottom-color: #ff1e27;
+                border-radius: 50%;
+            }
+
+            .transition-spinner::before {
+                animation: spin3DInner 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+            }
+
+            .transition-spinner::after {
+                border-top-color: transparent;
+                border-bottom-color: transparent;
+                border-left-color: #ff0055;
+                border-right-color: #00ffff;
+                transform: rotateZ(45deg);
+                animation: spin3DOuter 2.0s ease-in-out infinite alternate;
+            }
+
+            @keyframes spin3D {
+                0% { transform: rotateY(0deg) rotateX(45deg); }
+                100% { transform: rotateY(360deg) rotateX(45deg); }
+            }
+
+            @keyframes spin3DInner {
+                0% { transform: rotateZ(0deg) scale(0.8); }
+                50% { transform: rotateZ(180deg) scale(1.1); }
+                100% { transform: rotateZ(360deg) scale(0.8); }
+            }
+
+            @keyframes spin3DOuter {
+                0% { transform: rotateZ(45deg) scale(1.2); }
+                100% { transform: rotateZ(405deg) scale(0.9); }
+            }
+
+            .transition-title {
+                position: relative;
+                z-index: 1;
+                font-size: 36px;
+                color: #ff1e27;
+                text-shadow: 0 0 10px rgba(255, 30, 39, 0.8), 0 0 20px rgba(255, 30, 39, 0.4);
+                margin-bottom: 15px;
+                letter-spacing: 3px;
+                animation: glitch-red 2s infinite ease-in-out;
+            }
+
+            #transition-target-engine {
+                position: relative;
+                z-index: 1;
+                font-size: 48px;
+                color: #ffffff;
+                letter-spacing: 4px;
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+                background: rgba(255, 0, 0, 0.07);
+                border-left: 4px solid #ff1e27;
+                border-right: 4px solid #ff1e27;
+                padding: 10px 40px;
+                margin-bottom: 35px;
+                box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.15), 0 0 10px rgba(255, 0, 0, 0.2);
+                animation: target-glow 1.5s ease-in-out infinite alternate;
+                text-transform: uppercase;
+            }
+
+            .transition-progress {
+                position: relative;
+                z-index: 1;
+                width: 450px;
+                height: 30px;
+                background: #050505;
+                border: 3px solid #ff1e27;
+                box-shadow: 0 0 20px rgba(255, 30, 39, 0.5);
+                overflow: hidden;
+                margin-bottom: 20px;
+                padding: 3px;
+                box-sizing: border-box;
+            }
+
+            #transition-progress-bar {
+                height: 100%;
+                background: linear-gradient(90deg, 
+                    #ff0055 0%, 
+                    #ff5500 12.5%, 
+                    #ffcc00 25%, 
+                    #33ff00 37.5%, 
+                    #00ffcc 50%, 
+                    #0055ff 62.5%, 
+                    #7f00ff 75%, 
+                    #ff00ff 87.5%, 
+                    #ff0055 100%
+                );
+                background-size: 200% 100%;
+                width: 0%;
+                transition: width 0.2s cubic-bezier(0.1, 0.8, 0.3, 1);
+                animation: rainbow-flow 1.5s linear infinite;
+                box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+            }
+
+            #transition-status-text {
+                position: relative;
+                z-index: 1;
+                font-size: 24px;
+                color: #ff8888;
+                text-shadow: 0 0 5px rgba(255, 30, 39, 0.5);
+                letter-spacing: 2px;
+                animation: text-pulse 1s infinite alternate;
+            }
+
+            @keyframes glitch-red {
+                0%, 100% { text-shadow: 2px -1px 0 rgba(255,0,0,0.8), -2px 1px 0 rgba(0,255,255,0.5), 0 0 10px rgba(255, 30, 39, 0.8); }
+                50% { text-shadow: -2px 1px 0 rgba(255,0,0,0.8), 2px -1px 0 rgba(0,255,255,0.5), 0 0 15px rgba(255, 30, 39, 0.9); }
+            }
+
+            @keyframes target-glow {
+                from {
+                    box-shadow: inset 0 0 15px rgba(255,0,0,0.1), 0 0 5px rgba(255,0,0,0.1);
+                    border-color: #ff1e27;
+                }
+                to {
+                    box-shadow: inset 0 0 30px rgba(255,0,0,0.3), 0 0 15px rgba(255,0,0,0.3);
+                    border-color: #ff5555;
+                }
+            }
+
+            @keyframes rainbow-flow {
+                0% { background-position: 0% 0%; }
+                100% { background-position: -200% 0%; }
+            }
+
+            @keyframes text-pulse {
+                from { opacity: 0.6; }
+                to { opacity: 1.0; }
+            }
+        </style>
+        <div class="transition-glow-core"></div>
         <div class="ui-scaler">
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
-                <h1 class="retro-label" style="position:relative; font-size:3rem;">LOADING ASSETS...</h1>
-                <div style="width:400px; height:30px; border:2px solid var(--accent); padding:3px; margin-top:20px;">
-                    <div id="game-loading-bar" style="width:0%; height:100%; background:var(--accent); transition:width 0.1s;"></div>
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center; position: relative; z-index: 2;">
+                <div class="transition-spinner"></div>
+                <h1 class="transition-title">SWITCHING ENGINE...</h1>
+                <div id="transition-target-engine">RPG TOP-DOWN</div>
+                <div class="transition-progress">
+                    <div id="transition-progress-bar"></div>
                 </div>
-                <div id="game-loading-text" style="margin-top:10px; color:#fff;">0%</div>
+                <div id="transition-status-text">Preparing transition...</div>
             </div>
         </div>
     </div>

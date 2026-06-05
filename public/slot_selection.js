@@ -108,7 +108,7 @@ function createOccupiedSlotHTML(summary) {
     return `
         <div class="slot-header">
             <div class="slot-number">SLOT ${summary.slotId}</div>
-            <div class="slot-status">${summary.isComplete ? 'COMPLETE' : 'IN PROGRESS'}</div>
+            <div class="slot-status ${summary.isComplete ? '' : 'in-progress'}">${summary.isComplete ? 'COMPLETE' : 'IN PROGRESS'}</div>
         </div>
         <div class="slot-body">
             <h2 class="campaign-name">${escapeHtml(summary.campaignName)}</h2>
@@ -163,7 +163,7 @@ function createProgressBarHTML(percent) {
         <div class="progress-container">
             <div class="progress-label">
                 <span>PROGRESS</span>
-                <span>${percent}%</span>
+                <span class="pct">${percent}%</span>
             </div>
             <div class="progress-bar">
                 <div class="progress-fill" style="width: ${percent}%"></div>

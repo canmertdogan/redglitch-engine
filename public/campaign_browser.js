@@ -82,8 +82,9 @@ function renderCampaigns() {
     showEmpty(false);
     grid.style.display = 'grid';
 
-    filteredCampaigns.forEach(campaign => {
+    filteredCampaigns.forEach((campaign, index) => {
         const card = createCampaignCard(campaign);
+        card.style.animationDelay = `${index * 0.06}s`;
         grid.appendChild(card);
     });
 }
@@ -105,52 +106,54 @@ function createCampaignCard(campaign) {
 
     // Build tags
     let tagsHtml = '';
-    
+
     if (pattern) {
         tagsHtml += `<span class="tag pattern">${pattern.toUpperCase()}</span>`;
     }
-    
+
     if (difficulty) {
-        tagsHtml += `<span class="tag difficulty">${difficulty.toUpperCase()}</span>`;
+        tagsHtml += `<span class="tag difficulty" data-d="${difficulty.toLowerCase()}">${difficulty.toUpperCase()}</span>`;
     }
 
     // Build card HTML
     card.innerHTML = `
-        <div class="campaign-header">
-            <h2 class="campaign-name">${escapeHtml(campaign.name)}</h2>
-            <p class="campaign-author">
-                <i class="fas fa-user"></i> ${escapeHtml(campaign.author)}
+        <div class="campaign-card-inner">
+            <div class="campaign-header">
+                <h2 class="campaign-name">${escapeHtml(campaign.name)}</h2>
+                <p class="campaign-author">
+                    <i class="fas fa-user"></i> ${escapeHtml(campaign.author)}
+                </p>
+            </div>
+
+            <p class="campaign-description">
+                ${escapeHtml(campaign.description)}
             </p>
-        </div>
 
-        <p class="campaign-description">
-            ${escapeHtml(campaign.description)}
-        </p>
+            <div class="campaign-meta">
+                <div class="meta-item">
+                    <i class="fas fa-map"></i>
+                    <span>${campaign.nodeCount} Nodes</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span>${playtime}</span>
+                </div>
+                ${endings > 1 ? `
+                <div class="meta-item">
+                    <i class="fas fa-code-branch"></i>
+                    <span>${endings} Endings</span>
+                </div>
+                ` : ''}
+            </div>
 
-        <div class="campaign-meta">
-            <div class="meta-item">
-                <i class="fas fa-map"></i>
-                <span>${campaign.nodeCount} Nodes</span>
+            <div class="campaign-tags">
+                ${tagsHtml}
+                <span class="tag">v${campaign.version}</span>
             </div>
-            <div class="meta-item">
-                <i class="fas fa-clock"></i>
-                <span>${playtime}</span>
-            </div>
-            ${endings > 1 ? `
-            <div class="meta-item">
-                <i class="fas fa-code-branch"></i>
-                <span>${endings} Endings</span>
-            </div>
-            ` : ''}
-        </div>
-
-        <div class="campaign-tags">
-            ${tagsHtml}
-            <span class="tag">v${campaign.version}</span>
         </div>
 
         <button class="campaign-select-btn">
-            <i class="fas fa-play-circle"></i> START CAMPAIGN
+            <span><i class="fas fa-play-circle"></i> START CAMPAIGN</span>
         </button>
     `;
 

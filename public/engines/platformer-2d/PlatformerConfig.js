@@ -27,13 +27,15 @@ const PlatformerConfig = {
     CHUNK_SIZE: 16,
     SOURCE_TILE_SIZE: 16,
     DEFAULT_ZOOM: 1.5,
+    MAX_RENDER_CHUNKS: 512,
     
     // Graphics
     SPRITE_SCALE: 1,
-    DEFAULT_BG: '#87CEEB',
+    DEFAULT_BG: '#000',
+    ACCENT_COLOR: '#ff1e27',
     
-    // IRAB Aesthetic
-    DEFAULT_PLAYER_MODE: 'WORM', // 'WORM' or 'SPRITE'
+    // Aesthetic
+    DEFAULT_PLAYER_MODE: 'SPRITE', // 'WORM' or 'SPRITE'
     
     // UI
     HUD_FONT: '24px VT323, monospace',

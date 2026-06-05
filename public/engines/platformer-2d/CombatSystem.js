@@ -131,6 +131,16 @@ class PlatformerCombatSystem {
             if (target.hp <= 0) target.isDead = true;
         }
 
+        // Apply Knockback
+        if (!target.isDead && typeof target.vx !== 'undefined') {
+            const dir = hb.owner.facingRight ? 1 : -1;
+            target.vx = dir * 6;
+            target.vy = -4;
+        }
+
+        // Apply Hit Stop (Freeze Frames)
+        this.game.freezeFrames = 4; // Pause engine loop for 4 frames
+
         // FX
         if (this.game.fx) {
             const rect = hb.getRect();
@@ -138,8 +148,13 @@ class PlatformerCombatSystem {
             const sparkX = hb.owner.facingRight ? (rect.x) : (rect.x + rect.w);
             this.game.fx.spawnParticles(sparkX, target.y + target.h/2, 'spark', 5);
             
+            // Damage Number
+            if (this.game.fx.popText) {
+                this.game.fx.popText(target.x + target.w/2, target.y, `-${hb.damage}`, '#ff1e27');
+            }
+
             if (this.game.renderer.shake) {
-                this.game.renderer.shake(3, 0.1);
+                this.game.renderer.shake(4, 0.15); // Stronger shake
             }
         }
     }
