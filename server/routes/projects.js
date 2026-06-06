@@ -10,9 +10,9 @@ const TEMPLATES_ROOT = path.join(__dirname, '..', '..', 'templates');
 
 const VALID_ENGINE_TYPES = new Set([
     'rpg-topdown', 'platformer-2d', 'iso-pixel',
-    'topdown-3d', 'fps-3d', 'platformer-3d',
+    'topdown-3d', 'fps-3d', 'platformer-3d', 'unified-3d'
 ]);
-const VALID_3D_ENGINE_TYPES = new Set(['topdown-3d', 'fps-3d', 'platformer-3d']);
+const VALID_3D_ENGINE_TYPES = new Set(['topdown-3d', 'fps-3d', 'platformer-3d', 'unified-3d']);
 const VALID_RENDER_QUALITY  = new Set(['low', 'medium', 'high', 'ultra']);
 
 /**
@@ -20,7 +20,7 @@ const VALID_RENDER_QUALITY  = new Set(['low', 'medium', 'high', 'ultra']);
  * Returns the config object or throws if required fields are invalid.
  */
 function buildProjectConfig(fields) {
-    const { name, author, engineType, template, renderQuality, physics3D, shadowQuality } = fields;
+    const { name, author, engineType, mode, template, renderQuality, physics3D, shadowQuality } = fields;
     const safeEngine = VALID_ENGINE_TYPES.has(engineType) ? engineType : 'rpg-topdown';
     const is3D       = VALID_3D_ENGINE_TYPES.has(safeEngine);
     const config = {
@@ -32,11 +32,15 @@ function buildProjectConfig(fields) {
         template:      typeof template === 'string' ? template : 'blank',
         created:       new Date().toISOString(),
         engineVersion: '7.0.1',
+        metadata: {
+            is3D,
+            renderQuality: is3D ? (VALID_RENDER_QUALITY.has(renderQuality) ? renderQuality : 'medium') : 'medium',
+            physics3D: is3D ? !!physics3D : false,
+            shadowQuality: is3D ? !!shadowQuality : false
+        }
     };
-    if (is3D) {
-        config.renderQuality  = VALID_RENDER_QUALITY.has(renderQuality) ? renderQuality : 'medium';
-        config.physics3D      = physics3D !== false;
-        config.shadowQuality  = shadowQuality !== false;
+    if (safeEngine === 'unified-3d') {
+        config.mode = mode || 'fps-3d';
     }
     return config;
 }
@@ -351,7 +355,7 @@ router.post('/projects', async (req, res) => {
 
 // POST /api/projects/create - Create new project (legacy alias)
 router.post('/projects/create', async (req, res) => {
-    const { name, template, engineType, author, renderQuality, physics3D, shadowQuality } = req.body;
+    const { name, template, engineType, mode, author, renderQuality, physics3D, shadowQuality } = req.body;
     if (!name) return res.status(400).json({ error: 'Project name required' });
 
     // Default to base-rpg if template is 'default' or 'blank'
@@ -359,7 +363,8 @@ router.post('/projects/create', async (req, res) => {
     if (template === 'blank' || template === 'default') templateId = 'base-rpg';
 
     try {
-        const projectConfig = buildProjectConfig({ name, author, engineType, template: templateId, renderQuality, physics3D, shadowQuality });
+        // 2. Build configuration
+        const projectConfig = buildProjectConfig({ name, author, engineType, mode, template: templateId, renderQuality, physics3D, shadowQuality });
         const result = await createProject({
             name,
             templateId,

@@ -42,6 +42,7 @@ import {
     serialize3DPlayerState,
     deserialize3DPlayerState,
 } from '../shared/Save3D.js';
+import HybridScene3D           from '../shared/HybridScene3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -77,8 +78,9 @@ export default class Game3DCore extends Engine3DAdapter {
         this._options = options;
 
         // ── Shared systems (instantiated in initCore) ─────────────────────
-        /** @type {Renderer3D|null} */
         this.renderer3d = null;
+        /** @type {HybridScene3D|null} */
+        this.hybridScene = null;
         /** @type {Camera3DController|null} */
         this.camera3d   = null;
         /** @type {Physics3DWorld|null} */
@@ -162,7 +164,10 @@ export default class Game3DCore extends Engine3DAdapter {
         await this.renderer3d.init();
 
         this.THREE = this.renderer3d.THREE;
-        this.scene = this.renderer3d.scene;
+        
+        // ── Hybrid Scene Manager ──────────────────────────────────────────
+        this.hybridScene = new HybridScene3D(this.renderer3d);
+        this.scene = this.hybridScene.scene;
 
         // ── Camera ────────────────────────────────────────────────────────
         this.camera3d = new Camera3DController(this.renderer3d.camera, container, {
@@ -327,7 +332,7 @@ export default class Game3DCore extends Engine3DAdapter {
         this._coreUpdate(rawDt);
 
         // ── Render ────────────────────────────────────────────────────
-        this._coreRender();
+        this._coreRender(rawDt);
 
         if (window.RedGlitchProfiler) {
             window.RedGlitchProfiler.updateStats({
@@ -364,11 +369,16 @@ export default class Game3DCore extends Engine3DAdapter {
                     : null,
             );
         }
+
+        // 6. Hybrid scene frustum culling and mesh updates
+        if (this.hybridScene && this.camera3d?.camera) {
+            this.hybridScene.update(dt, this.camera3d.camera);
+        }
     }
 
-    _coreRender() {
-        if (!this.renderer3d) return;
-        this.renderer3d.render();
+    _coreRender(dt) {
+        if (!this.hybridScene) return;
+        this.hybridScene.render(dt);
     }
 
     // ── Level completion ──────────────────────────────────────────────────────

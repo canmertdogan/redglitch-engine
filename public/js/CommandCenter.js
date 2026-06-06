@@ -36,6 +36,27 @@ const Log = {
     success: (msg) => Log.add(msg, 'SUCCESS')
 };
 
+const TOOL_ID_ALIASES = {
+    asset_manager: 'assets',
+    audio: 'daw',
+    logic: 'algorithm',
+    iso: 'iso_studio',
+    prefab: 'prefab',
+    editor: 'editor',
+    script: 'script',
+    pixel: 'pixel',
+    npc: 'npc',
+    enemy: 'enemy',
+    item: 'item',
+    quests: 'quests',
+    dialogue: 'dialogue',
+    console: 'console'
+};
+
+function resolveToolId(id) {
+    return TOOL_ID_ALIASES[id] || id;
+}
+
 function toggleAutoScroll() {
     Log.autoScroll = !Log.autoScroll;
     const stateEl = document.getElementById('as-state');
@@ -44,6 +65,33 @@ function toggleAutoScroll() {
         stateEl.style.color = Log.autoScroll ? 'var(--green)' : '#555';
     }
 }
+
+window.refreshCommandCenter = async function() {
+    await loadTelemetry();
+    await loadCounts();
+    renderActivities();
+    Log.info('Command center refreshed.');
+};
+
+window.runGameFromCommandCenter = function() {
+    if (window.parent && window.parent.playGame) {
+        Log.success('Launching game runtime...');
+        window.parent.playGame();
+    } else {
+        Log.warn('Game runtime not available.');
+    }
+};
+
+window.closeCommandCenter = function() {
+    Log.info('Closing command center...');
+    setTimeout(() => {
+        if (window.parent && window.parent.closeWindow) {
+            window.parent.closeWindow('win-project_dashboard');
+        } else {
+            window.close();
+        }
+    }, 150);
+};
 
 // --- COMMAND INPUT & TERMINAL ---
 const Terminal = {
@@ -155,14 +203,7 @@ const commandRegistry = {
     run: {
         desc: 'Launch game runtime',
         usage: 'run',
-        exec: () => {
-            if(window.parent && window.parent.playGame) {
-                Log.success("Launching game runtime...");
-                window.parent.playGame();
-            } else {
-                Log.error("Game runtime not available.");
-            }
-        }
+        exec: () => window.runGameFromCommandCenter()
     },
     
     open: {
@@ -171,7 +212,7 @@ const commandRegistry = {
         exec: (args) => {
             if (!args[0]) {
                 Log.warn("Usage: open <tool_id>");
-                Log.info("Available tools: editor, script, pixel, audio, npc, iso, daw, prefab, logic, asset_manager");
+                Log.info("Available tools: editor, script, pixel, daw, npc, enemy, item, algorithm, assets, console");
                 return;
             }
             openTool(args[0]);
@@ -347,7 +388,7 @@ const commandRegistry = {
     },
     
     reload: {
-        desc: 'Reload dashboard',
+        desc: 'Reload command center',
         usage: 'reload',
         exec: () => {
             Log.info('Reloading...');
@@ -356,16 +397,9 @@ const commandRegistry = {
     },
     
     close: {
-        desc: 'Close dashboard window',
+        desc: 'Close command center window',
         usage: 'close',
-        exec: () => {
-            if (window.parent && window.parent.closeWindow) {
-                Log.info('Closing dashboard...');
-                setTimeout(() => window.parent.closeWindow('win-dashboard'), 500);
-            } else {
-                Log.warn('Cannot close dashboard from here.');
-            }
-        }
+        exec: () => window.closeCommandCenter()
     }
 };
 
@@ -399,9 +433,11 @@ async function loadTelemetry() {
         
         const projEl = document.getElementById('proj-name');
         if (projEl) {
-            let display = data.name.toUpperCase();
+            let display = (data.name || 'UNKNOWN').toUpperCase();
             if (display.length > 15) display = display.substring(0, 15) + "...";
             projEl.innerText = display;
+            const sbProjEl = document.getElementById('sb-project-name');
+            if (sbProjEl) sbProjEl.innerText = display;
         }
     } catch(e) {}
     
@@ -464,50 +500,10 @@ async function updateAIMetrics() {
 async function renderActivities() {
     const list = document.getElementById('activity-list');
     if (!list) return;
-    list.innerHTML = '';
-    
-    let activities = [];
-    if (window.RedGlitchProjectState) {
-        activities = window.RedGlitchProjectState.get('activities', []);
-    }
-    
-    if (activities.length === 0) {
-        const legacy = JSON.parse(localStorage.getItem('redglitch_recent_files') || '[]');
-        activities = legacy.map(f => ({ type: 'file', name: f.name, data: { path: f.path }, timestamp: Date.now() }));
-    }
+    list.innerHTML = '<div class="empty-state">No recent activity.</div>';
 
-    if (activities.length === 0) {
-        list.innerHTML = '<div style="color:#555; text-align:center; margin-top:20px;">No recent activity.</div>';
-        return;
-    }
-
-    activities.slice(0, 15).forEach(act => {
-        const div = document.createElement('div');
-        div.className = 'file-item';
-        let icon = 'fa-circle', color = '#ccc';
-        
-        if (act.type === 'tool') { icon = 'fa-hammer'; color = 'var(--accent)'; }
-        else if (act.type === 'file') {
-            icon = 'fa-file';
-            if (act.name.endsWith('.json')) icon = 'fa-code';
-            if (act.name.endsWith('.png')) icon = 'fa-image';
-            color = 'var(--cyan)';
-        }
-        
-        div.onclick = () => {
-            if (act.type === 'tool') openTool(act.data.id || act.name.toLowerCase().replace(/ /g,'_'));
-            else if (act.type === 'file') openFileInParent(act.data.path);
-        };
-        
-        div.innerHTML = `
-            <div class="file-icon"><i class="fas ${icon}" style="color:${color}"></i></div>
-            <div class="file-info">
-                <span class="file-name">${act.name}</span>
-                <span class="file-path">${getRelativeTime(act.timestamp)}</span>
-            </div>
-        `;
-        list.appendChild(div);
-    });
+    const activityCount = document.getElementById('sb-activity-count');
+    if (activityCount) activityCount.innerText = '0';
 }
 
 function getRelativeTime(ts) {
@@ -557,15 +553,21 @@ async function loadCounts() {
 }
 
 function openTool(id) {
-    if (window.parent && window.parent.openWindow) {
-        const tool = window.parent.tools.find(t => t.id === id);
+    const resolvedId = resolveToolId(id);
+    const parentTools = window.parent && Array.isArray(window.parent.tools) ? window.parent.tools : null;
+    if (window.parent && window.parent.openWindow && parentTools) {
+        const tool = parentTools.find(t => t.id === resolvedId);
         if (tool) {
             window.parent.openWindow(tool);
-            Log.info(`Opened tool: ${id}`);
+            Log.info(`Opened tool: ${resolvedId}`);
             if (window.RedGlitchProjectState) {
                 window.RedGlitchProjectState.logActivity('tool', tool.title, { id: tool.id });
             }
+        } else {
+            Log.error(`Tool not found: ${id}`);
         }
+    } else {
+        Log.error('Tool host is unavailable.');
     }
 }
 

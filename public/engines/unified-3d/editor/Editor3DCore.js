@@ -205,6 +205,15 @@ export default class Editor3DCore {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             this._dirty = false;
             console.log(`[Editor3DCore] Level saved: ${this._project}/${this._levelId}`);
+            
+            // Notify Hub
+            if (window.RedGlitchEventBus) {
+                window.RedGlitchEventBus.emit('EDITOR_ASSET_SAVED', {
+                    project: this._project,
+                    type: 'level3d',
+                    name: this._levelId
+                });
+            }
         } catch (e) {
             console.error('[Editor3DCore] saveLevel failed:', e);
         }
@@ -216,6 +225,42 @@ export default class Editor3DCore {
         this._levelData = data;
         this._rebuildScene(data);
         this._dirty = true;
+    }
+
+    async importGLTF() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.gltf,.glb';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const buffer = await file.arrayBuffer();
+            
+            // Dynamic import GLTFLoader and FacetTool
+            const [{ GLTFLoader }, { default: FacetTool }] = await Promise.all([
+                import('https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js'),
+                import('/engines/shared/editor/FacetTool.js')
+            ]);
+            
+            const palette = this.renderer3d?.paletteManager?.palette || [0x555555, 0x888888, 0xcccccc];
+            
+            try {
+                const meshes = await FacetTool.importAndFacet(buffer, this.THREE, GLTFLoader, palette);
+                for (const mesh of meshes) {
+                    mesh.name = `imported_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+                    mesh.userData = { type: 'trimesh', imported: true };
+                    this.meshGroup.add(mesh);
+                }
+                this._updateSceneTree();
+                this._markDirty();
+                console.log(`[Editor3DCore] Imported ${meshes.length} faceted meshes from ${file.name}`);
+            } catch (err) {
+                console.error('[Editor3DCore] GLTF import failed:', err);
+                alert('Failed to import GLTF: ' + err.message);
+            }
+        };
+        input.click();
     }
 
     // ── Selection ─────────────────────────────────────────────────────────────
@@ -472,7 +517,7 @@ export default class Editor3DCore {
         if (this.meshGroup) {
             for (const mesh of this.meshGroup.children) {
                 const ud = mesh.userData || {};
-                data.geometry.push({
+                const geoData = {
                     id:            mesh.name,
                     type:          ud.type || 'mesh',
                     width:         ud.width  || 1,
@@ -485,7 +530,19 @@ export default class Editor3DCore {
                     palette_index: ud.palette_index ?? null,
                     castShadow:    true,
                     receiveShadow: true,
-                });
+                    imported:      ud.imported || false
+                };
+                
+                if (ud.type === 'trimesh' && mesh.geometry) {
+                    const pos = mesh.geometry.getAttribute('position');
+                    if (pos) geoData.positions = Array.from(pos.array);
+                    const nrm = mesh.geometry.getAttribute('normal');
+                    if (nrm) geoData.normals = Array.from(nrm.array);
+                    const col = mesh.geometry.getAttribute('color');
+                    if (col) geoData.colors = Array.from(col.array);
+                }
+                
+                data.geometry.push(geoData);
             }
         }
 

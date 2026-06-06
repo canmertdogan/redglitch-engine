@@ -15,6 +15,7 @@
             --bg-card: rgba(12, 12, 20, 0.8);
             --bg-card-hover: rgba(20, 18, 30, 0.95);
             --accent: #ff1e27;
+            --accent-cyan: #ff1e27;
             --accent-glow: rgba(255, 30, 39, 0.35);
             --accent-soft: rgba(255, 30, 39, 0.1);
             --text: #e0e0e0;
@@ -46,10 +47,9 @@
             overflow: hidden;
             display: grid;
             grid-template-columns: 220px 1fr;
-            grid-template-rows: 40px 38px 1fr;
+            grid-template-rows: 44px 1fr;
             grid-template-areas:
                 "titlebar titlebar"
-                "toolbar toolbar"
                 "sidebar content";
             position: relative;
         }
@@ -87,106 +87,305 @@
         /* --- TITLEBAR --- */
         .top-bar {
             grid-area: titlebar;
-            background: rgba(0, 0, 0, 0.5);
+            height: 44px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.5));
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
             border-bottom: 1px solid var(--border);
-            display: flex;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
             align-items: center;
-            justify-content: space-between;
-            padding: 0;
+            gap: 12px;
+            padding: 0 12px;
             z-index: 1;
             -webkit-app-region: drag;
             position: relative;
+            overflow: visible;
+            isolation: isolate;
+        }
+
+        .top-bar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at left center, rgba(255, 30, 39, 0.11), transparent 34%),
+                linear-gradient(90deg, rgba(255, 30, 39, 0.08), transparent 18%, transparent 82%, rgba(255, 30, 39, 0.04));
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .top-bar::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 30, 39, 0.6), transparent);
+            opacity: 0.8;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .title-group,
+        .titlebar-actions {
+            position: relative;
+            z-index: 1;
         }
 
         .title-group {
             display: flex;
             align-items: center;
             height: 100%;
+            flex-shrink: 0;
+            min-width: 0;
         }
 
         .app-icon {
             width: auto;
-            padding: 0 15px;
-            gap: 10px;
+            max-width: 100%;
+            padding: 0 14px 0 12px;
+            gap: 12px;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.8rem;
-            background: rgba(0, 0, 0, 0.35);
+            background: rgba(0, 0, 0, 0.25);
             color: var(--accent);
             border-right: 1px solid rgba(255, 255, 255, 0.06);
             font-family: var(--font-pixel);
             text-shadow: 0 0 20px var(--accent-glow);
+            min-width: 0;
+            overflow: hidden;
         }
 
-        .app-icon img {
+        .app-icon-mark {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.35);
+            color: var(--accent);
+            box-shadow: 0 0 20px rgba(255, 30, 39, 0.08);
+            overflow: hidden;
+        }
+
+        .app-icon-mark img {
             width: 18px;
             height: 18px;
+            display: block;
             image-rendering: pixelated;
+            object-fit: contain;
+        }
+
+        .app-icon-copy {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .brand-line {
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+            white-space: nowrap;
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+
+        .brand-red {
+            color: var(--accent);
+            font-family: var(--font-pixel);
+            font-size: 18px;
+        }
+
+        .brand-glitch {
+            color: #ffffff;
+            font-family: var(--font-pixel);
+            font-size: 18px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .brand-glitch::before,
+        .brand-glitch::after {
+            content: 'GLITCH';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            opacity: 0.8;
+            z-index: -1;
+        }
+
+        .brand-glitch::before {
+            left: 2px;
+            text-shadow: -1px 0 var(--accent);
+            animation: top-glitch-anim 2s infinite linear alternate-reverse;
+        }
+
+        .brand-glitch::after {
+            left: -2px;
+            text-shadow: -1px 0 var(--accent-cyan);
+            animation: top-glitch-anim 3s infinite linear alternate-reverse;
+        }
+
+        @keyframes top-glitch-anim {
+            0% { clip-path: inset(20% 0 80% 0); transform: translate(-1px, 1px); }
+            20% { clip-path: inset(60% 0 10% 0); transform: translate(1px, -1px); }
+            40% { clip-path: inset(40% 0 50% 0); transform: translate(-1px, -1px); }
+            60% { clip-path: inset(80% 0 5% 0); transform: translate(1px, 1px); }
+            80% { clip-path: inset(10% 0 70% 0); transform: translate(-1px, 0); }
+            100% { clip-path: inset(30% 0 40% 0); transform: translate(1px, 0); }
+        }
+
+        .brand-tag {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 3px;
         }
 
         .app-caption {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 14px;
-            letter-spacing: 1px;
-            font-weight: bold;
-            color: var(--text);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            white-space: nowrap;
             pointer-events: none;
             z-index: 1;
-            white-space: nowrap;
+            min-width: 0;
+            justify-self: center;
+            text-align: center;
+        }
+
+        .caption-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .caption-chip i {
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .caption-chip span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .titlebar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0;
+            justify-self: end;
+            min-width: 0;
         }
 
         .sys-stats {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 14px;
-            color: var(--text-muted);
+            gap: 8px;
+            height: 34px;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.18);
+            border: 1px solid var(--border);
+            border-radius: 999px;
             -webkit-app-region: no-drag;
-            height: 100%;
-            padding-right: 12px;
         }
 
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 5px;
-            padding: 0 8px;
+            gap: 6px;
+            padding: 0 12px;
+            height: 26px;
+            color: var(--text-muted);
+            font-size: 13px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        #status-indicator {
+            cursor: pointer;
+            display: none;
+            pointer-events: auto !important;
+            z-index: 950;
+        }
+
+        #status-indicator.error {
+            display: flex;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid var(--border-accent);
+        }
+
+        #clock {
+            color: var(--accent);
         }
 
         .window-controls {
             display: flex;
+            align-items: center;
+            gap: 6px;
             height: 100%;
             -webkit-app-region: no-drag;
+            z-index: 2;
+            padding: 0 0 0 8px;
+            margin-left: 2px;
+            border-left: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.16);
+            border-radius: 999px;
         }
 
         .win-btn {
-            width: 45px;
-            height: 100%;
+            width: 32px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
             color: var(--text-dim);
+            cursor: pointer;
+            font-size: 13px;
             transition: all 0.25s ease;
-            border: none;
-            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 999px;
         }
 
         .win-btn:hover {
             background: var(--accent-soft);
             color: var(--accent);
+            border-color: var(--border-accent);
         }
 
         .win-btn.close:hover {
             background: #e81123;
             color: #fff;
+            border-color: #e81123;
         }
 
         /* --- QUICK ACCESS TOOLBAR --- */
@@ -1084,42 +1283,44 @@
 
 <body>
 
-    <!-- Header -->
     <header class="top-bar">
         <div class="title-group">
-            <div class="app-icon">
-                <img src="/favicon.ico" alt="Logo">
-                <span><span style="color:var(--accent);">RED</span><span style="color:#fff;">GLITCH</span></span>
+            <div class="app-icon" style="-webkit-app-region: drag;">
+                <div class="app-icon-mark">
+                    <img src="/favicon.ico" alt="" aria-hidden="true">
+                </div>
+                <div class="app-icon-copy">
+                    <div class="brand-line">
+                        <span class="brand-red">RED</span><span class="brand-glitch">GLITCH</span>
+                    </div>
+                    <div class="brand-tag">Project Hub</div>
+                </div>
             </div>
         </div>
-        <div class="app-caption" id="typing-brand"></div>
-        <div class="sys-stats">
-            <div class="stat-item" id="status-indicator" onclick="LogManager.show()">
-                <i class="fas fa-exclamation-circle"></i> <span id="status-text">0</span>
-            </div>
-            <div class="stat-item" style="color:var(--accent)" id="clock">00:00</div>
 
+        <div class="app-caption">
+            <div class="caption-chip">
+                <i class="fas fa-sparkles"></i>
+                <span id="typing-brand"></span>
+            </div>
+        </div>
+
+        <div class="titlebar-actions">
+            <div class="sys-stats">
+                <div class="stat-item" id="status-indicator" onclick="LogManager.show()">
+                    <i class="fas fa-exclamation-circle"></i> <span id="status-text">0</span>
+                </div>
+                <div class="stat-item" id="clock">00:00</div>
+            </div>
             <div class="window-controls">
                 <div class="win-btn" onclick="if(window.electronAPI) window.electronAPI.minimize()"><i
                         class="fas fa-minus"></i></div>
+                <div class="win-btn" onclick="if(window.electronAPI) window.electronAPI.maximize()"><i class="fas fa-square"></i></div>
                 <div class="win-btn close" onclick="if(window.electronAPI) window.electronAPI.close()"><i
                         class="fas fa-times"></i></div>
             </div>
         </div>
     </header>
-
-    <!-- QUICK ACCESS TOOLBAR -->
-    <div id="quick-toolbar">
-        <div class="toolbar-group">
-            <button class="tool-btn" title="Refresh Projects" onclick="View.show('projects')"><i class="fas fa-sync"></i></button>
-            <button class="tool-btn" title="Create Project" onclick="View.show('create')"><i class="fas fa-plus"></i></button>
-            <button class="tool-btn primary" title="Open Studio" onclick="window.location.href='tools.html'"><i class="fas fa-rocket"></i></button>
-        </div>
-        <div class="toolbar-group">
-            <button class="tool-btn" title="Project Logs" onclick="LogManager.show()"><i class="fas fa-terminal"></i></button>
-            <button class="tool-btn" title="Settings" onclick="View.show('settings')"><i class="fas fa-cog"></i></button>
-        </div>
-    </div>
 
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -1304,21 +1505,21 @@
                         <p style="color:#4488ff; font-size:12px; margin-bottom:16px; letter-spacing:1px;">── 3D ENGINES
                             ──────────────────────</p>
                         <div class="engine-selection six-col">
-                            <div class="engine-card" onclick="Wizard.selectEngine('topdown-3d')">
+                            <div class="engine-card" onclick="Wizard.selectEngine('unified-3d', 'topdown-3d')">
                                 <span class="engine-card-badge badge-3d">3D</span>
                                 <i class="fas fa-street-view"></i>
                                 <div class="engine-card-title">Top-Down 3D</div>
                                 <div class="engine-card-desc">Low-poly 3D RPG/adventure with overhead camera and physics
                                 </div>
                             </div>
-                            <div class="engine-card" onclick="Wizard.selectEngine('fps-3d')">
+                            <div class="engine-card" onclick="Wizard.selectEngine('unified-3d', 'fps-3d')">
                                 <span class="engine-card-badge badge-3d">3D</span>
                                 <i class="fas fa-crosshairs"></i>
                                 <div class="engine-card-title">FPS / First Person</div>
                                 <div class="engine-card-desc">First-person shooter or explorer with voxel world editor
                                 </div>
                             </div>
-                            <div class="engine-card" onclick="Wizard.selectEngine('platformer-3d')">
+                            <div class="engine-card" onclick="Wizard.selectEngine('unified-3d', 'platformer-3d')">
                                 <span class="engine-card-badge badge-3d">3D</span>
                                 <i class="fas fa-layer-group"></i>
                                 <div class="engine-card-title">Platformer 3D</div>

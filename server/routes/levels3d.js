@@ -22,7 +22,7 @@ const { resolveUnderRoot } = require('../utils/pathGuard');
 
 const PROJECTS_ROOT = path.resolve(__dirname, '..', '..', 'projects');
 
-const VALID_3D_ENGINE_TYPES = ['topdown-3d', 'fps-3d', 'platformer-3d'];
+const VALID_3D_ENGINE_TYPES = ['unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'];
 const LEVEL_SCHEMA_VERSION  = '1.0';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -71,6 +71,16 @@ function validateLevel3D(raw) {
             ...raw,
             version:    raw.version    || LEVEL_SCHEMA_VERSION,
             engineType: 'fps-3d',
+            name:       typeof raw.name === 'string' ? raw.name : (raw.mapName || 'Untitled Level'),
+        };
+    }
+
+    if (raw.engineType === 'unified-3d') {
+        return {
+            ...raw,
+            version:    raw.version    || LEVEL_SCHEMA_VERSION,
+            engineType: 'unified-3d',
+            mode:       typeof raw.mode === 'string' ? raw.mode : 'fps-3d',
             name:       typeof raw.name === 'string' ? raw.name : (raw.mapName || 'Untitled Level'),
         };
     }

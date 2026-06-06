@@ -321,7 +321,12 @@ export default class TerrainSystem3D {
         mesh.receiveShadow = true;
         mesh.name          = `chunk_atlas_${key}`;
 
-        this.scene.add(mesh);
+        const hybrid = this.scene.userData.hybridScene;
+        if (hybrid) {
+            hybrid.addVoxelChunk(`atlas_${key}`, mesh);
+        } else {
+            this.scene.add(mesh);
+        }
         this._chunkMeshes.set(key, mesh);
     }
 
@@ -564,7 +569,12 @@ export default class TerrainSystem3D {
         mesh.receiveShadow = true;
         mesh.name          = `chunk_${key}`;
 
-        this.scene.add(mesh);
+        const hybrid = this.scene.userData.hybridScene;
+        if (hybrid) {
+            hybrid.addVoxelChunk(key, mesh);
+        } else {
+            this.scene.add(mesh);
+        }
         this._chunkMeshes.set(key, mesh);
     }
 

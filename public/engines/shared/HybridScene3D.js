@@ -19,6 +19,7 @@ export default class HybridScene3D {
 
     /** @type {THREE.Scene} The Three.js scene owned by this hybrid manager. */
     this.scene = new THREE.Scene();
+    this.scene.userData.hybridScene = this;
 
     /** @type {TriMeshRenderer3D} Manages all tri-mesh objects in the scene. */
     this.triMesh = new TriMeshRenderer3D(this.scene);
@@ -57,6 +58,16 @@ export default class HybridScene3D {
    */
   addTriMesh(id, geometry, paletteIndex, palette) {
     return this.triMesh.add(id, geometry, paletteIndex, palette);
+  }
+
+  /**
+   * Add a pre-built tri-mesh object directly.
+   * Delegates to TriMeshRenderer3D.addMesh().
+   * @param {string} id - Unique identifier.
+   * @param {THREE.Mesh} mesh - The pre-built mesh.
+   */
+  addMesh(id, mesh) {
+    this.triMesh.addMesh(id, mesh);
   }
 
   /**
@@ -120,13 +131,22 @@ export default class HybridScene3D {
     );
     this._frustum.setFromProjectionMatrix(this._projScreenMatrix);
 
-    const cullMesh = (mesh) => {
-      if (!mesh.geometry.boundingSphere) {
-        mesh.geometry.computeBoundingSphere();
+    const cullMesh = (obj) => {
+      if (obj.isMesh) {
+        if (!obj.geometry.boundingSphere) {
+          obj.geometry.computeBoundingSphere();
+        }
+        const sphere = obj.geometry.boundingSphere.clone();
+        sphere.applyMatrix4(obj.matrixWorld);
+        obj.visible = this._frustum.intersectsSphere(sphere);
+      } else if (obj.isGroup || obj.type === 'Object3D') {
+        let anyVisible = false;
+        for (const child of obj.children) {
+          cullMesh(child);
+          if (child.visible) anyVisible = true;
+        }
+        obj.visible = anyVisible;
       }
-      const sphere = mesh.geometry.boundingSphere.clone();
-      sphere.applyMatrix4(mesh.matrixWorld);
-      mesh.visible = this._frustum.intersectsSphere(sphere);
     };
 
     for (const mesh of this._voxelMeshes.values()) cullMesh(mesh);

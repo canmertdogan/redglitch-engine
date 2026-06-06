@@ -6,9 +6,9 @@ const { bakeVoxToGlb } = require('./scripts/voxel-baker');
 // All engine types recognized by the build system
 const VALID_ENGINE_TYPES = new Set([
     'rpg-topdown', 'platformer-2d', 'iso-pixel',
-    'topdown-3d', 'fps-3d', 'platformer-3d',
+    'unified-3d'
 ]);
-const IS_3D_ENGINE = new Set(['topdown-3d', 'fps-3d', 'platformer-3d']);
+const IS_3D_ENGINE = new Set(['unified-3d']);
 
 // --- CONFIGURATION ---
 const PROJECT_NAME = process.argv[2] || 'Default Project';

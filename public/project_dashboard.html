@@ -1,344 +1,1065 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="modern-dark">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>REDGLITCH COMMAND CENTER</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <script src="theme.js?v=3"></script>
     <style>
         :root {
             --bg-root: #050508;
-            --bg-widget: #0a0e14;
-            --bg-input: #000;
-            
-            --border: #1f2b42;
-            --border-highlight: #34495e;
-            
-            --accent: #ff0000;
-            --cyan: #40e0d0;
+            --bg-main: rgba(12, 12, 20, 0.82);
+            --bg-ui: rgba(20, 18, 30, 0.92);
+            --bg-card: rgba(12, 12, 20, 0.8);
+            --bg-card-hover: rgba(20, 18, 30, 0.95);
+            --accent: #ff1e27;
+            --accent-cyan: #ff1e27;
+            --accent-glow: rgba(255, 30, 39, 0.35);
+            --accent-soft: rgba(255, 30, 39, 0.1);
+            --text: #e0e0e0;
+            --text-muted: #777;
+            --text-dim: #444;
+            --border: rgba(255, 255, 255, 0.05);
+            --border-accent: rgba(255, 30, 39, 0.15);
+            --edge-border: 1px solid rgba(255, 255, 255, 0.08);
+            --glass-blur: blur(12px);
             --green: #2ecc71;
             --red: #e74c3c;
-            
-            --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
-            --font-pixel: 'VT323', monospace;
+            --gold: #ffd700;
+            --header-h: 44px;
+            --toolbar-h: 38px;
+            --status-h: 24px;
+            --sidebar-w: 324px;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
-            background-color: var(--bg-root);
-            color: #ccc;
-            font-family: var(--font-mono);
-            font-size: 13px;
-            margin: 0; padding: 15px;
+            margin: 0;
+            width: 100vw;
             height: 100vh;
             overflow: hidden;
-            display: grid;
-            grid-template-rows: 60px 1fr 200px; /* Header, Main, Log */
-            gap: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: var(--bg-root);
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
         }
 
-        /* --- CRT EFFECT (Subtle) --- */
-        body::after {
-            content: " ";
-            display: block;
-            position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 2px;
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                linear-gradient(rgba(255, 30, 39, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 30, 39, 0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: grid-drift 50s linear infinite;
             pointer-events: none;
-            z-index: 100;
         }
 
-        /* --- WIDGET CONTAINER --- */
-        .widget {
-            background: var(--bg-widget);
-            border: 1px solid var(--border);
-            display: flex; flex-direction: column;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50vh;
+            z-index: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(255, 30, 39, 0.06) 0%, transparent 70%);
+            pointer-events: none;
         }
-        .widget:hover { border-color: var(--border-highlight); }
-        
-        .w-header {
-            background: #020408;
+
+        @keyframes grid-drift {
+            0% { background-position: 0 0; }
+            100% { background-position: 60px 60px; }
+        }
+
+        #titlebar,
+        #studio-layout,
+        #status-bar {
+            position: relative;
+            z-index: 1;
+        }
+
+        #titlebar {
+            height: var(--header-h);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.5));
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+            padding: 0 12px;
             border-bottom: 1px solid var(--border);
-            padding: 8px 12px;
-            font-family: var(--font-pixel);
-            font-size: 1.1rem;
-            color: #8fa0bc;
-            display: flex; justify-content: space-between; align-items: center;
-            text-transform: uppercase; letter-spacing: 1px;
+            user-select: none;
+            -webkit-app-region: drag;
+            isolation: isolate;
+            overflow: visible;
         }
-        .w-controls { display: flex; gap: 8px; }
-        .w-btn { cursor: pointer; color: #555; transition: color 0.1s; font-size: 0.9rem; }
-        .w-btn:hover { color: #fff; }
 
-        .w-body {
-            flex-grow: 1; padding: 10px; overflow-y: auto;
+        #titlebar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at left center, rgba(255, 30, 39, 0.11), transparent 34%),
+                linear-gradient(90deg, rgba(255, 30, 39, 0.08), transparent 18%, transparent 82%, rgba(255, 30, 39, 0.04));
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #titlebar::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 30, 39, 0.6), transparent);
+            opacity: 0.8;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .title-group,
+        .titlebar-actions {
             position: relative;
+            z-index: 1;
         }
 
-        /* --- TOP ROW: TELEMETRY --- */
-        #telemetry-strip {
-            display: flex; gap: 15px;
-            background: transparent; border: none; box-shadow: none;
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            height: 100%;
+            flex-shrink: 0;
+            min-width: 0;
         }
-        
-        .tele-card {
-            flex: 1;
-            background: var(--bg-widget); border: 1px solid var(--border);
-            display: flex; align-items: center; padding: 0 20px;
-            gap: 15px;
+
+        .app-icon {
+            width: auto;
+            max-width: 100%;
+            padding: 0 14px 0 12px;
+            gap: 12px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--accent);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            font-family: 'VT323', monospace;
+            text-shadow: 0 0 20px var(--accent-glow);
+            min-width: 0;
+            overflow: hidden;
         }
-        .tele-icon { font-size: 1.8rem; color: #34495e; }
-        .tele-data { display: flex; flex-direction: column; overflow: hidden; }
-        .tele-val { 
-            font-size: 1.4rem; color: #fff; font-family: var(--font-pixel); line-height: 1; 
+
+        .app-icon-mark {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.35);
+            color: var(--accent);
+            box-shadow: 0 0 20px rgba(255, 30, 39, 0.08);
+            overflow: hidden;
+        }
+
+        .app-icon-mark img {
+            width: 18px;
+            height: 18px;
+            display: block;
+            image-rendering: pixelated;
+            object-fit: contain;
+        }
+
+        .app-icon-copy {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .brand-line {
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
             white-space: nowrap;
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+
+        .brand-red {
+            color: var(--accent);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+        }
+
+        .brand-glitch {
+            color: #ffffff;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .brand-glitch::before,
+        .brand-glitch::after {
+            content: 'CENTER';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            opacity: 0.8;
+            z-index: -1;
+        }
+
+        .brand-glitch::before {
+            left: 2px;
+            text-shadow: -1px 0 var(--accent);
+            animation: top-glitch-anim 2s infinite linear alternate-reverse;
+        }
+
+        .brand-glitch::after {
+            left: -2px;
+            text-shadow: -1px 0 var(--accent-cyan);
+            animation: top-glitch-anim 3s infinite linear alternate-reverse;
+        }
+
+        @keyframes top-glitch-anim {
+            0% { clip-path: inset(20% 0 80% 0); transform: translate(-1px, 1px); }
+            20% { clip-path: inset(60% 0 10% 0); transform: translate(1px, -1px); }
+            40% { clip-path: inset(40% 0 50% 0); transform: translate(-1px, -1px); }
+            60% { clip-path: inset(80% 0 5% 0); transform: translate(1px, 1px); }
+            80% { clip-path: inset(10% 0 70% 0); transform: translate(-1px, 0); }
+            100% { clip-path: inset(30% 0 40% 0); transform: translate(1px, 0); }
+        }
+
+        .brand-tag {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+
+        .app-caption {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1;
+            min-width: 0;
+            justify-self: center;
+            text-align: center;
+        }
+
+        .caption-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            font-size: 12px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .caption-chip i {
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .titlebar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-self: end;
+            min-width: 0;
+        }
+
+        .titlebar-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 34px;
+            padding: 4px 6px;
+            background: rgba(0, 0, 0, 0.24);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            overflow: hidden;
+            -webkit-app-region: no-drag;
+        }
+
+        .titlebar-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.02);
+            font-family: inherit;
+        }
+
+        .titlebar-btn i {
+            color: var(--accent);
+            font-size: 11px;
+        }
+
+        .titlebar-btn:hover {
+            background: rgba(255, 255, 255, 0.03);
+            color: #fff;
+            border-color: var(--border-accent);
+        }
+
+        .titlebar-btn:active {
+            transform: translateY(1px);
+        }
+
+        .titlebar-btn.primary {
+            background: rgba(255, 30, 39, 0.08);
+            border-color: var(--border-accent);
+            color: var(--accent);
+        }
+
+        .titlebar-btn.primary:hover {
+            background: rgba(255, 30, 39, 0.14);
+        }
+
+        .titlebar-btn.danger {
+            color: #ffd1d1;
+        }
+
+        .titlebar-btn.danger i {
+            color: var(--red);
+        }
+
+        .titlebar-btn.danger:hover {
+            background: rgba(231, 76, 60, 0.12);
+            border-color: rgba(231, 76, 60, 0.22);
+            color: #fff;
+        }
+
+        #studio-layout {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) minmax(230px, 240px);
+            gap: 15px;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        #telemetry-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 15px;
+            min-width: 0;
+            align-items: stretch;
+        }
+
+        .tele-card {
+            position: relative;
+            background: var(--bg-card);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(255, 30, 39, 0.05);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 18px;
+            min-height: 82px;
+            min-width: 0;
+            border-radius: 12px;
+        }
+
+        .tele-card::before,
+        .widget::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.9;
+            pointer-events: none;
+        }
+
+        .tele-icon {
+            width: 34px;
+            height: 34px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 10px;
+        }
+
+        .tele-data {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+
+        .tele-val {
+            color: #fff;
+            font-size: 1.25rem;
+            line-height: 1;
+            letter-spacing: 1px;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        .tele-label { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-top: 4px; }
-        .tele-card.accent .tele-icon { color: var(--accent); }
-        .tele-card.accent .tele-val { color: var(--accent); }
 
-        /* --- MIDDLE ROW: WORKSPACE --- */
+        .tele-label {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
         #workspace-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 15px;
+            min-height: 0;
         }
 
-        /* Recent Files */
+        .widget {
+            position: relative;
+            background: var(--bg-card);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(255, 30, 39, 0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            border-radius: 12px;
+        }
+
+        .w-header {
+            height: 34px;
+            background: rgba(0, 0, 0, 0.38);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            color: #fff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 0.82rem;
+            flex-shrink: 0;
+            gap: 12px;
+        }
+
+        .w-header span i {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        .w-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .w-btn {
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .w-btn:hover {
+            color: var(--accent);
+        }
+
+        .w-body {
+            flex: 1;
+            min-height: 0;
+            padding: 14px;
+            overflow: auto;
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
         .file-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px; border-bottom: 1px solid #111;
-            cursor: pointer; transition: background 0.1s;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.22);
+            cursor: pointer;
+            transition: all 0.25s ease;
         }
-        .file-item:hover { background: #162133; }
-        .file-icon { color: var(--accent); width: 16px; text-align: center; }
-        .file-info { flex-grow: 1; }
-        .file-name { color: #ccc; display: block; }
-        .file-path { color: #555; font-size: 0.8rem; display: block; }
 
-        /* Scratchpad */
-        textarea.scratchpad {
-            width: 100%; height: 100%;
-            background: var(--bg-input); border: none;
-            color: #ddd; font-family: var(--font-mono); font-size: 13px;
-            resize: none; outline: none; padding: 5px;
-            line-height: 1.5;
+        .file-item:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(255, 30, 39, 0.2);
+            transform: translateY(-1px);
         }
-        
-        /* Asset Watcher */
+
+        .file-icon {
+            width: 22px;
+            text-align: center;
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+
+        .file-info {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .file-name {
+            display: block;
+            color: #fff;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-path {
+            color: var(--text-muted);
+            font-size: 0.76rem;
+            letter-spacing: 1px;
+        }
+
+        .empty-state {
+            color: #555;
+            text-align: center;
+            margin-top: 20px;
+            letter-spacing: 1px;
+        }
+
+        .scratchpad-wrap {
+            padding: 0;
+        }
+
+        .scratchpad {
+            width: 100%;
+            min-height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.55));
+            color: #ddd;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.55;
+            padding: 14px;
+        }
+
         .asset-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 0; border-bottom: 1px solid #111;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--text);
         }
-        .asset-label { color: #888; }
-        .asset-bar-bg { width: 100px; height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
-        .asset-bar-fill { height: 100%; background: var(--cyan); transition: width 0.5s; }
-        
+
+        .asset-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .asset-label {
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 1px;
+        }
+
+        .dashboard-select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-select:focus {
+            border-color: rgba(255, 30, 39, 0.3);
+            box-shadow: 0 0 20px rgba(255, 30, 39, 0.08);
+        }
+
         .quick-action-btn {
-            display: block; width: 100%; padding: 10px; margin-top: 10px;
-            background: #1f2b42; border: 1px solid #34495e; color: #ccc;
-            cursor: pointer; text-align: center; transition: all 0.1s;
-            font-family: var(--font-pixel);
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #1f2b42;
+            border: 1px solid #34495e;
+            color: #ccc;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.1s;
+            font-family: 'VT323', monospace;
             font-size: 1.3rem;
             text-transform: uppercase;
             letter-spacing: 1px;
             box-shadow: 3px 3px 0 #000;
             border-radius: 0;
         }
-        .quick-action-btn:hover { 
-            background: var(--accent); color: #000; 
+
+        .quick-action-btn:hover {
+            background: var(--accent);
+            color: #000;
             transform: translate(1px, 1px);
             box-shadow: 1px 1px 0 #000;
         }
+
         .quick-action-btn.secondary {
             background: transparent;
             border-color: #333;
         }
 
-        /* --- BOTTOM ROW: LOG --- */
         #log-terminal {
-            display: flex; flex-direction: column;
+            min-height: 0;
         }
+
         #log-feed {
-            flex-grow: 1; overflow-y: auto; padding: 5px;
-            font-family: var(--font-mono); font-size: 12px;
-            background: #000;
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.55);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
         }
-        .log-line { margin-bottom: 2px; display: flex; gap: 10px; }
-        .log-ts { color: #444; min-width: 60px; }
-        .log-tag { font-weight: bold; min-width: 50px; }
-        .log-tag.INFO { color: #3498db; }
-        .log-tag.WARN { color: var(--accent); }
-        .log-tag.ERROR { color: var(--red); }
-        .log-tag.SUCCESS { color: var(--green); }
-        .log-msg { color: #ccc; word-break: break-all; }
+
+        .log-line {
+            margin-bottom: 6px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .log-ts {
+            color: #444;
+            min-width: 70px;
+            flex-shrink: 0;
+        }
+
+        .log-tag {
+            font-weight: bold;
+            min-width: 58px;
+            flex-shrink: 0;
+        }
+
+        .log-tag.INFO {
+            color: #3498db;
+        }
+
+        .log-tag.WARN {
+            color: var(--accent);
+        }
+
+        .log-tag.ERROR {
+            color: var(--red);
+        }
+
+        .log-tag.SUCCESS {
+            color: var(--green);
+        }
+
+        .log-msg {
+            color: #ccc;
+            word-break: break-word;
+        }
 
         #cmd-bar {
-            height: 30px; background: #111; border-top: 1px solid var(--border);
-            display: flex; align-items: center; padding: 0 10px;
+            height: 34px;
+            background: rgba(0, 0, 0, 0.72);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
             transition: background 0.2s;
         }
+
         #cmd-bar:focus-within {
-            background: #1a1a1a;
+            background: rgba(0, 0, 0, 0.82);
             border-top-color: var(--green);
         }
-        #cmd-prompt { 
-            color: var(--green); 
-            margin-right: 10px; 
+
+        #cmd-prompt {
+            color: var(--green);
+            margin-right: 10px;
             font-weight: bold;
             user-select: none;
+            white-space: nowrap;
         }
+
         #cmd-input {
-            background: transparent; border: none; color: #fff;
-            flex-grow: 1; font-family: var(--font-mono); outline: none;
+            background: transparent;
+            border: none;
+            color: #fff;
+            flex: 1;
+            font-family: 'Consolas', 'Monaco', monospace;
+            outline: none;
             caret-color: var(--green);
         }
+
         #cmd-input::placeholder {
             color: #555;
             font-style: italic;
         }
 
-        /* Scrollbars */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        #status-bar {
+            height: var(--status-h);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            user-select: none;
+            z-index: 10;
+            gap: 8px;
+        }
 
+        .sb-section {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            gap: 0;
+            min-width: 0;
+        }
+
+        .sb-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 8px;
+            height: 100%;
+            cursor: pointer;
+            transition: background 0.1s;
+            white-space: nowrap;
+        }
+
+        .sb-item:hover {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .sb-icon {
+            font-size: 12px;
+            display: inline-flex;
+            width: 14px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #sb-message {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 900px) {
+            #titlebar {
+                grid-template-columns: auto minmax(0, 1fr);
+                gap: 8px;
+                padding: 0 8px;
+            }
+
+            .titlebar-actions {
+                grid-column: 1 / -1;
+                justify-self: start;
+            }
+
+            .sb-section {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 720px) {
+            #studio-layout {
+                padding: 12px;
+                gap: 12px;
+            }
+        }
     </style>
 </head>
 <body>
-
-    <!-- ROW 1: TELEMETRY -->
-    <div id="telemetry-strip">
-        <div class="tele-card accent">
-            <div class="tele-icon"><i class="fas fa-cube"></i></div>
-            <div class="tele-data">
-                <div class="tele-val" id="proj-name">DEFAULT</div>
-                <div class="tele-label">Active Project</div>
-            </div>
-        </div>
-        <div class="tele-card">
-            <div class="tele-icon"><i class="fas fa-memory"></i></div>
-            <div class="tele-data">
-                <div class="tele-val" id="mem-usage">-- MB</div>
-                <div class="tele-label">Memory Usage</div>
-            </div>
-        </div>
-        <div class="tele-card">
-            <div class="tele-icon"><i class="fas fa-brain"></i></div>
-            <div class="tele-data">
-                <div class="tele-val" id="ai-mem-usage">-- MB</div>
-                <div class="tele-label">AI Memory</div>
-            </div>
-        </div>
-        <div class="tele-card">
-            <div class="tele-icon"><i class="fas fa-microchip"></i></div>
-            <div class="tele-data">
-                <div class="tele-val" id="ai-cpu-usage">--%</div>
-                <div class="tele-label">AI CPU</div>
-            </div>
-        </div>
-        <div class="tele-card">
-            <div class="tele-icon"><i class="fas fa-clock"></i></div>
-            <div class="tele-data">
-                <div class="tele-val" id="uptime">00:00</div>
-                <div class="tele-label">Session Uptime</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ROW 2: WORKSPACE -->
-    <div id="workspace-grid">
-        
-        <!-- Latest Activities -->
-        <div class="widget">
-            <div class="w-header">
-                <span><i class="fas fa-history"></i> Latest Activities</span>
-                <div class="w-controls"><i class="fas fa-sync w-btn" title="Refresh" onclick="renderActivities()"></i></div>
-            </div>
-            <div class="w-body" id="activity-list">
-                <div style="color:#555; text-align:center; margin-top:20px;">No recent activity.</div>
+    <div id="titlebar">
+        <div class="title-group">
+            <div class="app-icon">
+                <div class="app-icon-mark"><img src="/favicon.ico" alt="" aria-hidden="true"></div>
+                <div class="app-icon-copy">
+                    <div class="brand-line"><span class="brand-red">COMMAND</span><span class="brand-glitch">CENTER</span></div>
+                    <div class="brand-tag">Project Shell</div>
+                </div>
             </div>
         </div>
 
-        <!-- Scratchpad -->
-        <div class="widget">
-            <div class="w-header">
-                <span><i class="fas fa-sticky-note"></i> Dev Scratchpad</span>
-                <div class="w-controls"><i class="fas fa-save w-btn" title="Auto-saving..." style="color:var(--green)"></i></div>
-            </div>
-            <div class="w-body" style="padding:0;">
-                <textarea id="scratchpad" class="scratchpad" placeholder="// Write notes, todos, or ideas here..."></textarea>
+        <div class="app-caption">
+            <div class="caption-chip">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>PROJECT COMMAND CENTER</span>
             </div>
         </div>
 
-        <!-- Asset Pulse -->
-        <div class="widget">
-            <div class="w-header">
-                <span><i class="fas fa-chart-pie"></i> Asset Pulse</span>
-            </div>
-            <div class="w-body">
-                <div class="asset-row">
-                    <span class="asset-label"><i class="fas fa-palette"></i> UI Theme</span>
-                    <select id="theme-selector" onchange="setTheme(this.value)" style="background:#000; border:1px solid #333; color:var(--accent); font-family:inherit; padding:2px;">
-                        <option value="modern-light">Modern Light</option>
-                        <option value="modern-dark">Modern Dark</option>
-                        <option value="cyberpunk">Cyberpunk</option>
-                        <option value="classic-dungeon">Dungeon</option>
-                    </select>
-                </div>
-                <div class="asset-row">
-                    <span class="asset-label"><i class="fas fa-map"></i> Levels</span>
-                    <span id="count-levels" style="font-weight:bold;">0</span>
-                </div>
-                <div class="asset-row">
-                    <span class="asset-label"><i class="fas fa-image"></i> Sprites</span>
-                    <span id="count-sprites" style="font-weight:bold;">0</span>
-                </div>
-                <div class="asset-row">
-                    <span class="asset-label"><i class="fas fa-code"></i> Scripts</span>
-                    <span id="count-scripts" style="font-weight:bold;">0</span>
-                </div>
-                
-                <button class="quick-action-btn" onclick="scanAssets()">
-                    <i class="fas fa-search"></i> FORCE RE-INDEX
+        <div class="titlebar-actions">
+            <div class="titlebar-controls">
+                <button type="button" class="titlebar-btn primary" onclick="refreshCommandCenter()" title="Refresh">
+                    <i class="fas fa-sync"></i>
                 </button>
-                <button class="quick-action-btn secondary" onclick="openTool('asset_manager')" style="margin-top:5px;">
-                    BROWSE ASSETS
+                <button type="button" class="titlebar-btn" onclick="runGameFromCommandCenter()" title="Run">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button type="button" class="titlebar-btn danger" onclick="closeCommandCenter()" title="Close">
+                    <i class="fas fa-power-off"></i>
                 </button>
             </div>
         </div>
-
     </div>
 
-    <!-- ROW 3: SYSTEM LOG -->
-    <div class="widget" id="log-terminal">
-        <div class="w-header">
-            <span><i class="fas fa-terminal"></i> System Log</span>
-            <div class="w-controls" style="font-size:0.8rem; gap:10px;">
-                <span class="w-btn" onclick="Log.clear()">CLEAR</span>
-                <span class="w-btn" onclick="toggleAutoScroll()">SCROLL: <span id="as-state" style="color:var(--green)">ON</span></span>
+    <main id="studio-layout">
+        <div id="telemetry-strip">
+            <div class="tele-card accent">
+                <div class="tele-icon"><i class="fas fa-cube"></i></div>
+                <div class="tele-data">
+                    <div class="tele-val" id="proj-name">LOADING...</div>
+                    <div class="tele-label">Active Project</div>
+                </div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-icon"><i class="fas fa-memory"></i></div>
+                <div class="tele-data">
+                    <div class="tele-val" id="mem-usage">-- MB</div>
+                    <div class="tele-label">Memory Usage</div>
+                </div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-icon"><i class="fas fa-brain"></i></div>
+                <div class="tele-data">
+                    <div class="tele-val" id="ai-mem-usage">-- MB</div>
+                    <div class="tele-label">AI Memory</div>
+                </div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-icon"><i class="fas fa-microchip"></i></div>
+                <div class="tele-data">
+                    <div class="tele-val" id="ai-cpu-usage">--%</div>
+                    <div class="tele-label">AI CPU</div>
+                </div>
+            </div>
+            <div class="tele-card">
+                <div class="tele-icon"><i class="fas fa-clock"></i></div>
+                <div class="tele-data">
+                    <div class="tele-val" id="uptime">00:00</div>
+                    <div class="tele-label">Session Uptime</div>
+                </div>
             </div>
         </div>
-        <div id="log-feed">
-            <!-- Logs go here -->
+
+        <div id="workspace-grid">
+            <div class="widget">
+                <div class="w-header">
+                    <span><i class="fas fa-history"></i> Latest Activities</span>
+                    <div class="w-controls"><i class="fas fa-sync w-btn" title="Refresh" onclick="renderActivities()"></i></div>
+                </div>
+                <div class="w-body activity-list" id="activity-list">
+                    <div class="empty-state">No recent activity.</div>
+                </div>
+            </div>
+
+            <div class="widget">
+                <div class="w-header">
+                    <span><i class="fas fa-sticky-note"></i> Dev Scratchpad</span>
+                    <div class="w-controls"><i class="fas fa-save w-btn" title="Auto-saving..." style="color:var(--green)"></i></div>
+                </div>
+                <div class="w-body scratchpad-wrap" style="padding:0;">
+                    <textarea id="scratchpad" class="scratchpad" placeholder="// Write notes, todos, or ideas here..."></textarea>
+                </div>
+            </div>
+
+            <div class="widget">
+                <div class="w-header">
+                    <span><i class="fas fa-chart-pie"></i> Asset Pulse</span>
+                </div>
+                <div class="w-body">
+                    <div class="asset-row">
+                        <span class="asset-label"><i class="fas fa-palette"></i> UI Theme</span>
+                        <select id="theme-selector" class="dashboard-select" onchange="setTheme(this.value)">
+                            <option value="modern-light">Modern Light</option>
+                            <option value="modern-dark">Modern Dark</option>
+                            <option value="cyberpunk">Cyberpunk</option>
+                            <option value="classic-dungeon">Dungeon</option>
+                        </select>
+                    </div>
+                    <div class="asset-row">
+                        <span class="asset-label"><i class="fas fa-map"></i> Levels</span>
+                        <span id="count-levels" style="font-weight:bold;">0</span>
+                    </div>
+                    <div class="asset-row">
+                        <span class="asset-label"><i class="fas fa-image"></i> Sprites</span>
+                        <span id="count-sprites" style="font-weight:bold;">0</span>
+                    </div>
+                    <div class="asset-row">
+                        <span class="asset-label"><i class="fas fa-code"></i> Scripts</span>
+                        <span id="count-scripts" style="font-weight:bold;">0</span>
+                    </div>
+                    <button type="button" class="quick-action-btn" onclick="scanAssets()">
+                        <i class="fas fa-search"></i> FORCE RE-INDEX
+                    </button>
+                    <button type="button" class="quick-action-btn secondary" onclick="openTool('assets')" style="margin-top:5px;">
+                        BROWSE ASSETS
+                    </button>
+                </div>
+            </div>
         </div>
-        <div id="cmd-bar">
-            <span id="cmd-prompt">redglitch@sys:~$</span>
-            <input type="text" id="cmd-input" placeholder="Type 'help' for commands | ↑↓ history | Tab completion | Ctrl+L clear" autocomplete="off">
+
+        <div class="widget" id="log-terminal">
+            <div class="w-header">
+                <span><i class="fas fa-terminal"></i> System Log</span>
+                <div class="w-controls" style="font-size:0.8rem; gap:10px;">
+                    <span class="w-btn" onclick="Log.clear()">CLEAR</span>
+                    <span class="w-btn" onclick="toggleAutoScroll()">SCROLL: <span id="as-state" style="color:var(--green)">ON</span></span>
+                </div>
+            </div>
+            <div id="log-feed">
+                <!-- Logs go here -->
+            </div>
+            <div id="cmd-bar">
+                <span id="cmd-prompt">redglitch@cc:~$</span>
+                <input type="text" id="cmd-input" placeholder="Type 'help' for commands | ↑↓ history | Tab completion | Ctrl+L clear" autocomplete="off">
+            </div>
+        </div>
+    </main>
+
+    <div id="status-bar">
+        <div class="sb-section">
+            <div class="sb-item">
+                <span class="sb-icon"><i class="fas fa-cube"></i></span>
+                <span>PROJECT</span>
+                <strong id="sb-project-name">LOADING...</strong>
+            </div>
+            <div class="sb-item">
+                <span class="sb-icon"><i class="fas fa-layer-group"></i></span>
+                <span>ACTIVITY</span>
+                <span id="sb-activity-count">0</span>
+            </div>
+            <div class="sb-item">
+                <span class="sb-icon"><i class="fas fa-bug"></i></span>
+                <span>ERR</span>
+                <span id="sb-errors">0</span>
+            </div>
+            <div class="sb-item">
+                <span class="sb-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                <span>WARN</span>
+                <span id="sb-warnings">0</span>
+            </div>
+        </div>
+
+        <div class="sb-section" style="flex-grow: 1; justify-content: center;">
+            <div id="sb-message">COMMAND CENTER ONLINE</div>
+        </div>
+
+        <div class="sb-section">
+            <div class="sb-item">
+                <span class="sb-icon"><i class="fas fa-microchip"></i></span>
+                <span id="sb-cpu">0%</span>
+            </div>
+            <div class="sb-item">
+                <span class="sb-icon"><i class="fas fa-memory"></i></span>
+                <span id="sb-mem">0M</span>
+            </div>
+            <div class="sb-item">
+                <span class="sb-icon"><i class="fas fa-clock"></i></span>
+                <span id="sb-clock">12:00 PM</span>
+            </div>
         </div>
     </div>
 
-    <!-- System Integration -->
     <script src="shared/EventBus.js"></script>
     <script src="shared/SharedProjectState.js"></script>
     <script src="shared/AssetManager.js"></script>
     <script src="js/CommandCenter.js"></script>
+    <script>
+        const updateClock = () => {
+            const clock = document.getElementById('sb-clock');
+            if (!clock) return;
+            clock.textContent = new Intl.DateTimeFormat([], {
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(new Date());
+        };
+
+        window.addEventListener('load', () => {
+            updateClock();
+            setInterval(updateClock, 1000);
+        });
+    </script>
 </body>
 </html>

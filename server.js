@@ -268,6 +268,11 @@ app.use('/sprite-art', (req, res, next) => {
     });
 });
 
+// Redirect legacy 3D editors to unified editor
+app.get('/fps_editor.html', (req, res) => res.redirect('/editor3d.html?mode=fps-3d&project=' + (req.query.project || '')));
+app.get('/topdown3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=topdown-3d&project=' + (req.query.project || '')));
+app.get('/platformer3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=platformer-3d&project=' + (req.query.project || '')));
+
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/projects', express.static(path.join(__dirname, 'projects')));

@@ -310,13 +310,20 @@ export default class Engine3DAdapter extends Engine3DBase {
                 continue;
             }
 
-            // ── Geometry Factory (Phase 64/65) ──────────────────────────────
-            const type = (def.blockType || def.type || 'box').toLowerCase();
-            const w = def.width  || def.w || 1;
-            const h = def.height || def.h || 1;
-            const d = def.depth  || def.d || 1;
-            
-            const geo = PrimitiveFactory.create(type, w, h, d);
+            let geo;
+            if (def.type === 'trimesh' && def.positions) {
+                geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(def.positions, 3));
+                if (def.normals) geo.setAttribute('normal', new THREE.Float32BufferAttribute(def.normals, 3));
+                if (def.colors) geo.setAttribute('color', new THREE.Float32BufferAttribute(def.colors, 3));
+            } else {
+                // ── Geometry Factory (Phase 64/65) ──────────────────────────────
+                const type = (def.blockType || def.type || 'box').toLowerCase();
+                const w = def.width  || def.w || 1;
+                const h = def.height || def.h || 1;
+                const d = def.depth  || def.d || 1;
+                geo = PrimitiveFactory.create(type, w, h, d);
+            }
 
             let mat;
             if (def.textureId && atlas) {
@@ -340,7 +347,11 @@ export default class Engine3DAdapter extends Engine3DBase {
             obj.castShadow    = def.castShadow    ?? false;
             obj.receiveShadow = def.receiveShadow ?? true;
 
-            this.scene.add(obj);
+            if (this.hybridScene) {
+                this.hybridScene.addMesh(def.id || obj.uuid, obj);
+            } else {
+                this.scene.add(obj);
+            }
             if (def.id) this._levelObjects.set(def.id, obj);
         }
     }

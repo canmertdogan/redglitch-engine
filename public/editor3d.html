@@ -5,48 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unified 3D Editor — RedGlitch Engine</title>
     <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg-primary:   #0a0a0a;
-            --bg-secondary: #111111;
-            --bg-panel:     #0d0d0d;
-            --border:       #222;
-            --accent:       #e74c3c;
-            --accent-hover: #ff6b5b;
+            --bg-root:      #050508;
+            --bg-widget:    #0a0e14;
+            --bg-input:     #000;
+            --border:       #1f2b42;
+            --border-highlight: #34495e;
+            --accent:       #40e0d0;
+            --accent-hover: #50f0e0;
             --text:         #ccc;
-            --text-dim:     #666;
-            --font:         'VT323', monospace;
+            --text-dim:     #8fa0bc;
+            --font-pixel:   'VT323', monospace;
+            --font-mono:    'Consolas', 'Monaco', 'Courier New', monospace;
         }
 
         body {
-            background: var(--bg-primary);
-            font-family: var(--font);
+            background: var(--bg-root);
+            font-family: var(--font-mono);
             color: var(--text);
+            font-size: 13px;
             overflow: hidden;
             user-select: none;
+        }
+
+        /* --- CRT EFFECT (Subtle) --- */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 2px;
+            pointer-events: none;
+            z-index: 100;
         }
 
         /* ── Layout ────────────────────────────────────────────── */
         #editor-root {
             display: grid;
             grid-template-columns: 240px 1fr 260px;
-            grid-template-rows: 44px 1fr 28px;
+            grid-template-rows: 50px 1fr 30px;
             grid-template-areas:
                 "toolbar toolbar toolbar"
                 "left    viewport right"
                 "status  status   status";
             width: 100vw;
             height: 100vh;
+            gap: 15px;
+            padding: 15px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Widget base */
+        .widget {
+            background: var(--bg-widget);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            position: relative;
+            transition: border-color 0.15s;
+        }
+        .widget:hover { border-color: var(--border-highlight); }
+
+        .w-header {
+            background: #020408;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 12px;
+            font-family: var(--font-pixel);
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            display: flex; justify-content: space-between; align-items: center;
+            text-transform: uppercase; letter-spacing: 1px;
+            flex-shrink: 0;
         }
 
         /* ── Toolbar ───────────────────────────────────────────── */
         #toolbar {
             grid-area: toolbar;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            display: flex;
+            flex-direction: row;
             align-items: center;
             gap: 12px;
             padding: 0 16px;
@@ -54,39 +96,46 @@
 
         #toolbar-title {
             color: var(--accent);
-            font-size: 18px;
-            letter-spacing: 4px;
+            font-family: var(--font-pixel);
+            font-size: 1.4rem;
+            letter-spacing: 2px;
             margin-right: 16px;
         }
 
         .toolbar-group {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
         .toolbar-btn {
             background: transparent;
             border: 1px solid var(--border);
-            color: var(--text);
-            font-family: var(--font);
-            font-size: 16px;
+            color: var(--text-dim);
+            font-family: var(--font-pixel);
+            font-size: 1.1rem;
             padding: 4px 12px;
             cursor: pointer;
             transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         .toolbar-btn:hover { border-color: var(--accent); color: #fff; }
-        .toolbar-btn.active { border-color: var(--accent); background: rgba(231,76,60,0.15); color: var(--accent); }
+        .toolbar-btn.active { border-color: var(--accent); background: rgba(64,224,208,0.15); color: var(--accent); }
 
         #mode-selector {
-            background: #111;
-            border: 1px solid var(--accent);
+            background: var(--bg-input);
+            border: 1px solid var(--border);
             color: var(--accent);
-            font-family: var(--font);
-            font-size: 16px;
+            font-family: var(--font-pixel);
+            font-size: 1.1rem;
             padding: 4px 8px;
             cursor: pointer;
+            outline: none;
+            transition: border-color 0.15s;
         }
+        #mode-selector:hover { border-color: var(--accent); }
 
         .toolbar-sep {
             width: 1px;
@@ -98,19 +147,6 @@
         /* ── Left Panel ────────────────────────────────────────── */
         #left-panel {
             grid-area: left;
-            background: var(--bg-panel);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-
-        .panel-header {
-            padding: 10px 12px;
-            color: var(--accent);
-            font-size: 14px;
-            letter-spacing: 3px;
-            border-bottom: 1px solid var(--border);
         }
 
         #scene-tree {
@@ -121,33 +157,43 @@
 
         .tree-group { margin-bottom: 8px; }
         .tree-group-label {
-            font-size: 14px;
+            font-size: 0.9rem;
             color: var(--text-dim);
             padding: 4px 0;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .tree-item {
-            padding: 3px 8px;
-            font-size: 16px;
+            padding: 4px 8px;
+            font-size: 13px;
             cursor: pointer;
             border-left: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         .tree-item:hover { background: rgba(255,255,255,0.04); }
-        .tree-item.selected { border-left-color: var(--accent); background: rgba(231,76,60,0.08); color: #fff; }
+        .tree-item.selected { border-left-color: var(--accent); background: rgba(64,224,208,0.08); color: #fff; }
 
         .panel-empty {
             color: var(--text-dim);
             padding: 16px;
-            font-size: 14px;
+            font-size: 13px;
             text-align: center;
+            font-style: italic;
         }
 
         /* ── Viewport ──────────────────────────────────────────── */
-        #viewport {
+        #viewport-container {
             grid-area: viewport;
+            padding: 0;
+        }
+
+        #viewport {
+            width: 100%;
+            height: 100%;
             background: #000;
-            position: relative;
         }
 
         #viewport canvas {
@@ -159,176 +205,199 @@
         /* ── Right Panel ───────────────────────────────────────── */
         #right-panel {
             grid-area: right;
-            background: var(--bg-panel);
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
+        }
+
+        #properties-panel, #mode-tools {
+            padding: 10px;
+        }
+        #properties-panel {
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            max-height: 50%;
+            overflow-y: auto;
+        }
+        #mode-tools {
+            flex: 1;
             overflow-y: auto;
         }
 
-        #properties-panel {
-            padding: 8px;
-            border-bottom: 1px solid var(--border);
+        /* Asset Card style for Prop Groups & Tool Sections */
+        .asset-card {
+            background: #0f151f;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 12px;
         }
+        .asset-card:last-child { margin-bottom: 0; }
 
         .prop-group { margin-bottom: 10px; }
+        .prop-group:last-child { margin-bottom: 0; }
+
         .prop-label {
-            font-size: 13px;
+            font-size: 11px;
             color: var(--text-dim);
-            letter-spacing: 2px;
-            margin-bottom: 4px;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
         }
         .prop-input {
             width: 100%;
-            background: #111;
+            background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text);
-            font-family: var(--font);
-            font-size: 16px;
-            padding: 4px 8px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            padding: 6px 8px;
+            outline: none;
+            transition: border-color 0.1s;
         }
-        .prop-input:focus { border-color: var(--accent); outline: none; }
+        .prop-input:focus { border-color: var(--accent); }
         .prop-vec3 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 4px;
+            gap: 6px;
         }
         .prop-vec3 input {
-            background: #111;
+            background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text);
-            font-family: var(--font);
-            font-size: 14px;
-            padding: 3px 4px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            padding: 4px;
             width: 100%;
+            outline: none;
         }
-        .prop-vec3 input:focus { border-color: var(--accent); outline: none; }
-
-        #mode-tools {
-            flex: 1;
-            padding: 8px;
-            overflow-y: auto;
-        }
+        .prop-vec3 input:focus { border-color: var(--accent); }
 
         /* ── Mode Tools styling ────────────────────────────────── */
         .tool-section {
+            background: #0f151f;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
             margin-bottom: 12px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
         }
-        .tool-section:last-child { border-bottom: none; }
+        .tool-section:last-child { margin-bottom: 0; }
 
         .tool-section-title {
-            font-size: 12px;
-            color: var(--accent);
-            letter-spacing: 3px;
-            margin-bottom: 8px;
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
         }
 
         .tool-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 6px;
         }
 
         .tool-btn {
-            background: #111;
+            background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text);
-            font-size: 18px;
-            padding: 6px 10px;
+            font-size: 16px;
+            padding: 6px 12px;
             cursor: pointer;
             transition: all 0.1s;
+            border-radius: 2px;
         }
         .tool-btn:hover { border-color: var(--accent); }
-        .tool-btn.active { border-color: var(--accent); background: rgba(231,76,60,0.15); }
+        .tool-btn.active { border-color: var(--accent); background: rgba(64,224,208,0.15); color: var(--accent); }
 
         .draw-btn {
-            background: #111;
+            background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text);
-            font-family: var(--font);
-            font-size: 14px;
+            font-family: var(--font-pixel);
+            font-size: 1.1rem;
             padding: 4px 10px;
             cursor: pointer;
         }
-        .draw-btn.active { border-color: var(--accent); background: rgba(231,76,60,0.15); color: var(--accent); }
+        .draw-btn.active { border-color: var(--accent); background: rgba(64,224,208,0.15); color: var(--accent); }
 
         .tool-select, .tool-select-sm {
             width: 100%;
-            background: #111;
+            background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text);
-            font-family: var(--font);
-            font-size: 14px;
-            padding: 4px 8px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            padding: 6px 8px;
+            outline: none;
         }
-        .tool-select-sm { width: auto; }
+        .tool-select-sm { width: auto; padding: 4px 6px; }
 
         .tool-row {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 14px;
-            margin-top: 4px;
+            font-size: 13px;
+            margin-top: 6px;
         }
 
         .tool-input-sm {
             width: 50px;
-            background: #111;
+            background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text);
-            font-family: var(--font);
-            font-size: 14px;
-            padding: 2px 4px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            padding: 4px;
+            outline: none;
         }
 
         .tool-buttons-col {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .action-btn {
-            background: #111;
+            background: var(--bg-input);
             border: 1px solid var(--border);
             color: var(--text);
-            font-family: var(--font);
-            font-size: 16px;
+            font-family: var(--font-pixel);
+            font-size: 1.1rem;
             padding: 6px 12px;
             cursor: pointer;
             text-align: left;
+            transition: all 0.1s;
+            text-transform: uppercase;
         }
         .action-btn:hover { border-color: var(--accent); color: #fff; }
 
         /* ── Status Bar ────────────────────────────────────────── */
         #status-bar {
             grid-area: status;
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border);
+            background: transparent;
+            border: none;
             display: flex;
             align-items: center;
-            padding: 0 16px;
-            font-size: 14px;
+            padding: 0;
+            font-family: var(--font-pixel);
+            font-size: 1.1rem;
             color: var(--text-dim);
             gap: 24px;
         }
 
-        #status-mode { color: var(--accent); }
-        #status-dirty { color: #e67e22; }
+        #status-mode { color: var(--accent); font-weight: bold; }
+        #status-dirty { color: #e74c3c; font-weight: bold; }
 
         /* ── Scrollbar ─────────────────────────────────────────── */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-panel); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-highlight); }
     </style>
 </head>
 <body>
     <div id="editor-root">
         <!-- Toolbar -->
-        <div id="toolbar">
-            <span id="toolbar-title">REDGLITCH 3D EDITOR</span>
+        <div id="toolbar" class="widget">
+            <span id="toolbar-title"><i class="fas fa-cube" style="margin-right:8px;"></i>REDGLITCH 3D</span>
             <select id="mode-selector">
                 <option value="fps-3d">FPS 3D</option>
                 <option value="topdown-3d">TOP-DOWN 3D</option>
@@ -336,39 +405,48 @@
             </select>
             <div class="toolbar-sep"></div>
             <div class="toolbar-group">
-                <button class="toolbar-btn" id="btn-new" title="New Level">📄 New</button>
-                <button class="toolbar-btn" id="btn-save" title="Save (Ctrl+S)">💾 Save</button>
-                <button class="toolbar-btn" id="btn-load" title="Load Level">📂 Load</button>
+                <button class="toolbar-btn" id="btn-new" title="New Level"><i class="fas fa-file"></i> New</button>
+                <button class="toolbar-btn" id="btn-save" title="Save (Ctrl+S)"><i class="fas fa-save"></i> Save</button>
+                <button class="toolbar-btn" id="btn-load" title="Load Level"><i class="fas fa-folder-open"></i> Load</button>
+                <button class="toolbar-btn" id="btn-import" title="Import Tri-Mesh GLTF"><i class="fas fa-file-import"></i> Import</button>
             </div>
             <div class="toolbar-sep"></div>
             <div class="toolbar-group">
-                <button class="toolbar-btn" id="btn-undo" title="Undo (Ctrl+Z)">↩ Undo</button>
-                <button class="toolbar-btn" id="btn-redo" title="Redo (Ctrl+Y)">↪ Redo</button>
+                <button class="toolbar-btn" id="btn-undo" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+                <button class="toolbar-btn" id="btn-redo" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
             </div>
             <div class="toolbar-sep"></div>
             <div class="toolbar-group">
-                <button class="toolbar-btn" id="btn-playtest" title="Playtest (F5)">▶ Play</button>
+                <button class="toolbar-btn" id="btn-playtest" title="Playtest (F5)"><i class="fas fa-play"></i> Play</button>
             </div>
         </div>
 
         <!-- Left Panel: Scene Tree -->
-        <div id="left-panel">
-            <div class="panel-header">SCENE TREE</div>
+        <div id="left-panel" class="widget">
+            <div class="w-header">
+                <span><i class="fas fa-sitemap"></i> Scene Tree</span>
+            </div>
             <div id="scene-tree">
                 <div class="panel-empty">No level loaded</div>
             </div>
         </div>
 
         <!-- 3D Viewport -->
-        <div id="viewport"></div>
+        <div id="viewport-container" class="widget">
+            <div id="viewport"></div>
+        </div>
 
         <!-- Right Panel: Properties + Mode Tools -->
-        <div id="right-panel">
-            <div class="panel-header">PROPERTIES</div>
+        <div id="right-panel" class="widget">
+            <div class="w-header">
+                <span><i class="fas fa-sliders-h"></i> Properties</span>
+            </div>
             <div id="properties-panel">
                 <div class="panel-empty">No selection</div>
             </div>
-            <div class="panel-header">MODE TOOLS</div>
+            <div class="w-header" style="border-top: 1px solid var(--border);">
+                <span><i class="fas fa-tools"></i> Mode Tools</span>
+            </div>
             <div id="mode-tools">
                 <div class="panel-empty">Select a mode</div>
             </div>
@@ -384,6 +462,7 @@
         </div>
     </div>
 
+    <script src="/shared/EventBus.js"></script>
     <script type="module">
         import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js';
 
@@ -472,6 +551,9 @@
             const proj = prompt('Project name:');
             const lvl  = prompt('Level ID:');
             if (proj && lvl) editor.loadLevel(proj, lvl);
+        });
+        document.getElementById('btn-import')?.addEventListener('click', () => {
+            editor.importGLTF();
         });
 
         // ── Keyboard shortcuts ────────────────────────────────────────────

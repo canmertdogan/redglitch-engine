@@ -17,7 +17,7 @@ function isSafeLevelId(value) {
 }
 
 function isValidEngineType(value) {
-    return ['rpg-topdown', 'iso-pixel', 'platformer-2d', 'topdown-3d', 'fps-3d', 'platformer-3d'].includes(value);
+    return ['rpg-topdown', 'iso-pixel', 'platformer-2d', 'topdown-3d', 'fps-3d', 'platformer-3d', 'unified-3d'].includes(value);
 }
 
 function normalizeEngineType(rawType) {

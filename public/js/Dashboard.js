@@ -157,7 +157,7 @@ async function launchProject(name) {
 const Wizard = {
     currentStep: 1,
     TOTAL_STEPS: 5,
-    IS_3D_ENGINE: ['topdown-3d', 'fps-3d', 'platformer-3d'],
+    IS_3D_ENGINE: ['unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'],
     data: {
         name: '',
         author: '',
@@ -176,8 +176,9 @@ const Wizard = {
 
     is3D() { return this.IS_3D_ENGINE.includes(this.data.engineType); },
     
-    selectEngine(type) {
+    selectEngine(type, mode) {
         this.data.engineType = type;
+        this.data.mode = mode; // optional mode for unified-3d
         document.querySelectorAll('.engine-card').forEach(el => el.classList.remove('selected'));
         if (event && event.target) {
             const card = event.target.closest('.engine-card');
@@ -282,6 +283,7 @@ const Wizard = {
                 template: this.data.template,
                 engineType: this.data.engineType,
             };
+            if (this.data.mode) payload.mode = this.data.mode;
             if (this.is3D()) {
                 payload.renderQuality  = this.data.renderQuality;
                 payload.physics3D      = this.data.physics3D;
