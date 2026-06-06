@@ -76,10 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.push({
                 x, y,
                 baseZ: Math.random() * 0.6,
-                color: isAccent ? '#f1c40f' : '#1a1a1a',
-                top:   isAccent ? '#f5d147' : '#222222',
-                left:  isAccent ? '#c9a50b' : '#111111',
-                right: isAccent ? '#b8950a' : '#0d0d0d',
+                color: isAccent ? '#ff1e27' : '#14141e',
+                top:   isAccent ? '#ff3b42' : '#1e1e2a',
+                left:  isAccent ? '#cc141c' : '#101018',
+                right: isAccent ? '#aa0e14' : '#0c0c12',
             });
         }
     }

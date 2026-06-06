@@ -99,7 +99,7 @@ function workspaceLoop() {
         const offsetX = workspacePan.x % gridSize;
         const offsetY = workspacePan.y % gridSize;
         
-        ctx.strokeStyle = 'rgba(26, 36, 58, 0.3)';
+        ctx.strokeStyle = 'rgba(255, 30, 39, 0.04)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         for(let x = offsetX; x < bgCanvas.width; x += gridSize) {
@@ -110,7 +110,7 @@ function workspaceLoop() {
         }
         ctx.stroke();
 
-        ctx.fillStyle = 'rgba(143, 160, 188, 0.1)';
+        ctx.fillStyle = 'rgba(255, 30, 39, 0.06)';
         backgroundParticles.forEach(p => {
             p.y += p.speed;
             if(p.y > bgCanvas.height) p.y = 0;
@@ -212,6 +212,12 @@ function formatProjectName(name) {
     return display;
 }
 
+function updateTitlebarProjectLabel(name, isRoot = false) {
+    const el = document.getElementById('titlebar-project');
+    if (!el) return;
+    el.textContent = isRoot ? 'COMMAND CENTER' : `PROJECT • ${formatProjectName(name)}`;
+}
+
 async function studioInit() {
     console.log("[Studio] Initializing Legacy Kernel...");
     // Populate Sidebar with Categories
@@ -281,11 +287,12 @@ async function determineStartupWindow() {
         const projName = data.name;
         console.log("[Studio] Active Project:", projName);
         window._redglitchActiveProject = projName;
+        updateTitlebarProjectLabel(projName, data.isRoot);
         
         const projNameEl = document.getElementById('sb-project-name');
         if (projNameEl) projNameEl.innerText = formatProjectName(projName);
 
-        if (data.isRoot) {
+        if (data.isRoot || !projName || projName === 'ROOT') {
             console.log("[Studio] No project active (Root), redirecting to Launcher...");
             window.location.href = 'dashboard.html';
         } else {
@@ -300,7 +307,8 @@ async function determineStartupWindow() {
 
     } catch(e) {
         console.error("[Studio] Startup error:", e);
-        // window.location.href = 'dashboard.html'; // Don't redirect immediately to allow debugging
+        console.log("[Studio] Redirecting to dashboard due to error...");
+        window.location.href = 'dashboard.html';
     }
 }
 
@@ -311,6 +319,7 @@ window.onProjectLoaded = function(name) {
 
     const projNameEl = document.getElementById('sb-project-name');
     if (projNameEl) projNameEl.innerText = formatProjectName(name);
+    updateTitlebarProjectLabel(name, false);
 
     const cmdCenter = tools.find(t => t.id === 'project_dashboard');
     if(cmdCenter) openWindow(cmdCenter);
@@ -832,7 +841,9 @@ function stopGame() {
 }
 
 function setRunningState(isRunning) {
-    const captionElements = document.querySelectorAll('.app-caption span, .app-caption i, .app-icon i');
+    const captionElements = document.querySelectorAll(
+        '.app-caption span, .app-caption i, .app-icon i, .app-icon .brand-red, .app-icon .brand-glitch'
+    );
     if (isRunning) captionElements.forEach(el => el.classList.add('running-text'));
     else captionElements.forEach(el => el.classList.remove('running-text'));
 }
@@ -1074,6 +1085,29 @@ function bwSelectTarget(t) {
     document.getElementById('bw-target-label').innerText = labelMap[t] || t.toUpperCase();
 }
 
+function setBuildTarget(target) {
+    currentBuildTarget = target;
+    const selectEl = document.getElementById('build-target');
+    if (selectEl) selectEl.value = target;
+    
+    const labelMap = {
+        win: 'Windows (EXE)',
+        macos: 'macOS (.app)',
+        android: 'Android (APK)',
+        ios: 'iOS (Xcode)',
+        web: 'Web (HTML5)',
+        all: 'All targets'
+    };
+    const sbEl = document.getElementById('sb-build-target');
+    if (sbEl) sbEl.innerText = labelMap[target] || target.toUpperCase();
+    
+    showStatusMessage(`BUILD TARGET SET: ${target.toUpperCase()}`);
+}
+
+function buildGame(target) {
+    openBuildWizard(target || currentBuildTarget);
+}
+
 // --- BOOT ---
 window.addEventListener('DOMContentLoaded', studioInit);
 window.tools = tools;
@@ -1097,6 +1131,8 @@ window.bwSelectTarget = bwSelectTarget;
 window.bwStartBuild = bwStartBuild;
 window.closeBuildWizard = closeBuildWizard;
 window.setBuildTarget = setBuildTarget;
+window.buildGame = buildGame;
+window.openBuildWizard = openBuildWizard;
 window.pauseGame = pauseGame;
 window.stopGame = stopGame;
 window.openTool = openTool;

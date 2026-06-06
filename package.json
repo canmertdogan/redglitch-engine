@@ -69,10 +69,10 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/icons/favicon-6-512.png"
+      "icon": "public/icons/icon.png"
     },
     "mac": {
-      "icon": "public/icons/favicon-6-512.png"
+      "icon": "public/icons/icon.icns"
     }
   }
 }

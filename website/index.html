@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;700;800;900&family=Space+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
     <nav class="nav">
         <div class="nav-container">
             <a href="#" class="nav-brand">
-                <img src="assets/logo.png" alt="RedGlitch" class="nav-logo">
+                <img src="favicon.ico" alt="RedGlitch" class="nav-logo">
                 <span>REDGLITCH</span>
             </a>
             <div class="nav-links" id="navLinks">
@@ -224,8 +224,162 @@
                     <p>No switching between apps. Every tool your game needs is a tab away inside the RedGlitch Studio.</p>
                 </div>
 
-                <div class="screenshot-placeholder" data-label="Studio Dashboard — project overview, tools, recent activity">
-                    <span>📸 Screenshot: Project Dashboard</span>
+                <div class="mockup-window">
+                    <!-- Title Bar -->
+                    <div class="mockup-titlebar">
+                        <div class="mockup-app-icon">
+                            <div class="mockup-app-icon-mark">🚀</div>
+                            <div class="mockup-app-icon-copy">
+                                <div class="mockup-brand-line">
+                                    <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
+                                </div>
+                                <div class="mockup-brand-tag">Studio Core</div>
+                            </div>
+                        </div>
+                        <div class="mockup-app-caption">
+                            <div class="mockup-caption-chip">
+                                <span>✦</span> COMMAND CENTER
+                            </div>
+                            <div class="mockup-caption-meta">Workspace Active</div>
+                        </div>
+                        <div class="mockup-win-controls">
+                            <span class="mockup-control-btn">─</span>
+                            <span class="mockup-control-btn">◻</span>
+                            <span class="mockup-control-btn">✕</span>
+                        </div>
+                    </div>
+
+                    <!-- Telemetry Strip & Content Grid -->
+                    <div class="mockup-dashboard-layout">
+                        <!-- ROW 1: TELEMETRY -->
+                        <div class="mockup-telemetry-strip">
+                            <div class="mockup-tele-card accent">
+                                <div class="mockup-tele-icon">⚙</div>
+                                <div class="mockup-tele-data">
+                                    <div class="mockup-tele-val">RETRO_RPG</div>
+                                    <div class="mockup-tele-label">Active Project</div>
+                                </div>
+                            </div>
+                            <div class="mockup-tele-card">
+                                <div class="mockup-tele-icon">❑</div>
+                                <div class="mockup-tele-data">
+                                    <div class="mockup-tele-val">42 MB</div>
+                                    <div class="mockup-tele-label">Memory Usage</div>
+                                </div>
+                            </div>
+                            <div class="mockup-tele-card">
+                                <div class="mockup-tele-icon">🧠</div>
+                                <div class="mockup-tele-data">
+                                    <div class="mockup-tele-val">128 MB</div>
+                                    <div class="mockup-tele-label">AI Memory</div>
+                                </div>
+                            </div>
+                            <div class="mockup-tele-card">
+                                <div class="mockup-tele-icon">⚡</div>
+                                <div class="mockup-tele-data">
+                                    <div class="mockup-tele-val">4%</div>
+                                    <div class="mockup-tele-label">AI CPU</div>
+                                </div>
+                            </div>
+                            <div class="mockup-tele-card">
+                                <div class="mockup-tele-icon">🕒</div>
+                                <div class="mockup-tele-data">
+                                    <div class="mockup-tele-val">01:24</div>
+                                    <div class="mockup-tele-label">Uptime</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ROW 2: WORKSPACE -->
+                        <div class="mockup-workspace-grid">
+                            <!-- Activities -->
+                            <div class="mockup-widget">
+                                <div class="mockup-w-header">
+                                    <span>🕒 LATEST ACTIVITIES</span>
+                                </div>
+                                <div class="mockup-w-body">
+                                    <div class="mockup-activity-item">
+                                        <span class="mockup-activity-text">Compiled assets and sprites</span>
+                                        <span class="mockup-activity-time">Just now</span>
+                                    </div>
+                                    <div class="mockup-activity-item">
+                                        <span class="mockup-activity-text">EventBus WS Blob crash resolved</span>
+                                        <span class="mockup-activity-time">4m ago</span>
+                                    </div>
+                                    <div class="mockup-activity-item">
+                                        <span class="mockup-activity-text">Vegetation generated in IsoPixel</span>
+                                        <span class="mockup-activity-time">10m ago</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Scratchpad -->
+                            <div class="mockup-widget">
+                                <div class="mockup-w-header">
+                                    <span>✎ DEV SCRATCHPAD</span>
+                                </div>
+                                <div class="mockup-w-body" style="background:#000; color:#888; font-size:11px;">
+                                    // NPC AI schedule logic setup<br>
+                                    // TODO: Implement chest loot tables<br>
+                                    // Fix player collider offset inside level 2...
+                                </div>
+                            </div>
+
+                            <!-- Asset Pulse -->
+                            <div class="mockup-widget">
+                                <div class="mockup-w-header">
+                                    <span>⚙ ASSET PULSE</span>
+                                </div>
+                                <div class="mockup-w-body">
+                                    <div class="mockup-asset-row">
+                                        <span class="mockup-asset-label">UI Theme</span>
+                                        <span class="mockup-asset-val" style="color:var(--crimson)">Cyberpunk</span>
+                                    </div>
+                                    <div class="mockup-asset-row">
+                                        <span class="mockup-asset-label">Levels</span>
+                                        <span class="mockup-asset-val">12</span>
+                                    </div>
+                                    <div class="mockup-asset-row">
+                                        <span class="mockup-asset-label">Sprites</span>
+                                        <span class="mockup-asset-val">84</span>
+                                    </div>
+                                    <div class="mockup-asset-row">
+                                        <span class="mockup-asset-label">Scripts</span>
+                                        <span class="mockup-asset-val">38</span>
+                                    </div>
+                                    <div class="mockup-action-btn">Browse Assets</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ROW 3: SYSTEM LOG -->
+                        <div class="mockup-log-terminal">
+                            <div class="mockup-w-header">
+                                <span>⌨ SYSTEM LOG</span>
+                            </div>
+                            <div class="mockup-log-feed">
+                                <div class="mockup-log-line">
+                                    <span class="mockup-log-ts">[15:30:10]</span>
+                                    <span class="mockup-log-tag INFO">[INFO]</span>
+                                    <span class="mockup-log-msg">RedGlitch core server initialized on port 3000</span>
+                                </div>
+                                <div class="mockup-log-line">
+                                    <span class="mockup-log-ts">[15:30:12]</span>
+                                    <span class="mockup-log-tag SUCCESS">[SUCCESS]</span>
+                                    <span class="mockup-log-msg">Asset indices loaded successfully in memory</span>
+                                </div>
+                                <div class="mockup-log-line">
+                                    <span class="mockup-log-ts">[15:31:05]</span>
+                                    <span class="mockup-log-tag INFO">[INFO]</span>
+                                    <span class="mockup-log-msg">EventBus websocket handler linked to localhost</span>
+                                </div>
+                            </div>
+                            <div class="mockup-cmd-bar">
+                                <span class="mockup-cmd-prompt">redglitch@sys:~$</span>
+                                <span class="mockup-cmd-input">help_</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="tools-grid">
@@ -285,8 +439,117 @@
                     </div>
                 </div>
 
-                <div class="screenshot-placeholder" data-label="Script Editor — Monaco code editor with AI autocomplete">
-                    <span>📸 Screenshot: Script Editor (Monaco)</span>
+                <div class="mockup-window">
+                    <!-- Title Bar -->
+                    <div class="mockup-titlebar">
+                        <div class="mockup-app-icon">
+                            <div class="mockup-app-icon-mark">⚡</div>
+                            <div class="mockup-app-icon-copy">
+                                <div class="mockup-brand-line">
+                                    <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
+                                </div>
+                                <div class="mockup-brand-tag">Code Forge</div>
+                            </div>
+                        </div>
+                        <div class="mockup-app-caption">
+                            <div class="mockup-caption-chip">
+                                <span>📂</span> AssetManager.js
+                            </div>
+                            <div class="mockup-caption-meta">Monaco Editor</div>
+                        </div>
+                        <div class="mockup-win-controls">
+                            <span class="mockup-control-btn">─</span>
+                            <span class="mockup-control-btn">◻</span>
+                            <span class="mockup-control-btn">✕</span>
+                        </div>
+                    </div>
+
+                    <!-- Menubar -->
+                    <div class="mockup-titlebar" style="background:#000; border-bottom:1px solid rgba(255,255,255,0.05); padding: 4px 12px;">
+                        <div class="mockup-menubar">
+                            <span class="mockup-menu-btn active">File</span>
+                            <span class="mockup-menu-btn">Edit</span>
+                            <span class="mockup-menu-btn">View</span>
+                            <span class="mockup-menu-btn">Help</span>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-muted)">REDGLITCH.DEV</div>
+                    </div>
+
+                    <!-- Quick Toolbar -->
+                    <div class="mockup-quick-toolbar">
+                        <div class="mockup-toolbar-group">
+                            <span class="mockup-tool-btn"><i class="fas fa-save"></i></span>
+                            <span class="mockup-tool-btn"><i class="fas fa-sync-alt"></i></span>
+                        </div>
+                        <div class="mockup-toolbar-group">
+                            <span class="mockup-tool-btn"><i class="fas fa-undo"></i></span>
+                            <span class="mockup-tool-btn"><i class="fas fa-redo"></i></span>
+                        </div>
+                        <div class="mockup-toolbar-group">
+                            <span class="mockup-tool-btn"><i class="fas fa-search"></i></span>
+                            <span class="mockup-tool-btn primary"><i class="fas fa-cog"></i></span>
+                        </div>
+                    </div>
+
+                    <!-- Main Split Layout (Sidebar + Editor) -->
+                    <div class="mockup-split-layout">
+                        <!-- Sidebar Explorer -->
+                        <div class="mockup-explorer-panel">
+                            <div class="mockup-explorer-header">
+                                <span>EXPLORER 📂</span>
+                            </div>
+                            <div class="mockup-file-tree">
+                                <div class="mockup-tree-node">
+                                    <span>🗎</span> EventBus.js
+                                </div>
+                                <div class="mockup-tree-node active">
+                                    <span>🗎</span> AssetManager.js
+                                </div>
+                                <div class="mockup-tree-node">
+                                    <span>🗎</span> NPCManager.js
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Editor Workspace -->
+                        <div class="mockup-editor-workspace">
+                            <!-- Tabs -->
+                            <div class="mockup-editor-tabs">
+                                <div class="mockup-editor-tab">EventBus.js</div>
+                                <div class="mockup-editor-tab active">AssetManager.js</div>
+                            </div>
+
+                            <!-- Code Container -->
+                            <div class="mockup-code-container">
+                                <div><span class="code-ln">1</span><span class="code-keyword">import</span> { <span class="code-ident">EventBus</span> } <span class="code-keyword">from</span> <span class="code-string">'./EventBus.js'</span>;</div>
+                                <div><span class="code-ln">2</span></div>
+                                <div><span class="code-ln">3</span><span class="code-keyword">export class</span> <span class="code-ident">AssetManager</span> {</div>
+                                <div><span class="code-ln">4</span>    <span class="code-keyword">constructor</span>() {</div>
+                                <div><span class="code-ln">5</span>        <span class="code-keyword">this</span>.<span class="code-ident">loadedAssets</span> = <span class="code-keyword">new</span> <span class="code-ident">Map</span>();</div>
+                                <div><span class="code-ln">6</span>    }</div>
+                                <div><span class="code-ln">7</span></div>
+                                <div><span class="code-ln">8</span>    <span class="code-keyword">async</span> <span class="code-ident">loadSprite</span>(<span class="code-ident">path</span>) {</div>
+                                <div><span class="code-ln">9</span>        <span class="code-comment">// Sanitize paths to strip duplicate prefixes</span></div>
+                                <div><span class="code-ln">10</span>        <span class="code-keyword">const</span> <span class="code-ident">cleanPath</span> = <span class="code-ident">path</span>.<span class="code-ident">replace</span>(<span class="code-string">/^projects\/ActiveProject\//</span>, <span class="code-string">''</span>);</div>
+                                <div><span class="code-ln">11</span>        <span class="code-ghost">const response = await fetch(`/api/ide/read?file=${cleanPath}`);</span></div>
+                                <div><span class="code-ln">12</span>        <span class="code-ghost">const data = await response.json();</span></div>
+                                <div><span class="code-ln">13</span>    }</div>
+                                <div><span class="code-ln">14</span>}</div>
+                            </div>
+
+                            <!-- Status Bar -->
+                            <div class="mockup-status-bar">
+                                <div class="mockup-status-item">
+                                    <span>READY</span>
+                                </div>
+                                <div class="mockup-status-item">
+                                    <span>LN 11, COL 24</span>
+                                    <span>Space: 4</span>
+                                    <span>JavaScript</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -331,8 +594,98 @@
                         </div>
                     </div>
                     <div class="ai-visual">
-                        <div class="screenshot-placeholder" data-label="Kai AI chat panel inside the Studio">
-                            <span>📸 Screenshot: Kai AI Panel</span>
+                        <div class="mockup-window">
+                            <!-- Title Bar -->
+                            <div class="mockup-titlebar">
+                                <div class="mockup-app-icon">
+                                    <div class="mockup-app-icon-mark">🚀</div>
+                                    <div class="mockup-app-icon-copy">
+                                        <div class="mockup-brand-line">
+                                            <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
+                                        </div>
+                                        <div class="mockup-brand-tag">Studio Core</div>
+                                    </div>
+                                </div>
+                                <div class="mockup-app-caption">
+                                    <div class="mockup-caption-chip">
+                                        <span>🤖</span> AI Assistant
+                                    </div>
+                                    <div class="mockup-caption-meta">Kai Active</div>
+                                </div>
+                                <div class="mockup-win-controls">
+                                    <span class="mockup-control-btn">─</span>
+                                    <span class="mockup-control-btn">◻</span>
+                                    <span class="mockup-control-btn">✕</span>
+                                </div>
+                            </div>
+
+                            <!-- Menubar -->
+                            <div class="mockup-titlebar" style="background:#000; border-bottom:1px solid rgba(255,255,255,0.05); padding: 4px 12px;">
+                                <div class="mockup-menubar">
+                                    <span class="mockup-menu-btn">File</span>
+                                    <span class="mockup-menu-btn">Edit</span>
+                                    <span class="mockup-menu-btn">View</span>
+                                    <span class="mockup-menu-btn">Help</span>
+                                </div>
+                                <div style="font-size:11px; color:var(--text-muted)">KAI_INFERENCE_READY</div>
+                            </div>
+
+                            <!-- Workspace with Right Sidebar containing AI -->
+                            <div class="mockup-split-layout with-right-sidebar">
+                                <!-- Left Mini Toolbar (Tools Sidebar) -->
+                                <div class="mockup-studio-sidebar">
+                                    <span class="mockup-studio-btn"><i class="fas fa-th"></i></span>
+                                    <span class="mockup-studio-btn"><i class="fas fa-cube"></i></span>
+                                    <span class="mockup-studio-btn active"><i class="fas fa-code"></i></span>
+                                    <span class="mockup-studio-btn"><i class="fas fa-cogs"></i></span>
+                                </div>
+
+                                <!-- Center Editor Area -->
+                                <div class="mockup-editor-workspace">
+                                    <div class="mockup-editor-tabs">
+                                        <div class="mockup-editor-tab active">EventBus.js</div>
+                                    </div>
+                                    <div class="mockup-code-container" style="min-height:200px;">
+                                        <div><span class="code-ln">1</span><span class="code-keyword">import</span> { <span class="code-ident">EventBus</span> } <span class="code-keyword">from</span> <span class="code-string">'./EventBus.js'</span>;</div>
+                                        <div><span class="code-ln">2</span></div>
+                                        <div><span class="code-ln">3</span><span class="code-keyword">const</span> <span class="code-ident">rawText</span> = <span class="code-ident">event</span>.<span class="code-ident">data</span>;</div>
+                                        <div><span class="code-ln">4</span><span class="code-keyword">const</span> <span class="code-ident">data</span> = <span class="code-ident">JSON</span>.<span class="code-ident">parse</span>(<span class="code-ident">rawText</span>);</div>
+                                    </div>
+                                    <div class="mockup-status-bar">
+                                        <span>READY</span>
+                                        <span>LN 4, COL 30</span>
+                                    </div>
+                                </div>
+
+                                <!-- Right AI Sidebar -->
+                                <div class="mockup-right-sidebar">
+                                    <div class="mockup-right-tab-bar">
+                                        <div class="mockup-right-tab">DevOps</div>
+                                        <div class="mockup-right-tab active">🤖 Kai AI</div>
+                                    </div>
+                                    <div class="mockup-chat-body">
+                                        <div class="chat-bubble user">
+                                            <div class="chat-bubble-header">
+                                                <span>User</span>
+                                                <span>15:32</span>
+                                            </div>
+                                            How do I fix the WebSocket Blob crash in EventBus?
+                                        </div>
+                                        <div class="chat-bubble ai">
+                                            <div class="chat-bubble-header">
+                                                <span>Kai AI</span>
+                                                <span>15:32</span>
+                                            </div>
+                                            In `EventBus.js`, check if the payload is a `Blob` and parse it:
+                                            <div class="diff-block">
+                                                <span class="diff-del">- const data = JSON.parse(event.data);</span>
+                                                <span class="diff-add">+ const rawText = event.data instanceof Blob ? await event.data.text() : event.data;</span>
+                                                <span class="diff-add">+ const data = JSON.parse(rawText);</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -381,8 +734,55 @@
             <div class="section-container">
                 <div class="ai-layout">
                     <div class="ai-visual">
-                        <div class="screenshot-placeholder" data-label="RedGlitch Studio running on a Tablet / iPad">
-                            <span>📸 Screenshot: Tablet Interface</span>
+                        <div class="mockup-tablet-frame">
+                            <!-- Title Bar -->
+                            <div class="mockup-titlebar">
+                                <div class="mockup-app-icon">
+                                    <div class="mockup-app-icon-mark">◈</div>
+                                    <div class="mockup-app-icon-copy">
+                                        <div class="mockup-brand-line">
+                                            <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
+                                        </div>
+                                        <div class="mockup-brand-tag">IsoPixel Studio</div>
+                                    </div>
+                                </div>
+                                <div class="mockup-app-caption">
+                                    <div class="mockup-caption-chip">
+                                        <span>◈</span> IsoEditor - level_1.json
+                                    </div>
+                                </div>
+                                <div class="mockup-win-controls">
+                                    <span class="mockup-control-btn">✕</span>
+                                </div>
+                            </div>
+                            <div class="tablet-screen">
+                                <div class="tablet-leftbar">
+                                    <div class="tablet-tool-btn active">✎</div>
+                                    <div class="tablet-tool-btn">⎔</div>
+                                    <div class="tablet-tool-btn">🖹</div>
+                                    <div class="tablet-tool-btn">⚙</div>
+                                </div>
+                                <div class="tablet-canvas-view">
+                                    <div class="tablet-canvas-grid"></div>
+                                    <div class="tablet-game-character"></div>
+                                </div>
+                                <div class="tablet-sidebar">
+                                    <div class="mockup-right-tab-bar" style="margin-bottom:8px;">
+                                        <div class="mockup-right-tab">Worlds</div>
+                                        <div class="mockup-right-tab active">Prefabs</div>
+                                        <div class="mockup-right-tab">NPCs</div>
+                                    </div>
+                                    <div class="tablet-palette-item">
+                                        <span>🌲</span> Pine Tree
+                                    </div>
+                                    <div class="tablet-palette-item">
+                                        <span>🌸</span> Vegetation
+                                    </div>
+                                    <div class="tablet-palette-item">
+                                        <span>🧱</span> Brick Wall
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="ai-text">
@@ -666,7 +1066,7 @@ npm run server
     <footer class="footer">
         <div class="footer-container">
             <div class="footer-brand">
-                <img src="assets/logo.png" alt="RedGlitch" class="footer-logo">
+                <img src="favicon.ico" alt="RedGlitch" class="footer-logo">
                 <span>RedGlitch Engine Studio</span>
             </div>
             <div class="footer-links">

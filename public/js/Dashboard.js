@@ -97,8 +97,60 @@ function escapeHtml(text) {
 }
 
 async function launchProject(name) {
-    await fetch('/api/projects/switch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name }) });
-    window.location.href = 'tools.html';
+    try {
+        // Disable all cards to prevent multiple clicks
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.style.pointerEvents = 'none';
+            card.style.opacity = '0.6';
+        });
+        
+        // Show loading state on the clicked card
+        const projectList = document.getElementById('project-list');
+        const allCards = projectList.querySelectorAll('.project-card');
+        allCards.forEach(card => {
+            if (card.querySelector('.p-title')?.textContent.includes(name)) {
+                card.style.opacity = '1';
+                card.style.borderColor = 'var(--accent)';
+            }
+        });
+        
+        console.log(`[Dashboard] Launching project: ${name}`);
+        const res = await fetch('/api/projects/switch', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ name }) 
+        });
+        
+        if (!res.ok) {
+            throw new Error(`API error: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        console.log(`[Dashboard] Project switched to: ${data.active}`);
+        
+        // Verify the project was switched before navigating
+        // Use a longer delay to ensure server state is updated
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Double-check the project was switched
+        const verifyRes = await fetch('/api/projects/current');
+        if (verifyRes.ok) {
+            const verifyData = await verifyRes.json();
+            console.log(`[Dashboard] Verified active project: ${verifyData.name}`);
+        }
+        
+        // Navigate to studio
+        window.location.href = 'tools.html';
+    } catch (error) {
+        console.error('[Dashboard] Error launching project:', error);
+        // Re-enable cards on error
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.style.pointerEvents = 'auto';
+            card.style.opacity = '1';
+            card.style.borderColor = '';
+        });
+        alert(`Failed to launch project: ${error.message}`);
+    }
 }
 
 // --- PROJECT WIZARD ---

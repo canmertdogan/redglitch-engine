@@ -2,6 +2,12 @@ const { app, BrowserWindow, ipcMain, Menu, shell, nativeImage, dialog } = requir
 const path = require('path');
 const { spawn } = require('child_process');
 
+const APP_NAME = 'RedGlitch Game Studio';
+
+// Set the app name before Electron initializes the app menu or lock state.
+app.name = APP_NAME;
+app.setName(APP_NAME);
+
 // --- AI CORTEX MANAGER ---
 class CortexManager {
     constructor() {
@@ -150,12 +156,8 @@ app.commandLine.appendSwitch('enable-unsafe-webgpu');
 
 // Set app name for macOS top bar - MUST BE DONE BEFORE READY
 if (process.platform === 'darwin') {
-    app.name = 'RedGlitch Game Studio';
-    app.setName('RedGlitch Game Studio');
-    console.log('App Name (Initial):', app.name);
-    console.log('App Name via getName():', app.getName());
     app.setAboutPanelOptions({
-        applicationName: 'RedGlitch Game Studio',
+        applicationName: APP_NAME,
         applicationVersion: '1.0.0',
         copyright: 'Copyright © 2026 RedGlitch',
         version: '1.0.0'
@@ -172,7 +174,7 @@ let splashWindow;
 function createMenu() {
     const template = [
         ...(process.platform === 'darwin' ? [{
-            label: 'RedGlitch Game Studio',
+            label: APP_NAME,
             submenu: [
                 { role: 'about' },
                 { type: 'separator' },
@@ -242,7 +244,7 @@ function createWindow() {
         backgroundColor: '#00000000',
         frame: false,
         alwaysOnTop: true,
-        icon: path.join(__dirname, 'public/icons/favicon-6.png'),
+        icon: path.join(__dirname, 'public/icons/icon.png'),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true
@@ -260,8 +262,8 @@ function createWindow() {
         minWidth: 800,
         minHeight: 450,
         show: false, // Don't show until ready
-        title: "RedGlitch Game Studio",
-        icon: path.join(__dirname, 'public/icons/favicon-6.png'),
+        title: APP_NAME,
+        icon: path.join(__dirname, 'public/icons/icon.png'),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -380,7 +382,7 @@ app.whenReady().then(() => {
 
     // Set dock icon for macOS as early as possible
     if (process.platform === 'darwin') {
-        const iconPath = path.join(__dirname, 'public/icons/favicon-6.png');
+        const iconPath = path.join(__dirname, 'public/icons/icon.png');
         try {
             const image = nativeImage.createFromPath(iconPath);
             if (!image.isEmpty()) {

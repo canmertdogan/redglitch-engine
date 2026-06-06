@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>REDGLITCH GAME STUDIO</title>
@@ -9,19 +10,34 @@
     <style>
         :root {
             --bg-deep: #050508;
-            --bg-main: #080c18;
-            --bg-ui: #121a2b;
-            --accent: #ff0000;
-            --text: #cfd8dc;
-            --border: 1px solid #1f2b42;
+            --bg-main: rgba(12, 12, 20, 0.82);
+            --bg-ui: rgba(20, 18, 30, 0.92);
+            --bg-card: rgba(12, 12, 20, 0.8);
+            --bg-card-hover: rgba(20, 18, 30, 0.95);
+            --accent: #ff1e27;
+            --accent-glow: rgba(255, 30, 39, 0.35);
+            --accent-soft: rgba(255, 30, 39, 0.1);
+            --text: #e0e0e0;
+            --text-muted: #777;
+            --text-dim: #444;
+            --border: rgba(255, 255, 255, 0.05);
+            --border-accent: rgba(255, 30, 39, 0.15);
+            --edge-border: 1px solid rgba(255, 255, 255, 0.08);
+            --glass-blur: blur(12px);
             --font-pixel: 'VT323', monospace;
             --danger: #e74c3c;
+            --green: #2ecc71;
         }
 
-        * { box-sizing: border-box; user-select: none; cursor: default; }
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            cursor: default;
+        }
 
         body {
-            margin: 0; padding: 0;
+            margin: 0;
+            padding: 0;
             background-color: var(--bg-deep);
             color: var(--text);
             font-family: var(--font-pixel);
@@ -30,295 +46,1176 @@
             overflow: hidden;
             display: grid;
             grid-template-columns: 220px 1fr;
-            grid-template-rows: 40px 1fr;
-            grid-template-areas: 
-                "header header"
+            grid-template-rows: 40px 38px 1fr;
+            grid-template-areas:
+                "titlebar titlebar"
+                "toolbar toolbar"
                 "sidebar content";
+            position: relative;
         }
 
-        /* --- BACKGROUND & CRT --- */
-        #wallpaper-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
-            background: #000;
-            overflow: hidden;
-            will-change: transform;
-            transform: translateZ(0);
-            backface-visibility: hidden;
-        }
-        #blackhole-canvas-dash, #mesh-canvas-dash {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            will-change: transform;
-        }
-        #ui-overlay-tint-dash {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.95) 100%);
-            z-index: 3;
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                linear-gradient(rgba(255, 30, 39, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 30, 39, 0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: grid-drift 50s linear infinite;
+            pointer-events: none;
         }
 
         body::after {
-            content: " ";
-            display: block;
-            position: fixed; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 2px;
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50vh;
+            z-index: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(255, 30, 39, 0.06) 0%, transparent 70%);
             pointer-events: none;
-            z-index: 10;
-            will-change: contents;
         }
 
-        /* --- HEADER --- */
-        .top-bar {
-            grid-area: header;
-            background: rgba(0,0,0,0.8);
-            border-bottom: 1px solid #1f2b42;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 0 0 15px;
-            z-index: 10;
-            -webkit-app-region: drag;
+        @keyframes grid-drift {
+            0% { background-position: 0 0; }
+            100% { background-position: 60px 60px; }
         }
-        .brand { font-size: 18px; color: var(--accent); letter-spacing: 2px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
-        .brand-text { border-right: 1px solid var(--accent); white-space: nowrap; overflow: hidden; padding-right: 5px; }
-        .brand span { font-size: 14px; color: #555; margin-left: 5px; font-weight: normal; }
-        
-        .sys-stats { 
-            display: flex; align-items: center; gap: 15px; font-size: 16px; color: #666; 
-            -webkit-app-region: no-drag;
+
+        /* --- TITLEBAR --- */
+        .top-bar {
+            grid-area: titlebar;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0;
+            z-index: 1;
+            -webkit-app-region: drag;
+            position: relative;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
             height: 100%;
         }
 
-        .window-controls { display: flex; height: 100%; -webkit-app-region: no-drag; }
-        .win-btn { width: 40px; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #444; transition: all 0.1s; }
-        .win-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
-        .win-btn.close:hover { background: var(--danger); color: #fff; }
+        .app-icon {
+            width: auto;
+            padding: 0 15px;
+            gap: 10px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.35);
+            color: var(--accent);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            font-family: var(--font-pixel);
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .app-icon img {
+            width: 18px;
+            height: 18px;
+            image-rendering: pixelated;
+        }
+
+        .app-caption {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            letter-spacing: 1px;
+            font-weight: bold;
+            color: var(--text);
+            pointer-events: none;
+            z-index: 1;
+            white-space: nowrap;
+        }
+
+        .sys-stats {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: var(--text-muted);
+            -webkit-app-region: no-drag;
+            height: 100%;
+            padding-right: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0 8px;
+        }
+
+        .window-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+        }
+
+        .win-btn {
+            width: 45px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-dim);
+            transition: all 0.25s ease;
+            border: none;
+            background: transparent;
+        }
+
+        .win-btn:hover {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .win-btn.close:hover {
+            background: #e81123;
+            color: #fff;
+        }
+
+        /* --- QUICK ACCESS TOOLBAR --- */
+        #quick-toolbar {
+            grid-area: toolbar;
+            height: 38px;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            gap: 2px;
+            z-index: 1;
+            overflow-x: auto;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 0 4px;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            margin-right: 2px;
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .tool-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-dim);
+            width: 30px;
+            height: 28px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            border-radius: 0;
+            transition: all 0.25s ease;
+            padding: 0;
+        }
+
+        .tool-btn:hover {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-color: var(--border-accent);
+            box-shadow: 0 0 15px rgba(255, 30, 39, 0.08);
+        }
+
+        .tool-btn:active,
+        .tool-btn.active {
+            background: rgba(255, 30, 39, 0.15);
+            color: #fff;
+            border-color: var(--accent);
+            transform: translateY(1px);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .tool-btn.primary {
+            color: var(--accent);
+        }
+
+        .tool-btn.primary:hover {
+            background: var(--accent-soft);
+            border-color: var(--border-accent);
+            color: #fff;
+        }
 
         /* --- SIDEBAR --- */
         .sidebar {
             grid-area: sidebar;
-            background: rgba(8, 12, 24, 0.8);
-            border-right: 1px solid #1f2b42;
-            display: flex; flex-direction: column;
-            padding: 10px 0;
-            z-index: 10;
-            backdrop-filter: blur(5px);
+            background: var(--bg-card);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-right: var(--edge-border);
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            z-index: 1;
+            overflow: hidden;
         }
-        
-        .nav-group-label { padding: 8px 15px; font-size: 12px; color: #444; text-transform: uppercase; letter-spacing: 1px; }
+
+        .sidebar-brand {
+            padding: 16px 14px 14px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .sidebar-brand-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-brand-icon {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.35);
+            color: var(--accent);
+            box-shadow: 0 0 20px rgba(255, 30, 39, 0.08);
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand-copy {
+            min-width: 0;
+        }
+
+        .sidebar-kicker {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 2px;
+        }
+
+        .sidebar-title {
+            font-size: 24px;
+            line-height: 1;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .sidebar-subtitle {
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .sidebar-quick {
+            padding: 12px 12px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .sidebar-action {
+            appearance: none;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-family: var(--font-pixel);
+        }
+
+        .sidebar-action:hover {
+            background: var(--accent-soft);
+            color: #fff;
+            border-color: var(--border-accent);
+            box-shadow: 0 0 15px rgba(255, 30, 39, 0.08);
+        }
+
+        .sidebar-action.primary {
+            color: var(--accent);
+            border-color: var(--border-accent);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 8px 12px;
+        }
+
+        .nav-group {
+            margin-bottom: 10px;
+        }
+
+        .nav-group-label {
+            padding: 8px 8px 10px;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
 
         .nav-btn {
-            padding: 8px 15px; cursor: pointer; display: flex; align-items: center; gap: 12px;
-            font-size: 18px; color: #888; transition: all 0.1s; border-left: 2px solid transparent;
+            padding: 11px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #888;
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+            background: rgba(0, 0, 0, 0.25);
+            border-left: 3px solid transparent;
+            margin: 0 4px 6px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
         }
-        .nav-btn:hover { background: rgba(255,255,255,0.02); color: #fff; }
+
+        .nav-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .nav-main span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .nav-hint {
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            white-space: nowrap;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-card-hover);
+            color: #ccc;
+            border-color: rgba(255, 30, 39, 0.2);
+            border-left-color: rgba(255, 30, 39, 0.5);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
         .nav-btn.active {
-            background: rgba(255, 0, 0, 0.05); color: var(--accent); border-left-color: var(--accent);
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-left-color: var(--accent);
+            border-color: var(--border-accent);
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(255, 30, 39, 0.08);
         }
-        .nav-btn i { width: 20px; text-align: center; font-size: 14px; }
-        
-        .nav-btn.coming-soon { color: #444; pointer-events: none; cursor: default; opacity: 0.5; }
-        .sidebar-footer { margin-top: auto; padding: 15px; font-size: 11px; color: #333; text-align: center; border-top: 1px solid #111; }
+
+        .nav-btn i {
+            width: 16px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .nav-btn.active .nav-hint,
+        .nav-btn:hover .nav-hint {
+            color: var(--accent);
+        }
+
+        .nav-btn.launch {
+            color: var(--accent);
+            background: rgba(255, 30, 39, 0.06);
+            border-left-color: var(--accent);
+        }
+
+        .nav-btn.launch:hover {
+            background: rgba(255, 30, 39, 0.12);
+            color: #fff;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 12px 14px;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: left;
+            border-top: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.25);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            line-height: 1.4;
+        }
+
+        .sidebar-footer strong {
+            display: block;
+            color: #fff;
+            letter-spacing: 3px;
+            margin-top: 4px;
+        }
 
         /* --- CONTENT AREA --- */
-        .main-content { grid-area: content; padding: 20px; overflow-y: auto; position: relative; background: rgba(5, 5, 8, 0.4); }
-
-        .view-section { display: none; animation: fadeIn 0.1s ease-out; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        h1 { margin-top: 0; border-bottom: 1px solid #1f2b42; padding-bottom: 8px; color: #fff; font-weight: normal; font-size: 24px; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-pixel); }
-        
-        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
-        
-        .project-card {
-            background: rgba(10, 14, 20, 0.95);
-            border: 1px solid #1f2b42;
-            padding: 15px;
-            display: flex; flex-direction: column;
-            gap: 8px; cursor: pointer; transition: all 0.1s; position: relative;
+        .main-content {
+            grid-area: content;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+            background: rgba(5, 5, 8, 0.35);
+            z-index: 1;
         }
-        .project-card:hover { border-color: var(--accent); background: rgba(14, 20, 32, 0.9); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .project-card:active { transform: translateY(1px); }
-        
-        .p-icon { font-size: 28px; color: #333; margin-bottom: 5px; }
-        .project-card:hover .p-icon { color: var(--accent); }
-        
-        .p-title { font-size: 20px; color: #fff; font-weight: bold; }
-        .p-path { font-size: 13px; color: #555; word-break: break-all; font-family: monospace; }
-        .p-meta { margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; font-size: 13px; color: #444; border-top: 1px solid #111; }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.1s ease-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        h1 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            color: #fff;
+            font-weight: normal;
+            font-size: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-pixel);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 15px;
+        }
+
+        .project-card {
+            background: var(--bg-card);
+            border: var(--edge-border);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+            min-height: 180px;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .project-card:hover {
+            border-color: rgba(255, 30, 39, 0.2);
+            background: var(--bg-card-hover);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 30, 39, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .project-card:hover::before {
+            opacity: 1;
+        }
+
+        .project-card:active {
+            transform: translateY(1px);
+        }
+
+        .p-icon {
+            font-size: 32px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .project-card:hover .p-icon {
+            color: var(--accent);
+        }
+
+        .p-title {
+            font-size: 18px;
+            color: #fff;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .p-path {
+            font-size: 12px;
+            color: var(--text-muted);
+            word-break: break-all;
+            font-family: monospace;
+        }
+
+        .p-meta {
+            margin-top: auto;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid var(--border);
+        }
 
         .btn-action {
-            background: transparent; color: var(--accent);
-            border: 1px solid var(--accent); padding: 5px 12px; font-family: inherit; font-size: 16px;
-            cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
-            transition: all 0.1s;
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--border-accent);
+            padding: 5px 12px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        .btn-action:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
+
+        .btn-action:hover {
+            background: var(--accent-soft);
+            color: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
 
         /* --- LOG MODAL --- */
         #log-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 900;
-            display: none; align-items: center; justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 900;
+            display: none;
+            align-items: center;
+            justify-content: center;
             backface-visibility: hidden;
             transform: translateZ(0);
         }
-        #log-modal.active { display: flex; animation: fadeIn 0.2s; }
-        .log-box { width: 800px; height: 500px; background: #111; border: 2px solid var(--border); display: flex; flex-direction: column; box-shadow: 0 0 30px #000; }
-        .log-header { padding: 15px; border-bottom: 2px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #111; }
-        .log-content { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: 'Consolas', monospace; font-size: 16px; background: #000; }
-        .log-entry { padding: 4px 8px; border-bottom: 1px solid #222; display: flex; gap: 10px; }
-        
-        #status-indicator { cursor: pointer; display: none; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-weight: bold; pointer-events: auto !important; z-index: 950; }
-        #status-indicator.error { display: flex; color: #e74c3c; background: rgba(231, 76, 60, 0.1); border: 1px solid #e74c3c; }
-        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 800; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: #111; border: 2px solid var(--accent); padding: 15px 20px; color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.5); animation: slideUp 0.3s ease-out; display: flex; align-items: center; gap: 10px; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        #log-modal.active {
+            display: flex;
+            animation: fadeIn 0.2s;
+        }
+
+        .log-box {
+            width: 800px;
+            height: 500px;
+            background: var(--bg-card);
+            border: var(--edge-border);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .log-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        .log-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 16px;
+            background: rgba(5, 5, 8, 0.85);
+        }
+
+        .log-entry {
+            padding: 4px 8px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            gap: 10px;
+        }
+
+        #status-indicator {
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 8px;
+            border-radius: 0;
+            font-weight: bold;
+            pointer-events: auto !important;
+            z-index: 950;
+        }
+
+        #status-indicator.error {
+            display: flex;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid #e74c3c;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 800;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border-accent);
+            border-left: 3px solid var(--accent);
+            padding: 15px 20px;
+            color: #fff;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+            animation: slideUp 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
 
         /* --- PROJECT WIZARD --- */
-        .wizard-container { max-width: 700px; margin: 20px auto; background: rgba(10, 14, 20, 0.95); border: 1px solid #1f2b42; padding: 30px; }
-        .wizard-steps { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; }
-        .wizard-steps::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: #1f2b42; z-index: 0; }
-        .wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; z-index: 1; }
-        .wizard-step-circle { width: 30px; height: 30px; border-radius: 50%; background: #1f2b42; color: #666; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; transition: all 0.2s; }
-        .wizard-step.active .wizard-step-circle { background: var(--accent); color: #000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.5); }
-        .wizard-step.completed .wizard-step-circle { background: #2ecc71; color: #fff; }
-        .wizard-step-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-        .wizard-step.active .wizard-step-label { color: var(--accent); }
-        
-        .wizard-content { min-height: 300px; margin-bottom: 30px; }
-        .wizard-content > div { display: none; }
-        .wizard-content > div.active { display: block; animation: fadeIn 0.3s; }
-        
-        .engine-selection { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-        .engine-selection.six-col { grid-template-columns: repeat(3, 1fr); }
-        .engine-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; text-align: center; position: relative; }
-        .engine-card:hover { border-color: var(--accent); background: rgba(255, 0, 0, 0.05); }
-        .engine-card.selected { border-color: var(--accent); background: rgba(255, 0, 0, 0.1); box-shadow: 0 0 20px rgba(255, 0, 0, 0.3); }
-        .engine-card i { font-size: 48px; color: #666; margin-bottom: 15px; display: block; }
-        .engine-card.selected i { color: var(--accent); }
-        .engine-card-badge { position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 1px; }
-        .badge-2d  { background: #1a3a1a; color: #44dd88; border: 1px solid #2a5a2a; }
-        .badge-3d  { background: #1a1a3a; color: #4488ff; border: 1px solid #2a2a5a; }
-        .quality-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
-        .quality-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 12px 8px; cursor: pointer; text-align: center; transition: all 0.2s; border-radius: 4px; }
-        .quality-card:hover { border-color: #4488ff; }
-        .quality-card.selected { border-color: #4488ff; background: rgba(68,136,255,0.1); }
-        .quality-card-title { font-size: 13px; color: #fff; font-weight: bold; }
-        .quality-card-desc  { font-size: 11px; color: #666; margin-top: 4px; line-height: 1.3; }
-        .engine-card-title { font-size: 20px; color: #fff; margin-bottom: 8px; }
-        .engine-card-desc { font-size: 14px; color: #888; line-height: 1.4; }
-        
-        .template-selection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .template-card { background: rgba(0,0,0,0.5); border: 2px solid #1f2b42; padding: 20px; cursor: pointer; transition: all 0.2s; }
-        .template-card:hover { border-color: var(--accent); }
-        .template-card.selected { border-color: var(--accent); background: rgba(255, 0, 0, 0.1); }
-        
-        .wizard-actions { display: flex; justify-content: space-between; align-items: center; }
-        
+        .wizard-container {
+            max-width: 700px;
+            margin: 20px auto;
+            background: var(--bg-card);
+            border: var(--edge-border);
+            padding: 30px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        .wizard-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .wizard-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border);
+            z-index: 0;
+        }
+
+        .wizard-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .wizard-step-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.35);
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+        }
+
+        .wizard-step.active .wizard-step-circle {
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .wizard-step.completed .wizard-step-circle {
+            background: #2ecc71;
+            color: #fff;
+        }
+
+        .wizard-step-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .wizard-step.active .wizard-step-label {
+            color: var(--accent);
+        }
+
+        .wizard-content {
+            min-height: 300px;
+            margin-bottom: 30px;
+        }
+
+        .wizard-content>div {
+            display: none;
+        }
+
+        .wizard-content>div.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .engine-selection {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .engine-selection.six-col {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .engine-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: var(--edge-border);
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .engine-card:hover {
+            border-color: rgba(255, 30, 39, 0.2);
+            background: var(--accent-soft);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .engine-card.selected {
+            border-color: var(--accent);
+            background: rgba(255, 30, 39, 0.1);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .engine-card i {
+            font-size: 48px;
+            color: #666;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .engine-card.selected i {
+            color: var(--accent);
+        }
+
+        .engine-card-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .badge-2d {
+            background: #1a3a1a;
+            color: #44dd88;
+            border: 1px solid #2a5a2a;
+        }
+
+        .badge-3d {
+            background: #1a1a3a;
+            color: #4488ff;
+            border: 1px solid #2a2a5a;
+        }
+
+        .quality-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .quality-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: var(--edge-border);
+            padding: 12px 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.25s ease;
+            border-radius: 0;
+        }
+
+        .quality-card:hover {
+            border-color: rgba(255, 30, 39, 0.2);
+            background: var(--accent-soft);
+        }
+
+        .quality-card.selected {
+            border-color: var(--accent);
+            background: rgba(255, 30, 39, 0.1);
+        }
+
+        .quality-card-title {
+            font-size: 13px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .quality-card-desc {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+
+        .engine-card-title {
+            font-size: 20px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .engine-card-desc {
+            font-size: 14px;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        .template-selection {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .template-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: var(--edge-border);
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .template-card:hover {
+            border-color: rgba(255, 30, 39, 0.2);
+            background: var(--accent-soft);
+        }
+
+        .template-card.selected {
+            border-color: var(--accent);
+            background: rgba(255, 30, 39, 0.1);
+        }
+
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         /* --- PROJECT CARD ACTIONS --- */
-        .project-actions { position: absolute; top: 10px; right: 10px; display: none; gap: 5px; }
-        .project-card:hover .project-actions { display: flex; }
-        .project-action-btn { width: 30px; height: 30px; background: rgba(0,0,0,0.8); border: 1px solid #333; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.1s; }
-        .project-action-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
-        .project-action-btn.danger:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
-        
+        .project-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: none;
+            gap: 5px;
+        }
+
+        .project-card:hover .project-actions {
+            display: flex;
+        }
+
+        .project-action-btn {
+            width: 30px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: var(--text-muted);
+        }
+
+        .project-action-btn:hover {
+            background: var(--accent-soft);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        .project-action-btn.danger:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff;
+        }
+
         /* --- CONFIRMATION MODAL --- */
-        .modal-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8); z-index: 850; 
-            display: none; align-items: center; justify-content: center;
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 850;
+            display: none;
+            align-items: center;
+            justify-content: center;
             backface-visibility: hidden;
             transform: translateZ(0);
         }
-        .modal-overlay.active { display: flex; animation: fadeIn 0.2s; }
-        .modal-box { background: #0a0e14; border: 2px solid #1f2b42; padding: 30px; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-        .modal-title { font-size: 24px; color: #fff; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .modal-content { color: #ccc; line-height: 1.6; margin-bottom: 25px; }
-        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-box {
+            background: #0a0e14;
+            border: 2px solid #1f2b42;
+            padding: 30px;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #fff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-content {
+            color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
     </style>
 </head>
-<body>
 
-    <div id="wallpaper-container">
-        <div id="blackhole-container-dash"></div>
-        <canvas id="mesh-canvas-dash"></canvas>
-        <div id="ui-overlay-tint-dash"></div>
-    </div>
+<body>
 
     <!-- Header -->
     <header class="top-bar">
-        <div class="brand">
-            <img src="/favicon.ico" style="width:24px; height:24px; image-rendering: pixelated;"> 
-            <div class="brand-text" id="typing-brand"></div>
-            <span>v7.0</span>
+        <div class="title-group">
+            <div class="app-icon">
+                <img src="/favicon.ico" alt="Logo">
+                <span><span style="color:var(--accent);">RED</span><span style="color:#fff;">GLITCH</span></span>
+            </div>
         </div>
+        <div class="app-caption" id="typing-brand"></div>
         <div class="sys-stats">
             <div class="stat-item" id="status-indicator" onclick="LogManager.show()">
                 <i class="fas fa-exclamation-circle"></i> <span id="status-text">0</span>
             </div>
             <div class="stat-item" style="color:var(--accent)" id="clock">00:00</div>
-            
+
             <div class="window-controls">
-                <div class="win-btn" onclick="if(window.electronAPI) window.electronAPI.minimize()"><i class="fas fa-minus"></i></div>
-                <div class="win-btn close" onclick="if(window.electronAPI) window.electronAPI.close()"><i class="fas fa-times"></i></div>
+                <div class="win-btn" onclick="if(window.electronAPI) window.electronAPI.minimize()"><i
+                        class="fas fa-minus"></i></div>
+                <div class="win-btn close" onclick="if(window.electronAPI) window.electronAPI.close()"><i
+                        class="fas fa-times"></i></div>
             </div>
         </div>
     </header>
 
+    <!-- QUICK ACCESS TOOLBAR -->
+    <div id="quick-toolbar">
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Refresh Projects" onclick="View.show('projects')"><i class="fas fa-sync"></i></button>
+            <button class="tool-btn" title="Create Project" onclick="View.show('create')"><i class="fas fa-plus"></i></button>
+            <button class="tool-btn primary" title="Open Studio" onclick="window.location.href='tools.html'"><i class="fas fa-rocket"></i></button>
+        </div>
+        <div class="toolbar-group">
+            <button class="tool-btn" title="Project Logs" onclick="LogManager.show()"><i class="fas fa-terminal"></i></button>
+            <button class="tool-btn" title="Settings" onclick="View.show('settings')"><i class="fas fa-cog"></i></button>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
-        <nav>
-            <div class="nav-group-label">Workspace</div>
-            <div class="nav-btn active" onclick="View.show('projects')">
-                <i class="fas fa-th-large"></i> My Projects
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-row">
+                <div class="sidebar-brand-icon"><i class="fas fa-rocket"></i></div>
+                <div class="sidebar-brand-copy">
+                    <div class="sidebar-kicker">Launcher</div>
+                    <div class="sidebar-title">Project Hub</div>
+                    <div class="sidebar-subtitle">Choose a workspace</div>
+                </div>
             </div>
-            <div class="nav-btn" onclick="View.show('create')">
-                <i class="fas fa-plus-square"></i> New Project
+        </div>
+
+        <div class="sidebar-quick">
+            <div class="sidebar-quick-grid">
+                <button class="sidebar-action" onclick="View.show('projects')"><i class="fas fa-sync"></i> Refresh</button>
+                <button class="sidebar-action" onclick="View.show('create')"><i class="fas fa-plus"></i> New</button>
+                <button class="sidebar-action primary" onclick="window.location.href='tools.html'"><i class="fas fa-rocket"></i> Studio</button>
+                <button class="sidebar-action" onclick="LogManager.show()"><i class="fas fa-terminal"></i> Logs</button>
             </div>
-            <div class="nav-btn" onclick="View.show('templates')">
-                <i class="fas fa-layer-group"></i> Templates
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-group-label">Workspace</div>
+                <div class="nav-btn active" onclick="View.show('projects')">
+                    <div class="nav-main"><i class="fas fa-th-large"></i><span>My Projects</span></div>
+                    <span class="nav-hint">browse</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('create')">
+                    <div class="nav-main"><i class="fas fa-plus-square"></i><span>New Project</span></div>
+                    <span class="nav-hint">create</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('templates')">
+                    <div class="nav-main"><i class="fas fa-layer-group"></i><span>Templates</span></div>
+                    <span class="nav-hint">start</span>
+                </div>
             </div>
 
-            <div class="nav-group-label">Studio</div>
-            <div class="nav-btn" id="btn-launch-studio" onclick="window.location.href='tools.html'" style="color:var(--accent); background:rgba(255, 0, 0, 0.05); border-left: 4px solid var(--accent);">
-                <i class="fas fa-rocket"></i> Open Studio
-            </div>
-            <div class="nav-btn" onclick="View.show('assets')">
-                <i class="fas fa-images"></i> Asset Library
-            </div>
-            <div class="nav-btn" onclick="View.show('marketplace')">
-                <i class="fas fa-store"></i> Marketplace
-            </div>
-
-            <div class="nav-group-label">Resources</div>
-            <div class="nav-btn" onclick="View.show('docs')">
-                <i class="fas fa-book"></i> Documentation
-            </div>
-            <div class="nav-btn" onclick="View.show('tutorials')">
-                <i class="fas fa-graduation-cap"></i> Tutorials
-            </div>
-            <div class="nav-btn" onclick="View.show('community')">
-                <i class="fas fa-users"></i> Community
+            <div class="nav-group">
+                <div class="nav-group-label">Studio</div>
+                <div class="nav-btn launch" id="btn-launch-studio" onclick="window.location.href='tools.html'">
+                    <div class="nav-main"><i class="fas fa-rocket"></i><span>Open Studio</span></div>
+                    <span class="nav-hint">launch</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('assets')">
+                    <div class="nav-main"><i class="fas fa-images"></i><span>Asset Library</span></div>
+                    <span class="nav-hint">media</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('marketplace')">
+                    <div class="nav-main"><i class="fas fa-store"></i><span>Marketplace</span></div>
+                    <span class="nav-hint">shop</span>
+                </div>
             </div>
 
-            <div class="nav-group-label">System</div>
-            <div class="nav-btn" onclick="View.show('terminal')">
-                <i class="fas fa-terminal"></i> Terminal
+            <div class="nav-group">
+                <div class="nav-group-label">Resources</div>
+                <div class="nav-btn" onclick="View.show('docs')">
+                    <div class="nav-main"><i class="fas fa-book"></i><span>Documentation</span></div>
+                    <span class="nav-hint">help</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('tutorials')">
+                    <div class="nav-main"><i class="fas fa-graduation-cap"></i><span>Tutorials</span></div>
+                    <span class="nav-hint">learn</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('community')">
+                    <div class="nav-main"><i class="fas fa-users"></i><span>Community</span></div>
+                    <span class="nav-hint">social</span>
+                </div>
             </div>
-            <div class="nav-btn" onclick="View.show('updates')">
-                <i class="fas fa-download"></i> Updates
-            </div>
-            <div class="nav-btn" onclick="View.show('settings')">
-                <i class="fas fa-cogs"></i> Settings
+
+            <div class="nav-group">
+                <div class="nav-group-label">System</div>
+                <div class="nav-btn" onclick="View.show('terminal')">
+                    <div class="nav-main"><i class="fas fa-terminal"></i><span>Terminal</span></div>
+                    <span class="nav-hint">shell</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('updates')">
+                    <div class="nav-main"><i class="fas fa-download"></i><span>Updates</span></div>
+                    <span class="nav-hint">sync</span>
+                </div>
+                <div class="nav-btn" onclick="View.show('settings')">
+                    <div class="nav-main"><i class="fas fa-cogs"></i><span>Settings</span></div>
+                    <span class="nav-hint">prefs</span>
+                </div>
             </div>
         </nav>
         <div class="sidebar-footer">
-            &copy; 2026 RedGlitch Corp.<br>
-            STABLE_BUILD v7.0.1
+            &copy; 2026 RedGlitch Corp.
+            <strong>Stable Build v7.0.1</strong>
         </div>
     </aside>
 
     <!-- Main Content -->
-    <main class="main-content"> 
+    <main class="main-content">
         <div id="view-projects" class="view-section active">
             <h1>
                 My Projects
@@ -363,12 +1260,17 @@
                         <h2 style="color:var(--accent); margin-top:0;">Name Your Project</h2>
                         <p style="color:#888; margin-bottom: 20px;">Choose a unique name for your game project.</p>
                         <div style="margin-bottom: 15px;">
-                            <label style="display: block; color: var(--accent); margin-bottom: 8px;">Project Name *</label>
-                            <input type="text" id="wizard-proj-name" style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 12px; outline: none;" placeholder="My Awesome Game">
+                            <label style="display: block; color: var(--accent); margin-bottom: 8px;">Project Name
+                                *</label>
+                            <input type="text" id="wizard-proj-name"
+                                style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 12px; outline: none;"
+                                placeholder="My Awesome Game">
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; color: var(--accent); margin-bottom: 8px;">Author Name</label>
-                            <input type="text" id="wizard-author" style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 12px; outline: none;" placeholder="Your Name">
+                            <input type="text" id="wizard-author"
+                                style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 12px; outline: none;"
+                                placeholder="Your Name">
                         </div>
                     </div>
 
@@ -376,13 +1278,15 @@
                     <div class="wizard-page" data-page="2">
                         <h2 style="color:var(--accent); margin-top:0;">Select Engine Type</h2>
                         <p style="color:#888; margin-bottom: 12px;">Choose the type of game you want to create.</p>
-                        <p style="color:#4488ff; font-size:12px; margin-bottom:16px; letter-spacing:1px;">── 2D ENGINES ──────────────────────</p>
+                        <p style="color:#4488ff; font-size:12px; margin-bottom:16px; letter-spacing:1px;">── 2D ENGINES
+                            ──────────────────────</p>
                         <div class="engine-selection six-col" style="margin-bottom:20px;">
                             <div class="engine-card" onclick="Wizard.selectEngine('rpg-topdown')">
                                 <span class="engine-card-badge badge-2d">2D</span>
                                 <i class="fas fa-map"></i>
                                 <div class="engine-card-title">RPG Top-Down</div>
-                                <div class="engine-card-desc">Classic 2D RPG with exploration, quests, and dialogue</div>
+                                <div class="engine-card-desc">Classic 2D RPG with exploration, quests, and dialogue
+                                </div>
                             </div>
                             <div class="engine-card" onclick="Wizard.selectEngine('platformer-2d')">
                                 <span class="engine-card-badge badge-2d">2D</span>
@@ -397,19 +1301,22 @@
                                 <div class="engine-card-desc">3D-style isometric world with pixel art</div>
                             </div>
                         </div>
-                        <p style="color:#4488ff; font-size:12px; margin-bottom:16px; letter-spacing:1px;">── 3D ENGINES ──────────────────────</p>
+                        <p style="color:#4488ff; font-size:12px; margin-bottom:16px; letter-spacing:1px;">── 3D ENGINES
+                            ──────────────────────</p>
                         <div class="engine-selection six-col">
                             <div class="engine-card" onclick="Wizard.selectEngine('topdown-3d')">
                                 <span class="engine-card-badge badge-3d">3D</span>
                                 <i class="fas fa-street-view"></i>
                                 <div class="engine-card-title">Top-Down 3D</div>
-                                <div class="engine-card-desc">Low-poly 3D RPG/adventure with overhead camera and physics</div>
+                                <div class="engine-card-desc">Low-poly 3D RPG/adventure with overhead camera and physics
+                                </div>
                             </div>
                             <div class="engine-card" onclick="Wizard.selectEngine('fps-3d')">
                                 <span class="engine-card-badge badge-3d">3D</span>
                                 <i class="fas fa-crosshairs"></i>
                                 <div class="engine-card-title">FPS / First Person</div>
-                                <div class="engine-card-desc">First-person shooter or explorer with voxel world editor</div>
+                                <div class="engine-card-desc">First-person shooter or explorer with voxel world editor
+                                </div>
                             </div>
                             <div class="engine-card" onclick="Wizard.selectEngine('platformer-3d')">
                                 <span class="engine-card-badge badge-3d">3D</span>
@@ -424,7 +1331,8 @@
                     <div class="wizard-page" data-page="3">
                         <h2 style="color:var(--accent); margin-top:0;">Render Quality</h2>
                         <div id="quality-3d-section">
-                            <p style="color:#888; margin-bottom:12px;">Select the visual quality level for your 3D project. Lower = better performance on older hardware.</p>
+                            <p style="color:#888; margin-bottom:12px;">Select the visual quality level for your 3D
+                                project. Lower = better performance on older hardware.</p>
                             <div class="quality-grid" id="quality-grid">
                                 <div class="quality-card" onclick="Wizard.selectQuality('low')">
                                     <div class="quality-card-title">Low</div>
@@ -444,19 +1352,25 @@
                                 </div>
                             </div>
                             <div style="margin-top:18px; display:flex; gap:20px; flex-wrap:wrap;">
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#ccc; font-size:14px;">
-                                    <input type="checkbox" id="opt-physics3d" checked style="width:16px; height:16px; accent-color:#4488ff;">
+                                <label
+                                    style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#ccc; font-size:14px;">
+                                    <input type="checkbox" id="opt-physics3d" checked
+                                        style="width:16px; height:16px; accent-color:#4488ff;">
                                     Enable 3D Physics (cannon-es)
                                 </label>
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#ccc; font-size:14px;">
-                                    <input type="checkbox" id="opt-shadows" checked style="width:16px; height:16px; accent-color:#4488ff;">
+                                <label
+                                    style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#ccc; font-size:14px;">
+                                    <input type="checkbox" id="opt-shadows" checked
+                                        style="width:16px; height:16px; accent-color:#4488ff;">
                                     Cast Shadows
                                 </label>
                             </div>
                         </div>
                         <div id="quality-2d-section" style="display:none;">
-                            <p style="color:#888;">2D engines use a fixed rendering pipeline. No quality settings required.</p>
-                            <p style="color:#555; font-size:13px; margin-top:20px;"><i class="fas fa-check-circle" style="color:#44dd88"></i> Proceed to select a template.</p>
+                            <p style="color:#888;">2D engines use a fixed rendering pipeline. No quality settings
+                                required.</p>
+                            <p style="color:#555; font-size:13px; margin-top:20px;"><i class="fas fa-check-circle"
+                                    style="color:#44dd88"></i> Proceed to select a template.</p>
                         </div>
                     </div>
 
@@ -467,11 +1381,13 @@
                         <div class="template-selection">
                             <div class="template-card selected" onclick="Wizard.selectTemplate('blank')">
                                 <h3 style="color:#fff; margin-top:0;">⚡ Blank Project</h3>
-                                <p style="color:#888; font-size:14px; line-height:1.4;">Start from scratch with an empty project structure</p>
+                                <p style="color:#888; font-size:14px; line-height:1.4;">Start from scratch with an empty
+                                    project structure</p>
                             </div>
                             <div class="template-card" onclick="Wizard.selectTemplate('demo')">
                                 <h3 style="color:#fff; margin-top:0;">🎮 Demo Project</h3>
-                                <p style="color:#888; font-size:14px; line-height:1.4;">Pre-configured demo with sample assets and logic</p>
+                                <p style="color:#888; font-size:14px; line-height:1.4;">Pre-configured demo with sample
+                                    assets and logic</p>
                             </div>
                         </div>
                     </div>
@@ -492,7 +1408,8 @@
                                 <span style="color:#888;">Engine Type:</span>
                                 <span style="color:var(--accent); font-weight:bold;" id="confirm-engine">-</span>
                             </div>
-                            <div style="margin-bottom:12px; display:flex; justify-content:space-between;" id="confirm-quality-row">
+                            <div style="margin-bottom:12px; display:flex; justify-content:space-between;"
+                                id="confirm-quality-row">
                                 <span style="color:#888;">Render Quality:</span>
                                 <span style="color:#4488ff;" id="confirm-quality">-</span>
                             </div>
@@ -524,20 +1441,25 @@
 
         <div id="view-terminal" class="view-section">
             <h1>Terminal</h1>
-            <div style="background: #000; border: 1px solid #1f2b42; height: 60vh; padding: 12px; font-family: monospace; display: flex; flex-direction: column; color: #2ecc71; font-size: 14px;">
-                <div id="term-out" style="flex-grow: 1; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap;">RedGlitch Terminal v1.0 ready</div>
+            <div
+                style="background: #000; border: 1px solid #1f2b42; height: 60vh; padding: 12px; font-family: monospace; display: flex; flex-direction: column; color: #2ecc71; font-size: 14px;">
+                <div id="term-out" style="flex-grow: 1; overflow-y: auto; margin-bottom: 10px; white-space: pre-wrap;">
+                    RedGlitch Terminal v1.0 ready</div>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <span style="color:var(--accent)">></span>
-                    <input type="text" id="term-in" style="background: transparent; border: none; color: #fff; font-family: inherit; font-size: 16px; width: 100%; outline: none;">
+                    <input type="text" id="term-in"
+                        style="background: transparent; border: none; color: #fff; font-family: inherit; font-size: 16px; width: 100%; outline: none;">
                 </div>
             </div>
         </div>
 
         <div id="view-docs" class="view-section">
             <h1>Documentation</h1>
-            <div style="max-width: 800px; margin: 20px auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px);">
+            <div
+                style="max-width: 800px; margin: 20px auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px);">
                 <h2 style="color:var(--accent); margin-top:0;">Welcome to RedGlitch Engine</h2>
-                <p style="line-height:1.8; color:#ccc;">A powerful multi-platform game development studio supporting RPG, platformer, and isometric games.</p>
+                <p style="line-height:1.8; color:#ccc;">A powerful multi-platform game development studio supporting
+                    RPG, platformer, and isometric games.</p>
                 <h3 style="color:var(--accent); margin-top:25px;">Quick Start</h3>
                 <ol style="line-height:1.8; color:#ccc;">
                     <li>Create a new project from the dashboard</li>
@@ -551,7 +1473,8 @@
         <div id="view-updates" class="view-section">
             <h1><i class="fas fa-download"></i> Updates</h1>
             <div style="max-width: 800px; margin: 20px auto;">
-                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid var(--accent); padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                <div
+                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid var(--accent); padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
                     <h3 style="color:var(--accent); margin:0 0 10px 0;">v7.0.1 - Latest</h3>
                     <ul style="color:#ccc; line-height:1.8;">
                         <li>✨ 4-Step Project Wizard with engine selection</li>
@@ -561,7 +1484,8 @@
                         <li>🔧 Enhanced stability and performance</li>
                     </ul>
                 </div>
-                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                <div
+                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
                     <h3 style="color:#888; margin:0 0 10px 0;">v7.0.0</h3>
                     <ul style="color:#666; line-height:1.8;">
                         <li>🚀 Multi-platform support (Desktop, Web, Android)</li>
@@ -619,7 +1543,8 @@
         <div id="view-assets" class="view-section">
             <h1><i class="fas fa-images"></i> Asset Library</h1>
             <div style="max-width: 900px; margin: 20px auto;">
-                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; text-align: center; backdrop-filter: blur(10px);">
+                <div
+                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; text-align: center; backdrop-filter: blur(10px);">
                     <i class="fas fa-palette" style="font-size:64px; color:#333; margin-bottom:20px;"></i>
                     <h2 style="color:var(--accent); margin-bottom:15px;">Asset Library</h2>
                     <p style="color:#888; line-height:1.8; margin-bottom:25px;">
@@ -627,7 +1552,8 @@
                     </p>
                     <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:15px; margin-top:30px;">
                         <div style="background:rgba(0,0,0,0.5); border:1px solid #1f2b42; padding:20px;">
-                            <i class="fas fa-image" style="font-size:32px; color:var(--accent); margin-bottom:10px;"></i>
+                            <i class="fas fa-image"
+                                style="font-size:32px; color:var(--accent); margin-bottom:10px;"></i>
                             <div style="color:#fff; margin-bottom:5px;">Sprites</div>
                             <div style="color:#666; font-size:14px;">Character & Object Art</div>
                         </div>
@@ -652,13 +1578,16 @@
         <div id="view-marketplace" class="view-section">
             <h1><i class="fas fa-store"></i> Marketplace</h1>
             <div style="max-width: 900px; margin: 20px auto;">
-                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 40px; text-align: center; backdrop-filter: blur(10px);">
+                <div
+                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 40px; text-align: center; backdrop-filter: blur(10px);">
                     <i class="fas fa-shopping-bag" style="font-size:64px; color:var(--accent); margin-bottom:20px;"></i>
                     <h2 style="color:var(--accent); margin-bottom:15px;">Asset Marketplace</h2>
                     <p style="color:#888; line-height:1.8; max-width:600px; margin:0 auto 25px;">
-                        Discover premium assets, plugins, and templates created by the RedGlitch community. Expand your game with ready-to-use content.
+                        Discover premium assets, plugins, and templates created by the RedGlitch community. Expand your
+                        game with ready-to-use content.
                     </p>
-                    <div style="color:#666; font-size:14px; margin-top:30px; padding:20px; background:rgba(0,0,0,0.3); border:1px solid #1f2b42;">
+                    <div
+                        style="color:#666; font-size:14px; margin-top:30px; padding:20px; background:rgba(0,0,0,0.3); border:1px solid #1f2b42;">
                         <i class="fas fa-rocket"></i> Marketplace coming soon in v7.1
                     </div>
                 </div>
@@ -712,27 +1641,33 @@
         <div id="view-community" class="view-section">
             <h1><i class="fas fa-users"></i> Community</h1>
             <div style="max-width: 800px; margin: 20px auto;">
-                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px); margin-bottom:20px;">
+                <div
+                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px); margin-bottom:20px;">
                     <h2 style="color:var(--accent); margin-top:0;">Join the RedGlitch Community</h2>
                     <p style="color:#888; line-height:1.8; margin-bottom:25px;">
                         Connect with other game developers, share your projects, get help, and collaborate.
                     </p>
                     <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:15px;">
-                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening Discord...', 'info')">
+                        <button class="btn-action" style="width:100%;"
+                            onclick="showToast('🌐 Opening Discord...', 'info')">
                             <i class="fab fa-discord"></i> Discord Server
                         </button>
-                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening forum...', 'info')">
+                        <button class="btn-action" style="width:100%;"
+                            onclick="showToast('🌐 Opening forum...', 'info')">
                             <i class="fas fa-comments"></i> Community Forum
                         </button>
-                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening GitHub...', 'info')">
+                        <button class="btn-action" style="width:100%;"
+                            onclick="showToast('🌐 Opening GitHub...', 'info')">
                             <i class="fab fa-github"></i> GitHub Repository
                         </button>
-                        <button class="btn-action" style="width:100%;" onclick="showToast('🌐 Opening website...', 'info')">
+                        <button class="btn-action" style="width:100%;"
+                            onclick="showToast('🌐 Opening website...', 'info')">
                             <i class="fas fa-globe"></i> Official Website
                         </button>
                     </div>
                 </div>
-                <div style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
+                <div
+                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
                     <h3 style="color:var(--accent); margin-top:0;">Latest Community Projects</h3>
                     <div style="color:#666; text-align:center; padding:30px;">
                         <i class="fas fa-gamepad" style="font-size:48px; opacity:0.3; margin-bottom:15px;"></i><br>
@@ -744,13 +1679,17 @@
 
         <div id="view-settings" class="view-section">
             <h1>Settings</h1>
-            <div style="max-width: 600px; margin: 0 auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
+            <div
+                style="max-width: 600px; margin: 0 auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; color: var(--accent); margin-bottom: 8px;">Developer Name</label>
-                    <input type="text" id="dev-name-input" style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 8px; outline: none;" placeholder="Your Name">
+                    <input type="text" id="dev-name-input"
+                        style="width: 100%; background: #000; border: 1px solid #333; color: #fff; font-family: inherit; font-size: 18px; padding: 8px; outline: none;"
+                        placeholder="Your Name">
                 </div>
                 <div style="text-align: right; margin-top: 20px;">
-                    <button class="btn-action" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
+                    <button class="btn-action" onclick="saveSettings()"><i class="fas fa-save"></i> Save
+                        Settings</button>
                 </div>
             </div>
         </div>
@@ -759,7 +1698,8 @@
     <div id="log-modal">
         <div class="log-box">
             <div class="log-header">
-                <div style="font-size: 20px; font-weight: bold; color: #fff;"><i class="fas fa-clipboard-list"></i> SYSTEM LOGS</div>
+                <div style="font-size: 20px; font-weight: bold; color: #fff;"><i class="fas fa-clipboard-list"></i>
+                    SYSTEM LOGS</div>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn-action" onclick="LogManager.clear()">CLEAR</button>
                     <button class="btn-action" style="background:#e74c3c;" onclick="LogManager.hide()">CLOSE</button>
@@ -785,15 +1725,15 @@
                 <button class="btn-action" onclick="ConfirmModal.hide()">
                     <i class="fas fa-times"></i> Cancel
                 </button>
-                <button class="btn-action" style="background:var(--danger); border-color:var(--danger);" onclick="ConfirmModal.confirm()" id="confirm-modal-btn">
+                <button class="btn-action" style="background:var(--danger); border-color:var(--danger);"
+                    onclick="ConfirmModal.confirm()" id="confirm-modal-btn">
                     <i class="fas fa-check"></i> Confirm
                 </button>
             </div>
         </div>
     </div>
 
-    <script src="lib/three.min.js"></script>
-    <script src="js/BlackholeBackground.js"></script>
     <script src="js/Dashboard.js"></script>
 </body>
+
 </html>
