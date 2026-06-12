@@ -118,6 +118,9 @@ export default class PlatformerEditorPanel {
             btn.addEventListener('click', () => {
                 this.container.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                if (this.editor) {
+                    this.editor.setActiveTool('draw');
+                }
             });
         });
 
@@ -130,6 +133,9 @@ export default class PlatformerEditorPanel {
         blockW?.addEventListener('change', () => { this._blockW = parseFloat(blockW.value) || 4; });
         blockH?.addEventListener('change', () => { this._blockH = parseFloat(blockH.value) || 1; });
         blockD?.addEventListener('change', () => { this._blockD = parseFloat(blockD.value) || 4; });
+
+        const platSnap = document.getElementById('plat-snap');
+        platSnap?.addEventListener('change', () => { this._snapToGrid = platSnap.checked; });
     }
 
     onSceneRebuilt(levelData) {
@@ -149,6 +155,30 @@ export default class PlatformerEditorPanel {
     }
 
     onModeChanged(mode) {}
+
+    getDrawState() {
+        const activeBtn = this.container.querySelector('.tool-btn.active');
+        const tool = activeBtn ? activeBtn.dataset.tool : 'block';
+        
+        let blockVal = 'box';
+        if (tool === 'block') {
+            blockVal = document.getElementById('plat-block-type')?.value || this._blockType;
+        } else if (tool === 'hazard') {
+            blockVal = document.getElementById('plat-hazard-type')?.value || this._hazardType;
+        } else {
+            blockVal = tool; // 'checkpoint', 'collectible', 'enemy', 'path'
+        }
+
+        return {
+            mode: 'pencil',
+            tool: tool,
+            block: blockVal,
+            width: this._blockW,
+            height: this._blockH,
+            depth: this._blockD,
+            snap: this._snapToGrid
+        };
+    }
 
     dispose() {
         if (this.container) this.container.innerHTML = '';

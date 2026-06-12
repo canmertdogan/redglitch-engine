@@ -3,350 +3,1304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RedGlitch Engine — Unified 3D Editor for FPS, Top-Down and Platformer level design">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "/lib/three/three.module.js"
+            }
+        }
+    </script>
     <title>Unified 3D Editor — RedGlitch Engine</title>
     <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="daw/v6-premium.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ═══════════════════════════════════════════════════
+           UNIFIED 3D EDITOR — UI Overrides & Components
+           ═══════════════════════════════════════════════════ */
 
-        :root {
-            --bg-root:      #050508;
-            --bg-widget:    #0a0e14;
-            --bg-input:     #000;
-            --border:       #1f2b42;
-            --border-highlight: #34495e;
-            --accent:       #40e0d0;
-            --accent-hover: #50f0e0;
-            --text:         #ccc;
-            --text-dim:     #8fa0bc;
-            --font-pixel:   'VT323', monospace;
-            --font-mono:    'Consolas', 'Monaco', 'Courier New', monospace;
+        /* ── Layout override: tighter left bar ── */
+        #kas-left {
+            width: 52px;
+            align-items: center;
+            padding: 6px 0;
+            gap: 2px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: #050505;
+            border-right: 1px solid rgba(255,30,39,0.15);
         }
 
-        body {
-            background: var(--bg-root);
-            font-family: var(--font-mono);
-            color: var(--text);
-            font-size: 13px;
-            overflow: hidden;
-            user-select: none;
-        }
-
-        /* --- CRT EFFECT (Subtle) --- */
-        body::after {
-            content: " ";
-            display: block;
-            position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 2px;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        /* ── Layout ────────────────────────────────────────────── */
-        #editor-root {
-            display: grid;
-            grid-template-columns: 240px 1fr 260px;
-            grid-template-rows: 50px 1fr 30px;
-            grid-template-areas:
-                "toolbar toolbar toolbar"
-                "left    viewport right"
-                "status  status   status";
-            width: 100vw;
-            height: 100vh;
-            gap: 15px;
-            padding: 15px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Widget base */
-        .widget {
-            background: var(--bg-widget);
-            border: 1px solid var(--border);
+        #kas-right {
+            width: 280px;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            position: relative;
-            transition: border-color 0.15s;
-        }
-        .widget:hover { border-color: var(--border-highlight); }
-
-        .w-header {
-            background: #020408;
-            border-bottom: 1px solid var(--border);
-            padding: 8px 12px;
-            font-family: var(--font-pixel);
-            font-size: 1.1rem;
-            color: var(--text-dim);
-            display: flex; justify-content: space-between; align-items: center;
-            text-transform: uppercase; letter-spacing: 1px;
-            flex-shrink: 0;
-        }
-
-        /* ── Toolbar ───────────────────────────────────────────── */
-        #toolbar {
-            grid-area: toolbar;
-            flex-direction: row;
-            align-items: center;
-            gap: 12px;
-            padding: 0 16px;
-        }
-
-        #toolbar-title {
-            color: var(--accent);
-            font-family: var(--font-pixel);
-            font-size: 1.4rem;
-            letter-spacing: 2px;
-            margin-right: 16px;
-        }
-
-        .toolbar-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .toolbar-btn {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-dim);
-            font-family: var(--font-pixel);
-            font-size: 1.1rem;
-            padding: 4px 12px;
-            cursor: pointer;
-            transition: all 0.1s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .toolbar-btn:hover { border-color: var(--accent); color: #fff; }
-        .toolbar-btn.active { border-color: var(--accent); background: rgba(64,224,208,0.15); color: var(--accent); }
-
-        #mode-selector {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--accent);
-            font-family: var(--font-pixel);
-            font-size: 1.1rem;
-            padding: 4px 8px;
-            cursor: pointer;
-            outline: none;
-            transition: border-color 0.15s;
-        }
-        #mode-selector:hover { border-color: var(--accent); }
-
-        .toolbar-sep {
-            width: 1px;
-            height: 24px;
-            background: var(--border);
-            margin: 0 6px;
-        }
-
-        /* ── Left Panel ────────────────────────────────────────── */
-        #left-panel {
-            grid-area: left;
-        }
-
-        #scene-tree {
-            flex: 1;
-            padding: 8px;
-            overflow-y: auto;
-        }
-
-        .tree-group { margin-bottom: 8px; }
-        .tree-group-label {
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            padding: 4px 0;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .tree-item {
-            padding: 4px 8px;
-            font-size: 13px;
-            cursor: pointer;
-            border-left: 2px solid transparent;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .tree-item:hover { background: rgba(255,255,255,0.04); }
-        .tree-item.selected { border-left-color: var(--accent); background: rgba(64,224,208,0.08); color: #fff; }
-
-        .panel-empty {
-            color: var(--text-dim);
-            padding: 16px;
-            font-size: 13px;
-            text-align: center;
-            font-style: italic;
-        }
-
-        /* ── Viewport ──────────────────────────────────────────── */
-        #viewport-container {
-            grid-area: viewport;
+            gap: 0;
             padding: 0;
+            background: #050505;
+            border-left: 1px solid rgba(255,30,39,0.15);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #kas-center {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            background: #000;
+        }
+
+        /* ── Viewport ── */
+        #viewport-wrapper {
+            flex: 1;
+            position: relative;
+            background: #000;
+            min-height: 0;
         }
 
         #viewport {
-            width: 100%;
-            height: 100%;
-            background: #000;
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
         }
 
         #viewport canvas {
             display: block;
             width: 100% !important;
             height: 100% !important;
+            outline: none;
         }
 
-        /* ── Right Panel ───────────────────────────────────────── */
-        #right-panel {
-            grid-area: right;
+        /* ── Viewport Overlay HUD ── */
+        #vp-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
         }
 
-        #properties-panel, #mode-tools {
-            padding: 10px;
+        #vp-top-left {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            pointer-events: none;
         }
-        #properties-panel {
-            border-bottom: 1px solid var(--border);
+
+        #vp-top-right {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            pointer-events: none;
+        }
+
+        #vp-bottom-left {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            pointer-events: none;
+        }
+
+        #vp-bottom-right {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: row;
+            gap: 4px;
+            pointer-events: auto;
+        }
+
+        .vp-hud-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,30,39,0.3);
+            padding: 3px 8px;
+            font-size: 10px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.9);
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(4px);
+        }
+
+        .vp-hud-pill.mode-pill {
+            background: rgba(255,30,39,0.15);
+            border-color: rgba(255,30,39,0.6);
+            font-size: 11px;
+            padding: 4px 10px;
+        }
+
+        .vp-hud-label {
+            font-size: 9px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,100,100,0.6);
+            letter-spacing: 1px;
+        }
+
+        /* Shortcut hint row */
+        .vp-shortcuts {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .vp-shortcut {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 9px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .vp-key {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0 4px;
+            font-size: 9px;
+        }
+
+        /* View buttons (top-right overlay) */
+        .vp-view-btn {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,30,39,0.25);
+            color: rgba(255,30,39,0.7);
+            font-family: 'VT323', monospace;
+            font-size: 10px;
+            padding: 3px 8px;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.1s;
+            letter-spacing: 0.5px;
+        }
+        .vp-view-btn:hover {
+            background: rgba(255,30,39,0.15);
+            border-color: rgba(255,30,39,0.6);
+            color: #ff1e27;
+        }
+        .vp-view-btn.active {
+            background: rgba(255,30,39,0.2);
+            border-color: #ff1e27;
+            color: #ff1e27;
+        }
+
+        /* ── Left Toolbar ── */
+        .tool-group-label {
+            font-size: 7px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.4);
+            letter-spacing: 1px;
+            text-align: center;
+            width: 100%;
+            padding: 2px 0;
+            user-select: none;
+        }
+
+        .left-divider {
+            width: 32px;
+            height: 1px;
+            background: rgba(255,30,39,0.15);
+            margin: 3px 0;
             flex-shrink: 0;
-            max-height: 50%;
-            overflow-y: auto;
         }
-        #mode-tools {
+
+        .vertical-tool-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: rgba(255,30,39,0.5);
+            font-size: 15px;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .vertical-tool-btn:hover {
+            color: #ff1e27;
+            background: rgba(255,30,39,0.08);
+            border-color: rgba(255,30,39,0.3);
+        }
+
+        .vertical-tool-btn.active {
+            color: #ff1e27;
+            background: rgba(255,30,39,0.15);
+            border-color: rgba(255,30,39,0.6);
+            box-shadow: 0 0 8px rgba(255,30,39,0.2);
+        }
+
+        /* Tooltip */
+        .vertical-tool-btn::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 46px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #111;
+            border: 1px solid rgba(255,30,39,0.4);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 11px;
+            padding: 3px 8px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 999;
+            letter-spacing: 0.5px;
+        }
+
+        .vertical-tool-btn:hover::after {
+            opacity: 1;
+        }
+
+        /* Spawn btn - slightly different color accent */
+        .vertical-tool-btn.spawn-btn {
+            color: rgba(255,30,39,0.35);
+        }
+        .vertical-tool-btn.spawn-btn:hover {
+            color: #ff6666;
+            background: rgba(255,50,50,0.07);
+            border-color: rgba(255,50,50,0.25);
+        }
+
+        /* ── Right Panel ── */
+        .rp-section {
+            border-bottom: 1px solid rgba(255,30,39,0.12);
+            flex-shrink: 0;
+        }
+
+        .rp-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: rgba(255,30,39,0.04);
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid rgba(255,30,39,0.08);
+            transition: background 0.1s;
+        }
+
+        .rp-header:hover {
+            background: rgba(255,30,39,0.07);
+        }
+
+        .rp-header-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .rp-header-icon {
+            color: rgba(255,30,39,0.5);
+            font-size: 10px;
+            width: 14px;
+            text-align: center;
+        }
+
+        .rp-title {
+            font-size: 9px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.7);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .rp-chevron {
+            font-size: 8px;
+            color: rgba(255,30,39,0.4);
+            transition: transform 0.2s;
+        }
+
+        .rp-section.collapsed .rp-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .rp-body {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .rp-section.collapsed .rp-body {
+            display: none;
+        }
+
+        /* Scene Tree */
+        #scene-tree {
+            max-height: 220px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .tree-empty {
+            padding: 20px 10px;
+            text-align: center;
+        }
+
+        .tree-empty-icon {
+            font-size: 22px;
+            margin-bottom: 6px;
+            opacity: 0.3;
+            filter: grayscale(1);
+        }
+
+        .tree-empty-text {
+            font-size: 10px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.3);
+            letter-spacing: 0.5px;
+        }
+
+        .scene-tree-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px 5px 16px;
+            font-size: 12px;
+            font-family: 'VT323', monospace;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            color: rgba(255,30,39,0.6);
+            transition: all 0.05s;
+            position: relative;
+        }
+
+        .scene-tree-item:hover {
+            background: rgba(255,30,39,0.05);
+            color: rgba(255,30,39,0.9);
+        }
+
+        .scene-tree-item.selected {
+            border-left-color: #ff1e27;
+            background: rgba(255,30,39,0.1);
+            color: #ff1e27;
+        }
+
+        .scene-tree-item .sti-icon {
+            font-size: 10px;
+            width: 14px;
+            text-align: center;
+            color: rgba(255,30,39,0.5);
+            flex-shrink: 0;
+        }
+
+        .scene-tree-item.selected .sti-icon {
+            color: #ff1e27;
+        }
+
+        .scene-tree-item .sti-name {
             flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+
+        .scene-tree-item .sti-type {
+            font-size: 9px;
+            color: rgba(255,30,39,0.3);
+            flex-shrink: 0;
+        }
+
+        /* Properties Panel */
+        #properties-panel {
+            max-height: 320px;
             overflow-y: auto;
         }
 
-        /* Asset Card style for Prop Groups & Tool Sections */
-        .asset-card {
-            background: #0f151f;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 10px;
-            margin-bottom: 12px;
+        .prop-empty {
+            padding: 24px 10px;
+            text-align: center;
         }
-        .asset-card:last-child { margin-bottom: 0; }
 
-        .prop-group { margin-bottom: 10px; }
-        .prop-group:last-child { margin-bottom: 0; }
+        .prop-empty-icon {
+            font-size: 24px;
+            margin-bottom: 6px;
+            opacity: 0.25;
+            filter: grayscale(1);
+        }
+
+        .prop-empty-text {
+            font-size: 10px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.3);
+        }
+
+        .prop-section {
+            border-bottom: 1px solid rgba(255,30,39,0.08);
+        }
+
+        .prop-section-title {
+            font-size: 8px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.4);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 5px 10px 4px;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .prop-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+        }
 
         .prop-label {
             font-size: 11px;
-            color: var(--text-dim);
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-            text-transform: uppercase;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.5);
+            min-width: 70px;
+            flex-shrink: 0;
+            letter-spacing: 0.3px;
         }
+
+        .prop-value {
+            flex: 1;
+            min-width: 0;
+        }
+
         .prop-input {
             width: 100%;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: var(--font-mono);
-            font-size: 13px;
-            padding: 6px 8px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 3px 6px;
             outline: none;
             transition: border-color 0.1s;
         }
-        .prop-input:focus { border-color: var(--accent); }
+
+        .prop-input:focus {
+            border-color: #ff1e27;
+            box-shadow: 0 0 4px rgba(255,30,39,0.2);
+        }
+
         .prop-vec3 {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 6px;
+            gap: 3px;
         }
+
         .prop-vec3 input {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: var(--font-mono);
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
             font-size: 12px;
-            padding: 4px;
+            padding: 3px 4px;
             width: 100%;
             outline: none;
-        }
-        .prop-vec3 input:focus { border-color: var(--accent); }
-
-        /* ── Mode Tools styling ────────────────────────────────── */
-        .tool-section {
-            background: #0f151f;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 10px;
-            margin-bottom: 12px;
-        }
-        .tool-section:last-child { margin-bottom: 0; }
-
-        .tool-section-title {
-            font-size: 11px;
-            color: var(--text-dim);
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
+            text-align: center;
         }
 
-        .tool-buttons {
+        .prop-vec3 input:focus {
+            border-color: #ff1e27;
+        }
+
+        /* Axis label badges on vec3 */
+        .vec3-wrap {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 3px;
+        }
+
+        .vec3-field {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .vec3-axis-label {
+            font-size: 7px;
+            font-family: 'VT323', monospace;
+            letter-spacing: 0.5px;
+            text-align: center;
+            padding: 0 2px;
+        }
+
+        .vec3-axis-label.x { color: #ff4444; }
+        .vec3-axis-label.y { color: #44ff44; }
+        .vec3-axis-label.z { color: #4488ff; }
+
+        .vec3-field input {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 3px 4px;
+            width: 100%;
+            outline: none;
+            text-align: center;
+        }
+
+        .vec3-field input:focus { border-color: #ff1e27; }
+
+        /* Mode Tools */
+        #mode-tools-body {
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
             gap: 6px;
         }
 
-        .tool-btn {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-size: 16px;
-            padding: 6px 12px;
-            cursor: pointer;
-            transition: all 0.1s;
-            border-radius: 2px;
-        }
-        .tool-btn:hover { border-color: var(--accent); }
-        .tool-btn.active { border-color: var(--accent); background: rgba(64,224,208,0.15); color: var(--accent); }
-
-        .draw-btn {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: var(--font-pixel);
-            font-size: 1.1rem;
-            padding: 4px 10px;
-            cursor: pointer;
-        }
-        .draw-btn.active { border-color: var(--accent); background: rgba(64,224,208,0.15); color: var(--accent); }
-
-        .tool-select, .tool-select-sm {
-            width: 100%;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: var(--font-mono);
-            font-size: 13px;
-            padding: 6px 8px;
-            outline: none;
-        }
-        .tool-select-sm { width: auto; padding: 4px 6px; }
-
-        .tool-row {
+        .mode-tool-btn {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 13px;
-            margin-top: 6px;
+            padding: 6px 10px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: rgba(255,30,39,0.7);
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.1s;
+            letter-spacing: 0.5px;
         }
+
+        .mode-tool-btn:hover {
+            background: rgba(255,30,39,0.1);
+            border-color: rgba(255,30,39,0.5);
+            color: #ff1e27;
+        }
+
+        .mode-tool-btn.active {
+            background: rgba(255,30,39,0.15);
+            border-color: #ff1e27;
+            color: #ff1e27;
+            box-shadow: inset 0 0 8px rgba(255,30,39,0.1);
+        }
+
+        .mode-tool-btn i {
+            font-size: 12px;
+            width: 14px;
+            text-align: center;
+        }
+
+        .mode-tools-empty {
+            padding: 16px 10px;
+            text-align: center;
+            font-size: 10px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.25);
+        }
+
+        /* ── Material Manager ── */
+        #material-manager {
+            height: 110px;
+            background: #050505;
+            border-top: 1px solid rgba(255,30,39,0.15);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .mat-header {
+            padding: 4px 10px;
+            background: rgba(255,30,39,0.04);
+            border-bottom: 1px solid rgba(255,30,39,0.1);
+            font-size: 9px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.5);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mat-list {
+            flex: 1;
+            display: flex;
+            gap: 6px;
+            padding: 6px 8px;
+            overflow-x: auto;
+            align-items: center;
+        }
+
+        .mat-list::-webkit-scrollbar { height: 3px; }
+
+        .mat-card {
+            width: 68px;
+            height: 68px;
+            background: #111;
+            border: 1px solid rgba(255,30,39,0.2);
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            overflow: hidden;
+            flex-shrink: 0;
+            transition: border-color 0.1s, box-shadow 0.1s;
+            position: relative;
+        }
+
+        .mat-card:hover {
+            border-color: rgba(255,30,39,0.5);
+        }
+
+        .mat-card.selected {
+            border-color: #ff1e27;
+            box-shadow: 0 0 8px rgba(255,30,39,0.3);
+        }
+
+        .mat-preview {
+            flex: 1;
+            background: linear-gradient(135deg, #333 0%, #555 50%, #333 100%);
+            position: relative;
+        }
+
+        .mat-preview-shader {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .mat-label {
+            height: 18px;
+            font-size: 9px;
+            font-family: 'VT323', monospace;
+            background: rgba(0,0,0,0.8);
+            color: rgba(255,30,39,0.8);
+            text-align: center;
+            line-height: 18px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            padding: 0 3px;
+            letter-spacing: 0.3px;
+        }
+
+        .mat-card.selected .mat-label {
+            background: rgba(255,30,39,0.2);
+            color: #ff1e27;
+        }
+
+        .mat-empty-state {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.25);
+            letter-spacing: 0.5px;
+            gap: 6px;
+        }
+
+        /* ── Top bar override ── */
+        #kas-topbar {
+            gap: 0;
+            padding: 0;
+            height: 48px;
+            min-height: 48px;
+            background: linear-gradient(180deg, #0d0d0d 0%, #080808 100%);
+            border-bottom: 1px solid rgba(255,30,39,0.25);
+            display: flex;
+            align-items: stretch;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle scanline shimmer on titlebar */
+        #kas-topbar::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 2px,
+                rgba(255,30,39,0.015) 2px,
+                rgba(255,30,39,0.015) 3px
+            );
+            pointer-events: none;
+        }
+
+        /* ── Brand zone ── */
+        #tb-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 16px;
+            border-right: 1px solid rgba(255,30,39,0.15);
+            min-width: 180px;
+            flex-shrink: 0;
+        }
+
+        #tb-brand-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, rgba(255,30,39,0.2), rgba(255,30,39,0.05));
+            border: 1px solid rgba(255,30,39,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: #ff1e27;
+            flex-shrink: 0;
+            box-shadow: 0 0 12px rgba(255,30,39,0.15), inset 0 0 6px rgba(255,30,39,0.05);
+        }
+
+        #tb-brand-text {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        #tb-brand-title {
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            color: #fff;
+            letter-spacing: 2px;
+            line-height: 1;
+            text-shadow: 0 0 10px rgba(255,30,39,0.3);
+        }
+
+        #tb-brand-sub {
+            font-family: 'VT323', monospace;
+            font-size: 9px;
+            color: rgba(255,30,39,0.4);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        /* ── Project name chip ── */
+        #tb-project-chip {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,30,39,0.12);
+            font-family: 'VT323', monospace;
+            font-size: 10px;
+            color: rgba(255,30,39,0.5);
+            letter-spacing: 0.8px;
+            max-width: 130px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        #tb-project-chip i {
+            font-size: 9px;
+            flex-shrink: 0;
+        }
+
+        /* ── Mode zone ── */
+        #tb-mode-zone {
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            border-right: 1px solid rgba(255,30,39,0.12);
+            gap: 3px;
+        }
+
+        #tb-mode-label {
+            font-family: 'VT323', monospace;
+            font-size: 8px;
+            color: rgba(255,30,39,0.3);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding-right: 8px;
+            border-right: 1px solid rgba(255,30,39,0.1);
+            margin-right: 3px;
+        }
+
+        .mode-pill-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            height: 28px;
+            padding: 0 10px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,30,39,0.12);
+            color: rgba(255,30,39,0.4);
+            font-family: 'VT323', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .mode-pill-btn i {
+            font-size: 9px;
+        }
+
+        .mode-pill-btn:hover {
+            color: rgba(255,30,39,0.8);
+            background: rgba(255,30,39,0.07);
+            border-color: rgba(255,30,39,0.3);
+        }
+
+        .mode-pill-btn.active {
+            color: #ff1e27;
+            background: rgba(255,30,39,0.15);
+            border-color: rgba(255,30,39,0.6);
+            box-shadow: 0 0 8px rgba(255,30,39,0.15), inset 0 0 6px rgba(255,30,39,0.05);
+            text-shadow: 0 0 8px rgba(255,30,39,0.5);
+        }
+
+        /* ── Quick transform zone ── */
+        #tb-transform-zone {
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 2px;
+            border-right: 1px solid rgba(255,30,39,0.12);
+        }
+
+        #tb-transform-label {
+            font-family: 'VT323', monospace;
+            font-size: 8px;
+            color: rgba(255,30,39,0.3);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding-right: 8px;
+            border-right: 1px solid rgba(255,30,39,0.1);
+            margin-right: 3px;
+        }
+
+        .tb-tool-btn {
+            width: 32px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,30,39,0.1);
+            color: rgba(255,30,39,0.4);
+            cursor: pointer;
+            transition: all 0.1s;
+            position: relative;
+            font-size: 11px;
+        }
+
+        .tb-tool-btn .tb-key {
+            font-family: 'VT323', monospace;
+            font-size: 7px;
+            color: rgba(255,30,39,0.3);
+            line-height: 1;
+        }
+
+        .tb-tool-btn:hover {
+            color: #ff1e27;
+            background: rgba(255,30,39,0.08);
+            border-color: rgba(255,30,39,0.3);
+        }
+
+        .tb-tool-btn.active {
+            color: #ff1e27;
+            background: rgba(255,30,39,0.15);
+            border-color: rgba(255,30,39,0.55);
+            box-shadow: 0 0 6px rgba(255,30,39,0.15);
+        }
+
+        .tb-snap-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 4px;
+            padding: 0 8px;
+            height: 28px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,30,39,0.1);
+            color: rgba(255,30,39,0.4);
+            font-family: 'VT323', monospace;
+            font-size: 9px;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .tb-snap-toggle.active {
+            color: #44ff88;
+            border-color: rgba(68,255,136,0.4);
+            background: rgba(68,255,136,0.06);
+        }
+
+        .tb-snap-toggle i { font-size: 9px; }
+
+        /* ── Spacer ── */
+        #tb-spacer { flex: 1; }
+
+        /* ── Stats zone ── */
+        #tb-stats-zone {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 14px;
+            border-left: 1px solid rgba(255,30,39,0.12);
+        }
+
+        .tb-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+        }
+
+        .tb-stat-value {
+            font-family: 'VT323', monospace;
+            font-size: 13px;
+            color: rgba(255,30,39,0.8);
+            line-height: 1;
+        }
+
+        .tb-stat-label {
+            font-family: 'VT323', monospace;
+            font-size: 7px;
+            color: rgba(255,30,39,0.3);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .tb-stat-div {
+            width: 1px;
+            height: 24px;
+            background: rgba(255,30,39,0.1);
+        }
+
+        /* ── File ops zone ── */
+        #tb-file-zone {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 0 10px;
+            border-left: 1px solid rgba(255,30,39,0.12);
+        }
+
+        .tb-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            height: 28px;
+            padding: 0 10px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,30,39,0.12);
+            color: rgba(255,30,39,0.6);
+            font-family: 'VT323', monospace;
+            font-size: 10px;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tb-action-btn i { font-size: 9px; }
+
+        .tb-action-btn:hover {
+            color: #ff1e27;
+            border-color: rgba(255,30,39,0.4);
+            background: rgba(255,30,39,0.08);
+        }
+
+        .tb-action-btn.icon-only {
+            width: 28px;
+            padding: 0;
+            justify-content: center;
+        }
+
+        .tb-action-btn.save {
+            color: rgba(255,200,50,0.8);
+            border-color: rgba(255,200,50,0.2);
+        }
+
+        .tb-action-btn.save:hover {
+            color: #ffc832;
+            border-color: rgba(255,200,50,0.5);
+            background: rgba(255,200,50,0.06);
+        }
+
+        .tb-div {
+            width: 1px;
+            height: 20px;
+            background: rgba(255,30,39,0.12);
+            margin: 0 4px;
+        }
+
+        /* ── Play button zone ── */
+        #tb-play-zone {
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            border-left: 1px solid rgba(255,30,39,0.15);
+        }
+
+        #tb-play-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            height: 34px;
+            padding: 0 18px;
+            background: linear-gradient(135deg, rgba(255,30,39,0.25) 0%, rgba(255,30,39,0.1) 100%);
+            border: 1px solid rgba(255,30,39,0.5);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 13px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-shadow: 0 0 10px rgba(255,30,39,0.6);
+            box-shadow: 0 0 12px rgba(255,30,39,0.12), inset 0 0 8px rgba(255,30,39,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #tb-play-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,30,39,0.15), transparent);
+            transition: left 0.4s;
+        }
+
+        #tb-play-btn:hover::before { left: 100%; }
+
+        #tb-play-btn:hover {
+            background: linear-gradient(135deg, rgba(255,30,39,0.35) 0%, rgba(255,30,39,0.15) 100%);
+            border-color: #ff1e27;
+            box-shadow: 0 0 20px rgba(255,30,39,0.3), inset 0 0 12px rgba(255,30,39,0.08);
+        }
+
+        #tb-play-btn i { font-size: 11px; }
+
+        #kas-main {
+            padding: 0;
+            gap: 0;
+        }
+
+        /* ── Mode Selector Styled (kept for JS compatibility) ── */
+        #mode-selector-wrap {
+            display: none; /* hidden - replaced by mode-pill-btn system */
+        }
+
+        /* ── Topbar Divider (legacy compat) ── */
+        .topbar-div {
+            width: 1px;
+            height: 20px;
+            background: rgba(255,30,39,0.15);
+            margin: 0 6px;
+        }
+
+        /* ── Transform axis labels on inputs ── */
+        .axis-x { color: #ff4444 !important; border-color: rgba(255,68,68,0.3) !important; }
+        .axis-y { color: #44ff44 !important; border-color: rgba(68,255,68,0.3) !important; }
+        .axis-z { color: #4488ff !important; border-color: rgba(68,136,255,0.3) !important; }
+
+        .axis-x:focus { border-color: #ff4444 !important; }
+        .axis-y:focus { border-color: #44ff44 !important; }
+        .axis-z:focus { border-color: #4488ff !important; }
+
+        /* ── Status bar override ── */
+        #kas-statusbar {
+            background: #000;
+            border-top: none;
+            border-bottom: 1px solid rgba(255,30,39,0.15);
+            height: 22px;
+            min-height: 22px;
+        }
+
+        /* ── Object selected highlight ── */
+        .scene-tree-item .sti-vis-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            color: rgba(255,30,39,0.4);
+            font-size: 9px;
+            cursor: pointer;
+            padding: 0 2px;
+        }
+
+        .scene-tree-item:hover .sti-vis-btn {
+            display: block;
+        }
+
+        /* ── Quick-select mini toolbar in viewport ── */
+        #vp-toolbar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,30,39,0.3);
+            padding: 4px 6px;
+            pointer-events: auto;
+            z-index: 20;
+            backdrop-filter: blur(6px);
+        }
+
+        .vp-tool-btn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: rgba(255,30,39,0.5);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            position: relative;
+        }
+
+        .vp-tool-btn:hover {
+            color: #ff1e27;
+            background: rgba(255,30,39,0.1);
+            border-color: rgba(255,30,39,0.3);
+        }
+
+        .vp-tool-btn.active {
+            color: #ff1e27;
+            background: rgba(255,30,39,0.18);
+            border-color: rgba(255,30,39,0.6);
+        }
+
+        .vp-tool-sep {
+            width: 1px;
+            height: 22px;
+            background: rgba(255,30,39,0.15);
+            margin: 0 2px;
+        }
+
+        .vp-tool-btn .vp-tool-key {
+            position: absolute;
+            bottom: 2px;
+            right: 3px;
+            font-size: 7px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.4);
+            line-height: 1;
+        }
+
+        /* Shader modal */
+        #shader-editor-modal {
+            display: none;
+            position: fixed;
+            top: 50px;
+            left: 100px;
+            width: 700px;
+            height: 500px;
+            background: #0a0a0a;
+            border: 1px solid rgba(255,30,39,0.4);
+            z-index: 9999;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 32px rgba(255,30,39,0.1);
+            flex-direction: column;
+        }
+
+        /* draw-btn / tool-btn used in mode panels */
+        .draw-btn {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: rgba(255,30,39,0.7);
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 4px 10px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .draw-btn:hover { background: rgba(255,30,39,0.08); border-color: rgba(255,30,39,0.4); color: #ff1e27; }
+        .draw-btn.active { border-color: #ff1e27; background: rgba(255,30,39,0.15); color: #ff1e27; }
+
+        .tool-btn {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: rgba(255,30,39,0.7);
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .tool-btn:hover { border-color: rgba(255,30,39,0.5); color: #ff1e27; }
+        .tool-btn.active { border-color: #ff1e27; background: rgba(255,30,39,0.15); color: #ff1e27; }
+
+        .tool-select, .tool-select-sm {
+            width: 100%;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 5px 8px;
+            outline: none;
+        }
+        .tool-select-sm { width: auto; padding: 3px 6px; }
+        .tool-select:focus, .tool-select-sm:focus { border-color: #ff1e27; }
 
         .tool-input-sm {
             width: 50px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: var(--font-mono);
-            font-size: 13px;
-            padding: 4px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 3px 4px;
             outline: none;
+        }
+
+        /* Mode Tools Panel Elements */
+        .tool-section {
+            background: rgba(10, 0, 0, 0.25);
+            border: 1px solid rgba(255, 30, 39, 0.08);
+            border-radius: 4px;
+            padding: 10px;
+            margin: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .tool-section-title {
+            font-family: 'VT323', monospace;
+            font-size: 11px;
+            color: rgba(255, 30, 39, 0.4);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border-bottom: 1px dashed rgba(255, 30, 39, 0.15);
+            padding-bottom: 4px;
+            margin-bottom: 2px;
+        }
+
+        .tool-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));
+            gap: 4px;
         }
 
         .tool-buttons-col {
@@ -355,220 +1309,837 @@
             gap: 6px;
         }
 
-        .action-btn {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: var(--font-pixel);
-            font-size: 1.1rem;
-            padding: 6px 12px;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.1s;
-            text-transform: uppercase;
-        }
-        .action-btn:hover { border-color: var(--accent); color: #fff; }
-
-        /* ── Status Bar ────────────────────────────────────────── */
-        #status-bar {
-            grid-area: status;
-            background: transparent;
-            border: none;
+        .tool-row {
             display: flex;
             align-items: center;
-            padding: 0;
-            font-family: var(--font-pixel);
-            font-size: 1.1rem;
-            color: var(--text-dim);
-            gap: 24px;
+            gap: 8px;
+            font-family: 'VT323', monospace;
+            font-size: 13px;
+            color: rgba(255, 30, 39, 0.85);
         }
 
-        #status-mode { color: var(--accent); font-weight: bold; }
-        #status-dirty { color: #e74c3c; font-weight: bold; }
+        .tool-row label {
+            white-space: nowrap;
+            color: rgba(255, 30, 39, 0.6);
+        }
 
-        /* ── Scrollbar ─────────────────────────────────────────── */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--border-highlight); }
+        .action-btn {
+            background: linear-gradient(180deg, rgba(255, 30, 39, 0.1) 0%, rgba(255, 30, 39, 0.03) 100%);
+            border: 1px solid rgba(255, 30, 39, 0.35);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 13px;
+            padding: 6px 12px;
+            cursor: pointer;
+            text-align: center;
+            text-shadow: 0 0 4px rgba(255, 30, 39, 0.4);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.5px;
+            border-radius: 2px;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 30, 39, 0.18);
+            border-color: #ff1e27;
+            box-shadow: 0 0 10px rgba(255, 30, 39, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .kas-prop-group {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 30, 39, 0.08);
+        }
+
+        /* Scrollbar for right panel */
+        #kas-right::-webkit-scrollbar { width: 3px; }
+        #kas-right::-webkit-scrollbar-track { background: #000; }
+        #kas-right::-webkit-scrollbar-thumb { background: rgba(255,30,39,0.3); }
+
+        /* ── JS-injected scene tree classes ── */
+        .tree-group {
+            border-bottom: 1px solid rgba(255,30,39,0.06);
+        }
+
+        .tree-group-label {
+            font-size: 8px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.35);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 5px 10px 3px;
+            background: rgba(0,0,0,0.25);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px 5px 18px;
+            font-size: 12px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.55);
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            transition: all 0.05s;
+            letter-spacing: 0.3px;
+        }
+
+        .tree-item:hover {
+            background: rgba(255,30,39,0.05);
+            color: rgba(255,30,39,0.85);
+        }
+
+        .tree-item.selected {
+            border-left-color: #ff1e27;
+            background: rgba(255,30,39,0.1);
+            color: #ff1e27;
+        }
+
+        /* ── JS-injected material / empty states ── */
+        .kas-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            gap: 4px;
+        }
+
+        .kas-empty-icon {
+            font-size: 20px;
+            opacity: 0.25;
+            filter: grayscale(1);
+        }
+
+        .kas-empty-title {
+            font-size: 11px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.3);
+            letter-spacing: 0.5px;
+        }
+
+        /* ── JS-injected property panel classes ── */
+        .kas-prop-group {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255,30,39,0.08);
+        }
+
+        .kas-prop-group-title {
+            font-size: 8px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.4);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .kas-prop-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .kas-prop-label {
+            font-size: 11px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.5);
+            min-width: 72px;
+            flex-shrink: 0;
+        }
+
+        .kas-prop-value {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .kas-tree-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px 5px 18px;
+            font-size: 12px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.55);
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            transition: all 0.05s;
+        }
+
+        .kas-tree-item:hover { background: rgba(255,30,39,0.05); color: rgba(255,30,39,0.85); }
+        .kas-tree-item.selected { border-left-color: #ff1e27; background: rgba(255,30,39,0.1); color: #ff1e27; }
+
+        /* ── Direct-injected prop panel (no kas- prefix) ── */
+        .prop-group {
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(255,30,39,0.07);
+        }
+
+        .prop-label {
+            font-size: 10px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.45);
+            margin-bottom: 3px;
+            letter-spacing: 0.5px;
+        }
+
+        .prop-input {
+            width: 100%;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 4px 6px;
+            outline: none;
+            transition: border-color 0.1s;
+        }
+
+        .prop-input:focus {
+            border-color: #ff1e27;
+            box-shadow: 0 0 4px rgba(255,30,39,0.2);
+        }
+
+        .prop-vec3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 3px;
+        }
+
+        .prop-vec3 input {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            padding: 3px 4px;
+            width: 100%;
+            outline: none;
+            text-align: center;
+        }
+
+        .prop-vec3 input:focus { border-color: #ff1e27; }
+
+        .panel-empty {
+            padding: 20px 10px;
+            text-align: center;
+            font-size: 11px;
+            font-family: 'VT323', monospace;
+            color: rgba(255,30,39,0.3);
+            letter-spacing: 0.5px;
+        }
+
     </style>
+
 </head>
 <body>
-    <div id="editor-root">
-        <!-- Toolbar -->
-        <div id="toolbar" class="widget">
-            <span id="toolbar-title"><i class="fas fa-cube" style="margin-right:8px;"></i>REDGLITCH 3D</span>
-            <select id="mode-selector">
-                <option value="fps-3d">FPS 3D</option>
-                <option value="topdown-3d">TOP-DOWN 3D</option>
-                <option value="platformer-3d">PLATFORMER 3D</option>
-            </select>
-            <div class="toolbar-sep"></div>
-            <div class="toolbar-group">
-                <button class="toolbar-btn" id="btn-new" title="New Level"><i class="fas fa-file"></i> New</button>
-                <button class="toolbar-btn" id="btn-save" title="Save (Ctrl+S)"><i class="fas fa-save"></i> Save</button>
-                <button class="toolbar-btn" id="btn-load" title="Load Level"><i class="fas fa-folder-open"></i> Load</button>
-                <button class="toolbar-btn" id="btn-import" title="Import Tri-Mesh GLTF"><i class="fas fa-file-import"></i> Import</button>
+
+<div id="kas-shell">
+
+    <!-- ═══════════ TOP BAR ═══════════ -->
+    <div id="kas-topbar">
+
+        <!-- ── BRAND ZONE ── -->
+        <div id="tb-brand">
+            <div id="tb-brand-icon">
+                <i class="fas fa-cube"></i>
             </div>
-            <div class="toolbar-sep"></div>
-            <div class="toolbar-group">
-                <button class="toolbar-btn" id="btn-undo" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
-                <button class="toolbar-btn" id="btn-redo" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+            <div id="tb-brand-text">
+                <div id="tb-brand-title">3D STUDIO</div>
+                <div id="tb-brand-sub">RedGlitch Engine</div>
             </div>
-            <div class="toolbar-sep"></div>
-            <div class="toolbar-group">
-                <button class="toolbar-btn" id="btn-playtest" title="Playtest (F5)"><i class="fas fa-play"></i> Play</button>
+            <div id="tb-project-chip" title="Active project">
+                <i class="fas fa-folder"></i>
+                <span id="tb-project-name">No Project</span>
             </div>
         </div>
 
-        <!-- Left Panel: Scene Tree -->
-        <div id="left-panel" class="widget">
-            <div class="w-header">
-                <span><i class="fas fa-sitemap"></i> Scene Tree</span>
+        <!-- ── MODE ZONE ── -->
+        <div id="tb-mode-zone">
+            <span id="tb-mode-label">MODE</span>
+            <button class="mode-pill-btn active" id="mtab-fps-3d" data-mode="fps-3d">
+                <i class="fas fa-crosshairs"></i> FPS 3D
+            </button>
+            <button class="mode-pill-btn" id="mtab-topdown-3d" data-mode="topdown-3d">
+                <i class="fas fa-eye"></i> TOP-DOWN
+            </button>
+            <button class="mode-pill-btn" id="mtab-platformer-3d" data-mode="platformer-3d">
+                <i class="fas fa-running"></i> PLATFORMER
+            </button>
+        </div>
+
+        <!-- Hidden native select (keeps JS compatible) -->
+        <select id="mode-selector" style="display:none;">
+            <option value="fps-3d">FPS 3D</option>
+            <option value="topdown-3d">TOP-DOWN 3D</option>
+            <option value="platformer-3d">PLATFORMER 3D</option>
+        </select>
+
+        <!-- Compatibility wrapper for JS that targets mode-selector-wrap -->
+        <div id="mode-selector-wrap" style="display:none;"></div>
+
+        <!-- ── TRANSFORM TOOLS ZONE ── -->
+        <div id="tb-transform-zone">
+            <span id="tb-transform-label">TOOLS</span>
+            <button class="tb-tool-btn active" id="tbtool-select" data-tool="select" title="Select [Q]">
+                <i class="fas fa-mouse-pointer"></i>
+                <span class="tb-key">Q</span>
+            </button>
+            <button class="tb-tool-btn" id="tbtool-move" data-tool="move" title="Move [W]">
+                <i class="fas fa-arrows-alt"></i>
+                <span class="tb-key">W</span>
+            </button>
+            <button class="tb-tool-btn" id="tbtool-rotate" data-tool="rotate" title="Rotate [E]">
+                <i class="fas fa-sync-alt"></i>
+                <span class="tb-key">E</span>
+            </button>
+            <button class="tb-tool-btn" id="tbtool-scale" data-tool="scale" title="Scale [R]">
+                <i class="fas fa-expand-arrows-alt"></i>
+                <span class="tb-key">R</span>
+            </button>
+            <button class="tb-tool-btn" id="tbtool-draw" data-tool="draw" title="Draw [D]">
+                <i class="fas fa-pencil-alt"></i>
+                <span class="tb-key">D</span>
+            </button>
+            <button class="tb-snap-toggle" id="tb-snap-btn" title="Toggle Grid Snap">
+                <i class="fas fa-th"></i>
+                SNAP
+            </button>
+        </div>
+
+        <!-- ── SPACER ── -->
+        <div id="tb-spacer"></div>
+
+        <!-- ── STATS ZONE ── -->
+        <div id="tb-stats-zone">
+            <div class="tb-stat">
+                <div class="tb-stat-value" id="tb-stat-objects">0</div>
+                <div class="tb-stat-label">OBJECTS</div>
             </div>
-            <div id="scene-tree">
-                <div class="panel-empty">No level loaded</div>
+            <div class="tb-stat-div"></div>
+            <div class="tb-stat">
+                <div class="tb-stat-value" id="tb-stat-selected">—</div>
+                <div class="tb-stat-label">SELECTED</div>
+            </div>
+            <div class="tb-stat-div"></div>
+            <div class="tb-stat">
+                <div class="tb-stat-value" id="tb-stat-fps">60</div>
+                <div class="tb-stat-label">FPS</div>
             </div>
         </div>
 
-        <!-- 3D Viewport -->
-        <div id="viewport-container" class="widget">
-            <div id="viewport"></div>
+        <!-- ── FILE OPS ZONE ── -->
+        <div id="tb-file-zone">
+            <button class="tb-action-btn icon-only" id="btn-undo" title="Undo (Ctrl+Z)">
+                <i class="fas fa-undo"></i>
+            </button>
+            <button class="tb-action-btn icon-only" id="btn-redo" title="Redo (Ctrl+Y)">
+                <i class="fas fa-redo"></i>
+            </button>
+            <div class="tb-div"></div>
+            <button class="tb-action-btn" id="btn-new" title="New Level">
+                <i class="fas fa-file"></i> NEW
+            </button>
+            <button class="tb-action-btn" id="btn-load" title="Load Level">
+                <i class="fas fa-folder-open"></i> LOAD
+            </button>
+            <button class="tb-action-btn save" id="btn-save" title="Save (Ctrl+S)">
+                <i class="fas fa-save"></i> SAVE
+            </button>
+            <div class="tb-div"></div>
+            <button class="tb-action-btn" id="btn-import" title="Import GLTF/OBJ">
+                <i class="fas fa-file-import"></i> IMPORT
+            </button>
         </div>
 
-        <!-- Right Panel: Properties + Mode Tools -->
-        <div id="right-panel" class="widget">
-            <div class="w-header">
-                <span><i class="fas fa-sliders-h"></i> Properties</span>
-            </div>
-            <div id="properties-panel">
-                <div class="panel-empty">No selection</div>
-            </div>
-            <div class="w-header" style="border-top: 1px solid var(--border);">
-                <span><i class="fas fa-tools"></i> Mode Tools</span>
-            </div>
-            <div id="mode-tools">
-                <div class="panel-empty">Select a mode</div>
-            </div>
-        </div>
-
-        <!-- Status Bar -->
-        <div id="status-bar">
-            <span id="status-mode">FPS 3D</span>
-            <span id="status-project">No project</span>
-            <span id="status-dirty"></span>
-            <span style="flex:1"></span>
-            <span id="status-info">Ctrl+S: Save | F5: Play | Del: Delete</span>
+        <!-- ── PLAY ZONE ── -->
+        <div id="tb-play-zone">
+            <button id="tb-play-btn" id="btn-playtest" title="Playtest (F5)">
+                <i class="fas fa-play"></i>
+                PLAYTEST
+            </button>
         </div>
     </div>
 
-    <script src="/shared/EventBus.js"></script>
-    <script type="module">
-        import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js';
+    <!-- ═══════════ STATUS BAR ═══════════ -->
+    <div id="kas-statusbar">
+        <span class="kas-badge accent" id="status-mode">FPS 3D</span>
+        <span style="width:1px;height:10px;background:rgba(255,30,39,0.2);"></span>
+        <span class="kas-badge" id="status-project">No project</span>
+        <span class="kas-badge" id="status-dirty" style="color:#ff1e27;font-weight:bold;"></span>
+        <span style="flex:1;"></span>
+        <span class="kas-badge" id="status-objects">0 objects</span>
+        <span style="width:1px;height:10px;background:rgba(255,30,39,0.2);"></span>
+        <span class="kas-badge" id="status-info">Q:SELECT  W:MOVE  E:ROTATE  R:SCALE  D:DRAW  DEL:DELETE</span>
+    </div>
 
-        // ── Mode panel registry ───────────────────────────────────────────
-        const PANEL_REGISTRY = {
-            'fps-3d':        () => import('/engines/unified-3d/editor/FPSEditorPanel.js'),
-            'topdown-3d':    () => import('/engines/unified-3d/editor/TopDownEditorPanel.js'),
-            'platformer-3d': () => import('/engines/unified-3d/editor/PlatformerEditorPanel.js'),
-        };
+    <!-- ═══════════ MAIN WORKSPACE ═══════════ -->
+    <div id="kas-main">
 
-        const MODE_NAMES = {
-            'fps-3d':        'FPS 3D',
-            'topdown-3d':    'TOP-DOWN 3D',
-            'platformer-3d': 'PLATFORMER 3D',
-        };
+        <!-- LEFT PANEL (Vertical Tools Palette) -->
+        <div class="kas-panel" id="kas-left">
 
-        // ── URL params ────────────────────────────────────────────────────
-        const params  = new URLSearchParams(window.location.search);
-        const mode    = params.get('mode')    || 'fps-3d';
-        const project = params.get('project') || '';
-        const level   = params.get('level')   || '';
+            <!-- Transform Tools -->
+            <span class="tool-group-label">TOOLS</span>
+            <button class="vertical-tool-btn active" id="tool-select" data-tool="select"
+                data-tip="SELECT  [Q]"><i class="fas fa-mouse-pointer"></i><span class="vp-tool-key">Q</span></button>
+            <button class="vertical-tool-btn" id="tool-move" data-tool="move"
+                data-tip="MOVE  [W]"><i class="fas fa-arrows-alt"></i><span class="vp-tool-key">W</span></button>
+            <button class="vertical-tool-btn" id="tool-rotate" data-tool="rotate"
+                data-tip="ROTATE  [E]"><i class="fas fa-sync-alt"></i><span class="vp-tool-key">E</span></button>
+            <button class="vertical-tool-btn" id="tool-scale" data-tool="scale"
+                data-tip="SCALE  [R]"><i class="fas fa-expand-arrows-alt"></i><span class="vp-tool-key">R</span></button>
+            <button class="vertical-tool-btn" id="tool-draw" data-tool="draw"
+                data-tip="DRAW  [D]"><i class="fas fa-pencil-alt"></i><span class="vp-tool-key">D</span></button>
 
-        // ── DOM refs ──────────────────────────────────────────────────────
-        const modeSelector = document.getElementById('mode-selector');
-        const statusMode   = document.getElementById('status-mode');
-        const statusProject = document.getElementById('status-project');
+            <div class="left-divider"></div>
 
-        // ── Init editor ───────────────────────────────────────────────────
-        const viewport = document.getElementById('viewport');
-        const editor = new Editor3DCore(viewport, { mode, project, levelId: level });
+            <!-- Shape Spawners -->
+            <span class="tool-group-label">ADD</span>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-box" data-tip="BOX"
+                onclick="window.editor3d?.spawnShape('box')"><i class="fas fa-cube"></i></button>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-sphere" data-tip="SPHERE"
+                onclick="window.editor3d?.spawnShape('sphere')"><i class="fas fa-circle"></i></button>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-cylinder" data-tip="CYLINDER"
+                onclick="window.editor3d?.spawnShape('cylinder')"><i class="fas fa-database"></i></button>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-cone" data-tip="CONE"
+                onclick="window.editor3d?.spawnShape('cone')"><i class="fas fa-chevron-up" style="transform:scale(1.2);"></i></button>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-plane" data-tip="PLANE"
+                onclick="window.editor3d?.spawnShape('plane')"><i class="fas fa-border-all"></i></button>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-capsule" data-tip="CAPSULE"
+                onclick="window.editor3d?.spawnShape('capsule')"><i class="fas fa-pills"></i></button>
 
-        editor.init().then(async () => {
-            console.log('[Editor3D] Core initialised');
+            <div class="left-divider"></div>
 
-            // Set initial mode
-            modeSelector.value = mode;
-            statusMode.textContent = MODE_NAMES[mode] || mode;
-            statusProject.textContent = project ? `Project: ${project}` : 'No project';
+            <!-- Lights & Entities -->
+            <span class="tool-group-label">PLACE</span>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-light" data-tip="POINT LIGHT"
+                onclick="window.editor3d?.spawnLight()"><i class="fas fa-lightbulb"></i></button>
+            <button class="vertical-tool-btn spawn-btn" id="spawn-entity" data-tip="ENTITY"
+                onclick="window.editor3d?.spawnEntity()"><i class="fas fa-user-circle"></i></button>
+        </div>
 
-            // Load mode panel
-            await loadModePanel(mode);
+        <!-- CENTER VIEWPORT & MATERIAL MANAGER -->
+        <div class="kas-panel kas-full" id="kas-center" style="gap:0;">
+            <div id="viewport-wrapper">
+                <div id="viewport"></div>
 
-            // Load level if specified
-            if (project && level) {
-                await editor.loadLevel(project, level);
-            }
-        });
+                <!-- Viewport HUD Overlay -->
+                <div id="vp-overlay">
 
-        // ── Mode switching ────────────────────────────────────────────────
-        async function loadModePanel(modeId) {
-            const loader = PANEL_REGISTRY[modeId];
-            if (!loader) return;
-            const mod = await loader();
-            const PanelClass = mod.default;
-            editor.setModePanel(new PanelClass());
-            await editor.setMode(modeId);
+                    <!-- Top Left: Mode + Active Tool -->
+                    <div id="vp-top-left">
+                        <div class="vp-hud-pill mode-pill">
+                            <i class="fas fa-cube" style="font-size:9px;"></i>
+                            <span id="vp-mode-label">FPS 3D</span>
+                        </div>
+                        <div class="vp-hud-pill" id="vp-tool-label">
+                            <i class="fas fa-mouse-pointer" style="font-size:9px;"></i>
+                            SELECT
+                        </div>
+                    </div>
+
+                    <!-- Top Right: Camera / View -->
+                    <div id="vp-top-right">
+                        <div style="display:flex;gap:3px;">
+                            <button class="vp-view-btn active" id="vbtn-perspective" onclick="window.editor3d?.setCameraView?.('perspective')">PERSP</button>
+                            <button class="vp-view-btn" id="vbtn-top" onclick="window.editor3d?.setCameraView?.('top')">TOP</button>
+                            <button class="vp-view-btn" id="vbtn-front" onclick="window.editor3d?.setCameraView?.('front')">FRONT</button>
+                            <button class="vp-view-btn" id="vbtn-right" onclick="window.editor3d?.setCameraView?.('right')">RIGHT</button>
+                        </div>
+                        <div class="vp-hud-pill" id="vp-cam-info" style="justify-content:flex-end;">
+                            <i class="fas fa-camera" style="font-size:8px;"></i>
+                            <span id="vp-cam-pos">0, 0, 0</span>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Left: Shortcuts hint -->
+                    <div id="vp-bottom-left">
+                        <div class="vp-shortcuts">
+                            <span class="vp-shortcut"><span class="vp-key">RMB</span>ORBIT</span>
+                            <span class="vp-shortcut"><span class="vp-key">MMB</span>PAN</span>
+                            <span class="vp-shortcut"><span class="vp-key">SCROLL</span>ZOOM</span>
+                            <span class="vp-shortcut"><span class="vp-key">F</span>FOCUS</span>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Center: Quick Tool Switcher -->
+                    <div id="vp-toolbar">
+                        <button class="vp-tool-btn active" id="vt-select" data-tool="select" title="Select (Q)">
+                            <i class="fas fa-mouse-pointer"></i>
+                            <span class="vp-tool-key">Q</span>
+                        </button>
+                        <button class="vp-tool-btn" id="vt-move" data-tool="move" title="Move (W)">
+                            <i class="fas fa-arrows-alt"></i>
+                            <span class="vp-tool-key">W</span>
+                        </button>
+                        <button class="vp-tool-btn" id="vt-rotate" data-tool="rotate" title="Rotate (E)">
+                            <i class="fas fa-sync-alt"></i>
+                            <span class="vp-tool-key">E</span>
+                        </button>
+                        <button class="vp-tool-btn" id="vt-scale" data-tool="scale" title="Scale (R)">
+                            <i class="fas fa-expand-arrows-alt"></i>
+                            <span class="vp-tool-key">R</span>
+                        </button>
+                        <div class="vp-tool-sep"></div>
+                        <button class="vp-tool-btn" id="vt-draw" data-tool="draw" title="Draw (D)">
+                            <i class="fas fa-pencil-alt"></i>
+                            <span class="vp-tool-key">D</span>
+                        </button>
+                    </div>
+
+                    <!-- Bottom Right: Grid & Snap toggles -->
+                    <div id="vp-bottom-right">
+                        <button class="vp-view-btn active" id="vbtn-grid" onclick="window.editor3d?.toggleGrid?.(); this.classList.toggle('active')">GRID</button>
+                        <button class="vp-view-btn active" id="vbtn-snap" onclick="window.editor3d?.toggleSnap?.(); this.classList.toggle('active')">SNAP</button>
+                        <button class="vp-view-btn active" id="vbtn-wireframe" onclick="window.editor3d?.toggleWireframe?.(); this.classList.toggle('active')">SOLID</button>
+                    </div>
+
+                </div><!-- #vp-overlay -->
+            </div>
+
+            <!-- Material Manager -->
+            <div id="material-manager">
+                <div class="mat-header">
+                    <span><i class="fas fa-palette" style="margin-right:4px;font-size:9px;"></i>MATERIAL LIBRARY</span>
+                    <div style="display:flex;gap:4px;">
+                        <button class="kas-btn icon" title="Create New Material" id="btn-new-material"
+                            style="width:18px;height:18px;font-size:9px;padding:0;"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="mat-list" id="material-list">
+                    <div class="mat-empty-state">
+                        <i class="fas fa-palette" style="font-size:14px;opacity:0.3;"></i>
+                        No materials — click <i class="fas fa-plus" style="margin:0 3px;"></i> to create
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL (Inspector) -->
+        <div id="kas-right">
+
+            <!-- SCENE TREE -->
+            <div class="rp-section" id="rp-scene">
+                <div class="rp-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="rp-header-left">
+                        <i class="fas fa-sitemap rp-header-icon"></i>
+                        <span class="rp-title">Scene Tree</span>
+                    </div>
+                    <i class="fas fa-chevron-down rp-chevron"></i>
+                </div>
+                <div class="rp-body">
+                    <div id="scene-tree">
+                        <div class="tree-empty">
+                            <div class="tree-empty-icon"><i class="fas fa-tree"></i></div>
+                            <div class="tree-empty-text">No level loaded</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROPERTIES -->
+            <div class="rp-section" id="rp-props">
+                <div class="rp-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="rp-header-left">
+                        <i class="fas fa-sliders-h rp-header-icon"></i>
+                        <span class="rp-title">Properties</span>
+                    </div>
+                    <i class="fas fa-chevron-down rp-chevron"></i>
+                </div>
+                <div class="rp-body">
+                    <div id="properties-panel">
+                        <div class="prop-empty">
+                            <div class="prop-empty-icon"><i class="fas fa-hand-pointer"></i></div>
+                            <div class="prop-empty-text">Select an object</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE TOOLS -->
+            <div class="rp-section" id="rp-mode-tools">
+                <div class="rp-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="rp-header-left">
+                        <i class="fas fa-tools rp-header-icon"></i>
+                        <span class="rp-title">Mode Tools</span>
+                    </div>
+                    <i class="fas fa-chevron-down rp-chevron"></i>
+                </div>
+                <div class="rp-body">
+                    <div id="mode-tools">
+                        <div class="mode-tools-empty">
+                            <i class="fas fa-tools" style="font-size:14px;opacity:0.2;display:block;margin-bottom:6px;"></i>
+                            Select a mode
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ENVIRONMENT -->
+            <div class="rp-section" id="rp-env">
+                <div class="rp-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="rp-header-left">
+                        <i class="fas fa-globe rp-header-icon"></i>
+                        <span class="rp-title">Environment</span>
+                    </div>
+                    <i class="fas fa-chevron-down rp-chevron"></i>
+                </div>
+                <div class="rp-body">
+                    <div style="padding:8px;">
+                        <div class="prop-row">
+                            <span class="prop-label">Ambient</span>
+                            <div class="prop-value" style="display:flex;gap:4px;align-items:center;">
+                                <input type="color" id="env-ambient-color" value="#111111"
+                                    style="width:28px;height:22px;border:1px solid rgba(255,30,39,0.3);background:transparent;cursor:pointer;padding:1px;"
+                                    oninput="window.editor3d?.setAmbientColor?.(this.value)">
+                                <input type="range" min="0" max="2" step="0.05" value="0.3" id="env-ambient-intensity"
+                                    class="kas-range" style="flex:1;" oninput="window.editor3d?.setAmbientIntensity?.(parseFloat(this.value))">
+                            </div>
+                        </div>
+                        <div class="prop-row">
+                            <span class="prop-label">Fog</span>
+                            <div class="prop-value" style="display:flex;gap:4px;align-items:center;">
+                                <input type="checkbox" id="env-fog-toggle"
+                                    style="accent-color:#ff1e27;cursor:pointer;"
+                                    onchange="window.editor3d?.setFog?.(this.checked)">
+                                <input type="range" min="0" max="500" step="5" value="100" id="env-fog-far"
+                                    class="kas-range" style="flex:1;" oninput="window.editor3d?.setFogDistance?.(parseFloat(this.value))">
+                            </div>
+                        </div>
+                        <div class="prop-row">
+                            <span class="prop-label">Sky</span>
+                            <div class="prop-value">
+                                <select class="tool-select" id="env-sky"
+                                    onchange="window.editor3d?.setSkybox?.(this.value)">
+                                    <option value="solid">Solid Color</option>
+                                    <option value="gradient">Gradient</option>
+                                    <option value="day">Day</option>
+                                    <option value="night">Night</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- #kas-right -->
+
+    </div><!-- #kas-main -->
+
+    <!-- Shader Editor Modal -->
+    <div id="shader-editor-modal">
+        <div id="shader-editor-header"
+            style="height:36px;background:#111;border-bottom:1px solid rgba(255,30,39,0.3);
+                   display:flex;align-items:center;padding:0 10px;justify-content:space-between;
+                   cursor:move;user-select:none;">
+            <div style="font-weight:bold;color:#ff1e27;font-size:10px;letter-spacing:1px;font-family:'VT323',monospace;">
+                <i class="fas fa-code" style="margin-right:6px;"></i>
+                SHADER SOURCE
+                <span id="shader-editor-title" style="color:rgba(255,30,39,0.5);font-weight:normal;margin-left:8px;"></span>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button id="shader-btn-compile" class="kas-btn" style="height:24px;font-size:10px;">
+                    <i class="fas fa-play"></i> COMPILE &amp; APPLY
+                </button>
+                <button id="shader-btn-close" class="kas-btn icon" style="height:24px;width:24px;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div style="display:flex;flex:1;min-height:0;">
+            <div id="shader-monaco-container" style="flex:1;background:#000;"></div>
+            <div style="width:200px;border-left:1px solid rgba(255,30,39,0.2);display:flex;flex-direction:column;background:#080808;">
+                <div style="height:24px;background:#111;border-bottom:1px solid rgba(255,30,39,0.2);font-size:9px;
+                            font-family:'VT323',monospace;letter-spacing:1.5px;color:rgba(255,30,39,0.5);
+                            display:flex;align-items:center;padding:0 8px;">UNIFORMS</div>
+                <div id="shader-uniforms-panel" style="flex:1;overflow-y:auto;padding:8px;"></div>
+                <div style="height:24px;background:#111;border-top:1px solid rgba(255,30,39,0.2);
+                            border-bottom:1px solid rgba(255,30,39,0.2);font-size:9px;
+                            font-family:'VT323',monospace;letter-spacing:1.5px;color:rgba(255,30,39,0.5);
+                            display:flex;align-items:center;padding:0 8px;">OUTPUT</div>
+                <div id="shader-output-panel"
+                    style="height:100px;background:#000;color:rgba(255,30,39,0.7);
+                           font-family:'VT323',monospace;font-size:11px;padding:8px;overflow-y:auto;">
+                    Ready.
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- #kas-shell -->
+
+<!-- Scripts -->
+<script src="/shared/EventBus.js"></script>
+<script src="lib/monaco/vs/loader.js"></script>
+<script type="module">
+    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust3';
+
+    // ── Mode panel registry ───────────────────────────────────────────
+    const PANEL_REGISTRY = {
+        'fps-3d':        () => import('/engines/unified-3d/editor/FPSEditorPanel.js'),
+        'topdown-3d':    () => import('/engines/unified-3d/editor/TopDownEditorPanel.js'),
+        'platformer-3d': () => import('/engines/unified-3d/editor/PlatformerEditorPanel.js'),
+    };
+
+    const MODE_NAMES = {
+        'fps-3d':        'FPS 3D',
+        'topdown-3d':    'TOP-DOWN 3D',
+        'platformer-3d': 'PLATFORMER 3D',
+    };
+
+    // ── URL params ────────────────────────────────────────────────────
+    const params  = new URLSearchParams(window.location.search);
+    const mode    = params.get('mode')    || 'fps-3d';
+    const project = params.get('project') || '';
+    const level   = params.get('level')   || '';
+
+    // ── DOM refs ──────────────────────────────────────────────────────
+    const modeSelector  = document.getElementById('mode-selector');
+    const statusMode    = document.getElementById('status-mode');
+    const statusProject = document.getElementById('status-project');
+    const vpModeLabel   = document.getElementById('vp-mode-label');
+
+    // ── Init editor ───────────────────────────────────────────────────
+    const viewport = document.getElementById('viewport');
+    const editor = new Editor3DCore(viewport, { mode, project, levelId: level });
+
+    editor.init().then(async () => {
+        console.log('[Editor3D] Core initialised');
+        modeSelector.value = mode;
+        statusMode.textContent = MODE_NAMES[mode] || mode;
+        statusProject.textContent = project ? `Project: ${project}` : 'No project';
+        vpModeLabel.textContent = MODE_NAMES[mode] || mode;
+        await loadModePanel(mode);
+        if (project && level) {
+            await editor.loadLevel(project, level);
         }
+    });
 
-        modeSelector.addEventListener('change', async () => {
-            const newMode = modeSelector.value;
+    // ── Mode switching ────────────────────────────────────────────────
+    async function loadModePanel(modeId) {
+        const loader = PANEL_REGISTRY[modeId];
+        if (!loader) return;
+        const mod = await loader();
+        const PanelClass = mod.default;
+        editor.setModePanel(new PanelClass());
+        await editor.setMode(modeId);
+    }
+
+    // ── Custom tab buttons (visual-only, drive hidden select) ─────────
+    document.querySelectorAll('.mode-tab-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const newMode = btn.dataset.mode;
+            modeSelector.value = newMode;
             statusMode.textContent = MODE_NAMES[newMode] || newMode;
+            vpModeLabel.textContent = MODE_NAMES[newMode] || newMode;
             await loadModePanel(newMode);
-            // Update URL without reload
             const url = new URL(window.location);
             url.searchParams.set('mode', newMode);
             history.replaceState(null, '', url);
         });
+    });
+    // sync initial state
+    document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
+    const initTab = document.querySelector(`.mode-tab-btn[data-mode="${mode}"]`);
+    if (initTab) initTab.classList.add('active');
 
-        // ── Toolbar buttons ───────────────────────────────────────────────
-        document.getElementById('btn-new')?.addEventListener('click', () => {
-            editor.newLevel();
-        });
-        document.getElementById('btn-save')?.addEventListener('click', () => {
-            editor.saveLevel();
-        });
-        document.getElementById('btn-undo')?.addEventListener('click', () => {
-            editor.undo();
-        });
-        document.getElementById('btn-redo')?.addEventListener('click', () => {
-            editor.redo();
-        });
-        document.getElementById('btn-playtest')?.addEventListener('click', () => {
-            editor.playtest();
-        });
-        document.getElementById('btn-load')?.addEventListener('click', () => {
-            const proj = prompt('Project name:');
-            const lvl  = prompt('Level ID:');
-            if (proj && lvl) editor.loadLevel(proj, lvl);
-        });
-        document.getElementById('btn-import')?.addEventListener('click', () => {
-            editor.importGLTF();
-        });
+    // ── Toolbar buttons ───────────────────────────────────────────────
+    document.getElementById('btn-new')?.addEventListener('click', () => editor.newLevel());
+    document.getElementById('btn-save')?.addEventListener('click', () => editor.saveLevel());
+    document.getElementById('btn-undo')?.addEventListener('click', () => editor.undo());
+    document.getElementById('btn-redo')?.addEventListener('click', () => editor.redo());
+    document.getElementById('btn-playtest')?.addEventListener('click', () => editor.playtest());
+    document.getElementById('btn-load')?.addEventListener('click', () => {
+        const proj = prompt('Project name:');
+        const lvl  = prompt('Level ID:');
+        if (proj && lvl) editor.loadLevel(proj, lvl);
+    });
+    document.getElementById('btn-import')?.addEventListener('click', () => editor.importGLTF());
 
-        // ── Keyboard shortcuts ────────────────────────────────────────────
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                if (e.key === 's') { e.preventDefault(); editor.saveLevel(); }
-                if (e.key === 'z') { e.preventDefault(); editor.undo(); }
-                if (e.key === 'y') { e.preventDefault(); editor.redo(); }
+    // ── Keyboard shortcuts ────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 's') { e.preventDefault(); editor.saveLevel(); }
+            if (e.key === 'z') { e.preventDefault(); editor.undo(); }
+            if (e.key === 'y') { e.preventDefault(); editor.redo(); }
+        }
+        if (e.key === 'F5') { e.preventDefault(); editor.playtest(); }
+        if (e.key === 'Delete') { editor.deleteSelected?.(); }
+    });
+
+    // ── Transform tool buttons (sidebar + viewport toolbar) ───────────
+
+    // Sync UI buttons/HUD only — does NOT call editor.setActiveTool (avoids re-entry)
+    function syncToolUI(tool) {
+        // Sidebar buttons
+        document.querySelectorAll('#kas-left [data-tool]').forEach(b => {
+            b.classList.toggle('active', b.dataset.tool === tool);
+        });
+        // Viewport mini toolbar
+        document.querySelectorAll('#vp-toolbar [data-tool]').forEach(b => {
+            b.classList.toggle('active', b.dataset.tool === tool);
+        });
+        // HUD label
+        const icons  = { select:'mouse-pointer', move:'arrows-alt', rotate:'sync-alt', scale:'expand-arrows-alt', draw:'pencil-alt' };
+        const labels = { select:'SELECT', move:'MOVE', rotate:'ROTATE', scale:'SCALE', draw:'DRAW' };
+        const vpLabel = document.getElementById('vp-tool-label');
+        if (vpLabel) vpLabel.innerHTML = `<i class="fas fa-${icons[tool]||'mouse-pointer'}" style="font-size:9px;"></i> ${labels[tool]||tool.toUpperCase()}`;
+    }
+
+    // Called by button clicks — tells the editor AND syncs UI
+    function activateTool(tool) {
+        editor.setActiveTool(tool); // fires _onToolChanged → syncToolUI (no loop)
+    }
+
+    document.querySelectorAll('#kas-left [data-tool]').forEach(btn => {
+        btn.addEventListener('click', () => activateTool(btn.dataset.tool));
+    });
+    document.querySelectorAll('#vp-toolbar [data-tool]').forEach(btn => {
+        btn.addEventListener('click', () => activateTool(btn.dataset.tool));
+    });
+
+    // Called by the editor when tool changes (keyboard shortcut, programmatic, etc.)
+    // Must only call syncToolUI — NOT activateTool — to avoid infinite recursion
+    editor._onToolChanged = (tool) => {
+        syncToolUI(tool);
+        if (tool !== 'draw') {
+            document.querySelectorAll('#mode-tools .draw-btn, #mode-tools .tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        } else {
+            const activeDraw = document.querySelector('#mode-tools .draw-btn.active');
+            if (!activeDraw) {
+                const pencilBtn = document.querySelector('#mode-tools [data-draw="pencil"]');
+                if (pencilBtn) pencilBtn.classList.add('active');
             }
-            if (e.key === 'F5') { e.preventDefault(); editor.playtest(); }
-            if (e.key === 'Delete') { editor.deleteSelected?.(); }
-        });
+            const activeTool = document.querySelector('#mode-tools .tool-btn.active');
+            if (!activeTool) {
+                const drawRoomBtn = document.querySelector('#mode-tools [data-tool="draw-room"]');
+                if (drawRoomBtn) drawRoomBtn.classList.add('active');
+            }
+        }
+    };
 
-        // ── Expose for debugging ──────────────────────────────────────────
-        window.editor3d = editor;
-    </script>
+    // ── Live object count in status bar ──────────────────────────────
+    const statusObjects = document.getElementById('status-objects');
+    setInterval(() => {
+        const count = window.editor3d?.meshGroup?.children?.length ?? 0;
+        statusObjects.textContent = `${count} object${count !== 1 ? 's' : ''}`;
+    }, 1000);
+
+    // ── Expose for debugging ──────────────────────────────────────────
+    window.editor3d = editor;
+</script>
 </body>
 </html>

@@ -168,11 +168,7 @@
                 </div>
             </div>
 
-            <!-- STUDIO RADAR (Minimap) -->
-            <div id="studio-minimap" onclick="handleMinimapClick(event)">
-                <div id="minimap-header">Studio Radar</div>
-                <canvas id="minimap-canvas"></canvas>
-            </div>
+
         </main>
 
         <!-- RIGHT SIDEBAR: DEV OPS TOOLKIT -->
@@ -473,7 +469,7 @@
     <script src="shared/AssetManager.js?v=6"></script>
     <script src="ai/error-watcher.js?v=1"></script>
     <script type="module">
-        import { ThoughtVisualizer } from 'ai/ui/thought-visualizer.js';
+        import { ThoughtVisualizer } from './ai/ui/thought-visualizer.js';
         window.RedGlitchThoughtVisualizer = new ThoughtVisualizer(window.RedGlitchEventBus);
     </script>
     

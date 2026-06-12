@@ -53,6 +53,131 @@ const CelQuantizeShader = {
     `
 };
 
+// ── Color Grading Shader ─────────────────────────────────────────────────────
+const ColorGradingShader = {
+    name: 'ColorGradingShader',
+    uniforms: {
+        tDiffuse: { value: null },
+        uBrightness: { value: 1.0 },
+        uContrast: { value: 1.0 },
+        uSaturation: { value: 1.0 }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float uBrightness;
+        uniform float uContrast;
+        uniform float uSaturation;
+        varying vec2 vUv;
+        void main() {
+            vec4 texel = texture2D(tDiffuse, vUv);
+            
+            // Brightness
+            vec3 color = texel.rgb * uBrightness;
+            
+            // Contrast
+            color = (color - 0.5) * max(uContrast, 0.0) + 0.5;
+            
+            // Saturation
+            const vec3 W = vec3(0.2125, 0.7154, 0.0721);
+            vec3 intensity = vec3(dot(color, W));
+            color = mix(intensity, color, uSaturation);
+            
+            gl_FragColor = vec4(color, texel.a);
+        }
+    `
+};
+
+// ── Screen Fog Shader ────────────────────────────────────────────────────────
+const ScreenFogShader = {
+    name: 'ScreenFogShader',
+    uniforms: {
+        tDiffuse: { value: null },
+        uFogColor: { value: new THREE.Color(0x000000) },
+        uFogDensity: { value: 0.5 },
+        uFogHeightMin: { value: 0.0 },
+        uFogHeightMax: { value: 1.0 }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec3 uFogColor;
+        uniform float uFogDensity;
+        uniform float uFogHeightMin;
+        uniform float uFogHeightMax;
+        varying vec2 vUv;
+        void main() {
+            vec4 texel = texture2D(tDiffuse, vUv);
+            
+            // Simple gradient based on screen Y
+            float factor = smoothstep(uFogHeightMin, uFogHeightMax, vUv.y);
+            factor = clamp(factor * uFogDensity, 0.0, 1.0);
+            
+            gl_FragColor = vec4(mix(uFogColor, texel.rgb, factor), texel.a);
+        }
+    `
+};
+
+// ── Glow Shader (Pseudo-bloom) ───────────────────────────────────────────────
+const GlowShader = {
+    name: 'GlowShader',
+    uniforms: {
+        tDiffuse: { value: null },
+        uIntensity: { value: 1.0 },
+        uThreshold: { value: 0.8 },
+        uRadius: { value: 0.005 }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float uIntensity;
+        uniform float uThreshold;
+        uniform float uRadius;
+        varying vec2 vUv;
+        
+        void main() {
+            vec4 texel = texture2D(tDiffuse, vUv);
+            
+            // Simple 5-tap cross blur
+            vec3 sum = vec3(0.0);
+            vec2 offsets[4];
+            offsets[0] = vec2(uRadius, 0.0);
+            offsets[1] = vec2(-uRadius, 0.0);
+            offsets[2] = vec2(0.0, uRadius);
+            offsets[3] = vec2(0.0, -uRadius);
+            
+            for(int i = 0; i < 4; i++) {
+                vec3 sampleColor = texture2D(tDiffuse, vUv + offsets[i]).rgb;
+                float brightness = max(max(sampleColor.r, sampleColor.g), sampleColor.b);
+                if (brightness > uThreshold) {
+                    sum += sampleColor * (brightness - uThreshold);
+                }
+            }
+            
+            vec3 finalColor = texel.rgb + (sum * uIntensity);
+            gl_FragColor = vec4(finalColor, texel.a);
+        }
+    `
+};
+
 class Renderer3D {
     constructor(container, opts = {}) {
         this.container = container;
@@ -105,6 +230,65 @@ class Renderer3D {
         this._resizeObserver = new ResizeObserver(() => this._onResize());
         this._resizeObserver.observe(this.container);
         return this;
+    }
+
+    rebuildPostProcessing(stackConfig = []) {
+        if (!this.composer) return;
+
+        let { width, height } = this._size();
+        width = Math.max(width, 16); height = Math.max(height, 16);
+
+        // Clear existing passes
+        this.composer.passes.forEach(p => { if (p.dispose) p.dispose(); });
+        this.composer.passes = [];
+        this.outlinePass = null; // Reset outline pass reference
+
+        // Base render pass
+        this.composer.addPass(new RenderPass(this.scene, this.camera));
+
+        // Add configured passes
+        for (const passConfig of stackConfig) {
+            if (passConfig.type === 'outline') {
+                const op = new OutlinePass(new THREE.Vector2(width, height), this.scene, this.camera);
+                op.edgeStrength = passConfig.edgeStrength ?? 3.0;
+                op.edgeThickness = passConfig.edgeThickness ?? 1.5;
+                op.visibleEdgeColor.set(passConfig.edgeColor || '#000000');
+                op.hiddenEdgeColor.set(passConfig.edgeColor || '#000000');
+                this.outlinePass = op; // Save for selection highlighting
+                this.composer.addPass(op);
+            }
+            else if (passConfig.type === 'cel') {
+                const cp = new ShaderPass(CelQuantizeShader);
+                cp.uniforms.uTones.value = passConfig.tones ?? 3.0;
+                cp.uniforms.uSatBoost.value = passConfig.satBoost ?? 1.1;
+                this.composer.addPass(cp);
+            }
+            else if (passConfig.type === 'color_grading') {
+                const cg = new ShaderPass(ColorGradingShader);
+                cg.uniforms.uBrightness.value = passConfig.brightness ?? 1.0;
+                cg.uniforms.uContrast.value = passConfig.contrast ?? 1.0;
+                cg.uniforms.uSaturation.value = passConfig.saturation ?? 1.0;
+                this.composer.addPass(cg);
+            }
+            else if (passConfig.type === 'fog') {
+                const fp = new ShaderPass(ScreenFogShader);
+                fp.uniforms.uFogColor.value = new THREE.Color(passConfig.color || '#000000');
+                fp.uniforms.uFogDensity.value = passConfig.density ?? 0.5;
+                fp.uniforms.uFogHeightMin.value = passConfig.heightMin ?? 0.0;
+                fp.uniforms.uFogHeightMax.value = passConfig.heightMax ?? 1.0;
+                this.composer.addPass(fp);
+            }
+            else if (passConfig.type === 'glow') {
+                const gp = new ShaderPass(GlowShader);
+                gp.uniforms.uIntensity.value = passConfig.intensity ?? 1.0;
+                gp.uniforms.uThreshold.value = passConfig.threshold ?? 0.8;
+                gp.uniforms.uRadius.value = passConfig.radius ?? 0.005;
+                this.composer.addPass(gp);
+            }
+        }
+
+        // Final output
+        this.composer.addPass(new OutputPass());
     }
 
     render() { if (this.composer) this.composer.render(); }

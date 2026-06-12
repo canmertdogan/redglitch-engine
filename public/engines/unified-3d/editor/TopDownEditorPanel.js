@@ -102,6 +102,9 @@ export default class TopDownEditorPanel {
             btn.addEventListener('click', () => {
                 this.container.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                if (this.editor) {
+                    this.editor.setActiveTool('draw');
+                }
             });
         });
 
@@ -118,6 +121,32 @@ export default class TopDownEditorPanel {
     }
 
     onModeChanged(mode) {}
+
+    getDrawState() {
+        const activeBtn = this.container.querySelector('.tool-btn.active');
+        const tool = activeBtn ? activeBtn.dataset.tool : 'terrain';
+        
+        let blockVal = 'terrain';
+        if (tool === 'entity') {
+            blockVal = document.getElementById('td-entity-type')?.value || this._entityType;
+        } else {
+            blockVal = tool; // 'terrain', 'navmesh', 'waypoint', 'fog'
+        }
+
+        const team = parseInt(document.getElementById('td-team')?.value) || 0;
+
+        return {
+            mode: 'pencil',
+            tool: tool,
+            block: blockVal,
+            entity: blockVal,
+            team: team,
+            width: 1,
+            height: 1,
+            depth: 1,
+            snap: tool === 'terrain'
+        };
+    }
 
     dispose() {
         if (this.container) this.container.innerHTML = '';

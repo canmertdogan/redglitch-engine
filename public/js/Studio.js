@@ -89,7 +89,6 @@ function initWorkspaceV2() {
 
 function workspaceLoop() {
     const bgCanvas = document.getElementById('studio-bg-canvas');
-    const minimapCanvas = document.getElementById('minimap-canvas');
     
     if (bgCanvas) {
         const ctx = bgCanvas.getContext('2d');
@@ -117,55 +116,8 @@ function workspaceLoop() {
             ctx.fillRect(p.x, p.y, p.size, p.size);
         });
     }
-
-    if (minimapCanvas) {
-        renderMinimap(minimapCanvas);
-    }
     
     requestAnimationFrame(workspaceLoop);
-}
-
-function renderMinimap(canvas) {
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const windows = Array.from(document.querySelectorAll('.window')).filter(w => w.style.display !== 'none');
-    
-    let minX = -workspacePan.x, maxX = -workspacePan.x + window.innerWidth;
-    let minY = -workspacePan.y, maxY = -workspacePan.y + window.innerHeight;
-    
-    windows.forEach(w => {
-        const wx = parseFloat(w.style.left) || 0;
-        const wy = parseFloat(w.style.top) || 0;
-        minX = Math.min(minX, wx);
-        maxX = Math.max(maxX, wx + w.offsetWidth);
-        minY = Math.min(minY, wy);
-        maxY = Math.max(maxY, wy + w.offsetHeight);
-    });
-
-    const padding = 500;
-    const worldW = maxX - minX + padding * 2;
-    const worldH = maxY - minY + padding * 2;
-    const scale = Math.min(canvas.width / worldW, canvas.height / worldH);
-
-    ctx.save();
-    ctx.scale(scale, scale);
-    ctx.translate(-minX + padding, -minY + padding);
-
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-    ctx.lineWidth = 10 / scale;
-    ctx.strokeRect(-workspacePan.x, -workspacePan.y, window.innerWidth, window.innerHeight);
-
-    windows.forEach(w => {
-        const wx = parseFloat(w.style.left) || 0;
-        const wy = parseFloat(w.style.top) || 0;
-        ctx.fillStyle = w.classList.contains('focused') ? '#ff0000' : 'rgba(52, 73, 94, 0.8)';
-        ctx.fillRect(wx, wy, w.offsetWidth, w.offsetHeight);
-    });
-
-    ctx.restore();
 }
 
 function tileWindows() {
@@ -603,6 +555,10 @@ window.addEventListener('mousemove', (e) => {
     if (animationFrameId) return;
     
     animationFrameId = requestAnimationFrame(() => {
+        if (!dragTarget) {
+            animationFrameId = null;
+            return;
+        }
         const workspace = document.getElementById('workspace');
         const wsRect = workspace.getBoundingClientRect();
         const ghost = document.getElementById('snap-ghost');
@@ -1136,30 +1092,6 @@ window.openBuildWizard = openBuildWizard;
 window.pauseGame = pauseGame;
 window.stopGame = stopGame;
 window.openTool = openTool;
-function handleMinimapClick(e) {
-    const minimap = document.getElementById('studio-minimap');
-    const canvas = document.getElementById('minimap-canvas');
-    if (!minimap || !canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    // We need to reverse the scale and translation from renderMinimap
-    // For simplicity, let's just use the ratio of the click to the canvas size
-    const rx = x / canvas.width;
-    const ry = y / canvas.height;
-
-    // This is a rough estimation since the minimap scale is dynamic
-    // A better way is to store the scale and minX/minY in a global state
-    // But for V2.0, let's just make it "center the workspace" on click for now
-    // or implement a basic 'jump to origin' if clicked.
-    
-    // Better implementation:
-    // We'll calculate the bounds during render and store them.
-}
-
-window.handleMinimapClick = handleMinimapClick;
 window.tileWindows = tileWindows;
 async function openExplorer() {
     try {

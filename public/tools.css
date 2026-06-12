@@ -927,37 +927,6 @@
             will-change: transform;
         }
 
-        #studio-minimap {
-            position: absolute;
-            bottom: 20px; right: 20px;
-            width: 180px; height: 120px;
-            background: var(--bg-card);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: 1px solid var(--border);
-            z-index: 2000;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 30, 39, 0.04);
-            border-radius: 0;
-            overflow: hidden;
-            cursor: crosshair;
-            display: flex; flex-direction: column;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        #studio-minimap:hover {
-            border-color: rgba(255, 30, 39, 0.2);
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(255, 30, 39, 0.06);
-        }
-        #minimap-header {
-            height: 18px;
-            background: rgba(0, 0, 0, 0.4);
-            font-size: 9px;
-            color: var(--text-muted);
-            display: flex; align-items: center; padding: 0 5px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            border-bottom: 1px solid var(--border);
-        }
-        #minimap-canvas { flex-grow: 1; background: rgba(5, 5, 8, 0.6); }
         /* --- INTERNAL WINDOWS --- */
         .window {
             position: absolute;

@@ -108,6 +108,9 @@ export default class FPSEditorPanel {
             btn.addEventListener('click', () => {
                 this.container.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                if (this.editor) {
+                    this.editor.setActiveTool('draw');
+                }
             });
         });
 
@@ -116,6 +119,9 @@ export default class FPSEditorPanel {
                 this.container.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this._drawMode = btn.dataset.draw;
+                if (this.editor) {
+                    this.editor.setActiveTool('draw');
+                }
             });
         });
 
@@ -140,6 +146,28 @@ export default class FPSEditorPanel {
 
     onModeChanged(mode) {
         // Only active when mode is fps-3d
+    }
+
+    getDrawState() {
+        const activeBtn = this.container.querySelector('.tool-btn.active');
+        const tool = activeBtn ? activeBtn.dataset.tool : 'draw-room';
+        const blockType = document.getElementById('fps-block-type')?.value || this._activeBlock;
+        
+        let blockVal = blockType;
+        if (tool === 'entity') blockVal = 'spawn';
+        else if (tool === 'light') blockVal = 'light';
+        else if (tool === 'trigger') blockVal = 'trigger';
+
+        return {
+            mode: this._drawMode,
+            tool: tool,
+            block: blockVal,
+            layerY: this._activeY,
+            width: 1,
+            height: (tool === 'draw-room' && (blockType === 'wall' || blockType === 'pillar')) ? 2 : 1,
+            depth: 1,
+            snap: true
+        };
     }
 
     dispose() {

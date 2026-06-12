@@ -20,6 +20,7 @@
 import Engine3DBase from './Engine3DBase.js';
 import * as THREE from '/lib/three/three.module.js';
 import { hexMaterial, PrimitiveFactory } from './Renderer3D.js';
+import { createDefaultSkyboxConfig, normalizeSkyboxConfig } from './SkyboxSystem.js';
 
 // ── Level Schema Version ──────────────────────────────────────────────────────
 const LEVEL_SCHEMA_VERSION = '1.0';
@@ -28,28 +29,35 @@ const LEVEL_SCHEMA_VERSION = '1.0';
  * 3D Level JSON schema:
  * {
  *   version:    string,          // LEVEL_SCHEMA_VERSION
- *   engineType: string,          // 'topdown-3d' | 'fps-3d' | 'platformer-3d'
+ *   engineType: string,          // 'unified-3d' | 'topdown-3d' | 'fps-3d' | 'platformer-3d'
  *   name:       string,
  *   geometry:   GeometryDef[],   // static meshes / voxel chunks
  *   entities:   EntityDef[],     // dynamic objects (NPCs, pickups, triggers)
+ *   materials:  MaterialDef[],   // material data (Cinema 4D style channels)
  *   lights:     LightDef[],      // directional, point, spot, ambient
  *   navmesh:    NavmeshDef|null, // baked navmesh polygon soup
- *   skybox:     SkyboxDef|null,  // solid color or palette-idx gradient
+ *   skybox:     SkyboxDef|null,  // unified skybox payload with colors + sun
  *   physics:    PhysicsDef,      // gravity, fixed-step config
  * }
  *
- * GeometryDef:  { id, type:'mesh'|'voxelChunk', position[3], rotation[4], scale[3], palette_index|colorHex, mesh_ref, chunk_data }
+ * MaterialDef:  { id, name, tags[], channels: { color, luminance, reflectance, transparency, bump } }
+ * GeometryDef:  { id, type:'mesh'|'voxelChunk', position[3], rotation[4], scale[3], material_id, palette_index|colorHex, mesh_ref, chunk_data }
  * EntityDef:    { id, type, position[3], rotation[4], scale[3], properties{} }
  * LightDef:     { id, type:'ambient'|'directional'|'point'|'spot', color_index, intensity, position[3], target[3], castShadow }
  * NavmeshDef:   { vertices: number[], indices: number[], areas: number[] }
- * SkyboxDef:    { type:'solid'|'gradient', top_index, bottom_index }
- * PhysicsDef:   { gravity[3], fixedStep, iterations }
+ *   SkyboxDef:    {
+ *     type:'solid'|'gradient'|'voxel',
+ *     topColor, bottomColor, colorHex,
+ *     fogSync, fallbackMode,
+ *     sun:{ color, intensity, azimuth, elevation },
+ *     top_index, bottom_index
+ *   }
+ *   PhysicsDef:   { gravity[3], fixedStep, iterations }
  */
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_PHYSICS = { gravity: [0, -9.82, 0], fixedStep: 1 / 60, iterations: 10 };
-const DEFAULT_SKYBOX  = { type: 'solid', top_index: 0, bottom_index: 0 };
 
 // ── Engine3DAdapter ───────────────────────────────────────────────────────────
 
@@ -203,6 +211,9 @@ export default class Engine3DAdapter extends Engine3DBase {
     _validateLevel(raw) {
         if (!raw || typeof raw !== 'object') throw new Error('Level data must be an object');
 
+        const engineType = raw.engineType || this.engineType3D || 'topdown-3d';
+        const paletteManager = this._getPaletteManager();
+
         const rawLights = (Array.isArray(raw.lights) && raw.lights.length > 0)
             ? raw.lights
             : [_defaultAmbient(), _defaultSun()];
@@ -211,13 +222,18 @@ export default class Engine3DAdapter extends Engine3DBase {
             // Preserve engine-specific payload fields (e.g. topdown terrain/nav extras)
             ...raw,
             version:    raw.version    || LEVEL_SCHEMA_VERSION,
-            engineType: raw.engineType || this.engineType3D || 'topdown-3d',
+            engineType,
             name:       raw.name       || 'Untitled Level',
+            materials:  Array.isArray(raw.materials) ? raw.materials : [],
             geometry:   Array.isArray(raw.geometry)  ? raw.geometry  : [],
             entities:   Array.isArray(raw.entities)  ? raw.entities  : [],
             lights:     rawLights.map(_normalizeLightDef).filter(Boolean),
             navmesh:    raw.navmesh    || null,
-            skybox:     raw.skybox     || { ...DEFAULT_SKYBOX },
+            skybox:     normalizeSkyboxConfig(raw.skybox ?? raw.sky ?? raw.lighting ?? null, {
+                engineType,
+                paletteManager,
+                fallbackFog: raw.fog ?? null,
+            }),
             physics:    { ...DEFAULT_PHYSICS, ...(raw.physics || {}) },
         };
 
@@ -225,7 +241,7 @@ export default class Engine3DAdapter extends Engine3DBase {
         level.geometry  = level.geometry.map(_normalizeTransform);
         level.entities  = level.entities.map(_normalizeTransform);
 
-        const valid3D = ['topdown-3d', 'fps-3d', 'platformer-3d'];
+        const valid3D = ['unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'];
         if (!valid3D.includes(level.engineType)) {
             console.warn(`[Engine3DAdapter] Unknown engineType "${level.engineType}", proceeding anyway`);
         }
@@ -415,23 +431,34 @@ export default class Engine3DAdapter extends Engine3DBase {
 
     _applySkybox(skyboxDef) {
         if (!this.scene) return;
-        const sky = skyboxDef || DEFAULT_SKYBOX;
+        const engineType = this.engineType3D || this._currentLevel?.engineType || 'unified-3d';
+        const paletteManager = this._getPaletteManager();
+        const sky = normalizeSkyboxConfig(skyboxDef, {
+            engineType,
+            paletteManager,
+            fallbackFog: this._currentLevel?.fog ?? null,
+        });
 
         // Modern SkyboxSystem (Phase 62)
         if (this.skybox) {
-            this.skybox.applyConfig(sky);
+            this.skybox.applyConfig(sky, {
+                engineType,
+                paletteManager,
+                fallbackFog: this._currentLevel?.fog ?? null,
+            });
             return;
         }
 
-        const paletteManager = this._getPaletteManager();
-        if (paletteManager && sky.top_index != null) {
-            const col = paletteManager.getColor(sky.top_index);
-            this.scene.background = col;
-        } else if (sky.colorHex) {
-            const THREE = this.THREE;
-            if (THREE?.Color) {
-                this.scene.background = new THREE.Color(sky.colorHex);
-            }
+        const backgroundColor = sky.type === 'solid'
+            ? (sky.colorHex || sky.bottomColor || sky.topColor)
+            : (sky.bottomColor || sky.colorHex || sky.topColor);
+
+        if (backgroundColor && THREE?.Color) {
+            this.scene.background = new THREE.Color(backgroundColor);
+        }
+
+        if (sky.fogSync && this.scene.fog?.color && backgroundColor) {
+            this.scene.fog.color.set(backgroundColor);
         }
     }
 
@@ -486,6 +513,7 @@ export default class Engine3DAdapter extends Engine3DBase {
      * @returns {object}
      */
     static createEmptyLevel(engineType = 'topdown-3d', name = 'New Level') {
+        const skybox = createDefaultSkyboxConfig(engineType);
         return {
             version:    LEVEL_SCHEMA_VERSION,
             engineType,
@@ -494,7 +522,7 @@ export default class Engine3DAdapter extends Engine3DBase {
             entities:   [],
             lights:     [_defaultAmbient(), _defaultSun()],
             navmesh:    null,
-            skybox:     { type: 'solid', top_index: 0 },
+            skybox,
             physics:    { ...DEFAULT_PHYSICS },
         };
     }

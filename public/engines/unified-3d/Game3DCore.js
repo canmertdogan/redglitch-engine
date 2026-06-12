@@ -35,7 +35,10 @@ import Input3D                 from '../shared/Input3D.js';
 import AudioSpatial3D          from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }           from '../shared/Raycast3D.js';
-import SkyboxSystem            from '../shared/SkyboxSystem.js';
+import SkyboxSystem, {
+    createDefaultSkyboxConfig,
+    normalizeSkyboxConfig,
+} from '../shared/SkyboxSystem.js';
 import {
     serializeSavePayload3D,
     deserializeSavePayload3D,
@@ -198,8 +201,11 @@ export default class Game3DCore extends Engine3DAdapter {
         this.raycast.setCamera(this.renderer3d.camera);
 
         // ── Skybox ────────────────────────────────────────────────────────
-        this.skybox = new SkyboxSystem(this.scene);
-        this.skybox.setGradient('#1a2a3a', '#0a0806'); // default moody sky
+        this.skybox = new SkyboxSystem(this.scene, { engineType: this.engineType3D });
+        this.skybox.applyConfig(createDefaultSkyboxConfig(this.engineType3D), {
+            engineType: this.engineType3D,
+        });
+        this.skybox.update(this.renderer3d.camera, 0);
 
         // ── Window resize ─────────────────────────────────────────────────
         this._boundOnResize = () => this._onResize();
@@ -254,11 +260,17 @@ export default class Game3DCore extends Engine3DAdapter {
 
         // Apply skybox from level config
         if (this.skybox) {
-            if (level.skybox) {
-                this.skybox.applyConfig(level.skybox);
-            } else if (level.fog) {
-                this.skybox.setSolid(level.fog.color);
-            }
+            const skyboxData = normalizeSkyboxConfig(level.skybox ?? level.sky ?? level.lighting ?? null, {
+                engineType: this.engineType3D,
+                paletteManager: this.palette,
+                fallbackFog: level.fog ?? null,
+            });
+            this.skybox.applyConfig(skyboxData, {
+                engineType: this.engineType3D,
+                paletteManager: this.palette,
+                fallbackFog: level.fog ?? null,
+            });
+            this.skybox.update(this.renderer3d?.camera, 0);
         }
 
         // Sync raycaster layers
@@ -357,7 +369,7 @@ export default class Game3DCore extends Engine3DAdapter {
         this.camera3d?.update(dt);
 
         // 4. Skybox follows camera
-        this.skybox?.update(this.renderer3d?.camera);
+        this.skybox?.update(this.renderer3d?.camera, dt);
 
         // 5. Spatial audio listener follows camera
         if (this.audio && this.renderer3d?.camera) {

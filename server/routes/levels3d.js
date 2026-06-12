@@ -24,6 +24,44 @@ const PROJECTS_ROOT = path.resolve(__dirname, '..', '..', 'projects');
 
 const VALID_3D_ENGINE_TYPES = ['unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'];
 const LEVEL_SCHEMA_VERSION  = '1.0';
+const SKYBOX_DEFAULTS = {
+    'unified-3d': {
+        type: 'gradient',
+        topColor: '#1a2a3a',
+        bottomColor: '#87ceeb',
+        colorHex: '#87ceeb',
+        fogSync: true,
+        fallbackMode: 'gradient',
+        sun: { color: '#fffbe0', intensity: 1.4, azimuth: 45, elevation: 45 },
+    },
+    'topdown-3d': {
+        type: 'gradient',
+        topColor: '#3a6a8a',
+        bottomColor: '#ccddee',
+        colorHex: '#ccddee',
+        fogSync: true,
+        fallbackMode: 'gradient',
+        sun: { color: '#fffbe0', intensity: 1.2, azimuth: 45, elevation: 45 },
+    },
+    'fps-3d': {
+        type: 'gradient',
+        topColor: '#1a2a3a',
+        bottomColor: '#0a0806',
+        colorHex: '#0a0806',
+        fogSync: true,
+        fallbackMode: 'gradient',
+        sun: { color: '#ffefcc', intensity: 0.8, azimuth: 30, elevation: 40 },
+    },
+    'platformer-3d': {
+        type: 'gradient',
+        topColor: '#1a3a6a',
+        bottomColor: '#ffffff',
+        colorHex: '#ffffff',
+        fogSync: true,
+        fallbackMode: 'gradient',
+        sun: { color: '#fff4cc', intensity: 1.3, azimuth: 45, elevation: 50 },
+    },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,6 +71,110 @@ function sanitizeProject(name) {
 
 function isSafeLevelId(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
+}
+
+function normalizeSkyboxMode(value, fallback = 'gradient') {
+    const mode = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (mode === 'solid' || mode === 'gradient' || mode === 'voxel') return mode;
+    return fallback;
+}
+
+function normalizeSkyboxColor(value, fallback = null) {
+    if (value == null || value === '') return fallback;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' && Number.isFinite(value)) return fallback;
+    if (value && typeof value === 'object') {
+        if (typeof value.color !== 'undefined') return normalizeSkyboxColor(value.color, fallback);
+        if (typeof value.getHexString === 'function') return `#${value.getHexString()}`;
+        if (Number.isFinite(Number(value.r)) && Number.isFinite(Number(value.g)) && Number.isFinite(Number(value.b))) {
+            const r = Math.max(0, Math.min(255, Math.round(Number(value.r) * 255)));
+            const g = Math.max(0, Math.min(255, Math.round(Number(value.g) * 255)));
+            const b = Math.max(0, Math.min(255, Math.round(Number(value.b) * 255)));
+            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+        }
+    }
+    return fallback;
+}
+
+function normalizeSunConfig(source, defaults) {
+    const sunSource = source && typeof source.sun === 'object' ? source.sun : {};
+    return {
+        color: normalizeSkyboxColor(
+            source?.sunColor ?? sunSource.color ?? sunSource.colorHex,
+            defaults.sun.color,
+        ),
+        intensity: Number.isFinite(Number(source?.sunIntensity ?? sunSource.intensity))
+            ? Number(source?.sunIntensity ?? sunSource.intensity)
+            : defaults.sun.intensity,
+        azimuth: Number.isFinite(Number(source?.sunAzimuth ?? sunSource.azimuth))
+            ? Number(source?.sunAzimuth ?? sunSource.azimuth)
+            : defaults.sun.azimuth,
+        elevation: Number.isFinite(Number(source?.sunElevation ?? sunSource.elevation))
+            ? Number(source?.sunElevation ?? sunSource.elevation)
+            : defaults.sun.elevation,
+    };
+}
+
+function defaultSkyboxFor(engineType = 'unified-3d') {
+    const preset = SKYBOX_DEFAULTS[engineType] || SKYBOX_DEFAULTS['unified-3d'];
+    return {
+        ...preset,
+        sun: { ...preset.sun },
+    };
+}
+
+function normalizeSkybox3D(levelData = {}, engineType = 'unified-3d') {
+    const defaults = defaultSkyboxFor(engineType);
+    const sky = {
+        ...(levelData?.lighting || {}),
+        ...(levelData?.sky || {}),
+        ...(levelData?.skybox || {}),
+    };
+    const fogColor = normalizeSkyboxColor(levelData?.fog?.color ?? levelData?.fogColor ?? sky.fogColor, null);
+
+    const topIndex = Number.isFinite(Number(sky.top_index ?? sky.topIndex)) ? Number(sky.top_index ?? sky.topIndex) : null;
+    const bottomIndex = Number.isFinite(Number(sky.bottom_index ?? sky.bottomIndex)) ? Number(sky.bottom_index ?? sky.bottomIndex) : null;
+
+    let topColor = normalizeSkyboxColor(sky.topColor ?? sky.skyTop ?? sky.top ?? levelData?.skyTop, null);
+    let bottomColor = normalizeSkyboxColor(sky.bottomColor ?? sky.skyHorizon ?? sky.bottom ?? levelData?.skyHorizon, null);
+    let colorHex = normalizeSkyboxColor(sky.colorHex ?? sky.color ?? levelData?.skyColor ?? levelData?.skyColorHex, null);
+
+    if (!topColor) topColor = defaults.topColor;
+    if (!bottomColor) bottomColor = fogColor || defaults.bottomColor;
+    if (!colorHex) colorHex = bottomColor || defaults.colorHex;
+
+    let type = normalizeSkyboxMode(sky.type ?? sky.mode, null);
+    if (!type) {
+        if (sky.colorHex != null || sky.color != null) {
+            type = 'solid';
+        } else if (topIndex != null || bottomIndex != null || sky.topColor != null || sky.bottomColor != null || sky.skyTop != null || sky.skyHorizon != null) {
+            type = topIndex != null && bottomIndex != null && topIndex === bottomIndex ? 'solid' : 'gradient';
+        } else {
+            type = defaults.type;
+        }
+    }
+
+    const sun = normalizeSunConfig(sky, defaults);
+    const fallbackMode = normalizeSkyboxMode(sky.fallbackMode ?? sky.fallback, defaults.fallbackMode);
+    const fogSync = sky.fogSync !== undefined ? !!sky.fogSync : defaults.fogSync;
+
+    return {
+        ...sky,
+        type,
+        mode: type,
+        topColor,
+        bottomColor,
+        colorHex: type === 'solid' ? colorHex : (colorHex || bottomColor),
+        fogSync,
+        fallbackMode,
+        top_index: topIndex,
+        bottom_index: bottomIndex,
+        sun,
+        sunColor: sun.color,
+        sunIntensity: sun.intensity,
+        sunAzimuth: sun.azimuth,
+        sunElevation: sun.elevation,
+    };
 }
 
 function resolveProjectPath(projectName) {
@@ -72,6 +214,7 @@ function validateLevel3D(raw) {
             version:    raw.version    || LEVEL_SCHEMA_VERSION,
             engineType: 'fps-3d',
             name:       typeof raw.name === 'string' ? raw.name : (raw.mapName || 'Untitled Level'),
+            skybox:     normalizeSkybox3D(raw, 'fps-3d'),
         };
     }
 
@@ -82,12 +225,14 @@ function validateLevel3D(raw) {
             engineType: 'unified-3d',
             mode:       typeof raw.mode === 'string' ? raw.mode : 'fps-3d',
             name:       typeof raw.name === 'string' ? raw.name : (raw.mapName || 'Untitled Level'),
+            skybox:     normalizeSkybox3D(raw, 'unified-3d'),
         };
     }
 
     // platformer-3d: full schema pass-through (Phase 56)
     if (raw.engineType === 'platformer-3d') {
         return {
+            ...raw,
             version:      raw.version    || LEVEL_SCHEMA_VERSION,
             engineType:   'platformer-3d',
             id:           typeof raw.id   === 'string' ? raw.id   : 'level01',
@@ -106,11 +251,13 @@ function validateLevel3D(raw) {
             collectibles: Array.isArray(raw.collectibles) ? raw.collectibles : [],
             checkpoints:  Array.isArray(raw.checkpoints)  ? raw.checkpoints  : [],
             entities:     Array.isArray(raw.entities)     ? raw.entities     : [],
+            skybox:       normalizeSkybox3D(raw, 'platformer-3d'),
         };
     }
 
     // Legacy schema normalisation for topdown-3d
     return {
+        ...raw,
         version:    raw.version    || LEVEL_SCHEMA_VERSION,
         engineType: raw.engineType || 'topdown-3d',
         name:       typeof raw.name === 'string' ? raw.name : 'Untitled Level',
@@ -118,7 +265,7 @@ function validateLevel3D(raw) {
         entities:   Array.isArray(raw.entities)  ? raw.entities  : [],
         lights:     Array.isArray(raw.lights)    ? raw.lights    : [],
         navmesh:    raw.navmesh    != null  ? raw.navmesh  : null,
-        skybox:     raw.skybox     != null  ? raw.skybox   : null,
+        skybox:     normalizeSkybox3D(raw, 'topdown-3d'),
         physics:    (raw.physics && typeof raw.physics === 'object') ? raw.physics : {},
     };
 }
@@ -235,3 +382,5 @@ router.get('/levels3d/:project', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.validateLevel3D = validateLevel3D;
+module.exports.normalizeSkybox3D = normalizeSkybox3D;

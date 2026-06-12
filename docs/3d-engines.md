@@ -169,9 +169,29 @@ const { pos3, quat4, vel3, vitals } = deserialize3DPlayerState(data.player);
   ],
 
   "skybox": {
-    "type": "gradient",             // "gradient" | "color"
+    "type": "gradient",             // "solid" | "gradient" | "voxel"
+    "mode": "gradient",             // legacy alias; keep equal to type
     "topColor": "#3a6ea5",
-    "bottomColor": "#c9e4f0"
+    "bottomColor": "#c9e4f0",
+    "colorHex": "#c9e4f0",
+    "fogSync": true,
+    "fallbackMode": "gradient",
+    "seed": 1337,
+    "starCount": 220,
+    "starRadius": 360,
+    "cloudCount": 12,
+    "cloudPuffs": 8,
+    "cloudRadius": 220,
+    "cloudBand": 90,
+    "cloudSpeed": 0.02,
+    "sun": {
+      "color": "#fffbe8",
+      "intensity": 1.0,
+      "azimuth": 45,
+      "elevation": 45
+    },
+    "top_index": null,
+    "bottom_index": null
   },
 
   "fog": {

@@ -200,6 +200,19 @@ const serveMergedSprites = async (req, res, next) => {
 app.get('/engines/rpg-topdown/sprites.js', serveMergedSprites);
 app.get('/base_game/sprites.js', serveMergedSprites);
 
+app.use('/engines', (req, res, next) => {
+    const projectDir = projectService.getActiveProject();
+    const projectFilePath = path.join(projectDir, 'engines', req.path);
+    const rootFilePath = path.join(__dirname, 'public', 'engines', req.path);
+    
+    res.sendFile(projectFilePath, err => {
+        if (!err) return;
+        res.sendFile(rootFilePath, err2 => {
+            if (err2 && !res.headersSent) next();
+        });
+    });
+});
+
 // Dynamic Asset Serving for Projects
 app.use('/dunyalar', (req, res, next) => {
     const projectDir = projectService.getActiveProject();

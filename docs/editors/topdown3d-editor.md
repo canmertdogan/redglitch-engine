@@ -68,6 +68,8 @@ Click **+ Add Light** and select a type. Multiple lights of each type are suppor
 | **Gradient** | `topColor` → `bottomColor` vertical gradient rendered as a hemisphere shader |
 | **Solid Color** | Single flat color fill |
 
+The saved `skybox` object also carries `colorHex`, `fogSync`, `fallbackMode`, and `sun` fields so the unified editor and runtime can round-trip the full environment state.
+
 ---
 
 ### 5. Fog Panel
