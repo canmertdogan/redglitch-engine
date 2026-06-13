@@ -7,7 +7,7 @@ const tools = [
     // SYSTEM
     { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', icon: 'fa-rocket', src: 'dashboard.html', w: 900, h: 700 },
     { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', icon: 'fa-tachometer-alt', src: 'project_dashboard.html', w: 1000, h: 600 },
-    { id: 'menu', category: 'SYSTEM', title: 'Interface (UI)', icon: 'fa-window-restore', src: 'menu_editor.html', w: 900, h: 600 },
+    { id: 'menu', category: 'SYSTEM', title: 'Interface (UI)', icon: 'fa-window-restore', src: 'menu_editor.html', w: 1280, h: 760 },
     { id: 'loc', category: 'SYSTEM', title: 'Localization', icon: 'fa-globe', src: 'localization_editor.html', w: 900, h: 600 },
     { id: 'input', category: 'SYSTEM', title: 'Input Map', icon: 'fa-gamepad', src: 'input_editor.html', w: 600, h: 600 },
     { id: 'console', category: 'SYSTEM', title: 'System Logs', icon: 'fa-terminal', src: 'console.html', w: 800, h: 500 },
@@ -409,7 +409,7 @@ function openWindow(tool) {
                 </div>
             </div>
             <div class="window-content">
-                <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['studio_3d']; return (proj3dIds.includes(tool.id) && window._redglitchActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._redglitchActiveProject) : tool.src; })()}"></iframe>
+                <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['studio_3d']; return (proj3dIds.includes(tool.id) && window._redglitchActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._redglitchActiveProject) + '&v=cachebustLayout' : tool.src + '?v=cachebustLayout'; })()}"></iframe>
             </div>
         `;
         win.onmousedown = () => focusWindow(winId);
@@ -1120,3 +1120,263 @@ async function cleanBuilds() {
     }
 }
 window.cleanBuilds = cleanBuilds;
+
+// --- PHASE 9: LIVE CAMPAIGN STATE INSPECTOR ---
+let currentCampaignSnapshot = null;
+
+function refreshCampaignState() {
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:memory:request', { namespace: 'campaign' });
+        showStatusMessage("REQUESTING CAMPAIGN STATE...");
+    }
+}
+
+function takeCampaignSnapshot() {
+    if (!window.RedGlitchEventBus) return;
+    
+    // We request state, and wait for the response to save it.
+    // A more robust way is if we already have the cached state from the last update.
+    // But since the IDE is just a viewer, we can request a fresh one and snapshot it on arrival.
+    window._pendingSnapshot = true;
+    refreshCampaignState();
+}
+
+function restoreCampaignSnapshot() {
+    if (!currentCampaignSnapshot) {
+        alert("No snapshot available to restore.");
+        return;
+    }
+    if (confirm("Restore campaign state to the last snapshot?")) {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.emit('system:memory:patch', {
+                namespace: 'campaign',
+                patch: {
+                    variables: currentCampaignSnapshot.variables,
+                    globalFlags: currentCampaignSnapshot.globalFlags
+                }
+            });
+            showStatusMessage("SNAPSHOT RESTORED");
+            setTimeout(refreshCampaignState, 500);
+        }
+    }
+}
+
+function updateLiveStateUI(data) {
+    if (window._pendingSnapshot) {
+        window._pendingSnapshot = false;
+        currentCampaignSnapshot = JSON.parse(JSON.stringify(data)); // Deep copy
+        showStatusMessage("CAMPAIGN SNAPSHOT SAVED");
+    }
+
+    const varList = document.getElementById('live-variables-list');
+    const flagList = document.getElementById('live-flags-list');
+    
+    if (varList && data.variables) {
+        varList.innerHTML = '';
+        if (Object.keys(data.variables).length === 0) {
+            varList.innerHTML = '<div style="color:#666; font-size:0.8rem; text-align:center;">No variables defined.</div>';
+        } else {
+            for (const [k, v] of Object.entries(data.variables)) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.padding = '4px';
+                row.style.background = 'rgba(255,255,255,0.05)';
+                row.style.borderRadius = '2px';
+                
+                row.innerHTML = `
+                    <span style="font-family:VT323; font-size:16px; color:#aaa;">${k}</span>
+                    <input type="number" value="${v}" style="width:60px; background:#111; color:var(--accent); border:1px solid #333; font-family:VT323; font-size:16px; text-align:right;" 
+                        onchange="patchCampaignVariable('${k}', this.value)">
+                `;
+                varList.appendChild(row);
+            }
+        }
+    }
+    
+    if (flagList && data.globalFlags) {
+        flagList.innerHTML = '';
+        if (Object.keys(data.globalFlags).length === 0) {
+            flagList.innerHTML = '<div style="color:#666; font-size:0.8rem; text-align:center;">No flags defined.</div>';
+        } else {
+            for (const [k, v] of Object.entries(data.globalFlags)) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.padding = '4px';
+                row.style.background = 'rgba(255,255,255,0.05)';
+                row.style.borderRadius = '2px';
+                
+                row.innerHTML = `
+                    <span style="font-family:VT323; font-size:16px; color:#aaa;">${k}</span>
+                    <input type="checkbox" ${v ? 'checked' : ''} onchange="patchCampaignFlag('${k}', this.checked)">
+                `;
+                flagList.appendChild(row);
+            }
+        }
+    }
+}
+
+window.patchCampaignVariable = function(key, val) {
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:memory:patch', {
+            namespace: 'campaign',
+            patch: {
+                variables: { [key]: parseFloat(val) || 0 }
+            }
+        });
+    }
+};
+
+window.patchCampaignFlag = function(key, val) {
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:memory:patch', {
+            namespace: 'campaign',
+            patch: {
+                globalFlags: { [key]: !!val }
+            }
+        });
+    }
+};
+
+window.refreshCampaignState = refreshCampaignState;
+window.takeCampaignSnapshot = takeCampaignSnapshot;
+window.restoreCampaignSnapshot = restoreCampaignSnapshot;
+
+// Listen for updates from CampaignController
+if (typeof window !== 'undefined') {
+    // Wait for EventBus to be ready
+    setTimeout(() => {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('system:memory:update', (e) => {
+                const data = e.data || {};
+                if (data.namespace === 'campaign' && data.patch) {
+                    updateLiveStateUI(data.patch);
+                }
+            });
+            
+            // PHASE 11: Multi-Engine Level Streaming Sync
+            window.RedGlitchEventBus.on('system:engine:switch', (e) => {
+                console.log('[Studio] Engine switched, refreshing campaign state...');
+                const varList = document.getElementById('live-variables-list');
+                const flagList = document.getElementById('live-flags-list');
+                if (varList) varList.innerHTML = '<div style="color:#666; font-size:0.8rem; text-align:center;">Syncing new engine...</div>';
+                if (flagList) flagList.innerHTML = '<div style="color:#666; font-size:0.8rem; text-align:center;">Syncing new engine...</div>';
+                
+                // Request state from the new engine instance
+                setTimeout(refreshCampaignState, 500);
+            });
+        }
+    }, 1000);
+}
+
+// --- PHASE 12: TRIGGER DISPATCHER ---
+window.dispatchManualTrigger = function() {
+    const nameEl = document.getElementById('manual-trigger-name');
+    const payloadEl = document.getElementById('manual-trigger-payload');
+    if (!nameEl) return;
+    
+    const triggerId = nameEl.value.trim();
+    if (!triggerId) {
+        showStatusMessage("TRIGGER ID REQUIRED");
+        return;
+    }
+    
+    let payload = {};
+    if (payloadEl && payloadEl.value.trim()) {
+        try {
+            payload = JSON.parse(payloadEl.value.trim());
+        } catch(e) {
+            showStatusMessage("INVALID PAYLOAD JSON");
+            return;
+        }
+    }
+    
+    fireQuickTrigger(triggerId, payload);
+};
+
+window.fireQuickTrigger = function(triggerId, payload = {}) {
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:trigger:fire', {
+            triggerId: triggerId,
+            payload: payload
+        });
+        showStatusMessage(`TRIGGER FIRED: ${triggerId}`);
+    } else {
+        showStatusMessage("EVENT BUS NOT READY");
+    }
+};
+
+// --- PHASE 13 & 14: LIVE ENGINE INSPECTION ---
+window.requestEngineInspect = function() {
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:engine:inspect', {});
+        showStatusMessage("REQUESTED ENGINE METRICS");
+    }
+};
+
+if (typeof window !== 'undefined') {
+    setTimeout(() => {
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('system:engine:inspect:response', (e) => {
+                const metrics = e.data?.metrics;
+                if (metrics) {
+                    const metricsList = document.getElementById('engine-metrics-list');
+                    if (metricsList) {
+                        let html = '';
+                        for (const [key, val] of Object.entries(metrics)) {
+                            if (key === 'timestamp') continue;
+                            html += `
+                                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:4px;">
+                                    <span style="color:#aaa">${key.toUpperCase()}</span>
+                                    <span style="color:var(--green); font-family:'VT323', monospace;">${val}</span>
+                                </div>
+                            `;
+                        }
+                        metricsList.innerHTML = html;
+                    }
+                }
+            });
+            
+            // Also listen to periodic metrics
+            window.RedGlitchEventBus.on('system:engine:metrics', (e) => {
+                const metrics = e.data?.metrics;
+                if (metrics) {
+                    const fpsEl = document.getElementById('sb-engine-fps');
+                    const entsEl = document.getElementById('sb-engine-ents');
+                    const drawsEl = document.getElementById('sb-engine-draws');
+                    
+                    if (fpsEl) fpsEl.textContent = `${Math.round(metrics.fps || 0)} FPS`;
+                    if (entsEl) entsEl.textContent = `${metrics.entityCount || 0} ENTS`;
+                    if (drawsEl) drawsEl.textContent = `${metrics.drawCalls || 0} DRAWS`;
+                }
+            });
+        }
+    }, 1200);
+}
+// --- PHASE 15 & 16: GHOST MODE AND TIME DILATION ---
+window.toggleGhostMode = function(enabled) {
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:camera:mode', { mode: enabled ? 'ghost' : 'normal' });
+        showStatusMessage(`GHOST MODE: ${enabled ? 'ON' : 'OFF'}`);
+    }
+};
+
+window.setTimeScale = function(value) {
+    const scale = parseFloat(value);
+    const label = document.getElementById('time-scale-val');
+    if (label) label.textContent = `${scale.toFixed(1)}x`;
+    
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:engine:timeScale', { scale });
+    }
+};
+
+window.stepFrame = function() {
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:engine:stepFrame', {});
+        showStatusMessage("STEPPED 1 FRAME");
+    }
+};

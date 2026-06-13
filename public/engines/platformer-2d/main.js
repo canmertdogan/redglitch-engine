@@ -478,7 +478,16 @@ class PlatformerGame {
         }
 
         if (this.map && this.map.width) {
-            this.renderer.updateCamera(this.player, this.map.width, this.map.height);
+            if (this.ghostMode) {
+                // Phase 15: Ghost Mode Camera
+                const ghostSpeed = 500 * dt;
+                if (this.keys['KeyW'] || this.keys['ArrowUp']) this.renderer.camera.y -= ghostSpeed;
+                if (this.keys['KeyS'] || this.keys['ArrowDown']) this.renderer.camera.y += ghostSpeed;
+                if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.renderer.camera.x -= ghostSpeed;
+                if (this.keys['KeyD'] || this.keys['ArrowRight']) this.renderer.camera.x += ghostSpeed;
+            } else {
+                this.renderer.updateCamera(this.player, this.map.width, this.map.height);
+            }
         }
         
         this.combat.update(dt);
@@ -591,14 +600,36 @@ class PlatformerGame {
         dt = Math.max(minDt, Math.min(dt, maxDt));
         this._lastTime = nowTime;
 
+        // Phase 16: Time Scale
+        if (this.timeScale !== undefined) {
+            dt *= this.timeScale;
+        }
+
         if (this.freezeFrames && this.freezeFrames > 0) {
             this.freezeFrames--;
         } else {
-            this.update(dt);
+            if (dt > 0) {
+                this.update(dt);
+            } else if (this.ghostMode) {
+                // Keep camera moving if paused and in ghost mode
+                if (this.map && this.map.width) {
+                    const ghostSpeed = 500 * (1/60);
+                    if (this.keys['KeyW'] || this.keys['ArrowUp']) this.renderer.camera.y -= ghostSpeed;
+                    if (this.keys['KeyS'] || this.keys['ArrowDown']) this.renderer.camera.y += ghostSpeed;
+                    if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.renderer.camera.x -= ghostSpeed;
+                    if (this.keys['KeyD'] || this.keys['ArrowRight']) this.renderer.camera.x += ghostSpeed;
+                }
+            }
         }
         
         this.draw();
         requestAnimationFrame((t) => this.loop(t));
+    }
+
+    stepFrame() {
+        // Phase 16: Manual step
+        this.update(1/60);
+        this.draw();
     }
 
     login(username) {

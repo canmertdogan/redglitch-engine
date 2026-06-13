@@ -32,8 +32,24 @@ class PlatformerAdapter extends EngineAdapter {
         // Initialize engine
         await this.engine.init();
         
+        this.setupLiveBridge();
+        
         this.isInitialized = true;
         console.log('PlatformerAdapter initialized');
+    }
+
+    /**
+     * Locate an active entity by ID in Platformer mode
+     * @param {string} id
+     */
+    findEntityById(id) {
+        if (!this.engine) return null;
+        if (this.engine.player && this.engine.player.id === id) return this.engine.player;
+        if (this.engine.entities) {
+            const ent = this.engine.entities.find(e => e.id === id);
+            if (ent) return ent;
+        }
+        return null;
     }
 
     /**

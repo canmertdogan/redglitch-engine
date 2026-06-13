@@ -49,8 +49,20 @@ const ELEMENT_DEFAULTS = {
     },
     button: {
         text: 'BUTTON',
-        rect: { x: 50, y: 50, w: 140, h: 44 },
-        style: { backgroundColor: '#333', color: '#ff0000', borderWidth: 2, borderColor: '#fff', fontSize: 20, textAlign: 'center' },
+        rect: { x: 50, y: 50, w: 156, h: 42 },
+        style: {
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            backgroundImage: 'linear-gradient(180deg, rgba(255,30,39,0.1), rgba(0,0,0,0.2))',
+            color: '#ff1e27',
+            borderWidth: 1,
+            borderColor: 'rgba(255,30,39,0.36)',
+            fontSize: 16,
+            textAlign: 'center',
+            boxShadow: '0 8px 18px rgba(0,0,0,0.34)',
+            textTransform: 'uppercase',
+            letterSpacing: '0px',
+            fontWeight: '700'
+        },
         script: '',
         props: {}
     },
@@ -72,6 +84,8 @@ class UIStudio {
     constructor() {
         // ── Data ──
         this.data = { screens: {} };
+        this.interfaceFileName = 'main.redui';
+        this.interfacePath = 'interfaces/main.redui';
         this.activeScreen = null;
         this.dirty = false;
         this.knownActions = []; // populated from /api/ui-config/actions
@@ -107,6 +121,7 @@ class UIStudio {
         // ── DOM refs ──
         this.dom = {
             screenSelect: document.getElementById('screen-selector'),
+            fileStatus: document.getElementById('interface-file-status'),
             hierarchy: document.getElementById('hierarchy-list'),
             artboard: document.getElementById('artboard'),
             artboardLabel: document.getElementById('artboard-label'),
@@ -147,22 +162,27 @@ class UIStudio {
     async loadData() {
         let loaded = false;
 
-        // Try the API endpoint first
+        // Try the project interface document first.
         try {
-            const res = await fetch('/api/ui-config');
+            const res = await fetch(`/api/ui-config?file=${encodeURIComponent(this.interfaceFileName)}`);
             if (res.ok) {
                 const json = await res.json();
                 if (json && json.screens && Object.keys(json.screens).length > 0) {
+                    this.interfaceFileName = json.fileName || this.interfaceFileName;
+                    this.interfacePath = json.path || `interfaces/${this.interfaceFileName}`;
+                    delete json.fileName;
+                    delete json.path;
+                    delete json.migratedFrom;
                     this.data = json;
                     loaded = true;
                 }
             }
         } catch (e) {}
 
-        // Fallback: load directly from static file path
+        // Fallback for projects opened statically without the API.
         if (!loaded) {
             try {
-                const res = await fetch('/dunyalar/definitions/ui.json');
+                const res = await fetch(`/interfaces/${this.interfaceFileName}`);
                 if (res.ok) {
                     const json = await res.json();
                     if (json && json.screens && Object.keys(json.screens).length > 0) {
@@ -176,17 +196,50 @@ class UIStudio {
         // Also fetch known engine actions for the action editor
         try {
             const res = await fetch('/api/ui-config/actions');
-            if (res.ok) this.knownActions = await res.json();
+            if (res.ok) {
+                const actions = await res.json();
+                this.knownActions = actions.map(action => {
+                    if (typeof action === 'string') {
+                        return { id: action, label: action.replace(/_/g, ' '), category: 'engine' };
+                    }
+                    return {
+                        id: action.id,
+                        label: action.label || action.id,
+                        category: action.category || 'engine'
+                    };
+                }).filter(action => action.id);
+            }
         } catch (e) { this.knownActions = []; }
 
         if (Object.keys(this.data.screens).length === 0) {
             this.data.screens['main_hud'] = { elements: [] };
         }
+        this.upgradeLegacyButtonStyles();
 
         this.updateScreenList();
         const first = Object.keys(this.data.screens)[0];
         this.switchScreen(first);
+        this.updateFileStatus();
         this.showLoadFeedback();
+    }
+
+    upgradeLegacyButtonStyles() {
+        const defaultButton = ELEMENT_DEFAULTS.button.style;
+        Object.values(this.data.screens || {}).forEach(screen => {
+            (screen.elements || []).forEach(element => {
+                if (element.type !== 'button' || !element.style) return;
+                const style = element.style;
+                const usesLegacyButtonStyle =
+                    style.backgroundColor === '#333' &&
+                    style.borderColor === '#fff' &&
+                    Number(style.borderWidth) === 2 &&
+                    (style.color === '#ff0000' || style.color === '#fff');
+                if (!usesLegacyButtonStyle) return;
+                element.rect = element.rect || {};
+                element.rect.h = Math.max(element.rect.h || 0, ELEMENT_DEFAULTS.button.rect.h);
+                element.style = { ...style, ...defaultButton };
+            });
+        });
     }
 
     async reloadFromDisk() {
@@ -212,13 +265,23 @@ class UIStudio {
     async save() {
         this.pushUndo();
         try {
-            const res = await fetch('/api/ui-config', {
+            const payload = {
+                ...this.data,
+                name: this.data.name || 'Main Interface',
+                format: 'redglitch-ui',
+                formatVersion: 1
+            };
+            const res = await fetch(`/api/ui-config?file=${encodeURIComponent(this.interfaceFileName)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.data)
+                body: JSON.stringify(payload)
             });
             if (res.ok) {
+                const result = await res.json();
+                this.interfaceFileName = result.fileName || this.interfaceFileName;
+                this.interfacePath = result.path || this.interfacePath;
                 this.dirty = false;
+                this.updateFileStatus();
                 this.showSaveIndicator();
                 broadcastUIUpdate('saved');
             } else {
@@ -228,10 +291,17 @@ class UIStudio {
     }
 
     exportJSON() {
-        const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
+        const document = {
+            ...this.data,
+            name: this.data.name || 'Main Interface',
+            format: 'redglitch-ui',
+            formatVersion: 1,
+            exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'ui-config.json';
+        a.download = this.interfaceFileName;
         a.click();
         URL.revokeObjectURL(a.href);
     }
@@ -239,13 +309,24 @@ class UIStudio {
     showSaveIndicator() {
         const el = document.createElement('div');
         el.className = 'save-indicator';
-        el.innerHTML = '<i class="fas fa-check"></i> SAVED';
+        el.innerHTML = `<i class="fas fa-check"></i> SAVED ${this.interfaceFileName}`;
         document.body.appendChild(el);
         setTimeout(() => el.remove(), 2500);
     }
 
     markDirty() {
         this.dirty = true;
+        this.updateFileStatus();
+    }
+
+    updateFileStatus() {
+        if (this.dom.fileStatus) {
+            this.dom.fileStatus.textContent = `${this.dirty ? '*' : ''}${this.interfacePath}`;
+        }
+        const statusFile = document.getElementById('status-file');
+        if (statusFile) {
+            statusFile.textContent = `${this.dirty ? 'Unsaved' : 'Saved'}: ${this.interfaceFileName}`;
+        }
     }
 
     // ═══════════════════════════════════════
@@ -491,10 +572,16 @@ class UIStudio {
     _applyPreviewStyle(el, s) {
         if (s.color) el.style.color = s.color;
         if (s.backgroundColor) el.style.background = s.backgroundColor;
+        if (s.backgroundImage) el.style.backgroundImage = s.backgroundImage;
         if (s.fontSize) el.style.fontSize = s.fontSize + 'px';
         if (s.borderWidth) el.style.borderWidth = s.borderWidth + 'px';
         if (s.borderColor) el.style.borderColor = s.borderColor;
         if (s.textAlign) el.style.textAlign = s.textAlign;
+        if (s.borderRadius !== undefined) el.style.borderRadius = s.borderRadius + 'px';
+        if (s.boxShadow) el.style.boxShadow = s.boxShadow;
+        if (s.textTransform) el.style.textTransform = s.textTransform;
+        if (s.letterSpacing !== undefined) el.style.letterSpacing = s.letterSpacing;
+        if (s.fontWeight) el.style.fontWeight = s.fontWeight;
     }
 
     // ═══════════════════════════════════════
@@ -852,6 +939,7 @@ class UIStudio {
             `${selCount} selected`;
 
         document.getElementById('status-zoom').textContent = `Zoom: ${Math.round(this.scale * 100)}%`;
+        this.updateFileStatus();
     }
 
     // ═══════════════════════════════════════

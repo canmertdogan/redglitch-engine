@@ -182,6 +182,15 @@
                     <div class="sidebar-tab" id="tab-files" onclick="switchRightSidebar('files')">
                         <i class="fas fa-folder-tree"></i> FILES
                     </div>
+                    <div class="sidebar-tab" id="tab-state" onclick="switchRightSidebar('state')">
+                        <i class="fas fa-database"></i> STATE
+                    </div>
+                    <div class="sidebar-tab" id="tab-events" onclick="switchRightSidebar('events')">
+                        <i class="fas fa-bolt"></i> EVENTS
+                    </div>
+                    <div class="sidebar-tab" id="tab-inspect" onclick="switchRightSidebar('inspect')">
+                        <i class="fas fa-search"></i> INSPECT
+                    </div>
                 </div>
                 
                 <!-- PANE 1: DEV OPS -->
@@ -193,8 +202,12 @@
                             <div class="dev-ops-grid">
                                 <div class="ops-btn" onclick="playGame()"><i class="fas fa-play" style="color:var(--green)"></i> PLAY</div>
                                 <div class="ops-btn" onclick="pauseGame()"><i class="fas fa-pause" style="color:var(--accent)"></i> PAUSE</div>
-                                <div class="ops-btn" onclick="location.reload()"><i class="fas fa-redo"></i> RESTART</div>
+                                <div class="ops-btn" onclick="stepFrame()"><i class="fas fa-step-forward" style="color:#aaa"></i> STEP</div>
                                 <div class="ops-btn" onclick="toggleConsole()"><i class="fas fa-terminal"></i> LOGS</div>
+                            </div>
+                            <div style="margin-top:8px;">
+                                <label style="font-size:0.8rem; color:#aaa;">TIME SCALE: <span id="time-scale-val">1.0x</span></label>
+                                <input type="range" id="time-scale-slider" min="0" max="3" step="0.1" value="1" style="width:100%; margin-top:4px;" oninput="setTimeScale(this.value)">
                             </div>
                         </div>
 
@@ -243,6 +256,7 @@
                         <!-- DEBUG FLAGS -->
                         <div class="dev-ops-panel">
                             <div class="cat-title">ENGINE FLAGS</div>
+                            <label class="retro-toggle"><span style="color:#aaa;">GHOST MODE</span> <input type="checkbox" onchange="toggleGhostMode(this.checked)"></label>
                             <label class="retro-toggle"><span style="color:#aaa;">GOD MODE</span> <input type="checkbox"></label>
                             <label class="retro-toggle"><span style="color:#aaa;">COLLIDERS</span> <input type="checkbox"></label>
                             <label class="retro-toggle"><span style="color:#aaa;">AI BRAINS</span> <input type="checkbox" checked></label>
@@ -276,6 +290,75 @@
                     </div>
                     <div id="file-manager-footer" style="padding:8px; background:#000; border-top:1px solid var(--border); font-size:10px; color:#555;">
                         REAL-TIME SYNC ACTIVE
+                    </div>
+                </div>
+
+                <!-- PANE 3: LIVE STATE (PHASE 9/10) -->
+                <div id="pane-state" class="sidebar-content-pane hidden">
+                    <div class="sidebar-list">
+                        <div class="dev-ops-panel">
+                            <div class="cat-title">CAMPAIGN SNAPSHOTS</div>
+                            <div class="ops-btn-row">
+                                <div class="ops-btn" onclick="takeCampaignSnapshot()"><i class="fas fa-camera"></i> SNAPSHOT</div>
+                                <div class="ops-btn" onclick="restoreCampaignSnapshot()" style="color:var(--accent);"><i class="fas fa-history"></i> RESTORE</div>
+                            </div>
+                        </div>
+                        
+                        <div class="dev-ops-panel">
+                            <div class="cat-title" style="display:flex; justify-content:space-between;">
+                                GLOBAL VARIABLES
+                                <i class="fas fa-sync" style="cursor:pointer;" onclick="refreshCampaignState()"></i>
+                            </div>
+                            <div id="live-variables-list" style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
+                                <div style="color:#666; font-size:0.8rem; text-align:center;">Not connected to active engine.</div>
+                            </div>
+                        </div>
+
+                        <div class="dev-ops-panel">
+                            <div class="cat-title">GLOBAL FLAGS</div>
+                            <div id="live-flags-list" style="display:flex; flex-direction:column; gap:4px; margin-top:8px;">
+                                <div style="color:#666; font-size:0.8rem; text-align:center;">Not connected to active engine.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANE 4: TRIGGER DISPATCHER (PHASE 12) -->
+                <div id="pane-events" class="sidebar-content-pane hidden">
+                    <div class="sidebar-list">
+                        <div class="dev-ops-panel">
+                            <div class="cat-title">MANUAL DISPATCH</div>
+                            <div style="display:flex; gap:4px; flex-direction:column;">
+                                <input type="text" id="manual-trigger-name" placeholder="Trigger ID (e.g. SpawnBoss)" class="form-input" style="width:100%; margin-bottom:4px;">
+                                <input type="text" id="manual-trigger-payload" placeholder='Payload (JSON) e.g. {"x":10}' class="form-input" style="width:100%; margin-bottom:8px;">
+                                <div class="ops-btn active" onclick="dispatchManualTrigger()"><i class="fas fa-bolt"></i> FIRE TRIGGER</div>
+                            </div>
+                        </div>
+                        
+                        <div class="dev-ops-panel">
+                            <div class="cat-title">COMMON EVENT SHORTCUTS</div>
+                            <div class="dev-ops-grid" id="common-trigger-list">
+                                <div class="ops-btn" onclick="fireQuickTrigger('SpawnEnemy')"><i class="fas fa-skull"></i> SPAWN_ENEMY</div>
+                                <div class="ops-btn" onclick="fireQuickTrigger('GiveItem')"><i class="fas fa-gift"></i> GIVE_ITEM</div>
+                                <div class="ops-btn" onclick="fireQuickTrigger('LevelUp')"><i class="fas fa-star"></i> LEVEL_UP</div>
+                                <div class="ops-btn" onclick="fireQuickTrigger('KillAll')"><i class="fas fa-bomb"></i> KILL_ALL</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANE 5: ENGINE INSPECTOR (PHASE 13/14) -->
+                <div id="pane-inspect" class="sidebar-content-pane hidden">
+                    <div class="sidebar-list">
+                        <div class="dev-ops-panel">
+                            <div class="cat-title" style="display:flex; justify-content:space-between;">
+                                ENGINE METRICS
+                                <i class="fas fa-sync" style="cursor:pointer;" onclick="requestEngineInspect()"></i>
+                            </div>
+                            <div id="engine-metrics-list" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+                                <div style="color:#666; font-size:0.8rem; text-align:center;">Waiting for engine data...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -440,7 +523,16 @@
         </div>
 
         <div class="sb-section" style="flex-grow:1; justify-content:center;">
-            <div id="sb-message" style="opacity:0.8;">redglitch ENGINE AND V8 CORE READY</div>
+            <div id="sb-message" style="opacity:0.8; margin-right:15px;">redglitch ENGINE AND V8 CORE READY</div>
+            <div class="sb-item" title="Engine FPS" style="color:var(--accent);">
+                <span class="sb-icon">⚡</span> <span id="sb-engine-fps">-- FPS</span>
+            </div>
+            <div class="sb-item" title="Entity Count" style="color:var(--accent);">
+                <span class="sb-icon">👻</span> <span id="sb-engine-ents">-- ENTS</span>
+            </div>
+            <div class="sb-item" title="Draw Calls" style="color:var(--accent);">
+                <span class="sb-icon">🖌️</span> <span id="sb-engine-draws">-- DRAWS</span>
+            </div>
         </div>
 
         <div class="sb-section">
@@ -498,6 +590,16 @@
                 const iframe = document.getElementById('kai-ai-panel');
                 if (iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI) {
                     iframe.contentWindow.AIChatUI.dismiss();
+                }
+            },
+            injectContext: (text) => {
+                const iframe = document.getElementById('kai-ai-panel');
+                if (iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI) {
+                    const input = iframe.contentWindow.document.getElementById('ai-chat-input');
+                    if (input) {
+                        input.value = text;
+                        // Don't auto-send, let the user review
+                    }
                 }
             }
         };

@@ -19,6 +19,9 @@ import { MaterialSystem } from '/engines/shared/MaterialSystem.js';
 import { TextureComposer } from '/engines/shared/TextureComposer.js';
 import { ShaderRegistry } from '/engines/shared/ShaderRegistry.js';
 import { ShaderEditorUI } from './ShaderEditorUI.js';
+import { MaterialPackManager } from '/engines/shared/MaterialPresets.js';
+import { Evaluator, Brush, ADDITION, SUBTRACTION, INTERSECTION } from 'three-bvh-csg';
+import PropertiesPanel from './panels/PropertiesPanel.js';
 
 export default class Editor3DCore {
 
@@ -56,6 +59,7 @@ export default class Editor3DCore {
         this._selected      = [];     // Array of THREE.Object3D
         this._clipboard     = null;   // Serialised objects for paste
         this._dirty         = false;
+        this._snapEnabled   = false;  // Gizmo Snapping disabled by default for smooth movement
 
         // ── Active Tool ───────────────────────────────────────────────────
         this._activeTool    = 'select'; // 'select' | 'move' | 'rotate' | 'scale' | 'draw'
@@ -90,6 +94,9 @@ export default class Editor3DCore {
         this._createDefaultSkyboxConfig = null;
         this._normalizeSkyboxConfig = null;
         this._PaletteManager = null;
+        
+        // ── UI Panels ─────────────────────────────────────────────────────
+        this.propertiesPanel = new PropertiesPanel(this);
     }
 
     // ── Initialisation ────────────────────────────────────────────────────────
@@ -183,6 +190,13 @@ export default class Editor3DCore {
         this.transformCtrl.size = 0.85;
         this.transformCtrl.getHelper().visible = false;
         this.transformCtrl.enabled = false;
+        
+        // Gizmo Snapping Configuration
+        if (this._snapEnabled) {
+            this.transformCtrl.setTranslationSnap(1.0);
+            this.transformCtrl.setRotationSnap(Math.PI / 12); // 15 degrees
+        }
+        
         this.scene.add(this.transformCtrl.getHelper());
 
         this._gizmoDragging = false;
@@ -448,6 +462,19 @@ export default class Editor3DCore {
         this._updateTransformGizmo();
     }
 
+    toggleSnap() {
+        this._snapEnabled = !this._snapEnabled;
+        if (this.transformCtrl) {
+            if (this._snapEnabled) {
+                this.transformCtrl.setTranslationSnap(1.0);
+                this.transformCtrl.setRotationSnap(Math.PI / 12);
+            } else {
+                this.transformCtrl.setTranslationSnap(null);
+                this.transformCtrl.setRotationSnap(null);
+            }
+        }
+    }
+
     selectMultiple(objs) {
         this._selected = [...objs];
         this._highlightSelection();
@@ -534,7 +561,7 @@ export default class Editor3DCore {
             position: [offset, 0.5, offset],
             rotation: [0, 0, 0, 1],
             scale: [1, 1, 1],
-            colorHex: '#888888',
+            colorHex: '#666666',
             material_id: null,
             castShadow: true,
             receiveShadow: true,
@@ -576,7 +603,7 @@ export default class Editor3DCore {
         const id = `entity_${Date.now().toString(36)}`;
         this._levelData.entities.push({
             id, type: 'spawn',
-            position: [0, 0, 0],
+            position: [0, 1, 0]
         });
         this._rebuildScene(this._levelData);
         this._markDirty();
@@ -584,760 +611,125 @@ export default class Editor3DCore {
         if (mesh) this.select(mesh);
     }
 
+    spawnTerrain() {
+        if (!this._levelData) return;
+        if (!this._levelData.geometry) this._levelData.geometry = [];
+
+        this._pushUndo();
+        const id = `terrain_${Date.now().toString(36)}`;
+        
+        // Default terrain is a 64x64 plane with 32 segments
+        const geo = new this.THREE.PlaneGeometry(64, 64, 32, 32);
+        geo.rotateX(-Math.PI / 2); // Lay flat
+        
+        const def = {
+            id,
+            shape_type: 'custom_csg', // Reuse custom buffer geometry loader
+            position: [0, 0, 0],
+            rotation: [0, 0, 0, 1],
+            scale: [1, 1, 1],
+            material_id: 'mat_default',
+            custom_vertices: Array.from(geo.attributes.position.array),
+            custom_normals: Array.from(geo.attributes.normal.array),
+            custom_uvs: Array.from(geo.attributes.uv.array),
+            custom_indices: geo.index ? Array.from(geo.index.array) : null,
+        };
+
+        this._levelData.geometry.push(def);
+        this._rebuildScene(this._levelData);
+        this._markDirty();
+        
+        const newMesh = this.scene.getObjectByName(id);
+        if (newMesh) this.select(newMesh);
+    }
+
+    async performCSG(operationType) {
+        if (!this._selected || this._selected.length < 2) {
+            alert('Please select exactly 2 geometry objects for CSG operations.');
+            return;
+        }
+
+        const mesh1 = this._selected[0];
+        const mesh2 = this._selected[1];
+
+        if (!mesh1.isMesh || !mesh2.isMesh || mesh1._isEnvironment || mesh2._isEnvironment || mesh1.userData._isLight || mesh2.userData._isLight || mesh1.userData._isEntity || mesh2.userData._isEntity) {
+            alert('CSG operations only work on valid 3D geometry objects.');
+            return;
+        }
+
+        let op = ADDITION;
+        if (operationType === 'subtract') op = SUBTRACTION;
+        else if (operationType === 'intersect') op = INTERSECTION;
+
+        this._pushUndo();
+
+        const evaluator = new Evaluator();
+        evaluator.useGroups = false;
+        
+        const brush1 = new Brush(mesh1.geometry, mesh1.material);
+        const brush2 = new Brush(mesh2.geometry, mesh2.material);
+        
+        brush1.position.copy(mesh1.position);
+        brush1.rotation.copy(mesh1.rotation);
+        brush1.scale.copy(mesh1.scale);
+        brush1.updateMatrixWorld();
+        
+        brush2.position.copy(mesh2.position);
+        brush2.rotation.copy(mesh2.rotation);
+        brush2.scale.copy(mesh2.scale);
+        brush2.updateMatrixWorld();
+
+        const result = evaluator.evaluate(brush1, brush2, op);
+        
+        // Use result's geometry and the first mesh's material (or combined if evaluator preserved them)
+        const newGeo = result.geometry.clone();
+        
+        // Create new definition based on first mesh but as a "custom" geometry shape_type
+        const id = `csg_${Date.now().toString(36)}`;
+        
+        const def = {
+            id,
+            shape_type: 'custom_csg', // Special type so it doesn't get overwritten with a box
+            position: [mesh1.position.x, mesh1.position.y, mesh1.position.z],
+            rotation: [mesh1.rotation.x, mesh1.rotation.y, mesh1.rotation.z],
+            scale: [mesh1.scale.x, mesh1.scale.y, mesh1.scale.z],
+            material_id: mesh1.userData.material_id || 'mat_default',
+            // Storing vertices and indices so it survives save/load
+            custom_vertices: Array.from(newGeo.attributes.position.array),
+            custom_normals: newGeo.attributes.normal ? Array.from(newGeo.attributes.normal.array) : null,
+            custom_uvs: newGeo.attributes.uv ? Array.from(newGeo.attributes.uv.array) : null,
+            custom_indices: newGeo.index ? Array.from(newGeo.index.array) : null,
+        };
+
+        // Remove old objects
+        this._levelData.geometry = this._levelData.geometry.filter(g => g.id !== mesh1.name && g.id !== mesh2.name);
+        
+        // Add new combined object
+        this._levelData.geometry.push(def);
+        
+        this._rebuildScene(this._levelData);
+        this._markDirty();
+        
+        const newMesh = this.scene.getObjectByName(id);
+        if (newMesh) this.select(newMesh);
+    }
+
     _highlightSelection() {
         // Use outline pass to highlight selected objects
         if (this.renderer3d?.outlinePass) {
             this.renderer3d.outlinePass.selectedObjects = this._selected.filter(o => !o._isEnvironment);
+            this.renderer3d.outlinePass.visibleEdgeColor.set('#ffaa00'); // Orange selection
+            this.renderer3d.outlinePass.hiddenEdgeColor.set('#ffaa00');
+            this.renderer3d.outlinePass.edgeStrength = 5.0;
+            this.renderer3d.outlinePass.edgeThickness = 2.0;
         }
     }
 
     _updatePropertiesPanel() {
-        const panel = document.getElementById('properties-panel');
-        if (!panel) return;
-
-        if (this._selected.length === 0) {
-            panel.innerHTML = '<div class="panel-empty">No selection</div>';
-            return;
-        }
-
-        const obj = this._selected[0];
-
-        if (obj._isEnvironment) {
-            const sky = this._levelData.skybox || this._getDefaultSkybox(this._mode);
-            panel.innerHTML = `
-                <div class="prop-group">
-                    <div class="prop-label">Mode</div>
-                    <select class="prop-input" data-env-field="type">
-                        <option value="solid" ${sky.type==='solid'?'selected':''}>Solid</option>
-                        <option value="gradient" ${sky.type==='gradient'?'selected':''}>Gradient</option>
-                        <option value="voxel" ${sky.type==='voxel'?'selected':''}>Voxel (Procedural)</option>
-                    </select>
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Top Color</div>
-                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${sky.topColor || '#000000'}" data-env-field="topColor">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Bottom Color</div>
-                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${sky.bottomColor || '#000000'}" data-env-field="bottomColor">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Fog Sync</div>
-                    <input type="checkbox" ${sky.fogSync ? 'checked' : ''} data-env-field="fogSync">
-                </div>
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group">
-                    <div class="prop-label">Sun Color</div>
-                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${sky.sun?.color || '#ffffff'}" data-env-field="sun.color">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Sun Intensity</div>
-                    <input type="number" step="0.1" class="prop-input" value="${sky.sun?.intensity || 1.2}" data-env-field="sun.intensity">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Sun Azimuth</div>
-                    <input type="number" step="1" class="prop-input" value="${sky.sun?.azimuth || 45}" data-env-field="sun.azimuth">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Sun Elevation</div>
-                    <input type="number" step="1" class="prop-input" value="${sky.sun?.elevation || 45}" data-env-field="sun.elevation">
-                </div>
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group">
-                    <div class="prop-label">Voxel Seed</div>
-                    <input type="number" step="1" class="prop-input" value="${sky.seed || 1337}" data-env-field="seed">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Cloud Speed</div>
-                    <input type="number" step="0.01" class="prop-input" value="${sky.cloudSpeed || 0.02}" data-env-field="cloudSpeed">
-                </div>
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Post-Processing Stack</div>
-                ${this._renderPostProcessingStack()}
-            `;
-
-            panel.querySelectorAll('input, select').forEach(input => {
-                if (input.classList.contains('pp-input')) return; // handled separately
-                input.addEventListener('change', () => {
-                    const field = input.dataset.envField;
-                    if (!field) return;
-                    let val = input.type === 'checkbox' ? input.checked : input.value;
-                    if (input.type === 'number') val = parseFloat(val);
-                    this._applyEnvironmentChange(field, val);
-                });
-            });
-
-            this._bindPostProcessingEvents(panel);
-            return;
-        }
-
-        if (obj._isMaterial) {
-            const mat = this._levelData.materials.find(m => m.id === obj.id);
-            if (!mat) return;
-
-            panel.innerHTML = `
-                <div class="prop-group">
-                    <div class="prop-label">Material Name</div>
-                    <input type="text" class="prop-input" value="${mat.name || ''}" data-mat-field="name">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Shader Type</div>
-                    <select class="prop-input" data-mat-field="shader_id">
-                        ${ShaderRegistry.getAvailableShaders().map(s => 
-                            `<option value="${s.id}" ${(mat.shader_id || 'standard') === s.id ? 'selected' : ''}>${s.name}</option>`
-                        ).join('')}
-                    </select>
-                </div>
-                ${(mat.shader_id && mat.shader_id !== 'standard') ? `
-                <div class="prop-group" style="padding:4px 12px;">
-                    <button class="kas-btn" id="btn-edit-shader" style="width:100%; border-color:var(--text-accent); color:var(--text-accent);"><i class="fas fa-code"></i> EDIT SHADER SOURCE</button>
-                </div>
-                ` : ''}
-                ${this._renderShaderUniformsUI(mat)}
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Color Channel</div>
-                <div class="prop-group">
-                    <div class="prop-label">Color</div>
-                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${mat.channels?.color?.color || '#ffffff'}" data-mat-field="channels.color.color">
-                </div>
-                </div>
-                ${this._renderLayersUI(mat)}
-                <div class="prop-group">
-                    <div class="prop-label">Tiling</div>
-                    <div class="prop-vec3" style="grid-template-columns: 1fr 1fr;">
-                        <input type="number" step="0.1" value="${mat.channels?.color?.tilingX ?? 1.0}" data-mat-field="channels.color.tilingX">
-                        <input type="number" step="0.1" value="${mat.channels?.color?.tilingY ?? 1.0}" data-mat-field="channels.color.tilingY">
-                    </div>
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Offset</div>
-                    <div class="prop-vec3" style="grid-template-columns: 1fr 1fr;">
-                        <input type="number" step="0.1" value="${mat.channels?.color?.offsetX ?? 0.0}" data-mat-field="channels.color.offsetX">
-                        <input type="number" step="0.1" value="${mat.channels?.color?.offsetY ?? 0.0}" data-mat-field="channels.color.offsetY">
-                    </div>
-                </div>
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Luminance Channel</div>
-                <div class="prop-group">
-                    <div class="prop-label">Emission</div>
-                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${mat.channels?.luminance?.color || '#000000'}" data-mat-field="channels.luminance.color">
-                </div>
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Reflectance Channel</div>
-                <div class="prop-group">
-                    <div class="prop-label">Roughness</div>
-                    <input type="number" step="0.05" min="0" max="1" class="prop-input" value="${mat.channels?.reflectance?.roughness ?? 0.8}" data-mat-field="channels.reflectance.roughness">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Metalness</div>
-                    <input type="number" step="0.05" min="0" max="1" class="prop-input" value="${mat.channels?.reflectance?.metalness ?? 0.0}" data-mat-field="channels.reflectance.metalness">
-                </div>
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Normal Channel</div>
-                <div class="prop-group">
-                    <div class="prop-label">Normal Map</div>
-                    <input type="text" class="prop-input" placeholder="/assets/textures/normal.png" value="${mat.channels?.normal?.map || ''}" data-mat-field="channels.normal.map">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Intensity</div>
-                    <input type="number" step="0.1" class="prop-input" value="${mat.channels?.normal?.intensity ?? 1.0}" data-mat-field="channels.normal.intensity">
-                </div>
-                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Transparency Channel</div>
-                <div class="prop-group">
-                    <div class="prop-label">Opacity</div>
-                    <input type="number" step="0.1" min="0" max="1" class="prop-input" value="${mat.channels?.transparency?.opacity ?? 1.0}" data-mat-field="channels.transparency.opacity">
-                </div>
-                <div class="prop-group">
-                    <div class="prop-label">Alpha Map</div>
-                    <input type="text" class="prop-input" placeholder="/assets/textures/alpha.png" value="${mat.channels?.transparency?.alphaMap || ''}" data-mat-field="channels.transparency.alphaMap">
-                </div>
-                ${this._renderMaterialPropertiesUI(mat)}
-                <div class="prop-group" style="padding:12px;">
-                    <button class="kas-btn" id="btn-delete-mat" style="width:100%; border-color:var(--kas-red); color:var(--kas-red);"><i class="fas fa-trash"></i> DELETE MATERIAL</button>
-                </div>
-            `;
-
-            panel.querySelectorAll('input, select').forEach(input => {
-                // Skip if it's a custom property key/value or inline shader uniform, we handle them separately
-                if (input.classList.contains('custom-prop-key') || input.classList.contains('custom-prop-val') || input.classList.contains('inline-shader-uniform')) return;
-                
-                input.addEventListener('change', () => {
-                    const field = input.dataset.matField;
-                    let val = input.value;
-                    if (input.type === 'number') val = parseFloat(val);
-                    this._applyMaterialChange(mat.id, field, val);
-                });
-            });
-
-            panel.querySelectorAll('.inline-shader-uniform').forEach(input => {
-                input.addEventListener('change', (e) => {
-                    const key = e.target.dataset.key;
-                    const matId = e.target.dataset.matId;
-                    
-                    const matDef = this._levelData.materials.find(m => m.id === matId);
-                    if (!matDef) return;
-                    if (!matDef.shader_uniforms) matDef.shader_uniforms = {};
-                    
-                    this._pushUndo();
-                    
-                    let parsed = e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value;
-                    
-                    const applyToLiveMaterial = (baseKey, axis, rawVal) => {
-                        if (this.scene) {
-                            this.scene.traverse(child => {
-                                if (child.isMesh && child.material && child.material.userData.materialId === matId) {
-                                    const uniforms = child.material.userData.shader_uniforms;
-                                    if (uniforms && uniforms[baseKey] && uniforms[baseKey].value) {
-                                        if (axis) {
-                                            uniforms[baseKey].value[axis] = rawVal;
-                                        } else if (uniforms[baseKey].value.isColor) {
-                                            uniforms[baseKey].value.set(rawVal);
-                                        } else {
-                                            uniforms[baseKey].value = rawVal;
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    };
-
-                    if (key.endsWith('_x') || key.endsWith('_y')) {
-                        const baseKey = key.slice(0, -2);
-                        const axis = key.slice(-1);
-                        if (!matDef.shader_uniforms[baseKey]) matDef.shader_uniforms[baseKey] = {};
-                        matDef.shader_uniforms[baseKey][axis] = parsed;
-                        applyToLiveMaterial(baseKey, axis, parsed);
-                    } else {
-                        matDef.shader_uniforms[key] = parsed;
-                        applyToLiveMaterial(key, null, parsed);
-                    }
-                    
-                    this._markDirty();
-                });
-            });
-
-            panel.querySelectorAll('.custom-prop-key').forEach(input => {
-                input.addEventListener('change', (e) => {
-                    this._updateMaterialPropertyKey(mat.id, e.target.dataset.oldKey, e.target.value);
-                });
-            });
-
-            panel.querySelectorAll('.custom-prop-val').forEach(input => {
-                input.addEventListener('change', (e) => {
-                    this._updateMaterialPropertyValue(mat.id, e.target.dataset.key, e.target.value);
-                });
-            });
-
-            const btnAddProp = document.getElementById('btn-add-mat-prop');
-            if (btnAddProp) {
-                btnAddProp.addEventListener('click', () => {
-                    this._addMaterialProperty(mat.id);
-                });
-            }
-
-            panel.querySelectorAll('.btn-del-mat-prop').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    this._removeMaterialProperty(mat.id, e.target.dataset.key);
-                });
-            });
-
-            const btnDel = document.getElementById('btn-delete-mat');
-            if (btnDel) {
-                btnDel.addEventListener('click', () => {
-                    if (confirm('Delete this material?')) {
-                        this._deleteMaterial(mat.id);
-                    }
-                });
-            }
-
-            const btnEditShader = document.getElementById('btn-edit-shader');
-            if (btnEditShader) {
-                btnEditShader.addEventListener('click', () => {
-                    if (this.shaderEditorUI) {
-                        this.shaderEditorUI.open(mat.shader_id, mat.id);
-                    }
-                });
-            }
-
-            // Wire layer specific buttons
-            panel.querySelectorAll('.btn-add-layer').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const channel = e.target.dataset.channel;
-                    this._addMaterialLayer(mat.id, channel);
-                });
-            });
-            panel.querySelectorAll('.btn-del-layer').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const channel = e.target.dataset.channel;
-                    const index = parseInt(e.target.dataset.index, 10);
-                    this._removeMaterialLayer(mat.id, channel, index);
-                });
-            });
-
-            return;
-        }
-
-        const p = obj.position;
-        const r = obj.rotation;
-        const s = obj.scale;
-
-        const shapeType = obj.userData?.shape_type || 'box';
-        const shapeLabel = { box: '📦 Box', sphere: '🔵 Sphere', cylinder: '🏛 Cylinder', cone: '△ Cone', plane: '▭ Plane', capsule: '💊 Capsule' }[shapeType] || '📦 Mesh';
-
-        panel.innerHTML = `
-            <div style="padding:8px 12px 4px; display:flex; align-items:center; justify-content:space-between;">
-                <span style="font-size:11px; font-weight:bold; color:var(--text-accent);">${shapeLabel}</span>
-                <button class="kas-btn icon" id="btn-delete-selected" style="height:20px; width:20px; font-size:10px; border-color:var(--kas-red); color:var(--kas-red);" title="Delete Object (Del)"><i class="fas fa-trash"></i></button>
-            </div>
-            <div class="prop-group">
-                <div class="prop-label">Name</div>
-                <input type="text" class="prop-input" value="${obj.name || ''}" data-field="name">
-            </div>
-            ${this._renderMaterialAssignmentsUI(obj)}
-            <div class="prop-group">
-                <div class="prop-label">Position</div>
-                <div class="prop-vec3">
-                    <input type="number" step="0.1" value="${p.x.toFixed(2)}" data-field="px">
-                    <input type="number" step="0.1" value="${p.y.toFixed(2)}" data-field="py">
-                    <input type="number" step="0.1" value="${p.z.toFixed(2)}" data-field="pz">
-                </div>
-            </div>
-            <div class="prop-group">
-                <div class="prop-label">Rotation (°)</div>
-                <div class="prop-vec3">
-                    <input type="number" step="1" value="${(r.x * 180/Math.PI).toFixed(1)}" data-field="rx">
-                    <input type="number" step="1" value="${(r.y * 180/Math.PI).toFixed(1)}" data-field="ry">
-                    <input type="number" step="1" value="${(r.z * 180/Math.PI).toFixed(1)}" data-field="rz">
-                </div>
-            </div>
-            <div class="prop-group">
-                <div class="prop-label">Scale</div>
-                <div class="prop-vec3">
-                    <input type="number" step="0.1" value="${s.x.toFixed(2)}" data-field="sx">
-                    <input type="number" step="0.1" value="${s.y.toFixed(2)}" data-field="sy">
-                    <input type="number" step="0.1" value="${s.z.toFixed(2)}" data-field="sz">
-                </div>
-            </div>
-            
-            <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-            <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Instance Overrides</div>
-            <div class="prop-group">
-                <div class="prop-label">Color</div>
-                <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${obj.userData.material_overrides?.colorHex || '#000000'}" data-override-field="colorHex">
-            </div>
-            <div class="prop-group">
-                <div class="prop-label">Emission</div>
-                <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${obj.userData.material_overrides?.emissive || '#000000'}" data-override-field="emissive">
-            </div>
-            <div class="prop-group">
-                <div class="prop-label">Roughness</div>
-                <input type="number" step="0.05" min="0" max="1" class="prop-input" value="${obj.userData.material_overrides?.roughness !== undefined ? obj.userData.material_overrides.roughness : ''}" data-override-field="roughness" placeholder="Inherit">
-            </div>
-            <div class="prop-group" style="padding:12px;">
-                <button class="kas-btn" id="btn-clear-overrides" style="width:100%;"><i class="fas fa-undo"></i> CLEAR OVERRIDES</button>
-            </div>
-        `;
-
-        // Wire input changes
-        panel.querySelectorAll('input, select').forEach(input => {
-            if (input.classList.contains('custom-mat-assignment')) {
-                input.addEventListener('change', () => {
-                    const groupIndex = parseInt(input.dataset.groupIndex, 10);
-                    this._applySubMeshMaterialChange(obj, groupIndex, input.value);
-                });
-            } else if (input.dataset.overrideField) {
-                input.addEventListener('change', () => {
-                    const field = input.dataset.overrideField;
-                    const val = input.type === 'number' ? parseFloat(input.value) : input.value;
-                    this._applyInstanceOverride(obj, field, val);
-                });
-            } else {
-                input.addEventListener('change', () => {
-                    const field = input.dataset.field;
-                    if (!field) return;
-                    const val = (field === 'name' || field === 'material_id') ? input.value : parseFloat(input.value);
-                    this._applyPropertyChange(obj, field, val);
-                });
-            }
-        });
-
-        const btnClearOverrides = document.getElementById('btn-clear-overrides');
-        if (btnClearOverrides) {
-            btnClearOverrides.addEventListener('click', () => {
-                this._clearInstanceOverrides(obj);
-            });
-        }
-
-        const btnDelete = document.getElementById('btn-delete-selected');
-        if (btnDelete) {
-            btnDelete.addEventListener('click', () => this._deleteSelected());
-        }
+        this.propertiesPanel._updatePropertiesPanel();
     }
 
-    _renderMaterialAssignmentsUI(obj) {
-        let html = '';
-        if (obj.geometry && obj.geometry.groups && obj.geometry.groups.length > 0) {
-            html += `<div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Material Assignments</div>`;
-            const assignments = obj.userData.material_assignments || {};
-            
-            obj.geometry.groups.forEach((group, index) => {
-                const matId = assignments[index] || '';
-                html += `
-                    <div class="prop-group">
-                        <div class="prop-label">Group ${index} [${group.start}-${group.start+group.count}]</div>
-                        <select class="prop-input custom-mat-assignment" data-group-index="${index}">
-                            <option value="">(None)</option>
-                            ${(this._levelData.materials || []).map(m => `<option value="${m.id}" ${matId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
-                        </select>
-                    </div>
-                `;
-            });
-        } else {
-            html += `
-                <div class="prop-group">
-                    <div class="prop-label">Material</div>
-                    <select class="prop-input" data-field="material_id">
-                        <option value="">(None)</option>
-                        ${(this._levelData.materials || []).map(m => `<option value="${m.id}" ${obj.userData?.material_id === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
-                    </select>
-                </div>
-            `;
-        }
-        return html;
-    }
-
-    _renderLayersUI(mat) {
-        const layers = mat.channels?.color?.layers;
-        if (!layers || layers.length === 0) {
-            return `
-                <div class="prop-group">
-                    <div class="prop-label">Texture</div>
-                    <input type="text" class="prop-input" placeholder="/assets/textures/..." value="${mat.channels?.color?.texture || ''}" data-mat-field="channels.color.texture">
-                </div>
-                <div class="prop-group">
-                    <button class="kas-btn btn-add-layer" data-channel="color" style="width:100%; font-size:10px;"><i class="fas fa-layer-group"></i> ADD COMPOSITE LAYER</button>
-                </div>
-            `;
-        }
-
-        let html = `
-            <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent); font-size:10px;">Compositing Stack</div>
-        `;
-
-        layers.forEach((layer, i) => {
-            html += `
-                <div style="background:var(--bg-card); padding:8px; margin:4px 12px; border-radius:4px; border:1px solid var(--border-subtle);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="font-size:10px; font-weight:bold;">Layer ${i}</span>
-                        <button class="kas-btn btn-del-layer" data-channel="color" data-index="${i}" style="padding:2px 6px; font-size:10px; color:var(--kas-red);"><i class="fas fa-times" style="pointer-events:none;"></i></button>
-                    </div>
-                    
-                    <div class="prop-group" style="margin-bottom:4px;">
-                        <div class="prop-label" style="width:40px;">Type</div>
-                        <select class="prop-input" data-mat-field="channels.color.layers.${i}.type">
-                            <option value="color" ${layer.type === 'color' ? 'selected' : ''}>Solid Color</option>
-                            <option value="image" ${layer.type === 'image' ? 'selected' : ''}>Image Map</option>
-                        </select>
-                    </div>
-
-                    <div class="prop-group" style="margin-bottom:4px;">
-                        <div class="prop-label" style="width:40px;">Value</div>
-                        ${layer.type === 'color' ? 
-                            `<input type="color" class="prop-input" style="padding:0; height:24px;" value="${layer.value || '#ffffff'}" data-mat-field="channels.color.layers.${i}.value">` : 
-                            `<input type="text" class="prop-input" placeholder="/assets/textures/..." value="${layer.value || ''}" data-mat-field="channels.color.layers.${i}.value">`
-                        }
-                    </div>
-
-                    <div class="prop-group" style="margin-bottom:4px;">
-                        <div class="prop-label" style="width:40px;">Blend</div>
-                        <select class="prop-input" data-mat-field="channels.color.layers.${i}.blendMode">
-                            <option value="source-over" ${layer.blendMode === 'source-over' ? 'selected' : ''}>Normal</option>
-                            <option value="multiply" ${layer.blendMode === 'multiply' ? 'selected' : ''}>Multiply</option>
-                            <option value="screen" ${layer.blendMode === 'screen' ? 'selected' : ''}>Screen</option>
-                            <option value="overlay" ${layer.blendMode === 'overlay' ? 'selected' : ''}>Overlay</option>
-                        </select>
-                    </div>
-
-                    <div class="prop-group">
-                        <div class="prop-label" style="width:40px;">Opacity</div>
-                        <input type="number" step="0.1" min="0" max="1" class="prop-input" value="${layer.opacity !== undefined ? layer.opacity : 1.0}" data-mat-field="channels.color.layers.${i}.opacity">
-                    </div>
-                </div>
-            `;
-        });
-
-        html += `
-            <div class="prop-group">
-                <button class="kas-btn btn-add-layer" data-channel="color" style="width:100%; font-size:10px;"><i class="fas fa-plus"></i> ADD LAYER</button>
-            </div>
-        `;
-
-        return html;
-    }
-
-    _renderMaterialPropertiesUI(mat) {
-        let html = `
-            <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-            <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Gameplay Properties</div>
-        `;
-
-        if (mat.properties && Object.keys(mat.properties).length > 0) {
-            for (const [key, value] of Object.entries(mat.properties)) {
-                html += `
-                    <div style="display:flex; gap:4px; margin:4px 12px; align-items:center;">
-                        <input type="text" class="prop-input custom-prop-key" style="flex:1;" value="${key}" data-old-key="${key}">
-                        <span style="color:var(--text-muted);">:</span>
-                        <input type="text" class="prop-input custom-prop-val" style="flex:1;" value="${value}" data-key="${key}">
-                        <button class="kas-btn btn-del-mat-prop" data-key="${key}" style="padding:2px 6px; font-size:10px; color:var(--kas-red);"><i class="fas fa-times" style="pointer-events:none;"></i></button>
-                    </div>
-                `;
-            }
-        } else {
-            html += `
-                <div class="prop-group" style="padding:4px 12px; color:var(--text-muted); font-size:10px; font-style:italic;">
-                    No custom properties defined.
-                </div>
-            `;
-        }
-
-        html += `
-            <div class="prop-group" style="padding:4px 12px;">
-                <button class="kas-btn" id="btn-add-mat-prop" style="width:100%; font-size:10px;"><i class="fas fa-plus"></i> ADD PROPERTY</button>
-            </div>
-        `;
-        return html;
-    }
-
-    _renderShaderUniformsUI(mat) {
-        if (!mat.shader_id || mat.shader_id === 'standard') return '';
-        const def = ShaderRegistry.shaders[mat.shader_id];
-        if (!def || !def.uniforms) return '';
-
-        let html = `
-            <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
-            <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Shader Parameters</div>
-        `;
-
-        let count = 0;
-        for (const [key, uniform] of Object.entries(def.uniforms)) {
-            if (key === 'time' || key === 'uTime') continue; // skip globals
-            count++;
-
-            let val = uniform.value;
-            // Override with material-specific variant value if available
-            if (mat.shader_uniforms && mat.shader_uniforms[key] !== undefined) {
-                const ov = mat.shader_uniforms[key];
-                if (val && val.isColor && typeof ov === 'string') {
-                    val = new THREE.Color(ov);
-                } else if (val && typeof val === 'object' && val.isVector2) {
-                    val = { x: ov.x ?? val.x, y: ov.y ?? val.y };
-                } else {
-                    val = ov;
-                }
-            }
-
-            let inputHtml = '';
-            if (typeof val === 'number') {
-                inputHtml = `<input type="number" step="0.1" class="prop-input inline-shader-uniform" data-mat-id="${mat.id}" data-key="${key}" value="${val}" style="width:60px;">`;
-            } else if (val && val.isColor) {
-                const hex = '#' + val.getHexString();
-                inputHtml = `<input type="color" class="prop-input inline-shader-uniform" data-mat-id="${mat.id}" data-key="${key}" value="${hex}" style="width:24px; height:24px; padding:0;">`;
-            } else if (val && (val.isVector2 || typeof val.x === 'number')) {
-                inputHtml = `
-                    <div style="display:flex; gap:4px;">
-                        <input type="number" step="0.1" class="prop-input inline-shader-uniform" data-mat-id="${mat.id}" data-key="${key}_x" value="${val.x}" style="width:40px;">
-                        <input type="number" step="0.1" class="prop-input inline-shader-uniform" data-mat-id="${mat.id}" data-key="${key}_y" value="${val.y}" style="width:40px;">
-                    </div>
-                `;
-            } else {
-                inputHtml = `<span style="color:var(--text-muted); font-size:10px;">[Object]</span>`;
-            }
-
-            html += `
-                <div class="prop-group" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="prop-label" style="margin-bottom:0;">${key}</div>
-                    ${inputHtml}
-                </div>
-            `;
-        }
-
-        if (count === 0) return '';
-        return html;
-    }
-
-    _renderPostProcessingStack() {
-        this._levelData.postprocessing = this._levelData.postprocessing || [];
-        const stack = this._levelData.postprocessing;
-
-        let html = '<div style="display:flex; flex-direction:column; gap:8px; padding:0 12px; margin-bottom:8px;">';
-
-        if (stack.length === 0) {
-            html += '<div style="color:var(--text-muted); font-size:10px; font-style:italic;">No active passes.</div>';
-        } else {
-            stack.forEach((pass, i) => {
-                let controls = '';
-                if (pass.type === 'outline') {
-                    controls = `
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Thickness</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="edgeThickness" value="${pass.edgeThickness ?? 1.5}" style="width:40px;">
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Strength</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="edgeStrength" value="${pass.edgeStrength ?? 3.0}" style="width:40px;">
-                        </div>
-                    `;
-                } else if (pass.type === 'glow') {
-                    controls = `
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Intensity</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="intensity" value="${pass.intensity ?? 1.0}" style="width:40px;">
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Threshold</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="threshold" value="${pass.threshold ?? 0.8}" style="width:40px;">
-                        </div>
-                    `;
-                } else if (pass.type === 'cel') {
-                    controls = `
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Tones</span>
-                            <input type="number" step="1" class="pp-input" data-index="${i}" data-key="tones" value="${pass.tones ?? 3.0}" style="width:40px;">
-                        </div>
-                    `;
-                } else if (pass.type === 'color_grading') {
-                    controls = `
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Brightness</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="brightness" value="${pass.brightness ?? 1.0}" style="width:40px;">
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Contrast</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="contrast" value="${pass.contrast ?? 1.0}" style="width:40px;">
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Saturation</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="saturation" value="${pass.saturation ?? 1.0}" style="width:40px;">
-                        </div>
-                    `;
-                } else if (pass.type === 'fog') {
-                    controls = `
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Color</span>
-                            <input type="color" class="pp-input" data-index="${i}" data-key="color" value="${pass.color || '#000000'}">
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                            <span>Density</span>
-                            <input type="number" step="0.1" class="pp-input" data-index="${i}" data-key="density" value="${pass.density ?? 0.5}" style="width:40px;">
-                        </div>
-                    `;
-                }
-
-                html += `
-                    <div style="background:var(--bg-card); padding:8px; border-radius:4px; border:1px solid var(--border-subtle);">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:bold; font-size:11px; text-transform:uppercase;">${pass.type}</span>
-                            <div style="display:flex; gap:4px;">
-                                <button class="kas-btn btn-pp-up" data-index="${i}" style="padding:2px 6px; font-size:10px;" ${i===0?'disabled':''}><i class="fas fa-chevron-up"></i></button>
-                                <button class="kas-btn btn-pp-down" data-index="${i}" style="padding:2px 6px; font-size:10px;" ${i===stack.length-1?'disabled':''}><i class="fas fa-chevron-down"></i></button>
-                                <button class="kas-btn btn-pp-del" data-index="${i}" style="padding:2px 6px; font-size:10px; color:var(--kas-red);"><i class="fas fa-times"></i></button>
-                            </div>
-                        </div>
-                        <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">
-                            ${controls}
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-            <div style="display:flex; gap:4px; margin-top:4px;">
-                <select id="pp-new-type" class="prop-input" style="flex:1;">
-                    <option value="glow">Glow (Bloom)</option>
-                    <option value="outline">Outline</option>
-                    <option value="cel">Toon/Cel</option>
-                    <option value="color_grading">Color Grading</option>
-                    <option value="fog">Screen Fog</option>
-                </select>
-                <button class="kas-btn" id="btn-add-pp" style="padding:4px 8px; font-size:10px;"><i class="fas fa-plus"></i> ADD</button>
-            </div>
-        </div>`;
-
-        return html;
-    }
-
-    _bindPostProcessingEvents(panel) {
-        panel.querySelectorAll('.pp-input').forEach(input => {
-            input.addEventListener('change', (e) => {
-                const idx = parseInt(e.target.dataset.index);
-                const key = e.target.dataset.key;
-                let val = e.target.value;
-                if (e.target.type === 'number') val = parseFloat(val);
-                this._levelData.postprocessing[idx][key] = val;
-                this._pushUndo();
-                if (this.renderer3d) this.renderer3d.rebuildPostProcessing(this._levelData.postprocessing);
-                this._markDirty();
-            });
-        });
-
-        panel.querySelectorAll('.btn-pp-up').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idx = parseInt(e.currentTarget.dataset.index);
-                if (idx > 0) {
-                    this._pushUndo();
-                    const stack = this._levelData.postprocessing;
-                    const temp = stack[idx - 1];
-                    stack[idx - 1] = stack[idx];
-                    stack[idx] = temp;
-                    if (this.renderer3d) this.renderer3d.rebuildPostProcessing(this._levelData.postprocessing);
-                    this._markDirty();
-                    this._updatePropertiesPanel();
-                }
-            });
-        });
-
-        panel.querySelectorAll('.btn-pp-down').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idx = parseInt(e.currentTarget.dataset.index);
-                const stack = this._levelData.postprocessing;
-                if (idx < stack.length - 1) {
-                    this._pushUndo();
-                    const temp = stack[idx + 1];
-                    stack[idx + 1] = stack[idx];
-                    stack[idx] = temp;
-                    if (this.renderer3d) this.renderer3d.rebuildPostProcessing(this._levelData.postprocessing);
-                    this._markDirty();
-                    this._updatePropertiesPanel();
-                }
-            });
-        });
-
-        panel.querySelectorAll('.btn-pp-del').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idx = parseInt(e.currentTarget.dataset.index);
-                this._pushUndo();
-                this._levelData.postprocessing.splice(idx, 1);
-                if (this.renderer3d) this.renderer3d.rebuildPostProcessing(this._levelData.postprocessing);
-                this._markDirty();
-                this._updatePropertiesPanel();
-            });
-        });
-
-        const btnAdd = panel.querySelector('#btn-add-pp');
-        if (btnAdd) {
-            btnAdd.addEventListener('click', () => {
-                const type = panel.querySelector('#pp-new-type').value;
-                this._pushUndo();
-                this._levelData.postprocessing.push({ type });
-                if (this.renderer3d) this.renderer3d.rebuildPostProcessing(this._levelData.postprocessing);
-                this._markDirty();
-                this._updatePropertiesPanel();
-            });
-        }
-    }
-
+    // UI Rendering methods moved to PropertiesPanel.js
     _applyEnvironmentChanges(changes) {
         this._pushUndo();
         this._levelData.skybox = this._levelData.skybox || this._getDefaultSkybox(this._mode);
@@ -1363,117 +755,10 @@ export default class Editor3DCore {
         this._markDirty();
         this._markDirty();
         this._updatePropertiesPanel();
-        this._syncEnvironmentPanel();
     }
 
     _applyEnvironmentChange(field, value) {
         this._applyEnvironmentChanges({ [field]: value });
-    }
-
-    _syncEnvironmentPanel() {
-        const sky = this._levelData?.skybox || this._getDefaultSkybox(this._mode);
-        
-        const ambColorInput = document.getElementById('env-ambient-color');
-        if (ambColorInput) {
-            let col = sky.ambientColor || '#ffffff';
-            if (typeof col === 'number') {
-                col = '#' + col.toString(16).padStart(6, '0');
-            } else if (typeof col === 'string') {
-                if (col.startsWith('0x')) col = '#' + col.slice(2);
-                if (!col.startsWith('#')) col = '#' + col;
-            }
-            ambColorInput.value = col;
-        }
-        
-        const ambIntensityInput = document.getElementById('env-ambient-intensity');
-        if (ambIntensityInput) {
-            ambIntensityInput.value = sky.ambientIntensity !== undefined ? sky.ambientIntensity : 0.3;
-        }
-        
-        const fogToggleInput = document.getElementById('env-fog-toggle');
-        if (fogToggleInput) {
-            fogToggleInput.checked = !!sky.fogSync;
-        }
-        
-        const fogFarInput = document.getElementById('env-fog-far');
-        if (fogFarInput) {
-            // Map density to distance (far): far = 4.6 / density
-            const density = sky.fogDensity ?? 0.02;
-            const far = 4.6 / Math.max(0.0001, density);
-            fogFarInput.value = Math.round(far);
-        }
-        
-        const skySelect = document.getElementById('env-sky');
-        if (skySelect) {
-            if (sky.type === 'solid') {
-                skySelect.value = 'solid';
-            } else {
-                if (sky.topColor === '#030310' && sky.bottomColor === '#0a0a28') {
-                    skySelect.value = 'night';
-                } else if (sky.topColor === '#1a2a3a' && sky.bottomColor === '#87ceeb') {
-                    skySelect.value = 'day';
-                } else {
-                    skySelect.value = 'gradient';
-                }
-            }
-        }
-    }
-
-    setAmbientIntensity(val) {
-        this._applyEnvironmentChange('ambientIntensity', val);
-    }
-
-    setAmbientColor(hex) {
-        this._applyEnvironmentChange('ambientColor', hex);
-    }
-
-    setFog(enabled) {
-        this._applyEnvironmentChange('fogSync', enabled);
-    }
-
-    setFogDistance(far) {
-        const density = 4.6 / Math.max(1, far);
-        this._applyEnvironmentChange('fogDensity', density);
-    }
-
-    setSkybox(type) {
-        if (type === 'solid') {
-            this._applyEnvironmentChanges({
-                type: 'solid',
-                mode: 'solid'
-            });
-        } else if (type === 'gradient') {
-            this._applyEnvironmentChanges({
-                type: 'gradient',
-                mode: 'gradient'
-            });
-        } else if (type === 'day') {
-            this._applyEnvironmentChanges({
-                type: 'gradient',
-                mode: 'gradient',
-                topColor: '#1a2a3a',
-                bottomColor: '#87ceeb',
-                ambientColor: '#ffffff',
-                ambientIntensity: 0.8,
-                'sun.color': '#fffbe0',
-                'sun.intensity': 1.4,
-                'sun.azimuth': 45,
-                'sun.elevation': 45
-            });
-        } else if (type === 'night') {
-            this._applyEnvironmentChanges({
-                type: 'gradient',
-                mode: 'gradient',
-                topColor: '#030310',
-                bottomColor: '#0a0a28',
-                ambientColor: '#111122',
-                ambientIntensity: 0.2,
-                'sun.color': '#334466',
-                'sun.intensity': 0.15,
-                'sun.azimuth': 45,
-                'sun.elevation': 45
-            });
-        }
     }
 
     _applyMaterialChange(matId, field, value) {
@@ -1737,7 +1022,7 @@ export default class Editor3DCore {
 
     _buildMaterialFromId(materialId, fallbackColorHex, overrides = {}) {
         const THREE = this.THREE;
-        let color = fallbackColorHex || '#888888';
+        let color = fallbackColorHex || '#666666';
         let emissive = '#000000';
         let opacity = 1.0;
         let transparent = false;
@@ -1789,12 +1074,13 @@ export default class Editor3DCore {
         }
 
         const mat = new THREE.MeshStandardMaterial({ 
-            color: overrides.colorHex || color, 
-            emissive: overrides.emissive || emissive, 
+            color: new THREE.Color(overrides.colorHex || color), 
+            emissive: new THREE.Color(overrides.emissive || emissive), 
             roughness: overrides.roughness !== undefined ? overrides.roughness : roughness,
             metalness,
             opacity, 
-            transparent
+            transparent,
+            side: THREE.DoubleSide
         });
 
         if (materialId) {
@@ -1887,28 +1173,90 @@ export default class Editor3DCore {
 
                 // Choose geometry based on shape_type
                 let geo;
-                switch (def.shape_type) {
-                    case 'sphere':
-                        geo = new THREE.SphereGeometry(w / 2, 24, 16);
-                        break;
-                    case 'cylinder':
-                        geo = new THREE.CylinderGeometry(w / 2, w / 2, h, 24);
-                        break;
-                    case 'cone':
-                        geo = new THREE.ConeGeometry(w / 2, h, 24);
-                        break;
-                    case 'plane':
-                        geo = new THREE.PlaneGeometry(w, d);
-                        break;
-                    case 'capsule':
-                        geo = (typeof THREE.CapsuleGeometry !== 'undefined')
-                            ? new THREE.CapsuleGeometry(w / 2, h, 8, 16)
-                            : new THREE.CylinderGeometry(w / 2, w / 2, h, 16); // fallback
-                        break;
-                    case 'box':
-                    default:
-                        geo = new THREE.BoxGeometry(w, h, d);
-                        break;
+                if (def.shape_type === 'custom_csg') {
+                    geo = new THREE.BufferGeometry();
+                    if (def.custom_vertices) geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(def.custom_vertices), 3));
+                    if (def.custom_normals) geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(def.custom_normals), 3));
+                    if (def.custom_uvs) geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(def.custom_uvs), 2));
+                    if (def.custom_indices) geo.setIndex(new THREE.BufferAttribute(new Uint16Array(def.custom_indices), 1));
+                    
+                    // Always compute vertex normals to fix black rendering bug on CSG
+                    geo.computeVertexNormals();
+                } else {
+                    switch (def.shape_type) {
+                        case 'sphere':
+                            geo = new THREE.SphereGeometry(w / 2, 24, 16);
+                            break;
+                        case 'cylinder':
+                            geo = new THREE.CylinderGeometry(w / 2, w / 2, h, 24);
+                            break;
+                        case 'cone':
+                            geo = new THREE.ConeGeometry(w / 2, h, 24);
+                            break;
+                        case 'plane':
+                            geo = new THREE.PlaneGeometry(w, d);
+                            geo.rotateX(-Math.PI / 2); // Make planes flat by default
+                            break;
+                        case 'capsule':
+                            geo = (typeof THREE.CapsuleGeometry !== 'undefined')
+                                ? new THREE.CapsuleGeometry(w / 2, h, 8, 16)
+                                : new THREE.CylinderGeometry(w / 2, w / 2, h, 16); // fallback
+                            break;
+                        case 'slope': {
+                            const shape = new THREE.Shape();
+                            shape.moveTo(0, 0);
+                            shape.lineTo(w, 0);
+                            shape.lineTo(0, h);
+                            shape.lineTo(0, 0);
+                            geo = new THREE.ExtrudeGeometry(shape, { depth: d, bevelEnabled: false });
+                            geo.center();
+                            break;
+                        }
+                        case 'wedge': {
+                            const shape = new THREE.Shape();
+                            shape.moveTo(0, 0);
+                            shape.lineTo(w, 0);
+                            shape.lineTo(w/2, h);
+                            shape.lineTo(0, 0);
+                            geo = new THREE.ExtrudeGeometry(shape, { depth: d, bevelEnabled: false });
+                            geo.center();
+                            break;
+                        }
+                        case 'stairs': {
+                            const shape = new THREE.Shape();
+                            const steps = 5;
+                            shape.moveTo(0, 0);
+                            shape.lineTo(w, 0);
+                            for(let i=1; i<=steps; i++) {
+                                shape.lineTo(w - (w/steps)*(i-1), h/steps * i);
+                                shape.lineTo(w - (w/steps)*i, h/steps * i);
+                            }
+                            shape.lineTo(0, 0);
+                            geo = new THREE.ExtrudeGeometry(shape, { depth: d, bevelEnabled: false });
+                            geo.center();
+                            break;
+                        }
+                        case 'arch': {
+                            const shape = new THREE.Shape();
+                            shape.moveTo(0, 0);
+                            shape.lineTo(w*0.2, 0);
+                            shape.lineTo(w*0.2, h*0.6);
+                            // Arch curve
+                            shape.absarc(w*0.5, h*0.6, w*0.3, Math.PI, 0, true);
+                            shape.lineTo(w*0.8, 0);
+                            shape.lineTo(w, 0);
+                            shape.lineTo(w, h);
+                            shape.lineTo(0, h);
+                            shape.lineTo(0, 0);
+                            geo = new THREE.ExtrudeGeometry(shape, { depth: d, bevelEnabled: false, curveSegments: 12 });
+                            geo.center();
+                            break;
+                        }
+                        case 'box':
+                        default:
+                            geo = new THREE.BoxGeometry(w, h, d);
+                            break;
+                    }
                 }
 
                 let meshMaterial;
@@ -1942,7 +1290,7 @@ export default class Editor3DCore {
         if (Array.isArray(levelData.entities)) {
             for (const ent of levelData.entities) {
                 const geo = new THREE.SphereGeometry(0.3, 8, 6);
-                const mat = new THREE.MeshLambertMaterial({ color: this._entityColor(ent.type) });
+                const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(this._entityColor(ent.type)) });
                 const mesh = new THREE.Mesh(geo, mat);
                 if (ent.position) mesh.position.set(...ent.position);
                 mesh.name = ent.id || `ent_${this.entityGroup.children.length}`;
@@ -1954,9 +1302,10 @@ export default class Editor3DCore {
         // Build lights as gizmos
         if (Array.isArray(levelData.lights)) {
             for (const lt of levelData.lights) {
+                if (lt.id === '__ambient__' || lt.id === '__sun__') continue;
                 const color = lt.colorHex || '#ffffff';
                 const geo = new THREE.SphereGeometry(0.15, 6, 4);
-                const mat = new THREE.MeshBasicMaterial({ color });
+                const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color) });
                 const mesh = new THREE.Mesh(geo, mat);
                 if (lt.position) mesh.position.set(...lt.position);
                 mesh.name = lt.id || `light_${this.lightGroup.children.length}`;
@@ -2050,6 +1399,23 @@ export default class Editor3DCore {
         this.select({ _isMaterial: true, id: defaultMat.id });
     }
 
+    loadMaterialPack(packName) {
+        if (!this._levelData) return;
+        if (!this._levelData.materials) this._levelData.materials = [];
+        
+        const newMaterials = MaterialPackManager.getMaterialsForPack(packName);
+        if (newMaterials.length === 0) return;
+
+        // Add them ensuring unique IDs
+        for (const mat of newMaterials) {
+            mat.id = 'mat_' + Math.random().toString(36).substr(2, 9);
+            this._levelData.materials.push(mat);
+        }
+
+        this._updateMaterialManager();
+        this._markDirty();
+    }
+
     async _updateMaterialManager() {
         const list = document.getElementById('material-list');
         if (!list) return;
@@ -2070,7 +1436,7 @@ export default class Editor3DCore {
                 const dataUrl = await this.materialPreviewRenderer.renderPreview(mat);
                 previewBg = `background-image: url('${dataUrl}'); background-size: cover; background-position: center;`;
             } else {
-                const colorHex = mat.channels?.color?.color || '#888888';
+                const colorHex = mat.channels?.color?.color || '#666666';
                 previewBg = `background-color: ${colorHex};`;
             }
 
@@ -2244,6 +1610,17 @@ export default class Editor3DCore {
         const btnNewMat = document.getElementById('btn-new-material');
         if (btnNewMat) {
             btnNewMat.addEventListener('click', () => this.createNewMaterial());
+        }
+
+        const selMatPack = document.getElementById('sel-material-pack');
+        if (selMatPack) {
+            selMatPack.addEventListener('change', (e) => {
+                const packName = e.target.value;
+                if (packName) {
+                    this.loadMaterialPack(packName);
+                    e.target.value = ''; // Reset select
+                }
+            });
         }
     }
 
@@ -2527,7 +1904,7 @@ export default class Editor3DCore {
             blockType = stateOrBlock;
         }
 
-        let color = '#888888';
+        let color = '#666666';
         if (blockType === 'floor') color = '#555555';
         else if (blockType === 'wall') color = '#7f8c8d';
         else if (blockType === 'ceiling') color = '#2c3e50';

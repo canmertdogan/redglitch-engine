@@ -21,7 +21,7 @@ class IsoEntity {
         
         // Properties
         this.type = def.type || 'npc'; // 'npc' or 'enemy'
-        this.id = def.id;
+        this.id = def.instanceId || def.id || crypto.randomUUID();
         this.spriteId = def.spriteId || (def.data && def.data.spriteId);
         
         // Stats
@@ -29,6 +29,13 @@ class IsoEntity {
         this.maxHp = def.maxHp || 100;
         this.speed = def.speed || 0.04;
         this.range = def.range || 8; // Detection range
+        
+        // Apply Instance Overrides
+        if (def.overrides) {
+            for (const key in def.overrides) {
+                this[key] = def.overrides[key];
+            }
+        }
         
         // Physics
         this.grounded = false;

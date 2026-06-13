@@ -1958,8 +1958,12 @@ function onMouseDown(e) {
         state.isPanning = true;
         state.lastMouse = { x: e.clientX, y: e.clientY };
     } else if (e.button === 0) {
-        state.isDrawing = true;
-        paint();
+        if (state.tool === 'inspect') {
+            inspectInstance();
+        } else {
+            state.isDrawing = true;
+            paint();
+        }
     }
 }
 
@@ -1973,7 +1977,7 @@ function onMouseMove(e) {
         state.camX += e.clientX - state.lastMouse.x;
         state.camY += e.clientY - state.lastMouse.y;
         state.lastMouse = { x: e.clientX, y: e.clientY };
-    } else if (state.isDrawing) {
+    } else if (state.isDrawing && state.tool !== 'inspect') {
         paint();
     }
 }
@@ -2117,3 +2121,154 @@ function onWheel(e) {
     state.zoom = Math.max(0.2, Math.min(4, state.zoom + delta));
     document.getElementById('zoom-level').innerText = Math.round(state.zoom * 100) + '%';
 }
+
+// --- INSTANCE INSPECTION ---
+function inspectInstance() {
+    const { x, y } = state.mouseMapPos;
+    if (x < 0 || x >= map.width || y < 0 || y >= map.height) return;
+
+    // Find decoration at this position (prefer current Z, but accept any)
+    let found = map.decorations.find(d => d.x === x && d.y === y && d.z === state.currentZ);
+    if (!found) {
+        found = map.decorations.find(d => d.x === x && d.y === y);
+    }
+
+    const overridesGroup = document.getElementById('instance-overrides-group');
+    if (!found) {
+        state.selectedInstance = null;
+        overridesGroup.style.display = 'none';
+        return;
+    }
+
+    state.selectedInstance = found;
+    
+    // Ensure instance has an ID
+    if (!found.instanceId) {
+        found.instanceId = crypto.randomUUID();
+    }
+    
+    // Ensure overrides object exists
+    if (!found.overrides) {
+        found.overrides = {};
+    }
+
+    overridesGroup.style.display = 'block';
+    
+    let typeDisplay = found.type;
+    if (found.type === 'npc') typeDisplay = `NPC: ${found.id}`;
+    if (found.type === 'prefab') typeDisplay = `PREFAB: ${found.data}`;
+    
+    document.getElementById('instance-type-display').innerText = `Type: ${typeDisplay}`;
+    document.getElementById('instance-id-display').innerText = `ID: ${found.instanceId}`;
+
+    renderInstanceOverrides();
+}
+
+function renderInstanceOverrides() {
+    const list = document.getElementById('instance-overrides-list');
+    list.innerHTML = '';
+    
+    if (!state.selectedInstance || !state.selectedInstance.overrides) return;
+    
+    Object.keys(state.selectedInstance.overrides).forEach(key => {
+        const val = state.selectedInstance.overrides[key];
+        
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '5px';
+        
+        const keyInput = document.createElement('input');
+        keyInput.type = 'text';
+        keyInput.value = key;
+        keyInput.placeholder = 'Key';
+        keyInput.style.flex = '1';
+        keyInput.style.width = '0';
+        keyInput.dataset.oldKey = key;
+        
+        const valInput = document.createElement('input');
+        valInput.type = 'text';
+        valInput.value = val;
+        valInput.placeholder = 'Value';
+        valInput.style.flex = '2';
+        valInput.style.width = '0';
+        
+        const delBtn = document.createElement('button');
+        delBtn.className = 'tool-btn';
+        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        delBtn.style.width = 'auto';
+        delBtn.style.padding = '0 5px';
+        delBtn.onclick = () => {
+            delete state.selectedInstance.overrides[key];
+            renderInstanceOverrides();
+        };
+        
+        row.appendChild(keyInput);
+        row.appendChild(valInput);
+        row.appendChild(delBtn);
+        
+        list.appendChild(row);
+    });
+}
+
+function addInstanceOverride() {
+    if (!state.selectedInstance) return;
+    if (!state.selectedInstance.overrides) state.selectedInstance.overrides = {};
+    
+    let baseKey = 'newKey';
+    let key = baseKey;
+    let counter = 1;
+    while (state.selectedInstance.overrides[key] !== undefined) {
+        key = baseKey + counter;
+        counter++;
+    }
+    
+    state.selectedInstance.overrides[key] = '';
+    renderInstanceOverrides();
+}
+
+function applyInstanceOverrides() {
+    if (!state.selectedInstance) return;
+    
+    const list = document.getElementById('instance-overrides-list');
+    const newOverrides = {};
+    
+    Array.from(list.children).forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs.length >= 2) {
+            const key = inputs[0].value.trim();
+            let val = inputs[1].value.trim();
+            
+            if (key) {
+                // Attempt to parse val as number or JSON
+                try {
+                    if (val === 'true') val = true;
+                    else if (val === 'false') val = false;
+                    else if (!isNaN(Number(val)) && val !== '') val = Number(val);
+                    else if (val.startsWith('{') || val.startsWith('[')) val = JSON.parse(val);
+                } catch(e) {
+                    // Keep as string
+                }
+                newOverrides[key] = val;
+            }
+        }
+    });
+    
+    state.selectedInstance.overrides = newOverrides;
+    console.log('[IsoEditor] Overrides updated for', state.selectedInstance.instanceId, newOverrides);
+    
+    // Broadcast live update to engine
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:entity:patch', {
+            entityId: state.selectedInstance.instanceId,
+            components: [
+                { type: 'Overrides', ...newOverrides }
+            ]
+        });
+    }
+}
+
+// Ensure window exports
+window.inspectInstance = inspectInstance;
+window.renderInstanceOverrides = renderInstanceOverrides;
+window.addInstanceOverride = addInstanceOverride;
+window.applyInstanceOverrides = applyInstanceOverrides;

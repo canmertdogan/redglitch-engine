@@ -15,7 +15,22 @@ class IsoPixelAdapter extends EngineAdapter {
         if (typeof IsoGame === 'undefined') throw new Error('ISO-Pixel engine not loaded');
         this.engine = new IsoGame();
         window.game = this.engine;
+        this.setupLiveBridge();
         this.isInitialized = true;
+    }
+
+    /**
+     * Locate an active entity by ID in ISO mode
+     * @param {string} id
+     */
+    findEntityById(id) {
+        if (!this.engine) return null;
+        if (this.engine.player && this.engine.player.id === id) return this.engine.player;
+        if (this.engine.entities) {
+            const ent = this.engine.entities.find(e => e.id === id || (e.def && e.def.id === id));
+            if (ent) return ent;
+        }
+        return null;
     }
 
     async loadLevel(levelId, levelPath = null) {

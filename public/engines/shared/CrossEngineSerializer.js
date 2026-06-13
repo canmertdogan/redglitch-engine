@@ -365,6 +365,108 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         }
     }
 
+    // ── Entity Component Serialization (Phase 5: Cross-Engine ECS Serialization) ──
+
+    /**
+     * Serialize an entity's internal logic/stats into standard IDE Components format.
+     * @param {Object} entity - Live runtime entity
+     * @param {string} engineType - The active engine type
+     * @returns {Array} Array of standard component definitions
+     */
+    static serializeEntityComponents(entity, engineType) {
+        if (!entity) return [];
+        const components = [];
+
+        if (engineType === 'rpg-topdown' || engineType === 'iso-pixel') {
+            if (entity.def) {
+                if (entity.def.stats) components.push({ type: 'Stats', ...entity.def.stats });
+                if (entity.def.ai) components.push({ type: 'AI', ...entity.def.ai });
+                if (entity.def.animations) components.push({ type: 'Animations', ...entity.def.animations });
+                if (entity.def.scriptId || entity.id) components.push({ type: 'Script', scriptId: entity.def.scriptId || entity.id });
+            } else if (Array.isArray(entity.components)) {
+                return JSON.parse(JSON.stringify(entity.components));
+            }
+        } else if (engineType && engineType.includes('3d')) {
+            if (entity.properties && Array.isArray(entity.properties.components)) {
+                return JSON.parse(JSON.stringify(entity.properties.components));
+            } else if (entity.userData && Array.isArray(entity.userData.components)) {
+                return JSON.parse(JSON.stringify(entity.userData.components));
+            }
+            
+            // Generate implicit components
+            const t = this.serializeTransform3D(entity);
+            components.push({ type: 'Transform3D', ...t });
+            
+            if (entity.properties && entity.properties.scriptId) {
+                components.push({ type: 'Script', scriptId: entity.properties.scriptId });
+            }
+        }
+
+        return components;
+    }
+
+    /**
+     * Deserialize standard IDE components back into a live runtime entity.
+     * @param {Object} entity - Live runtime entity
+     * @param {Array} components - Array of standard component definitions
+     * @param {string} engineType - The active engine type
+     */
+    static deserializeEntityComponents(entity, components, engineType) {
+        if (!entity || !Array.isArray(components)) return;
+
+        if (engineType === 'rpg-topdown' || engineType === 'iso-pixel') {
+            if (!entity.def) entity.def = {};
+            
+            for (const comp of components) {
+                switch(comp.type) {
+                    case 'Stats':
+                        entity.def.stats = { ...comp };
+                        delete entity.def.stats.type;
+                        
+                        // Live patch runtime variables if applicable
+                        if (comp.hp !== undefined) entity.maxHp = comp.hp;
+                        if (comp.speed !== undefined) entity.speed = comp.speed;
+                        break;
+                    case 'AI':
+                        entity.def.ai = { ...comp };
+                        delete entity.def.ai.type;
+                        if (entity.ai) Object.assign(entity.ai, entity.def.ai);
+                        else entity.ai = entity.def.ai;
+                        break;
+                    case 'Animations':
+                        entity.def.animations = { ...comp };
+                        delete entity.def.animations.type;
+                        break;
+                    case 'Script':
+                        entity.def.scriptId = comp.scriptId;
+                        if (!entity.id) entity.id = comp.scriptId;
+                        break;
+                    case 'Overrides':
+                        if (!entity.overrides) entity.overrides = {};
+                        for (const key in comp) {
+                            if (key !== 'type') {
+                                entity.overrides[key] = comp[key];
+                                entity[key] = comp[key]; // apply directly
+                            }
+                        }
+                        break;
+                }
+            }
+        } else if (engineType && engineType.includes('3d')) {
+             if (!entity.userData) entity.userData = {};
+             entity.userData.components = JSON.parse(JSON.stringify(components));
+             
+             for (const comp of components) {
+                 if (comp.type === 'Transform3D') {
+                     this.deserializeTransform3D(comp, entity);
+                 } else if (comp.type === 'Script') {
+                     if (!entity.properties) entity.properties = {};
+                     entity.properties.scriptId = comp.scriptId;
+                 }
+             }
+        }
+    }
+
     // ── 3D Transform Serialization ────────────────────────────────────────────
 
     /**

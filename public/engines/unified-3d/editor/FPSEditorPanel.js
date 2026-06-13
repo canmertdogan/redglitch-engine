@@ -57,10 +57,18 @@ export default class FPSEditorPanel {
         if (!this.container) return;
         this.container.innerHTML = `
             <div class="tool-section">
-                <div class="tool-section-title">FPS TOOLS</div>
+                <div class="tool-section-title">QUICK ACTIONS (FPS)</div>
+                <div class="tool-buttons-col">
+                    <button class="action-btn" data-tool="spawn" title="Place Player Spawn"><i class="fas fa-user-astronaut"></i> Place Player Spawn</button>
+                    <button class="action-btn" data-tool="weapon" title="Add Weapon Pickup"><i class="fas fa-crosshairs"></i> Add Weapon Pickup</button>
+                    <button class="action-btn" data-tool="enemy" title="Place Enemy AI"><i class="fas fa-biohazard"></i> Place Enemy AI</button>
+                    <button class="action-btn" data-tool="navmesh" title="Configure NavMesh"><i class="fas fa-route"></i> Configure NavMesh</button>
+                </div>
+            </div>
+            <div class="tool-section">
+                <div class="tool-section-title">BUILDING BLOCKS</div>
                 <div class="tool-buttons">
                     <button class="tool-btn active" data-tool="draw-room" title="Draw Room">🏠</button>
-                    <button class="tool-btn" data-tool="entity" title="Place Entity">👤</button>
                     <button class="tool-btn" data-tool="light" title="Place Light">💡</button>
                     <button class="tool-btn" data-tool="paint" title="Paint">🎨</button>
                     <button class="tool-btn" data-tool="trigger" title="Place Trigger">⚡</button>
@@ -89,24 +97,24 @@ export default class FPSEditorPanel {
             <div class="tool-section">
                 <div class="tool-section-title">LAYER (Y)</div>
                 <div class="tool-row">
-                    <button id="fps-layer-down">▼</button>
-                    <span id="fps-layer-val">0</span>
-                    <button id="fps-layer-up">▲</button>
+                    <button class="kas-btn" id="fps-layer-down">▼</button>
+                    <span id="fps-layer-val" style="flex:1;text-align:center;">0</span>
+                    <button class="kas-btn" id="fps-layer-up">▲</button>
                 </div>
             </div>
             <div class="tool-section">
                 <div class="tool-section-title">ACTIONS</div>
                 <div class="tool-buttons-col">
-                    <button class="action-btn" id="fps-export-btn">📦 Export Map</button>
-                    <button class="action-btn" id="fps-playtest-btn">▶ Playtest</button>
+                    <button class="action-btn" id="fps-export-btn"><i class="fas fa-box"></i> Export Map</button>
+                    <button class="action-btn" id="fps-playtest-btn"><i class="fas fa-play"></i> Playtest</button>
                 </div>
             </div>
         `;
 
         // Wire events
-        this.container.querySelectorAll('.tool-btn').forEach(btn => {
+        this.container.querySelectorAll('.tool-btn, .action-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.container.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                this.container.querySelectorAll('.tool-btn, .action-btn[data-tool]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 if (this.editor) {
                     this.editor.setActiveTool('draw');
@@ -149,12 +157,15 @@ export default class FPSEditorPanel {
     }
 
     getDrawState() {
-        const activeBtn = this.container.querySelector('.tool-btn.active');
+        const activeBtn = this.container.querySelector('.tool-btn.active, .action-btn.active[data-tool]');
         const tool = activeBtn ? activeBtn.dataset.tool : 'draw-room';
         const blockType = document.getElementById('fps-block-type')?.value || this._activeBlock;
         
         let blockVal = blockType;
-        if (tool === 'entity') blockVal = 'spawn';
+        if (tool === 'spawn') blockVal = 'spawn';
+        else if (tool === 'weapon') blockVal = 'weapon';
+        else if (tool === 'enemy') blockVal = 'enemy';
+        else if (tool === 'navmesh') blockVal = 'navmesh';
         else if (tool === 'light') blockVal = 'light';
         else if (tool === 'trigger') blockVal = 'trigger';
 

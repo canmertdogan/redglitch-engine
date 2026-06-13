@@ -457,18 +457,20 @@ window.Core = class Core {
         const sw = this.player.width * this.player.scale, sh = this.player.height * this.player.scale;
         
         // --- CAMERA JUICE (Look-Ahead + Smoothing) ---
-        // 1. Calculate Target: Player Center + Mouse Offset (capped)
-        const mouseXRel = input.mouse.x - (this.canvas.width / 2);
-        const mouseYRel = input.mouse.y - (this.canvas.height / 2);
-        const lookAheadFactor = 0.15; // How much it peeks towards mouse
-        
-        const targetCamX = (this.player.x + sw/2) - (this.canvas.width / 2) + (mouseXRel * lookAheadFactor);
-        const targetCamY = (this.player.y + sh/2) - (this.canvas.height / 2) + (mouseYRel * lookAheadFactor);
+        if (!this.ghostMode) {
+            // 1. Calculate Target: Player Center + Mouse Offset (capped)
+            const mouseXRel = input.mouse.x - (this.canvas.width / 2);
+            const mouseYRel = input.mouse.y - (this.canvas.height / 2);
+            const lookAheadFactor = 0.15; // How much it peeks towards mouse
+            
+            const targetCamX = (this.player.x + sw/2) - (this.canvas.width / 2) + (mouseXRel * lookAheadFactor);
+            const targetCamY = (this.player.y + sh/2) - (this.canvas.height / 2) + (mouseYRel * lookAheadFactor);
 
-        // 2. Smooth Lerp (0.1 = fast, 0.05 = heavy)
-        const smoothSpeed = 5 * deltaTime;
-        this.camera.x += (targetCamX - this.camera.x) * smoothSpeed;
-        this.camera.y += (targetCamY - this.camera.y) * smoothSpeed;
+            // 2. Smooth Lerp (0.1 = fast, 0.05 = heavy)
+            const smoothSpeed = 5 * deltaTime;
+            this.camera.x += (targetCamX - this.camera.x) * smoothSpeed;
+            this.camera.y += (targetCamY - this.camera.y) * smoothSpeed;
+        }
         
         // 3. Shake is handled by FXSystem now
         
@@ -856,17 +858,33 @@ window.Core = class Core {
         let dt = (ts - this.lastTime) / 1000;
         this.lastTime = ts;
         
+        // Phase 16: Time Scale
+        if (this.timeScale !== undefined) {
+            dt *= this.timeScale;
+        }
+
         // Safety cap to prevent "Spiral of Death" on lag spikes (e.g. tab switching)
         if (dt > 0.25) dt = 0.25;
 
-        this.accumulator += dt;
-        
-        while (this.accumulator >= this.fixedTimeStep) {
-            this.update(this.fixedTimeStep);
-            this.accumulator -= this.fixedTimeStep;
+        if (dt > 0) {
+            this.accumulator += dt;
+            
+            while (this.accumulator >= this.fixedTimeStep) {
+                this.update(this.fixedTimeStep);
+                this.accumulator -= this.fixedTimeStep;
+            }
+        } else if (this.ghostMode) {
+            // Keep ghost camera moving
+            const ghostDt = 1/60;
+            const input = window.RedGlitchInput || this.input;
+            const ghostSpeed = 500 * ghostDt;
+            if (input.keys && (input.keys['KeyW'] || input.keys['ArrowUp'])) this.camera.y -= ghostSpeed;
+            if (input.keys && (input.keys['KeyS'] || input.keys['ArrowDown'])) this.camera.y += ghostSpeed;
+            if (input.keys && (input.keys['KeyA'] || input.keys['ArrowLeft'])) this.camera.x -= ghostSpeed;
+            if (input.keys && (input.keys['KeyD'] || input.keys['ArrowRight'])) this.camera.x += ghostSpeed;
         }
 
-        const alpha = this.accumulator / this.fixedTimeStep;
+        const alpha = (dt > 0) ? (this.accumulator / this.fixedTimeStep) : 1.0;
         this.draw(alpha);
         
         // Phase 26: End profiling
@@ -878,5 +896,11 @@ window.Core = class Core {
         }
 
         requestAnimationFrame(this.gameLoop.bind(this)); 
+    }
+
+    stepFrame() {
+        // Phase 16: Manual step
+        this.update(this.fixedTimeStep);
+        this.draw(1.0);
     }
 }

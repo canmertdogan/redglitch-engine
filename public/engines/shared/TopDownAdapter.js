@@ -14,7 +14,50 @@ class TopDownAdapter extends EngineAdapter {
         if (this.isInitialized) return;
         if (typeof window.Core === 'undefined') throw new Error('RPG-Topdown engine not loaded');
         this.engine = new window.Core();
+        this.setupLiveBridge();
         this.isInitialized = true;
+    }
+
+    /**
+     * Locate an active entity by ID
+     * @param {string} id
+     */
+    findEntityById(id) {
+        if (!this.engine) return null;
+        if (this.engine.player && this.engine.player.id === id) return this.engine.player;
+        
+        // Search enemies
+        if (this.engine.enemies) {
+            const enemy = this.engine.enemies.find(e => e.id === id);
+            if (enemy) return enemy;
+        }
+        
+        // Search NPCs
+        if (this.engine.npcs) {
+            const npc = this.engine.npcs.find(n => n.id === id);
+            if (npc) return npc;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Find all entities spawned from a specific prefab
+     * @param {string} prefabId
+     */
+    findEntitiesByPrefabId(prefabId) {
+        if (!this.engine) return [];
+        const results = [];
+        
+        if (this.engine.enemies) {
+            results.push(...this.engine.enemies.filter(e => e.prefabId === prefabId));
+        }
+        
+        if (this.engine.npcs) {
+            results.push(...this.engine.npcs.filter(n => n.prefabId === prefabId));
+        }
+        
+        return results;
     }
 
     async loadLevel(levelId, levelPath = null) {

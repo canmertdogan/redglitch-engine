@@ -76,6 +76,24 @@ class SharedProjectState {
         this.eventBus.on('activity:logged', (event) => {
             this.handleActivityEvent(event);
         });
+
+        // Phase 2: Live Memory Bridge Integration
+        this.eventBus.on('system:memory:diff', (event) => {
+            this.handleMemoryDiff(event);
+        });
+    }
+
+    handleMemoryDiff(event) {
+        const { namespace, diff } = event.data || {};
+        if (namespace === 'campaign' && diff) {
+            // Apply runtime state changes to IDE state silently to avoid feedback loop
+            if (diff.variables) this.set('variables', diff.variables, { silent: true, skipUndo: true });
+            if (diff.globalFlags) this.set('globalFlags', diff.globalFlags, { silent: true, skipUndo: true });
+            if (diff.currentNodeId) this.set('campaignState.currentNodeId', diff.currentNodeId, { silent: true, skipUndo: true });
+            
+            // Notify tools of memory sync
+            this.eventBus.emit('editor:memory:synced', { timestamp: Date.now() });
+        }
     }
 
     handleActivityEvent(event) {
@@ -133,6 +151,19 @@ class SharedProjectState {
                 oldValue,
                 project: this.projectName
             });
+            
+            // Phase 2: Live Memory Bridge Integration (IDE -> Runtime Sync)
+            if (path.startsWith('variables.') || path.startsWith('globalFlags.')) {
+                const patchObj = {};
+                this.setNested(patchObj, path, value);
+                
+                // Extract the top level namespace
+                if (path.startsWith('variables.')) {
+                    this.eventBus.patchMemory('campaign', { variables: patchObj.variables });
+                } else if (path.startsWith('globalFlags.')) {
+                    this.eventBus.patchMemory('campaign', { globalFlags: patchObj.globalFlags });
+                }
+            }
         }
         
         return this;
@@ -404,6 +435,31 @@ class SharedProjectState {
      * Handle asset events
      */
     handleAssetEvent(event) {
+        // Phase 3: Asset Hot-Swapping Infrastructure
+        if (event.type === 'asset:modified') {
+            const asset = event.data?.asset;
+            if (asset && asset.type === 'image') {
+                // Clear the global sprite cache for this asset
+                if (window.editorSpriteCache) {
+                    // Try to match by ID, Name, or Path
+                    delete window.editorSpriteCache[asset.id];
+                    delete window.editorSpriteCache[asset.name];
+                    delete window.editorSpriteCache[asset.path];
+                    console.log(`[Hot-Swap] Cleared cache for modified image: ${asset.id}`);
+                }
+            }
+            
+            // Phase 18: Hot-Reload Dependency Resolution (Prefab updates)
+            if (asset && asset.type === 'json' && asset.path.includes('dunyalar/definitions/')) {
+                const prefabId = asset.name.replace('.json', '');
+                console.log(`[SharedProjectState] Prefab updated: ${prefabId}, broadcasting system:prefab:update`);
+                this.eventBus.emit('system:prefab:update', {
+                    prefabId: prefabId,
+                    timestamp: Date.now()
+                });
+            }
+        }
+
         const { type, data } = event;
         
         switch (type) {

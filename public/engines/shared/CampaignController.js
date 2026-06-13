@@ -136,6 +136,44 @@ class CampaignController {
         this.totalPlayTime = 0; 
         this._activeProjectName = null;
         this._activeProjectNameResolved = false;
+
+        // Phase 2: Live Memory Bridge Integration
+        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('system:memory:request', (event) => {
+                const namespace = event.data?.namespace || 'global';
+                if (namespace === 'campaign' || namespace === 'global') {
+                    window.RedGlitchEventBus.broadcastMemoryDiff('campaign', {
+                        campaignId: this.campaignId,
+                        currentNodeId: this.currentNodeId,
+                        globalFlags: this.globalFlags,
+                        variables: this.variables
+                    });
+                }
+            });
+            
+            window.RedGlitchEventBus.on('system:memory:patch', (event) => {
+                const { namespace, patch } = event.data || {};
+                if (namespace === 'campaign' && patch) {
+                    if (patch.variables) Object.assign(this.variables, patch.variables);
+                    if (patch.globalFlags) Object.assign(this.globalFlags, patch.globalFlags);
+                    console.log('[CampaignController] Campaign Memory patched by Data-Driven IDE');
+                }
+            });
+            
+            // Phase 12: Data-Driven Trigger Dispatcher
+            window.RedGlitchEventBus.on('system:trigger:fire', async (event) => {
+                const triggerId = event.data?.triggerId;
+                const payload = event.data?.payload || {};
+                console.log(`[CampaignController] Firing IDE Manual Trigger: ${triggerId}`, payload);
+                if (this.currentAdapter && typeof this.currentAdapter.handleTrigger === 'function') {
+                    this.currentAdapter.handleTrigger(triggerId, payload);
+                } else if (typeof window.fireCampaignEvent === 'function') {
+                    window.fireCampaignEvent(triggerId, payload);
+                } else {
+                    console.warn(`[CampaignController] No trigger handler available for ${triggerId}`);
+                }
+            });
+        }
     }
 
     setVariable(key, value) {

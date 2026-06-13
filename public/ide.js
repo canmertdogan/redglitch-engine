@@ -74,6 +74,7 @@ function switchDock(pane) {
 
     document.getElementById('terminal-pane').style.display = pane === 'terminal' ? 'block' : 'none';
     document.getElementById('stats-pane').style.display = pane === 'stats' ? 'block' : 'none';
+    document.getElementById('memory-pane').style.display = pane === 'memory' ? 'block' : 'none';
 }
 
 // Terminal Logic
@@ -126,6 +127,24 @@ async function updateStats() {
     }
 }
 setInterval(updateStats, 2000);
+
+// --- MEMORY BRIDGE LOGIC ---
+window.requestMemoryDump = function() {
+    if (window.RedGlitchEventBus) {
+        document.getElementById('live-memory-display').innerText = "Requesting dump from engine...";
+        window.RedGlitchEventBus.requestMemoryDump('campaign');
+    }
+};
+
+// Listen for memory diffs
+if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
+    window.RedGlitchEventBus.on('system:memory:diff', (event) => {
+        const { namespace, diff } = event.data;
+        if (namespace === 'campaign' && document.getElementById('live-memory-display')) {
+            document.getElementById('live-memory-display').innerText = JSON.stringify(diff, null, 2);
+        }
+    });
+}
 
 // --- MONACO INIT ---
 require.config({ paths: { 'vs': 'lib/monaco/vs' }});

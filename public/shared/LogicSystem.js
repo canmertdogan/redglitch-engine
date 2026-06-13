@@ -257,4 +257,25 @@ window.LogicSystem = class LogicSystem {
             }
         }
     }
+
+    async reloadAlgorithm(algorithmName) {
+        // Phase 6: Hot-Reload Visual Scripts
+        this.algorithms.delete(algorithmName);
+        console.log(`[LogicSystem] Re-fetching algorithm AST: ${algorithmName}`);
+        
+        // Load the new AST/JSON
+        await this.loadAlgorithm(algorithmName);
+        
+        // Notify or re-attach if necessary
+        // For VSL Interpreter, just updating this.algorithms is enough since trigger() fetches it every time.
+        // But for legacy AlgorithmRuntime, we need to rebuild the runtime.
+        for (const [entityId, runtime] of this.algorithmRuntimes) {
+            if (runtime.owner && runtime.owner.algorithmScript === algorithmName) {
+                const entity = runtime.owner;
+                this.algorithmRuntimes.delete(entityId);
+                await this.attachToEntity(entity, algorithmName, entity.algorithmEvents || ['start', 'update']);
+                console.log(`[LogicSystem] Hot-reloaded algorithm ${algorithmName} for entity ${entityId}`);
+            }
+        }
+    }
 };

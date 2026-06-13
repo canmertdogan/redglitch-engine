@@ -58,7 +58,23 @@ export default class Unified3DAdapter extends EngineAdapter {
 
         this.isInitialized = true;
         this.isLoaded      = false;
+        
+        // Phase 5: Setup Live Bridge
+        this.setupLiveBridge();
+        
         console.log(`[Unified3DAdapter] initialized (mode: ${this._requestedType})`);
+    }
+
+    /**
+     * Locate an active entity by ID in 3D
+     * @param {string} id
+     */
+    findEntityById(id) {
+        if (!this.game || !this.game.gameState || !this.game.gameState.entities) return null;
+        
+        // Search through runtime entities (they are wrapped in EntityDef or similar in gameState)
+        const entity = this.game.gameState.entities.find(e => e.id === id || e.name === id);
+        return entity || null;
     }
 
     /**

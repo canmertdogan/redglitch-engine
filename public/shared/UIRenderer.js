@@ -60,7 +60,7 @@ window.UIRenderer = class UIRenderer {
 
         if (data.type === 'button') {
             inner = document.createElement('div');
-            inner.className = 'retro-btn'; 
+            inner.className = 'retro-btn rg-ui-button'; 
             inner.innerText = data.text || 'BTN';
             
             // Interaction
@@ -72,12 +72,18 @@ window.UIRenderer = class UIRenderer {
                 container.onmousedown = (e) => context.onInteract(data, e);
             }
 
-            this.applyStyle(inner, data.style);
-            
-            // Flex layout for button text
             inner.style.display = 'flex'; 
             inner.style.alignItems = 'center'; 
             inner.style.justifyContent = 'center';
+            inner.style.background = 'linear-gradient(180deg, rgba(255,30,39,0.1), rgba(0,0,0,0.2)), rgba(0,0,0,0.48)';
+            inner.style.border = '1px solid rgba(255,30,39,0.38)';
+            inner.style.color = '#ff1e27';
+            inner.style.boxShadow = '0 8px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)';
+            inner.style.textShadow = '0 0 10px rgba(255,30,39,0.24)';
+            inner.style.textTransform = 'uppercase';
+            inner.style.fontWeight = '700';
+            inner.style.letterSpacing = '0';
+            this.applyStyle(inner, data.style);
         } 
         else if (data.type === 'label') {
             inner = document.createElement('div');
@@ -170,9 +176,15 @@ window.UIRenderer = class UIRenderer {
         if (!style) return;
         if (style.color) el.style.color = style.color;
         if (style.backgroundColor) el.style.background = style.backgroundColor;
+        if (style.backgroundImage) el.style.backgroundImage = style.backgroundImage;
         if (style.fontSize) el.style.fontSize = style.fontSize + 'px';
         if (style.borderWidth) el.style.borderWidth = style.borderWidth + 'px';
         if (style.borderColor) el.style.borderColor = style.borderColor;
         if (style.textAlign) el.style.textAlign = style.textAlign;
+        if (style.borderRadius !== undefined) el.style.borderRadius = style.borderRadius + 'px';
+        if (style.boxShadow) el.style.boxShadow = style.boxShadow;
+        if (style.textTransform) el.style.textTransform = style.textTransform;
+        if (style.letterSpacing !== undefined) el.style.letterSpacing = style.letterSpacing;
+        if (style.fontWeight) el.style.fontWeight = style.fontWeight;
     }
 }

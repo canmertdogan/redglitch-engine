@@ -179,6 +179,7 @@
                     <div class="dock-tab active" onclick="switchDock('terminal')">Terminal</div>
                     <div class="dock-tab" onclick="switchDock('output')">Output</div>
                     <div class="dock-tab" onclick="switchDock('stats')">System Stats</div>
+                    <div class="dock-tab" onclick="switchDock('memory')">Live Memory Bridge</div>
                 </div>
                 <div id="dock-content">
                     <div id="terminal-pane">
@@ -192,6 +193,13 @@
                         <div>Server RAM: <span id="stat-mem">0</span> MB</div>
                         <div>CPU Load: <span id="stat-cpu">0</span>%</div>
                         <div>System Uptime: <span id="stat-uptime">0</span>s</div>
+                    </div>
+                    <div id="memory-pane" style="display:none; color:#40e0d0; padding-top:10px; height: 100%; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span><strong>Campaign Memory State</strong> (Live from Engine)</span>
+                            <button onclick="requestMemoryDump()" style="background:var(--accent); color:#000;">🔄 Request Dump</button>
+                        </div>
+                        <pre id="live-memory-display" style="color: #fff; font-size: 11px; margin: 0;"></pre>
                     </div>
                 </div>
             </div>

@@ -584,6 +584,7 @@
                 <button id="tool-block" class="rail-btn active" title="Place Block" onclick="setTool('block')"><i class="fas fa-cube"></i></button>
                 <button id="tool-eraser" class="rail-btn" title="Eraser" onclick="setTool('eraser')"><i class="fas fa-eraser"></i></button>
                 <button id="tool-picker" class="rail-btn" title="Picker" onclick="setTool('picker')"><i class="fas fa-eye-dropper"></i></button>
+                <button id="tool-inspect" class="rail-btn" title="Inspect Instance" onclick="setTool('inspect')"><i class="fas fa-mouse-pointer"></i></button>
                 <div class="rail-sep"></div>
                 <button id="mode-visual" class="rail-btn active" title="Visuals" onclick="setMode('visual')"><i class="fas fa-paint-brush"></i><span>VIS</span></button>
                 <button id="mode-geo" class="rail-btn" title="Geometry" onclick="setMode('geo')"><i class="fas fa-mountain"></i><span>GEO</span></button>
@@ -652,6 +653,20 @@
                             <label style="display:block; margin-bottom:5px;"><input type="checkbox" checked> Collision</label>
                             <label style="display:block; margin-bottom:5px;"><input type="checkbox"> Cast Shadows</label>
                         <input type="text" placeholder="Custom Tags..." style="width:100%; font-size:12px;">
+                    </div>
+
+                    <!-- INSTANCE OVERRIDES -->
+                    <div class="control-group" id="instance-overrides-group" style="display:none; border:1px solid var(--accent); padding:8px; background:rgba(231,76,60,0.05);">
+                        <span class="control-label" style="color:var(--accent);">INSTANCE OVERRIDES</span>
+                        <div style="font-size:10px; color:#aaa; margin-bottom:5px;" id="instance-type-display">Type: NONE</div>
+                        <div style="font-size:10px; color:#aaa; margin-bottom:8px;" id="instance-id-display">ID: NONE</div>
+                        
+                        <div id="instance-overrides-list" style="display:flex; flex-direction:column; gap:5px; margin-bottom:8px;">
+                            <!-- JS will populate key/value inputs here -->
+                        </div>
+                        
+                        <button class="tool-btn" style="width:100%; margin-bottom:5px;" onclick="addInstanceOverride()"><i class="fas fa-plus"></i> ADD OVERRIDE</button>
+                        <button class="tool-btn" style="width:100%; background:var(--accent); color:#000;" onclick="applyInstanceOverrides()"><i class="fas fa-check"></i> APPLY (LIVE)</button>
                     </div>
 
                     <!-- SCENE PRESET (Quick FX Setup) -->

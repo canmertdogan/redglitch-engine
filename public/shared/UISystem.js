@@ -11,7 +11,9 @@ window.UISystem = class UISystem {
     
     async init() { 
         try { 
-            const res = await fetch('/dunyalar/definitions/ui.json'); 
+            let res = await fetch('/api/ui-config?file=main.redui');
+            if (!res.ok) res = await fetch('/interfaces/main.redui');
+            if (!res.ok) res = await fetch('/dunyalar/definitions/ui.json');
             if (res.ok) { 
                 const data = await res.json(); 
                 this.config = data.screens || {}; 

@@ -175,7 +175,13 @@ class AssetManager {
 
         // Check if it's already registered
         const asset = this.assets.get(assetId);
-        if (asset) return asset.path;
+        if (asset) {
+            let resolvedPath = asset.path;
+            if (asset.cacheBust) {
+                resolvedPath += (resolvedPath.includes('?') ? '&' : '?') + 'v=' + asset.cacheBust;
+            }
+            return resolvedPath;
+        }
 
         // Heuristic fallback for non-registered assets
         // If it starts with a known folder, assume virtual root
@@ -560,6 +566,7 @@ class AssetManager {
                     // Invalidate cache
                     this.cache.delete(asset.id);
                     asset.status = 'modified';
+                    asset.cacheBust = Date.now();
                     
                     if (this.eventBus) {
                         this.eventBus.emit('asset:modified', {

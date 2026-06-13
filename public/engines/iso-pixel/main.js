@@ -886,30 +886,40 @@ class IsoGame {
         if (Math.abs(p.z - p.renderZ) < 0.001) p.renderZ = p.z;
         
         // === CAMERA FOLLOW ===
-        const dims = this.strategy.getTileDims(this.config);
-        const target = this.strategy.project(p.renderX, p.renderY, p.renderZ, dims);
-        
-        const desiredCamX = -target.x;
-        const desiredCamY = -target.y;
-        
-        if (isNaN(desiredCamX) || isNaN(desiredCamY)) return;
-        
         const cam = this.renderer.camera;
-        const distX = desiredCamX - cam.x;
-        const distY = desiredCamY - cam.y;
-        const dist = Math.sqrt(distX * distX + distY * distY);
         
-        // Snap camera if too far (teleport, initial load)
-        if (dist > 400) {
-            cam.x = desiredCamX;
-            cam.y = desiredCamY;
+        // Phase 15: Ghost Mode Camera
+        if (this.ghostMode) {
+            const speed = 1000 * (dt / 1000);
+            if (this.keys['KeyW'] || this.keys['ArrowUp']) cam.y -= speed;
+            if (this.keys['KeyS'] || this.keys['ArrowDown']) cam.y += speed;
+            if (this.keys['KeyA'] || this.keys['ArrowLeft']) cam.x -= speed;
+            if (this.keys['KeyD'] || this.keys['ArrowRight']) cam.x += speed;
         } else {
-            // Smooth follow with deadzone
-            const deadzone = 5;
-            if (dist > deadzone) {
-                const smoothing = 0.08;
-                cam.x += distX * smoothing;
-                cam.y += distY * smoothing;
+            const dims = this.strategy.getTileDims(this.config);
+            const target = this.strategy.project(p.renderX, p.renderY, p.renderZ, dims);
+            
+            const desiredCamX = -target.x;
+            const desiredCamY = -target.y;
+            
+            if (!isNaN(desiredCamX) && !isNaN(desiredCamY)) {
+                const distX = desiredCamX - cam.x;
+                const distY = desiredCamY - cam.y;
+                const dist = Math.sqrt(distX * distX + distY * distY);
+                
+                // Snap camera if too far (teleport, initial load)
+                if (dist > 400) {
+                    cam.x = desiredCamX;
+                    cam.y = desiredCamY;
+                } else {
+                    // Smooth follow with deadzone
+                    const deadzone = 5;
+                    if (dist > deadzone) {
+                        const smoothing = 0.08;
+                        cam.x += distX * smoothing;
+                        cam.y += distY * smoothing;
+                    }
+                }
             }
         }
         
@@ -1124,31 +1134,51 @@ class IsoGame {
         if(!this.running) return;
         
         if (!this.lastTime) this.lastTime = time;
-        const dt = time - this.lastTime;
+        let dt = time - this.lastTime;
         this.lastTime = time;
         
-        // === FIXED TIMESTEP PHYSICS ===
-        // Accumulate time and run physics at fixed rate
-        this.accumulator += dt;
-        
-        // Cap accumulator to prevent spiral of death on slow frames
-        if (this.accumulator > this.maxAccumulator) {
-            this.accumulator = this.maxAccumulator;
+        // Phase 16: Apply time scale
+        if (this.timeScale !== undefined) {
+            dt *= this.timeScale;
+        }
+
+        // Only run logic if time has advanced (not paused)
+        if (dt > 0) {
+            // === FIXED TIMESTEP PHYSICS ===
+            // Accumulate time and run physics at fixed rate
+            this.accumulator += dt;
+            
+            // Cap accumulator to prevent spiral of death on slow frames
+            if (this.accumulator > this.maxAccumulator) {
+                this.accumulator = this.maxAccumulator;
+            }
+            
+            // Run physics updates at fixed rate
+            while (this.accumulator >= this.TICK_MS) {
+                this.fixedUpdate();
+                this.accumulator -= this.TICK_MS;
+            }
+            
+            // === VARIABLE TIMESTEP RENDERING ===
+            // Camera and interpolation at frame rate
+            this.frameCount++;
+            this.update(dt);
+        } else if (this.ghostMode) {
+            // If paused but in ghost mode, still allow camera updates
+            this.update(16); // Mock dt for camera movement
         }
         
-        // Run physics updates at fixed rate
-        while (this.accumulator >= this.TICK_MS) {
-            this.fixedUpdate();
-            this.accumulator -= this.TICK_MS;
-        }
-        
-        // === VARIABLE TIMESTEP RENDERING ===
-        // Camera and interpolation at frame rate
-        this.frameCount++;
-        this.update(dt);
+        // Always draw
         this.draw();
         
         requestAnimationFrame(t => this.loop(t));
+    }
+
+    stepFrame() {
+        // Phase 16: Step exactly one logical frame
+        this.fixedUpdate();
+        this.update(16);
+        this.draw();
     }
 
     login(username) {

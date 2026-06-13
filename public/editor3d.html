@@ -7,7 +7,9 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "/lib/three/three.module.js"
+                "three": "/lib/three/three.module.js",
+                "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.7.3/build/index.module.js",
+                "three-bvh-csg": "https://unpkg.com/three-bvh-csg@0.0.16/build/index.module.js"
             }
         }
     </script>
@@ -16,60 +18,244 @@
     <link rel="stylesheet" href="daw/v6-premium.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <style>
-        /* ═══════════════════════════════════════════════════
-           UNIFIED 3D EDITOR — UI Overrides & Components
-           ═══════════════════════════════════════════════════ */
+        /* ══════════════════════════════════════════════════
+           UNIFIED 3D EDITOR — Full Layout System
+           ══════════════════════════════════════════════════ */
 
-        /* ── Layout override: tighter left bar ── */
+        /* ── Shell: full-page column stack ── */
+        #kas-shell {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            height: 100% !important;
+            overflow: hidden !important;
+            background: #000 !important;
+        }
+
+        /* ── Reset base .kas-panel chrome (keep display/flex intact) ── */
+        .kas-panel {
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        /* ── Main 3-column workspace ── */
+        #kas-main {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            align-items: stretch !important;
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            padding: 0 !important;
+            gap: 0 !important;
+            background: #000 !important;
+        }
+
+        /* ── Left column: Shape Library (Toolbox) ── */
         #kas-left {
-            width: 52px;
+            width: 48px !important;
+            min-width: 48px !important;
+            max-width: 48px !important;
+            flex: 0 0 48px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            background: #050505 !important;
+            border-right: 1px solid rgba(255,30,39,0.18) !important;
+            overflow: visible !important; /* CRITICAL: Allow tooltips to pop out */
+            padding: 0 !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            z-index: 100;
+            min-height: 0 !important; /* CRITICAL: Allow scrolling to work */
+        }
+
+        #kas-left.expanded {
+            width: 220px !important;
+            min-width: 220px !important;
+            max-width: 220px !important;
+            flex: 0 0 220px !important;
+        }
+
+        /* Custom Scrollbar for Toolbox */
+        .rp-body::-webkit-scrollbar {
+            width: 4px;
+        }
+        .rp-body::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .rp-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 30, 39, 0.3);
+            border-radius: 4px;
+        }
+        .rp-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 30, 39, 0.6);
+        }
+
+        /* ── Toolbox Items ── */
+        .toolbox-item {
+            width: 100%;
+            height: 48px;
+            min-height: 48px;
+            display: flex;
             align-items: center;
-            padding: 6px 0;
-            gap: 2px;
-            overflow-y: auto;
-            overflow-x: hidden;
-            background: #050505;
-            border-right: 1px solid rgba(255,30,39,0.15);
-        }
-
-        #kas-right {
-            width: 280px;
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            padding: 0;
-            background: #050505;
-            border-left: 1px solid rgba(255,30,39,0.15);
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-
-        #kas-center {
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-            background: #000;
-        }
-
-        /* ── Viewport ── */
-        #viewport-wrapper {
-            flex: 1;
+            justify-content: center;
+            color: rgba(255, 30, 39, 0.6);
+            font-size: 16px;
+            cursor: pointer;
             position: relative;
-            background: #000;
-            min-height: 0;
+            transition: all 0.15s ease;
+            box-sizing: border-box;
+            padding: 0;
+        }
+
+        #kas-left.expanded .toolbox-item {
+            justify-content: flex-start;
+            padding-left: 16px;
+        }
+
+        .toolbox-label {
+            display: none;
+            margin-left: 16px;
+            font-size: 16px;
+            font-family: 'VT323', monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        #kas-left.expanded .toolbox-label {
+            display: block;
+        }
+
+        .toolbox-item:hover {
+            color: #ff1e27;
+            background: rgba(255, 30, 39, 0.08);
+            border-left: 2px solid #ff1e27;
+        }
+
+        .toolbox-divider {
+            height: 1px;
+            width: 32px;
+            min-height: 1px;
+            margin: 8px auto;
+            background: rgba(255, 30, 39, 0.15);
+            transition: width 0.2s ease;
+        }
+
+        #kas-left.expanded .toolbox-divider {
+            width: 180px;
+        }
+
+        /* Tooltip styling using data-tooltip */
+        .toolbox-item[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 56px; /* Position to the right of the toolbox */
+            background: #111;
+            color: #ff1e27;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 30, 39, 0.3);
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: 'VT323', monospace;
+            font-weight: 400;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            text-transform: uppercase;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            transform: translateX(-5px);
+            box-shadow: 2px 2px 12px rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+
+        #kas-left:not(.expanded) .toolbox-item:hover[data-tooltip]::after {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toolbox-toggle {
+            height: 48px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 30, 39, 0.4);
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,30,39,0.18);
+            transition: all 0.2s ease;
+        }
+
+        .toolbox-toggle:hover {
+            color: #ff1e27;
+            background: rgba(255, 30, 39, 0.08);
+        }
+
+        #kas-left.expanded .toolbox-toggle {
+            justify-content: flex-end;
+            padding-right: 16px;
+        }
+
+        #kas-left.expanded .toolbox-toggle i {
+            transform: rotate(180deg);
+        }
+
+        /* ── Center column: Viewport + Material bar ── */
+        #kas-center {
+            flex: 1 1 0% !important;
+            min-width: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            padding: 0 !important;
+            gap: 0 !important;
+            background: #000 !important;
+            overflow: hidden !important;
+        }
+
+        /* ── Right column: Inspector ── */
+        #kas-right {
+            width: 290px !important;
+            min-width: 290px !important;
+            max-width: 290px !important;
+            flex: 0 0 290px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important;
+            padding: 0 !important;
+            background: #050505 !important;
+            border-left: 1px solid rgba(255,30,39,0.18) !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+        }
+
+        /* ── Viewport: fill remaining height in center ── */
+        #viewport-wrapper {
+            flex: 1 1 0% !important;
+            position: relative !important;
+            background: #000 !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            width: 100% !important;
         }
 
         #viewport {
-            position: absolute;
-            inset: 0;
-            overflow: hidden;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            overflow: hidden !important;
         }
 
         #viewport canvas {
-            display: block;
+            display: block !important;
             width: 100% !important;
             height: 100% !important;
-            outline: none;
+            outline: none !important;
         }
 
         /* ── Viewport Overlay HUD ── */
@@ -196,88 +382,55 @@
             color: #ff1e27;
         }
 
-        /* ── Left Toolbar ── */
-        .tool-group-label {
-            font-size: 7px;
-            font-family: 'VT323', monospace;
-            color: rgba(255,30,39,0.4);
+        /* ── Asset Library (Left Panel) ── */
+        .lib-category-label {
+            font-size: 10px;
             letter-spacing: 1px;
-            text-align: center;
-            width: 100%;
-            padding: 2px 0;
-            user-select: none;
+            color: rgba(255, 30, 39, 0.6);
+            margin-bottom: 8px;
+            margin-left: 2px;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
         }
-
-        .left-divider {
-            width: 32px;
-            height: 1px;
-            background: rgba(255,30,39,0.15);
-            margin: 3px 0;
-            flex-shrink: 0;
+        .lib-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 15px;
         }
-
-        .vertical-tool-btn {
-            background: transparent;
-            border: 1px solid transparent;
-            color: rgba(255,30,39,0.5);
-            font-size: 15px;
-            width: 38px;
-            height: 38px;
+        .lib-item {
+            background: rgba(255, 30, 39, 0.05);
+            border: 1px solid rgba(255, 30, 39, 0.1);
+            border-radius: 4px;
+            padding: 12px 6px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 8px;
             cursor: pointer;
-            transition: all 0.1s;
-            flex-shrink: 0;
-            position: relative;
+            transition: all 0.2s ease;
+            color: rgba(255, 255, 255, 0.6);
         }
-
-        .vertical-tool-btn:hover {
+        .lib-item i {
+            font-size: 18px;
+            color: rgba(255, 30, 39, 0.7);
+            transition: color 0.2s;
+        }
+        .lib-item span {
+            font-size: 10px;
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            font-weight: 500;
+        }
+        .lib-item:hover {
+            background: rgba(255, 30, 39, 0.15);
+            border-color: rgba(255, 30, 39, 0.4);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+        .lib-item:hover i {
             color: #ff1e27;
-            background: rgba(255,30,39,0.08);
-            border-color: rgba(255,30,39,0.3);
-        }
-
-        .vertical-tool-btn.active {
-            color: #ff1e27;
-            background: rgba(255,30,39,0.15);
-            border-color: rgba(255,30,39,0.6);
-            box-shadow: 0 0 8px rgba(255,30,39,0.2);
-        }
-
-        /* Tooltip */
-        .vertical-tool-btn::after {
-            content: attr(data-tip);
-            position: absolute;
-            left: 46px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #111;
-            border: 1px solid rgba(255,30,39,0.4);
-            color: #ff1e27;
-            font-family: 'VT323', monospace;
-            font-size: 11px;
-            padding: 3px 8px;
-            white-space: nowrap;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.15s;
-            z-index: 999;
-            letter-spacing: 0.5px;
-        }
-
-        .vertical-tool-btn:hover::after {
-            opacity: 1;
-        }
-
-        /* Spawn btn - slightly different color accent */
-        .vertical-tool-btn.spawn-btn {
-            color: rgba(255,30,39,0.35);
-        }
-        .vertical-tool-btn.spawn-btn:hover {
-            color: #ff6666;
-            background: rgba(255,50,50,0.07);
-            border-color: rgba(255,50,50,0.25);
         }
 
         /* ── Right Panel ── */
@@ -1095,11 +1248,6 @@
 
         #tb-play-btn i { font-size: 11px; }
 
-        #kas-main {
-            padding: 0;
-            gap: 0;
-        }
-
         /* ── Mode Selector Styled (kept for JS compatibility) ── */
         #mode-selector-wrap {
             display: none; /* hidden - replaced by mode-pill-btn system */
@@ -1124,11 +1272,12 @@
 
         /* ── Status bar override ── */
         #kas-statusbar {
-            background: #000;
-            border-top: none;
-            border-bottom: 1px solid rgba(255,30,39,0.15);
-            height: 22px;
-            min-height: 22px;
+            background: #000 !important;
+            border-top: 1px solid rgba(255,30,39,0.1) !important;
+            border-bottom: 1px solid rgba(255,30,39,0.15) !important;
+            height: 22px !important;
+            min-height: 22px !important;
+            flex-shrink: 0 !important;
         }
 
         /* ── Object selected highlight ── */
@@ -1586,34 +1735,7 @@
         <!-- Compatibility wrapper for JS that targets mode-selector-wrap -->
         <div id="mode-selector-wrap" style="display:none;"></div>
 
-        <!-- ── TRANSFORM TOOLS ZONE ── -->
-        <div id="tb-transform-zone">
-            <span id="tb-transform-label">TOOLS</span>
-            <button class="tb-tool-btn active" id="tbtool-select" data-tool="select" title="Select [Q]">
-                <i class="fas fa-mouse-pointer"></i>
-                <span class="tb-key">Q</span>
-            </button>
-            <button class="tb-tool-btn" id="tbtool-move" data-tool="move" title="Move [W]">
-                <i class="fas fa-arrows-alt"></i>
-                <span class="tb-key">W</span>
-            </button>
-            <button class="tb-tool-btn" id="tbtool-rotate" data-tool="rotate" title="Rotate [E]">
-                <i class="fas fa-sync-alt"></i>
-                <span class="tb-key">E</span>
-            </button>
-            <button class="tb-tool-btn" id="tbtool-scale" data-tool="scale" title="Scale [R]">
-                <i class="fas fa-expand-arrows-alt"></i>
-                <span class="tb-key">R</span>
-            </button>
-            <button class="tb-tool-btn" id="tbtool-draw" data-tool="draw" title="Draw [D]">
-                <i class="fas fa-pencil-alt"></i>
-                <span class="tb-key">D</span>
-            </button>
-            <button class="tb-snap-toggle" id="tb-snap-btn" title="Toggle Grid Snap">
-                <i class="fas fa-th"></i>
-                SNAP
-            </button>
-        </div>
+
 
         <!-- ── SPACER ── -->
         <div id="tb-spacer"></div>
@@ -1629,11 +1751,7 @@
                 <div class="tb-stat-value" id="tb-stat-selected">—</div>
                 <div class="tb-stat-label">SELECTED</div>
             </div>
-            <div class="tb-stat-div"></div>
-            <div class="tb-stat">
-                <div class="tb-stat-value" id="tb-stat-fps">60</div>
-                <div class="tb-stat-label">FPS</div>
-            </div>
+
         </div>
 
         <!-- ── FILE OPS ZONE ── -->
@@ -1682,53 +1800,91 @@
     </div>
 
     <!-- ═══════════ MAIN WORKSPACE ═══════════ -->
-    <div id="kas-main">
+    <div id="kas-main" style="display:flex; flex-direction:row; flex-wrap:nowrap; align-items:stretch; flex:1 1 auto; min-height:0; overflow:hidden; padding:0; gap:0;">
 
-        <!-- LEFT PANEL (Vertical Tools Palette) -->
+        <!-- TOOLBOX (Left Panel) -->
         <div class="kas-panel" id="kas-left">
+            <div class="rp-section" style="border-bottom: none; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                
+                <!-- Toggle Button -->
+                <div class="toolbox-toggle" onclick="document.getElementById('kas-left').classList.toggle('expanded')">
+                    <i class="fas fa-bars" style="transition: transform 0.2s ease;"></i>
+                </div>
 
-            <!-- Transform Tools -->
-            <span class="tool-group-label">TOOLS</span>
-            <button class="vertical-tool-btn active" id="tool-select" data-tool="select"
-                data-tip="SELECT  [Q]"><i class="fas fa-mouse-pointer"></i><span class="vp-tool-key">Q</span></button>
-            <button class="vertical-tool-btn" id="tool-move" data-tool="move"
-                data-tip="MOVE  [W]"><i class="fas fa-arrows-alt"></i><span class="vp-tool-key">W</span></button>
-            <button class="vertical-tool-btn" id="tool-rotate" data-tool="rotate"
-                data-tip="ROTATE  [E]"><i class="fas fa-sync-alt"></i><span class="vp-tool-key">E</span></button>
-            <button class="vertical-tool-btn" id="tool-scale" data-tool="scale"
-                data-tip="SCALE  [R]"><i class="fas fa-expand-arrows-alt"></i><span class="vp-tool-key">R</span></button>
-            <button class="vertical-tool-btn" id="tool-draw" data-tool="draw"
-                data-tip="DRAW  [D]"><i class="fas fa-pencil-alt"></i><span class="vp-tool-key">D</span></button>
+                <div class="rp-body" style="padding: 0; flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 0;">
+                    
+                    <!-- Primitives -->
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('box')" data-tooltip="Box">
+                        <i class="fas fa-cube"></i><span class="toolbox-label">Box</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('sphere')" data-tooltip="Sphere">
+                        <i class="fas fa-circle"></i><span class="toolbox-label">Sphere</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('cylinder')" data-tooltip="Cylinder">
+                        <i class="fas fa-database"></i><span class="toolbox-label">Cylinder</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('cone')" data-tooltip="Cone">
+                        <i class="fas fa-chevron-up"></i><span class="toolbox-label">Cone</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('plane')" data-tooltip="Plane">
+                        <i class="fas fa-border-all"></i><span class="toolbox-label">Plane</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('capsule')" data-tooltip="Capsule">
+                        <i class="fas fa-pills"></i><span class="toolbox-label">Capsule</span>
+                    </div>
+                    
+                    <div class="toolbox-divider"></div>
+                    
+                    <!-- Architecture -->
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('slope')" data-tooltip="Slope">
+                        <i class="fas fa-play" style="transform: rotate(-45deg);"></i><span class="toolbox-label">Slope</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('wedge')" data-tooltip="Wedge">
+                        <i class="fas fa-caret-up"></i><span class="toolbox-label">Wedge</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('stairs')" data-tooltip="Stairs">
+                        <i class="fas fa-align-right"></i><span class="toolbox-label">Stairs</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnShape('arch')" data-tooltip="Arch">
+                        <i class="fas fa-archway"></i><span class="toolbox-label">Arch</span>
+                    </div>
+                    
+                    <div class="toolbox-divider"></div>
+                    
+                    <!-- Logic & Lights -->
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnLight()" data-tooltip="Point Light">
+                        <i class="fas fa-lightbulb"></i><span class="toolbox-label">Point Light</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnEntity()" data-tooltip="Entity">
+                        <i class="fas fa-user-circle"></i><span class="toolbox-label">Entity</span>
+                    </div>
+                    
+                    <div class="toolbox-divider"></div>
+                    
+                    <!-- CSG -->
+                    <div class="toolbox-item" onclick="window.editor3d?.performCSG('union')" data-tooltip="CSG Union">
+                        <i class="fas fa-object-group"></i><span class="toolbox-label">Union</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.performCSG('subtract')" data-tooltip="CSG Subtract">
+                        <i class="fas fa-object-ungroup"></i><span class="toolbox-label">Subtract</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.performCSG('intersect')" data-tooltip="CSG Intersect">
+                        <i class="fas fa-compress-arrows-alt"></i><span class="toolbox-label">Intersect</span>
+                    </div>
+                    
+                    <div class="toolbox-divider"></div>
 
-            <div class="left-divider"></div>
+                    <!-- Terrain -->
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnTerrain()" data-tooltip="New Terrain">
+                        <i class="fas fa-mountain"></i><span class="toolbox-label">New Terrain</span>
+                    </div>
 
-            <!-- Shape Spawners -->
-            <span class="tool-group-label">ADD</span>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-box" data-tip="BOX"
-                onclick="window.editor3d?.spawnShape('box')"><i class="fas fa-cube"></i></button>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-sphere" data-tip="SPHERE"
-                onclick="window.editor3d?.spawnShape('sphere')"><i class="fas fa-circle"></i></button>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-cylinder" data-tip="CYLINDER"
-                onclick="window.editor3d?.spawnShape('cylinder')"><i class="fas fa-database"></i></button>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-cone" data-tip="CONE"
-                onclick="window.editor3d?.spawnShape('cone')"><i class="fas fa-chevron-up" style="transform:scale(1.2);"></i></button>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-plane" data-tip="PLANE"
-                onclick="window.editor3d?.spawnShape('plane')"><i class="fas fa-border-all"></i></button>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-capsule" data-tip="CAPSULE"
-                onclick="window.editor3d?.spawnShape('capsule')"><i class="fas fa-pills"></i></button>
-
-            <div class="left-divider"></div>
-
-            <!-- Lights & Entities -->
-            <span class="tool-group-label">PLACE</span>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-light" data-tip="POINT LIGHT"
-                onclick="window.editor3d?.spawnLight()"><i class="fas fa-lightbulb"></i></button>
-            <button class="vertical-tool-btn spawn-btn" id="spawn-entity" data-tip="ENTITY"
-                onclick="window.editor3d?.spawnEntity()"><i class="fas fa-user-circle"></i></button>
+                </div>
+            </div>
         </div>
 
         <!-- CENTER VIEWPORT & MATERIAL MANAGER -->
-        <div class="kas-panel kas-full" id="kas-center" style="gap:0;">
+        <div class="kas-panel" id="kas-center">
             <div id="viewport-wrapper">
                 <div id="viewport"></div>
 
@@ -1811,6 +1967,13 @@
                 <div class="mat-header">
                     <span><i class="fas fa-palette" style="margin-right:4px;font-size:9px;"></i>MATERIAL LIBRARY</span>
                     <div style="display:flex;gap:4px;">
+                        <select id="sel-material-pack" style="background:rgba(0,0,0,0.6); border:1px solid rgba(255,30,39,0.2); color:#ff1e27; font-family:'VT323', monospace; font-size:10px; outline:none; cursor:pointer;">
+                            <option value="">+ ADD PACK...</option>
+                            <option value="Neon Dystopia">Neon Dystopia (Sci-Fi)</option>
+                            <option value="Low-Poly Nostalgia">Low-Poly Nostalgia (Retro)</option>
+                            <option value="Cel-Shaded Comic">Cel-Shaded Comic (Toon)</option>
+                            <option value="Brutalism & Decay">Brutalism & Decay (Horror)</option>
+                        </select>
                         <button class="kas-btn icon" title="Create New Material" id="btn-new-material"
                             style="width:18px;height:18px;font-size:9px;padding:0;"><i class="fas fa-plus"></i></button>
                     </div>
@@ -1884,53 +2047,6 @@
                 </div>
             </div>
 
-            <!-- ENVIRONMENT -->
-            <div class="rp-section" id="rp-env">
-                <div class="rp-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                    <div class="rp-header-left">
-                        <i class="fas fa-globe rp-header-icon"></i>
-                        <span class="rp-title">Environment</span>
-                    </div>
-                    <i class="fas fa-chevron-down rp-chevron"></i>
-                </div>
-                <div class="rp-body">
-                    <div style="padding:8px;">
-                        <div class="prop-row">
-                            <span class="prop-label">Ambient</span>
-                            <div class="prop-value" style="display:flex;gap:4px;align-items:center;">
-                                <input type="color" id="env-ambient-color" value="#111111"
-                                    style="width:28px;height:22px;border:1px solid rgba(255,30,39,0.3);background:transparent;cursor:pointer;padding:1px;"
-                                    oninput="window.editor3d?.setAmbientColor?.(this.value)">
-                                <input type="range" min="0" max="2" step="0.05" value="0.3" id="env-ambient-intensity"
-                                    class="kas-range" style="flex:1;" oninput="window.editor3d?.setAmbientIntensity?.(parseFloat(this.value))">
-                            </div>
-                        </div>
-                        <div class="prop-row">
-                            <span class="prop-label">Fog</span>
-                            <div class="prop-value" style="display:flex;gap:4px;align-items:center;">
-                                <input type="checkbox" id="env-fog-toggle"
-                                    style="accent-color:#ff1e27;cursor:pointer;"
-                                    onchange="window.editor3d?.setFog?.(this.checked)">
-                                <input type="range" min="0" max="500" step="5" value="100" id="env-fog-far"
-                                    class="kas-range" style="flex:1;" oninput="window.editor3d?.setFogDistance?.(parseFloat(this.value))">
-                            </div>
-                        </div>
-                        <div class="prop-row">
-                            <span class="prop-label">Sky</span>
-                            <div class="prop-value">
-                                <select class="tool-select" id="env-sky"
-                                    onchange="window.editor3d?.setSkybox?.(this.value)">
-                                    <option value="solid">Solid Color</option>
-                                    <option value="gradient">Gradient</option>
-                                    <option value="day">Day</option>
-                                    <option value="night">Night</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div><!-- #kas-right -->
 
     </div><!-- #kas-main -->
@@ -1979,9 +2095,10 @@
 
 <!-- Scripts -->
 <script src="/shared/EventBus.js"></script>
+<script src="/shared/SchemaRegistry.js"></script>
 <script src="lib/monaco/vs/loader.js"></script>
 <script type="module">
-    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust3';
+    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust4';
 
     // ── Mode panel registry ───────────────────────────────────────────
     const PANEL_REGISTRY = {
@@ -2035,9 +2152,9 @@
     }
 
     // ── Custom tab buttons (visual-only, drive hidden select) ─────────
-    document.querySelectorAll('.mode-tab-btn').forEach(btn => {
+    document.querySelectorAll('.mode-pill-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-            document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.mode-pill-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const newMode = btn.dataset.mode;
             modeSelector.value = newMode;
@@ -2050,8 +2167,8 @@
         });
     });
     // sync initial state
-    document.querySelectorAll('.mode-tab-btn').forEach(b => b.classList.remove('active'));
-    const initTab = document.querySelector(`.mode-tab-btn[data-mode="${mode}"]`);
+    document.querySelectorAll('.mode-pill-btn').forEach(b => b.classList.remove('active'));
+    const initTab = document.querySelector(`.mode-pill-btn[data-mode="${mode}"]`);
     if (initTab) initTab.classList.add('active');
 
     // ── Toolbar buttons ───────────────────────────────────────────────
@@ -2082,10 +2199,7 @@
 
     // Sync UI buttons/HUD only — does NOT call editor.setActiveTool (avoids re-entry)
     function syncToolUI(tool) {
-        // Sidebar buttons
-        document.querySelectorAll('#kas-left [data-tool]').forEach(b => {
-            b.classList.toggle('active', b.dataset.tool === tool);
-        });
+
         // Viewport mini toolbar
         document.querySelectorAll('#vp-toolbar [data-tool]').forEach(b => {
             b.classList.toggle('active', b.dataset.tool === tool);
@@ -2102,9 +2216,7 @@
         editor.setActiveTool(tool); // fires _onToolChanged → syncToolUI (no loop)
     }
 
-    document.querySelectorAll('#kas-left [data-tool]').forEach(btn => {
-        btn.addEventListener('click', () => activateTool(btn.dataset.tool));
-    });
+
     document.querySelectorAll('#vp-toolbar [data-tool]').forEach(btn => {
         btn.addEventListener('click', () => activateTool(btn.dataset.tool));
     });

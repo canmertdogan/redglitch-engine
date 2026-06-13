@@ -470,7 +470,8 @@ export function registerDefaultTools(registry) {
                     'topdown': 'editor', 'topdown_studio': 'editor', 'rpg': 'editor', 'rpg_studio': 'editor', 'level_editor': 'editor', 'world': 'editor',
                     'isopixel': 'iso_studio', 'isometric': 'iso_studio', 'iso': 'iso_studio',
                     'platformer': 'platformer_studio', 'platform': 'platformer_studio',
-                    'code_forge': 'script', 'code': 'script'
+                    'code_forge': 'script', 'code': 'script',
+                    'logic': 'algorithm_studio', 'algorithm': 'algorithm_studio'
                 };
                 target = targetAliases[target] || target;
 
@@ -502,7 +503,8 @@ export function registerDefaultTools(registry) {
                     'quest': 'quest_editor.html',
                     'dialogue': 'dialogue_editor.html',
                     'pixel': 'iso_editor.html',
-                    'val_suite': 'ai/val-suite.html'
+                    'val_suite': 'ai/val-suite.html',
+                    'algorithm_studio': 'algorithm_editor.html'
                 };
                 
                 if (nav[target]) {
@@ -630,6 +632,54 @@ export function registerDefaultTools(registry) {
             }
             // Remote execution - handled by StudioBridge in editor.js
             // The editor listens via eventBus for 'studio:action:execute' and processes through StudioBridge
+        });
+
+        // logic.generate proxy (ensures Algorithm Studio is open)
+        registry.register({
+            name: 'logic.generate',
+            description: 'Generate or patch a visual algorithm node graph. The payload should contain nodes (with type, x, y, and specific data) and wires connecting them.',
+            securityLevel: 'high-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    nodes: { 
+                        type: 'array',
+                        description: 'List of logic nodes to spawn on the canvas. Must include type, x, y.',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string', description: 'Temporary ID for wiring (e.g. n1)' },
+                                type: { type: 'string', description: 'Node definition type (e.g. event_on_start, math_add)' },
+                                x: { type: 'number', description: 'X coordinate' },
+                                y: { type: 'number', description: 'Y coordinate' },
+                                value: { type: 'string', description: 'For var_string/number/etc' },
+                                op: { type: 'string', description: 'For math/compare' }
+                            },
+                            required: ['id', 'type', 'x', 'y']
+                        }
+                    },
+                    wires: {
+                        type: 'array',
+                        description: 'List of connections between nodes.',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                sourceId: { type: 'string' },
+                                sourcePort: { type: 'string', description: 'e.g. next, out, true, false' },
+                                targetId: { type: 'string' },
+                                targetPort: { type: 'string', description: 'e.g. exec, in, a, b' }
+                            },
+                            required: ['sourceId', 'sourcePort', 'targetId', 'targetPort']
+                        }
+                    }
+                },
+                required: ['nodes', 'wires']
+            },
+            execute: async (args) => {
+                const ready = await ensureStudioOpen('logic');
+                if (!ready) throw new Error('Algorithm Studio could not be opened.');
+                return { success: true, message: 'Logic generation requested in Algorithm Studio.' };
+            }
         });
 
         // Aliases for legacy

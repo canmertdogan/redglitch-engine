@@ -882,6 +882,20 @@ class KAE {
             window.RedGlitchEventBus.on('audio:map_updated', (event) => {
                 this.loadMap(event.data);
             });
+            
+            // Phase 3: Asset Hot-Swapping Infrastructure
+            window.RedGlitchEventBus.on('asset:modified', (event) => {
+                const asset = event.data?.asset;
+                if (asset && asset.type === 'audio') {
+                    if (this.buffers.has(asset.path)) {
+                        this.buffers.delete(asset.path);
+                        console.log(`[Hot-Swap] Cleared audio cache for: ${asset.path}`);
+                    }
+                    if (this.buffers.has(asset.id)) {
+                        this.buffers.delete(asset.id);
+                    }
+                }
+            });
         }
     }
 

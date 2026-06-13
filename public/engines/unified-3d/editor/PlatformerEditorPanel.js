@@ -51,13 +51,20 @@ export default class PlatformerEditorPanel {
         if (!this.container) return;
         this.container.innerHTML = `
             <div class="tool-section">
-                <div class="tool-section-title">PLATFORMER TOOLS</div>
+                <div class="tool-section-title">QUICK ACTIONS (PLATFORMER)</div>
+                <div class="tool-buttons-col">
+                    <button class="action-btn" data-tool="checkpoint" title="Place Checkpoint"><i class="fas fa-flag"></i> Place Checkpoint</button>
+                    <button class="action-btn" data-tool="moving" title="Add Moving Platform"><i class="fas fa-arrows-alt-h"></i> Add Moving Platform</button>
+                    <button class="action-btn" data-tool="bounce" title="Place Jump Pad"><i class="fas fa-angle-double-up"></i> Place Jump Pad</button>
+                    <button class="action-btn" data-tool="collectible" title="Add Collectible"><i class="fas fa-star"></i> Add Collectible</button>
+                </div>
+            </div>
+            <div class="tool-section">
+                <div class="tool-section-title">BUILDING BLOCKS</div>
                 <div class="tool-buttons">
                     <button class="tool-btn active" data-tool="block" title="Place Block">📦</button>
                     <button class="tool-btn" data-tool="hazard" title="Place Hazard">⚠️</button>
                     <button class="tool-btn" data-tool="path" title="Moving Platform Path">🛤️</button>
-                    <button class="tool-btn" data-tool="checkpoint" title="Checkpoint">🚩</button>
-                    <button class="tool-btn" data-tool="collectible" title="Collectible">⭐</button>
                     <button class="tool-btn" data-tool="enemy" title="Enemy">👾</button>
                 </div>
             </div>
@@ -108,15 +115,15 @@ export default class PlatformerEditorPanel {
             <div class="tool-section">
                 <div class="tool-section-title">ACTIONS</div>
                 <div class="tool-buttons-col">
-                    <button class="action-btn" id="plat-playtest-btn">▶ Playtest</button>
+                    <button class="action-btn" id="plat-playtest-btn"><i class="fas fa-play"></i> Playtest</button>
                 </div>
             </div>
         `;
 
         // Wire events
-        this.container.querySelectorAll('.tool-btn').forEach(btn => {
+        this.container.querySelectorAll('.tool-btn, .action-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.container.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                this.container.querySelectorAll('.tool-btn, .action-btn[data-tool]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 if (this.editor) {
                     this.editor.setActiveTool('draw');
@@ -157,7 +164,7 @@ export default class PlatformerEditorPanel {
     onModeChanged(mode) {}
 
     getDrawState() {
-        const activeBtn = this.container.querySelector('.tool-btn.active');
+        const activeBtn = this.container.querySelector('.tool-btn.active, .action-btn.active[data-tool]');
         const tool = activeBtn ? activeBtn.dataset.tool : 'block';
         
         let blockVal = 'box';
@@ -165,8 +172,12 @@ export default class PlatformerEditorPanel {
             blockVal = document.getElementById('plat-block-type')?.value || this._blockType;
         } else if (tool === 'hazard') {
             blockVal = document.getElementById('plat-hazard-type')?.value || this._hazardType;
-        } else {
-            blockVal = tool; // 'checkpoint', 'collectible', 'enemy', 'path'
+        } else if (tool === 'checkpoint') blockVal = 'checkpoint';
+        else if (tool === 'moving') blockVal = 'moving';
+        else if (tool === 'bounce') blockVal = 'bounce';
+        else if (tool === 'collectible') blockVal = 'collectible';
+        else {
+            blockVal = tool; // 'enemy', 'path'
         }
 
         return {

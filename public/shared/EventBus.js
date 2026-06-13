@@ -217,6 +217,27 @@ class EventBus {
     }
 
     /**
+     * Request a memory dump from the active engine (Live Memory Bridge)
+     */
+    requestMemoryDump(namespace = 'global') {
+        this.emit('system:memory:request', { namespace });
+    }
+
+    /**
+     * Broadcast a memory diff from the engine back to the tools (Live Memory Bridge)
+     */
+    broadcastMemoryDiff(namespace, diff) {
+        this.emit('system:memory:diff', { namespace, diff });
+    }
+
+    /**
+     * Patch a memory value in the engine from the tools (Live Memory Bridge)
+     */
+    patchMemory(namespace, patch) {
+        this.emit('system:memory:patch', { namespace, patch });
+    }
+
+    /**
      * Handle events from remote sources
      */
     handleRemoteEvent(eventData) {

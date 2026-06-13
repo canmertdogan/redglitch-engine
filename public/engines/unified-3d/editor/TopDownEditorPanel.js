@@ -30,13 +30,20 @@ export default class TopDownEditorPanel {
         if (!this.container) return;
         this.container.innerHTML = `
             <div class="tool-section">
-                <div class="tool-section-title">TOPDOWN TOOLS</div>
+                <div class="tool-section-title">QUICK ACTIONS (TOP-DOWN)</div>
+                <div class="tool-buttons-col">
+                    <button class="action-btn" data-tool="camera" title="Set Camera Angle"><i class="fas fa-video"></i> Set Camera Angle</button>
+                    <button class="action-btn" data-tool="npc" title="Place NPC"><i class="fas fa-user-friends"></i> Place NPC</button>
+                    <button class="action-btn" data-tool="trigger" title="Add Trigger Zone"><i class="fas fa-vector-square"></i> Add Trigger Zone</button>
+                    <button class="action-btn" data-tool="pathfinding" title="Configure Pathfinding"><i class="fas fa-project-diagram"></i> Configure Pathfinding</button>
+                </div>
+            </div>
+            <div class="tool-section">
+                <div class="tool-section-title">ENVIRONMENT</div>
                 <div class="tool-buttons">
                     <button class="tool-btn active" data-tool="terrain" title="Terrain">🏔️</button>
-                    <button class="tool-btn" data-tool="entity" title="Place Entity">👤</button>
-                    <button class="tool-btn" data-tool="navmesh" title="Navmesh">🗺️</button>
-                    <button class="tool-btn" data-tool="fog" title="Fog Config">🌫️</button>
                     <button class="tool-btn" data-tool="waypoint" title="Waypoints">📍</button>
+                    <button class="tool-btn" data-tool="entity" title="Place Entity">👤</button>
                 </div>
             </div>
             <div class="tool-section">
@@ -63,29 +70,10 @@ export default class TopDownEditorPanel {
                 </div>
             </div>
             <div class="tool-section">
-                <div class="tool-section-title">ENTITY</div>
-                <select id="td-entity-type" class="tool-select">
-                    <option value="unit">Unit (Player)</option>
-                    <option value="enemy">Enemy</option>
-                    <option value="npc">NPC</option>
-                    <option value="building">Building</option>
-                    <option value="resource">Resource</option>
-                    <option value="trigger">Trigger Zone</option>
-                </select>
-                <div class="tool-row">
-                    <label>Team:</label>
-                    <select id="td-team" class="tool-select-sm">
-                        <option value="0">Team 0 (Player)</option>
-                        <option value="1">Team 1 (Enemy)</option>
-                        <option value="2">Team 2 (Neutral)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="tool-section">
                 <div class="tool-section-title">ACTIONS</div>
                 <div class="tool-buttons-col">
-                    <button class="action-btn" id="td-bake-nav">🗺️ Bake Navmesh</button>
-                    <button class="action-btn" id="td-playtest-btn">▶ Playtest</button>
+                    <button class="action-btn" id="td-bake-nav"><i class="fas fa-map"></i> Bake Navmesh</button>
+                    <button class="action-btn" id="td-playtest-btn"><i class="fas fa-play"></i> Playtest</button>
                 </div>
             </div>
         `;
@@ -98,9 +86,9 @@ export default class TopDownEditorPanel {
             radiusVal.textContent = this._sculptRadius;
         });
 
-        this.container.querySelectorAll('.tool-btn').forEach(btn => {
+        this.container.querySelectorAll('.tool-btn, .action-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.container.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                this.container.querySelectorAll('.tool-btn, .action-btn[data-tool]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 if (this.editor) {
                     this.editor.setActiveTool('draw');
@@ -123,15 +111,16 @@ export default class TopDownEditorPanel {
     onModeChanged(mode) {}
 
     getDrawState() {
-        const activeBtn = this.container.querySelector('.tool-btn.active');
+        const activeBtn = this.container.querySelector('.tool-btn.active, .action-btn.active[data-tool]');
         const tool = activeBtn ? activeBtn.dataset.tool : 'terrain';
         
         let blockVal = 'terrain';
-        if (tool === 'entity') {
-            blockVal = document.getElementById('td-entity-type')?.value || this._entityType;
-        } else {
-            blockVal = tool; // 'terrain', 'navmesh', 'waypoint', 'fog'
-        }
+        if (tool === 'entity') blockVal = 'entity';
+        else if (tool === 'npc') blockVal = 'npc';
+        else if (tool === 'trigger') blockVal = 'trigger';
+        else if (tool === 'camera') blockVal = 'camera';
+        else if (tool === 'pathfinding') blockVal = 'pathfinding';
+        else blockVal = tool;
 
         const team = parseInt(document.getElementById('td-team')?.value) || 0;
 

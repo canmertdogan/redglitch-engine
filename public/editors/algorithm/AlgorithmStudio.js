@@ -1,5 +1,5 @@
 import { CodeBuilder } from './CodeBuilder.js';
-import { LIB, CATEGORIES } from './AlgorithmNodes.js';
+import { LIB } from './AlgorithmNodes.js';
 
 // algorithm_editor.js - Core Visual Scripting Engine v2.1
 // Improved Visuals, Robust Layout, and User-Friendly Features
@@ -38,6 +38,29 @@ function initializeAlgorithmIntegration() {
                 }
             });
             
+            // PHASE 11: Multi-Engine Level Streaming Sync
+            eventBus.on('system:engine:switch', (event) => {
+                console.log('[AlgorithmEditor] Engine switched to:', event.data?.engineType, 'Flushing execution caches.');
+                if (window.studio && window.studio.liveValues) {
+                    window.studio.liveValues.clear();
+                }
+                const execNodes = document.querySelectorAll('.executing');
+                execNodes.forEach(n => n.classList.remove('executing'));
+            });
+            
+            // PHASE 17: AI Logic Generation Support
+            eventBus.on('studio:action:execute', (event) => {
+                if (event.data && event.data.tool === 'logic.generate') {
+                    console.log('[AlgorithmEditor] Received AI logic generation patch');
+                    if (window.studio && event.data.args) {
+                        const { nodes, wires } = event.data.args;
+                        if (nodes && wires) {
+                            window.studio.applyAIPatch(nodes, wires);
+                        }
+                    }
+                }
+            });
+            
             console.log('[AlgorithmEditor] EventBus connected');
         }
     }
@@ -49,6 +72,14 @@ function broadcastAlgorithmUpdate(scriptName, action = 'updated') {
             scriptId: scriptName,
             timestamp: Date.now()
         });
+        
+        // Phase 6: Broadcast for dynamic script injection
+        if (action === 'saved' || action === 'updated') {
+            eventBus.emit('system:script:update', {
+                scriptId: scriptName,
+                timestamp: Date.now()
+            });
+        }
     }
     
     if (projectState) {
@@ -307,8 +338,36 @@ export class AlgorithmStudio {
             this.spawnNode('evt_start', 100, 100);
         }
 
+        // PHASE 8: Real-Time Node Execution Visualization
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('vsl:node_exec', (event) => {
+                const { nodeId } = event.data || {};
+                if (nodeId) {
+                    this.highlightNodeExecution(nodeId);
+                }
+            });
+        }
+
         requestAnimationFrame(() => this.loop());
         this.log("Studio v2.1 Ready. [Tools: V/W/H/Z/X/C | Panels: Ctrl+1/2/3 | Presets: F1-F4/F11]", "info");
+    }
+
+    highlightNodeExecution(nodeId) {
+        if (this.viewMode !== 'GRAPH') return;
+        const nodeEl = document.getElementById(`node-${nodeId}`);
+        if (nodeEl) {
+            // Remove previous active highlights
+            const prev = document.querySelectorAll('.node-exec-active');
+            prev.forEach(el => el.classList.remove('node-exec-active'));
+            
+            nodeEl.classList.add('node-exec-active');
+            
+            // Add pulse effect and remove it after a short delay
+            nodeEl.classList.add('node-exec-pulse');
+            setTimeout(() => {
+                nodeEl.classList.remove('node-exec-pulse');
+            }, 300);
+        }
     }
 
     loop() {
@@ -3239,6 +3298,39 @@ export class AlgorithmStudio {
         this.testScript();
     }
     
+    // PHASE 17: Inject Context and Open AI
+    invokeAI() {
+        const kai = window.KAI || (window.parent && window.parent.KAI);
+        if (!kai) {
+            this.log("Ketebe AI is not available or offline.", "error");
+            return;
+        }
+
+        const simplifiedNodes = this.nodes.map(n => ({
+            id: n.id,
+            type: n.type,
+            value: n.value,
+            op: n.op
+        }));
+
+        const simplifiedWires = this.wires.map(w => ({
+            sourceId: w.sourceNode,
+            sourcePort: w.sourcePort,
+            targetId: w.targetNode,
+            targetPort: w.targetPort
+        }));
+
+        const contextText = `I am working on a visual logic algorithm.
+Here is the current AST representation of the graph:
+\`\`\`json
+${JSON.stringify({ nodes: simplifiedNodes, wires: simplifiedWires }, null, 2)}
+\`\`\`
+I want to modify or add new logic to this graph.`;
+
+        kai.injectContext(contextText);
+        kai.openChat();
+    }
+    
     closeTestPanel() {
         const overlay = document.getElementById('test-panel-overlay');
         if (overlay) {
@@ -3407,6 +3499,68 @@ export class AlgorithmStudio {
         if (errorData.stack) {
             this.logToTestConsole(`  Stack: ${errorData.stack.join(' → ')}`, 'error');
         }
+    }
+
+    // PHASE 17: AI Logic Patching
+    applyAIPatch(nodes, wires) {
+        this.log("Applying AI Logic Patch...", "info");
+        const nodeMap = new Map();
+        
+        // Offset the new nodes to appear near the center of the viewport
+        const offsetX = -this.pan.x + window.innerWidth / 2 - 100;
+        const offsetY = -this.pan.y + window.innerHeight / 2 - 100;
+
+        // 1. Instantiate Nodes
+        nodes.forEach(nData => {
+            if (!LIB[nData.type]) {
+                this.log(`AI Error: Unknown node type ${nData.type}`, "error");
+                return;
+            }
+            // Spawn node
+            const n = {
+                id: 'node_' + Math.random().toString(36).substr(2, 9),
+                type: nData.type,
+                x: (nData.x || 0) + offsetX,
+                y: (nData.y || 0) + offsetY,
+                inputs: {},
+                outputs: {}
+            };
+            if (nData.value !== undefined) n.value = nData.value;
+            if (nData.op !== undefined) n.op = nData.op;
+            
+            this.nodes.push(n);
+            this.createNodeDOM(n, LIB[n.type]);
+            nodeMap.set(nData.id, n.id);
+        });
+
+        // 2. Wire them up
+        wires.forEach(wData => {
+            const realSourceId = nodeMap.get(wData.sourceId);
+            const realTargetId = nodeMap.get(wData.targetId);
+            
+            if (realSourceId && realTargetId) {
+                const wire = {
+                    id: 'wire_' + Math.random().toString(36).substr(2, 9),
+                    sourceNode: realSourceId,
+                    sourcePort: wData.sourcePort,
+                    targetNode: realTargetId,
+                    targetPort: wData.targetPort
+                };
+                this.wires.push(wire);
+                this.drawWire(wire);
+                
+                const sn = this.nodes.find(n => n.id === realSourceId);
+                const tn = this.nodes.find(n => n.id === realTargetId);
+                if (sn && tn) {
+                    sn.outputs[wData.sourcePort] = { node: realTargetId, port: wData.targetPort };
+                    tn.inputs[wData.targetPort] = { node: realSourceId, port: wData.sourcePort };
+                }
+            }
+        });
+
+        this.redrawWires();
+        this.saveState();
+        this.log("AI Logic Patch applied successfully.", "info");
     }
 }
 
