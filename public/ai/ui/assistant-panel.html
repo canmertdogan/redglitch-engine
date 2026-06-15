@@ -638,7 +638,7 @@
             <div class="xp-input-toolbar">
                 <div class="xp-toolbar-section">
                     <button class="xp-tool-btn" title="Clear History" onclick="document.getElementById('ai-chat-messages').innerHTML=''">[CLR]</button>
-                    <button class="xp-tool-btn" title="Project Context">[CTX]</button>
+                    <button class="xp-tool-btn" title="Project Context" onclick="AIChatUI.queryContext()">[CTX]</button>
                     <button class="xp-tool-btn" title="System Status" onclick="AIChatUI.addMessage('system', '>> KERNEL_STATUS: OPTIMAL\n>> BRAIN_SYNC: 100%\n>> RAG_LATENCY: 12ms')">[LOG]</button>
                 </div>
                 <button id="ai-chat-send" onclick="AIChatUI.sendMessage()">TRANSMIT</button>

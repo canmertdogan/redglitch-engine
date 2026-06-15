@@ -13,6 +13,7 @@ class SharedProjectState {
         this.maxUndoSteps = 50;
         this.autoSaveInterval = null;
         this.isDirty = false;
+        this.timestamps = {}; // Phase 5: Timestamp diffing cache
         
         // Subscribe to EventBus if available
         if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
@@ -127,15 +128,32 @@ class SharedProjectState {
      * Set a value in the project state
      */
     set(path, value, options = {}) {
+        const updateTime = options.timestamp || Date.now();
+        const lastTime = this.getNested(this.timestamps, path, 0);
+
+        // Phase 5: Anti-Race Condition (Timestamp Diffing)
+        if (updateTime < lastTime && !options.force) {
+            console.warn(`[SharedProjectState] Rejected stale update to ${path} (Delta: ${lastTime - updateTime}ms)`);
+            return this;
+        }
+
         const oldValue = this.get(path);
         
+        let finalValue = value;
+        // Phase 5: Graceful Merge for objects instead of exact overwrite
+        if (options.merge && typeof oldValue === 'object' && oldValue !== null && typeof value === 'object' && value !== null && !Array.isArray(oldValue)) {
+            finalValue = { ...oldValue, ...value };
+            console.log(`[SharedProjectState] Merged object state for ${path}`);
+        }
+
         // Create undo point if value actually changed
-        if (JSON.stringify(oldValue) !== JSON.stringify(value) && !options.skipUndo) {
+        if (JSON.stringify(oldValue) !== JSON.stringify(finalValue) && !options.skipUndo) {
             this.createUndoPoint();
         }
         
         // Set the value
-        this.setNested(this.state, path, value);
+        this.setNested(this.state, path, finalValue);
+        this.setNested(this.timestamps, path, updateTime);
         
         // Mark as dirty
         this.isDirty = true;

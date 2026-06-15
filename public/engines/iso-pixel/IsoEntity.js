@@ -22,7 +22,8 @@ class IsoEntity {
         // Properties
         this.type = def.type || 'npc'; // 'npc' or 'enemy'
         this.id = def.instanceId || def.id || crypto.randomUUID();
-        this.spriteId = def.spriteId || (def.data && def.data.spriteId);
+        this.spriteId = def.spriteId || (def.data && def.data.spriteId) || (typeof def.data === 'string' ? def.data.replace('.json', '') : null);
+        this.prefabId = def.prefabId || (typeof def.data === 'string' && def.data.endsWith('.json') ? def.data.replace('.json', '') : null);
         
         // Stats
         this.hp = def.hp || 100;

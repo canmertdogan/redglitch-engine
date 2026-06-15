@@ -61,6 +61,13 @@ function initializeAlgorithmIntegration() {
                 }
             });
             
+            // PHASE 7: Reload custom nodes from JS files when scripts are updated
+            eventBus.on('system:script:update', (event) => {
+                if (window.studio) {
+                    window.studio.loadCustomNodes();
+                }
+            });
+            
             console.log('[AlgorithmEditor] EventBus connected');
         }
     }
@@ -278,6 +285,9 @@ export class AlgorithmStudio {
         // Initialize integration first
         initializeAlgorithmIntegration();
         
+        // PHASE 7: Load Custom Node Wrappers from JS
+        this.loadCustomNodes();
+        
         // PHASE 3: Fetch project data
         this.fetchProjectData();
         this.initLayoutManager();
@@ -298,7 +308,60 @@ export class AlgorithmStudio {
         this.refreshScriptList();
         
         // PHASE 7: Initialize enhancements (after library populated)
-        this.initEnhancements();
+        this.initNodeGrouping();
+        this.initUndoSystem();
+    }
+    
+    // PHASE 7: Custom JS Node Wrappers
+    async loadCustomNodes() {
+        try {
+            const res = await fetch('/api/ide/tree');
+            if (!res.ok) return;
+            const tree = await res.json();
+            
+            const jsFiles = [];
+            const walk = (nodes, pathPrefix = '') => {
+                for (const node of nodes) {
+                    if (node.type === 'dir') {
+                        walk(node.children, node.path + '/');
+                    } else if (node.name.endsWith('.js') && (node.path.includes('/logic/') || node.path.includes('/scripts/'))) {
+                        jsFiles.push(node.path);
+                    }
+                }
+            };
+            if (Array.isArray(tree)) walk(tree);
+
+            let addedCount = 0;
+            for (const path of jsFiles) {
+                try {
+                    const contentRes = await fetch(`/api/ide/read?file=${encodeURIComponent(path)}`);
+                    if (!contentRes.ok) continue;
+                    const content = await contentRes.text();
+                    
+                    const match = content.match(/export\s+const\s+nodeConfig\s*=\s*(\{[\s\S]*?\});/);
+                    if (match) {
+                        const configStr = match[1];
+                        const config = new Function(`return ${configStr}`)();
+                        
+                        const typeId = 'custom_' + path.split(/[/\\]/).pop().replace('.js', '');
+                        if (!config.cat) config.cat = 'Custom';
+                        if (!config.title) config.title = typeId;
+                        
+                        LIB[typeId] = config;
+                        addedCount++;
+                    }
+                } catch(e) { console.warn('Error parsing custom node:', e); }
+            }
+            if (addedCount > 0) {
+                console.log(`[AlgorithmStudio] Loaded ${addedCount} custom JS nodes.`);
+                this.populateLibrary();
+            }
+        } catch (e) {
+            console.warn('[AlgorithmStudio] Failed to load custom nodes', e);
+        }
+    }
+    
+    initEnhancements() {
         
         // PHASE B: Listen for error messages from game
         window.addEventListener('message', (event) => {
@@ -2611,6 +2674,42 @@ export class AlgorithmStudio {
         });
         builder.out(); builder.line(`}`);
         return builder.toString();
+    }
+
+    async ejectToJS() {
+        const compiledCode = this.compile();
+        const scriptName = this.dom.scriptName.value || 'untitled_logic';
+        
+        let projectName = 'ActiveProject';
+        if (projectState && projectState.get('project.name')) {
+            projectName = projectState.get('project.name');
+        } else {
+            try {
+                const res = await fetch('/api/projects/current');
+                const data = await res.json();
+                projectName = data.name;
+            } catch(e) { }
+        }
+
+        const exportPath = `projects/${projectName}/logic/${scriptName}.js`;
+        
+        try {
+            const res = await fetch('/api/ide/write', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ file: exportPath, content: compiledCode })
+            });
+            if (res.ok) {
+                this.log(`Ejected logic to ${exportPath}`, 'info');
+                if (eventBus) {
+                    eventBus.emit('script:request', { scriptPath: exportPath });
+                }
+            } else {
+                this.log(`Failed to eject logic to JS`, 'err');
+            }
+        } catch (e) {
+            this.log(`Error ejecting logic: ${e.message}`, 'err');
+        }
     }
     compileNodeChain(node, outputPortId, builder) {
         const wires = this.wires.filter(w => w.fromNode === node.id && w.fromPort === outputPortId);

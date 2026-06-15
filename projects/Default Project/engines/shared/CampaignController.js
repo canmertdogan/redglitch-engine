@@ -45,6 +45,150 @@ class CampaignController {
         this.totalPlayTime = 0; // in seconds
         this._activeProjectName = null;
         this._activeProjectNameResolved = false;
+
+        // Engine Manifests
+        this.engineManifests = {
+            'rpg-topdown': [
+                'shared/InputSystem.js',
+                'shared/AchievementSystem.js',
+                'shared/Profiler.js',
+                'shared/VFXBridge.js',
+                'shared/LocalizationSystem.js',
+                'shared/SoundManager.js',
+                'strategies/TopDownStrategy.js',
+                'engines/rpg-topdown/sprites.js',
+                'engines/rpg-topdown/input.js',
+                'engines/rpg-topdown/saveSystem.js',
+                'engines/rpg-topdown/mapSystem.js',
+                'engines/rpg-topdown/fxSystem.js',
+                'engines/rpg-topdown/audioSystem.js',
+                'engines/rpg-topdown/console.js',
+                'engines/rpg-topdown/postProcess.js',
+                'engines/rpg-topdown/logicRuntime.js',
+                'engines/rpg-topdown/BrainRuntime.js',
+                'engines/rpg-topdown/NPC.js',
+                'engines/rpg-topdown/MenuSystem.js',
+                'engines/rpg-topdown/Entities.js',
+                'engines/rpg-topdown/WeatherSystem.js',
+                'engines/rpg-topdown/InteractiveCutsceneEngine.js',
+                'engines/rpg-topdown/campaignSystem.js',
+                'engines/rpg-topdown/spatialHash.js',
+                'engines/rpg-topdown/stateMachine.js',
+                'engines/rpg-topdown/Core.js',
+                'engines/rpg-topdown/main.js'
+            ],
+            'iso-pixel': [
+                'shared/InputSystem.js',
+                'shared/AchievementSystem.js',
+                'shared/Profiler.js',
+                'shared/VFXBridge.js',
+                'shared/LocalizationSystem.js',
+                'shared/SoundManager.js',
+                'shared/LogicSystem.js',
+                'shared/LogicInterpreter.js',
+                'shared/BehaviorTreeRunner.js',
+                'strategies/IsoStrategy.js',
+                'engines/iso-pixel/renderer.js',
+                'engines/iso-pixel/fxSystem.js',
+                'engines/iso-pixel/hudSystem.js',
+                'engines/iso-pixel/shaderSystem.js',
+                'engines/iso-pixel/IsoCombatSystem.js',
+                'engines/iso-pixel/IsoEntity.js',
+                'engines/iso-pixel/main.js'
+            ],
+            'platformer-2d': [
+                'shared/InputSystem.js',
+                'shared/AchievementSystem.js',
+                'shared/Profiler.js',
+                'shared/VFXBridge.js',
+                'shared/LocalizationSystem.js',
+                'shared/SoundManager.js',
+                'strategies/PlatformerStrategy.js',
+                'engines/platformer-2d/PlatformerConfig.js',
+                'engines/platformer-2d/PlatformerAssetManager.js',
+                'engines/platformer-2d/ParallaxSystem.js',
+                'engines/platformer-2d/Animator.js',
+                'engines/platformer-2d/CombatSystem.js',
+                'engines/platformer-2d/entities/Entity.js',
+                'engines/platformer-2d/entities/Player.js',
+                'engines/platformer-2d/entities/Enemy.js',
+                'engines/platformer-2d/entities/FlyingEnemy.js',
+                'engines/platformer-2d/entities/ShooterEnemy.js',
+                'engines/platformer-2d/entities/Projectile.js',
+                'engines/platformer-2d/entities/PushableBlock.js',
+                'engines/platformer-2d/entities/MovingPlatform.js',
+                'engines/platformer-2d/entities/Trigger.js',
+                'engines/platformer-2d/PhysicsSystem.js',
+                'engines/platformer-2d/renderer.js',
+                'engines/platformer-2d/generator/SmartGenerator.js',
+                'engines/platformer-2d/main.js'
+            ],
+            'topdown-3d': [
+                'engines/shared/Engine3DBase.js',
+                'engines/shared/Engine3DAdapter.js',
+                'engines/3d/Unified3DAdapter.js'
+            ],
+            'fps-3d': [
+                'engines/shared/Engine3DBase.js',
+                'engines/shared/Engine3DAdapter.js',
+                'engines/3d/Unified3DAdapter.js'
+            ],
+            'platformer-3d': [
+                'engines/shared/Engine3DBase.js',
+                'engines/shared/Engine3DAdapter.js',
+                'engines/3d/Unified3DAdapter.js'
+            ]
+        };
+        this.loadedEngines = new Set();
+
+        // Phase 2: Live Memory Bridge Integration
+        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('system:memory:request', (event) => {
+                const namespace = event.data?.namespace || 'global';
+                if (namespace === 'campaign' || namespace === 'global') {
+                    window.RedGlitchEventBus.broadcastMemoryDiff('campaign', {
+                        campaignId: this.campaignId,
+                        currentNodeId: this.currentNodeId,
+                        globalFlags: this.globalFlags,
+                        variables: this.variables
+                    });
+                }
+            });
+            
+            window.RedGlitchEventBus.on('system:memory:patch', (event) => {
+                const { namespace, patch } = event.data || {};
+                if (namespace === 'campaign' && patch) {
+                    if (patch.variables) Object.assign(this.variables, patch.variables);
+                    if (patch.globalFlags) Object.assign(this.globalFlags, patch.globalFlags);
+                    console.log('[CampaignController] Campaign Memory patched by Data-Driven IDE');
+                }
+            });
+
+            // Phase 4: Global Database Live-Patching
+            window.RedGlitchEventBus.on('system:database:patch', (event) => {
+                const { collection, data } = event.data || {};
+                console.log(`[CampaignController] Live-patching database: ${collection}`);
+                if (this.currentAdapter && typeof this.currentAdapter.handleDatabasePatch === 'function') {
+                    this.currentAdapter.handleDatabasePatch(collection, data);
+                } else if (typeof window.applyDatabasePatch === 'function') {
+                    window.applyDatabasePatch(collection, data);
+                }
+            });
+            
+            // Phase 12: Data-Driven Trigger Dispatcher
+            window.RedGlitchEventBus.on('system:trigger:fire', async (event) => {
+                const triggerId = event.data?.triggerId;
+                const payload = event.data?.payload || {};
+                console.log(`[CampaignController] Firing IDE Manual Trigger: ${triggerId}`, payload);
+                if (this.currentAdapter && typeof this.currentAdapter.handleTrigger === 'function') {
+                    this.currentAdapter.handleTrigger(triggerId, payload);
+                } else if (typeof window.fireCampaignEvent === 'function') {
+                    window.fireCampaignEvent(triggerId, payload);
+                } else {
+                    console.warn(`[CampaignController] No trigger handler available for ${triggerId}`);
+                }
+            });
+        }
     }
 
     /**
@@ -401,6 +545,54 @@ class CampaignController {
             console.warn('[CampaignController] Failed to resolve active project:', error);
             return null;
         }
+    }
+
+    /**
+     * Dynamically load scripts for a specific engine type
+     * @private
+     * @param {string} engineType 
+     * @returns {Promise<void>}
+     */
+    async _loadEngineScripts(engineType) {
+        if (this.loadedEngines.has(engineType)) return;
+        const scripts = this.engineManifests[engineType];
+        if (!scripts) return;
+        for (const src of scripts) {
+            const isModule = (src.endsWith('Adapter.js') && this._is3DEngine(engineType)) || src.includes('Engine3D');
+            
+            if (isModule) {
+                console.log(`[CampaignController] Importing module: ${src}`);
+                try {
+                    await import(`/${src}?v=${Date.now()}`);
+                } catch (err) {
+                    console.error(`[CampaignController] Module import failed for ${src}:`, err);
+                }
+            } else {
+                const cleanSrc = src.split('?')[0];
+                const alreadyLoaded = Array.from(document.scripts).some(s => {
+                    const absSrc = s.src || '';
+                    const attrSrc = s.getAttribute('src') || '';
+                    return absSrc.includes(cleanSrc) || attrSrc.includes(cleanSrc);
+                });
+                if (alreadyLoaded) {
+                    console.log(`[CampaignController] Script already loaded, skipping: ${src}`);
+                    continue;
+                }
+
+                await new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    const v = Date.now();
+                    script.src = `${src}?v=${v}`;
+                    script.onload = resolve;
+                    script.onerror = () => {
+                        console.error(`[CampaignController] Failed to load ${src}`);
+                        resolve();
+                    };
+                    document.body.appendChild(script);
+                });
+            }
+        }
+        this.loadedEngines.add(engineType);
     }
 
     /**
@@ -902,6 +1094,9 @@ class CampaignController {
 
             // Show transition screen
             this._showTransitionScreen(newEngineType);
+
+            // Dynamically load new engine scripts
+            await this._loadEngineScripts(newEngineType);
 
             // Create new adapter
             let adapter;

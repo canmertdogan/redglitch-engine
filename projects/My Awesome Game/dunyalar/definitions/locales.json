@@ -1,7 +1,0 @@
-{
-  "ui.start_game": { "EN": "NEW GAME", "TR": "YENİ OYUN", "RU": "НОВАЯ ИГРА", "AR": "لعبة جديدة" },
-  "ui.continue": { "EN": "CONTINUE", "TR": "DEVAM ET", "RU": "ПРОДОЛЖИТЬ", "AR": "استمر" },
-  "ui.settings": { "EN": "SETTINGS", "TR": "AYARLAR", "RU": "НАСТРОЙКИ", "AR": "إعدادات" },
-  "ui.credits": { "EN": "CREDITS", "TR": "EMEĞİ GEÇENLER", "RU": "АВТОРЫ", "AR": "الاعتمادات" },
-  "ui.quit": { "EN": "QUIT", "TR": "ÇIKIŞ", "RU": "ВЫХОД", "AR": "خروج" }
-}

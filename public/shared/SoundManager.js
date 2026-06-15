@@ -896,6 +896,20 @@ class KAE {
                     }
                 }
             });
+
+            // Also listen to raw file changes in case AssetManager hasn't indexed it yet
+            window.RedGlitchEventBus.on('file:changed', (event) => {
+                const path = event.data?.path || '';
+                if (path.includes('audio/') || path.includes('muzikler/')) {
+                    // Try to match partial or full path
+                    for (const cachedPath of this.buffers.keys()) {
+                        if (cachedPath.includes(path) || path.includes(cachedPath)) {
+                            this.buffers.delete(cachedPath);
+                            console.log(`[Hot-Swap] Cleared audio cache via file:changed for: ${cachedPath}`);
+                        }
+                    }
+                }
+            });
         }
     }
 

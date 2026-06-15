@@ -14,6 +14,9 @@ class TopDownAdapter extends EngineAdapter {
         if (this.isInitialized) return;
         if (typeof window.Core === 'undefined') throw new Error('RPG-Topdown engine not loaded');
         this.engine = new window.Core();
+        if (typeof this.engine.loadDefinitions === 'function') {
+            await this.engine.loadDefinitions();
+        }
         this.setupLiveBridge();
         this.isInitialized = true;
     }

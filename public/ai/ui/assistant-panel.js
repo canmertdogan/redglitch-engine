@@ -598,6 +598,47 @@ class KaiChatUIController {
         }
     }
 
+    queryContext() {
+        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+        if (!eventBus) {
+            this.addMessage('error', '>> EVENT_BUS NOT FOUND. CANNOT QUERY CONTEXT.');
+            return;
+        }
+
+        this.addMessage('system', '>> GATHERING WORKSPACE TELEMETRY...');
+        this.setAvatarState('working');
+        
+        const contexts = [];
+        const handler = (e) => {
+            contexts.push(e.data);
+        };
+        eventBus.on('ai:context_response', handler);
+
+        eventBus.emit('ai:context_query', { timestamp: Date.now() });
+
+        setTimeout(() => {
+            // A simple implementation of off(), assuming EventBus supports it, else we just ignore.
+            if (eventBus.off) eventBus.off('ai:context_response', handler);
+            
+            if (contexts.length === 0) {
+                this.addMessage('system', '>> NO ACTIVE TOOLS RESPONDED WITH CONTEXT.');
+            } else {
+                let report = '>> CONTEXT REPORT:\n';
+                contexts.forEach(ctx => {
+                    report += `[${ctx.source.toUpperCase()}]: ${ctx.details}\n`;
+                });
+                this.addMessage('system', report);
+                
+                const input = document.getElementById('ai-chat-input');
+                if (input && input.value === '') {
+                    input.value = `Given the following context:\n${contexts.map(c => `- ${c.source}: ${c.details}`).join('\n')}\n\n`;
+                    input.focus();
+                }
+            }
+            this.setAvatarState('idle');
+        }, 800);
+    }
+
     addMessage(type, text) {
         const messagesContainer = document.getElementById('ai-chat-messages');
         if (!messagesContainer) return;

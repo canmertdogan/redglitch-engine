@@ -334,7 +334,37 @@
                 card.className = 'asset-card';
                 if (selectedAsset && selectedAsset.id === asset.id) card.classList.add('selected');
                 
-                card.onclick = () => selectAsset(asset);
+                card.onmousedown = (e) => {
+                    selectAsset(asset);
+                    let startX = e.clientX;
+                    let startY = e.clientY;
+                    
+                    function onMouseMove(moveEvent) {
+                        if (Math.abs(moveEvent.clientX - startX) > 5 || Math.abs(moveEvent.clientY - startY) > 5) {
+                            if (window.RedGlitchEventBus) {
+                                window.RedGlitchEventBus.emit('drag:start', {
+                                    payload: { type: asset.type, path: asset.path, name: asset.name, id: asset.id },
+                                    label: `+ ${asset.name}`,
+                                    clientX: moveEvent.clientX,
+                                    clientY: moveEvent.clientY
+                                });
+                            }
+                            cleanup();
+                        }
+                    }
+                    
+                    function onMouseUp() {
+                        cleanup();
+                    }
+                    
+                    function cleanup() {
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    }
+                    
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                };
                 
                 let visual = '';
                 if (asset.type === 'image' || asset.type === 'sprite') {

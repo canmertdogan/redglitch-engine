@@ -28,7 +28,8 @@ class ItemDefinitions {
             const items = await response.json();
             
             // Normalize and store items (will override defaults if IDs match)
-            items.forEach(item => {
+            const itemsArray = Array.isArray(items) ? items : Object.values(items);
+            itemsArray.forEach(item => {
                 const normalized = this.normalizeItem(item);
                 this.definitions.set(normalized.id, normalized);
             });

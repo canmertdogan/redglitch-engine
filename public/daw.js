@@ -1545,10 +1545,41 @@ class AudioStudio {
         document.getElementById('synth-btn-export')?.addEventListener('click', () => {
             if (this._synthBuf) this._exportBufferAsWav(this._synthBuf, `${this._synthType || 'synth'}.wav`);
         });
-        document.getElementById('synth-btn-attach')?.addEventListener('click', () => {
-            if (this._synthType && this.activeEventId) {
+        document.getElementById('synth-btn-attach')?.addEventListener('click', async () => {
+            if (this._synthType && this.activeEventId && this._synthBuf) {
                 const assetName = `synth_${this._synthType}_${Date.now()}.wav`;
-                alert(`In a full export flow, this WAV would be saved as:\n${assetName}\nand attached to "${this.activeEventId}"`);
+                try {
+                    const arrayBuffer = this._encodeWav(this._synthBuf);
+                    const bytes = new Uint8Array(arrayBuffer);
+                    let binary = '';
+                    for (let i = 0; i < bytes.byteLength; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    const base64Data = window.btoa(binary);
+
+                    const res = await fetch('/api/assets/upload', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            path: `assets/audio/${assetName}`,
+                            content: base64Data,
+                            isBase64: true
+                        })
+                    });
+
+                    if (res.ok) {
+                        this._addClipToEvent(this.activeEventId, assetName);
+                        this._syncStatus(`EXPORTED: ${assetName} to ${this.activeEventId}`, 'green');
+                        if (window.RedGlitchEventBus) {
+                            window.RedGlitchEventBus.emit('file:changed', { path: `assets/audio/${assetName}` });
+                        }
+                    } else {
+                        alert("Failed to export to server");
+                    }
+                } catch(e) {
+                    console.error("Export error", e);
+                    alert("Error exporting audio");
+                }
             }
         });
     }

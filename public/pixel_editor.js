@@ -456,10 +456,29 @@ window.saveProject = async function() {
     }
     const ac = {}; Object.keys(app.anims).forEach(k => { ac[k] = {...app.anims[k], loop:true, fps:app.fps}; });
     try {
-        await fetch('/api/sprites', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name, sprite: s.toDataURL() }) });
-        await fetch('/api/animations', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(ac) });
-        alert("SAVED!");
-    } catch(e) { alert("ERROR SAVING"); }
+        const base64Data = s.toDataURL('image/png');
+        const res = await fetch('/api/assets/upload', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                path: `assets/sprites/${name}.png`,
+                content: base64Data,
+                isBase64: true
+            })
+        });
+        
+        if (res.ok) {
+            if (window.RedGlitchEventBus) {
+                window.RedGlitchEventBus.emit('file:changed', { path: `assets/sprites/${name}.png` });
+            }
+            alert("SAVED!");
+        } else {
+            alert("ERROR SAVING SPRITE");
+        }
+    } catch(e) { 
+        console.error(e);
+        alert("ERROR SAVING"); 
+    }
 };
 
 window.importFile = function() { document.getElementById('file-input').click(); };

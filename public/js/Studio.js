@@ -225,6 +225,7 @@ async function studioInit() {
     updateSystemMeter();
     
     initWorkspaceV2();
+    initDragAndDropBroker();
     
     hookConsole();
     window.addEventListener('message', handleChildMessage);
@@ -826,6 +827,26 @@ function toggleFullscreen() {
     else if (document.exitFullscreen) document.exitFullscreen();
 }
 
+// Phase 20: Final QA & Stress Testing
+function qaStressTest() {
+    if (window.RedGlitchEventBus) {
+        console.log('[Studio] Firing qa_stress_test...');
+        window.RedGlitchEventBus.emit('debug:spawn_stress_test', { amount: 500 });
+        
+        // Show brief UI feedback
+        const msgEl = document.getElementById('sb-message');
+        if (msgEl) {
+            const oldMsg = msgEl.textContent;
+            msgEl.textContent = 'STRESS TEST INITIATED: 500 ENTITIES';
+            msgEl.style.color = '#ff3366';
+            setTimeout(() => {
+                msgEl.textContent = oldMsg;
+                msgEl.style.color = '';
+            }, 3000);
+        }
+    }
+}
+
 // --- PROJECT WIZARD & ASSET SCAN ---
 async function openProjectManager() {
     document.getElementById('project-modal').style.display = 'flex';
@@ -1078,6 +1099,8 @@ window.saveGlobalProject = saveGlobalProject;
 window.confirmClose = confirmClose;
 window.toggleConsole = toggleConsole;
 window.dispatchGlobalCommand = dispatchGlobalCommand;
+window.qaStressTest = qaStressTest;
+window.Studio = new IDEStudio();
 window.toggleFullscreen = toggleFullscreen;
 window.scanAssets = scanAssets;
 window.openProjectManager = openProjectManager;
@@ -1347,10 +1370,12 @@ if (typeof window !== 'undefined') {
                     const fpsEl = document.getElementById('sb-engine-fps');
                     const entsEl = document.getElementById('sb-engine-ents');
                     const drawsEl = document.getElementById('sb-engine-draws');
+                    const memEl = document.getElementById('sb-engine-mem');
                     
                     if (fpsEl) fpsEl.textContent = `${Math.round(metrics.fps || 0)} FPS`;
                     if (entsEl) entsEl.textContent = `${metrics.entityCount || 0} ENTS`;
                     if (drawsEl) drawsEl.textContent = `${metrics.drawCalls || 0} DRAWS`;
+                    if (memEl) memEl.textContent = `${metrics.memoryMB || 0} MB`;
                 }
             });
         }
@@ -1380,3 +1405,130 @@ window.stepFrame = function() {
         showStatusMessage("STEPPED 1 FRAME");
     }
 };
+
+// PHASE 8: Unified Drag-and-Drop Broker
+function initDragAndDropBroker() {
+    if (!window.RedGlitchEventBus) return;
+    
+    const ghost = document.getElementById('global-drag-ghost');
+    let currentDragPayload = null;
+    let isDragging = false;
+    
+    window.RedGlitchEventBus.on('drag:start', (e) => {
+        if (!e.data || !e.data.payload) return;
+        isDragging = true;
+        currentDragPayload = e.data.payload;
+        
+        if (ghost) {
+            ghost.style.display = 'block';
+            ghost.innerText = e.data.label || 'Dragging...';
+        }
+        
+        // Disable pointer events on all iframes so mouse events bubble to Studio
+        document.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = 'none');
+        
+        if (e.data.clientX && e.data.clientY) {
+            updateGhostPosition(e.data.clientX, e.data.clientY, e.source);
+        }
+    });
+    
+    window.RedGlitchEventBus.on('drag:move', (e) => {
+        if (!isDragging) return;
+        if (e.data.clientX && e.data.clientY) {
+            updateGhostPosition(e.data.clientX, e.data.clientY, e.source);
+        }
+    });
+    
+    window.RedGlitchEventBus.on('drag:end', (e) => {
+        if (!isDragging) return;
+        
+        if (ghost) {
+            ghost.style.display = 'none';
+        }
+        
+        let absX = e.data.clientX;
+        let absY = e.data.clientY;
+        
+        // If the end event was fired by an iframe, adjust coordinates
+        if (e.source && !e.source.includes('tools.html')) {
+            const iframes = document.querySelectorAll('iframe');
+            for (const f of iframes) {
+                try {
+                    const srcPath = new URL(f.src, window.location.href).pathname;
+                    if (e.source.includes(srcPath)) {
+                        const rect = f.getBoundingClientRect();
+                        absX += rect.left;
+                        absY += rect.top;
+                        break;
+                    }
+                } catch(err) {}
+            }
+        }
+        
+        // Restore pointer events temporarily to check what element we drop on
+        document.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = 'auto');
+        
+        const elements = document.elementsFromPoint(absX, absY);
+        let droppedOnIframe = null;
+        for (const el of elements) {
+            if (el.tagName === 'IFRAME') {
+                droppedOnIframe = el;
+                break;
+            }
+        }
+        
+        if (droppedOnIframe) {
+            const rect = droppedOnIframe.getBoundingClientRect();
+            window.RedGlitchEventBus.emit('drag:drop', {
+                payload: currentDragPayload,
+                targetId: droppedOnIframe.id.replace('frame-', ''), 
+                localX: absX - rect.left,
+                localY: absY - rect.top
+            });
+        }
+        
+        isDragging = false;
+        currentDragPayload = null;
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            if (ghost) {
+                ghost.style.left = e.clientX + 'px';
+                ghost.style.top = e.clientY + 'px';
+            }
+            // Emit to sync coordinates if parent handles the move
+            window.RedGlitchEventBus.emit('drag:move', { clientX: e.clientX, clientY: e.clientY });
+        }
+    });
+    
+    document.addEventListener('mouseup', (e) => {
+        if (isDragging) {
+            window.RedGlitchEventBus.emit('drag:end', { clientX: e.clientX, clientY: e.clientY });
+        }
+    });
+
+    function updateGhostPosition(clientX, clientY, source) {
+        if (!ghost) return;
+        let absX = clientX;
+        let absY = clientY;
+        
+        if (source && !source.includes('tools.html')) {
+            const iframes = document.querySelectorAll('iframe');
+            for (const f of iframes) {
+                try {
+                    const srcPath = new URL(f.src, window.location.href).pathname;
+                    if (source.includes(srcPath)) {
+                        const rect = f.getBoundingClientRect();
+                        absX += rect.left;
+                        absY += rect.top;
+                        break;
+                    }
+                } catch(err) {}
+            }
+        }
+        
+        ghost.style.left = absX + 'px';
+        ghost.style.top = absY + 'px';
+    }
+}

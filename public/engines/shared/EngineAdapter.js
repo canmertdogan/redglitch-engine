@@ -102,6 +102,50 @@ class EngineAdapter {
             };
             window.RedGlitchEventBus.on('system:prefab:update', this._prefabUpdateListener);
 
+            // Phase 1: Sprite Hot-Reloading via AssetManager
+            if (this._assetModifiedListener) {
+                window.RedGlitchEventBus.off('asset:modified', this._assetModifiedListener);
+            }
+            this._assetModifiedListener = async (event) => {
+                const { asset } = event.data || {};
+                if (asset && asset.path && asset.path.includes('sprites/')) {
+                    const spriteName = asset.name.split('.')[0];
+                    try {
+                        const res = await fetch(`/api/ide/read?file=${asset.path}&isBase64=true`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.content) {
+                                if (!window.SPRITES) window.SPRITES = {};
+                                const dataUrl = `data:image/png;base64,${data.content}`;
+                                window.SPRITES[spriteName] = dataUrl;
+                                
+                                if (this.engine && this.engine.entities) {
+                                    this.engine.entities.forEach(entity => {
+                                        if (entity.spriteName === spriteName && typeof entity.setSprite === 'function') {
+                                            entity.setSprite(spriteName);
+                                        } else if (entity.def && entity.def.animations) {
+                                            if (entity.sprites) {
+                                                Object.keys(entity.def.animations).forEach(anim => {
+                                                    if (entity.def.animations[anim].sprite === spriteName) {
+                                                        if (typeof window.createPixelImage === 'function') {
+                                                            entity.sprites[anim] = window.createPixelImage(spriteName);
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                                console.log(`[EngineAdapter] Hot-reloaded sprite: ${spriteName}`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error(`[EngineAdapter] Failed to hot-reload sprite ${spriteName}:`, err);
+                    }
+                }
+            };
+            window.RedGlitchEventBus.on('asset:modified', this._assetModifiedListener);
+
             // Phase 13 & 14: Live Engine Inspection & Metrics
             if (this._engineInspectListener) {
                 window.RedGlitchEventBus.off('system:engine:inspect', this._engineInspectListener);
@@ -132,6 +176,7 @@ class EngineAdapter {
                         fps: this.engine.fps || 0,
                         drawCalls: this.engine.drawCalls || 0,
                         entityCount: this.engine.entities ? this.engine.entities.length : 0,
+                        memoryMB: window.performance && window.performance.memory ? Math.round(window.performance.memory.usedJSHeapSize / (1024 * 1024)) : 0
                     };
                     window.RedGlitchEventBus.emit('system:engine:metrics', { metrics });
                 }
@@ -175,6 +220,31 @@ class EngineAdapter {
                 }
             };
             window.RedGlitchEventBus.on('system:engine:stepFrame', this._stepFrameListener);
+
+            // Phase 20: QA Stress Test
+            if (this._stressTestListener) {
+                window.RedGlitchEventBus.off('debug:spawn_stress_test', this._stressTestListener);
+            }
+            this._stressTestListener = (event) => {
+                const { amount = 500 } = event.data || {};
+                if (this.engine && typeof this.engine.spawnEntity === 'function') {
+                    for (let i = 0; i < amount; i++) {
+                        // Create a dummy entity
+                        const x = Math.random() * 800;
+                        const y = Math.random() * 600;
+                        if (this.engineType === 'iso-pixel') {
+                            this.engine.spawnEntity({ type: 'prop', x, y, width: 32, height: 32, name: `Stress_${i}` });
+                        } else if (this.engineType === 'top-down') {
+                            this.engine.spawnEntity({ type: 'prop', position: { x, y }, width: 32, height: 32, name: `Stress_${i}` });
+                        } else {
+                            // Unified 3D or fallback
+                            this.engine.spawnEntity({ id: `stress_${i}`, x, y });
+                        }
+                    }
+                    console.warn(`[EngineAdapter] Spawned ${amount} stress test entities!`);
+                }
+            };
+            window.RedGlitchEventBus.on('debug:spawn_stress_test', this._stressTestListener);
         }
     }
 
@@ -289,6 +359,24 @@ class EngineAdapter {
             clearInterval(this._metricsInterval);
             this._metricsInterval = null;
         }
+
+        // Phase 19: Unregister all EventBus listeners to prevent severe memory leaks
+        if (window.RedGlitchEventBus) {
+            if (this._entityPatchListener) window.RedGlitchEventBus.off('system:entity:patch', this._entityPatchListener);
+            if (this._scriptUpdateListener) window.RedGlitchEventBus.off('system:script:update', this._scriptUpdateListener);
+            if (this._prefabUpdateListener) window.RedGlitchEventBus.off('system:prefab:update', this._prefabUpdateListener);
+            if (this._engineInspectListener) window.RedGlitchEventBus.off('system:engine:inspect', this._engineInspectListener);
+            if (this._cameraModeListener) window.RedGlitchEventBus.off('system:camera:mode', this._cameraModeListener);
+            if (this._timeScaleListener) window.RedGlitchEventBus.off('system:engine:timeScale', this._timeScaleListener);
+            if (this._stepFrameListener) window.RedGlitchEventBus.off('system:engine:stepFrame', this._stepFrameListener);
+            if (this._stressTestListener) window.RedGlitchEventBus.off('debug:spawn_stress_test', this._stressTestListener);
+        }
+
+        // Purge AssetManager cache if available to prevent bloat across engine switches
+        if (window.RedGlitchAssetManager && typeof window.RedGlitchAssetManager.purgeCache === 'function') {
+            window.RedGlitchAssetManager.purgeCache();
+        }
+
         if (this.engine) {
             this.stop();
             this.engine = null;
@@ -349,6 +437,24 @@ class EngineAdapter {
     resize() {
         if (this.engine && this.engine.resize) {
             this.engine.resize();
+        }
+    }
+
+    /**
+     * Handle incoming database patch (Phase 4)
+     * @param {string} collection - The database collection (e.g., 'items', 'enemies')
+     * @param {Object} data - The updated data to merge
+     */
+    handleDatabasePatch(collection, data) {
+        // Implementation can be overridden by specific engine adapters if needed.
+        // Default behavior: attempt to locate the collection in the global namespace and patch it.
+        if (typeof window !== 'undefined' && window.RedGlitchDB) {
+            if (!window.RedGlitchDB[collection]) window.RedGlitchDB[collection] = {};
+            Object.assign(window.RedGlitchDB[collection], data);
+            console.log(`[EngineAdapter] Patched global DB collection: ${collection}`);
+        } else if (this.engine && this.engine.db && this.engine.db[collection]) {
+            Object.assign(this.engine.db[collection], data);
+            console.log(`[EngineAdapter] Patched engine DB collection: ${collection}`);
         }
     }
 

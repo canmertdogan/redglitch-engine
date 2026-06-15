@@ -2139,6 +2139,81 @@
         if (project && level) {
             await editor.loadLevel(project, level);
         }
+        
+        // ── Phase 9: Handle Drag and Drop Drops ───────────────────────────
+        if (window.RedGlitchEventBus) {
+            window.RedGlitchEventBus.on('drag:drop', (e) => {
+                if (e.data.targetId !== 'studio_3d') return;
+                
+                const payload = e.data.payload;
+                if (!editor._levelData) return;
+                
+                const rect = editor.container.getBoundingClientRect();
+                const mouseX = e.data.localX - rect.left;
+                const mouseY = e.data.localY - rect.top;
+                
+                if (mouseX >= 0 && mouseX <= rect.width && mouseY >= 0 && mouseY <= rect.height) {
+                    const pseudoEvent = { clientX: e.data.localX, clientY: e.data.localY };
+                    const raycaster = editor._getRaycaster(pseudoEvent);
+                    
+                    const plane = new editor.THREE.Plane(new editor.THREE.Vector3(0, 1, 0), 0);
+                    const target = new editor.THREE.Vector3();
+                    let intersectPos = [0, 0, 0];
+                    
+                    if (raycaster.ray.intersectPlane(plane, target)) {
+                        intersectPos = [target.x, Math.max(0.5, target.y), target.z];
+                    }
+                    
+                    editor._pushUndo();
+                    
+                    if (payload.type === 'sprite' || payload.type === 'image') {
+                        const id = `geo_${Date.now().toString(36)}`;
+                        if (!editor._levelData.geometry) editor._levelData.geometry = [];
+                        editor._levelData.geometry.push({
+                            id,
+                            shape_type: 'box',
+                            type: 'mesh',
+                            width: 1, height: 1, depth: 1,
+                            position: intersectPos,
+                            rotation: [0, 0, 0, 1],
+                            scale: [1, 1, 1],
+                            colorHex: '#ffffff',
+                            castShadow: true,
+                            receiveShadow: true
+                        });
+                        console.log(`[Editor3D] Dropped Sprite at ${intersectPos}`);
+                    } else if (payload.type === 'prefab') {
+                        const id = `entity_${Date.now().toString(36)}`;
+                        if (!editor._levelData.entities) editor._levelData.entities = [];
+                        editor._levelData.entities.push({
+                            id,
+                            type: 'spawn',
+                            prefab: payload.name,
+                            position: intersectPos
+                        });
+                        console.log(`[Editor3D] Dropped Prefab at ${intersectPos}`);
+                    }
+                    
+                    editor._rebuildScene(editor._levelData);
+                    editor._markDirty();
+                }
+            });
+            
+            // --- Phase 10: Global AI Context Bounds ---
+            window.RedGlitchEventBus.on('ai:context_query', () => {
+                let contextStr = '3D Studio is idle.';
+                if (editor._levelData) {
+                    const levelName = editor._levelId || 'untitled';
+                    const numEntities = editor._levelData.entities ? editor._levelData.entities.length : 0;
+                    const numGeoms = editor._levelData.geometry ? editor._levelData.geometry.length : 0;
+                    contextStr = `Editing 3D level: ${levelName} (${numEntities} entities, ${numGeoms} geometry objects). Active tool: ${editor._activeTool}. Selected items: ${editor._selected.length}.`;
+                }
+                window.RedGlitchEventBus.emit('ai:context_response', {
+                    source: '3D Studio',
+                    details: contextStr
+                });
+            });
+        }
     });
 
     // ── Mode switching ────────────────────────────────────────────────

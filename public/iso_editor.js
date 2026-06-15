@@ -47,6 +47,61 @@ async function initializeIsoIntegration() {
                 console.log('[IsoEditor] Prefab updated:', event.data);
             });
             
+            // --- Phase 9: Handle Drag and Drop Drops ---
+            eventBus.on('drag:drop', (e) => {
+                if (e.data.targetId !== 'iso_studio') return;
+                
+                const payload = e.data.payload;
+                const canvasRect = document.getElementById('isoCanvas').getBoundingClientRect();
+                const mouseX = e.data.localX - canvasRect.left;
+                const mouseY = e.data.localY - canvasRect.top;
+                
+                if (mouseX >= 0 && mouseX <= canvasRect.width && mouseY >= 0 && mouseY <= canvasRect.height) {
+                    const coords = state.strategy.screenToMap(e.data.localX, e.data.localY, CONFIG, canvasRect, state);
+                    if (coords.x >= 0 && coords.x < map.width && coords.y >= 0 && coords.y < map.height) {
+                        if (payload.type === 'sprite' || payload.type === 'image') {
+                            map.decorations.push({
+                                x: coords.x,
+                                y: coords.y,
+                                z: state.currentZ,
+                                type: 'sprite',
+                                spriteUrl: payload.path
+                            });
+                            console.log(`[IsoEditor] Dropped Sprite at ${coords.x}, ${coords.y}`);
+                        } else if (payload.type === 'prefab') {
+                            map.decorations.push({
+                                x: coords.x,
+                                y: coords.y,
+                                z: state.currentZ,
+                                type: 'prefab',
+                                data: payload.name
+                            });
+                            console.log(`[IsoEditor] Dropped Prefab at ${coords.x}, ${coords.y}`);
+                        }
+                        
+                        // Set occlusion dirty and force re-render
+                        map.occlusionDirty = true;
+                        if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
+                        render();
+                        broadcastMapUpdate(document.getElementById('level-name').value);
+                    }
+                }
+            });
+            
+            
+            // --- Phase 10: Global AI Context Bounds ---
+            eventBus.on('ai:context_query', () => {
+                let contextStr = 'IsoPixel Studio is idle.';
+                if (window.map) {
+                    const levelName = document.getElementById('level-name').value || 'untitled';
+                    contextStr = `Editing level: ${levelName} (${map.width}x${map.height} grid, ${map.decorations ? map.decorations.length : 0} decorations). Z-Level: ${state.currentZ}. Selected Tool: ${state.currentTool}`;
+                }
+                eventBus.emit('ai:context_response', {
+                    source: 'IsoPixel Studio',
+                    details: contextStr
+                });
+            });
+
             console.log('[IsoEditor] EventBus connected');
         }
     }

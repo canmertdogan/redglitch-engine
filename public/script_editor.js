@@ -20,11 +20,30 @@ function initializeScriptIntegration() {
             // Listen for script requests from other editors
             eventBus.on('script:request', (event) => {
                 console.log('[ScriptEditor] Script requested:', event.data.scriptPath);
+                if (typeof openFile === 'function') {
+                    openFile(event.data.scriptPath);
+                }
             });
 
             // --- AI INTEGRATION: Code Injection (Legacy Support) ---
             eventBus.on('ai:inject-code', (data) => {
                 injectCodeAtBottom(data.code);
+            });
+            
+            // --- Phase 10: Global AI Context Bounds ---
+            eventBus.on('ai:context_query', () => {
+                let contextStr = 'Code Forge is idle. No file open.';
+                if (window.currentFile) {
+                    contextStr = `Editing file: ${window.currentFile}`;
+                    if (window.editor) {
+                        const code = window.editor.getValue();
+                        contextStr += `\nSnippet (first 100 chars): ${code.substring(0, 100).replace(/\n/g, ' ')}...`;
+                    }
+                }
+                eventBus.emit('ai:context_response', {
+                    source: 'Code Forge',
+                    details: contextStr
+                });
             });
             
             console.log('[ScriptEditor] EventBus connected');

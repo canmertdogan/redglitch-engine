@@ -159,6 +159,17 @@ class CampaignController {
                     console.log('[CampaignController] Campaign Memory patched by Data-Driven IDE');
                 }
             });
+
+            // Phase 4: Global Database Live-Patching
+            window.RedGlitchEventBus.on('system:database:patch', (event) => {
+                const { collection, data } = event.data || {};
+                console.log(`[CampaignController] Live-patching database: ${collection}`);
+                if (this.currentAdapter && typeof this.currentAdapter.handleDatabasePatch === 'function') {
+                    this.currentAdapter.handleDatabasePatch(collection, data);
+                } else if (typeof window.applyDatabasePatch === 'function') {
+                    window.applyDatabasePatch(collection, data);
+                }
+            });
             
             // Phase 12: Data-Driven Trigger Dispatcher
             window.RedGlitchEventBus.on('system:trigger:fire', async (event) => {

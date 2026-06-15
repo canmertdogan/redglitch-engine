@@ -690,6 +690,20 @@ class AssetManager {
         // Simple estimation based on cache size
         return this.cache.size * 1024; // Very rough estimate
     }
+
+    /**
+     * Purge the asset cache to free up memory.
+     * Useful when switching engines or reloading large levels.
+     */
+    purgeCache() {
+        console.log(`[AssetManager] Purging cache... freeing ${this.cache.size} assets`);
+        this.cache.clear();
+        
+        // Also fire an event so systems know references are broken
+        if (this.eventBus) {
+            this.eventBus.emit('asset:cache:purged', { timestamp: Date.now() });
+        }
+    }
 }
 
 // Create global instance

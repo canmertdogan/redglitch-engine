@@ -28,7 +28,9 @@ class TopDownAdapter extends EngineAdapter {
 
         this.engine = new window.Core();
         
-        // Core initializes in constructor, no init() method needed
+        if (typeof this.engine.loadDefinitions === 'function') {
+            await this.engine.loadDefinitions();
+        }
         
         this.isInitialized = true;
         console.log('TopDownAdapter initialized');

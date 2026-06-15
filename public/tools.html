@@ -46,6 +46,7 @@
 <body>
 
     <div id="snap-ghost"></div>
+    <div id="global-drag-ghost" style="display:none; position:fixed; pointer-events:none; z-index:99999; background:rgba(255,255,255,0.8); border:2px dashed #333; padding:10px; font-weight:bold; box-shadow:0 10px 20px rgba(0,0,0,0.5); transform:translate(-50%, -50%); border-radius:4px;"></div>
 
     <!-- PROFESSIONAL TITLE BAR -->
     <div id="titlebar">
@@ -124,6 +125,9 @@
             <button class="tool-btn" title="Pause" onclick="pauseGame()"><i class="fas fa-pause"></i></button>
             <button class="tool-btn" title="Stop" onclick="stopGame()"><i class="fas fa-stop"></i></button>
             <button class="tool-btn" title="Build Project" onclick="buildGame()"><i class="fas fa-hammer"></i></button>
+            <div class="tool-separator"></div>
+            <!-- Phase 20: Final QA & Stress Testing -->
+            <button class="tool-btn" title="QA Stress Test (Spawn 500 Entities)" onclick="qaStressTest()" style="color: #ff3366;"><i class="fas fa-bug"></i></button>
         </div>
 
         <div class="toolbar-group">
@@ -526,12 +530,12 @@
             <div id="sb-message" style="opacity:0.8; margin-right:15px;">redglitch ENGINE AND V8 CORE READY</div>
             <div class="sb-item" title="Engine FPS" style="color:var(--accent);">
                 <span class="sb-icon">⚡</span> <span id="sb-engine-fps">-- FPS</span>
-            </div>
-            <div class="sb-item" title="Entity Count" style="color:var(--accent);">
+                <span class="sb-separator"></span>
                 <span class="sb-icon">👻</span> <span id="sb-engine-ents">-- ENTS</span>
-            </div>
-            <div class="sb-item" title="Draw Calls" style="color:var(--accent);">
+                <span class="sb-separator"></span>
                 <span class="sb-icon">🖌️</span> <span id="sb-engine-draws">-- DRAWS</span>
+                <span class="sb-separator"></span>
+                <span class="sb-icon">🧠</span> <span id="sb-engine-mem">-- MB</span>
             </div>
         </div>
 

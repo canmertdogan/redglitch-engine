@@ -33,6 +33,15 @@ class IsoPixelAdapter extends EngineAdapter {
         return null;
     }
 
+    /**
+     * Find all entities spawned from a specific prefab
+     * @param {string} prefabId
+     */
+    findEntitiesByPrefabId(prefabId) {
+        if (!this.engine || !this.engine.entities) return [];
+        return this.engine.entities.filter(e => e.prefabId === prefabId || (e.def && e.def.prefabId === prefabId));
+    }
+
     async loadLevel(levelId, levelPath = null) {
         if (!this.isInitialized) throw new Error('Adapter not initialized');
         const path = levelPath || `dunyalar/${levelId}.json`;
