@@ -439,6 +439,31 @@ export default class Engine3DAdapter extends Engine3DBase {
             fallbackFog: this._currentLevel?.fog ?? null,
         });
 
+        // Phase 62 / Lightning Bug Fix: Sync lights from skybox payload
+        if (this.THREE && this.scene) {
+            const sun = this.scene.getObjectByName('__sunLight') || this.scene.getObjectByName('__sun__');
+            if (sun && sky.sunColor) {
+                sun.color.set(sky.sunColor);
+                if (typeof sky.sunIntensity === 'number') sun.intensity = sky.sunIntensity;
+                
+                const az = (sky.sunAzimuth ?? 45) * Math.PI / 180;
+                const el = (sky.sunElevation ?? 45) * Math.PI / 180;
+                const r = 100;
+                sun.position.set(
+                    r * Math.cos(el) * Math.sin(az),
+                    r * Math.sin(el),
+                    r * Math.cos(el) * Math.cos(az)
+                );
+                sun.target.position.set(0, 0, 0);
+            }
+            
+            const amb = this.scene.getObjectByName('__ambLight') || this.scene.getObjectByName('__ambient__');
+            if (amb && sky.ambientColor) {
+                amb.color.set(sky.ambientColor);
+                if (typeof sky.ambientIntensity === 'number') amb.intensity = sky.ambientIntensity;
+            }
+        }
+
         // Modern SkyboxSystem (Phase 62)
         if (this.skybox) {
             this.skybox.applyConfig(sky, {

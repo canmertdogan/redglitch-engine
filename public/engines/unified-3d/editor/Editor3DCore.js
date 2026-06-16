@@ -146,18 +146,20 @@ export default class Editor3DCore {
 
         this._updateOrbitCamera();
 
-        // ── Skybox ────────────────────────────────────────────────────────
-        this.skybox = new SkyboxSystem(this.scene, { engineType: this._mode });
-        this._applySkyboxToViewport({ skybox: this._getDefaultSkybox(this._mode) }, this._mode);
-
         // ── Lighting ──────────────────────────────────────────────────────
-        this._ambLight = new THREE.AmbientLight(0xffffff, 1.2);
+        this._ambLight = new THREE.AmbientLight(0xffffff, 2.0); // Boosted
         this.scene.add(this._ambLight);
-        this._sunLight = new THREE.DirectionalLight(0xfffbe0, 1.8);
+        
+        this._sunLight = new THREE.DirectionalLight(0xfffbe0, 3.0); // Boosted for physically correct
         this._sunLight.position.set(30, 60, 30);
         this._sunLight.castShadow = true;
         this._sunLight.shadow.mapSize.set(2048, 2048);
         this.scene.add(this._sunLight);
+        this.scene.add(this._sunLight.target);
+
+        // ── Skybox ────────────────────────────────────────────────────────
+        this.skybox = new SkyboxSystem(this.scene, { engineType: this._mode });
+        this._applySkyboxToViewport({ skybox: this._getDefaultSkybox(this._mode) }, this._mode);
 
         // ── Grid ──────────────────────────────────────────────────────────
         this.gridHelper = new THREE.GridHelper(50, 100, 0xcccccc, 0x444444);
@@ -418,7 +420,8 @@ export default class Editor3DCore {
         // Update Sun & Ambient
         if (this._sunLight && skybox.sun) {
             this._sunLight.color.set(skybox.sun.color || '#ffffff');
-            this._sunLight.intensity = typeof skybox.sun.intensity === 'number' ? skybox.sun.intensity : 1.2;
+            const sunInt = typeof skybox.sun.intensity === 'number' ? skybox.sun.intensity : 1.2;
+            this._sunLight.intensity = sunInt * Math.PI; // Compensate for physical lighting
             
             const az = (skybox.sun.azimuth ?? 45) * Math.PI / 180;
             const el = (skybox.sun.elevation ?? 45) * Math.PI / 180;
@@ -434,7 +437,7 @@ export default class Editor3DCore {
             this._ambLight.color.set(skybox.ambientColor);
         }
         if (this._ambLight && typeof skybox.ambientIntensity === 'number') {
-            this._ambLight.intensity = skybox.ambientIntensity;
+            this._ambLight.intensity = skybox.ambientIntensity * Math.PI; // Compensate for physical lighting
         }
 
         // Apply Fog directly if fogSync is true
@@ -1023,7 +1026,8 @@ export default class Editor3DCore {
     _buildMaterialFromId(materialId, fallbackColorHex, overrides = {}) {
         const THREE = this.THREE;
         let color = fallbackColorHex || '#666666';
-        let emissive = '#000000';
+        let emissive = color;
+        let emissiveIntensity = 0.02;
         let opacity = 1.0;
         let transparent = false;
         let roughness = 0.8;
@@ -1040,7 +1044,7 @@ export default class Editor3DCore {
         if (materialId && this._levelData && this._levelData.materials) {
             matDef = this._levelData.materials.find(m => m.id === materialId);
             if (matDef && matDef.channels) {
-                if (matDef.channels.color?.color) color = matDef.channels.color.color;
+                if (matDef.channels.color?.value) color = matDef.channels.color.value;
                 if (matDef.channels.color?.layers && matDef.channels.color.layers.length > 0) {
                     colorLayers = matDef.channels.color.layers;
                     tiling.x = matDef.channels.color.tilingX ?? 1;
@@ -1054,7 +1058,7 @@ export default class Editor3DCore {
                     offset.x = matDef.channels.color.offsetX ?? 0;
                     offset.y = matDef.channels.color.offsetY ?? 0;
                 }
-                if (matDef.channels.luminance?.color) emissive = matDef.channels.luminance.color;
+                if (matDef.channels.luminance?.value) emissive = matDef.channels.luminance.value;
                 if (matDef.channels.transparency?.opacity !== undefined) {
                     opacity = matDef.channels.transparency.opacity;
                     if (opacity < 1.0) transparent = true;
@@ -1073,11 +1077,10 @@ export default class Editor3DCore {
             }
         }
 
-        const mat = new THREE.MeshStandardMaterial({ 
+        const mat = new THREE.MeshLambertMaterial({ 
             color: new THREE.Color(overrides.colorHex || color), 
-            emissive: new THREE.Color(overrides.emissive || emissive), 
-            roughness: overrides.roughness !== undefined ? overrides.roughness : roughness,
-            metalness,
+            emissive: new THREE.Color(overrides.emissive || emissive),
+            emissiveIntensity: overrides.emissiveIntensity ?? emissiveIntensity,
             opacity, 
             transparent,
             side: THREE.DoubleSide
@@ -1289,8 +1292,14 @@ export default class Editor3DCore {
         // Build entities as markers
         if (Array.isArray(levelData.entities)) {
             for (const ent of levelData.entities) {
+                const entColor = this._entityColor(ent.type);
                 const geo = new THREE.SphereGeometry(0.3, 8, 6);
-                const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(this._entityColor(ent.type)) });
+                const mat = new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color(entColor),
+                    emissive: new THREE.Color(entColor),
+                    emissiveIntensity: 0.02,
+                    flatShading: true
+                });
                 const mesh = new THREE.Mesh(geo, mat);
                 if (ent.position) mesh.position.set(...ent.position);
                 mesh.name = ent.id || `ent_${this.entityGroup.children.length}`;
@@ -1436,7 +1445,7 @@ export default class Editor3DCore {
                 const dataUrl = await this.materialPreviewRenderer.renderPreview(mat);
                 previewBg = `background-image: url('${dataUrl}'); background-size: cover; background-position: center;`;
             } else {
-                const colorHex = mat.channels?.color?.color || '#666666';
+                const colorHex = mat.channels?.color?.value || '#666666';
                 previewBg = `background-color: ${colorHex};`;
             }
 

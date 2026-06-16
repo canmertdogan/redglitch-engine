@@ -149,7 +149,7 @@ export default class PropertiesPanel {
                 <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Luminance Channel</div>
                 <div class="prop-group">
                     <div class="prop-label">Emission</div>
-                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${mat.channels?.luminance?.color || '#000000'}" data-mat-field="channels.luminance.color">
+                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${mat.channels?.luminance?.value || '#000000'}" data-mat-field="channels.luminance.value">
                 </div>
                 <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
                 <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Reflectance Channel</div>
@@ -437,7 +437,7 @@ export default class PropertiesPanel {
             </div>
             <div class="prop-group">
                 <div class="prop-label">Emission</div>
-                <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${obj.userData.material_overrides?.emissive || '#000000'}" data-override-field="emissive">
+                <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${obj.userData.material_overrides?.emissive || obj.userData.material_overrides?.colorHex || obj.userData.colorHex || '#666666'}" data-override-field="emissive">
             </div>
             <div class="prop-group">
                 <div class="prop-label">Roughness</div>

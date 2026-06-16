@@ -44,11 +44,16 @@ const CelQuantizeShader = {
         }
         void main() {
             vec4 texel = texture2D(tDiffuse, vUv);
-            vec3 hsv   = rgb2hsv(texel.rgb);
+            // Convert from Linear to sRGB for perceptually uniform quantization
+            vec3 srgbColor = pow(abs(texel.rgb), vec3(1.0 / 2.2));
+            vec3 hsv   = rgb2hsv(srgbColor);
             float levels = max(1.0, uTones - 1.0);
             hsv.z = floor(hsv.z * levels + 0.5) / levels;
             hsv.y = clamp(hsv.y * uSatBoost, 0.0, 1.0);
-            gl_FragColor = vec4(hsv2rgb(hsv), texel.a);
+            vec3 quantizedSrgb = hsv2rgb(hsv);
+            // Convert back to Linear before output
+            vec3 linearColor = pow(quantizedSrgb, vec3(2.2));
+            gl_FragColor = vec4(linearColor, texel.a);
         }
     `
 };
