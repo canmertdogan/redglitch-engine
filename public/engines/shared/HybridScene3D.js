@@ -18,7 +18,7 @@ export default class HybridScene3D {
     this._renderer3D = renderer3D;
 
     /** @type {THREE.Scene} The Three.js scene owned by this hybrid manager. */
-    this.scene = new THREE.Scene();
+    this.scene = renderer3D.scene;
     this.scene.userData.hybridScene = this;
 
     /** @type {TriMeshRenderer3D} Manages all tri-mesh objects in the scene. */
@@ -153,13 +153,13 @@ export default class HybridScene3D {
     for (const mesh of this.triMesh._meshes.values()) cullMesh(mesh);
   }
 
-  /**
-   * Per-frame update: run frustum culling and update animated meshes.
-   * @param {number} delta - Time since last frame in seconds.
-   * @param {THREE.Camera} camera - The active camera.
-   */
   update(delta, camera) {
-    if (camera) this.frustumCull(camera);
+    if (camera) {
+      this.scene.updateMatrixWorld(false);
+      camera.updateMatrixWorld(true);
+      camera.updateProjectionMatrix();
+      this.frustumCull(camera);
+    }
     // Future: tick animated mesh mixers here
   }
 
