@@ -32,8 +32,8 @@
  *   ds.dispose();
  */
 
-import * as THREE from '../../lib/three/three.module.js';
-import { LayerMask } from '../shared/Raycast3D.js';
+import * as THREE from '/lib/three/three.module.js';
+import { LayerMask } from '/engines/shared/Raycast3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

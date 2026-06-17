@@ -547,6 +547,8 @@ class SkyboxSystem {
         mesh.name = 'skybox_mesh';
         mesh.renderOrder = -100;
         mesh.frustumCulled = false;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
         return mesh;
     }
 
@@ -562,6 +564,8 @@ class SkyboxSystem {
         const mesh = new THREE.InstancedMesh(geometry, material, cfg.starCount);
         mesh.name = 'skybox_voxel_stars';
         mesh.frustumCulled = false;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         if (mesh.instanceColor) {
             mesh.instanceColor.setUsage?.(THREE.DynamicDrawUsage);
@@ -612,6 +616,8 @@ class SkyboxSystem {
         const mesh = new THREE.InstancedMesh(geometry, material, instanceCount);
         mesh.name = 'skybox_voxel_clouds';
         mesh.frustumCulled = false;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
         const matrix = new THREE.Matrix4();

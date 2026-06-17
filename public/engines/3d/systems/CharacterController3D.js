@@ -37,9 +37,9 @@
  *   cc.destroy();
  */
 
-import * as THREE  from '../../lib/three/three.module.js';
-import * as CANNON from '../../lib/cannon-es/cannon-es.module.js';
-import Physics3DWorld, { BodyType, ShapeType } from '../shared/Physics3DWorld.js';
+import * as THREE  from '/lib/three/three.module.js';
+import * as CANNON from '/lib/cannon-es/cannon-es.module.js';
+import Physics3DWorld, { BodyType, ShapeType } from '/engines/shared/Physics3DWorld.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

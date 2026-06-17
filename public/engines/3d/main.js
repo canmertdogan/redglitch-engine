@@ -542,11 +542,9 @@ class RedGlitch3DGame extends Engine3DAdapter {
     // ── Pointer lock helpers ──────────────────────────────────────────────────
 
     requestPointerLock() {
-        if (this.fpsCamera) {
-            this.fpsCamera.requestPointerLock();
-        } else {
-            document.body.requestPointerLock?.();
-        }
+        this.fpsCamera 
+            ? this.fpsCamera.requestPointerLock()
+            : document.body.requestPointerLock?.()?.catch?.(() => {});
     }
 
     releasePointerLock() {

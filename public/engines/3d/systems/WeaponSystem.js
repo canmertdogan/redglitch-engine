@@ -49,8 +49,8 @@
  * No PBR, no normal maps. Viewmodel FOV = 55° (different from world camera).
  */
 
-import * as THREE from '../../lib/three/three.module.js';
-import { LayerMask } from '../shared/Raycast3D.js';
+import * as THREE from '/lib/three/three.module.js';
+import { LayerMask } from '/engines/shared/Raycast3D.js';
 
 // ── Weapon state enum ─────────────────────────────────────────────────────────
 

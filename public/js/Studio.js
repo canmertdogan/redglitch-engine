@@ -41,7 +41,7 @@ const tools = [
     { id: 'daw', category: 'ASSETS', title: 'Audio Studio', icon: 'fa-music', src: 'daw.html', w: 800, h: 500 },
     { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', icon: 'fa-paint-brush', src: 'pixel_editor.html', w: 900, h: 650 },
     { id: 'fxpro', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'fx_editor.html', w: 900, h: 650 },
-    { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'shader_editor.html', w: 1000, h: 700 },
+    { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'studio-dist/shader_editor.html', w: 1200, h: 800 },
     { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'asset_manager.html', w: 900, h: 600 }
 ];
 
@@ -512,6 +512,14 @@ function startDrag(e, id) {
 }
 
 window.addEventListener('keydown', (e) => {
+    // Global Save Shortcut (Ctrl+S / Cmd+S)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveGlobalProject();
+        return;
+    }
+
+    // Workspace Panning (Shift + W/A/S/D)
     if (e.shiftKey) {
         const speed = 40;
         const key = e.key.toLowerCase();
@@ -668,6 +676,12 @@ function getOpenEditorFrames() {
 async function runFrameSave(frameWindow) {
     const saveHooks = [
         () => (typeof frameWindow.saveToServer === 'function' ? frameWindow.saveToServer.bind(frameWindow) : null),
+        () => (typeof frameWindow.saveAllFiles === 'function' ? frameWindow.saveAllFiles.bind(frameWindow) : null),
+        () => (typeof frameWindow.saveProject === 'function' ? frameWindow.saveProject.bind(frameWindow) : null),
+        () => (typeof frameWindow.saveEffect === 'function' ? frameWindow.saveEffect.bind(frameWindow) : null),
+        () => (typeof frameWindow.saveCutscene === 'function' ? frameWindow.saveCutscene.bind(frameWindow) : null),
+        () => (typeof frameWindow.saveLogic === 'function' ? frameWindow.saveLogic.bind(frameWindow) : null),
+        () => (typeof frameWindow.saveShader === 'function' ? frameWindow.saveShader.bind(frameWindow) : null),
         () => (typeof frameWindow.editor?.save === 'function' ? frameWindow.editor.save.bind(frameWindow.editor) : null),
         () => (typeof frameWindow.studio?.save === 'function' ? frameWindow.studio.save.bind(frameWindow.studio) : null),
         () => (typeof frameWindow.app?.save === 'function' ? frameWindow.app.save.bind(frameWindow.app) : null),
@@ -701,14 +715,26 @@ async function saveGlobalProject(options = {}) {
     const silent = !!options.silent;
     if (!silent) showStatusMessage("SAVING PROJECT...");
 
+    let saved = 0;
+    let warned = 0;
+    
+    // Save Central Project State
+    if (window.RedGlitchProjectState && window.RedGlitchProjectState.isDirty) {
+        await window.RedGlitchProjectState.saveProject();
+        saved++;
+    }
+
+    // Broadcast global save event
+    if (window.RedGlitchEventBus) {
+        window.RedGlitchEventBus.emit('system:global_save', { timestamp: Date.now() });
+    }
+
     const frames = getOpenEditorFrames();
-    if (frames.length === 0) {
+    if (frames.length === 0 && saved === 0) {
         if (!silent) showStatusMessage("NO OPEN TOOLS TO SAVE");
         return { total: 0, saved: 0, warned: 0 };
     }
 
-    let saved = 0;
-    let warned = 0;
     for (const frame of frames) {
         const ok = await runFrameSave(frame.contentWindow);
         if (ok) saved++;
@@ -1096,6 +1122,21 @@ window.focusWindow = focusWindow;
 window.applyTheme = applyTheme;
 window.playGame = playGame;
 window.saveGlobalProject = saveGlobalProject;
+
+// Listen for Ctrl+S globally in Studio
+window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveGlobalProject();
+    }
+});
+
+// Listen for cross-frame save requests
+if (window.RedGlitchEventBus) {
+    window.RedGlitchEventBus.on('system:project:save_request', () => {
+        saveGlobalProject();
+    });
+}
 window.confirmClose = confirmClose;
 window.toggleConsole = toggleConsole;
 window.dispatchGlobalCommand = dispatchGlobalCommand;

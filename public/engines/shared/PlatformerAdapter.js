@@ -77,7 +77,7 @@ class PlatformerAdapter extends EngineAdapter {
                     await this.engine.loadLevel(levelId, mainPath);
                 } else {
                     // Fallback to platformer subfolder
-                    await this.engine.loadLevel(levelId, `dunyalar/${levelId}.json`);
+                    await this.engine.loadLevel(levelId, `dunyalar/platformer/${levelId}.json`);
                 }
             } catch (e) {
                 // Final fallback

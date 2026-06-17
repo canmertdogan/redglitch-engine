@@ -36,7 +36,7 @@
  *   phys.unregisterVolume(id)
  */
 
-import * as CANNON from '../../lib/cannon-es/cannon-es.module.js';
+import * as CANNON from '/lib/cannon-es/cannon-es.module.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

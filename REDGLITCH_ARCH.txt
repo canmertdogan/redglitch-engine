@@ -1,0 +1,83 @@
+                          REDGLITCH GAME STUDIO - SYSTEM ARCHITECTURE (v9.2)
+                          ===================================================
+
+  +-----------------------------------------------------------------------------------------------------------------------+
+  |                                               USER WORKSTATION (Chromium / Electron)                                  |
+  +-----------------------------------------------------------------------------------------------------------------------+
+  |                                                                                                                       |
+  |   +--------------------------+           +-------------------------------------+           +--------------------------+   |
+  |   |    IDE & EDITORS (UI)    |           |       KETEBE AI MICRO (Local)       |           |    RUNTIMES (Engines)    |   |
+  |   +--------------------------+           +-------------------------------------+           +--------------------------+   |
+  |   | [CORE 2D/2.5D TOOLS]     |           | [FRONTEND UI & TOOLS]               |           | [ISOPIXEL (2.5D)]        |   |
+  |   | - Dashboard (IDE Hub)    |           | - MSN-Retro UI / Monaco Autocomplete|           | - IsoStrategy Projection |   |
+  |   | - Iso Studio (Canvas)    |           | - Tool Registry / Permission Gate   |           | - Sprite-based Rendering |   |
+  |   | - Code Forge (Monaco)    |           | - model-manager.js                  |           | - Dynamic Day/Night Cycle|   |
+  |   | - NPC/Dialogue Weaver    |           +-------------------------------------+           | - IsoShaderSystem WebGL  |   |
+  |   | - Pixel/FX/Audio Studios |                        |                                    | - Entity/NPC Spawning    |   |
+  |   |                          |           +-------------------------------------+           |                          |   |
+  |   | [3D-FIRST SUITE (v9)]    |           |      RAG & LOCAL INFERENCE          |           | [3D CORES (Three.js)]    |   |
+  |   | - FPS Editor (Voxels)    |           +-------------------------------------+           | - Shared Renderer3D Pipe |   |
+  |   | - TopDown3D Editor       |           | [BROWSER EMBEDDINGS]| [PYTHON RAG]  |           |   (Public Resize Method) |   |
+  |   | - Platformer3D Editor    |           | - embedding-worker  | - rag.py      |           | - FPS Core (6DOF)        |   |
+  |   | - Low-Poly Terrain Gen   |<--+       | - Transformers.js v3| - main.py     |           | - Platformer3D (AABB)    |   |
+  |   | - 256-Color Palette      |   |       | - vector-store (db) | - brain.py    |           | - TopDown3D (Y-Sort)     |   |
+  |   |                          |   |       | - rag-engine.js     | - pkl backups |           | - Voxel/Trimesh hybrid   |   |
+  |   | [MODULAR UI BINDINGS]    |   |       +-------------+-----------------------+           |                          |   |
+  |   | - studio-ui/ Wrappers    |   +------>|       EVENT BUS (WebSockets)        |<----------| [LEGACY 2D CORES]        |   |
+  |   +--------------------------+           |   (Real-time State Sync & HOT)      |           | - RPG TopDown (LogicSys) |   |
+  |                                          |   (Port 3000, Chokidar File Watch)  |           | - Platformer2D (Simple)  |   |
+  |                                          +-------------------------------------+           +--------------------------+   |
+  |                                                           |                                                               |
+  |   +-------------------------------------------------------+-------------------------------------------------------+   |
+  |   |                                         SHARED KERNEL (public/shared/)                                        |   |
+  |   +--------------------------+----------------------------+----------------------------+--------------------------+   |
+  |   |      ASSET MANAGER       |      SHARED STATE (SPS)    |      SYSTEMS & LOGIC       |      PHYSICS BRIDGE      |   |
+  |   |    (v9 Path Mapping)     |    (Voxel Grid / Undo)     |    (Dialogue, Quests)      |     (Raycast / AABB)     |   |
+  |   |  - Sanitizes paths       |    (Dashboard Activity)    |    (LogicInterpreter)      | - Renderer3D.resize()    |   |
+  |   +--------------------------+----------------------------+----------------------------+--------------------------+   |
+  |                                                           ^                                                       |
+  |                
+  |                                              | (REST API: /api/levels3d/ | /api/projects/)           |
+  |                                                           | (REST API: /api/ide/read  | /api/ide/save )           |
+  +-----------------------------------------------------------|-------------------------------------------------------+
+                                                              |
+  +-----------------------------------------------------------v-------------------------------------------------------+
+  |                                 LOCAL NODE.JS EXPRESS SERVER (server.js & server/)                                |
+  +-------------------------------------------------------------------------------------------------------------------+
+  |  [VIRTUAL OVERLAY SYSTEM]    |  [MODULAR ROUTING (server/routes/)] |  [AI BACKEND PROXY (IRAB)]                   |
+  |  - Shadow Filesystem         |  - levels.js, projects.js           |  - Proxies /api/ai to http://localhost:8000  |
+  |  - Core vs. Project routes   |  - ide.js, assets.js                |  - Handles Timeout & Fallback (Metrics)      |
+  |    (project/public fallback) |  - build.js, git.js, shaders.js     |  - Direct Python Integration                 |
+  |  - Dynamic JS Injection      |  - WebSocket Handlers (Chokidar)    |                                              |
+  +------------------------------+-------------------------------------+----------------------------------------------+
+                                             |                     |
+                                             v                     v
+  +-------------------------------------------------------------------------------------------------------------------+
+  |                                             DATA STORAGE (Physical Disk)                                          |
+  +-------------------------------------------------------------------------------------------------------------------+
+  | [SYSTEM FILES (.redglitch/)]    | [PROJECT DATA (projects/)]         | [EXTERNAL CACHE (data/ & backend/)]           |
+  | - ai_config.json             | - levels/ (.json)                  | - models/ (GGUF/WebGPU)                       |
+  | - user_profiles.json         | - sprites/ (.png)                  | - saves/ (.sav)                               |
+  | - session_logs.txt           | - logic/ (.js)                     | - backend/vector_store.pkl                    |
+  | - redglitch.json (project cfg)  | - dunyalar/ (world/map data)       | - embeddings / corpus.json                    |
+  +------------------------------+------------------------------------+-----------------------------------------------+
+
+  DETAILED COMPONENT BREAKDOWN & RECENT EVOLUTIONS (v9.2):
+
+  1. THE EXPRESS SERVER MODULARIZATION:
+     - `server.js` has been heavily refactored from a monolithic file into a clean `server/` directory containing modular `routes/`, `services/`, `middleware/`, and `websocket/` managers.
+     - The IDE UI securely requests data and assets through `AssetManager.js`, which sanitizes relative paths client-side to prevent 404s, while the server intelligently routes between `projects/` and the core `public/` engine fallbacks.
+
+  2. THE KETEBE AI MICRO SYSTEM (PHASE 2 RAG):
+     - The architecture operates a Dual-Layer AI system. `server.js` acts as a proxy, piping heavy LLM inference (`/api/ai`) to a background Python backend (`backend/main.py`) running DeepSeek-Coder-1.3B.
+     - Concurrently, the frontend (`public/ai/`) operates a fully local RAG engine. Using `embedding-worker.js` (Transformers.js v3), it generates embeddings dynamically in Web Workers to prevent UI locking.
+     - Vectors are stored locally in an IndexedDB-backed Orama database (`vector-store.js`), seamlessly querying the generated `corpus.json`.
+
+  3. SHARED KERNEL BACKBONE (`public/shared/`):
+     - `EventBus.js` remains the heart of the engine, syncing internal state via WebSockets (Port 3000) across all decoupled IDE tabs, AI systems, and Game Loops.
+     - `SharedProjectState.js` acts as the single source of truth for the active client, while `AssetManager` dictates resource fetching.
+
+  4. THE ISOPIXEL v8 UPGRADES:
+     - The old `worlds-grid` system was sunset, replaced by a universal, responsive `.asset-grid` & `.asset-card` layout across Prefabs, Worlds, and the newly added NPCs tab.
+     - The Engine rendering loop removed occlusion culling entirely and disabled image smoothing, opting to brute-force tiles and sprites for maximized visual stability and crisp pixel art.
+     - A dynamic Day/Night lighting cycle runs continuously in tandem with NPC spawning logic.

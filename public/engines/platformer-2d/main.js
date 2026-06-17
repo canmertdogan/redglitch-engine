@@ -29,6 +29,18 @@ class PlatformerGame {
             }
         };
 
+        // Universal UI Runtime (HUD)
+        import('../shared/UIRuntime.js').then(m => {
+            this.uiRuntime = new m.UIRuntime();
+            this.uiRuntime.init(document.body);
+            fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
+                if (data) {
+                    this.uiRuntime.load(data);
+                    this.uiRuntime.showScreen('main_hud');
+                }
+            }).catch(e => console.log('No HUD config found'));
+        }).catch(e => console.log('Could not load UIRuntime', e));
+
         this.audio = window.Sound;
         if (this.audio && !this.audio.ctx) this.audio.init();
         
@@ -150,7 +162,7 @@ class PlatformerGame {
             ? [levelPath]
             : [
                 `dunyalar/${cleanLevelId}.json`,
-                `dunyalar/${cleanLevelId}.json`,
+                `dunyalar/platformer/${cleanLevelId}.json`,
             ];
 
         let loaded = null;
@@ -221,7 +233,13 @@ class PlatformerGame {
         map.height = height;
 
         if (!Array.isArray(map.layers) || map.layers.length === 0) {
-            map.layers = [new Array(total).fill(0)];
+            if (Array.isArray(map.collision) && map.collision.length === total) {
+                // If it's a legacy map with only collision, turn collision into a main visual layer
+                map.layers = [Array.from(map.collision)];
+                map.layerProps = [{ name: 'Main' }];
+            } else {
+                map.layers = [new Array(total).fill(0)];
+            }
         } else {
             map.layers = map.layers.map((layer) => {
                 if (!Array.isArray(layer)) return new Array(total).fill(0);
@@ -233,7 +251,20 @@ class PlatformerGame {
         }
 
         if (!Array.isArray(map.collision) || map.collision.length !== total) {
-            const src = map.layers[0] || [];
+            // Find the main layer to derive collision from (usually layer 1 if bg exists, or the one named 'Main')
+            let collisionSrcIdx = 0;
+            if (map.layerProps && map.layerProps.length > 0) {
+                const mainLayerIdx = map.layerProps.findIndex(p => {
+                    const n = (p.name || '').toLowerCase();
+                    return !n.includes('bg') && !n.includes('background') && !n.includes('fg') && !n.includes('foreground');
+                });
+                if (mainLayerIdx >= 0 && map.layers[mainLayerIdx]) {
+                    collisionSrcIdx = mainLayerIdx;
+                }
+            } else if (map.layers.length > 1) {
+                collisionSrcIdx = 1; // Assuming layer 0 is BG, layer 1 is Main
+            }
+            const src = map.layers[collisionSrcIdx] || [];
             map.collision = new Array(total).fill(0);
             for (let i = 0; i < total; i++) {
                 map.collision[i] = Number(src[i] || 0) > 0 ? 1 : 0;
@@ -497,6 +528,19 @@ class PlatformerGame {
         this._checkCheckpoints();
         this._checkGoal();
         this._checkDeathZones();
+        
+        if (this.uiRuntime) this._syncUI();
+    }
+
+    _syncUI() {
+        this.uiRuntime.sync({
+            player: {
+                hp: this.player.hp || 100,
+                maxHp: this.player.maxHp || 100,
+                coins: this.player.coins || 0
+            },
+            gameTimeFormatted: `${Math.floor(this.time)}:${String(Math.floor((this.time%1)*60)).padStart(2,'0')}`
+        });
     }
 
     _updateEntities(dt) {
@@ -637,6 +681,14 @@ class PlatformerGame {
         const loginScreen = document.getElementById('login-screen');
         if(loginScreen) loginScreen.classList.add('hidden');
         this.init();
+    }
+
+    destroy() {
+        this.isRunning = false;
+        if (this.uiRuntime) {
+            this.uiRuntime.destroy();
+            this.uiRuntime = null;
+        }
     }
 }
 

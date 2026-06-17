@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <title>REDGLITCH ENGINE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REDGLITCH ENGINE BOOT</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <style>
         :root {
-            --bg: #000000;
+            --bg: #050001;
             --accent: #ff1e27;
+            --accent-glow: #ff2a5f;
             --text: #ffffff;
-            --hud: rgba(255, 30, 39, 0.4);
-            --panel-bg: rgba(0, 0, 0, 0.45);
-            --panel-border: rgba(255, 255, 255, 0.08);
-            --panel-shadow: 0 8px 40px rgba(0, 0, 0, 0.45);
+            --text-dim: rgba(255, 255, 255, 0.5);
         }
 
         * {
@@ -24,576 +22,217 @@
 
         body {
             background: var(--bg);
-            color: var(--text);
-            font-family: 'VT323', monospace;
-            overflow: hidden;
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'VT323', monospace;
+            color: var(--text);
+            user-select: none;
             image-rendering: pixelated;
         }
 
-        /* ═══ CRT SCANLINES & FLICKER ═══ */
-        body::after {
-            content: '';
+        /* Alive Red Background */
+        .ambient-glow {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255, 30, 39, 0.15) 0%, transparent 80%);
+            animation: breathe 4s infinite alternate ease-in-out;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes breathe {
+            0% { opacity: 0.5; transform: scale(1); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .crt-scanlines {
             position: fixed;
             inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.2) 2px,
+                rgba(0, 0, 0, 0.2) 4px
+            );
             z-index: 999;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            background-size: 100% 3px;
             pointer-events: none;
         }
 
-        .crt-flicker {
+        .vignette {
             position: fixed;
             inset: 0;
+            background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.95) 100%);
             z-index: 998;
-            background: rgba(255, 30, 39, 0.02);
-            opacity: 0;
             pointer-events: none;
-            animation: flicker 0.15s infinite;
         }
 
-        @keyframes flicker {
-            0% {
-                opacity: 0.02;
-            }
-
-            50% {
-                opacity: 0.05;
-            }
-
-            100% {
-                opacity: 0;
-            }
-        }
-
-        /* ═══ WARP STARFIELD CANVAS ═══ */
         #warp-canvas {
-            position: fixed;
+            position: absolute;
             inset: 0;
             z-index: 1;
-            opacity: 0.6;
-            pointer-events: none;
-            image-rendering: pixelated;
+            opacity: 0.5;
+            mix-blend-mode: screen;
         }
 
-        /* ═══ CORNER BRACKETS ═══ */
-        .corner {
-            position: fixed;
-            width: 32px;
-            height: 32px;
-            border: 4px solid var(--accent);
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        .tl {
-            top: 20px;
-            left: 20px;
-            border-right: none;
-            border-bottom: none;
-        }
-
-        .tr {
-            top: 20px;
-            right: 20px;
-            border-left: none;
-            border-bottom: none;
-        }
-
-        .bl {
-            bottom: 20px;
-            left: 20px;
-            border-right: none;
-            border-top: none;
-        }
-
-        .br {
-            bottom: 20px;
-            right: 20px;
-            border-left: none;
-            border-top: none;
-        }
-
-        /* ═══ CENTER BRANDING ═══ */
-        .brand-container {
-            position: relative;
-            z-index: 10;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .brand-title {
-            font-size: clamp(3.5rem, 8vw, 6.5rem);
-            color: var(--accent);
-            text-shadow: 4px 4px 0px #550000;
-            position: relative;
-            letter-spacing: 6px;
-            text-transform: uppercase;
-        }
-
-        /* Glitch pseudo elements */
-        .brand-title::before,
-        .brand-title::after {
-            content: 'REDGLITCH';
+        /* Top Left Branding */
+        .top-left-brand {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            opacity: 0.8;
-            z-index: -1;
-        }
-
-        .brand-title::before {
-            left: 3px;
-            text-shadow: -2px 0 red;
-            animation: glitch-anim 2s infinite linear alternate-reverse;
-        }
-
-        .brand-title::after {
-            left: -3px;
-            text-shadow: -2px 0 white;
-            animation: glitch-anim 3s infinite linear alternate-reverse;
-        }
-
-        @keyframes glitch-anim {
-            0% {
-                clip-path: inset(20% 0 80% 0);
-                transform: translate(-2px, 2px);
-            }
-
-            20% {
-                clip-path: inset(60% 0 10% 0);
-                transform: translate(2px, -2px);
-            }
-
-            40% {
-                clip-path: inset(40% 0 50% 0);
-                transform: translate(-2px, -2px);
-            }
-
-            60% {
-                clip-path: inset(80% 0 5% 0);
-                transform: translate(2px, 2px);
-            }
-
-            80% {
-                clip-path: inset(10% 0 70% 0);
-                transform: translate(-2px, 0);
-            }
-
-            100% {
-                clip-path: inset(30% 0 40% 0);
-                transform: translate(2px, 0);
-            }
-        }
-
-        .brand-sub {
-            font-size: 1.2rem;
-            color: var(--text);
-            letter-spacing: 8px;
-            text-transform: uppercase;
-        }
-
-        .splash-shell {
-            position: relative;
+            top: 50px;
+            left: 60px;
             z-index: 10;
-            width: min(1180px, calc(100vw - 48px));
-            height: min(720px, calc(100vh - 48px));
-            display: grid;
-            grid-template-columns: 220px minmax(0, 1fr);
-            gap: 18px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
         }
 
-        .splash-sidebar {
-            background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--panel-border);
-            box-shadow: var(--panel-shadow);
-            padding: 18px;
+        .logo {
+            width: 56px;
+            height: 56px;
+            filter: drop-shadow(0 0 15px var(--accent-glow));
+            /* In case the icon is white/black, tint it heavily red */
+            /* If it's already red, this just enhances it */
+            -webkit-filter: drop-shadow(0 0 15px var(--accent-glow));
+        }
+
+        .brand-text {
+            font-size: 3.5rem;
+            color: var(--text);
+            letter-spacing: 14px;
+            line-height: 1;
+            text-transform: uppercase;
+            text-shadow: 0 0 30px var(--accent-glow), 2px 2px 0px var(--accent);
+            animation: glitch 4s infinite alternate-reverse;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0, 0); text-shadow: 0 0 30px var(--accent-glow), 2px 2px 0px var(--accent); }
+            2% { transform: translate(-2px, 1px); text-shadow: 0 0 30px var(--accent-glow), -2px -1px 0px #0ff; }
+            4% { transform: translate(2px, -1px); text-shadow: 0 0 30px var(--accent-glow), 2px -1px 0px var(--accent); }
+            6% { transform: translate(0, 0); text-shadow: 0 0 30px var(--accent-glow), 2px 2px 0px var(--accent); }
+            100% { transform: translate(0, 0); text-shadow: 0 0 30px var(--accent-glow), 2px 2px 0px var(--accent); }
+        }
+
+        /* Bottom Section */
+        .bottom-section {
+            position: absolute;
+            bottom: 60px;
+            left: 60px;
+            right: 60px;
+            z-index: 10;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            min-height: 0;
         }
 
-        .sidebar-kicker {
-            font-size: 0.85rem;
-            color: var(--accent);
-            letter-spacing: 6px;
-            text-transform: uppercase;
-        }
-
-        .sidebar-title {
-            font-size: 2rem;
-            line-height: 0.9;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-        }
-
-        .sidebar-block {
+        .bottom-hud {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding-top: 12px;
-            border-top: 1px solid var(--panel-border);
-        }
-
-        .sidebar-label {
-            font-size: 0.95rem;
-            color: var(--accent);
-            letter-spacing: 4px;
-            text-transform: uppercase;
-        }
-
-        .sidebar-item {
-            display: flex;
-            align-items: center;
             justify-content: space-between;
-            padding: 10px 12px;
-            border: 1px solid var(--panel-border);
-            background: rgba(0, 0, 0, 0.35);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 0.9rem;
+            align-items: flex-end;
         }
 
-        .sidebar-item.active {
-            border-color: var(--accent);
-            background: var(--accent-soft);
-            color: #fff;
-        }
-
-        .sidebar-item span {
-            color: var(--accent);
-        }
-
-        .sidebar-chip {
-            padding: 8px 10px;
-            border: 1px solid var(--panel-border);
-            background: rgba(0, 0, 0, 0.25);
-            font-size: 0.85rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        .sidebar-chip strong {
-            display: block;
-            color: var(--accent);
-            margin-top: 4px;
-            letter-spacing: 2px;
-        }
-
-        .sidebar-footer {
-            margin-top: auto;
-            border-top: 1px solid var(--panel-border);
-            padding-top: 12px;
-            color: #777;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .splash-main {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 24px;
-            min-width: 0;
-            min-height: 0;
-        }
-
-        .splash-panels {
-            display: grid;
-            grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-            gap: 18px;
-        }
-
-        .splash-panel {
-            background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--panel-border);
-            box-shadow: var(--panel-shadow);
-            padding: 18px;
-            min-height: 280px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel-label {
-            font-size: 1rem;
-            color: var(--accent);
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-        }
-
-        /* ═══ TERMINAL BOOT SEQUENCE ═══ */
         #boot-log {
-            position: relative;
-            left: auto;
-            bottom: auto;
-            width: 100%;
-            height: auto;
-            max-height: none;
-            overflow-y: auto;
+            width: 400px;
+            height: 120px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            z-index: 100;
-            font-size: 1.05rem;
-            color: var(--accent);
-            text-shadow: 0 0 5px rgba(255, 30, 39, 0.4);
-            flex: 1;
-            padding-right: 4px;
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+            letter-spacing: 2px;
         }
+        .log-line { opacity: 0.6; }
+        .log-line:last-child { opacity: 1; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
 
-        .log-line {
-            margin-top: 4px;
-            opacity: 0.8;
-        }
-
-        .log-line:last-child {
-            opacity: 1;
-            font-weight: bold;
-        }
-
-        /* ═══ LOADING BAR SECTION ═══ */
-        .loader-frame {
-            position: relative;
-            bottom: auto;
-            right: auto;
-            width: 100%;
-            max-width: none;
-            min-width: 0;
-            z-index: 100;
+        .status-info {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            align-items: flex-end;
+            gap: 4px;
+        }
+        
+        #status-text {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            letter-spacing: 6px;
         }
 
-        .loader-top-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0;
+        #pct {
+            font-size: 3rem;
+            color: #fff;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px var(--accent-glow);
+            line-height: 1;
         }
 
-        .loader-status {
-            font-size: 1.4rem;
-            color: var(--text);
-            text-transform: uppercase;
-        }
-
-        .loader-pct {
-            font-size: 1.4rem;
-            color: var(--accent);
-        }
-
+        /* Glowing Progress Bar */
         .progress-track {
             width: 100%;
-            height: 18px;
-            background: rgba(0, 0, 0, 0.65);
-            border: 1px solid var(--accent);
-            padding: 2px;
+            height: 6px;
+            background: rgba(255, 30, 39, 0.1);
+            position: relative;
+            box-shadow: 0 0 10px rgba(255, 30, 39, 0.1);
+            overflow: hidden;
+            border-radius: 4px;
         }
 
         .progress-fill {
             height: 100%;
             width: 0%;
-            background: var(--accent);
+            background: #fff;
+            box-shadow: 0 0 20px 8px var(--accent-glow), 0 0 40px 15px rgba(255, 42, 95, 0.4);
             transition: width 0.1s linear;
+            border-radius: 4px;
         }
 
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 16px;
+        /* Hidden elements required by JS */
+        .hidden-sys {
+            display: none !important;
         }
 
-        .status-chip {
-            border: 1px solid var(--panel-border);
-            background: rgba(0, 0, 0, 0.35);
-            padding: 10px 12px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .status-chip strong {
-            display: block;
-            color: var(--accent);
-            margin-top: 4px;
-            font-size: 1.1rem;
-            letter-spacing: 2px;
-        }
-
-        @media (max-width: 960px) {
-            .splash-shell {
-                width: calc(100vw - 24px);
-                height: calc(100vh - 24px);
-                grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
-                gap: 12px;
-            }
-
-            .splash-sidebar {
-                display: none;
-            }
-
-            .brand-container {
-                gap: 4px;
-            }
-
-            .brand-title {
-                font-size: clamp(2.2rem, 10vw, 3.2rem);
-                letter-spacing: 4px;
-            }
-
-            .brand-sub {
-                font-size: 0.8rem;
-                letter-spacing: 4px;
-            }
-
-            .splash-main {
-                gap: 12px;
-            }
-
-            .splash-panels {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-
-            .splash-panel {
-                min-height: 0;
-                padding: 12px;
-            }
-
-            .panel-label {
-                font-size: 0.8rem;
-                margin-bottom: 8px;
-            }
-
-            #boot-log {
-                font-size: 0.9rem;
-            }
-
-            .loader-status,
-            .loader-pct {
-                font-size: 1rem;
-            }
-
-            .progress-track {
-                height: 12px;
-            }
-
-            .status-grid {
-                gap: 8px;
-                margin-top: 10px;
-            }
-
-            .status-chip {
-                padding: 8px 10px;
-                font-size: 0.72rem;
-            }
-
-            .status-chip strong {
-                font-size: 0.95rem;
-            }
-        }
     </style>
 </head>
-
 <body>
 
+    <div class="ambient-glow"></div>
     <canvas id="warp-canvas"></canvas>
-    <div class="crt-flicker"></div>
+    <div class="vignette"></div>
+    <div class="crt-scanlines"></div>
 
-    <!-- CORNER BRACKETS -->
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
+    <div class="top-left-brand">
+        <img src="icons/icon.png" class="logo" alt="RedGlitch Logo">
+        <div class="brand-text">REDGLITCH</div>
+    </div>
 
-    <div class="splash-shell">
-        <aside class="splash-sidebar">
-            <div class="sidebar-kicker">Launcher</div>
-            <div class="sidebar-title">Boot Menu</div>
-
-            <div class="sidebar-block">
-                <div class="sidebar-label">Sequence</div>
-                <div class="sidebar-item active"><span>01</span>Initialize</div>
-                <div class="sidebar-item"><span>02</span>Sync Projects</div>
-                <div class="sidebar-item"><span>03</span>Load Studio</div>
-                <div class="sidebar-item"><span>04</span>Hand Off</div>
+    <div class="bottom-section">
+        <div class="bottom-hud">
+            <div id="boot-log"></div>
+            <div class="status-info">
+                <div id="status-text">INITIALIZING...</div>
+                <div id="pct">0%</div>
             </div>
+        </div>
+        
+        <div class="progress-track">
+            <div class="progress-fill" id="bar"></div>
+        </div>
+    </div>
 
-            <div class="sidebar-block">
-                <div class="sidebar-label">Systems</div>
-                <div class="sidebar-chip">Core<strong>Online</strong></div>
-                <div class="sidebar-chip">Link<strong>Pending</strong></div>
-                <div class="sidebar-chip">UI<strong>Loading</strong></div>
-                <div class="sidebar-chip">Mode<strong>Boot</strong></div>
-            </div>
-
-            <div class="sidebar-footer">
-                REDGLITCH ENGINE<br>
-                <strong>v7 BOOT</strong>
-            </div>
-        </aside>
-
-        <main class="splash-main">
-            <!-- BRANDING -->
-            <div class="brand-container">
-                <div class="brand-title">REDGLITCH</div>
-                <div class="brand-sub">SYSTEM BOOT SEQUENCER V7</div>
-            </div>
-
-            <div class="splash-panels">
-                <section class="splash-panel">
-                    <div class="panel-label">BOOT LOG</div>
-                    <div id="boot-log"></div>
-                </section>
-
-                <section class="splash-panel">
-                    <div class="panel-label">SYSTEM STATUS</div>
-                    <div class="loader-frame">
-                        <div class="loader-top-row">
-                            <span class="loader-status" id="status-text">INITIALIZING...</span>
-                            <span class="loader-pct" id="pct">0%</span>
-                        </div>
-                        <div class="progress-track">
-                            <div class="progress-fill" id="bar"></div>
-                        </div>
-                    </div>
-                    <div class="status-grid">
-                        <div class="status-chip">Core<strong>Online</strong></div>
-                        <div class="status-chip">Link<strong>Pending</strong></div>
-                        <div class="status-chip">UI<strong>Loading</strong></div>
-                        <div class="status-chip">Mode<strong>Boot</strong></div>
-                    </div>
-                </section>
-            </div>
-        </main>
+    <!-- Hidden chips to satisfy JS -->
+    <div class="hidden-sys">
+        <div id="chip-core"><div id="fill-core"></div></div>
+        <div id="chip-link"><div id="fill-link"></div></div>
+        <div id="chip-ui"><div id="fill-ui"></div></div>
+        <div id="chip-mode"><div id="fill-mode"></div></div>
     </div>
 
     <script>
-        /**
-         * WARP STARFIELD — Pure Red/White Pixel Edition
-         */
+        // ═══════════════════════════════════════════
+        // WARP STARFIELD — Red Alive Edition
+        // ═══════════════════════════════════════════
         (function () {
             const canvas = document.getElementById('warp-canvas');
             const ctx = canvas.getContext('2d');
@@ -607,41 +246,36 @@
             window.addEventListener('resize', resize);
             resize();
 
-            const COLORS = ['#ff1e27', '#ffffff', '#880000'];
+            const COLORS = ['#ff2a5f', '#ff5e62', '#ffffff', '#aa0011'];
 
             class Star {
                 constructor() { this.reset(true); }
-
-                reset(randomZ = false) {
+                reset(randomZ) {
                     this.x = (Math.random() - 0.5) * w * 2.0;
                     this.y = (Math.random() - 0.5) * h * 2.0;
                     this.z = randomZ ? Math.random() * 1000 : 1000;
                     this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
                     this.speedMult = 0.5 + Math.random();
                 }
-
                 update(speed) {
                     this.z -= speed * this.speedMult;
                     if (this.z <= 0) this.reset(false);
                 }
-
                 draw() {
                     const k = 280 / this.z;
                     const px = this.x * k + w / 2;
                     const py = this.y * k + h / 2;
                     if (px < 0 || px > w || py < 0 || py > h) return;
-
                     const size = Math.max(2, Math.floor(6 - (this.z / 200)));
-
                     ctx.fillStyle = this.color;
                     ctx.fillRect(Math.floor(px), Math.floor(py), size, size);
                 }
             }
 
-            for (let i = 0; i < 300; i++) stars.push(new Star());
+            for (let i = 0; i < 400; i++) stars.push(new Star());
 
             function draw() {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
                 ctx.fillRect(0, 0, w, h);
                 const speed = window.warpSpeed;
                 for (const star of stars) {
@@ -653,11 +287,11 @@
             draw();
         })();
 
-        /**
-         * BOOT SEQUENCE LOGIC
-         */
+        // ═══════════════════════════════════════════
+        // BOOT SEQUENCE LOGIC
+        // ═══════════════════════════════════════════
         const bootLines = [
-            "BIOS DATE 06/05/26 18:00:00 VER 7.00",
+            "BIOS DATE 06/16/26 18:00:00 VER 7.00",
             "CPU: REDGLITCH NEURAL PROCESSOR",
             "Speed: 8.4 GHz",
             "Memory Test: 1048576K OK",
@@ -673,17 +307,18 @@
         let progress = 0;
         const bar = document.getElementById('bar');
         const pct = document.getElementById('pct');
-        const status = document.getElementById('status-text');
+        const statusEl = document.getElementById('status-text');
         const logContainer = document.getElementById('boot-log');
 
         function appendLog(text) {
             const div = document.createElement('div');
             div.className = 'log-line';
-            div.innerText = "> " + text;
+            div.innerText = '> ' + text;
             logContainer.appendChild(div);
-            if (logContainer.children.length > 6) {
+            if (logContainer.children.length > 5) {
                 logContainer.removeChild(logContainer.firstChild);
             }
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
 
         let currentLineIndex = 0;
@@ -694,31 +329,61 @@
             } else {
                 clearInterval(lineInterval);
             }
-        }, 300);
+        }, 700);
+
+        // Chip activation logic (Hidden but functional)
+        const chipCore = document.getElementById('chip-core');
+        const chipLink = document.getElementById('chip-link');
+        const chipUi = document.getElementById('chip-ui');
+        const chipMode = document.getElementById('chip-mode');
+        const fillCore = document.getElementById('fill-core');
+        const fillLink = document.getElementById('fill-link');
+        const fillUi = document.getElementById('fill-ui');
+        const fillMode = document.getElementById('fill-mode');
+
+        function updateChips(pct) {
+            const activate = (chip, fill, threshold, active) => {
+                chip.classList.toggle('active', active);
+                if (fill) fill.style.width = active ? Math.min(100, ((pct - threshold) / (100 - threshold)) * 100) + '%' : '0%';
+            };
+            activate(chipCore, fillCore, 0, pct > 5);
+            activate(chipLink, fillLink, 25, pct > 30);
+            activate(chipUi, fillUi, 55, pct > 60);
+            activate(chipMode, fillMode, 80, pct > 85);
+        }
 
         function updateProgress() {
             if (progress < 100) {
-                let step = Math.random() * 1.5;
-                if (progress > 85) step = 0.5;
+                // Slower progress step to stretch out to ~10+ seconds
+                let step = Math.random() * 0.5;
+                
+                // Add a chance for random "hangs" to simulate loading large assets
+                if (Math.random() > 0.95) step = 0; 
+
+                // Even slower at the very end
+                if (progress > 85) step = 0.15;
+                
                 progress += step;
                 if (progress > 100) progress = 100;
 
                 if (bar) bar.style.width = progress + '%';
                 if (pct) pct.innerText = Math.floor(progress) + '%';
 
-                window.warpSpeed = 4.0 + (progress * progress) / 100;
+                window.warpSpeed = 4.0 + (progress * progress * 0.02);
+                updateChips(progress);
 
                 if (progress >= 100) {
-                    status.innerText = "BOOT COMPLETE";
-                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+                    statusEl.innerText = 'BOOT COMPLETE';
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 600);
                     return;
                 }
-                setTimeout(updateProgress, 30);
+                setTimeout(updateProgress, 60);
             }
         }
 
         setTimeout(updateProgress, 500);
     </script>
 </body>
-
 </html>

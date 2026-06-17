@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>redglitch SHADER LAB</title>
+    <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="lib/monaco/vs/editor/editor.main.min.css">
+    <style>
+        :root {
+            --bg-dark: #05050a;
+            --bg-panel: #0d0d14;
+            --bg-surface: #14141e;
+            --border: 1px solid #2a2a3a;
+            --accent: #00f3ff;
+            --accent-dim: rgba(0, 243, 255, 0.15);
+            --gold: #ff6b35;
+            --green: #27ae60;
+            --red: #e74c3c;
+            --pink: #ff2d78;
+            --text: #d0d0e0;
+            --text-dim: #666;
+            --input-bg: #0a0a12;
+            --radius: 6px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; background: var(--bg-dark); color: var(--text);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            height: 100vh; overflow: hidden; font-size: 13px;
+            display: flex; flex-direction: column;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        #toolbar {
+            height: 40px; background: #08080e; display: flex; align-items: center;
+            padding: 0 10px; gap: 6px; border-bottom: var(--border);
+            flex-shrink: 0; -webkit-app-region: drag;
+        }
+        #toolbar > * { -webkit-app-region: no-drag; }
+        .logo { color: var(--accent); font-size: 1.15rem; font-weight: bold; margin-right: 12px; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+        .logo small { color: var(--text-dim); font-size: 0.55rem; font-weight: normal; }
+
+        .btn {
+            background: var(--bg-surface); border: var(--border); color: var(--text);
+            padding: 3px 9px; cursor: pointer; font-family: inherit;
+            font-size: 0.75rem; border-radius: var(--radius);
+            transition: all 0.12s; display: inline-flex; align-items: center; gap: 4px;
+            white-space: nowrap;
+        }
+        .btn:hover { background: #1a1a2a; border-color: var(--accent); color: #fff; }
+        .btn.primary { color: var(--accent); border-color: var(--accent); }
+        .btn.primary:hover { background: var(--accent-dim); }
+        .btn.gold { color: var(--gold); border-color: var(--gold); }
+        .btn.gold:hover { background: rgba(255,107,53,0.15); }
+        .btn.green { color: var(--green); border-color: var(--green); }
+        .btn.green:hover { background: rgba(39,174,96,0.15); }
+        .btn.pink { color: var(--pink); border-color: var(--pink); }
+        .btn.pink:hover { background: rgba(255,45,120,0.15); }
+        .btn.red { color: var(--red); border-color: var(--red); }
+        .btn.red:hover { background: rgba(231,76,60,0.15); }
+        .btn:disabled { opacity: 0.3; pointer-events: none; }
+        .btn.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+        .spacer { flex-grow: 1; }
+        .sep { width: 1px; height: 20px; background: #2a2a3a; margin: 0 4px; }
+
+        #main { flex-grow: 1; display: flex; overflow: hidden; min-height: 0; }
+
+        #code-panel {
+            width: 42%; min-width: 320px; display: flex; flex-direction: column;
+            border-right: var(--border); background: var(--bg-dark);
+        }
+        #code-tabs {
+            display: flex; background: #08080e; border-bottom: var(--border); flex-shrink: 0;
+        }
+        .code-tab {
+            padding: 5px 14px; cursor: pointer; font-size: 0.72rem; color: var(--text-dim);
+            border-bottom: 2px solid transparent; transition: all 0.12s;
+            background: transparent; border-top: none; border-left: none; border-right: none;
+            font-family: inherit;
+        }
+        .code-tab:hover { color: var(--text); }
+        .code-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--bg-panel); }
+        .code-tab .badge {
+            display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+            margin-left: 6px; vertical-align: middle;
+        }
+        .code-tab .badge.ok { background: var(--green); }
+        .code-tab .badge.err { background: var(--red); }
+        .code-tab .badge.none { background: var(--text-dim); }
+
+        #monaco-container { flex-grow: 1; position: relative; min-height: 0; }
+        #monaco-editor { width: 100%; height: 100%; }
+
+        #compile-bar {
+            height: 26px; background: #08080e; border-top: var(--border);
+            display: flex; align-items: center; padding: 0 10px; gap: 6px; flex-shrink: 0;
+            font-size: 0.65rem;
+        }
+        #compile-bar .dot {
+            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+        }
+        #compile-bar .dot.idle { background: var(--text-dim); }
+        #compile-bar .dot.compiling { background: var(--gold); animation: pulse 0.6s infinite; }
+        #compile-bar .dot.ok { background: var(--green); }
+        #compile-bar .dot.err { background: var(--red); }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        #compile-status { color: var(--text-dim); }
+        #compile-ms { color: var(--text-dim); margin-left: auto; }
+
+        #preview-panel {
+            flex-grow: 1; display: flex; flex-direction: column; min-width: 0;
+            background: var(--bg-dark);
+        }
+
+        #preview-toolbar {
+            height: 30px; background: #08080e; border-bottom: var(--border);
+            display: flex; align-items: center; padding: 0 8px; gap: 5px; flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        #preview-toolbar select, #preview-toolbar input[type="color"] {
+            background: var(--input-bg); border: var(--border); color: var(--text);
+            padding: 1px 5px; font-family: inherit; font-size: 0.65rem; border-radius: 3px;
+            height: 20px; max-width: 80px;
+        }
+        #preview-toolbar label { font-size: 0.65rem; color: var(--text-dim); display: inline-flex; align-items: center; gap: 3px; }
+
+        #viewport-container {
+            flex-grow: 1; position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; min-height: 0;
+            background: #06060c;
+            background-image: radial-gradient(#0e0e18 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        #gl-canvas {
+            display: block; border-radius: var(--radius);
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            image-rendering: pixelated;
+            max-width: 100%; max-height: 100%; cursor: crosshair;
+        }
+
+        #error-overlay {
+            position: absolute; bottom: 10px; left: 10px; right: 10px;
+            background: rgba(231,76,60,0.92); color: #fff; padding: 6px 10px;
+            font-size: 0.7rem; display: none; border-radius: var(--radius);
+            font-family: 'Consolas', monospace; white-space: pre-wrap;
+            max-height: 70px; overflow-y: auto;
+        }
+
+        #overlay-top-right {
+            position: absolute; top: 6px; right: 6px; display: flex; gap: 4px;
+            font-size: 0.6rem; font-family: 'Consolas', monospace;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 3px;
+            color: var(--text-dim);
+        }
+        .stat-box .val { color: var(--accent); }
+        .stat-box .val.gold { color: var(--gold); }
+        .stat-box .val.pink { color: var(--pink); }
+
+        #uniforms-panel {
+            height: auto; max-height: 150px; background: var(--bg-panel);
+            border-top: var(--border); overflow-y: auto; flex-shrink: 0;
+        }
+        #uniforms-header {
+            display: flex; align-items: center; padding: 3px 10px;
+            background: #08080e; border-bottom: var(--border);
+            font-size: 0.65rem; color: var(--text-dim); cursor: pointer; user-select: none;
+        }
+        #uniforms-header .arrow { transition: transform 0.15s; display: inline-block; margin-right: 6px; font-size: 0.5rem; }
+        #uniforms-header.collapsed .arrow { transform: rotate(-90deg); }
+        #uniforms-body {
+            padding: 4px 8px; display: flex; flex-wrap: wrap; gap: 3px 10px;
+        }
+        #uniforms-body.collapsed { display: none; }
+        .uniform-row {
+            display: flex; align-items: center; gap: 4px; min-width: 160px;
+            font-size: 0.65rem;
+        }
+        .uniform-row label { color: var(--accent); width: 70px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; }
+        .uniform-row input[type="range"] {
+            width: 70px; height: 3px; -webkit-appearance: none;
+            background: #2a2a3a; border-radius: 2px; outline: none;
+        }
+        .uniform-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 8px; height: 8px; border-radius: 50%;
+            background: var(--accent); cursor: pointer;
+        }
+        .uniform-row input[type="color"] {
+            width: 22px; height: 18px; padding: 0; border: none; cursor: pointer;
+            background: transparent;
+        }
+        .uniform-row .val { color: #fff; min-width: 28px; text-align: right; font-size: 0.6rem; }
+        .uniform-empty {
+            color: var(--text-dim); font-style: italic; font-size: 0.65rem;
+            padding: 6px; text-align: center; width: 100%;
+        }
+
+        #fullscreen-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+        }
+        #fullscreen-overlay.active { display: flex; }
+        #fullscreen-overlay canvas { max-width: 100vw; max-height: 100vh; }
+        #fullscreen-overlay .close-fs {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.6); border: var(--border); color: #fff;
+            padding: 5px 10px; cursor: pointer; font-family: inherit; border-radius: var(--radius); font-size: 0.7rem;
+        }
+        #fullscreen-overlay .close-fs:hover { background: rgba(255,255,255,0.1); }
+
+        .tooltip {
+            position: fixed; background: #111; border: 1px solid #333;
+            padding: 4px 8px; border-radius: 4px; font-size: 0.6rem;
+            color: var(--text-dim); pointer-events: none; z-index: 10001;
+            display: none; white-space: nowrap;
+        }
+
+        #upload-tex-input { display: none; }
+
+        @media (max-width: 800px) {
+            #code-panel { width: 50%; min-width: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="toolbar">
+    <span class="logo">&#9632; SHD LAB <small>v2</small></span>
+    <div class="sep"></div>
+    <button class="btn" onclick="applyTemplate()" title="Load shader template">TEMPLATES</button>
+    <button class="btn green" onclick="saveShader()" title="Save to project (Cmd+S)">SAVE</button>
+    <button class="btn" onclick="loadShaderFromProject()" title="Load from project">LOAD</button>
+    <div class="sep"></div>
+    <button class="btn primary" onclick="compileAndRun()" title="Compile shader (Cmd+Enter)">COMPILE</button>
+    <button class="btn" onclick="toggleShaderTime()" id="btn-play" title="Play/Pause shader time">&#9208; TIME</button>
+    <button class="btn" onclick="resetShaderTime()" title="Reset time to 0">&#8635; RESET</button>
+    <div class="sep"></div>
+    <button class="btn" onclick="takeScreenshot()" title="Download PNG screenshot">&#128247; SCREENSHOT</button>
+    <button class="btn" onclick="copyShaderSource()" title="Copy shader code">&#128203; COPY</button>
+    <button class="btn pink" onclick="toggleFullscreenPreview()" title="Fullscreen preview">&#10530; FULL</button>
+    <div class="sep"></div>
+    <button class="btn" onclick="toggleTheme()" title="Toggle Monaco theme">THEME</button>
+    <button class="btn" onclick="showShortcuts()" title="Show keyboard shortcuts">?</button>
+</div>
+
+<div id="main">
+    <div id="code-panel">
+        <div id="code-tabs">
+            <button class="code-tab active" data-shader="frag" onclick="switchShaderTab('frag')">FRAGMENT <span class="badge none"></span></button>
+            <button class="code-tab" data-shader="vert" onclick="switchShaderTab('vert')">VERTEX <span class="badge none"></span></button>
+        </div>
+        <div id="monaco-container">
+            <div id="monaco-editor"></div>
+        </div>
+        <div id="compile-bar">
+            <span class="dot idle" id="compile-dot"></span>
+            <span id="compile-status">Idle</span>
+            <span id="compile-ms"></span>
+            <span style="margin-left:auto;display:flex;gap:4px;align-items:center;">
+                <label style="font-size:0.6rem;color:var(--text-dim);display:flex;align-items:center;gap:3px;">
+                    <input type="checkbox" id="auto-compile" checked onchange="onAutoCompileChange()"> AUTO
+                </label>
+            </span>
+        </div>
+    </div>
+
+    <div id="preview-panel">
+        <div id="preview-toolbar">
+            <label>MESH <select id="mesh-select">
+                <optgroup label="&#9632; 2D (Screen)">
+                    <option value="quad">Fullscreen Quad</option>
+                </optgroup>
+                <optgroup label="&#9632; 3D (World)">
+                    <option value="sphere">Sphere</option>
+                    <option value="cube" selected>Cube</option>
+                    <option value="cylinder">Cylinder</option>
+                    <option value="torus">Torus</option>
+                </optgroup>
+            </select></label>
+            <span id="mode-badge" style="font-size:0.6rem;padding:1px 6px;border-radius:3px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);display:none;">3D</span>
+            <label>TEX <select id="texture-select">
+                <option value="synthwave" selected>Synthwave</option>
+                <option value="grid">Grid</option>
+                <option value="noise">Noise</option>
+                <option value="checker">Checker</option>
+                <option value="gradient">Gradient</option>
+                <option value="custom">Custom...</option>
+            </select></label>
+            <label>RES <select id="res-select">
+                <option value="512">512</option>
+                <option value="768" selected>768</option>
+                <option value="1024">1024</option>
+            </select></label>
+            <label>BG <input type="color" id="bg-color" value="#06060c"></label>
+            <label><input type="checkbox" id="wireframe-toggle"> WIRE</label>
+            <label><input type="checkbox" id="pause-rotation"> PAUSE</label>
+            <input type="file" id="upload-tex-input" accept="image/*">
+            <div class="spacer"></div>
+        </div>
+
+        <div id="viewport-container">
+            <canvas id="gl-canvas"></canvas>
+            <div id="error-overlay"></div>
+            <div id="overlay-top-right">
+                <span class="stat-box">FPS <span class="val" id="fps-val">0</span></span>
+                <span class="stat-box">T <span class="val gold" id="time-val">0.00</span></span>
+                <span class="stat-box">V <span class="val pink" id="vert-count">0</span></span>
+            </div>
+        </div>
+
+        <div id="uniforms-panel">
+            <div id="uniforms-header" onclick="toggleUniforms()">
+                <span class="arrow">&#9660;</span> UNIFORM CONTROLS
+            </div>
+            <div id="uniforms-body"></div>
+        </div>
+    </div>
+</div>
+
+<div id="fullscreen-overlay">
+    <canvas id="fs-canvas"></canvas>
+    <button class="close-fs" onclick="toggleFullscreenPreview()">EXIT [ESC]</button>
+</div>
+
+<script src="lib/monaco/vs/loader.min.js"></script>
+<script src="/shared/EventBus.js"></script>
+<script src="/shared/SharedProjectState.js"></script>
+<script src="/shared/AssetManager.js"></script>
+<script src="shader_lab.js"></script>
+</body>
+</html>

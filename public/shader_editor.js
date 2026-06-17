@@ -1,4 +1,9 @@
-// shader_editor.js - REDGLITCH SHADER LAB PRO
+// REDIRECT: This file is replaced by shader_lab.js
+if (!window.location.pathname.includes('shader_lab')) {
+  window.location.replace('/shader_lab.html');
+}
+
+// shader_editor.js - REDGLITCH SHADER LAB PRO (DEPRECATED)
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references

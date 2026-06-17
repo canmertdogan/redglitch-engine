@@ -24,8 +24,8 @@
  *   this.fpsCamera.detach();            // remove listeners
  */
 
-import * as THREE from '../../lib/three/three.module.js';
-import Camera3DController, { CameraMode } from '../shared/Camera3DController.js';
+import * as THREE from '/lib/three/three.module.js';
+import Camera3DController, { CameraMode } from '/engines/shared/Camera3DController.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -176,7 +176,7 @@ export default class FPSCamera {
     // ── Pointer lock ──────────────────────────────────────────────────────────
 
     requestPointerLock() {
-        this._domEl.requestPointerLock?.();
+        this._domEl.requestPointerLock?.()?.catch?.(() => {});
     }
 
     releasePointerLock() {

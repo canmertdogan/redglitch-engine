@@ -65,7 +65,7 @@ const StudioApp: React.FC = () => {
         { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', iconName: 'MessageSquare', src: 'dialogue_editor.html', w: 800, h: 500 },
         { id: 'daw', category: 'ASSETS', title: 'Audio Studio', iconName: 'Music', src: 'daw_editor.html', w: 800, h: 500 },
         { id: 'fxpro', category: 'ASSETS', title: 'FX Master', iconName: 'Zap', src: 'fx_editor.html', w: 900, h: 650 },
-        { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_editor.html', w: 1000, h: 700 },
+        { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_lab.html', w: 1200, h: 800 },
         { id: 'assets', category: 'ASSETS', title: 'File Manager', iconName: 'Folder', src: 'asset_manager.html', w: 900, h: 600 },
         { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700 }
     ];

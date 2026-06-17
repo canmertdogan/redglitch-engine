@@ -28,7 +28,7 @@
  *   ab.dispose();
  */
 
-import * as THREE from '../../lib/three/three.module.js';
+import * as THREE from '/lib/three/three.module.js';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 export const AbilityShape = Object.freeze({

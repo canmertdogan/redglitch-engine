@@ -36,6 +36,7 @@
     "express": "^4.18.2",
     "lucide-react": "^1.16.0",
     "monaco-editor": "^0.55.1",
+    "multer": "^2.2.0",
     "onnxruntime-web": "^1.19.2",
     "parse-magica-voxel": "^2.1.2",
     "react": "^19.2.6",

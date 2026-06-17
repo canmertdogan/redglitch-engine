@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const http = require('http');
 const cors = require('cors');
+const multer = require('multer');
 
 // Import configuration
 const config = require('./server/config');
@@ -118,6 +119,13 @@ app.use(securityHeaders);
 
 // Body parser
 app.use(express.json({ limit: '5mb' }));
+
+// Multer for file uploads (used by assets3d route for .blend/.obj conversion)
+const upload = multer({ limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
+app.use('/api/assets3d', upload.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'mtl',  maxCount: 1 },
+]));
 
 // Set explicit MIME types for ESM and WASM
 express.static.mime.define({

@@ -25,8 +25,8 @@
  *   cam.playCutscene(waypoints, speed); // enter cinematic mode
  */
 
-import * as THREE from '../../lib/three/three.module.js';
-import Camera3DController, { CameraMode } from '../shared/Camera3DController.js';
+import * as THREE from '/lib/three/three.module.js';
+import Camera3DController, { CameraMode } from '/engines/shared/Camera3DController.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

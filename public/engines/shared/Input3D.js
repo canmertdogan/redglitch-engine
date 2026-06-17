@@ -313,7 +313,7 @@ class Input3D {
     // ── Pointer Lock ──────────────────────────────────────────────────────────
 
     requestPointerLock() {
-        this.domElement.requestPointerLock?.();
+        this.domElement.requestPointerLock?.()?.catch?.(() => {});
     }
 
     releasePointerLock() {

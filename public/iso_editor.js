@@ -1292,6 +1292,15 @@ window.onload = async () => {
     // Keyboard State
     window.keys = {};
     window.addEventListener('keydown', e => {
+        const ctrl = e.ctrlKey || e.metaKey;
+        if (ctrl && e.key === 's') {
+            e.preventDefault();
+            if (typeof saveToServer === 'function') saveToServer();
+            if (window.parent && window.parent.RedGlitchEventBus) {
+                window.parent.RedGlitchEventBus.emit('system:project:save_request');
+            }
+            return;
+        }
         keys[e.code] = true;
         if (e.key.toLowerCase() === 'q') changeZ(1);
         if (e.key.toLowerCase() === 'e') changeZ(-1);
@@ -1299,6 +1308,15 @@ window.onload = async () => {
         if (e.key >= '1' && e.key <= '6') setShape(parseInt(e.key) - 1);
     });
     window.addEventListener('keyup', e => keys[e.code] = false);
+
+    // Listen for global save
+    if (window.parent && window.parent.RedGlitchEventBus) {
+        window.parent.RedGlitchEventBus.on('system:global_save', () => {
+            if (typeof saveToServer === 'function') {
+                saveToServer();
+            }
+        });
+    }
     
     document.getElementById('z-slider').addEventListener('input', (e) => {
         state.currentZ = parseInt(e.target.value);

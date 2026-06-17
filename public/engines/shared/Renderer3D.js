@@ -13,9 +13,10 @@ import { OutputPass }     from './OutputPass.js';
 const CelQuantizeShader = {
     name: 'CelQuantizeShader',
     uniforms: {
-        tDiffuse:  { value: null },
-        uTones:    { value: 3.0 },
-        uSatBoost: { value: 1.1 },
+        tDiffuse:     { value: null },
+        uTones:       { value: 3.0 },
+        uSatBoost:    { value: 1.1 },
+        uMinBright:   { value: 0.25 },
     },
     vertexShader: `
         varying vec2 vUv;
@@ -28,6 +29,7 @@ const CelQuantizeShader = {
         uniform sampler2D tDiffuse;
         uniform float uTones;
         uniform float uSatBoost;
+        uniform float uMinBright;
         varying vec2 vUv;
         vec3 rgb2hsv(vec3 c) {
             vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);
@@ -44,14 +46,16 @@ const CelQuantizeShader = {
         }
         void main() {
             vec4 texel = texture2D(tDiffuse, vUv);
-            // Convert from Linear to sRGB for perceptually uniform quantization
+            // Input is linear (from RenderPass), convert to sRGB for perceptual quantization
             vec3 srgbColor = pow(abs(texel.rgb), vec3(1.0 / 2.2));
             vec3 hsv   = rgb2hsv(srgbColor);
             float levels = max(1.0, uTones - 1.0);
             hsv.z = floor(hsv.z * levels + 0.5) / levels;
             hsv.y = clamp(hsv.y * uSatBoost, 0.0, 1.0);
             vec3 quantizedSrgb = hsv2rgb(hsv);
-            // Convert back to Linear before output
+            // Apply minimum brightness so shadows don't go pitch black
+            quantizedSrgb = max(quantizedSrgb, vec3(uMinBright));
+            // Convert back to linear for OutputPass to handle sRGB conversion
             vec3 linearColor = pow(quantizedSrgb, vec3(2.2));
             gl_FragColor = vec4(linearColor, texel.a);
         }
@@ -229,6 +233,8 @@ class Renderer3D {
         if (this._opts.cel) {
             const cp = new ShaderPass(CelQuantizeShader);
             cp.uniforms.uTones.value = this._opts.tones;
+            cp.uniforms.uSatBoost.value = this._opts.satBoost ?? 1.1;
+            cp.uniforms.uMinBright.value = this._opts.minBright ?? 0.25;
             this.composer.addPass(cp);
         }
         this.composer.addPass(new OutputPass());
@@ -266,6 +272,7 @@ class Renderer3D {
                 const cp = new ShaderPass(CelQuantizeShader);
                 cp.uniforms.uTones.value = passConfig.tones ?? 3.0;
                 cp.uniforms.uSatBoost.value = passConfig.satBoost ?? 1.1;
+                cp.uniforms.uMinBright.value = passConfig.minBright ?? 0.15;
                 this.composer.addPass(cp);
             }
             else if (passConfig.type === 'color_grading') {

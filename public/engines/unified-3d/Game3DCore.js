@@ -31,7 +31,7 @@ import Camera3DController,
 import Physics3DWorld          from '../shared/Physics3DWorld.js';
 import PaletteManager          from '../shared/PaletteManager.js';
 import AssetLoader3D           from '../shared/AssetLoader3D.js';
-import Input3D                 from '../shared/Input3D.js';
+import Input3D                 from '../shared/Input3D.js?v=cachebust6';
 import AudioSpatial3D          from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }           from '../shared/Raycast3D.js';
@@ -156,6 +156,7 @@ export default class Game3DCore extends Engine3DAdapter {
 
         const container = this.container || document.getElementById('game-container');
         if (!container) throw new Error('[Game3DCore] no container element');
+        this.container = container;
 
         // ── Renderer ──────────────────────────────────────────────────────
         this.renderer3d = new Renderer3D(container, {
@@ -217,6 +218,21 @@ export default class Game3DCore extends Engine3DAdapter {
             await this.input.loadActionMap(
                 `/projects/${this.currentProject}/data/input3d.json`
             ).catch(() => {});
+        }
+
+        // ── Universal UI Runtime ──────────────────────────────────────────
+        try {
+            const m = await import('../shared/UIRuntime.js');
+            this.uiRuntime = new m.UIRuntime();
+            this.uiRuntime.init(this.container);
+            const r = await fetch('/interfaces/main.redui');
+            if (r.ok) {
+                const data = await r.json();
+                this.uiRuntime.load(data);
+                this.uiRuntime.showScreen('main_hud');
+            }
+        } catch (e) {
+            console.log('[Game3DCore] No UIRuntime or HUD config found', e);
         }
 
         console.log('[Game3DCore] initCore() complete');
@@ -386,6 +402,21 @@ export default class Game3DCore extends Engine3DAdapter {
         if (this.hybridScene && this.camera3d?.camera) {
             this.hybridScene.update(dt, this.camera3d.camera);
         }
+
+        // 7. Universal HUD Sync
+        if (this.uiRuntime && this.mode && this.mode.player) {
+            this.uiRuntime.sync({
+                player: {
+                    hp: this.mode.player.hp || 100,
+                    maxHp: this.mode.player.maxHp || 100,
+                    mana: this.mode.player.mana || 50,
+                    maxMana: this.mode.player.maxMana || 50,
+                    stamina: this.mode.player.stamina || 100,
+                    maxStamina: this.mode.player.maxStamina || 100
+                },
+                gameTimeFormatted: `${Math.floor(this.gameTime)}:${String(Math.floor((this.gameTime%1)*60)).padStart(2,'0')}`
+            });
+        }
     }
 
     _coreRender(dt) {
@@ -532,9 +563,18 @@ export default class Game3DCore extends Engine3DAdapter {
         // Dispose shared systems
         this.releasePointerLock();
         this.input?.detach();
+        this.skybox?.dispose?.();
         this.audio?.dispose();
         this.renderer3d?.dispose();
         this.raycast?.dispose();
+
+        // ── Clean up UI ───────────────────────────────────────────────────
+        if (this.uiRuntime) {
+            this.uiRuntime.destroy();
+            this.uiRuntime = null;
+        }
+
+        this._listeners.clear();
 
         // Remove window listener
         if (this._boundOnResize) {

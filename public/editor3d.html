@@ -1295,6 +1295,12 @@
             display: block;
         }
 
+        /* ── Import dropdown hover ── */
+        .import-opt:hover {
+            background: rgba(255,30,39,0.15) !important;
+            color: #fff !important;
+        }
+
         /* ── Quick-select mini toolbar in viewport ── */
         #vp-toolbar {
             position: absolute;
@@ -1773,14 +1779,36 @@
                 <i class="fas fa-save"></i> SAVE
             </button>
             <div class="tb-div"></div>
-            <button class="tb-action-btn" id="btn-import" title="Import GLTF/OBJ">
-                <i class="fas fa-file-import"></i> IMPORT
-            </button>
+            <div id="import-dropdown" style="position:relative;">
+                <button class="tb-action-btn" id="btn-import" title="Import 3D asset">
+                    <i class="fas fa-file-import"></i> IMPORT
+                </button>
+                <div id="import-menu" style="display:none; position:absolute; top:100%; left:0; z-index:9999;
+                     background:#0a0a0a; border:1px solid rgba(255,30,39,0.3); border-radius:4px;
+                     min-width:160px; padding:4px 0; box-shadow:0 8px 24px rgba(0,0,0,0.6);">
+                    <button class="import-opt" data-format="gltf" style="display:block; width:100%; padding:8px 16px;
+                        background:none; border:none; color:#ccc; text-align:left; cursor:pointer; font-size:12px;">
+                        <i class="fas fa-cube"></i> GLTF / GLB
+                    </button>
+                    <button class="import-opt" data-format="fbx" style="display:block; width:100%; padding:8px 16px;
+                        background:none; border:none; color:#ccc; text-align:left; cursor:pointer; font-size:12px;">
+                        <i class="fas fa-cube"></i> FBX (Autodesk)
+                    </button>
+                    <button class="import-opt" data-format="obj" style="display:block; width:100%; padding:8px 16px;
+                        background:none; border:none; color:#ccc; text-align:left; cursor:pointer; font-size:12px;">
+                        <i class="fas fa-cube"></i> OBJ / MTL
+                    </button>
+                    <button class="import-opt" data-format="blend" style="display:block; width:100%; padding:8px 16px;
+                        background:none; border:none; color:#ccc; text-align:left; cursor:pointer; font-size:12px;">
+                        <i class="fas fa-blender"></i> Blender (.blend)
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- ── PLAY ZONE ── -->
         <div id="tb-play-zone">
-            <button id="tb-play-btn" id="btn-playtest" title="Playtest (F5)">
+            <button id="btn-playtest" title="Playtest (F5)">
                 <i class="fas fa-play"></i>
                 PLAYTEST
             </button>
@@ -2098,7 +2126,7 @@
 <script src="/shared/SchemaRegistry.js"></script>
 <script src="lib/monaco/vs/loader.js"></script>
 <script type="module">
-    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust5';
+    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust6';
 
     // ── Mode panel registry ───────────────────────────────────────────
     const PANEL_REGISTRY = {
@@ -2257,18 +2285,54 @@
         const lvl  = prompt('Level ID:');
         if (proj && lvl) editor.loadLevel(proj, lvl);
     });
-    document.getElementById('btn-import')?.addEventListener('click', () => editor.importGLTF());
+    // ── Import dropdown ────────────────────────────────────────────
+    const importBtn = document.getElementById('btn-import');
+    const importMenu = document.getElementById('import-menu');
+    if (importBtn && importMenu) {
+        importBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const shown = importMenu.style.display !== 'none';
+            importMenu.style.display = shown ? 'none' : 'block';
+        });
+        document.addEventListener('click', () => { importMenu.style.display = 'none'; }, { once: false });
+        importMenu.addEventListener('click', (e) => e.stopPropagation());
+        document.querySelectorAll('.import-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                importMenu.style.display = 'none';
+                const fmt = btn.dataset.format;
+                if (fmt === 'gltf')  editor.importGLTF();
+                else if (fmt === 'fbx')   editor.importFBX();
+                else if (fmt === 'obj')   editor.importOBJ();
+                else if (fmt === 'blend') editor.importBlend();
+            });
+        });
+    }
 
     // ── Keyboard shortcuts ────────────────────────────────────────────
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey || e.metaKey) {
-            if (e.key === 's') { e.preventDefault(); editor.saveLevel(); }
+            if (e.key === 's') { 
+                e.preventDefault(); 
+                editor.saveLevel(); 
+                if (window.parent && window.parent.RedGlitchEventBus) {
+                    window.parent.RedGlitchEventBus.emit('system:project:save_request');
+                }
+            }
             if (e.key === 'z') { e.preventDefault(); editor.undo(); }
             if (e.key === 'y') { e.preventDefault(); editor.redo(); }
         }
         if (e.key === 'F5') { e.preventDefault(); editor.playtest(); }
         if (e.key === 'Delete') { editor.deleteSelected?.(); }
     });
+
+    // Listen for global save
+    if (window.parent && window.parent.RedGlitchEventBus) {
+        window.parent.RedGlitchEventBus.on('system:global_save', () => {
+            if (editor && typeof editor.saveLevel === 'function') {
+                editor.saveLevel();
+            }
+        });
+    }
 
     // ── Transform tool buttons (sidebar + viewport toolbar) ───────────
 

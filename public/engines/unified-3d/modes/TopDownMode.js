@@ -18,15 +18,15 @@ import {
 } from '../../shared/Save3D.js';
 
 // TopDown-specific subsystems (still live in engines/topdown-3d/)
-import TopDownCamera3D       from '../../topdown-3d/TopDownCamera3D.js';
-import TerrainSystem3D, { BlockType } from '../../topdown-3d/TerrainSystem3D.js';
-import EntitySystem3D, { AIState, Entity3D } from '../../topdown-3d/EntitySystem3D.js';
-import Pathfinding3D, { AreaType } from '../../topdown-3d/Pathfinding3D.js';
-import FogOfWar3D, { VisState } from '../../topdown-3d/FogOfWar3D.js';
-import AbilitySystem3D, { AbilityShape, DamageType, BuffType } from '../../topdown-3d/AbilitySystem3D.js';
-import VFXSystem3D, { EffectType } from '../../topdown-3d/VFXSystem3D.js';
-import Minimap3D             from '../../topdown-3d/Minimap3D.js';
-import TopDown3DStrategy     from '../../topdown-3d/TopDown3DStrategy.js';
+import TopDownCamera3D       from '../../3d/systems/TopDownCamera3D.js';
+import TerrainSystem3D, { BlockType } from '../../3d/systems/TerrainSystem3D.js';
+import EntitySystem3D, { AIState, Entity3D } from '../../3d/systems/EntitySystem3D.js';
+import Pathfinding3D, { AreaType } from '../../3d/systems/Pathfinding3D.js';
+import FogOfWar3D, { VisState } from '../../3d/systems/FogOfWar3D.js';
+import AbilitySystem3D, { AbilityShape, DamageType, BuffType } from '../../3d/systems/AbilitySystem3D.js';
+import VFXSystem3D, { EffectType } from '../../3d/systems/VFXSystem3D.js';
+import Minimap3D             from '../../3d/systems/Minimap3D.js';
+import TopDown3DStrategy     from '../../3d/systems/TopDown3DStrategy.js';
 
 // ── TopDownMode ───────────────────────────────────────────────────────────────
 

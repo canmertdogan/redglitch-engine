@@ -309,9 +309,12 @@ window.onload = async () => {
             smoothScrolling: true
         });
 
-        // Add Keybindings
+        // Add custom save command
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             saveActiveFile();
+            if (window.parent && window.parent.RedGlitchEventBus) {
+                window.parent.RedGlitchEventBus.emit('system:project:save_request');
+            }
         });
 
         // Cursor Position Update
@@ -635,6 +638,33 @@ async function saveActiveFile(silent = false) {
     }
 }
 
+async function saveAllFiles(silent = false) {
+    if (openTabs.length === 0) return;
+    if (!silent) setStatus("SAVING ALL...", false, true);
+    let successCount = 0;
+    
+    for (const tab of openTabs) {
+        try {
+            const content = tab.model.getValue();
+            const res = await fetch('/api/ide/write', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ file: tab.path, content })
+            });
+            if (res.ok) successCount++;
+            else console.error(`Failed to save ${tab.path}`);
+        } catch (e) {
+            console.error(`Failed to save ${tab.path}`, e);
+        }
+    }
+    
+    if (successCount === openTabs.length) {
+        if (!silent) setStatus("ALL SAVED SUCCESSFULLY");
+    } else {
+        setStatus(`SAVED ${successCount}/${openTabs.length}`, true);
+    }
+}
+
 function triggerEditorAction(actionId) {
     if (!editor) return;
     
@@ -715,9 +745,19 @@ function getMonacoLanguage(ext) {
 window.scriptEditor = { closeTab };
 window.loadTree = loadTree;
 window.saveActiveFile = saveActiveFile;
+window.saveAllFiles = saveAllFiles;
 window.closeActiveTab = closeActiveTab;
 window.closeAllTabs = closeAllTabs;
 window.triggerEditorAction = triggerEditorAction;
 window.toggleSidebar = toggleSidebar;
 window.showSettings = showSettings;
 window.closeSettings = closeSettings;
+
+// Listen for global save
+if (window.parent && window.parent.RedGlitchEventBus) {
+    window.parent.RedGlitchEventBus.on('system:global_save', () => {
+        if (typeof saveAllFiles === 'function') {
+            saveAllFiles(true);
+        }
+    });
+}

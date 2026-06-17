@@ -22,14 +22,14 @@ import {
 } from '../../shared/Save3D.js';
 
 // Platformer-specific subsystems (still live in engines/platformer-3d/)
-import ThirdPersonCamera    from '../../platformer-3d/ThirdPersonCamera.js';
-import PlatformerPhysics3D  from '../../platformer-3d/PlatformerPhysics3D.js';
-import CharacterController3D, { MoveState } from '../../platformer-3d/CharacterController3D.js';
-import PlayerCharacter3D    from '../../platformer-3d/PlayerCharacter3D.js';
-import CollectibleSystem3D  from '../../platformer-3d/CollectibleSystem3D.js';
-import CheckpointSystem3D   from '../../platformer-3d/CheckpointSystem3D.js';
-import EnemyPlatformer3D, { EnemyState } from '../../platformer-3d/EnemyPlatformer3D.js';
-import VFX_Platformer3D     from '../../platformer-3d/VFX_Platformer3D.js';
+import ThirdPersonCamera    from '../../3d/systems/ThirdPersonCamera.js';
+import PlatformerPhysics3D  from '../../3d/systems/PlatformerPhysics3D.js';
+import CharacterController3D, { MoveState } from '../../3d/systems/CharacterController3D.js';
+import PlayerCharacter3D    from '../../3d/systems/PlayerCharacter3D.js';
+import CollectibleSystem3D  from '../../3d/systems/CollectibleSystem3D.js';
+import CheckpointSystem3D   from '../../3d/systems/CheckpointSystem3D.js';
+import EnemyPlatformer3D, { EnemyState } from '../../3d/systems/EnemyPlatformer3D.js';
+import VFX_Platformer3D     from '../../3d/systems/VFX_Platformer3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

@@ -27,7 +27,7 @@
  */
 
 import * as THREE from '/lib/three/three.module.js';
-import { BodyType, ShapeType } from '../shared/Physics3DWorld.js';
+import { BodyType, ShapeType } from '/engines/shared/Physics3DWorld.js';
 
 // ── Block types ───────────────────────────────────────────────────────────────
 

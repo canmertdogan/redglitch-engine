@@ -24,7 +24,7 @@
  *   fow.dispose();
  */
 
-import * as THREE from '../../lib/three/three.module.js';
+import * as THREE from '/lib/three/three.module.js';
 
 // ─── Visibility state ─────────────────────────────────────────────────────────
 export const VisState = Object.freeze({

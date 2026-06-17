@@ -714,6 +714,10 @@ export default class PropertiesPanel {
                             <span>Tones</span>
                             <input type="number" step="1" class="pp-input" data-index="${i}" data-key="tones" value="${pass.tones ?? 3.0}" style="width:40px;">
                         </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                            <span>Min Brightness</span>
+                            <input type="number" step="0.05" min="0" max="1" class="pp-input" data-index="${i}" data-key="minBright" value="${pass.minBright ?? 0.25}" style="width:40px;">
+                        </div>
                     `;
                 } else if (pass.type === 'color_grading') {
                     controls = `
@@ -839,7 +843,11 @@ export default class PropertiesPanel {
             btnAdd.addEventListener('click', () => {
                 const type = panel.querySelector('#pp-new-type').value;
                 this.editor._pushUndo();
-                this.editor._levelData.postprocessing.push({ type });
+                let newPass = { type };
+                if (type === 'cel') {
+                    newPass = { type: 'cel', tones: 5.0, satBoost: 1.1, minBright: 0.25 };
+                }
+                this.editor._levelData.postprocessing.push(newPass);
                 if (this.editor.renderer3d) this.editor.renderer3d.rebuildPostProcessing(this.editor._levelData.postprocessing);
                 this.editor._markDirty();
                 this._updatePropertiesPanel();

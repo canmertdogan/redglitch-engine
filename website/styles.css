@@ -7,33 +7,33 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #08080c;
-  --surface:     #121218;
-  --surface2:    #181822;
+  --bg:          #050509;
+  --surface:     #101018;
+  --surface2:    #1a1a26;
   --border:      rgba(255, 255, 255, 0.08);
   --border2:     rgba(255, 255, 255, 0.15);
-  --crimson:     #ff1e27;
-  --crimson-dim: #cc141c;
-  --crimson-glow: rgba(255, 30, 39, 0.18);
-  --green:       #00e676;
-  --text:        #f3f3f6;
-  --text-dim:    #b0b0bc;
-  --text-muted:  #707080;
+  --crimson:     #ff2a5f;
+  --crimson-dim: #cc224c;
+  --crimson-glow: rgba(255, 42, 95, 0.3);
+  --green:       #00f2fe;
+  --text:        #ffffff;
+  --text-dim:    #b3b3c5;
+  --text-muted:  #7a7a8c;
   
   /* Modern Web Typography */
-  --font:        'VT323', monospace;
+  --font:        'Inter', -apple-system, sans-serif;
   --font-mono:   'Space Mono', 'Courier New', monospace;
-  --display:     'VT323', monospace;
+  --display:     'Outfit', -apple-system, sans-serif;
   --display-retro: 'VT323', monospace;
   
   /* Premium Glassmorphism */
-  --glass-bg:      rgba(10, 10, 16, 0.72);
-  --glass-border:  rgba(255, 255, 255, 0.08);
-  --glass-shadow:  0 12px 40px 0 rgba(0, 0, 0, 0.6);
-  --glass-blur:    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  --glass-bg:      rgba(16, 16, 24, 0.65);
+  --glass-border:  rgba(255, 255, 255, 0.1);
+  --glass-shadow:  0 12px 40px 0 rgba(0, 0, 0, 0.7);
+  --glass-blur:    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   
-  --radius:      8px;
-  --radius-lg:   16px;
+  --radius:      12px;
+  --radius-lg:   24px;
   --scanline-opacity: 0.015;
 }
 
@@ -41,13 +41,12 @@ html { scroll-behavior: smooth; }
 
 body {
   background: var(--bg);
-  background-image: radial-gradient(circle at 50% -20%, rgba(255, 30, 39, 0.08) 0%, transparent 60%);
+  background-image: radial-gradient(circle at 50% -20%, rgba(255, 42, 95, 0.15) 0%, transparent 60%);
   color: var(--text);
   font-family: var(--font);
-  font-size: 19px;
-  line-height: 1.4;
-  -webkit-font-smoothing: none;
-  image-rendering: pixelated;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -123,9 +122,10 @@ body::after {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(10, 10, 10, 0.96);
-  border-bottom: 1px solid var(--crimson);
-  box-shadow: 0 0 20px rgba(255, 30, 39, 0.08);
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--border);
+  var(--glass-blur);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 }
 
 .nav-container {
@@ -262,37 +262,42 @@ body::after {
 .btn-primary {
   display: inline-flex;
   align-items: center;
-  padding: 10px 22px;
-  background: var(--crimson);
-  color: #000;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--crimson) 0%, #ff5e62 100%);
+  color: #fff;
   font-family: var(--font);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   border: none;
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: background 0.1s, transform 0.05s;
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 15px var(--crimson-glow);
 }
 
-.btn-primary:hover { background: var(--crimson-dim); transform: translateY(-1px); }
-.btn-primary.btn-large { padding: 13px 28px; font-size: 14px; }
+.btn-primary:hover { 
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 42, 95, 0.5);
+}
+.btn-primary.btn-large { padding: 14px 32px; font-size: 15px; }
 
 .btn-secondary {
   display: inline-flex;
   align-items: center;
-  padding: 10px 22px;
-  background: transparent;
+  padding: 12px 28px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text);
   font-family: var(--font);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   border: 1px solid var(--border2);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: border-color 0.1s, color 0.1s;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .btn-secondary:hover { border-color: var(--crimson); color: var(--crimson); }
@@ -395,8 +400,10 @@ body::after {
 }
 
 .hero-text h1 .hl {
-  color: var(--crimson);
-  text-shadow: 0 0 30px rgba(255, 30, 39, 0.35);
+  background: linear-gradient(to right, var(--crimson), #ff8a00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 40px rgba(255, 42, 95, 0.35);
 }
 
 .hero-sub {
@@ -521,30 +528,38 @@ body::after {
 }
 
 .engine-card {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  padding: 24px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--glass-bg);
+  var(--glass-blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
+  overflow: hidden;
 }
 
 .engine-card::before {
   content: '';
   position: absolute;
   top: 0; left: 0;
-  width: 3px; height: 100%;
-  background: var(--border2);
-  transition: background 0.15s;
+  width: 4px; height: 100%;
+  background: linear-gradient(to bottom, var(--crimson), transparent);
+  opacity: 0;
+  transition: opacity 0.4s;
 }
 
-.engine-card:hover { border-color: var(--crimson); box-shadow: 0 0 20px rgba(255,30,39,0.08); }
-.engine-card:hover::before { background: var(--crimson); }
+.engine-card:hover { 
+  border-color: var(--border2); 
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(255,42,95,0.15); 
+}
+.engine-card:hover::before { opacity: 1; }
 
 .engine-card.featured {
-  border-color: var(--crimson);
-  box-shadow: 0 0 20px rgba(255,30,39,0.08);
+  border-color: rgba(255, 42, 95, 0.3);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(255,42,95,0.1);
 }
-.engine-card.featured::before { background: var(--crimson); }
+.engine-card.featured::before { opacity: 1; }
 
 .engine-icon {
   font-size: 22px;

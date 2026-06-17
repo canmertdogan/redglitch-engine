@@ -36,7 +36,7 @@
  *   cs.onScoreChanged   = (score) => {};
  */
 
-import * as THREE from '../../lib/three/three.module.js';
+import * as THREE from '/lib/three/three.module.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unified 3D Engine — RedGlitch</title>
     <link href="../../fonts/fonts.css" rel="stylesheet">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "/lib/three/three.module.js",
+                "three/addons/": "/lib/three/addons/"
+            }
+        }
+    </script>
     <style>
         *, *::before, *::after {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -572,7 +580,7 @@
         });
 
         document.addEventListener('pointerlockerror', () => {
-            showError('Pointer lock failed — click the game window to try again');
+            console.warn('[Unified3D Launcher] Pointer lock failed — waiting for user gesture.');
         });
 
         // ── Keyboard shortcuts ────────────────────────────────────────────

@@ -197,7 +197,7 @@ class Camera3DController {
 
     requestPointerLock() {
         if (this.domElement.requestPointerLock) {
-            this.domElement.requestPointerLock();
+            this.domElement.requestPointerLock()?.catch?.(() => {});
         }
     }
 

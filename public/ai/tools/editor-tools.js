@@ -57,7 +57,7 @@ export class EditorTools {
             'pixel': 'pixel_editor.html',
             'fx': 'fx_editor.html',
             'background': 'background_editor.html',
-            'shader': 'shader_editor.html',
+            'shader': 'shader_lab.html',
             'input': 'input_editor.html'
         };
 

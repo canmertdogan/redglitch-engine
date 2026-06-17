@@ -30,6 +30,24 @@ window.Core = class Core {
             console.log("Interactive Cutscene Engine initialized");
         } 
         
+        // Initialize Universal UI Runtime (HUD)
+        import('../shared/UIRuntime.js').then(m => {
+            this.uiRuntime = new m.UIRuntime();
+            // Container is usually body or a specific #game-container
+            this.uiRuntime.init(document.body);
+            this.uiRuntime.onAction((action) => {
+                // If the UI Designer button is mapped to an action
+                console.log('[HUD] Action Triggered:', action);
+            });
+            fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
+                if (data) {
+                    this.uiRuntime.load(data);
+                    this.uiRuntime.showScreen('main_hud');
+                    this.updateHUD(); // force sync
+                }
+            }).catch(e => console.log('No HUD config found'));
+        });
+        
         this.isRunning = false; this.isPaused = false;
         this.player = {
             x: 0, y: 0, width: 16, height: 16, scale: 3, speed: 250, direction: 1, hp: 100, maxHp: 100, mana: 50, maxMana: 50, stamina: 100, maxStamina: 100,
@@ -303,6 +321,12 @@ window.Core = class Core {
         // Cleanup Input
         if (this.input && this.input.destroy) {
             this.input.destroy();
+        }
+
+        // Cleanup UIRuntime
+        if (this.uiRuntime) {
+            this.uiRuntime.destroy();
+            this.uiRuntime = null;
         }
 
         // Remove Resize Listener
@@ -675,8 +699,23 @@ window.Core = class Core {
         this.updateHUD();
     }
     updateHUD() { 
-        if (!this.player || !this.uiBars) return; if (this.uiBars.hp) this.uiBars.hp.style.width = `${(this.player.hp/this.player.maxHp)*100}%`; if (this.uiBars.stamina) this.uiBars.stamina.style.width = `${(this.player.stamina/this.player.maxStamina)*100}%`; if (this.uiBars.mana) this.uiBars.mana.style.width = `${(this.player.mana/this.player.maxMana)*100}%`; 
+        // Legacy HUD updates
+        if (this.player && this.uiBars) { if (this.uiBars.hp) this.uiBars.hp.style.width = `${(this.player.hp/this.player.maxHp)*100}%`; if (this.uiBars.stamina) this.uiBars.stamina.style.width = `${(this.player.stamina/this.player.maxStamina)*100}%`; if (this.uiBars.mana) this.uiBars.mana.style.width = `${(this.player.mana/this.player.maxMana)*100}%`; }
         const hours = Math.floor(this.gameTime); const minutes = Math.floor((this.gameTime - hours) * 60); const clockEl = document.getElementById('game-clock') || document.getElementById('clock'); if (clockEl) { clockEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`; }
+
+        // New Universal HUD Sync
+        if (this.uiRuntime && this.player) {
+            this.uiRuntime.sync({
+                player: {
+                    hp: this.player.hp, maxHp: this.player.maxHp,
+                    mana: this.player.mana, maxMana: this.player.maxMana,
+                    stamina: this.player.stamina, maxStamina: this.player.maxStamina
+                },
+                gameTimeFormatted: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+                inventory: this.inventory || [],
+                activeSkills: this.activeSkills || []
+            });
+        }
     }
     useItem(idx) { const item = this.inventory[idx]; if (!item) return; if (item.type === 'heal') this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.value); if (item.type === 'mana') this.player.mana = Math.min(this.player.maxMana, this.player.mana + item.value); if (item.type === 'stamina') this.player.stamina = Math.min(this.player.maxStamina, this.player.stamina + item.value); this.createExplosion(this.player.x + 24, this.player.y + 24, '#fff', 10); this.inventory.splice(idx, 1); this.updateInventoryHUD(); }
     useSkill(slotIdx) {
@@ -713,6 +752,8 @@ window.Core = class Core {
                 slot.appendChild(icon);
             }
         });
+        
+        if (this.uiRuntime) this.updateHUD();
     }
 
     updateInventoryHUD() {
@@ -727,6 +768,8 @@ window.Core = class Core {
                 slot.appendChild(icon);
             }
         });
+        
+        if (this.uiRuntime) this.updateHUD();
     }
     draw(alpha) {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); 

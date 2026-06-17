@@ -29,7 +29,7 @@
  *   pc.destroy();
  */
 
-import * as THREE from '../../lib/three/three.module.js';
+import * as THREE from '/lib/three/three.module.js';
 import { MoveState } from './CharacterController3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────

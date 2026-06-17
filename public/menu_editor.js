@@ -77,6 +77,12 @@ const ELEMENT_DEFAULTS = {
         rect: { x: 50, y: 50, w: 200, h: 30 },
         style: { backgroundColor: '#000', borderWidth: 2, borderColor: '#fff', color: '#fff', fontSize: 18, textAlign: 'center' },
         props: { fillColor: '#e74c3c', variable: 'hp', maxVariable: 'maxHp' }
+    },
+    slot: {
+        text: '',
+        rect: { x: 50, y: 50, w: 48, h: 48 },
+        style: { backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 2, borderColor: '#555', color: '#fff', fontSize: 12, textAlign: 'right' },
+        props: { variable: 'inventory.0' }
     }
 };
 
@@ -548,6 +554,32 @@ class UIStudio {
             label.className = 'preview-bar-label';
             label.textContent = data.text || 'BAR';
             inner.appendChild(label);
+        } else if (data.type === 'slot') {
+            inner = document.createElement('div');
+            inner.className = 'preview-slot';
+            this._applyPreviewStyle(inner, s);
+            inner.style.display = 'flex';
+            inner.style.alignItems = 'flex-end';
+            inner.style.justifyContent = 'flex-end';
+            inner.style.padding = '2px 4px';
+            
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-box';
+            icon.style.position = 'absolute';
+            icon.style.top = '50%';
+            icon.style.left = '50%';
+            icon.style.transform = 'translate(-50%, -50%)';
+            icon.style.opacity = '0.3';
+            icon.style.fontSize = '24px';
+            inner.appendChild(icon);
+            
+            if (data.text) {
+                const count = document.createElement('div');
+                count.textContent = data.text;
+                count.style.position = 'relative';
+                count.style.zIndex = '1';
+                inner.appendChild(count);
+            }
         }
 
         if (inner) {
@@ -630,7 +662,7 @@ class UIStudio {
         });
 
         if (this.selection.length === 0) {
-            container.innerHTML = '<div class="inspector-empty"><i class="fas fa-hand-pointer"></i><div>SELECT AN ELEMENT</div></div>';
+            this._renderScreenProps(container);
             return;
         }
 
@@ -659,6 +691,40 @@ class UIStudio {
         container.appendChild(footer);
     }
 
+    _renderScreenProps(container) {
+        if (!this.activeScreen || !this.data.screens[this.activeScreen]) {
+            container.innerHTML = '<div class="inspector-empty"><i class="fas fa-desktop"></i><div>SELECT A SCREEN</div></div>';
+            return;
+        }
+        const screen = this.data.screens[this.activeScreen];
+
+        const gProps = this._addGroup(container, 'SCREEN PROPERTIES');
+        this._addProp(gProps, 'NAME', this.activeScreen, 'text', null);
+
+        // HUD Overlay Toggle
+        const isHudRow = document.createElement('div'); isHudRow.className = 'prop-row';
+        const isHudLbl = document.createElement('span'); isHudLbl.className = 'prop-label'; isHudLbl.textContent = 'IS HUD OVERLAY';
+        const isHudSelect = document.createElement('select'); isHudSelect.className = 'prop-input';
+        
+        const optNo = document.createElement('option'); optNo.value = 'false'; optNo.textContent = 'False (Standard Menu)';
+        const optYes = document.createElement('option'); optYes.value = 'true'; optYes.textContent = 'True (In-Game HUD)';
+        
+        if (screen.isHud) optYes.selected = true;
+        else optNo.selected = true;
+        
+        isHudSelect.appendChild(optNo);
+        isHudSelect.appendChild(optYes);
+        
+        isHudSelect.onchange = () => {
+            screen.isHud = (isHudSelect.value === 'true');
+            this.markDirty();
+        };
+        
+        isHudRow.appendChild(isHudLbl);
+        isHudRow.appendChild(isHudSelect);
+        gProps.appendChild(isHudRow);
+    }
+
     _renderPropsTab(container, el) {
         // Identity
         const gId = this._addGroup(container, 'IDENTITY');
@@ -679,10 +745,12 @@ class UIStudio {
         this._addProp(gGeo, 'W', el.rect.w, 'number', v => { this.pushUndo(); el.rect.w = Math.max(10, v); this.markDirty(); this.renderCanvas(); });
         this._addProp(gGeo, 'H', el.rect.h, 'number', v => { this.pushUndo(); el.rect.h = Math.max(10, v); this.markDirty(); this.renderCanvas(); });
 
+        // Data Binding (Universal)
+        const gBind = this._addGroup(container, 'DATA BINDING');
+        this._addProp(gBind, 'BIND VARIABLE', el.props?.variable || '', 'text', v => { if (!el.props) el.props = {}; el.props.variable = v; this.markDirty(); });
+        
         // Bar-specific data binding
         if (el.type === 'bar') {
-            const gBind = this._addGroup(container, 'DATA BINDING');
-            this._addProp(gBind, 'VARIABLE', el.props?.variable || '', 'text', v => { if (!el.props) el.props = {}; el.props.variable = v; this.markDirty(); });
             this._addProp(gBind, 'MAX VAR', el.props?.maxVariable || '', 'text', v => { if (!el.props) el.props = {}; el.props.maxVariable = v; this.markDirty(); });
             this._addColorProp(gBind, 'FILL COLOR', el.props?.fillColor || '#e74c3c', v => { if (!el.props) el.props = {}; el.props.fillColor = v; this.markDirty(); this.renderCanvas(); });
         }
@@ -1441,7 +1509,14 @@ class UIStudio {
             const ctrl = e.ctrlKey || e.metaKey;
 
             // Ctrl+S — save
-            if (ctrl && e.key === 's') { e.preventDefault(); this.save(); return; }
+            if (ctrl && e.key === 's') { 
+                e.preventDefault(); 
+                this.save(); 
+                if (window.parent && window.parent.RedGlitchEventBus) {
+                    window.parent.RedGlitchEventBus.emit('system:project:save_request');
+                }
+                return; 
+            }
             // Ctrl+Z — undo
             if (ctrl && e.key === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); return; }
             // Ctrl+Y or Ctrl+Shift+Z — redo
@@ -1730,3 +1805,12 @@ class UIStudio {
 // Boot
 // ═══════════════════════════════════════════
 window.studio = new UIStudio();
+
+// Listen for global save
+if (window.parent && window.parent.RedGlitchEventBus) {
+    window.parent.RedGlitchEventBus.on('system:global_save', () => {
+        if (window.studio && window.studio.dirty) {
+            window.studio.save();
+        }
+    });
+}

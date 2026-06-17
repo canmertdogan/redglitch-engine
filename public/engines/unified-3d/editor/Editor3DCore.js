@@ -22,6 +22,7 @@ import { ShaderEditorUI } from './ShaderEditorUI.js';
 import { MaterialPackManager } from '/engines/shared/MaterialPresets.js';
 import { Evaluator, Brush, ADDITION, SUBTRACTION, INTERSECTION } from 'three-bvh-csg';
 import PropertiesPanel from './panels/PropertiesPanel.js';
+import AssetLoader3D from '/engines/shared/AssetLoader3D.js';
 
 export default class Editor3DCore {
 
@@ -134,10 +135,11 @@ export default class Editor3DCore {
 
         // ── Renderer ──────────────────────────────────────────────────────
         this.renderer3d = new Renderer3D(this.container, {
-            outline:   true,
+            outline:   false,
             cel:       true,
-            tones:     3,
-            outlinePx: 1.5,
+            tones:     5,
+            satBoost:  1.1,
+            minBright: 0.25,
         });
         await this.renderer3d.init();
         this.scene    = this.renderer3d.scene;
@@ -147,13 +149,22 @@ export default class Editor3DCore {
         this._updateOrbitCamera();
 
         // ── Lighting ──────────────────────────────────────────────────────
-        this._ambLight = new THREE.AmbientLight(0xffffff, 2.0); // Boosted
+        this._ambLight = new THREE.AmbientLight(0xffffff, 4.0);
         this.scene.add(this._ambLight);
         
-        this._sunLight = new THREE.DirectionalLight(0xfffbe0, 3.0); // Boosted for physically correct
+        this._sunLight = new THREE.DirectionalLight(0xfffbe0, 2.0);
         this._sunLight.position.set(30, 60, 30);
+        this._sunLight.target.position.set(0, 0, 0);
         this._sunLight.castShadow = true;
         this._sunLight.shadow.mapSize.set(2048, 2048);
+        this._sunLight.shadow.camera.left = -100;
+        this._sunLight.shadow.camera.right = 100;
+        this._sunLight.shadow.camera.top = 100;
+        this._sunLight.shadow.camera.bottom = -100;
+        this._sunLight.shadow.camera.near = 1;
+        this._sunLight.shadow.camera.far = 200;
+        this._sunLight.shadow.bias = -0.0005;
+        this._sunLight.shadow.normalBias = 0.02;
         this.scene.add(this._sunLight);
         this.scene.add(this._sunLight.target);
 
@@ -167,6 +178,16 @@ export default class Editor3DCore {
         this.gridHelper.material.opacity = 0.5;
         this.gridHelper.material.depthWrite = false;
         this.scene.add(this.gridHelper);
+
+        // ── Ground plane (shadow receiver) ──────────────────────────────
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+        this.groundPlane = new THREE.Mesh(groundGeo, groundMat);
+        this.groundPlane.rotation.x = -Math.PI / 2;
+        this.groundPlane.position.y = 0;
+        this.groundPlane.receiveShadow = true;
+        this.groundPlane.renderOrder = -10;
+        this.scene.add(this.groundPlane);
 
         // ── Groups ────────────────────────────────────────────────────────
         this.meshGroup   = new THREE.Group(); this.meshGroup.name = 'meshGroup';
@@ -359,6 +380,143 @@ export default class Editor3DCore {
         input.click();
     }
 
+    async importFBX() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.fbx';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                // Use AssetLoader3D to load FBX
+                const loader = new AssetLoader3D(this.scene, this.renderer3d?.paletteManager);
+                const { group, animations } = await loader.loadFBX(URL.createObjectURL(file), {
+                    cache: false,
+                    flatShading: true,
+                    remapColors: true,
+                });
+
+                // Add each mesh from the group to the scene
+                let meshCount = 0;
+                group.traverse((child) => {
+                    if (child.isMesh) {
+                        child.name = `fbx_${Date.now()}_${meshCount++}`;
+                        child.userData = { type: 'trimesh', imported: true, source: 'fbx' };
+                        this.meshGroup.add(child.clone());
+                    }
+                });
+
+                this._updateSceneTree();
+                this._markDirty();
+                console.log(`[Editor3DCore] Imported ${meshCount} meshes from FBX: ${file.name}`);
+            } catch (err) {
+                console.error('[Editor3DCore] FBX import failed:', err);
+                alert('Failed to import FBX: ' + err.message);
+            }
+        };
+        input.click();
+    }
+
+    async importOBJ() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.obj';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const loader = new AssetLoader3D(this.scene, this.renderer3d?.paletteManager);
+                const url = URL.createObjectURL(file);
+
+                // Check if an MTL file with the same basename exists alongside the OBJ
+                let mtlUrl = null;
+                const objName = file.name.toLowerCase();
+                if (objName.endsWith('.obj')) {
+                    // Try to find a companion .mtl file
+                    const basename = file.name.slice(0, -4);
+                    const mtlFile = e.target.files[1]; // second file if user selected multiple
+                    if (mtlFile && mtlFile.name.toLowerCase() === basename + '.mtl') {
+                        mtlUrl = URL.createObjectURL(mtlFile);
+                    } else if (file.webkitRelativePath) {
+                        // If running in a directory-aware context, try to guess MTL path
+                        const mtlPath = file.webkitRelativePath.replace(/\.obj$/i, '.mtl');
+                        // Not easily resolved from a File object
+                    }
+                }
+
+                const { group } = await loader.loadOBJ(url, mtlUrl, {
+                    cache: false,
+                    flatShading: true,
+                    remapColors: true,
+                });
+
+                let meshCount = 0;
+                group.traverse((child) => {
+                    if (child.isMesh) {
+                        child.name = `obj_${Date.now()}_${meshCount++}`;
+                        child.userData = { type: 'trimesh', imported: true, source: 'obj' };
+                        this.meshGroup.add(child.clone());
+                    }
+                });
+
+                this._updateSceneTree();
+                this._markDirty();
+                console.log(`[Editor3DCore] Imported ${meshCount} meshes from OBJ: ${file.name}`);
+            } catch (err) {
+                console.error('[Editor3DCore] OBJ import failed:', err);
+                alert('Failed to import OBJ: ' + err.message);
+            }
+        };
+        input.click();
+    }
+
+    async importBlend() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.blend';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!this._project) {
+                alert('Please load or create a project first before importing .blend files');
+                return;
+            }
+
+            try {
+                // Upload .blend file for server-side conversion
+                const loader = new AssetLoader3D(this.scene, this.renderer3d?.paletteManager);
+                const asset = await loader.importBlend(this._project, file);
+
+                // Load the converted GLB
+                const { scene, animations } = await loader.loadGLTF(asset.url, {
+                    cache: true,
+                    flatShading: true,
+                    remapColors: true,
+                });
+
+                let meshCount = 0;
+                scene.traverse((child) => {
+                    if (child.isMesh) {
+                        child.name = `blend_${Date.now()}_${meshCount++}`;
+                        child.userData = { type: 'trimesh', imported: true, source: 'blend' };
+                        this.meshGroup.add(child.clone());
+                    }
+                });
+
+                this._updateSceneTree();
+                this._markDirty();
+                console.log(`[Editor3DCore] Imported ${meshCount} meshes from Blender: ${file.name} (converted to ${asset.name})`);
+            } catch (err) {
+                console.error('[Editor3DCore] Blender import failed:', err);
+                alert('Failed to import .blend: ' + err.message);
+            }
+        };
+        input.click();
+    }
+
     _getDefaultSkybox(modeId = this._mode) {
         if (typeof this._createDefaultSkyboxConfig === 'function') {
             return this._createDefaultSkyboxConfig(modeId);
@@ -397,8 +555,7 @@ export default class Editor3DCore {
         );
         if (!level.postprocessing) {
             level.postprocessing = [
-                { type: 'outline', edgeThickness: 1.5, edgeStrength: 3.0 },
-                { type: 'cel', tones: 3.0, satBoost: 1.1 }
+                { type: 'cel', tones: 5.0, satBoost: 1.1, minBright: 0.25 }
             ];
         }
         return level;
@@ -1083,7 +1240,8 @@ export default class Editor3DCore {
             emissiveIntensity: overrides.emissiveIntensity ?? emissiveIntensity,
             opacity, 
             transparent,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            flatShading: true
         });
 
         if (materialId) {

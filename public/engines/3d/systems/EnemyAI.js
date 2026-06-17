@@ -34,9 +34,9 @@
  *   { id, position[3], normal[3]? }
  */
 
-import * as THREE          from '../../lib/three/three.module.js';
-import Pathfinding3D       from '../topdown-3d/Pathfinding3D.js';
-import { BodyType, ShapeType } from '../shared/Physics3DWorld.js';
+import * as THREE          from '/lib/three/three.module.js';
+import Pathfinding3D       from './Pathfinding3D.js';
+import { BodyType, ShapeType } from '/engines/shared/Physics3DWorld.js';
 
 // ── Enemy states ──────────────────────────────────────────────────────────────
 

@@ -25,8 +25,8 @@
  */
 
 import * as THREE from '/lib/three/three.module.js';
-import { BodyType, ShapeType } from '../shared/Physics3DWorld.js';
-import VoxelMeshGen from '../shared/VoxelMeshGen.js';
+import { BodyType, ShapeType } from '/engines/shared/Physics3DWorld.js';
+import VoxelMeshGen from '/engines/shared/VoxelMeshGen.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -221,11 +221,11 @@ export default class WorldGeometry {
 
     async _loadEditorGeometry(geometryData) {
         console.log(`[WorldGeometry] loading ${geometryData.length} editor shapes`);
-        const { hexMaterial, PrimitiveFactory } = await import('../shared/Renderer3D.js');
+        const { hexMaterial, PrimitiveFactory } = await import('/engines/shared/Renderer3D.js');
 
         // Load atlas if any shape needs it
         if (geometryData.some(d => d.textureId)) {
-            const { default: TextureAtlas3D } = await import('../shared/TextureAtlas3D.js');
+            const { default: TextureAtlas3D } = await import('/engines/shared/TextureAtlas3D.js');
             this._atlas = new TextureAtlas3D();
             await this._atlas.loadAsync(THREE);
             this._tilesetEnabled = true;

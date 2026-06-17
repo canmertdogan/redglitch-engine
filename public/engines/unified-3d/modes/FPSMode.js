@@ -18,15 +18,15 @@ import {
 } from '../../shared/Save3D.js';
 
 // FPS-specific subsystems (still live in engines/fps-3d/)
-import FPS3DStrategy     from '../../fps-3d/FPS3DStrategy.js';
-import FPSCamera         from '../../fps-3d/FPSCamera.js';
-import FPSController, { MoveState } from '../../fps-3d/FPSController.js';
-import WorldGeometry     from '../../fps-3d/WorldGeometry.js';
-import WeaponSystem, { WeaponState } from '../../fps-3d/WeaponSystem.js';
-import EnemyAI, { EnemyState, Difficulty } from '../../fps-3d/EnemyAI.js';
-import HUD_FPS           from '../../fps-3d/HUD_FPS.js';
-import DecalSystem       from '../../fps-3d/DecalSystem.js';
-import VFX_FPS           from '../../fps-3d/VFX_FPS.js';
+import FPS3DStrategy     from '../../3d/systems/FPS3DStrategy.js';
+import FPSCamera         from '../../3d/systems/FPSCamera.js';
+import FPSController, { MoveState } from '../../3d/systems/FPSController.js';
+import WorldGeometry     from '../../3d/systems/WorldGeometry.js';
+import WeaponSystem, { WeaponState } from '../../3d/systems/WeaponSystem.js';
+import EnemyAI, { EnemyState, Difficulty } from '../../3d/systems/EnemyAI.js';
+import HUD_FPS           from '../../3d/systems/HUD_FPS.js';
+import DecalSystem       from '../../3d/systems/DecalSystem.js';
+import VFX_FPS           from '../../3d/systems/VFX_FPS.js';
 
 // ── FPSMode ───────────────────────────────────────────────────────────────────
 
@@ -360,9 +360,9 @@ export default class FPSMode extends ModeInterface {
     // ── Pointer lock ──────────────────────────────────────────────────────────
 
     requestPointerLock() {
-        this.fpsCamera
+        this.fpsCamera 
             ? this.fpsCamera.requestPointerLock()
-            : document.body.requestPointerLock?.();
+            : document.body.requestPointerLock?.()?.catch?.(() => {});
     }
 
     releasePointerLock() {

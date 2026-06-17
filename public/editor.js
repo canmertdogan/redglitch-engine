@@ -410,6 +410,9 @@ class WorldEditor {
                     e.preventDefault();
                     console.log("Ctrl+S detected. Triggering save...");
                     saveToServer(false); // Quick save
+                    if (window.parent && window.parent.RedGlitchEventBus) {
+                        window.parent.RedGlitchEventBus.emit('system:project:save_request');
+                    }
                 }
                 
                 // Save As (Ctrl+Shift+S)
@@ -2171,5 +2174,14 @@ window.showSaveNotification = window.editorInstance.showSaveNotification;
 window.downloadJSON = window.editorInstance.downloadJSON;
 window.openTileMapper = window.editorInstance.openTileMapper;
 window.drawPreview = window.editorInstance.drawPreview;
+
+// Listen for global save
+if (window.parent && window.parent.RedGlitchEventBus) {
+    window.parent.RedGlitchEventBus.on('system:global_save', () => {
+        if (typeof saveToServer === 'function') {
+            saveToServer(false);
+        }
+    });
+}
 window.filterPalette = window.editorInstance.filterPalette;
 window.suggestNextLevelName = window.editorInstance.suggestNextLevelName;

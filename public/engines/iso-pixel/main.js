@@ -7,6 +7,18 @@ class IsoGame {
         // Initialize new FX and HUD systems (loaded via script tags)
         this.fx = null;
         this.hud = null;
+
+        // Universal UI Runtime (HUD)
+        import('../shared/UIRuntime.js').then(m => {
+            this.uiRuntime = new m.UIRuntime();
+            this.uiRuntime.init(document.body);
+            fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
+                if (data) {
+                    this.uiRuntime.load(data);
+                    this.uiRuntime.showScreen('main_hud');
+                }
+            }).catch(e => console.log('No HUD config found'));
+        }).catch(e => console.log('Could not load UIRuntime', e));
         
         // Shader system (WebGL post-processing)
         this.shaders = null;
@@ -141,6 +153,12 @@ class IsoGame {
         const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
         if (eventBus && this.eventBusIds) {
             this.eventBusIds.forEach(id => eventBus.off('*', id));
+        }
+
+        // Cleanup UIRuntime
+        if (this.uiRuntime) {
+            this.uiRuntime.destroy();
+            this.uiRuntime = null;
         }
 
         console.log('[IsoEngine] Destroyed and cleaned up listeners.');
@@ -343,6 +361,22 @@ class IsoGame {
                 maxStamina: this.player.maxStamina,
                 xp: this.player.xp,
                 level: this.player.level
+            });
+        }
+
+        // Universal UI Runtime
+        if (this.uiRuntime) {
+            this.uiRuntime.sync({
+                player: {
+                    hp: this.player.hp,
+                    maxHp: this.player.maxHp,
+                    mana: this.player.mana,
+                    maxMana: this.player.maxMana,
+                    stamina: this.player.stamina,
+                    maxStamina: this.player.maxStamina,
+                    xp: this.player.xp,
+                    level: this.player.level
+                }
             });
         }
     }

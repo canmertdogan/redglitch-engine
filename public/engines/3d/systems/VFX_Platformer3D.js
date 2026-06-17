@@ -5,7 +5,7 @@
  * No texture sheets. Flat-shaded MeshLambertMaterial throughout.
  */
 
-import * as _THREE_MOD from '../../../lib/three/three.module.js';
+import * as _THREE_MOD from '/lib/three/three.module.js';
 const THREE = (typeof globalThis !== 'undefined' && globalThis.THREE) || _THREE_MOD;
 
 // ─── Geometry cache (shared across all instances) ─────────────────────────────

@@ -559,6 +559,24 @@
 
     <script src="js/Studio.js"></script>
 
+    <!-- Auto-Maximize Logic -->
+    <script>
+        // Desktop App (Electron) Mode: Maximize immediately
+        if (window.electronAPI) {
+            window.electronAPI.maximize();
+        }
+
+        // Web Browser Mode: Maximize on first click
+        document.addEventListener('click', function autoFullscreen() {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log('Could not auto-maximize:', err);
+                });
+            }
+            document.removeEventListener('click', autoFullscreen);
+        }, { once: true });
+    </script>
+
     <!-- Integration System -->
     <script src="shared/EventBus.js?v=6"></script>
     <script src="shared/SharedProjectState.js?v=6"></script>

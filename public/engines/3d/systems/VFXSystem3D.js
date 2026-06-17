@@ -35,7 +35,7 @@
  *   vfx.dispose();
  */
 
-import * as THREE from '../../lib/three/three.module.js';
+import * as THREE from '/lib/three/three.module.js';
 
 // ─── Effect type registry ─────────────────────────────────────────────────────
 export const EffectType = Object.freeze({

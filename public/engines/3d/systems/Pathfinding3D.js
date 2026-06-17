@@ -17,7 +17,7 @@
  *   pf.dispose();
  */
 
-import * as THREE from '../../lib/three/three.module.js';
+import * as THREE from '/lib/three/three.module.js';
 
 // ─── Area cost table ──────────────────────────────────────────────────────────
 export const AreaType = Object.freeze({
