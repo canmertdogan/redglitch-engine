@@ -24,6 +24,21 @@ const MODE_REGISTRY = Object.freeze({
     'platformer-3d': () => import('./modes/PlatformerMode.js'),
 });
 
+const MODE_ALIASES = Object.freeze({
+    fps: 'fps-3d',
+    topdown: 'topdown-3d',
+    platformer: 'platformer-3d',
+});
+
+export function normalize3DMode(engineType, fallback = 'fps-3d') {
+    const requested = engineType === 'unified-3d' ? fallback : (engineType || fallback);
+    const normalized = MODE_ALIASES[requested] || requested;
+    if (!MODE_REGISTRY[normalized]) {
+        throw new Error(`[Unified3DGame] Unknown engine type: "${engineType}"`);
+    }
+    return normalized;
+}
+
 // ── Unified3DGame ─────────────────────────────────────────────────────────────
 
 export default class Unified3DGame {
@@ -46,7 +61,10 @@ export default class Unified3DGame {
         }
 
         /** @type {string} */
-        this._requestedType = options.engineType || 'fps-3d';
+        this._requestedType = normalize3DMode(
+            options.engineType,
+            options.mode || 'fps-3d',
+        );
 
         /** @type {object} */
         this._options = options;
@@ -65,7 +83,7 @@ export default class Unified3DGame {
      * @param {string} [engineType]  Override initial type (used by campaign switchEngine)
      */
     async init(engineType) {
-        const type = engineType || this._requestedType;
+        const type = normalize3DMode(engineType, this._requestedType);
         console.log(`[Unified3DGame] init(${type})`);
 
         // Create the core game instance
@@ -95,7 +113,9 @@ export default class Unified3DGame {
      */
     async switchMode(engineType) {
         if (!this.core) throw new Error('[Unified3DGame] Not initialised — call init() first');
-        console.log(`[Unified3DGame] switchMode → ${engineType}`);
+        const type = normalize3DMode(engineType, this._requestedType);
+        if (type === this.core.engineType3D) return;
+        console.log(`[Unified3DGame] switchMode → ${type}`);
 
         // Pause during switch
         this.core.pause();
@@ -104,10 +124,10 @@ export default class Unified3DGame {
         await this.core.unloadLevel3D();
 
         // Load new mode
-        await this._loadAndSetMode(engineType);
+        await this._loadAndSetMode(type);
 
         // Update requested type
-        this._requestedType = engineType;
+        this._requestedType = type;
 
         // Re-expose globals
         this._exposeGlobals();
@@ -115,7 +135,7 @@ export default class Unified3DGame {
         // Resume
         this.core.resume();
 
-        console.log(`[Unified3DGame] switchMode complete → ${engineType}`);
+        console.log(`[Unified3DGame] switchMode complete → ${type}`);
     }
 
     /** Set username and start the game loop. */
@@ -127,12 +147,23 @@ export default class Unified3DGame {
     /** Load a project level from the server. */
     async loadProject(projectName, levelId) {
         if (!this.core) throw new Error('[Unified3DGame] Not initialised');
-        await this.core.loadProject(projectName, levelId);
+        const response = await fetch(`/api/levels3d/${encodeURIComponent(projectName)}/${encodeURIComponent(levelId)}`);
+        if (!response.ok) {
+            throw new Error(`[Unified3DGame] Failed to load ${projectName}/${levelId} (HTTP ${response.status})`);
+        }
+        const levelData = await response.json();
+        this.core.currentProject = projectName;
+        await this.loadLevelFromData(levelData);
     }
 
     /** Load a level directly from JSON data (playtest mode). */
     async loadLevelFromData(levelData) {
         if (!this.core) throw new Error('[Unified3DGame] Not initialised');
+        const requestedMode = levelData?.engineType === 'unified-3d'
+            ? levelData.mode
+            : levelData?.engineType;
+        const mode = normalize3DMode(requestedMode, this._requestedType);
+        if (mode !== this.core.engineType3D) await this.switchMode(mode);
         await this.core.loadLevelFromData(levelData);
     }
 
@@ -180,7 +211,8 @@ export default class Unified3DGame {
     // ── Internal ──────────────────────────────────────────────────────────────
 
     async _loadAndSetMode(engineType) {
-        const loader = MODE_REGISTRY[engineType];
+        const normalizedType = normalize3DMode(engineType, this._requestedType);
+        const loader = MODE_REGISTRY[normalizedType];
         if (!loader) {
             throw new Error(`[Unified3DGame] Unknown engine type: "${engineType}". Valid: ${Object.keys(MODE_REGISTRY).join(', ')}`);
         }
@@ -190,6 +222,7 @@ export default class Unified3DGame {
         const modeInstance = new ModeClass();
 
         await this.core.setMode(modeInstance);
+        this._requestedType = normalizedType;
     }
 
     /**

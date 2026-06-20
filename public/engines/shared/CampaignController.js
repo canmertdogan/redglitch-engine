@@ -114,22 +114,20 @@ class CampaignController {
                 'engines/platformer-2d/main.js'
             ],
             'topdown-3d': [
-                'engines/shared/Engine3DBase.js',
-                'engines/shared/Engine3DAdapter.js',
-                'engines/3d/Unified3DAdapter.js'
+                'engines/unified-3d/Unified3DAdapter.js'
             ],
             'fps-3d': [
-                'engines/shared/Engine3DBase.js',
-                'engines/shared/Engine3DAdapter.js',
-                'engines/3d/Unified3DAdapter.js'
+                'engines/unified-3d/Unified3DAdapter.js'
             ],
             'platformer-3d': [
-                'engines/shared/Engine3DBase.js',
-                'engines/shared/Engine3DAdapter.js',
-                'engines/3d/Unified3DAdapter.js'
+                'engines/unified-3d/Unified3DAdapter.js'
+            ],
+            'unified-3d': [
+                'engines/unified-3d/Unified3DAdapter.js'
             ]
         };
         this.loadedEngines = new Set();
+        this.engineConstructors = new Map();
         
         this.slotId = null;
         this.playTimeStart = null;
@@ -277,7 +275,7 @@ class CampaignController {
     }
 
     async _handleLevelNode(node) {
-        const engineType = node.engineType || 'rpg-topdown';
+        const engineType = this._resolveEngineType(node);
         const levelId = node.levelId || node.id;
         const levelPath = node.levelPath || null;
         let projectName = node.projectName || node.project || this.campaignMetadata?.project || null;
@@ -295,20 +293,42 @@ class CampaignController {
                 if (projectName && typeof this.currentAdapter.setProject === 'function') {
                     this.currentAdapter.setProject(projectName);
                 }
-                this.currentAdapter.onLevelComplete((data) => {
+                this.currentAdapter.onLevelComplete(async (data) => {
                     this.playerData = this.currentAdapter.getPlayerData();
-                    this.advance();
+                    try {
+                        await this.advance();
+                    } catch (error) {
+                        console.error('[CampaignController] Failed to advance campaign:', error);
+                    }
                 });
                 await this.currentAdapter.loadLevel(levelId, levelPath);
                 this.currentAdapter.start();
             }
         } catch (error) {
             console.error('Failed to load level:', error);
+            throw error;
         }
     }
 
     _is3DEngine(type) {
-        return ['topdown-3d', 'fps-3d', 'platformer-3d'].includes(type);
+        return ['unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'].includes(type);
+    }
+
+    _resolveEngineType(node) {
+        const engineType = node?.engineType || 'rpg-topdown';
+        if (engineType !== 'unified-3d') return engineType;
+
+        const aliases = {
+            fps: 'fps-3d',
+            topdown: 'topdown-3d',
+            platformer: 'platformer-3d'
+        };
+        const requestedMode = node.mode || node.engineMode || node.unifiedMode || 'fps-3d';
+        const mode = aliases[requestedMode] || requestedMode;
+        if (!['topdown-3d', 'fps-3d', 'platformer-3d'].includes(mode)) {
+            throw new Error(`Invalid Unified3D mode: ${requestedMode}`);
+        }
+        return mode;
     }
 
     async _resolveActiveProjectName() {
@@ -333,10 +353,9 @@ class CampaignController {
             
             if (isModule) {
                 console.log(`[CampaignController] Importing module: ${src}`);
-                try {
-                    await import(`/${src}?v=${Date.now()}`);
-                } catch (err) {
-                    console.error(`[CampaignController] Module import failed for ${src}:`, err);
+                const module = await import(`/${src}`);
+                if (src.endsWith('Unified3DAdapter.js') && module.default) {
+                    this.engineConstructors.set('unified-3d', module.default);
                 }
             } else {
                 const cleanSrc = src.split('?')[0];
@@ -383,6 +402,9 @@ class CampaignController {
                 this._showTransitionScreen(newEngineType);
                 this.playerData = this.currentAdapter.getPlayerData();
                 await this.currentAdapter.switchMode(newEngineType);
+                if (this.playerData) {
+                    await Promise.resolve(this.currentAdapter.setPlayerData(this.playerData));
+                }
                 this.currentEngineType = newEngineType;
                 if (this.onEngineSwitch) this.onEngineSwitch(newEngineType);
             } else {
@@ -409,14 +431,19 @@ class CampaignController {
                     case 'topdown-3d':
                     case 'fps-3d':
                     case 'platformer-3d':
-                        adapter = new Unified3DAdapter(newEngineType);
+                        {
+                            const UnifiedAdapter = this.engineConstructors.get('unified-3d') || window.Unified3DAdapter;
+                            if (!UnifiedAdapter) throw new Error('Unified3DAdapter module did not export a constructor');
+                            adapter = new UnifiedAdapter(newEngineType);
+                        }
                         break;
                     default: throw new Error(`Unknown engine: ${newEngineType}`);
                 }
 
                 if (adapter.setCampaignController) adapter.setCampaignController(this);
+                if (adapter.setUsername) adapter.setUsername(this.username);
                 await adapter.initialize();
-                if (this.playerData) adapter.setPlayerData(this.playerData);
+                if (this.playerData) await Promise.resolve(adapter.setPlayerData(this.playerData));
                 this.currentAdapter = adapter;
                 this.currentEngineType = newEngineType;
                 if (this.onEngineSwitch) this.onEngineSwitch(newEngineType);

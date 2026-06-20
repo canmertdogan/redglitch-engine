@@ -1,15 +1,18 @@
 :root {
-    --bg-root: #050505;
-    --bg-panel: #0a0a0f;
-    --bg-header: #000000;
-    --bg-canvas: #080808;
-    --bg-input: #000000;
-    --border: #333;
+    --bg-root: #050608;
+    --bg-deep: #080a0f;
+    --bg-panel: #12151c;
+    --bg-panel-alt: #0d0f14;
+    --bg-hover: #1a1d26;
+    --border: #2a2f3a;
+    --border-mute: #1a1d26;
     --accent: #ff0000;
-    --accent-item: #2ecc71;
-    --accent-villain: #c0392b;
-    --text-main: #e0e0e0;
-    --text-muted: #888;
+    --accent-soft: rgba(255,0,0,0.08);
+    --text-main: #f0f2f5;
+    --text-dim: #8a8f9d;
+    --text-mute: #4f5565;
+    --danger: #ff4d4d;
+    --ok: #00cc66;
     --font-pixel: 'VT323', monospace;
 }
 
@@ -39,14 +42,14 @@ body {
     height: 10px;
 }
 ::-webkit-scrollbar-track {
-    background: #050505;
+    background: #050608;
 }
 ::-webkit-scrollbar-thumb {
-    background: #222;
-    border: 2px solid #050505;
+    background: #1a1d26;
+    border: 2px solid #050608;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #333;
+    background: #2a2f3a;
 }
 
 /* Common Layout Components */
@@ -54,9 +57,10 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--bg-panel);
-    border-right: 1px solid var(--border);
+    border-right: 2px solid #000;
     height: 100%;
     overflow: hidden;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
 }
 
 .panel-header {
@@ -85,37 +89,17 @@ body {
     min-height: 0;
 }
 
-.form-section {
-    background: #111;
-    border: 1px solid #333;
-    padding: 15px;
-    position: relative;
-    margin-bottom: 15px;
-    border-radius: 4px;
-}
-
-.section-title {
-    position: absolute;
-    top: -10px;
-    left: 10px;
-    background: #111;
-    padding: 0 8px;
-    color: #888;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
 input, select, textarea, button {
-    background: #000;
-    border: 1px solid #444;
-    color: var(--accent);
+    background: #0d0f14;
+    border: 1px solid #2a2f3a;
+    color: var(--text-main);
     padding: 6px 8px;
     font-family: inherit;
     font-size: 1rem;
     outline: none;
     width: 100%;
     transition: all 0.1s;
+    box-shadow: inset 2px 2px 0 rgba(0,0,0,0.5);
 }
 
 input:focus, select:focus, textarea:focus {
@@ -124,11 +108,13 @@ input:focus, select:focus, textarea:focus {
 
 button {
     font-size: inherit;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
 }
 
 label {
     display: block;
-    color: #666;
+    color: var(--text-mute);
     font-size: 0.85rem;
     margin-bottom: 4px;
     text-transform: uppercase;
@@ -136,9 +122,9 @@ label {
 }
 
 .tool-btn {
-    background: #111;
-    border: 1px solid #444;
-    color: #aaa;
+    background: #12151c;
+    border: 1px solid #2a2f3a;
+    color: #8a8f9d;
     width: 32px;
     height: 32px;
     cursor: pointer;
@@ -146,12 +132,12 @@ label {
     justify-content: center;
     align-items: center;
     font-size: 1rem;
-    border-radius: 3px;
     transition: all 0.1s;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
 }
 
 .tool-btn:hover {
-    background: #222;
+    background: #1a1d26;
     border-color: var(--accent);
     color: var(--accent);
 }

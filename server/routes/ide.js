@@ -5,6 +5,20 @@ const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const { resolveUnderRoot } = require('../utils/pathGuard');
 const safeFs = require('../utils/safeFs');
+const { canAutomateMutation } = require('../utils/automationPolicy');
+
+function rejectProtectedAutomation(req, res, filePath) {
+    if (req.get('X-RedGlitch-Automation') !== 'kai') return false;
+    let policyPath = String(filePath);
+    if (policyPath.startsWith('engine/')) policyPath = `public/${policyPath.slice('engine/'.length)}`;
+    if (projectService.isRootProject() && policyPath.startsWith('projects/ROOT/')) {
+        policyPath = policyPath.slice('projects/ROOT/'.length);
+    }
+    const policy = canAutomateMutation(policyPath);
+    if (policy.allowed) return false;
+    res.status(403).json({ error: 'Automation cannot modify protected files', code: policy.code, path: policy.path });
+    return true;
+}
 
 // Helper to ensure directory exists
 async function ensureDir(dirPath) {
@@ -72,6 +86,7 @@ router.post('/write', async (req, res) => {
     let filePath = req.body.file || req.body.path;
     const content = req.body.content;
     if (!filePath) return res.status(400).json({ error: 'No file path provided' });
+    if (rejectProtectedAutomation(req, res, filePath)) return;
 
     try {
         const activeProject = projectService.getActiveProject();
@@ -113,6 +128,7 @@ router.post('/write', async (req, res) => {
 router.post('/delete', async (req, res) => {
     let filePath = req.body.file || req.body.path;
     if (!filePath) return res.status(400).json({ error: 'No file path provided' });
+    if (rejectProtectedAutomation(req, res, filePath)) return;
 
     try {
         const activeProject = projectService.getActiveProject();

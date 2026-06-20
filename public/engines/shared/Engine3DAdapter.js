@@ -360,7 +360,7 @@ export default class Engine3DAdapter extends Engine3DBase {
             obj = new THREE.Mesh(geo, mat);
             _applyTransformToObject(obj, def);
             if (def.id) obj.name = def.id;
-            obj.castShadow    = def.castShadow    ?? false;
+            obj.castShadow    = def.castShadow    ?? true;
             obj.receiveShadow = def.receiveShadow ?? true;
 
             if (this.hybridScene) {

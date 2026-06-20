@@ -154,14 +154,6 @@ class IRABAssistantSimple {
     async _dispatchIntent(intent, params) {
         this._debug(`Dispatching intent: ${intent.action}`, params);
 
-        // Always store pending action for recovery on page load
-        localStorage.setItem('ai_pending_action', JSON.stringify({
-            method: intent.action, 
-            params: params || {},
-            id: `intent_${Date.now()}`, 
-            timestamp: Date.now()
-        }));
-
         try {
             const ai = await this.waitForCore();
             if (ai && ai.toolRegistry) {
@@ -178,9 +170,8 @@ class IRABAssistantSimple {
                 throw new Error("ToolRegistry not available");
             }
         } catch (error) {
-            console.warn('[Kai] Registry dispatch failed, falling back to legacy bridge:', error);
-            // Fallback for when the AI kernel isn't fully booted but we want to trigger a tool
-            return this._legacyDispatch(intent, params);
+            console.warn('[Kai] Registry dispatch failed:', error);
+            return { success: false, error: { code: 'AUTOMATION_UNAVAILABLE', message: error.message } };
         }
     }
 
@@ -189,51 +180,7 @@ class IRABAssistantSimple {
      * Used only as a fallback if the AI Kernel/ToolRegistry is unavailable.
      */
     async _legacyDispatch(intent, params) {
-        const frameMap = {
-            'iso_studio': 'frame-iso_studio',
-            'platformer_studio': 'frame-platformer_studio',
-            'editor': 'frame-editor'
-        };
-        const navMap = {
-            'iso_studio': 'iso_editor.html',
-            'platformer_studio': 'platformer_editor.html',
-            'editor': 'editor.html'
-        };
-
-        const frameId = frameMap[intent.target];
-        const url = navMap[intent.target];
-        if (!url) throw new Error(`Unknown target: ${intent.target}`);
-
-        const msg = { type: 'ai:tool', name: intent.action, args: params || {}, id: `intent_${Date.now()}` };
-
-        const hub = (window.parent !== window && window.parent) ||
-                    (window.top !== window && window.top) || null;
-
-        if (hub) {
-            const existingFrame = hub.document.getElementById(frameId);
-            if (existingFrame && existingFrame.contentWindow) {
-                try {
-                    const winEl = hub.document.getElementById('win-' + intent.target);
-                    if (winEl) winEl.style.display = 'flex';
-                    if (hub.focusWindow) hub.focusWindow('win-' + intent.target);
-                    existingFrame.contentWindow.postMessage(msg, '*');
-                    localStorage.removeItem('ai_pending_action');
-                    return { success: true, direct: true };
-                } catch (e) {}
-            }
-        }
-
-        if (hub && hub.openWindow && hub.tools) {
-            const tool = hub.tools.find(t => t.id === intent.target);
-            if (tool) {
-                hub.openWindow(tool);
-                return { success: true, pending: true };
-            }
-        }
-
-        const top = window.top || window.parent || window;
-        top.location.href = url;
-        return { success: true, pending: true };
+        throw new Error('Legacy automation dispatch is disabled; ToolRegistry is required.');
     }
 
     _debug(msg, data) {

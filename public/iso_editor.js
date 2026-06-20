@@ -1387,23 +1387,7 @@ window.onload = async () => {
 };
 
 function _isoPendingCheck() {
-    const raw = localStorage.getItem('ai_pending_action');
-    if (!raw) return;
-    try {
-        const action = JSON.parse(raw);
-        if (!action || !action.method) return;
-        const age = Date.now() - (action.timestamp || 0);
-        if (age > 60000) { localStorage.removeItem('ai_pending_action'); return; }
-        if (action.method === 'pixel.generateTerrain' || action.method === 'isopixel.generateTerrain' || action.method === 'iso.generateTerrain') {
-            localStorage.removeItem('ai_pending_action');
-            console.log('[IsoStudio] Recovering AI pending action:', action.params);
-            if (window._isoAIGenerate) {
-                window._isoAIGenerate(action.params || {});
-            }
-        }
-    } catch (e) {
-        console.error('[IsoStudio] Pending action recovery failed:', e);
-    }
+    // Recovery is owned by ToolRegistry so approval and request IDs are preserved.
 }
 
 // Listen for localStorage changes from other frames (assistant iframe sets it)

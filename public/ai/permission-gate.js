@@ -11,8 +11,6 @@
  */
 
 export class PermissionGate {
-    static SESSION_ALLOW_KEY = 'ai_permission_always_allow_tools';
-
     // PROTECTED FILES - CANNOT BE MODIFIED BY AI
     static PROTECTED_PATTERNS = [
         /\/engines\/.*\/main\.js$/,                    // Engine cores
@@ -32,7 +30,6 @@ export class PermissionGate {
     ];
 
     constructor(config = {}) {
-        this.alwaysAllowSession = this._loadAlwaysAllowSession(); // Tools allowed for this browser session
         this.config = config;
         this.auditLog = []; // Track all actions
         this.maxAuditEntries = 1000;
@@ -49,35 +46,18 @@ export class PermissionGate {
             .replace(/'/g, '&#39;');
     }
 
-    _loadAlwaysAllowSession() {
-        try {
-            const raw = sessionStorage.getItem(PermissionGate.SESSION_ALLOW_KEY);
-            if (!raw) return new Set();
-            const list = JSON.parse(raw);
-            if (!Array.isArray(list)) return new Set();
-            return new Set(list.filter((item) => typeof item === 'string'));
-        } catch (err) {
-            console.warn('[PermissionGate] Could not load session approvals:', err);
-            return new Set();
-        }
-    }
-
-    _saveAlwaysAllowSession() {
-        try {
-            sessionStorage.setItem(
-                PermissionGate.SESSION_ALLOW_KEY,
-                JSON.stringify(Array.from(this.alwaysAllowSession))
-            );
-        } catch (err) {
-            console.warn('[PermissionGate] Could not persist session approvals:', err);
-        }
-    }
-
     /**
      * Check if a file path is protected from AI modification
      */
     static canModifyFile(filePath) {
-        const normalizedPath = filePath.replace(/\\/g, '/');
+        const segments = String(filePath).replace(/\\/g, '/').split('/');
+        const normalized = [];
+        for (const segment of segments) {
+            if (!segment || segment === '.') continue;
+            if (segment === '..') normalized.pop();
+            else normalized.push(segment);
+        }
+        const normalizedPath = `/${normalized.join('/')}`;
         for (const pattern of PermissionGate.PROTECTED_PATTERNS) {
             if (pattern.test(normalizedPath)) {
                 return {
@@ -97,18 +77,28 @@ export class PermissionGate {
             timestamp: new Date().toISOString(),
             action,
             toolName,
-            args,
-            result
+            args: this._redact(args),
+            result: this._redact(result)
         };
         this.auditLog.push(entry);
         if (this.auditLog.length > this.maxAuditEntries) this.auditLog.shift();
         console.log('[AI Audit]', entry);
     }
 
+    _redact(value, key = '') {
+        if (/token|secret|api.?key|password|credential|content|code/i.test(key)) return '[REDACTED]';
+        if (typeof value === 'string') return value.length > 500 ? `${value.slice(0, 500)}…[TRUNCATED]` : value;
+        if (Array.isArray(value)) return value.slice(0, 50).map((item) => this._redact(item));
+        if (value && typeof value === 'object') {
+            return Object.fromEntries(Object.entries(value).map(([childKey, child]) => [childKey, this._redact(child, childKey)]));
+        }
+        return value;
+    }
+
     /**
      * Request permission for a tool action with KAP security awareness.
      */
-    async requestPermission(toolName, args, requiresConfirmation) {
+    async requestPermission(toolName, args, requiresConfirmation, plan = null) {
         const safeArgs = args && typeof args === 'object' ? args : {};
         if (!requiresConfirmation) {
             this.logAction('auto-approve', toolName, safeArgs, 'read-only/safe');
@@ -124,18 +114,7 @@ export class PermissionGate {
             }
         }
 
-        if (this.alwaysAllowSession.has(toolName)) {
-            this.logAction('auto-approve', toolName, safeArgs, 'session-allowed');
-            return true;
-        }
-
-        const response = await this._enqueueModal(async () => await this._showConfirmationModal(toolName, safeArgs));
-        if (response === 'always') {
-            this.alwaysAllowSession.add(toolName);
-            this._saveAlwaysAllowSession();
-            this.logAction('approve', toolName, safeArgs, 'session-allowed-granted');
-            return true;
-        }
+        const response = await this._enqueueModal(async () => await this._showConfirmationModal(toolName, safeArgs, plan));
 
         const approved = response === 'approve';
         this.logAction(approved ? 'approve' : 'reject', toolName, safeArgs, response);
@@ -156,13 +135,13 @@ export class PermissionGate {
     /**
      * Record an AI action for auditing and undo integration.
      */
-    recordAction(toolName, args, result, undoFn = null) {
+    recordAction(toolName, args, result, undoDescriptor = null) {
         const action = {
             id: `ai_action_${Date.now()}`,
             toolName,
             args,
             result,
-            undoFn,
+            undoDescriptor: undoDescriptor || result?.undoDescriptor || null,
             timestamp: Date.now()
         };
 
@@ -175,7 +154,7 @@ export class PermissionGate {
             });
             
             // If it's a structural change, trigger a state snapshot for undo
-            if (undoFn || toolName.startsWith('fs.') || toolName.includes('save')) {
+            if (action.undoDescriptor || toolName.startsWith('fs.') || toolName.includes('save')) {
                 window.RedGlitchProjectState.createUndoPoint();
             }
         }
@@ -184,7 +163,7 @@ export class PermissionGate {
     /**
      * Show the modal UI with IRAB/Retro theme and Diff view support.
      */
-    async _showConfirmationModal(toolName, args) {
+    async _showConfirmationModal(toolName, args, plan = null) {
         let originalContent = null;
         const filePath = args.path || args.file || args.filePath;
         
@@ -241,7 +220,8 @@ export class PermissionGate {
                             IRAB wants to use <strong>${this._escapeHtml(toolName)}</strong>
                         </div>
                         
-                        ${diffHtml || `<pre>${this._escapeHtml(JSON.stringify(args, null, 2))}</pre>`}
+                        <p>${this._escapeHtml(plan?.summary || 'Project mutation requested.')}</p>
+                        ${diffHtml || `<pre>${this._escapeHtml(JSON.stringify(plan?.proposed || args, null, 2))}</pre>`}
                         
                         <div class="ai-permission-warning">
                             THIS ACTION MAY MODIFY YOUR PROJECT FILES.
@@ -250,7 +230,6 @@ export class PermissionGate {
                     
                     <div class="ai-permission-actions">
                         <button id="ai-reject-btn" class="ai-btn-danger">DENY</button>
-                        <button id="ai-always-btn" class="ai-btn-secondary">ALWAYS ALLOW</button>
                         <button id="ai-approve-btn" class="ai-btn-primary">APPROVE & EXECUTE</button>
                     </div>
                 </div>
@@ -261,7 +240,6 @@ export class PermissionGate {
 
             modal.querySelector('#ai-reject-btn').onclick = () => { document.body.removeChild(modal); resolve('reject'); };
             modal.querySelector('#ai-approve-btn').onclick = () => { document.body.removeChild(modal); resolve('approve'); };
-            modal.querySelector('#ai-always-btn').onclick = () => { document.body.removeChild(modal); resolve('always'); };
         });
     }
 

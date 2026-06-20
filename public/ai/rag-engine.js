@@ -13,10 +13,24 @@ export class RAGEngine {
         this.isLoaded = false;
         this.worker = null;
         this.callbacks = new Map();
+        this.initializationPromise = null;
+        this.epoch = 0;
     }
 
     async initialize() {
         if (this.isLoaded) return;
+        if (this.initializationPromise) return this.initializationPromise;
+        const epoch = this.epoch;
+        const pending = this._initialize(epoch);
+        this.initializationPromise = pending;
+        try {
+            await pending;
+        } finally {
+            if (this.initializationPromise === pending) this.initializationPromise = null;
+        }
+    }
+
+    async _initialize(epoch) {
 
         console.log('[RAGEngine] Initializing...');
         await this.vectorStore.initialize();
@@ -30,28 +44,67 @@ export class RAGEngine {
 
         // Load and index corpus
         await this.loadCorpus();
+        if (epoch !== this.epoch) return;
         this.isLoaded = true;
         EventBus.emit('ai:rag:ready');
     }
 
+    async rebuild() {
+        if (this.initializationPromise) await this.initializationPromise.catch(() => {});
+        this.worker?.terminate();
+        for (const callback of this.callbacks.values()) callback.reject(new Error('RAG index rebuild requested.'));
+        this.callbacks.clear();
+        this.vectorStore = new VectorStore();
+        this.worker = null;
+        this.isLoaded = false;
+        this.initializationPromise = null;
+        await this.initialize();
+    }
+
+    shutdown() {
+        this.epoch++;
+        this.worker?.terminate();
+        this.worker = null;
+        for (const callback of this.callbacks.values()) callback.reject(new Error('AI features disabled.'));
+        this.callbacks.clear();
+        this.isLoaded = false;
+        this.initializationPromise = null;
+    }
+
     async loadCorpus() {
         try {
-            console.log('[RAGEngine] Loading corpus.json...');
-            const res = await fetch('/ai/docs/corpus.json');
-            const data = await res.json();
-            
-            // Check if we have pre-computed embeddings
-            // If not, we generate them on the fly (Phase 2 strategy)
-            const chunksToEmbed = data.chunks.filter(c => !c.embeddings);
-            
-            if (chunksToEmbed.length > 0) {
-                console.log(`[RAGEngine] Embedding ${chunksToEmbed.length} chunks...`);
-                const embeddedChunks = await this.embedChunks(chunksToEmbed);
-                await this.vectorStore.addChunks(embeddedChunks);
+            console.log('[RAGEngine] Loading corpus...');
+            const [corpusRes, embeddingsRes] = await Promise.all([
+                fetch('/ai/docs/corpus.json'),
+                fetch('/ai/docs/corpus-embeddings.json').catch(() => null)
+            ]);
+            const data = await corpusRes.json();
+            let precomputed = null;
+            if (embeddingsRes && embeddingsRes.ok) {
+                precomputed = await embeddingsRes.json();
+                console.log(`[RAGEngine] Loaded ${precomputed.length} pre-computed embeddings.`);
             }
 
-            const alreadyEmbedded = data.chunks.filter(c => c.embeddings);
+            let chunksToIndex = data.chunks;
+
+            // Merge pre-computed embeddings by index position
+            if (precomputed && precomputed.length === chunksToIndex.length) {
+                chunksToIndex = chunksToIndex.map((chunk, i) => ({
+                    ...chunk,
+                    embeddings: chunk.embeddings || precomputed[i]
+                }));
+            }
+
+            const chunksToEmbed = chunksToIndex.filter(c => !c.embeddings);
+            if (chunksToEmbed.length > 0) {
+                console.log(`[RAGEngine] Embedding ${chunksToEmbed.length} chunks (no pre-computed embedding)...`);
+                const embedded = await this.embedChunks(chunksToEmbed);
+                await this.vectorStore.addChunks(embedded);
+            }
+
+            const alreadyEmbedded = chunksToIndex.filter(c => c.embeddings);
             if (alreadyEmbedded.length > 0) {
+                console.log(`[RAGEngine] Indexing ${alreadyEmbedded.length} pre-computed chunks...`);
                 await this.vectorStore.addChunks(alreadyEmbedded);
             }
 

@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const safeFs = require('../utils/safeFs');
+const config = require('../config');
 
 const ensureDir = async (dir) => {
     await fs.mkdir(dir, { recursive: true });
@@ -82,10 +83,19 @@ router.get('/js/:name', async (req, res) => {
 // Get logic JSON (supports .algorithm extension)
 router.get('/:name', async (req, res) => {
     try {
-        const activeProject = projectService.getActiveProject();
         const normalizedFile = normalizeLogicName(req.params.name, true);
         if (!normalizedFile) return res.status(400).json({ error: 'Invalid name' });
-        const filePath = path.join(activeProject, 'data', 'logic', normalizedFile);
+        
+        const activeProject = projectService.getActiveProject();
+        const projectPath = path.join(activeProject, 'data', 'logic', normalizedFile);
+        const rootPath = path.join(config.DATA_DIR, 'logic', normalizedFile);
+        
+        let filePath = projectPath;
+        try {
+            await fs.access(projectPath);
+        } catch {
+            filePath = rootPath;
+        }
         
         const json = await fs.readFile(filePath, 'utf8');
         

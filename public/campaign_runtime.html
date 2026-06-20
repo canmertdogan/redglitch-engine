@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' ws: http:; img-src 'self' data: blob:;">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "/lib/three/three.module.js",
+                "three/addons/": "/lib/three/"
+            }
+        }
+    </script>
     <title>Campaign Runtime — RedGlitch</title>
     <link rel="stylesheet" href="base_game/style.css">
     <link href="fonts/fonts.css" rel="stylesheet">
@@ -1428,6 +1436,7 @@
 
                 // Initialize campaign controller
                 campaignController = new CampaignController();
+                window.campaignController = campaignController;
                 await campaignController.initialize(slot.player.name, slotId);
 
                 updateLoadingBar(60, `Loading campaign: ${slot.campaign.name}...`);

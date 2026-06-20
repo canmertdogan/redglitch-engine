@@ -400,6 +400,7 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 async def handle_prompt(message, websocket):
     msg_id = message.get("id")
+    request_type = message.get("type", "PROMPT")
     data = message.get("data", "")
 
     # If data is an object (from CHAT event), extract message and context
@@ -431,7 +432,7 @@ async def handle_prompt(message, websocket):
         "isometric terrain",
         "isopixel terrain",
     )
-    if not is_ghost and any(trigger in prompt_lower for trigger in iso_map_triggers):
+    if request_type != "CHAT" and not is_ghost and any(trigger in prompt_lower for trigger in iso_map_triggers):
         await manager.send_personal_message({
             "type": "TOKEN",
             "data": "GRRR... Initiating IsoPixel terrain generation sequence."
@@ -448,7 +449,6 @@ async def handle_prompt(message, websocket):
         return
     
     # Incorporate Phase 2: Active Focus
-    context_data = message.get("context", {})
     focused_code = context_data.get("focused_code", "")
     
     max_tokens = context_data.get("max_tokens", brain.max_tokens)
@@ -479,13 +479,28 @@ async def handle_prompt(message, websocket):
     persona = load_persona()
     style_guidance = f"\nUser Coding Style: {json.dumps(persona.get('coding_style', {}))}"
     
+    project_context = str(context_data.get("projectContext", ""))[:6000]
+    browser_rag_context = str(context_data.get("ragContext", ""))[:2500]
+    automation_protocol = str(context_data.get("automationProtocol", ""))[:1000]
+    tool_schemas = str(context_data.get("tools", ""))[:6000]
+    browser_context = ""
+    if not is_ghost:
+        if automation_protocol:
+            browser_context += f"\n[AUTOMATION CONTRACT]\n{automation_protocol}\n"
+        if tool_schemas:
+            browser_context += f"\n[TOOL SCHEMAS]\n{tool_schemas}\n"
+        if project_context:
+            browser_context += f"\n[ACTIVE PROJECT CONTEXT]\n{project_context}\n"
+        if browser_rag_context:
+            browser_context += f"\n[ENGINE DOCUMENTATION]\n{browser_rag_context}\n"
+
     if focused_code and not is_ghost:
         if len(focused_code) > 500: focused_code = focused_code[:500] + "..."
-        augmented_prompt = f"Code:\n{focused_code}\n\n{style_guidance}\n\nQuestion: {prompt}"
+        augmented_prompt = f"{browser_context}\nCode:\n{focused_code}\n\n{style_guidance}\n\nQuestion: {prompt}"
     elif context:
-        augmented_prompt = f"Reference:\n{context}\n\n{style_guidance}\n\nQuestion: {prompt}"
+        augmented_prompt = f"{browser_context}\nReference:\n{context}\n\n{style_guidance}\n\nQuestion: {prompt}"
     else:
-        augmented_prompt = f"{style_guidance}\n\n{prompt}"
+        augmented_prompt = f"{browser_context}\n{style_guidance}\n\n{prompt}"
     
     logger.info(f"Augmented prompt length: {len(augmented_prompt)} chars")
     full_response = ""
@@ -545,10 +560,14 @@ async def handle_prompt(message, websocket):
                         if start != -1 and end != -1:
                             json_str = tool_buffer[start:end+1]
                             call = json.loads(json_str)
-                            await manager.send_personal_message({
-                                "type": "COMMAND",
-                                "data": {"action": call.get("name"), "params": call.get("args", {})}
-                            }, websocket)
+                            # CHAT requests are coordinated by the browser KAP runtime,
+                            # which validates, previews, approves, and correlates results.
+                            # COMMAND remains only for legacy PROMPT clients.
+                            if request_type != "CHAT":
+                                await manager.send_personal_message({
+                                    "type": "COMMAND",
+                                    "data": {"action": call.get("name"), "params": call.get("args", {})}
+                                }, websocket)
                     except Exception as e: logger.error(f"KAP Error: {e}")
                     in_tool_block = False
                     tool_buffer = ""

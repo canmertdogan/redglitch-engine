@@ -1,3 +1,5 @@
+import { parseToolCalls } from './tool-call-parser.mjs';
+
 /**
  * RedGlitch AI - Workflow Manager (Phase 8)
  * Handles tool call parsing, sequencing, and transactional execution.
@@ -8,6 +10,8 @@ export class WorkflowManager {
         this.registry = toolRegistry;
         this.eventBus = eventBus;
         this.isExecuting = false;
+        this.cancelRequested = false;
+        this.maxSteps = 20;
     }
 
     /**
@@ -18,37 +22,31 @@ export class WorkflowManager {
      * ```
      */
     parseToolCalls(text) {
-        const regex = /```tool\s*\n([\s\S]*?)\n```/g;
-        const calls = [];
-        let match;
-
-        while ((match = regex.exec(text)) !== null) {
-            try {
-                const call = JSON.parse(match[1]);
-                calls.push(call);
-            } catch (e) {
-                console.error("[WorkflowManager] Failed to parse tool call JSON:", e);
-            }
-        }
-        return calls;
+        return parseToolCalls(text);
     }
 
     /**
      * Execute a sequence of tool calls as a single transaction.
      * If any step fails, it attempts to rollback previous steps.
      */
-    async executeWorkflow(calls) {
+    async executeWorkflow(calls, workflowId = `workflow_${Date.now()}`) {
         if (this.isExecuting) return { success: false, error: "Already executing a workflow" };
+        if (!Array.isArray(calls) || calls.length > this.maxSteps) {
+            return { success: false, error: `Workflow must contain at most ${this.maxSteps} steps` };
+        }
         this.isExecuting = true;
+        this.cancelRequested = false;
 
         const results = [];
         const executedActions = [];
 
         try {
-            for (const call of calls) {
+            for (let index = 0; index < calls.length; index++) {
+                const call = calls[index];
+                if (this.cancelRequested) throw Object.assign(new Error('Workflow cancelled'), { code: 'CANCELLED' });
                 this.eventBus.emit('ai:workflow:step', { name: call.name, args: call.args });
                 
-                const response = await this.registry.execute(call.name, call.args);
+                const response = await this.registry.execute(call.name, call.args, call.id || `${workflowId}:${index}`);
                 
                 if (!response.success) {
                     throw new Error(`Step failed: ${call.name} - ${response.error?.message || 'Unknown error'}`);
@@ -71,6 +69,12 @@ export class WorkflowManager {
         }
     }
 
+    cancel() {
+        if (!this.isExecuting) return false;
+        this.cancelRequested = true;
+        return true;
+    }
+
     /**
      * Rollback a list of actions in reverse order.
      */
@@ -80,10 +84,17 @@ export class WorkflowManager {
             const action = actions[i];
             const tool = this.registry.tools.get(action.name);
             
-            if (tool && tool.undo) {
+            const descriptor = action.result?.undoDescriptor;
+            if (descriptor?.type === 'restore-file') {
                 try {
                     console.log(`[WorkflowManager] Rolling back: ${action.name}`);
-                    await tool.undo(action.args, action.result);
+                    const endpoint = descriptor.existed ? '/api/ide/write' : '/api/ide/delete';
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                        body: JSON.stringify({ file: descriptor.path, content: descriptor.previousContent })
+                    });
+                    if (!response.ok) throw new Error(`Rollback request failed (${response.status})`);
                 } catch (undoError) {
                     console.error(`[WorkflowManager] Rollback failed for ${action.name}:`, undoError);
                 }

@@ -644,7 +644,7 @@ window.editor = new PlatformerEditor();
 (function initPlatformerAI() {
     const eventBus = window.RedGlitchEventBus;
     if (!eventBus || !window.StudioBridge) {
-        console.log('[PlatformerEditor] EventBus or StudioBridge not available, AI integration skipped.');
+        window.addEventListener('studio-bridge-ready', initPlatformerAI, { once: true });
         return;
     }
 
@@ -704,21 +704,7 @@ window._platformerAIGenerate = (params) => {
 };
 
 function _platformerPendingCheck() {
-    const raw = localStorage.getItem('ai_pending_action');
-    if (!raw) return;
-    try {
-        const action = JSON.parse(raw);
-        if (!action || !action.method) return;
-        const age = Date.now() - (action.timestamp || 0);
-        if (age > 60000) { localStorage.removeItem('ai_pending_action'); return; }
-        if (action.method === 'platformer.generateLevel' || action.method === 'platform.generateLevel') {
-            localStorage.removeItem('ai_pending_action');
-            console.log('[PlatformerEditor] Recovering AI pending action:', action.params);
-            window._platformerAIGenerate(action.params || {});
-        }
-    } catch (e) {
-        console.error('[PlatformerEditor] Pending action recovery failed:', e);
-    }
+    // Recovery is owned by ToolRegistry so approval and request IDs are preserved.
 }
 
 // Listen for localStorage changes from assistant iframe

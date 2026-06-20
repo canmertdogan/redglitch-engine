@@ -185,11 +185,7 @@ class CampaignEditor {
                 
                 // If availableLevels is empty but engine lists aren't, merge them
                 if (this.availableLevels.length === 0) {
-                    const allEngineLevels = [
-                        ...this.availableLevelsByEngine['rpg-topdown'],
-                        ...this.availableLevelsByEngine['iso-pixel'],
-                        ...this.availableLevelsByEngine['platformer-2d']
-                    ];
+                    const allEngineLevels = Object.values(this.availableLevelsByEngine).flat();
                     this.availableLevels = [...new Set(allEngineLevels)]; // Unique
                 }
             }
@@ -205,7 +201,10 @@ class CampaignEditor {
     }
     
     async _loadLevelsByEngine() {
-        const engineTypes = ['rpg-topdown', 'iso-pixel', 'platformer-2d'];
+        const engineTypes = [
+            'rpg-topdown', 'iso-pixel', 'platformer-2d',
+            'unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'
+        ];
         
         console.log('[CampaignEditor] Loading levels by engine type...');
         
@@ -352,6 +351,8 @@ class CampaignEditor {
                         icon = 'cube'; color = '#3498db';
                     } else if (node.engineType === 'platformer-2d') {
                         icon = 'running'; color = '#2ecc71';
+                    } else if (['unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'].includes(node.engineType)) {
+                        icon = 'cubes'; color = '#9b59b6';
                     } else {
                         icon = 'dungeon'; color = '#e74c3c';
                     }
@@ -374,7 +375,11 @@ class CampaignEditor {
                 const engineNames = {
                     'rpg-topdown': 'RPG',
                     'iso-pixel': 'ISO',
-                    'platformer-2d': 'PLT'
+                    'platformer-2d': 'PLT',
+                    'unified-3d': 'U3D',
+                    'topdown-3d': 'TD3D',
+                    'fps-3d': 'FPS',
+                    'platformer-3d': 'P3D'
                 };
                 engineBadge = `<span class="engine-badge ${node.engineType}">${engineNames[node.engineType] || 'UNK'}</span>`;
             }
@@ -927,8 +932,20 @@ class CampaignEditor {
                 createInput("Engine Type", "engineType", "select", [
                     { val: 'rpg-topdown', label: 'RPG Top-Down' },
                     { val: 'iso-pixel', label: 'Isometric Pixel' },
-                    { val: 'platformer-2d', label: 'Platformer 2D' }
+                    { val: 'platformer-2d', label: 'Platformer 2D' },
+                    { val: 'unified-3d', label: 'Unified 3D' },
+                    { val: 'topdown-3d', label: 'Top-Down 3D' },
+                    { val: 'fps-3d', label: 'FPS 3D' },
+                    { val: 'platformer-3d', label: 'Platformer 3D' }
                 ]);
+
+                if (node.engineType === 'unified-3d') {
+                    createInput('3D Mode', 'mode', 'select', [
+                        { val: 'fps-3d', label: 'FPS 3D' },
+                        { val: 'topdown-3d', label: 'Top-Down 3D' },
+                        { val: 'platformer-3d', label: 'Platformer 3D' }
+                    ]);
+                }
                 
                 // Level file selector (filtered by engine type)
                 const engineType = node.engineType || 'rpg-topdown';
@@ -946,7 +963,11 @@ class CampaignEditor {
                     const editorMap = {
                         'rpg-topdown': 'editor.html',
                         'iso-pixel': 'iso_editor.html',
-                        'platformer-2d': 'pixel_editor.html'
+                        'platformer-2d': 'pixel_editor.html',
+                        'unified-3d': 'editor3d.html',
+                        'topdown-3d': 'editor3d.html',
+                        'fps-3d': 'editor3d.html',
+                        'platformer-3d': 'editor3d.html'
                     };
                     window.open(editorMap[engineType] || 'editor.html', '_blank');
                 };

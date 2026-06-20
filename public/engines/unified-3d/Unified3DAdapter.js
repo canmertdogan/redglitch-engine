@@ -40,8 +40,14 @@ export default class Unified3DAdapter extends EngineAdapter {
         this.game = new Unified3DGame(container, { engineType: this._requestedType });
         await this.game.init(this._requestedType);
 
+        this._requestedType = this.game.engineType3D;
+        this.engineType = this.game.engineType3D;
+
         if (this.currentProject) {
             if (this.game.core) this.game.core.currentProject = this.currentProject;
+        }
+        if (this.username && this.game.core) {
+            this.game.core.username = this.username;
         }
 
         this.engine = this.game;
@@ -58,6 +64,7 @@ export default class Unified3DAdapter extends EngineAdapter {
 
         this.isInitialized = true;
         this.isLoaded      = false;
+        this.setupLiveBridge();
         console.log(`[Unified3DAdapter] initialized (mode: ${this._requestedType})`);
     }
 
@@ -93,6 +100,8 @@ export default class Unified3DAdapter extends EngineAdapter {
                 }
                 await this.game.loadProject(project, levelId);
             }
+            this._requestedType = this.game.engineType3D;
+            this.engineType = this.game.engineType3D;
             this.isLoaded = true;
             console.log(`[Unified3DAdapter] level "${levelId}" loaded`);
         } catch (error) {
@@ -105,6 +114,7 @@ export default class Unified3DAdapter extends EngineAdapter {
     async unloadLevel() {
         if (!this.isLoaded) return;
         this.stop();
+        await this.game?.core?.unloadLevel3D?.();
         this.isLoaded = false;
         console.log('[Unified3DAdapter] level unloaded');
     }
@@ -152,7 +162,14 @@ export default class Unified3DAdapter extends EngineAdapter {
     }
 
     setPlayerData(playerData) {
-        this.game?.mode?.setPlayerData?.(playerData);
+        return this.game?.mode?.setPlayerData?.(playerData);
+    }
+
+    findEntityById(id) {
+        const entities = this.game?.core?._currentLevel?.entities;
+        return Array.isArray(entities)
+            ? entities.find(entity => entity.id === id || entity.name === id) ?? null
+            : null;
     }
 
     // ── Ability system (forwarded to mode) ───────────────────────────────────

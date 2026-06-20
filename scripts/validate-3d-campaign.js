@@ -67,17 +67,9 @@ function fileMatches(relativePath, regex) {
 
 function campaignRuntimeUsesModuleThree() {
     const runtimePath = 'public/campaign_runtime.html';
-    const has3DAdapterScripts =
-        fileContains(runtimePath, 'topdown-3d/TopDown3DAdapter.js') &&
-        fileContains(runtimePath, 'fps-3d/FPS3DAdapter.js') &&
-        fileContains(runtimePath, 'platformer-3d/Platformer3DAdapter.js');
-
-    const adaptersUseDynamicImport =
-        fileContains('public/engines/topdown-3d/TopDown3DAdapter.js', 'await import') &&
-        fileContains('public/engines/fps-3d/FPS3DAdapter.js', 'await import') &&
-        fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'await import');
-
-    return has3DAdapterScripts && adaptersUseDynamicImport;
+    return fileContains(runtimePath, '<script type="importmap">') &&
+        fileContains(runtimePath, '"three": "/lib/three/three.module.js"') &&
+        fileContains('public/engines/unified-3d/Game3DCore.js', "from '/lib/three/three.module.js'");
 }
 
 function campaignRuntimeHasThreeSupport() {
@@ -113,57 +105,20 @@ shared3DSystems.forEach(file => {
     test(`Shared: ${file}`, () => fileExists(`public/engines/shared/${file}`));
 });
 
-// Test 3: TopDown-3D Engine
-log(BLUE, '\n--- TopDown-3D Engine ---');
-test('TopDown-3D main.js exists', () => fileExists('public/engines/topdown-3d/main.js'));
-test('TopDown3DAdapter.js exists', () => fileExists('public/engines/topdown-3d/TopDown3DAdapter.js'));
-test('TopDown3DStrategy.js exists', () => fileExists('public/engines/topdown-3d/TopDown3DStrategy.js'));
-test('TopDown3DAdapter has initialize()', () => 
-    fileContains('public/engines/topdown-3d/TopDown3DAdapter.js', 'async initialize()'));
-test('TopDown3DAdapter has loadLevel()', () => 
-    fileContains('public/engines/topdown-3d/TopDown3DAdapter.js', 'async loadLevel('));
-test('TopDown3DAdapter has pause()', () => 
-    fileContains('public/engines/topdown-3d/TopDown3DAdapter.js', 'pause()'));
-test('TopDown3DAdapter has useAbility()', () => 
-    fileContains('public/engines/topdown-3d/TopDown3DAdapter.js', 'useAbility('));
-test('TopDown3DStrategy has getState()', () => 
-    fileContains('public/engines/topdown-3d/TopDown3DStrategy.js', 'getState()'));
-
-// Test 4: FPS-3D Engine
-log(BLUE, '\n--- FPS-3D Engine ---');
-test('FPS-3D main.js exists', () => fileExists('public/engines/fps-3d/main.js'));
-test('FPS3DAdapter.js exists', () => fileExists('public/engines/fps-3d/FPS3DAdapter.js'));
-test('FPS3DStrategy.js exists', () => fileExists('public/engines/fps-3d/FPS3DStrategy.js'));
-test('FPS3DAdapter has dynamic import', () => 
-    fileContains('public/engines/fps-3d/FPS3DAdapter.js', 'await import'));
-test('FPS3DAdapter has pause()', () => 
-    fileContains('public/engines/fps-3d/FPS3DAdapter.js', 'pause()'));
-test('FPS3DAdapter has resume()', () => 
-    fileContains('public/engines/fps-3d/FPS3DAdapter.js', 'resume()'));
-test('FPS3DAdapter has useAbility()', () => 
-    fileContains('public/engines/fps-3d/FPS3DAdapter.js', 'useAbility('));
-test('FPS3DStrategy has useAbility()', () => 
-    fileContains('public/engines/fps-3d/FPS3DStrategy.js', 'useAbility('));
-test('FPS3DStrategy has getState()', () => 
-    fileContains('public/engines/fps-3d/FPS3DStrategy.js', 'getState()'));
-
-// Test 5: Platformer-3D Engine
-log(BLUE, '\n--- Platformer-3D Engine ---');
-test('Platformer-3D main.js exists', () => fileExists('public/engines/platformer-3d/main.js'));
-test('Platformer3DAdapter.js exists', () => fileExists('public/engines/platformer-3d/Platformer3DAdapter.js'));
-test('Platformer3DStrategy.js exists', () => fileExists('public/engines/platformer-3d/Platformer3DStrategy.js'));
-test('Platformer3DAdapter has dynamic import', () => 
-    fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'await import'));
-test('Platformer3DAdapter has pause()', () => 
-    fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'pause()'));
-test('Platformer3DAdapter has resume()', () => 
-    fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'resume()'));
-test('Platformer3DAdapter has useAbility()', () => 
-    fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'useAbility('));
-test('Platformer3DStrategy has useAbility()', () => 
-    fileContains('public/engines/platformer-3d/Platformer3DStrategy.js', 'useAbility('));
-test('Platformer3DStrategy has getState()', () => 
-    fileContains('public/engines/platformer-3d/Platformer3DStrategy.js', 'getState()'));
+// Test 3: Unified 3D Engine
+log(BLUE, '\n--- Unified 3D Engine ---');
+test('Unified3D game and adapter exist', () =>
+    fileExists('public/engines/unified-3d/Unified3DGame.js') &&
+    fileExists('public/engines/unified-3d/Unified3DAdapter.js'));
+for (const mode of ['FPSMode.js', 'TopDownMode.js', 'PlatformerMode.js']) {
+    test(`Unified mode: ${mode}`, () => fileExists(`public/engines/unified-3d/modes/${mode}`));
+}
+test('Unified adapter supports campaign lifecycle', () =>
+    fileContains('public/engines/unified-3d/Unified3DAdapter.js', 'async initialize()') &&
+    fileContains('public/engines/unified-3d/Unified3DAdapter.js', 'async loadLevel(') &&
+    fileContains('public/engines/unified-3d/Unified3DAdapter.js', 'async switchMode('));
+test('Unified game normalizes umbrella engine mode', () =>
+    fileContains('public/engines/unified-3d/Unified3DGame.js', 'normalize3DMode'));
 
 // Test 6: Campaign Runtime Integration
 log(BLUE, '\n--- Campaign Runtime Integration ---');
@@ -174,12 +129,11 @@ test('3D runtime resolves cannon-es via module imports', () =>
     fileContains('public/engines/shared/Physics3DWorld.js', "from '/lib/cannon-es/cannon-es.js'") ||
     fileContains('public/engines/shared/Physics3DWorld.js', "from '../../lib/cannon-es/cannon-es.module.js'")
 );
-test('campaign_runtime loads TopDown3DAdapter', () => 
-    fileContains('public/campaign_runtime.html', 'topdown-3d/TopDown3DAdapter.js'));
-test('campaign_runtime loads FPS3DAdapter', () => 
-    fileContains('public/campaign_runtime.html', 'fps-3d/FPS3DAdapter.js'));
-test('campaign_runtime loads Platformer3DAdapter', () => 
-    fileContains('public/campaign_runtime.html', 'platformer-3d/Platformer3DAdapter.js'));
+test('campaign_runtime publishes CampaignController globally', () =>
+    fileContains('public/campaign_runtime.html', 'window.campaignController = campaignController'));
+test('Campaign editor exposes Unified3D modes', () =>
+    fileContains('public/campaign_editor.js', "{ val: 'unified-3d', label: 'Unified 3D' }") &&
+    fileContains('public/campaign_editor.js', "createInput('3D Mode', 'mode'"));
 
 // Test 7: CampaignController Support
 log(BLUE, '\n--- CampaignController Support ---');
@@ -190,12 +144,10 @@ test('CampaignController supports fps-3d', () =>
     fileContains('public/engines/shared/CampaignController.js', "case 'fps-3d':"));
 test('CampaignController supports platformer-3d', () => 
     fileContains('public/engines/shared/CampaignController.js', "case 'platformer-3d':"));
-test('CampaignController creates TopDown3DAdapter', () => 
-    fileContains('public/engines/shared/CampaignController.js', 'new TopDown3DAdapter()'));
-test('CampaignController creates FPS3DAdapter', () => 
-    fileContains('public/engines/shared/CampaignController.js', 'new FPS3DAdapter()'));
-test('CampaignController creates Platformer3DAdapter', () => 
-    fileContains('public/engines/shared/CampaignController.js', 'new Platformer3DAdapter()'));
+test('CampaignController loads the active Unified3D adapter', () =>
+    fileContains('public/engines/shared/CampaignController.js', 'engines/unified-3d/Unified3DAdapter.js'));
+test('CampaignController resolves unified-3d campaign nodes', () =>
+    fileContains('public/engines/shared/CampaignController.js', "engineType !== 'unified-3d'"));
 
 // Test 8: Test Campaign
 log(BLUE, '\n--- Test Campaign ---');
@@ -215,51 +167,19 @@ test('3D campaign integration guide exists', () =>
 // Test 10: Runtime smoke contracts (behavior-oriented static checks)
 log(BLUE, '\n--- Runtime Smoke Contracts ---');
 
-test('TopDown adapter wires runtime completion event', () =>
-    fileMatches(
-        'public/engines/topdown-3d/TopDown3DAdapter.js',
-        /engine\.on\('levelComplete',\s*this\._onLevelComplete\)/
-    )
-);
-test('TopDown adapter supports levelPath and project load paths', () =>
-    fileContains('public/engines/topdown-3d/TopDown3DAdapter.js', 'loadLevelFromData(levelData)') &&
-    fileContains('public/engines/topdown-3d/TopDown3DAdapter.js', 'loadProject(projectName, levelId)')
-);
-test('TopDown runtime emits levelComplete', () =>
-    fileContains('public/engines/topdown-3d/main.js', "this.emit('levelComplete'")
-);
-
-test('FPS adapter wires runtime completion event', () =>
-    fileMatches(
-        'public/engines/fps-3d/FPS3DAdapter.js',
-        /game\.on\?\.\('levelComplete',\s*this\._onLevelComplete\)/
-    )
-);
-test('FPS adapter supports levelPath and project load paths', () =>
-    fileContains('public/engines/fps-3d/FPS3DAdapter.js', 'loadLevelFromData(levelData)') &&
-    fileContains('public/engines/fps-3d/FPS3DAdapter.js', 'loadProject(project, levelId)')
-);
-test('FPS runtime emits levelComplete', () =>
-    fileContains('public/engines/fps-3d/main.js', "this.emit('levelComplete'")
-);
-
-test('Platformer adapter forwards onLevelComplete callback', () =>
-    fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'this.game.onLevelComplete = this._onLevelComplete')
-);
-test('Platformer adapter supports levelPath and project load paths', () =>
-    fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'loadLevelFromData(levelData)') &&
-    fileContains('public/engines/platformer-3d/Platformer3DAdapter.js', 'loadProject(project, levelId)')
-);
-test('Platformer runtime completion stops loop and dispatches callback', () =>
-    fileContains('public/engines/platformer-3d/main.js', 'this._stopLoop();') &&
-    fileContains('public/engines/platformer-3d/main.js', 'this.onLevelComplete?.({')
-);
+test('Unified adapter forwards runtime completion', () =>
+    fileContains('public/engines/unified-3d/Unified3DAdapter.js', "this.game.on?.('levelComplete'") &&
+    fileContains('public/engines/unified-3d/Unified3DAdapter.js', 'this._triggerLevelComplete('));
+test('Unified core emits one-shot level completion', () =>
+    fileContains('public/engines/unified-3d/Game3DCore.js', "this.emit('levelComplete'") &&
+    fileContains('public/engines/unified-3d/Game3DCore.js', 'if (this._levelComplete) return false'));
+test('All Unified3D modes signal completion', () =>
+    ['FPSMode.js', 'TopDownMode.js', 'PlatformerMode.js'].every(mode =>
+        fileContains(`public/engines/unified-3d/modes/${mode}`, 'completeLevel(')));
 
 test('CampaignController advances node from adapter completion callback', () =>
-    fileContains('public/engines/shared/CampaignController.js', 'this.currentAdapter.onLevelComplete((data) => {') &&
-    (fileContains('public/engines/shared/CampaignController.js', 'this.advance();') ||
-        fileContains('public/engines/shared/CampaignController.js', 'this._advanceToNextNode();'))
-);
+    fileMatches('public/engines/shared/CampaignController.js',
+        /onLevelComplete\(async \(data\) => \{[\s\S]*?await this\.advance\(\)/));
 test('CampaignController passes levelPath through to adapter load', () =>
     fileContains('public/engines/shared/CampaignController.js', 'await this.currentAdapter.loadLevel(levelId, levelPath);')
 );

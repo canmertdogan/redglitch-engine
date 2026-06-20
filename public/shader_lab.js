@@ -355,8 +355,32 @@ function initMonaco() {
     return new Promise((resolve) => {
         require.config({ paths: { 'vs': 'lib/monaco/vs' } });
         require(['vs/editor/editor.main'], () => {
+            monaco.editor.defineTheme('redglitch-unified', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'comment', foreground: '7a3438', fontStyle: 'italic' },
+                    { token: 'keyword', foreground: 'ff4a52' },
+                    { token: 'number', foreground: 'ffc2c5' },
+                    { token: 'string', foreground: 'd78286' },
+                    { token: 'type', foreground: 'ff777e' }
+                ],
+                colors: {
+                    'editor.background': '#030303',
+                    'editor.foreground': '#d8c8c9',
+                    'editorLineNumber.foreground': '#572226',
+                    'editorLineNumber.activeForeground': '#ff1e27',
+                    'editorCursor.foreground': '#ff1e27',
+                    'editor.selectionBackground': '#5f171d88',
+                    'editor.inactiveSelectionBackground': '#35101466',
+                    'editor.lineHighlightBackground': '#140708',
+                    'editorIndentGuide.background1': '#241012',
+                    'editorIndentGuide.activeBackground1': '#7c252a',
+                    'editorGutter.background': '#030303'
+                }
+            });
             monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
-                value: DEFAULT_FRAG, language: 'cpp', theme: 'vs-dark',
+                value: DEFAULT_FRAG, language: 'cpp', theme: 'redglitch-unified',
                 minimap: { enabled: false }, fontSize: 13,
                 fontFamily: "'JetBrains Mono', Consolas, monospace", automaticLayout: true,
                 scrollBeyondLastLine: false, renderWhitespace: 'selection',
@@ -913,7 +937,7 @@ function onAutoCompileChange() { autoCompile = document.getElementById('auto-com
 
 // ======================== THEME ========================
 let themeDark = true;
-function toggleTheme() { themeDark = !themeDark; if (monacoEditor) monaco.editor.setTheme(themeDark ? 'vs-dark' : 'vs'); }
+function toggleTheme() { themeDark = !themeDark; if (monacoEditor) monaco.editor.setTheme(themeDark ? 'redglitch-unified' : 'vs'); }
 
 // ======================== CUSTOM TEXTURE UPLOAD ========================
 document.getElementById('texture-select').addEventListener('change', (e) => {
@@ -1014,7 +1038,7 @@ async function init() {
     if (badge) {
         badge.textContent = getProjectModeLabel();
         badge.style.display = 'inline';
-        badge.style.background = projectIs3D ? 'rgba(0,243,255,0.15)' : 'rgba(255,107,53,0.15)';
+        badge.style.background = projectIs3D ? 'rgba(255,30,39,0.12)' : 'rgba(255,200,50,0.12)';
         badge.style.color = projectIs3D ? 'var(--accent)' : 'var(--gold)';
         badge.style.borderColor = projectIs3D ? 'var(--accent)' : 'var(--gold)';
     }

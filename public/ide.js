@@ -189,6 +189,7 @@ window.editorInit = function() {
 
         // --- AI INTEGRATION: Ghost-Text Autocomplete ---
         try {
+            if (localStorage.getItem('kai_ai_enabled') === 'true') {
             const { RedGlitchAI } = await import('/ai/redglitch-ai.js');
             const { EventBus } = await import('/ai/shim.js');
             const ai = new RedGlitchAI();
@@ -237,6 +238,7 @@ window.editorInit = function() {
                 freeInlineCompletions: () => {}
             });
             console.log("RedGlitch AI Ghost-Text enabled.");
+            }
         } catch (e) {
             console.error("Failed to initialize AI Ghost-Text:", e);
         }
@@ -244,6 +246,7 @@ window.editorInit = function() {
         // --- AI INTEGRATION: Code Injection ---
         if (window.RedGlitchEventBus) {
             window.RedGlitchEventBus.on('ai:inject-code', (data) => {
+                if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
                 if (!editor) return;
                 const model = editor.getModel();
                 if (!model) return;
@@ -456,7 +459,7 @@ function updateTabsUI() {
     bar.innerHTML = '';
     
     openTabs.forEach((data, path) => {
-        const name = path.split(/[/\]/).pop();
+        const name = path.split(/[/\\]/).pop();
         const tab = document.createElement('div');
         tab.className = `tab ${path === activeTab ? 'active' : ''}`;
         

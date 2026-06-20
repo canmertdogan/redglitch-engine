@@ -28,8 +28,8 @@ export const AI_CONFIG = {
         contextWindow: 4096,                  // Total tokens for 3B model
         maxHistoryMessages: 10,                // Sliding window
         maxRAGChunks: 3,                      // Top-K retrieval
-        ragChunkSize: 300,                    // Characters per chunk
-        ragChunkOverlap: 50,                  // Overlap between chunks
+        ragChunkSize: 500,                    // Characters per chunk (matches build-corpus.js)
+        ragChunkOverlap: 100,                 // Overlap between chunks (matches build-corpus.js)
         idleDisposeMinutes: 5,                // Unload model after idle
         maxFileContextChars: 8000,            // Increased for 3B
         maxTokensForSystemPrompt: 800,        // Increased for 3B

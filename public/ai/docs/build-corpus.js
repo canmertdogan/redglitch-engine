@@ -15,7 +15,10 @@ const CONFIG = {
         { type: 'api', path: '../../shared/AssetManager.js', parser: 'jsdoc' },
         { type: 'api', path: '../../shared/SharedProjectState.js', parser: 'jsdoc' },
         { type: 'api', path: '../../engines/iso-pixel/main.js', parser: 'jsdoc' },
-        { type: 'type', path: '../../lib/monaco/redglitch.d.ts', parser: 'dts' }
+        { type: 'type', path: '../../lib/monaco/redglitch.d.ts', parser: 'dts' },
+        { type: 'knowledge', path: '../../knowledge/studio-docs.json', parser: 'knowledge' },
+        { type: 'knowledge', path: '../../knowledge/tutorials.json', parser: 'knowledge' },
+        { type: 'knowledge', path: '../../knowledge/faq.json', parser: 'knowledge' }
     ]
 };
 
@@ -42,6 +45,8 @@ async function buildCorpus() {
             fileChunks = parseJSDoc(content, source);
         } else if (source.parser === 'dts') {
             fileChunks = parseDTS(content, source);
+        } else if (source.parser === 'knowledge') {
+            fileChunks = parseKnowledge(content, source);
         } else {
             // Default Markdown/Text chunking
             fileChunks = chunkText(content, source);
@@ -130,6 +135,90 @@ function parseJSDoc(content, sourceInfo) {
 function parseDTS(content, sourceInfo) {
     // Treat d.ts as code text for now, but maybe split by 'interface' or 'declare'
     return chunkText(content, sourceInfo);
+}
+
+/**
+ * Knowledge JSON Parser
+ * Converts structured JSON (editors, tutorials, FAQs) into text chunks.
+ */
+function parseKnowledge(content, sourceInfo) {
+    const chunks = [];
+    let data;
+    try {
+        data = JSON.parse(content);
+    } catch (e) {
+        console.warn(`Cannot parse ${sourceInfo.path}: ${e.message}`);
+        return chunks;
+    }
+
+    // studio-docs.json: { editors: [...] }
+    if (data.editors && Array.isArray(data.editors)) {
+        for (const editor of data.editors) {
+            const text = [
+                `Editor: ${editor.name}`,
+                `Description: ${editor.description}`,
+                `How to use: ${editor.howToUse}`,
+                `Features: ${editor.features.join(', ')}`,
+                `Keywords: ${editor.keywords.join(', ')}`
+            ].join('\n');
+            chunks.push({
+                id: `kn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                text,
+                source: sourceInfo.path,
+                type: 'knowledge',
+                title: `EDITOR: ${editor.name}`,
+                tags: ['knowledge', 'editor', editor.id]
+            });
+        }
+        return chunks;
+    }
+
+    // tutorials.json: [{ id, title, steps, ... }]
+    if (Array.isArray(data) && data.length > 0 && data[0].steps) {
+        for (const tutorial of data) {
+            const stepsText = tutorial.steps.map(s => `  ${s.number}. ${s.instruction}`).join('\n');
+            const text = [
+                `Tutorial: ${tutorial.title}`,
+                `Difficulty: ${tutorial.difficulty || 'N/A'}`,
+                `Estimated time: ${tutorial.estimatedTime || 'N/A'}`,
+                `Keywords: ${tutorial.keywords || ''}`,
+                `Steps:\n${stepsText}`
+            ].join('\n');
+            chunks.push({
+                id: `kn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                text,
+                source: sourceInfo.path,
+                type: 'knowledge',
+                title: `TUTORIAL: ${tutorial.title}`,
+                tags: ['knowledge', 'tutorial', tutorial.id]
+            });
+        }
+        return chunks;
+    }
+
+    // faq.json: [{ id, question, answer, category, tags }]
+    if (Array.isArray(data) && data.length > 0 && data[0].question) {
+        for (const faq of data) {
+            const text = [
+                `Q: ${faq.question}`,
+                `A: ${faq.answer}`,
+                `Category: ${faq.category || 'general'}`,
+                `Tags: ${(faq.tags || []).join(', ')}`
+            ].join('\n');
+            chunks.push({
+                id: `kn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                text,
+                source: sourceInfo.path,
+                type: 'knowledge',
+                title: `FAQ: ${faq.question.substring(0, 60)}`,
+                tags: ['knowledge', 'faq', ...(faq.tags || [])]
+            });
+        }
+        return chunks;
+    }
+
+    console.warn(`Unknown knowledge format in ${sourceInfo.path}`);
+    return chunks;
 }
 
 buildCorpus().catch(console.error);

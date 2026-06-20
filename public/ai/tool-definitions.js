@@ -67,30 +67,16 @@ export function registerDefaultTools(registry) {
 
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
                     body: JSON.stringify({ file: args.path, content: args.content })
                 });
                 if (!res.ok) throw new Error(`Failed to write to ${args.path}`);
 
-                // Return UNDO function
-                const undo = async () => {
-                    console.log(`[Undo] Restoring ${args.path}...`);
-                    if (exists) {
-                        await fetch('/api/ide/write', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ file: args.path, content: previousContent })
-                        });
-                    } else {
-                        await fetch('/api/ide/delete', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ file: args.path })
-                        });
-                    }
+                return {
+                    success: true,
+                    path: args.path,
+                    undoDescriptor: { type: 'restore-file', path: args.path, existed: exists, previousContent }
                 };
-
-                return { success: true, path: args.path, undo };
             }
         });
 
@@ -118,47 +104,16 @@ export function registerDefaultTools(registry) {
 
                 const res = await fetch('/api/ide/delete', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
                     body: JSON.stringify({ file: args.path })
                 });
                 if (!res.ok) throw new Error(`Failed to delete ${args.path}`);
 
-                // Return UNDO function
-                const undo = async () => {
-                    if (previousContent !== null) {
-                        console.log(`[Undo] Restoring deleted file: ${args.path}`);
-                        await fetch('/api/ide/write', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ file: args.path, content: previousContent })
-                        });
-                    }
+                return {
+                    success: true,
+                    message: `${args.path} deleted.`,
+                    undoDescriptor: { type: 'restore-file', path: args.path, existed: previousContent !== null, previousContent }
                 };
-
-                return { success: true, message: `${args.path} deleted.`, undo };
-            }
-        });
-
-        // fs.mkdir (Low-Risk)
-        registry.register({
-            name: 'fs.mkdir',
-            description: 'Create a new directory.',
-            securityLevel: 'low-risk',
-            parameters: {
-                type: 'object',
-                properties: {
-                    path: { type: 'string', description: 'Directory path to create.' }
-                },
-                required: ['path']
-            },
-            execute: async (args) => {
-                const res = await fetch('/api/ide/mkdir', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dir: args.path })
-                });
-                if (!res.ok) throw new Error(`Failed to create directory ${args.path}`);
-                return { success: true, path: args.path };
             }
         });
 
@@ -202,6 +157,7 @@ export function registerDefaultTools(registry) {
             name: 'project.updateManifesto',
             description: 'Update the project vision document (MANIFESTO.md) with new decisions or vision statements.',
             securityLevel: 'low-risk',
+            argumentAliases: { newManifesto: 'content', manifesto: 'content', vision: 'content' },
             parameters: {
                 type: 'object',
                 properties: {
@@ -212,15 +168,27 @@ export function registerDefaultTools(registry) {
             execute: async (args) => {
                 // Get current project to find the right path
                 const info = await (await fetch('/api/projects/current')).json();
-                const path = info.name === 'Default Project' ? 'MANIFESTO.md' : `projects/${info.name}/MANIFESTO.md`;
+                const path = info.isRoot ? 'MANIFESTO.md' : `projects/${info.name}/MANIFESTO.md`;
+                let previousContent = null;
+                let existed = false;
+                const current = await fetch(`/api/ide/read?file=${encodeURIComponent(path)}`).catch(() => null);
+                if (current?.ok) {
+                    previousContent = await current.text();
+                    existed = true;
+                }
                 
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
                     body: JSON.stringify({ file: path, content: args.content })
                 });
                 if (!res.ok) throw new Error(`Failed to update Manifesto at ${path}`);
-                return { success: true, message: "Project Manifesto updated with new vision." };
+                return {
+                    success: true,
+                    message: 'Project Manifesto updated with new vision.',
+                    changedResources: [path],
+                    undoDescriptor: { type: 'restore-file', path, existed, previousContent }
+                };
             }
         });
 
@@ -523,165 +491,6 @@ export function registerDefaultTools(registry) {
             }
         });
         
-        // --- STUB TOOLS (absorb common LLM hallucinations silently) ---
-        // These prevent unregistered code.* / asset.* / world.* from triggering
-        // the namespace auto-redirect and opening random editors mid-workflow.
-        const _stub = (stubName, msg) => registry.register({
-            name: stubName, description: msg, securityLevel: 'safe',
-            parameters: { type: 'object', properties: {} },
-            execute: async () => ({ success: true, message: msg })
-        });
-        _stub('code.insert',   'No-op: code.insert is handled by the Script Editor directly.');
-        _stub('asset.generate','No-op: use the Sprite Editor to generate assets.');
-        _stub('world.spawn',   'No-op: use the World Editor to spawn objects.');
-
-        // --- STUDIO PROXY TOOLS ---
-        // These forward tool calls to the appropriate studio iframe via postMessage
-
-        /**
-         * Helper to ensure a specific studio/editor is open before dispatching.
-         */
-        const ensureStudioOpen = async (studioId, filename = null) => {
-            const hub = window.parent || window;
-            if (!hub.openWindow || !hub.tools) return false;
-
-            const tool = hub.tools.find(t => t.id === studioId);
-            if (!tool) return false;
-
-            // Open the window if not already visible
-            hub.openWindow(tool);
-            if (filename) {
-                // Future: add logic to open specific file
-            }
-
-            const frameId = `frame-${studioId}`;
-            return new Promise((resolve) => {
-                let tries = 0;
-                const iv = setInterval(() => {
-                    tries++;
-                    const frame = hub.document.getElementById(frameId);
-                    // Check if frame exists and is likely loaded (has contentWindow)
-                    if (frame && frame.contentWindow) {
-                        clearInterval(iv);
-                        resolve(true);
-                    }
-                    if (tries > 50) { // 5s timeout
-                        clearInterval(iv);
-                        resolve(false);
-                    }
-                }, 100);
-            });
-        };
-
-        // pixel.generateTerrain proxy (ensures iso_studio is open)
-        registry.register({
-            name: 'pixel.generateTerrain',
-            description: 'Generate procedural terrain in the IsoPixel Studio.',
-            securityLevel: 'high-risk',
-            parameters: {
-                type: 'object',
-                properties: {
-                    mode: { type: 'string', enum: ['terrain', 'islands', 'maze', 'flat'], default: 'terrain' },
-                    scale: { type: 'number', default: 0.05 },
-                    amplitude: { type: 'number', default: 10 }
-                }
-            },
-            execute: async (args) => {
-                const ready = await ensureStudioOpen('iso_studio');
-                if (!ready) throw new Error('IsoPixel Studio could not be opened.');
-                
-                // The actual execution is handled by StudioBridge in iso_editor.js
-                // which listens for 'studio:action:execute' emitted by ToolRegistry.execute()
-                return { success: true, message: 'Terrain generation requested in IsoPixel Studio.' };
-            }
-        });
-
-        // platformer.generateLevel proxy (ensures platformer_studio is open)
-        registry.register({
-            name: 'platformer.generateLevel',
-            description: 'Generate a procedural platformer level.',
-            securityLevel: 'high-risk',
-            parameters: {
-                type: 'object',
-                properties: {
-                    theme: { type: 'string', enum: ['flow', 'spire', 'abyss', 'gauntlet', 'clockwork'], default: 'flow' },
-                    difficulty: { type: 'number', default: 5, description: 'Difficulty 1-10.' },
-                    width: { type: 'number', default: 40 },
-                    height: { type: 'number', default: 20 }
-                }
-            },
-            execute: async (args) => {
-                const ready = await ensureStudioOpen('platformer_studio');
-                if (!ready) throw new Error('Platformer Studio could not be opened.');
-                return { success: true, message: 'Level generation requested in Platformer Studio.' };
-            }
-        });
-
-        // world.generateMap proxy (ensures editor is open and triggers generation)
-        registry.register({
-            name: 'world.generateMap',
-            description: 'Generate a procedural top-down RPG map.',
-            securityLevel: 'high-risk',
-            parameters: {
-                type: 'object',
-                properties: {
-                    type: { type: 'string', enum: ['village', 'dungeon', 'hell', 'heaven', 'lab'], default: 'village' },
-                    density: { type: 'number', default: 5 },
-                    seed: { type: 'string', description: 'Optional seed.' }
-                }
-            }
-            // Remote execution - handled by StudioBridge in editor.js
-            // The editor listens via eventBus for 'studio:action:execute' and processes through StudioBridge
-        });
-
-        // logic.generate proxy (ensures Algorithm Studio is open)
-        registry.register({
-            name: 'logic.generate',
-            description: 'Generate or patch a visual algorithm node graph. The payload should contain nodes (with type, x, y, and specific data) and wires connecting them.',
-            securityLevel: 'high-risk',
-            parameters: {
-                type: 'object',
-                properties: {
-                    nodes: { 
-                        type: 'array',
-                        description: 'List of logic nodes to spawn on the canvas. Must include type, x, y.',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                id: { type: 'string', description: 'Temporary ID for wiring (e.g. n1)' },
-                                type: { type: 'string', description: 'Node definition type (e.g. event_on_start, math_add)' },
-                                x: { type: 'number', description: 'X coordinate' },
-                                y: { type: 'number', description: 'Y coordinate' },
-                                value: { type: 'string', description: 'For var_string/number/etc' },
-                                op: { type: 'string', description: 'For math/compare' }
-                            },
-                            required: ['id', 'type', 'x', 'y']
-                        }
-                    },
-                    wires: {
-                        type: 'array',
-                        description: 'List of connections between nodes.',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                sourceId: { type: 'string' },
-                                sourcePort: { type: 'string', description: 'e.g. next, out, true, false' },
-                                targetId: { type: 'string' },
-                                targetPort: { type: 'string', description: 'e.g. exec, in, a, b' }
-                            },
-                            required: ['sourceId', 'sourcePort', 'targetId', 'targetPort']
-                        }
-                    }
-                },
-                required: ['nodes', 'wires']
-            },
-            execute: async (args) => {
-                const ready = await ensureStudioOpen('logic');
-                if (!ready) throw new Error('Algorithm Studio could not be opened.');
-                return { success: true, message: 'Logic generation requested in Algorithm Studio.' };
-            }
-        });
-
         // Aliases for legacy
         registry.register({ ...registry.tools.get('fs.read'), name: 'readFile' });
         registry.register({ ...registry.tools.get('fs.list'), name: 'listFiles' });

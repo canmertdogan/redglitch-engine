@@ -19,9 +19,14 @@ export class StudioBridge {
      * @param {redglitch.EventBus} eventBus - The global EventBus instance
      */
     constructor(namespace, eventBus = null) {
+        if (window.__redglitchStudioBridges?.has(namespace)) {
+            return window.__redglitchStudioBridges.get(namespace);
+        }
         this.namespace = namespace;
         this.eventBus = eventBus || window.RedGlitchEventBus;
         this.tools = new Map();
+        this.completedRequests = new Set();
+        this.listeners = [];
         
         if (!this.eventBus) {
             console.error(`[StudioBridge:${namespace}] EventBus not found. AI integration disabled.`);
@@ -29,6 +34,8 @@ export class StudioBridge {
         }
 
         this._setupListeners();
+        if (!window.__redglitchStudioBridges) window.__redglitchStudioBridges = new Map();
+        window.__redglitchStudioBridges.set(namespace, this);
     }
 
     /**
@@ -36,10 +43,11 @@ export class StudioBridge {
      */
     _setupListeners() {
         // Listen for execution requests from ToolRegistry
-        this.eventBus.on('studio:action:execute', async (event) => {
+        const executeHandler = async (event) => {
             if (!event || !event.data) return;
             const request = event.data;
             if (!request || !request.method) return;
+            if (this.completedRequests.has(request.id)) return;
 
             // PREVENT LOOPS: Only process if this bridge is in the window meant to handle this namespace
             const methodParts = request.method.split('.');
@@ -48,15 +56,11 @@ export class StudioBridge {
             const [ns, method] = methodParts;
 
             if (ns === this.namespace && this.tools.has(method)) {
-                // Ignore our own events (local echoes from the same instance)
-                if (event.source === this.eventBus.getSource()) {
-                    return;
-                }
-
                 console.log(`%c[StudioBridge:${this.namespace}]%c Executing AI command: ${method}`, 'background: #2ecc71; color: #000; padding: 2px 5px;', '', request.params);
 
                 
                 try {
+                    this.completedRequests.add(request.id);
                     const tool = this.tools.get(method);
                     const result = await tool.execute(request.params);
                     
@@ -80,12 +84,14 @@ export class StudioBridge {
                     });
                 }
             }
-        });
+        };
+        this.eventBus.on('studio:action:execute', executeHandler);
+        this.listeners.push(['studio:action:execute', executeHandler]);
 
         // Listen for discovery requests (if ToolRegistry reboots)
-        this.eventBus.on('ai:tool:discover', () => {
-            this.announceAll();
-        });
+        const discoverHandler = () => this.announceAll();
+        this.eventBus.on('ai:tool:discover', discoverHandler);
+        this.listeners.push(['ai:tool:discover', discoverHandler]);
     }
 
     /**
@@ -118,6 +124,12 @@ export class StudioBridge {
         for (const tool of this.tools.values()) {
             this.eventBus.emit('studio:tool:announce', tool);
         }
+    }
+
+    dispose() {
+        for (const [event, handler] of this.listeners) this.eventBus.off(event, handler);
+        this.listeners = [];
+        window.__redglitchStudioBridges?.delete(this.namespace);
     }
 }
 

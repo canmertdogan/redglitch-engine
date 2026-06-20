@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedGlitch — Multi-Engine Pixel Art Game Studio</title>
+    <meta name="description" content="RedGlitch is an open-source game development studio for building pixel art games — RPG, Platformer, Isometric, 3D TopDown, and FPS. Ships to Desktop, Web, Android, and iOS.">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #050509;
+            --surface: #101018;
+            --surface2: #1a1a26;
+            --border: rgba(255,255,255,0.08);
+            --crimson: #ff2a5f;
+            --crimson-dim: #cc224c;
+            --crimson-glow: rgba(255,42,95,0.3);
+            --green: #00f2fe;
+            --text: #ffffff;
+            --text-dim: #b3b3c5;
+            --text-muted: #7a7a8c;
+            --font: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'Space Mono', 'Courier New', monospace;
+            --display: 'Outfit', -apple-system, sans-serif;
+            --display-retro: 'VT323', monospace;
+            --radius: 12px;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            background-image: radial-gradient(circle at 50% -20%, rgba(255,42,95,0.15) 0%, transparent 60%);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 16px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+        a { color: var(--crimson); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul { list-style: none; }
+        img { max-width: 100%; height: auto; display: block; }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 32px 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 48px 0 32px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 32px;
+        }
+        .header-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .header-logo img { width: 48px; height: 48px; border-radius: 8px; }
+        .header-logo span {
+            font-family: var(--display);
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+        .header-logo span .red { color: var(--crimson); }
+        .header-logo span .glitch { color: var(--green); }
+        .header h1 {
+            font-family: var(--display);
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .header h1 .hl { color: var(--crimson); }
+        .header p {
+            color: var(--text-dim);
+            max-width: 640px;
+            margin: 0 auto;
+            font-size: 18px;
+        }
+        .header .badge {
+            display: inline-block;
+            background: rgba(255,42,95,0.15);
+            color: var(--crimson);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,42,95,0.3);
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--crimson);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--crimson-dim);
+            text-decoration: none;
+            box-shadow: 0 0 20px var(--crimson-glow);
+        }
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            border-color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .section {
+            margin-bottom: 48px;
+        }
+        .section-title {
+            font-family: var(--display);
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-title .hl { color: var(--crimson); }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .gallery-item {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-family: var(--font-mono);
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .feature {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 20px;
+        }
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .feature h3 {
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        .feature p {
+            color: var(--text-dim);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .engines {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .engine-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 16px;
+            text-align: center;
+        }
+        .engine-card.featured {
+            border-color: var(--crimson);
+            box-shadow: 0 0 20px rgba(255,42,95,0.1);
+        }
+        .engine-icon { font-size: 32px; margin-bottom: 8px; }
+        .engine-card h3 { font-size: 15px; margin-bottom: 4px; }
+        .engine-card .tag {
+            display: inline-block;
+            font-size: 10px;
+            font-family: var(--font-mono);
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(0,242,254,0.1);
+            color: var(--green);
+        }
+        .engine-card p {
+            color: var(--text-dim);
+            font-size: 13px;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+        .engine-card ul {
+            margin-top: 10px;
+            text-align: left;
+        }
+        .engine-card ul li {
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 2px 0;
+            font-family: var(--font-mono);
+        }
+        .engine-card ul li::before { content: '> '; color: var(--crimson); }
+
+        .platforms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .platform {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 16px;
+            text-align: center;
+        }
+        .platform-icon { font-size: 32px; margin-bottom: 8px; }
+        .platform h4 { font-size: 15px; margin-bottom: 4px; }
+        .platform p { color: var(--text-dim); font-size: 13px; line-height: 1.5; }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            padding: 24px 0;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+        .stat { text-align: center; }
+        .stat-num {
+            font-family: var(--display);
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--crimson);
+        }
+        .stat-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .description {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 24px;
+            margin-top: 20px;
+            line-height: 1.8;
+        }
+        .description p { color: var(--text-dim); margin-bottom: 12px; }
+        .description p:last-child { margin-bottom: 0; }
+
+        .footer {
+            text-align: center;
+            padding: 32px 0;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        .footer a { color: var(--text-dim); }
+
+        @media (max-width: 600px) {
+            .container { padding: 20px 16px; }
+            .header h1 { font-size: 26px; }
+            .stats { gap: 20px; }
+            .features { grid-template-columns: 1fr; }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;700;800;900&family=Space+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-logo">
+            <img src="../public/icons/icon.png" alt="RedGlitch">
+            <span><span class="red">RED</span><span class="glitch">GLITCH</span></span>
+        </div>
+        <div class="badge">OPEN SOURCE CORE · v7.0</div>
+        <h1>Forge <span class="hl">retro masterpieces</span>.<br>Ship to <span class="hl">any platform</span>.</h1>
+        <p>A full game development studio with multiple specialized engines, 30+ integrated editors, and a local AI assistant — all running in your browser or as a desktop app.</p>
+        <div class="btn-row">
+            <a href="https://github.com/n0rthstar/redglitch" class="btn btn-primary">View on GitHub</a>
+            <a href="../public/project_dashboard.html" class="btn btn-secondary">Open Live Demo</a>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-num">5+</div>
+            <span class="stat-label">Game Engines</span>
+        </div>
+        <div class="stat">
+            <div class="stat-num">30+</div>
+            <span class="stat-label">Integrated Editors</span>
+        </div>
+        <div class="stat">
+            <div class="stat-num">4</div>
+            <span class="stat-label">Target Platforms</span>
+        </div>
+        <div class="stat">
+            <div class="stat-num">100%</div>
+            <span class="stat-label">Local — No Cloud</span>
+        </div>
+    </div>
+
+    <!-- SCREENSHOTS -->
+    <div class="section">
+        <div class="section-title">Screenshots</div>
+        <div class="gallery">
+            <div class="gallery-item"><img src="../screenshots/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-03-09%20%D0%B2%2011.14.20.png" alt="IsoPixel Editor" loading="lazy"></div>
+            <div class="gallery-item"><img src="../screenshots/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-03-09%20%D0%B2%2011.17.19.png" alt="Studio Dashboard" loading="lazy"></div>
+            <div class="gallery-item"><img src="../screenshots/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-03-09%20%D0%B2%2011.18.30.png" alt="Code Editor" loading="lazy"></div>
+            <div class="gallery-item"><img src="../screenshots/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-03-09%20%D0%B2%2011.15.04.png" alt="Isometric World" loading="lazy"></div>
+            <div class="gallery-item"><img src="../screenshots/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-03-09%20%D0%B2%2011.13.28.png" alt="Platformer Editor" loading="lazy"></div>
+            <div class="gallery-item"><img src="../screenshots/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-03-09%20%D0%B2%2011.13.41.png" alt="Dialogue Editor" loading="lazy"></div>
+        </div>
+    </div>
+
+    <!-- DESCRIPTION -->
+    <div class="section">
+        <div class="section-title">About</div>
+        <div class="description">
+            <p><strong>RedGlitch</strong> is a professional-grade, open-source game development studio. Unlike generic game engines, RedGlitch ships multiple <strong>specialized engines</strong> — each tuned for a specific genre — so you're not fighting a one-size-fits-all tool. Whether you're building an isometric tactical RPG, a precision platformer, a story-driven top-down adventure, or a retro FPS, there's an engine ready to go.</p>
+            <p>Every engine comes with its own set of <strong>integrated visual editors</strong> — over 30 in total. Edit dialogue trees, design levels, paint sprites, script behaviors, compose music, manage quests, and more — all from within the studio. No context switching, no external tools required.</p>
+            <p>On top of that, <strong>Kai AI</strong> — a fully local, privacy-first AI assistant — runs directly in your browser via WebGPU/WASM. Kai can answer questions about your project, generate code, modify files, and act as your pair programmer, all without sending data to any server.</p>
+            <p>RedGlitch supports <strong>4 target platforms</strong>: Desktop (Electron), Web (Express), Android (Capacitor), and iOS (Capacitor). Build once, ship everywhere with a single command.</p>
+        </div>
+    </div>
+
+    <!-- ENGINES -->
+    <div class="section">
+        <div class="section-title">Engines</div>
+        <div class="engines">
+            <div class="engine-card featured">
+                <div class="engine-icon">◈</div>
+                <h3>IsoPixel <span class="tag">2.5D</span></h3>
+                <p>Isometric pixel art engine with depth-sorted rendering, day/night cycle, particle systems, and procedural vegetation.</p>
+                <ul>
+                    <li>Depth-sorted tile rendering</li>
+                    <li>Day/Night atmosphere</li>
+                    <li>IsoFX particle system</li>
+                </ul>
+            </div>
+            <div class="engine-card">
+                <div class="engine-icon">⬡</div>
+                <h3>RPG Top-Down <span class="tag">2D</span></h3>
+                <p>Systems-heavy engine with branching dialogue, quests, inventory, NPC schedules, and logic scripting runtime.</p>
+                <ul>
+                    <li>Branching dialogue trees</li>
+                    <li>Quest achievements</li>
+                    <li>Inventory management</li>
+                </ul>
+            </div>
+            <div class="engine-card">
+                <div class="engine-icon">▶</div>
+                <h3>Platformer 2D <span class="tag">2D</span></h3>
+                <p>Precision physics with AABB collision, smooth camera interpolation, and frame-perfect character animator.</p>
+                <ul>
+                    <li>AABB collision system</li>
+                    <li>Smooth camera</li>
+                    <li>Visual level editor</li>
+                </ul>
+            </div>
+            <div class="engine-card">
+                <div class="engine-icon">⬛</div>
+                <h3>TopDown 3D <span class="tag">3D</span></h3>
+                <p>Top-down with real 3D depth, ability system, fog of war, minimap, and full A* pathfinding.</p>
+                <ul>
+                    <li>3D depth rendering</li>
+                    <li>Fog of war + minimap</li>
+                    <li>A* pathfinding</li>
+                </ul>
+            </div>
+            <div class="engine-card">
+                <div class="engine-icon">◎</div>
+                <h3>FPS 3D <span class="tag">3D</span></h3>
+                <p>First-person engine with custom 3D camera, enemy AI, decal systems, and adapter-based rendering.</p>
+                <ul>
+                    <li>First-person camera</li>
+                    <li>Enemy AI system</li>
+                    <li>Decal system</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="section">
+        <div class="section-title">Key Features</div>
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🛠</div>
+                <h3>30+ Built-in Editors</h3>
+                <p>Dialogue, quests, characters, enemies, items, skills, achievements, audio, shaders, pixel art, prefabs, cutscenes, behaviors, and more.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🧠</div>
+                <h3>Kai Local AI</h3>
+                <p>AI pair programmer running 100% in-browser via WebGPU/WASM. Project-aware RAG, file creation, code modification — no cloud needed.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📦</div>
+                <h3>One-Cmd Export</h3>
+                <p><code>npm run build:game "Name" platform</code> — packages your game for desktop, web, Android, or iOS from a single project.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <h3>100% Private</h3>
+                <p>All engines, editors, and AI run locally. No telemetry, no accounts, no data leaving your machine. Open source under MIT.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <h3>Touch Optimized</h3>
+                <p>Full studio and all engine runners are responsive and touch-friendly. Works on tablets and phones right out of the box.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🎮</div>
+                <h3>Game Runtimes</h3>
+                <p>Each engine ships with a standalone runtime. Export a playable game that runs without the studio on any supported platform.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLATFORMS -->
+    <div class="section">
+        <div class="section-title">Supported Platforms</div>
+        <div class="platforms">
+            <div class="platform">
+                <div class="platform-icon">🖥</div>
+                <h4>Desktop</h4>
+                <p>Packaged via Electron. Embeds the game server internally — no separate install needed.</p>
+            </div>
+            <div class="platform">
+                <div class="platform-icon">🌐</div>
+                <h4>Web</h4>
+                <p>Served via Express. The same HTML/JS game runs in any modern browser.</p>
+            </div>
+            <div class="platform">
+                <div class="platform-icon">📱</div>
+                <h4>Android</h4>
+                <p>Packaged via Capacitor. Sync assets and open Android Studio with one command.</p>
+            </div>
+            <div class="platform">
+                <div class="platform-icon">🍎</div>
+                <h4>iOS</h4>
+                <p>Via Capacitor. Builds the Xcode project ready for App Store deployment.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GETTING STARTED -->
+    <div class="section">
+        <div class="section-title">Getting Started</div>
+        <div class="description">
+            <p><strong>1.</strong> Clone the repository: <code style="background:var(--surface); padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:13px;">git clone https://github.com/n0rthstar/redglitch.git</code></p>
+            <p><strong>2.</strong> Install dependencies: <code style="background:var(--surface); padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:13px;">npm ci</code></p>
+            <p><strong>3.</strong> Launch the studio: <code style="background:var(--surface); padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:13px;">npm start</code></p>
+            <p><strong>4.</strong> Or run the web server: <code style="background:var(--surface); padding:2px 8px; border-radius:4px; font-family:var(--font-mono); font-size:13px;">npm run server</code></p>
+            <p style="margin-top:16px;">Open your browser to <strong>http://localhost:3000</strong> and start building.</p>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p>RedGlitch Engine Studio v7.0 — Open Source (MIT)</p>
+        <p><a href="https://github.com/n0rthstar/redglitch" target="_blank" rel="noopener">GitHub Repository</a></p>
+    </div>
+
+</div>
+
+</body>
+</html>

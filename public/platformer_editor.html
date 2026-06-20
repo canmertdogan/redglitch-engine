@@ -497,6 +497,11 @@
             }, 16);
         }
     </script>
+    <script type="module">
+        import { StudioBridge } from '/ai/studio-bridge.js';
+        window.StudioBridge = StudioBridge;
+        window.dispatchEvent(new Event('studio-bridge-ready'));
+    </script>
     <script src="platformer_editor.js"></script>
 </body>
 </html>

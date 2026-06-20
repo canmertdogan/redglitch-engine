@@ -24,7 +24,7 @@ export class CoPilot {
 
         this.ai.toolRegistry.register({
             name: 'ai.chaosMode',
-            description: 'Activate or deactivate Chaos Mode for stress-testing. IRAB will perform random actions to try and break things.',
+            description: 'Activate or deactivate dry-run automation validation. No tools are executed.',
             securityLevel: 'high-risk',
             parameters: {
                 type: 'object',
@@ -54,10 +54,9 @@ export class CoPilot {
             
             console.log(`[Chaos] Executing random action: ${tool.name}`, args);
             try {
-                // Execute without confirmation for true chaos
-                await tool.execute(args);
+                this.eventBus.emit('ai:chaos:probe', { tool: tool.name, args, dryRun: true });
             } catch (e) {
-                console.warn(`[Chaos] Action failed (this is good for testing): ${tool.name}`, e);
+                console.warn(`[Chaos] Dry-run probe failed: ${tool.name}`, e);
             }
         }, 2000); // Action every 2 seconds
     }
@@ -124,6 +123,7 @@ export class CoPilot {
     }
 
     handleError(error) {
+        if (!this.enabled) return;
         console.log("[Co-Pilot] Error detected:", error);
         this.suggest(`Grrr! I detected an error: ${error.message || 'Unknown error'}. Want me to analyze and try to fix it?`, [
             { label: 'Fix it for me', action: 'ai.analyzeError', args: { error } },
@@ -150,6 +150,7 @@ export class CoPilot {
      * Show a proactive suggestion to the user.
      */
     suggest(text, actions = []) {
+        if (!this.enabled) return;
         this.eventBus.emit('ai:suggestion', { text, actions });
         // Also use TTS if available
         if (window.RedGlitchThoughtVisualizer) {

@@ -8,9 +8,9 @@
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         :root {
-            --kai-bg: #020b1c; /* Deep Navy */
-            --kai-panel: #051630; /* Slightly Lighter Navy */
-            --kai-border: #ff0000; /* Retro Yellow */
+            --kai-bg: #020b1c;
+            --kai-panel: #051630;
+            --kai-border: #ff0000;
             --kai-accent: #ff0000;
             --kai-text: #d0e0ff;
             --kai-user-bg: #003366;
@@ -18,6 +18,33 @@
             --kai-font: 'VT323', monospace;
             --kai-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
         }
+
+        body[data-kai-size="small"]  { font-size: 14px; }
+        body[data-kai-size="small"] .ai-message-bubble { font-size: 14px !important; }
+        body[data-kai-size="small"] #ai-chat-input { font-size: 14px !important; }
+        body[data-kai-size="small"] .xp-button,
+        body[data-kai-size="small"] .xp-tool-btn,
+        body[data-kai-size="small"] .xp-control-btn { font-size: 13px !important; }
+        body[data-kai-size="small"] .ai-speech-header { font-size: 16px !important; }
+        body[data-kai-size="small"] #ai-chat-title { font-size: 16px !important; }
+
+        body[data-kai-size="medium"]  { font-size: 16px; }
+        body[data-kai-size="medium"] .ai-message-bubble { font-size: 16px !important; }
+        body[data-kai-size="medium"] #ai-chat-input { font-size: 16px !important; }
+        body[data-kai-size="medium"] .xp-button,
+        body[data-kai-size="medium"] .xp-tool-btn,
+        body[data-kai-size="medium"] .xp-control-btn { font-size: 14px !important; }
+        body[data-kai-size="medium"] .ai-speech-header { font-size: 18px !important; }
+        body[data-kai-size="medium"] #ai-chat-title { font-size: 18px !important; }
+
+        body[data-kai-size="large"]  { font-size: 20px; }
+        body[data-kai-size="large"] .ai-message-bubble { font-size: 20px !important; }
+        body[data-kai-size="large"] #ai-chat-input { font-size: 20px !important; }
+        body[data-kai-size="large"] .xp-button,
+        body[data-kai-size="large"] .xp-tool-btn,
+        body[data-kai-size="large"] .xp-control-btn { font-size: 18px !important; }
+        body[data-kai-size="large"] .ai-speech-header { font-size: 22px !important; }
+        body[data-kai-size="large"] #ai-chat-title { font-size: 22px !important; }
 
         * {
             box-sizing: border-box;
@@ -45,6 +72,8 @@
         #xp-ai-loading, 
         #xp-settings, 
         #xp-omni-box,
+        #kai-mode-toggle,
+        #kai-mode-choice,
         .ai-permission-modal {
             pointer-events: auto !important;
         }
@@ -567,18 +596,203 @@
         }
         .setting-control-row label { flex: 1; font-size: 16px; color: #888; }
 
-        input[type="range"] { flex: 2; accent-color: var(--kai-accent); }
-        input[type="number"], select {
+        /* ===== THEMED INPUTS ===== */
+        input[type="range"] {
+            flex: 2;
+            accent-color: var(--kai-accent);
+            height: 4px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--kai-accent);
+            border: none;
+            cursor: pointer;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select,
+        textarea {
             background: #000;
             border: 1px solid #333;
             color: var(--kai-accent);
             font-family: var(--kai-font);
             font-size: 18px;
-            padding: 2px 5px;
+            padding: 4px 8px;
+            outline: none;
         }
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--kai-accent);
+            box-shadow: 0 0 8px rgba(255, 0, 0, 0.2);
+        }
+
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding-right: 20px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23ff0000'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            cursor: pointer;
+        }
+        select option {
+            background: #020b1c;
+            color: var(--kai-accent);
+        }
+
+        input[type="checkbox"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #000;
+            border: 1px solid #333;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        input[type="checkbox"]:checked {
+            border-color: var(--kai-accent);
+            background: var(--kai-accent);
+        }
+        input[type="checkbox"]:checked::after {
+            content: 'X';
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        /* ===== AD SQUARES ===== */
+        .kai-ad-grid {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            justify-content: center;
+        }
+        .kai-ad-square {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            width: 110px;
+            height: 110px;
+            background: #000;
+            border: 1px solid #333;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            padding: 8px;
+            text-align: center;
+        }
+        .kai-ad-square:hover {
+            border-color: var(--kai-accent);
+            box-shadow: 0 0 12px rgba(255, 0, 0, 0.25);
+            transform: scale(1.05);
+        }
+        .kai-ad-square:active {
+            transform: scale(0.97);
+        }
+        .kai-ad-icon {
+            font-size: 28px;
+            color: var(--kai-accent);
+            font-weight: bold;
+            line-height: 1;
+        }
+        .kai-ad-name {
+            font-size: 13px;
+            color: var(--kai-accent);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+        .kai-ad-desc {
+            font-size: 10px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
+        }
+        .kai-ad-cta {
+            font-size: 11px;
+            color: #888;
+            border: 1px solid #444;
+            padding: 2px 8px;
+            margin-top: 2px;
+            line-height: 1;
+            transition: all 0.15s;
+        }
+        .kai-ad-square:hover .kai-ad-cta {
+            border-color: var(--kai-accent);
+            color: var(--kai-accent);
+            box-shadow: 0 0 6px rgba(255, 0, 0, 0.15);
+        }
+
+        #kai-mode-toggle {
+            position: fixed;
+            top: 60px;
+            right: 12px;
+            z-index: 2000002;
+            padding: 7px 12px;
+            border: 1px solid var(--kai-accent);
+            background: #080c18;
+            color: var(--kai-accent);
+            font: 18px var(--kai-font);
+            cursor: pointer;
+            box-shadow: var(--kai-shadow);
+        }
+        #kai-mode-toggle.off { color: #aaa; border-color: #666; }
+        #kai-mode-choice {
+            position: fixed;
+            inset: 0;
+            z-index: 2000001;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.78);
+        }
+        #kai-mode-choice.show { display: flex; }
+        .kai-mode-dialog {
+            width: min(620px, calc(100vw - 32px));
+            padding: 24px;
+            border: 2px solid var(--kai-accent);
+            background: #080c18;
+            color: var(--kai-text);
+            box-shadow: 0 0 35px rgba(255, 0, 0, 0.28);
+        }
+        .kai-mode-dialog h2 { color: var(--kai-accent); margin-bottom: 12px; }
+        .kai-mode-dialog p { line-height: 1.35; margin-bottom: 12px; }
+        .kai-mode-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .kai-mode-actions button { flex: 1; padding: 12px; }
     </style>
 </head>
 <body>
+    <button id="kai-mode-toggle" class="off" onclick="window.toggleKaiMode()">AI: OFF</button>
+    <div id="kai-mode-choice" role="dialog" aria-modal="true" aria-labelledby="kai-mode-title">
+        <div class="kai-mode-dialog">
+            <h2 id="kai-mode-title">ENABLE AI FEATURES?</h2>
+            <p>Would you like to continue with AI features, including Kai automation, engine Copilot, project-aware assistance, RAG context, code completion, and proactive diagnostics?</p>
+            <p>AI mode can inspect your active project and propose changes. Project mutations still require preview and explicit approval. Manual mode keeps all AI inference, Copilot activity, RAG workers, and AI tool execution disabled.</p>
+            <div class="kai-mode-actions">
+                <button class="xp-button" onclick="window.chooseKaiMode(true)">CONTINUE WITH AI</button>
+                <button class="xp-button secondary" onclick="window.chooseKaiMode(false)">CONTINUE MANUALLY</button>
+            </div>
+        </div>
+    </div>
     <div id="ai-assistant-container">
         <div id="ai-clippy" class="state-idle" title="KAI - Studio Assistant (She/Her)" onclick="window.AIChatUI ? AIChatUI.openChat() : null">
             <div class="kai-avatar-img"></div>
@@ -638,6 +852,7 @@
             <div class="xp-input-toolbar">
                 <div class="xp-toolbar-section">
                     <button class="xp-tool-btn" title="Clear History" onclick="document.getElementById('ai-chat-messages').innerHTML=''">[CLR]</button>
+                    <button class="xp-tool-btn" title="Copy Last Response" onclick="window.copyLastKaiResponse()">[CPY]</button>
                     <button class="xp-tool-btn" title="Project Context" onclick="AIChatUI.queryContext()">[CTX]</button>
                     <button class="xp-tool-btn" title="System Status" onclick="AIChatUI.addMessage('system', '>> KERNEL_STATUS: OPTIMAL\n>> BRAIN_SYNC: 100%\n>> RAG_LATENCY: 12ms')">[LOG]</button>
                 </div>
@@ -709,7 +924,31 @@
                             <option value="native">NATIVE_CORTEX (PYTHON/GGUF)</option>
                             <option value="local">WEB_GPU (TRANSFORMERS.JS)</option>
                             <option value="cerebras">CLOUD_ORCHESTRATOR</option>
+                            <option value="opencode-zen">OPENCODE_ZEN (CLOUD)</option>
                         </select>
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">OPENCODE_ZEN</span>
+                    <div class="setting-control-row">
+                        <label>API Key:</label>
+                        <input type="password" id="setting-opencode-zen-key" placeholder="OpenCode Zen key" autocomplete="off" style="width: 65%;">
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Model ID:</label>
+                        <input type="text" id="setting-opencode-zen-model" list="opencode-zen-models" value="kimi-k2.5" placeholder="kimi-k2.5" style="width: 65%;">
+                        <datalist id="opencode-zen-models"></datalist>
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">CEREBRAS (CLOUD)</span>
+                    <div class="setting-control-row">
+                        <label>API Key:</label>
+                        <input type="password" id="setting-cerebras-key" placeholder="csk-..." autocomplete="off" style="width: 65%;">
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Model:</label>
+                        <input type="text" id="setting-cerebras-model" value="llama3.1-8b" placeholder="llama3.1-8b" style="width: 65%;">
                     </div>
                 </div>
                 <div class="xp-setting-group">
@@ -721,6 +960,20 @@
                             <option value="f16">16-BIT (HEAVY)</option>
                         </select>
                     </div>
+                </div>
+                <div class="kai-ad-grid">
+                    <a class="kai-ad-square" href="https://cloud.cerebras.ai/" target="_blank" title="Cerebras Cloud - Sign up">
+                        <span class="kai-ad-icon">C</span>
+                        <span class="kai-ad-name">CEREBRAS</span>
+                        <span class="kai-ad-desc">CLOUD INFERENCE</span>
+                        <span class="kai-ad-cta">SIGN UP ></span>
+                    </a>
+                    <a class="kai-ad-square" href="https://opencode.ai" target="_blank" title="OpenCode - Sign up">
+                        <span class="kai-ad-icon">O</span>
+                        <span class="kai-ad-name">OPENCODE</span>
+                        <span class="kai-ad-desc">ZEN API</span>
+                        <span class="kai-ad-cta">SIGN UP ></span>
+                    </a>
                 </div>
             </div>
 
@@ -750,6 +1003,24 @@
 
             <!-- Tab: Interface -->
             <div id="pane-interface" class="settings-pane">
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">AI FEATURES</span>
+                    <div class="setting-control-row">
+                        <label>Enable Kai + Copilot:</label>
+                        <input type="checkbox" id="setting-ai-enabled">
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">FONT</span>
+                    <div class="setting-control-row">
+                        <label>Size:</label>
+                        <select id="setting-font-size" style="flex: 2;">
+                            <option value="small">Small</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="xp-setting-group">
                     <span class="xp-setting-label">VISUALS</span>
                     <div class="setting-control-row">
@@ -806,9 +1077,9 @@
 
     <!-- Load AI Scripts -->
     <script src="../irab-personality.js?v=7"></script>
-    <!-- <script src="../cerebras-adapter.js?v=7"></script> -->
-    <!-- Core AI Engine (Module) -->
-    <script type="module" src="../redglitch-ai.js?v=7"></script>
+    <script src="../cerebras-adapter.js?v=7"></script>
+    <!-- Shared AI mode gate. The core engine is imported only after opt-in. -->
+    <script type="module" src="../ai-mode.mjs?v=1"></script>
     <!-- Compatibility Layer -->
     <script src="../redglitch-ai-assistant.js?v=7"></script>
     <!-- UI Controller -->

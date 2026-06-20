@@ -38,6 +38,7 @@ const shadersRouter = require('./server/routes/shaders');
 const test3dRouter = require('./server/routes/test-3d');
 const debug3dRouter = require('./server/routes/debug-3d');
 const uiConfigRouter = require('./server/routes/ui-config');
+const openCodeZenRouter = require('./server/routes/opencode-zen');
 
 let monitor3dRouter;
 try {
@@ -328,6 +329,7 @@ app.use('/api/test', test3dRouter);
 app.use('/api/debug', debug3dRouter);
 app.use('/api/monitor', monitor3dRouter);
 app.use('/api/ui-config', uiConfigRouter);
+app.use('/api/opencode-zen', openCodeZenRouter);
 
 // Fallback for API
 app.use('/api/*', (req, res) => {

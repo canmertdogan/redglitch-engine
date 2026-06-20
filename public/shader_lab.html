@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>redglitch SHADER LAB</title>
+    <title>Shader Lab — RedGlitch Engine</title>
     <link href="fonts/fonts.css" rel="stylesheet">
+    <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="pixel_scrollbars.css">
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="lib/monaco/vs/editor/editor.main.min.css">
     <style>
@@ -227,11 +228,323 @@
             #code-panel { width: 50%; min-width: 200px; }
         }
     </style>
+    <style>
+        /* Unified3D workstation skin. Functional selectors remain unchanged. */
+        :root {
+            --bg-dark: #000;
+            --bg-panel: #050505;
+            --bg-surface: #0a0a0a;
+            --border: 1px solid rgba(255, 30, 39, 0.2);
+            --accent: #ff1e27;
+            --accent-dim: rgba(255, 30, 39, 0.1);
+            --gold: #ffc832;
+            --green: #5bdb85;
+            --red: #ff1e27;
+            --pink: #ff6570;
+            --text: rgba(255, 255, 255, 0.74);
+            --text-dim: rgba(255, 30, 39, 0.45);
+            --input-bg: #000;
+            --radius: 0;
+        }
+
+        html, body { width: 100%; height: 100%; }
+        body {
+            background: #000;
+            color: var(--text);
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            letter-spacing: 0.35px;
+            text-transform: uppercase;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0.16;
+            background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,0.025) 3px 4px);
+        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,30,39,0.35); border-radius: 0; }
+
+        #toolbar {
+            height: 50px;
+            padding: 0 12px;
+            gap: 4px;
+            background: #000;
+            border-bottom: 1px solid rgba(255,30,39,0.22);
+            box-shadow: 0 6px 24px rgba(0,0,0,0.65);
+            z-index: 20;
+        }
+        .logo {
+            height: 100%;
+            min-width: 174px;
+            margin-right: 8px;
+            padding-right: 16px;
+            border-right: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 12px rgba(255,30,39,0.45);
+        }
+        .logo::before {
+            content: '\f1fc';
+            width: 27px;
+            height: 27px;
+            display: grid;
+            place-items: center;
+            background: #ff1e27;
+            color: #000;
+            font-family: 'Font Awesome 5 Free';
+            font-size: 12px;
+            font-weight: 900;
+            box-shadow: 4px 4px 0 rgba(255,30,39,0.25);
+        }
+        .logo small {
+            color: rgba(255,30,39,0.42);
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+        .sep { height: 22px; background: rgba(255,30,39,0.16); margin: 0 5px; }
+
+        .btn {
+            min-height: 30px;
+            padding: 4px 10px;
+            background: transparent;
+            border: 1px solid rgba(255,30,39,0.15);
+            color: rgba(255,255,255,0.52);
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            letter-spacing: 0.8px;
+            border-radius: 0;
+            transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+        }
+        .btn:hover,
+        .btn.primary:hover,
+        .btn.green:hover,
+        .btn.gold:hover,
+        .btn.pink:hover {
+            color: #ff1e27;
+            border-color: rgba(255,30,39,0.55);
+            background: rgba(255,30,39,0.08);
+            box-shadow: inset 0 0 12px rgba(255,30,39,0.05);
+        }
+        .btn.primary {
+            padding-inline: 16px;
+            color: #ff1e27;
+            border-color: rgba(255,30,39,0.55);
+            background: linear-gradient(135deg, rgba(255,30,39,0.2), rgba(255,30,39,0.06));
+            text-shadow: 0 0 10px rgba(255,30,39,0.55);
+        }
+        .btn.green, .btn.gold, .btn.pink { color: rgba(255,255,255,0.65); border-color: rgba(255,30,39,0.2); }
+        .btn.red { color: #ff1e27; }
+        .btn.active { color: #ff1e27; background: rgba(255,30,39,0.12); border-color: #ff1e27; }
+
+        #main { background: #000; }
+        #code-panel {
+            width: 43%;
+            min-width: 360px;
+            background: #030303;
+            border-right: 1px solid rgba(255,30,39,0.25);
+        }
+        #code-tabs {
+            min-height: 34px;
+            padding-left: 8px;
+            background: #050505;
+            border-bottom: 1px solid rgba(255,30,39,0.18);
+        }
+        #code-tabs::before {
+            content: 'SHADER SOURCE';
+            display: flex;
+            align-items: center;
+            padding: 0 14px 0 4px;
+            margin-right: 6px;
+            border-right: 1px solid rgba(255,30,39,0.14);
+            color: rgba(255,30,39,0.4);
+            font-size: 11px;
+            letter-spacing: 1.5px;
+        }
+        .code-tab {
+            padding: 0 16px;
+            color: rgba(255,255,255,0.35);
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            letter-spacing: 1px;
+            border-bottom-width: 1px;
+        }
+        .code-tab:hover { color: rgba(255,255,255,0.8); background: rgba(255,30,39,0.03); }
+        .code-tab.active { color: #ff1e27; background: rgba(255,30,39,0.07); border-bottom-color: #ff1e27; }
+        .code-tab .badge { width: 5px; height: 5px; border-radius: 0; }
+
+        #monaco-container { border-left: 2px solid rgba(255,30,39,0.12); }
+        #compile-bar {
+            height: 27px;
+            background: #000;
+            border-top: 1px solid rgba(255,30,39,0.16);
+            color: rgba(255,255,255,0.4);
+            font-size: 12px;
+            letter-spacing: 0.8px;
+        }
+        #compile-bar .dot { border-radius: 0; box-shadow: 0 0 7px currentColor; }
+        #compile-bar .dot.idle { background: rgba(255,30,39,0.35); }
+        #compile-bar .dot.ok { background: #ff1e27; }
+        #compile-status { color: rgba(255,30,39,0.55); }
+
+        #preview-panel { background: #000; }
+        #preview-toolbar {
+            min-height: 34px;
+            height: 34px;
+            padding: 0 10px;
+            gap: 10px;
+            background: #050505;
+            border-bottom: 1px solid rgba(255,30,39,0.18);
+        }
+        #preview-toolbar::before {
+            content: 'LIVE VIEWPORT';
+            color: rgba(255,30,39,0.55);
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            padding-right: 12px;
+            border-right: 1px solid rgba(255,30,39,0.15);
+        }
+        #preview-toolbar label { color: rgba(255,255,255,0.36); font-size: 12px; letter-spacing: 0.6px; }
+        #preview-toolbar select,
+        #preview-toolbar input[type='color'] {
+            height: 22px;
+            max-width: 100px;
+            background: #000;
+            border: 1px solid rgba(255,30,39,0.2);
+            color: #ff1e27;
+            font-family: 'VT323', monospace;
+            font-size: 13px;
+            border-radius: 0;
+            outline: none;
+        }
+        #preview-toolbar select:focus { border-color: #ff1e27; }
+        input[type='checkbox'] { accent-color: #ff1e27; }
+
+        #viewport-container {
+            background-color: #000;
+            background-image:
+                linear-gradient(rgba(255,30,39,0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,30,39,0.035) 1px, transparent 1px),
+                radial-gradient(circle at 50% 45%, rgba(255,30,39,0.08), transparent 52%);
+            background-size: 32px 32px, 32px 32px, 100% 100%;
+        }
+        #viewport-container::before {
+            content: 'UNIFIED 3D / MATERIAL PREVIEW';
+            position: absolute;
+            left: 10px;
+            top: 9px;
+            z-index: 2;
+            color: rgba(255,30,39,0.32);
+            font-size: 11px;
+            letter-spacing: 1.4px;
+            pointer-events: none;
+        }
+        #gl-canvas { border-radius: 0; box-shadow: 0 0 60px rgba(255,30,39,0.04); }
+        #overlay-top-right { top: 8px; right: 9px; gap: 3px; }
+        .stat-box {
+            padding: 3px 7px;
+            background: rgba(0,0,0,0.82);
+            border: 1px solid rgba(255,30,39,0.16);
+            border-radius: 0;
+            color: rgba(255,255,255,0.32);
+            font-size: 11px;
+        }
+        .stat-box .val, .stat-box .val.gold, .stat-box .val.pink { color: #ff1e27; }
+        #error-overlay {
+            bottom: 12px;
+            background: rgba(20,0,1,0.96);
+            border: 1px solid #ff1e27;
+            border-left: 3px solid #ff1e27;
+            color: #ff6570;
+            border-radius: 0;
+            font-size: 13px;
+        }
+
+        #uniforms-panel {
+            max-height: 170px;
+            background: #050505;
+            border-top: 1px solid rgba(255,30,39,0.22);
+        }
+        #uniforms-header {
+            min-height: 28px;
+            padding: 0 10px;
+            background: rgba(255,30,39,0.035);
+            border-bottom: 1px solid rgba(255,30,39,0.1);
+            color: rgba(255,30,39,0.62);
+            font-size: 12px;
+            letter-spacing: 1.4px;
+        }
+        #uniforms-body { padding: 7px 10px; gap: 6px 16px; }
+        .uniform-row { min-width: 185px; font-size: 13px; }
+        .uniform-row label { color: rgba(255,30,39,0.68); width: 82px; }
+        .uniform-row input[type='range'] { background: rgba(255,30,39,0.18); border-radius: 0; }
+        .uniform-row input[type='range']::-webkit-slider-thumb { background: #ff1e27; border-radius: 0; }
+        .uniform-row .val { color: rgba(255,255,255,0.72); font-size: 12px; }
+        .uniform-empty { color: rgba(255,30,39,0.3); font-size: 12px; letter-spacing: 1px; }
+
+        #fullscreen-overlay { background: #000; }
+        #fullscreen-overlay::before {
+            content: 'SHADER LAB / FULLSCREEN PREVIEW';
+            position: absolute;
+            top: 12px;
+            left: 14px;
+            color: rgba(255,30,39,0.5);
+            font-size: 13px;
+            letter-spacing: 1.5px;
+        }
+        #fullscreen-overlay .close-fs {
+            top: 10px;
+            right: 12px;
+            background: #050505;
+            border: 1px solid rgba(255,30,39,0.4);
+            color: #ff1e27;
+            border-radius: 0;
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+        }
+        .tooltip { background: #090909; border-color: rgba(255,30,39,0.3); color: #ff1e27; border-radius: 0; }
+        body > div[style*='z-index:10000'][style*='translate(-50%,-50%)'] {
+            background: #050505 !important;
+            border: 1px solid rgba(255,30,39,0.45) !important;
+            border-left: 3px solid #ff1e27 !important;
+            border-radius: 0 !important;
+            box-shadow: 8px 8px 0 rgba(255,30,39,0.12), 0 18px 60px rgba(0,0,0,0.85) !important;
+            color: rgba(255,255,255,0.72) !important;
+        }
+        body > div[style*='z-index:10000'] input {
+            background: #000 !important;
+            border-color: rgba(255,30,39,0.3) !important;
+            border-radius: 0 !important;
+            color: #ff1e27 !important;
+        }
+        .tpl-opt, .ld-opt { border-radius: 0 !important; }
+        .tpl-opt:hover, .ld-opt:hover { background: rgba(255,30,39,0.1) !important; color: #ff1e27; }
+        kbd { background: rgba(255,30,39,0.1) !important; color: #ff6570; border-radius: 0 !important; }
+
+        @media (max-width: 1120px) {
+            #toolbar { overflow-x: auto; }
+            .logo { min-width: 150px; }
+            .btn { padding-inline: 8px; }
+            #preview-toolbar::before { display: none; }
+        }
+        @media (max-width: 760px) {
+            #main { flex-direction: column; }
+            #code-panel { width: 100%; min-width: 0; height: 48%; border-right: 0; border-bottom: 1px solid rgba(255,30,39,0.25); }
+            #preview-panel { min-height: 0; }
+        }
+    </style>
 </head>
 <body>
 
 <div id="toolbar">
-    <span class="logo">&#9632; SHD LAB <small>v2</small></span>
+    <span class="logo">SHADER LAB <small>UNIFIED 3D</small></span>
     <div class="sep"></div>
     <button class="btn" onclick="applyTemplate()" title="Load shader template">TEMPLATES</button>
     <button class="btn green" onclick="saveShader()" title="Save to project (Cmd+S)">SAVE</button>

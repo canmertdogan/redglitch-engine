@@ -1,5 +1,8 @@
 import { PermissionGate } from './permission-gate.js?v=6';
 import { NAMESPACE_ALIAS } from './namespace-router.js';
+import { ACTION_STATUS, ERROR_CODE, createActionPlan, normalizeArguments, normalizeToolDefinition, validateSchema } from './automation-contract.mjs';
+import { editorForTool } from './editor-catalog.mjs';
+import { getAutomationFlags } from './automation-flags.mjs';
 
 /**
  * RedGlitch AI - Tool Registry (KAP)
@@ -11,6 +14,9 @@ export class ToolRegistry {
         this.eventBus = eventBus || window.RedGlitchEventBus;
         this.permissionGate = new PermissionGate();
         this.tools = new Map();
+        this.inFlight = new Map();
+        this.completedRequests = new Map();
+        this.flags = getAutomationFlags();
         this.NAMESPACE_ALIAS = NAMESPACE_ALIAS;
         
         console.log(`[ToolRegistry] Initialized in ${window.location.pathname}`);
@@ -77,7 +83,13 @@ export class ToolRegistry {
             
             const toolDef = event.data;
             this._debug(`Tool discovered via announce: ${toolDef.name}`);
+            if (this.tools.has(toolDef.name)) {
+                this._debug(`Ignoring repeated capability announcement: ${toolDef.name}`);
+                this._checkPendingAction(toolDef.name);
+                return;
+            }
             this.register(toolDef, false); // Register without re-broadcasting
+            this._checkPendingAction(toolDef.name);
         });
 
         // Discovery Request: When a new AI component joins, it asks for all tools
@@ -166,11 +178,17 @@ export class ToolRegistry {
      * Register a tool definition.
      */
     register(toolDef, broadcast = true) {
-        const compliantTool = {
+        const compliantTool = normalizeToolDefinition({
             securityLevel: 'high-risk',
             requiresConfirmation: toolDef.requiresConfirmation !== false && toolDef.securityLevel !== 'safe',
             ...toolDef
-        };
+        });
+        if (this.flags.strictDuplicates && this.tools.has(compliantTool.name)) {
+            const error = new Error(`Duplicate tool registration rejected: ${compliantTool.name}`);
+            error.code = ERROR_CODE.DUPLICATE_TOOL;
+            this._debug(`Error: ${error.message}`);
+            throw error;
+        }
         this.tools.set(compliantTool.name, compliantTool);
         
         this._debug(`Tool registered locally: ${compliantTool.name}`);
@@ -232,74 +250,46 @@ export class ToolRegistry {
     async execute(name, args, requestId = null) {
         const id = requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+        if (localStorage.getItem('kai_ai_enabled') !== 'true') {
+            return { id, success: false, status: ACTION_STATUS.CANCELLED, error: { code: 'AI_DISABLED', message: 'AI features are disabled.' } };
+        }
+
+        if (this.completedRequests.has(id)) return this.completedRequests.get(id);
+        if (this.inFlight.has(id)) return this.inFlight.get(id);
+        const execution = this._execute(name, args, id);
+        this.inFlight.set(id, execution);
+        try {
+            const response = await execution;
+            if (!response?.pending) {
+                this.completedRequests.set(id, response);
+                if (this.completedRequests.size > 100) this.completedRequests.delete(this.completedRequests.keys().next().value);
+            }
+            return response;
+        } finally {
+            this.inFlight.delete(id);
+        }
+    }
+
+    async _execute(name, args, id) {
+
         // Resolve aliases before any routing decisions
         let { resolvedName, tool } = this._resolveToolName(name);
         name = resolvedName;
+        args = normalizeArguments(tool, args);
 
         const parts = name.split('.');
         const namespace = parts.length > 1 ? parts[0] : null;
 
         this._debug(`Executing tool: ${name}`, { args, namespace });
 
-        const NAMESPACE_MAP = {
-            'pixel': 'iso_studio',
-            'isopixel': 'iso_studio',
-            'iso': 'iso_studio',
-            'world': 'editor',
-            'topdown': 'editor',
-            'rpg': 'editor',
-            'platformer': 'platformer_studio',
-        };
-
-        // Fallback heuristic: only redirect to iso_studio if the intent is clearly iso/pixel-specific
-        const argsString = args ? JSON.stringify(args).toLowerCase() : '';
-        const nameLower = name.toLowerCase();
-        
-        const heuristicIso = (nameLower.includes('isopixel') || nameLower.includes('iso_') || nameLower.includes('pixel') || nameLower.includes('isometric')) || 
-                            (argsString.includes('isopixel') || argsString.includes('iso-pixel') || argsString.includes('iso_pixel') || argsString.includes('isometric'));
-        // Topdown/RPG heuristic — redirects to Level Editor, not iso_studio
-        const heuristicTopdown = (nameLower.includes('topdown') || nameLower.includes('rpg') || nameLower.includes('top_down') || nameLower.includes('level_editor')) ||
-                            (argsString.includes('topdown') || argsString.includes('top-down') || argsString.includes('rpg') || argsString.includes('level-editor'));
-        // Platformer heuristic — redirects to Platformer Studio
-        const heuristicPlatformer = (nameLower.includes('platformer') || nameLower.includes('platform') || nameLower.includes('sidescroll')) ||
-                            (argsString.includes('platformer') || argsString.includes('platform') || argsString.includes('sidescroll'));
-        const prefersIsoOverCode = (namespace === 'pixel' || namespace === 'iso' || namespace === 'isopixel') && heuristicIso;
-
-        // Hard redirect based on intent heuristics when not already on the right editor.
-        const _pendingRedirect = (target, label) => {
-            if (window._ai_redirecting) return { success: false, pending: true };
-            window._ai_redirecting = true;
-            this._debug(`Heuristic intent detected (${label}); navigating to ${target}`);
-            localStorage.setItem('ai_pending_action', JSON.stringify({ method: name, params: args, id, timestamp: Date.now() }));
-            return this.execute('navigateTo', { target }).then(() => {
-                const response = { id, success: false, pending: true, error: { code: 'PENDING_TOOL', message: `Navigating to ${target} for ${name}` } };
-                if (this.eventBus) this.eventBus.emit('studio:action:result', response);
-                return response;
-            });
-        };
-
-        if (heuristicPlatformer && typeof window !== 'undefined' && !window.location.pathname.includes('platformer_editor')) {
-            return _pendingRedirect('platformer_studio', 'platformer level');
-        }
-
-        if (heuristicTopdown && typeof window !== 'undefined' && !window.location.pathname.includes('editor.html')) {
-            return _pendingRedirect('editor', 'topdown/rpg map');
-        }
-
-        if (heuristicIso && typeof window !== 'undefined' && !window.location.pathname.includes('iso_editor')) {
-            return _pendingRedirect('iso_studio', 'iso/pixel map');
-        }
-
-        if (!tool && (namespace && NAMESPACE_MAP[namespace] || heuristicIso || heuristicTopdown)) {
+        const editor = this.flags.explicitCapabilityRouting ? editorForTool(name) : null;
+        if (!tool && editor) {
             // Prevent recursive or multiple redirects
             if (window._ai_redirecting) return { success: false, pending: true };
             window._ai_redirecting = true;
 
-            let target = 'editor'; // default fallback
-            if (heuristicIso || (namespace && ['pixel','iso','isopixel'].includes(namespace))) target = 'iso_studio';
-            else if (namespace && NAMESPACE_MAP[namespace]) target = NAMESPACE_MAP[namespace];
-            
-            this._debug(`Namespace ${namespace} missing. Saving pending action and navigating to ${target}...`);
+            const target = editor.id;
+            this._debug(`Capability ${namespace} unavailable. Navigating to ${target}.`);
             
             localStorage.setItem('ai_pending_action', JSON.stringify({ 
                 method: name, 
@@ -314,8 +304,9 @@ export class ToolRegistry {
                 id, 
                 success: false, 
                 pending: true, 
+                status: ACTION_STATUS.PENDING_EDITOR,
                 error: { 
-                    code: 'PENDING_TOOL', 
+                    code: 'PENDING_EDITOR',
                     message: `Waiting for ${name}. Navigated to ${target} for tool registration.` 
                 }
             };
@@ -325,17 +316,25 @@ export class ToolRegistry {
         
         if (!tool) {
             this._debug(`ERROR: Unknown tool ${name}`);
-            const error = { code: 'UNKNOWN_TOOL', message: `Unknown tool: ${name}` };
-            const response = { id, success: false, error };
+            const error = { code: ERROR_CODE.UNKNOWN_TOOL, message: `Unknown tool: ${name}` };
+            const response = { id, success: false, status: ACTION_STATUS.FAILED, error };
             if (this.eventBus) this.eventBus.emit('studio:action:result', response);
+            return response;
+        }
+
+        const validationErrors = this.flags.contractValidation ? validateSchema(tool.inputSchema, args || {}) : [];
+        if (validationErrors.length) {
+            const response = { id, success: false, status: ACTION_STATUS.FAILED, error: { code: ERROR_CODE.INVALID_ARGUMENTS, message: validationErrors.join('; '), details: validationErrors } };
+            this.eventBus?.emit('studio:action:result', response);
             return response;
         }
 
         this._debug(`Tool resolved: ${name}. Checking permissions...`);
         
         try {
-            const requiresConfirmation = tool.securityLevel === 'high-risk';
-            const isLowRisk = tool.securityLevel === 'low-risk';
+            const requiresConfirmation = this.flags.approvalFirstMutations && tool.mutates;
+            const isLowRisk = tool.risk === 'low';
+            const plan = await createActionPlan(tool, args || {});
             
             if (isLowRisk) {
                 this.eventBus.emit('ai:thought', { text: `GRRR... QUICK ACTION: ${name}` });
@@ -343,14 +342,15 @@ export class ToolRegistry {
 
             const allowed = await this.permissionGate.requestPermission(
                 name, 
-                args, 
-                requiresConfirmation || (tool.requiresConfirmation && !isLowRisk)
+                args,
+                requiresConfirmation,
+                plan
             );
 
             if (!allowed) {
                 this._debug(`Permission denied for ${name}`);
-                const error = { code: 'PERMISSION_DENIED', message: `User rejected action: ${name}` };
-                const response = { id, success: false, error };
+                const error = { code: ERROR_CODE.PERMISSION_DENIED, message: `User rejected action: ${name}` };
+                const response = { id, success: false, status: ACTION_STATUS.CANCELLED, error };
                 this.eventBus.emit('ai:tool:rejected', { name, id });
                 this.eventBus.emit('studio:action:result', response);
                 return response;
@@ -364,24 +364,24 @@ export class ToolRegistry {
                 this.eventBus.emit('ai:thought', { text: narrative });
             }
             
-            this.eventBus.emit('studio:action:execute', { id, method: name, params: args });
-            
             let result;
             if (typeof tool.execute === 'function') {
                 this._debug(`Invoking local execution for ${name}`);
                 result = await tool.execute(args);
             } else {
                 this._debug(`Invoking remote execution for ${name}. Waiting for result...`);
-                result = await this._waitForRemoteResult(id);
+                if (typeof tool.prepare === 'function') await tool.prepare(args);
+                const resultPromise = this._waitForRemoteResult(id, tool.timeout);
+                this.eventBus.emit('studio:action:execute', { id, workflowId: null, method: name, params: args });
+                result = await resultPromise;
             }
             
             this._debug(`Execution success for ${name}`, result);
             
             // Record the action for undo/audit
-            const undoFn = (result && typeof result.undo === 'function') ? result.undo : tool.undo;
-            this.permissionGate.recordAction(name, args, result, undoFn);
+            this.permissionGate.recordAction(name, args, result, result?.undoDescriptor || tool.undoDescriptor);
             
-            const response = { id, success: true, result };
+            const response = { id, success: true, status: ACTION_STATUS.SUCCEEDED, result };
             this.eventBus.emit('studio:action:result', response);
             this.eventBus.emit('ai:tool:success', { name, id, result });
             
@@ -389,23 +389,24 @@ export class ToolRegistry {
         } catch (error) {
             this._debug(`Execution error for ${name}`, error.message);
             const actionError = { 
-                code: 'EXECUTION_FAILED', 
-                message: error.message || 'Unknown execution error',
-                data: error
+                code: error.code || ERROR_CODE.EXECUTION_FAILED,
+                message: error.message || 'Unknown execution error'
             };
-            const response = { id, success: false, error: actionError };
+            const response = { id, success: false, status: ACTION_STATUS.FAILED, error: actionError };
             this.eventBus.emit('studio:action:result', response);
             this.eventBus.emit('ai:tool:error', { name, id, error: actionError.message });
             return response;
         }
     }
 
-    async _waitForRemoteResult(requestId) {
+    async _waitForRemoteResult(requestId, timeoutMs = 15000) {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.eventBus.off('studio:action:result', handler);
-                reject(new Error("Remote execution timed out"));
-            }, 10000); // 10s timeout
+                const error = new Error('Editor execution timed out');
+                error.code = ERROR_CODE.EDITOR_TIMEOUT;
+                reject(error);
+            }, timeoutMs);
 
             const handler = (event) => {
                 const response = event.data;
@@ -419,6 +420,18 @@ export class ToolRegistry {
 
             this.eventBus.on('studio:action:result', handler);
         });
+    }
+
+    cancelPendingAction(requestId = null) {
+        const raw = localStorage.getItem('ai_pending_action');
+        if (!raw) return false;
+        try {
+            const action = JSON.parse(raw);
+            if (requestId && action.id !== requestId) return false;
+        } catch (_) {}
+        localStorage.removeItem('ai_pending_action');
+        window._ai_redirecting = false;
+        return true;
     }
 
     _getNarrative(toolName) {

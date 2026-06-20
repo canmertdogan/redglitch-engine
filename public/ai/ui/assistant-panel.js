@@ -209,6 +209,7 @@ class KaiChatUIController {
 
                 // PROACTIVE ERROR WATCHER
                 eventBus.on('system:error', (event) => {
+                    if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
                     const error = event.data;
                     console.log('Kai: Proactive Help triggered for error:', error.message);
                     
@@ -242,6 +243,7 @@ class KaiChatUIController {
                 // PROACTIVE PERFORMANCE SENTINEL
                 this.lastMetricWarning = 0;
                 eventBus.on('system:metrics', (event) => {
+                    if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
                     const { fps, entities, memory } = event.data;
                     const now = Date.now();
                     
@@ -345,7 +347,9 @@ class KaiChatUIController {
                 'xp-ai-loading', 
                 'xp-settings', 
                 'ai-speech-bubble',
-                'ai-permission-gate'
+                'ai-permission-gate',
+                'kai-mode-toggle',
+                'kai-mode-choice'
             ];
             
             elements.forEach(id => {
@@ -671,6 +675,9 @@ class KaiChatUIController {
         content.className = 'ai-message-content';
 
         const nameBar = document.createElement('div');
+        nameBar.style.display = 'flex';
+        nameBar.style.alignItems = 'center';
+        nameBar.style.justifyContent = 'space-between';
         const nameName = document.createElement('span');
         nameName.className = 'ai-message-name';
         nameName.textContent = type === 'user' ? 'USER' : 
@@ -678,6 +685,30 @@ class KaiChatUIController {
                                type === 'system' ? 'SYSTEM' : 'ERROR';
         
         nameBar.appendChild(nameName);
+
+        // Copy button for assistant messages
+        if (type === 'assistant') {
+            const copyBtn = document.createElement('button');
+            copyBtn.textContent = '[COPY]';
+            copyBtn.style.background = 'transparent';
+            copyBtn.style.border = '1px solid #444';
+            copyBtn.style.color = '#666';
+            copyBtn.style.cursor = 'pointer';
+            copyBtn.style.fontSize = '11px';
+            copyBtn.style.fontFamily = 'inherit';
+            copyBtn.style.padding = '1px 6px';
+            copyBtn.title = 'Copy response';
+            copyBtn.onclick = (e) => {
+                e.stopPropagation();
+                const clean = text.replace(/--- FILE: .*? ---/g, '').trim();
+                navigator.clipboard.writeText(clean).then(() => {
+                    copyBtn.textContent = '[COPIED]';
+                    setTimeout(() => { copyBtn.textContent = '[COPY]'; }, 2000);
+                }).catch(() => {});
+            };
+            nameBar.appendChild(copyBtn);
+        }
+
         content.appendChild(nameBar);
 
         const bubble = document.createElement('div');
@@ -686,7 +717,49 @@ class KaiChatUIController {
         // Clean up the text (hide the RAG headers for a cleaner UI, but keep for logic)
         const hasManifesto = text.includes('[MANIFESTO]');
         const cleanText = text.replace(/--- FILE: .*? ---/g, '').trim();
-        bubble.textContent = cleanText;
+
+        // Render code blocks with monospace and a copy button
+        if (type === 'assistant' && cleanText.includes('```')) {
+            const parts = cleanText.split(/(```[\s\S]*?```)/g);
+            parts.forEach(part => {
+                if (part.startsWith('```')) {
+                    const lines = part.replace(/```\w*\n?/, '').replace(/```$/, '').split('\n');
+                    const codeBlock = document.createElement('div');
+                    codeBlock.style.background = '#000';
+                    codeBlock.style.border = '1px solid #333';
+                    codeBlock.style.padding = '8px';
+                    codeBlock.style.margin = '6px 0';
+                    codeBlock.style.whiteSpace = 'pre-wrap';
+                    codeBlock.style.fontFamily = 'var(--kai-font-mono)';
+                    codeBlock.style.fontSize = '0.9em';
+                    codeBlock.style.overflowX = 'auto';
+                    const codeText = lines.join('\n');
+                    codeBlock.textContent = codeText;
+
+                    const codeCopyBtn = document.createElement('button');
+                    codeCopyBtn.textContent = '[COPY CODE]';
+                    codeCopyBtn.style.cssText = 'background:transparent;border:1px solid #444;color:#666;cursor:pointer;font-size:11px;font-family:inherit;padding:1px 6px;float:right;margin-bottom:4px;';
+                    codeCopyBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(codeText).then(() => {
+                            codeCopyBtn.textContent = '[COPIED]';
+                            setTimeout(() => { codeCopyBtn.textContent = '[COPY CODE]'; }, 2000);
+                        }).catch(() => {});
+                    };
+                    const wrapper = document.createElement('div');
+                    wrapper.style.overflow = 'hidden';
+                    wrapper.appendChild(codeCopyBtn);
+                    wrapper.appendChild(codeBlock);
+                    bubble.appendChild(wrapper);
+                } else if (part.trim()) {
+                    const textNode = document.createElement('span');
+                    textNode.textContent = part;
+                    bubble.appendChild(textNode);
+                }
+            });
+        } else {
+            bubble.textContent = cleanText;
+        }
 
         if (hasManifesto && type === 'assistant') {
             const badge = document.createElement('div');
@@ -854,15 +927,12 @@ Please analyze why this is happening and suggest a fix. If it's in a script I ca
         this.addMessage('system', '>> INITIATING FULL CODEBASE SCAN...');
         this.playSound('typing');
         try {
-            const res = await fetch('/api/ai/rag/reindex');
-            const data = await res.json();
-            if (data.success) {
-                this.addMessage('system', '>> RAG_INDEXER: BACKGROUND SCAN STARTED.');
-            } else {
-                this.addMessage('error', `>> RAG_ERROR: ${data.error}`);
-            }
+            const ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance;
+            if (!ai?.rebuildContextIndex) throw new Error('AI context index is unavailable.');
+            await ai.rebuildContextIndex();
+            this.addMessage('system', '>> RAG_INDEXER: ENGINE DOCS REBUILT. ACTIVE PROJECT CONTEXT REFRESHES ON EVERY QUERY.');
         } catch (e) {
-            this.addMessage('error', '>> RAG_ERROR: CLUSTER UNREACHABLE.');
+            this.addMessage('error', `>> RAG_ERROR: ${e.message}`);
         }
     }
 
@@ -884,15 +954,8 @@ class KaiSettingsController {
     }
 
     loadSettings() {
-        const saved = localStorage.getItem('kai_settings');
-        if (saved) {
-            try {
-                return JSON.parse(saved);
-            } catch (e) {
-                console.error("Kai: Failed to parse settings", e);
-            }
-        }
-        return {
+        const defaults = {
+            aiEnabled: localStorage.getItem('kai_ai_enabled') === 'true',
             provider: 'native',
             temp: 0.7,
             topP: 0.9,
@@ -903,8 +966,22 @@ class KaiSettingsController {
             historyLimit: 6,
             crtEnabled: true,
             soundsEnabled: true,
-            glowEnabled: true
+            glowEnabled: true,
+            fontSize: 'medium',
+            openCodeZenKey: '',
+            openCodeZenModel: 'kimi-k2.5',
+            cerebrasKey: '',
+            cerebrasModel: 'llama3.1-8b'
         };
+        const saved = localStorage.getItem('kai_settings');
+        if (saved) {
+            try {
+                return { ...defaults, ...JSON.parse(saved) };
+            } catch (e) {
+                console.error("Kai: Failed to parse settings", e);
+            }
+        }
+        return defaults;
     }
 
     applyToUI() {
@@ -922,6 +999,7 @@ class KaiSettingsController {
         };
 
         setVal('setting-provider', s.provider);
+        setVal('setting-ai-enabled', localStorage.getItem('kai_ai_enabled') === 'true');
         setVal('setting-temp', s.temp);
         setVal('setting-top-p', s.topP);
         setVal('setting-max-tokens', s.maxTokens);
@@ -932,6 +1010,28 @@ class KaiSettingsController {
         setVal('setting-crt', s.crtEnabled);
         setVal('setting-sounds', s.soundsEnabled);
         setVal('setting-glow', s.glowEnabled);
+        setVal('setting-font-size', s.fontSize);
+        setVal('setting-opencode-zen-key', s.openCodeZenKey);
+        setVal('setting-opencode-zen-model', s.openCodeZenModel);
+        setVal('setting-cerebras-key', s.cerebrasKey);
+        setVal('setting-cerebras-model', s.cerebrasModel);
+        this.loadOpenCodeZenModels();
+    }
+
+    async loadOpenCodeZenModels() {
+        const list = document.getElementById('opencode-zen-models');
+        if (!list || list.dataset.loaded === 'true') return;
+        try {
+            const response = await fetch('/api/opencode-zen/models');
+            if (!response.ok) return;
+            const payload = await response.json();
+            list.innerHTML = (payload.data || [])
+                .map(model => `<option value="${String(model.id).replace(/["&<>]/g, '')}"></option>`)
+                .join('');
+            list.dataset.loaded = 'true';
+        } catch (error) {
+            console.warn('Kai: OpenCode Zen model catalog unavailable.', error);
+        }
     }
 
     saveSettings() {
@@ -981,6 +1081,7 @@ class KaiSettingsController {
         };
 
         this.settings = {
+            aiEnabled: getVal('setting-ai-enabled'),
             provider: getVal('setting-provider'),
             temp: parseFloat(getVal('setting-temp')),
             topP: parseFloat(getVal('setting-top-p')),
@@ -991,10 +1092,16 @@ class KaiSettingsController {
             historyLimit: parseInt(getVal('setting-history-limit')),
             crtEnabled: getVal('setting-crt'),
             soundsEnabled: getVal('setting-sounds'),
-            glowEnabled: getVal('setting-glow')
+            glowEnabled: getVal('setting-glow'),
+            fontSize: getVal('setting-font-size') || 'medium',
+            openCodeZenKey: getVal('setting-opencode-zen-key') || '',
+            openCodeZenModel: getVal('setting-opencode-zen-model') || 'kimi-k2.5',
+            cerebrasKey: getVal('setting-cerebras-key') || '',
+            cerebrasModel: getVal('setting-cerebras-model') || 'llama3.1-8b'
         };
 
         this.saveSettings();
+        window.setKaiMode?.(this.settings.aiEnabled);
         
         if (window.AIChatUI) {
             window.AIChatUI.toggleSounds(this.settings.soundsEnabled);
@@ -1007,6 +1114,7 @@ class KaiSettingsController {
                 if (this.settings.glowEnabled) panel.style.boxShadow = '0 0 30px rgba(255, 215, 0, 0.4)';
                 else panel.style.boxShadow = 'none';
             }
+            document.body.setAttribute('data-kai-size', this.settings.fontSize || 'medium');
         }
         
         this.toggle();
@@ -1017,16 +1125,126 @@ class KaiSettingsController {
 window.AIChatUI = new KaiChatUIController();
 window.AISettings = new KaiSettingsController();
 
+// Apply saved font size on load
+(function applySavedSize() {
+    const s = window.AISettings.settings;
+    document.body.setAttribute('data-kai-size', s.fontSize || 'medium');
+})();
+
 // Compatibility aliases
 window.openChat = () => window.AIChatUI.openChat();
 window.closeChat = () => window.AIChatUI.closeChat();
 window.dismiss = () => window.AIChatUI.dismiss();
 window.updateAIProgress = (data) => window.AIChatUI.updateLoadingProgress(data);
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => window.AIChatUI.initialize().catch(console.error));
-} else {
-    window.AIChatUI.initialize().catch(console.error);
+function getStoredKaiMode() {
+    if (window.KAIMode) return window.KAIMode.getAIMode();
+    const value = localStorage.getItem('kai_ai_enabled');
+    return value === 'true' ? true : value === 'false' ? false : null;
 }
+
+function applyKaiModeUI(enabled) {
+    const toggle = document.getElementById('kai-mode-toggle');
+    const assistant = document.getElementById('ai-assistant-container');
+    const chat = document.getElementById('ai-chat-panel');
+    const omni = document.getElementById('xp-omni-box');
+    if (toggle) {
+        toggle.textContent = enabled ? 'AI: ON' : 'AI: OFF';
+        toggle.classList.toggle('off', !enabled);
+    }
+    if (assistant) assistant.style.display = enabled ? '' : 'none';
+    if (!enabled) {
+        chat?.classList.remove('show');
+        omni?.classList.remove('show');
+    }
+    const frame = window.frameElement;
+    if (frame && !enabled) {
+        frame.style.width = '130px';
+        frame.style.height = '104px';
+        frame.style.left = 'auto';
+        frame.style.right = '0';
+        frame.style.pointerEvents = 'auto';
+    } else if (frame) {
+        frame.style.width = '100%';
+        frame.style.height = '100%';
+        frame.style.left = '0';
+        frame.style.right = 'auto';
+        setTimeout(() => { frame.style.pointerEvents = 'none'; }, 50);
+    }
+}
+
+function showKaiModeChoice() {
+    const frame = window.frameElement;
+    if (frame) {
+        frame.style.width = '100%';
+        frame.style.height = '100%';
+        frame.style.left = '0';
+        frame.style.right = 'auto';
+        frame.style.pointerEvents = 'auto';
+    }
+    document.getElementById('kai-mode-choice')?.classList.add('show');
+}
+
+window.setKaiMode = async (enabled) => {
+    const mode = Boolean(enabled);
+    if (window.KAIMode) window.KAIMode.storeAIMode(mode);
+    else localStorage.setItem('kai_ai_enabled', mode ? 'true' : 'false');
+    document.getElementById('kai-mode-choice')?.classList.remove('show');
+    applyKaiModeUI(mode);
+
+    let ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance;
+    if (mode) {
+        const { RedGlitchAI } = await import('../redglitch-ai.js');
+        ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance || ai;
+        if (!ai) {
+            ai = new RedGlitchAI();
+            window.RedGlitchAIInstance = ai;
+        }
+        window.AIChatUI.assistant = new IRABAssistantSimple();
+        await window.AIChatUI.initialize();
+        await ai.setEnabled(true);
+    } else if (ai?.setEnabled) {
+        await ai.setEnabled(false);
+    }
+    window.dispatchEvent(new CustomEvent('kai:mode-change', { detail: { enabled: mode } }));
+    return mode;
+};
+
+window.chooseKaiMode = (enabled) => window.setKaiMode(enabled).catch((error) => {
+    console.error('Kai mode change failed:', error);
+    window.AIChatUI?.addMessage('error', `>> AI MODE ERROR: ${error.message}`);
+});
+
+window.toggleKaiMode = () => {
+    const enabled = getStoredKaiMode() === true;
+    if (enabled) window.chooseKaiMode(false);
+    else showKaiModeChoice();
+};
+
+async function bootstrapKaiMode() {
+    const mode = getStoredKaiMode();
+    applyKaiModeUI(mode === true);
+    if (mode === null) {
+        showKaiModeChoice();
+        return;
+    }
+    if (mode === true) await window.setKaiMode(true);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => bootstrapKaiMode().catch(console.error));
+} else {
+    bootstrapKaiMode().catch(console.error);
+}
+
+window.copyLastKaiResponse = () => {
+    const msgs = document.querySelectorAll('.ai-message.assistant .ai-message-bubble');
+    const last = msgs[msgs.length - 1];
+    if (!last) return;
+    const text = last.textContent || last.innerText || '';
+    navigator.clipboard.writeText(text.trim()).then(() => {
+        if (window.AIChatUI) window.AIChatUI.addMessage('system', '>> LAST_RESPONSE_COPIED.');
+    }).catch(() => {});
+};
 
 console.log('KAI UI LOADED.');

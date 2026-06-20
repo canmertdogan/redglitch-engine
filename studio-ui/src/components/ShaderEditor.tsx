@@ -1868,47 +1868,47 @@ const ShaderEditor: React.FC = () => {
     }, [] as string[]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: "'VT323', monospace" }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: "'VT323', monospace", background: THEME.bgRoot }}>
             <style>{`
                 .spin { animation: spin 1s linear infinite; }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             `}</style>
-            <div id="menubar" style={{ height: '32px', background: '#000', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 15px', fontFamily: "'VT323', monospace" }}>
-                <div style={{ color: 'var(--accent)', fontWeight: 'bold', marginRight: '20px' }}>
+            <div id="menubar" style={{ height: '32px', background: THEME.bgRoot, borderBottom: '2px solid #000', display: 'flex', alignItems: 'center', padding: '0 15px', fontFamily: "'VT323', monospace" }}>
+                <div style={{ color: THEME.accent, fontWeight: 'bold', marginRight: '20px' }}>
                     <Eye size={15} style={{ marginRight: '8px', display: 'inline' }} /> SHADER LAB v2.5
                 </div>
             </div>
 
-            <div id="toolbar" style={{ height: '44px', background: '#000', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '8px', fontFamily: "'VT323', monospace" }}>
+            <div id="toolbar" style={{ height: '44px', background: THEME.bgDeep, borderBottom: '2px solid #000', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '8px', fontFamily: "'VT323', monospace" }}>
                 <button className="tool-btn" onClick={() => compileShader(activeCode)} title="Compile"><Play size={16} /></button>
-                <div style={{ width: '1px', height: '20px', background: '#333' }} />
+                <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <button className="tool-btn" onClick={saveToServer} disabled={isSaving} title="Save"><Save size={16} /></button>
-                <div style={{ width: '1px', height: '20px', background: '#333' }} />
+                <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <button className="tool-btn" onClick={undo} disabled={undoIndexRef.current <= 0} title="Undo (Ctrl+Z)" style={{ fontSize: '0.7rem', padding: '4px 8px', width: 'auto' }}>↩</button>
                 <button className="tool-btn" onClick={redo} disabled={undoIndexRef.current >= undoStackRef.current.length - 1} title="Redo (Ctrl+Shift+Z)" style={{ fontSize: '0.7rem', padding: '4px 8px', width: 'auto' }}>↪</button>
-                <div style={{ width: '1px', height: '20px', background: '#333' }} />
+                <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <button className="tool-btn" onClick={() => { setShowTemplates(true); setSearchQuery(''); setSelectedCategory(null); }} title="Templates"><LayoutGrid size={16} /></button>
-                <div style={{ width: '1px', height: '20px', background: '#333' }} />
+                <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <button className="tool-btn" onClick={() => setShaders([...shaders, getDefaultShader()])} title="New Shader"><Plus size={16} /></button>
-                <div style={{ width: '1px', height: '20px', background: '#333' }} />
+                <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <List size={14} style={{ color: '#888' }} />
+                    <List size={14} style={{ color: THEME.textDim }} />
                     <select
                         value={meshType}
                         onChange={e => changeMesh(e.target.value as MeshType)}
-                        style={{ width: 'auto', padding: '3px 6px', fontSize: '0.85rem', background: '#111', border: '1px solid #444', color: '#aaa', borderRadius: '0px', fontFamily: "'VT323', monospace", cursor: 'pointer' }}
+                        style={{ width: 'auto', padding: '3px 6px', fontSize: '0.85rem', background: THEME.bgPanelAlt, border: '1px solid ' + THEME.border, color: THEME.textDim, borderRadius: '0px', fontFamily: "'VT323', monospace", cursor: 'pointer' }}
                     >
                         {Object.entries(MESH_LABELS).map(([k, v]) => (
                             <option key={k} value={k}>{v}</option>
                         ))}
                     </select>
                 </div>
-                <div style={{ width: '1px', height: '20px', background: '#333' }} />
+                <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <button
                     className="tool-btn"
                     onClick={captureSnapshot}
                     title="Capture snapshot B"
-                    style={{ fontSize: '0.7rem', padding: '4px 8px', width: 'auto', color: previewVersion === 'b' ? 'var(--accent)' : '#888' }}
+                    style={{ fontSize: '0.7rem', padding: '4px 8px', width: 'auto', color: previewVersion === 'b' ? THEME.accent : THEME.textDim }}
                 >B✔</button>
                 {snapshotBCode && (
                     <button
@@ -1917,22 +1917,22 @@ const ShaderEditor: React.FC = () => {
                         title="Toggle A/B preview"
                         style={{
                             fontSize: '0.7rem', padding: '4px 8px', width: 'auto',
-                            background: previewVersion === 'b' ? '#1a1a2a' : undefined,
-                            borderColor: previewVersion === 'b' ? 'var(--accent)' : undefined,
-                            color: previewVersion === 'b' ? 'var(--accent)' : '#888',
+                            background: previewVersion === 'b' ? THEME.bgPanel : undefined,
+                            borderColor: previewVersion === 'b' ? THEME.accent : undefined,
+                            color: previewVersion === 'b' ? THEME.accent : THEME.textDim,
                         }}
                     >{previewVersion === 'a' ? 'A' : 'B'}↔</button>
                 )}
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '10px', fontFamily: "'VT323', monospace" }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#888', fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: THEME.textDim, fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
                         <input type="checkbox" checked={autocompile} onChange={e => setAutocompile(e.target.checked)} style={{ width: 'auto' }} />
                         AUTO
                     </label>
-                    {layers.filter(l => l.visible).length > 1 && <div style={{ color: 'var(--accent)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={13} /> {layers.filter(l => l.visible).length}L</div>}
-                    {compileStatus === 'success' && <div style={{ color: '#2ecc71', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={14} /> READY</div>}
-                    {compileStatus === 'error' && <div style={{ color: '#e74c3c', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> ERROR</div>}
-                    {compileStatus === 'compiling' && <div style={{ color: 'var(--accent)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><RefreshCw size={14} className="spin" /> COMPILING...</div>}
-                    {fps > 0 && <div style={{ color: '#666', fontSize: '0.8rem' }}>{fps} FPS ({frameTime}ms)</div>}
+                    {layers.filter(l => l.visible).length > 1 && <div style={{ color: THEME.accent, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={13} /> {layers.filter(l => l.visible).length}L</div>}
+                    {compileStatus === 'success' && <div style={{ color: THEME.ok, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={14} /> READY</div>}
+                    {compileStatus === 'error' && <div style={{ color: THEME.danger, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> ERROR</div>}
+                    {compileStatus === 'compiling' && <div style={{ color: THEME.accent, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><RefreshCw size={14} className="spin" /> COMPILING...</div>}
+                    {fps > 0 && <div style={{ color: THEME.textMute, fontSize: '0.8rem' }}>{fps} FPS ({frameTime}ms)</div>}
                 </div>
             </div>
 
@@ -1947,7 +1947,7 @@ const ShaderEditor: React.FC = () => {
                             padding: '8px 12px',
                             cursor: 'pointer',
                             background: active ? '#111' : 'transparent',
-                            color: active ? 'var(--accent)' : '#888',
+                            color: active ? THEME.accent : THEME.textDim,
                             borderBottom: '1px solid #1a1a1a',
                             fontFamily: "'VT323', monospace",
                             fontSize: '1rem',
@@ -1983,16 +1983,16 @@ const ShaderEditor: React.FC = () => {
                             color: '#ffaaaa', padding: '8px 12px', fontSize: '0.9rem',
                             overflowY: 'auto', fontFamily: "'VT323', monospace"
                         }}>
-                            <div style={{ color: '#e74c3c', marginBottom: '4px' }}>// COMPILE ERROR</div>
+                            <div style={{ color: THEME.danger, marginBottom: '4px' }}>// COMPILE ERROR</div>
                             {errorMsg}
                         </div>
                     )}
                 </div>
 
-                <div className="panel" style={{ width: '400px', borderLeft: '1px solid #333' }}>
+                <div className="panel" style={{ width: '400px', borderLeft: '2px solid #000' }}>
                     <div className="panel-header">
                         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Box size={14} /> PREVIEW</span>
-                        <span style={{ fontSize: '0.75rem', color: '#666' }}>drag to orbit</span>
+                        <span style={{ fontSize: '0.75rem', color: THEME.textMute }}>drag to orbit</span>
                     </div>
                     <div style={{ padding: '16px', display: 'flex', justifyContent: 'center', background: '#000', position: 'relative' }}>
                         <canvas
@@ -2003,7 +2003,7 @@ const ShaderEditor: React.FC = () => {
                             onMouseMove={handleCanvasMouseMove}
                             onMouseUp={handleCanvasMouseUp}
                             onMouseLeave={handleCanvasMouseUp}
-                            style={{ border: '1px solid ' + (previewVersion === 'b' ? '#e67e22' : '#222'), borderRadius: '4px', cursor: 'grab', maxWidth: '100%' }}
+                            style={{                                     border: '1px solid ' + (previewVersion === 'b' ? '#e67e22' : THEME.border), borderRadius: '0px', cursor: 'grab', maxWidth: '100%' }}
                         />
                         {previewVersion === 'b' && (
                             <div style={{
@@ -2014,9 +2014,9 @@ const ShaderEditor: React.FC = () => {
                             }}>SNAPSHOT B</div>
                         )}
                     </div>
-                    <div className="panel-header" style={{ borderTop: '1px solid #333', cursor: 'pointer' }}>
+                    <div className="panel-header" style={{ borderTop: '1px solid ' + THEME.borderMute, cursor: 'pointer' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Eye size={14} /> LAYERS</span>
-                        <span style={{ fontSize: '0.75rem', color: '#666' }}>{layers.length}</span>
+                        <span style={{ fontSize: '0.75rem', color: THEME.textMute }}>{layers.length}</span>
                     </div>
                     <div className="panel-content" style={{ gap: '4px', fontSize: '0.8rem', padding: '8px' }}>
                         {layers.map((layer, i) => (
@@ -2025,14 +2025,14 @@ const ShaderEditor: React.FC = () => {
                                 onClick={() => setActiveLayerIdx(i)}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 6px',
-                                    background: i === activeLayerIdx ? '#1a1a2a' : 'transparent',
-                                    border: '1px solid ' + (i === activeLayerIdx ? 'var(--accent)' : '#222'),
+                                    background: i === activeLayerIdx ? THEME.bgPanel : 'transparent',
+                                    border: '1px solid ' + (i === activeLayerIdx ? THEME.accent : THEME.border),
                                     borderRadius: '0px', cursor: 'pointer',
                                 }}
                             >
                                 <button
                                     onClick={e => { e.stopPropagation(); pushUndo(); setLayers(prev => prev.map((l, j) => j === i ? { ...l, visible: !l.visible } : l)); }}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: layer.visible ? 'var(--accent)' : '#444', padding: 0, width: 'auto' }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: layer.visible ? THEME.accent : '#444', padding: 0, width: 'auto' }}
                                     title={layer.visible ? 'Hide' : 'Show'}
                                 >{layer.visible ? <Eye size={12} /> : <EyeOff size={12} />}</button>
                                 <input
@@ -2040,7 +2040,7 @@ const ShaderEditor: React.FC = () => {
                                     onChange={e => { pushUndo(); setLayers(prev => prev.map((l, j) => j === i ? { ...l, name: e.target.value } : l)); }}
                                     onClick={e => e.stopPropagation()}
                                     style={{
-                                        flexGrow: 1, background: 'none', border: 'none', color: i === activeLayerIdx ? '#fff' : '#888',
+                                        flexGrow: 1, background: 'none', border: 'none', color: i === activeLayerIdx ? '#fff' : THEME.textDim,
                                         fontSize: '0.8rem', fontFamily: "'VT323', monospace", outline: 'none', padding: 0, minWidth: 0, width: 'auto',
                                     }}
                                 />
@@ -2049,7 +2049,7 @@ const ShaderEditor: React.FC = () => {
                                     onChange={e => { pushUndo(); setLayers(prev => prev.map((l, j) => j === i ? { ...l, blendMode: e.target.value as BlendMode } : l)); }}
                                     onClick={e => e.stopPropagation()}
                                     style={{
-                                        fontSize: '0.65rem', background: '#111', border: '1px solid #333', color: '#aaa',
+                                        fontSize: '0.65rem', background: THEME.bgPanelAlt, border: '1px solid ' + THEME.border, color: THEME.textDim,
                                         borderRadius: '2px', padding: '1px 3px', fontFamily: "'VT323', monospace", width: 'auto', cursor: 'pointer',
                                     }}
                                 >
@@ -2067,7 +2067,7 @@ const ShaderEditor: React.FC = () => {
                                     style={{ width: '40px', padding: 0, height: '4px', cursor: 'pointer' }}
                                     title={`Opacity: ${Math.round(layer.opacity * 100)}%`}
                                 />
-                                <span style={{ color: '#555', fontSize: '0.65rem', minWidth: '20px', textAlign: 'right' }}>{Math.round(layer.opacity * 100)}%</span>
+                                <span style={{ color: THEME.textMute, fontSize: '0.65rem', minWidth: '20px', textAlign: 'right' }}>{Math.round(layer.opacity * 100)}%</span>
                             </div>
                         ))}
                         <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
@@ -2134,20 +2134,20 @@ const ShaderEditor: React.FC = () => {
                             ><ChevronDown size={12} /></button>
                         </div>
                     </div>
-                    <div className="panel-header" style={{ borderTop: '1px solid #333' }}>
+                    <div className="panel-header" style={{ borderTop: '1px solid ' + THEME.borderMute }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Sliders size={14} /> UNIFORMS</span>
-                        <span style={{ fontSize: '0.75rem', color: '#666' }}>{uniformControls.length}</span>
+                        <span style={{ fontSize: '0.75rem', color: THEME.textMute }}>{uniformControls.length}</span>
                     </div>
                     <div className="panel-content" style={{ gap: '8px', fontSize: '0.85rem' }}>
                         {uniformControls.length === 0 && (
-                            <div style={{ color: '#666', fontSize: '0.85rem', fontStyle: 'italic', fontFamily: "'VT323', monospace" }}>
-                                No tweakable uniforms detected. Add <span style={{ color: '#888' }}>uniform float uMyVar;</span> to your shader.
+                            <div style={{ color: THEME.textMute, fontSize: '0.85rem', fontStyle: 'italic', fontFamily: "'VT323', monospace" }}>
+                                No tweakable uniforms detected. Add <span style={{ color: THEME.textDim }}>uniform float uMyVar;</span> to your shader.
                             </div>
                         )}
                         {uniformControls.map(ctrl => (
-                            <div key={ctrl.name} style={{ background: '#111', border: '1px solid #222', borderRadius: '4px', padding: '8px 10px' }}>
+                            <div key={ctrl.name} style={{ background: THEME.bgPanelAlt, border: '1px solid ' + THEME.borderMute, borderRadius: '0px', padding: '8px 10px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                    <span style={{ color: 'var(--accent)', fontFamily: "'VT323', monospace", display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ color: THEME.accent, fontFamily: "'VT323', monospace", display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         {ctrl.name}
                                         <button
                                             onClick={() => {
@@ -2161,7 +2161,7 @@ const ShaderEditor: React.FC = () => {
                                             }}
                                             style={{
                                                 background: 'none', border: 'none', cursor: 'pointer',
-                                                color: (keyframes[ctrl.name] || []).length > 0 ? 'var(--accent)' : '#444',
+                                                color: (keyframes[ctrl.name] || []).length > 0 ? THEME.accent : '#444',
                                                 fontSize: '0.7rem', padding: '0 2px', width: 'auto',
                                                 lineHeight: 1, opacity: 0.6,
                                             }}
@@ -2169,13 +2169,13 @@ const ShaderEditor: React.FC = () => {
                                         >◆</button>
                                     </span>
                                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                        <span style={{ color: '#555', fontSize: '0.7rem', fontFamily: "'VT323', monospace" }}>{ctrl.glType}</span>
+                                        <span style={{ color: THEME.textMute, fontSize: '0.7rem', fontFamily: "'VT323', monospace" }}>{ctrl.glType}</span>
                                         <button
                                             onClick={() => toggleBinding(ctrl.name)}
                                             style={{
-                                                background: uniformBindings[ctrl.name] ? '#2ecc71' : '#222',
-                                                border: '1px solid ' + (uniformBindings[ctrl.name] ? '#2ecc71' : '#444'),
-                                                color: uniformBindings[ctrl.name] ? '#000' : '#888',
+                                                background: uniformBindings[ctrl.name] ? THEME.ok : THEME.bgPanelAlt,
+                                                border: '1px solid ' + (uniformBindings[ctrl.name] ? THEME.ok : THEME.borderMute),
+                                                color: uniformBindings[ctrl.name] ? '#000' : THEME.textDim,
                                                 borderRadius: '0px', cursor: 'pointer', fontSize: '0.65rem',
                                                 padding: '1px 6px', width: 'auto', fontFamily: "'VT323', monospace"
                                             }}
@@ -2184,7 +2184,7 @@ const ShaderEditor: React.FC = () => {
                                     </div>
                                 </div>
                                 {uniformBindings[ctrl.name] && (
-                                    <div style={{ color: '#2ecc71', fontSize: '0.7rem', marginBottom: '4px', fontFamily: "'VT323', monospace" }}>
+                                    <div style={{ color: THEME.ok, fontSize: '0.7rem', marginBottom: '4px', fontFamily: "'VT323', monospace" }}>
                                         → {uniformBindings[ctrl.name]}
                                     </div>
                                 )}
@@ -2197,7 +2197,7 @@ const ShaderEditor: React.FC = () => {
                                                 value={val}
                                                 onChange={e => updateUniform(ctrl.name, parseFloat(e.target.value))}
                                                 style={{ flexGrow: 1, width: 'auto', padding: 0, height: '6px', cursor: 'pointer' }} />
-                                            <span style={{ color: '#aaa', minWidth: '40px', textAlign: 'right', fontFamily: "'VT323', monospace" }}>{val.toFixed(2)}</span>
+                                            <span style={{ color: THEME.textDim, minWidth: '40px', textAlign: 'right', fontFamily: "'VT323', monospace" }}>{val.toFixed(2)}</span>
                                         </div>
                                     );
                                 })()}
@@ -2210,12 +2210,12 @@ const ShaderEditor: React.FC = () => {
                                                 value={val}
                                                 onChange={e => updateUniform(ctrl.name, parseInt(e.target.value))}
                                                 style={{ flexGrow: 1, width: 'auto', padding: 0, height: '6px', cursor: 'pointer' }} />
-                                            <span style={{ color: '#aaa', minWidth: '40px', textAlign: 'right', fontFamily: "'VT323', monospace" }}>{Math.round(val)}</span>
+                                            <span style={{ color: THEME.textDim, minWidth: '40px', textAlign: 'right', fontFamily: "'VT323', monospace" }}>{Math.round(val)}</span>
                                         </div>
                                     );
                                 })()}
                                 {ctrl.glType === 'bool' && (
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, color: '#aaa' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, color: THEME.textDim }}>
                                         <input type="checkbox"
                                             checked={uniformValuesRef.current[ctrl.name] as boolean ?? ctrl.value as boolean}
                                             onChange={e => updateUniform(ctrl.name, e.target.checked)}
@@ -2233,7 +2233,7 @@ const ShaderEditor: React.FC = () => {
                                                 <input type="color" value={hex}
                                                     onChange={e => updateUniform(ctrl.name, hexToVec3(e.target.value))}
                                                     style={{ width: '36px', height: '28px', padding: 0, border: 'none', cursor: 'pointer' }} />
-                                                <span style={{ color: '#aaa', fontFamily: "'VT323', monospace" }}>{hex}</span>
+                                                <span style={{ color: THEME.textDim, fontFamily: "'VT323', monospace" }}>{hex}</span>
                                             </div>
                                         );
                                     }
@@ -2241,7 +2241,7 @@ const ShaderEditor: React.FC = () => {
                                         <div style={{ display: 'flex', gap: '6px' }}>
                                             {['R', 'G', 'B'].map((ch, i) => (
                                                 <div key={ch} style={{ flex: 1 }}>
-                                                    <div style={{ color: '#666', fontSize: '0.65rem', fontFamily: "'VT323', monospace" }}>{ch}</div>
+                                                    <div style={{ color: THEME.textMute, fontSize: '0.65rem', fontFamily: "'VT323', monospace" }}>{ch}</div>
                                                     <input type="range" min={0} max={1} step={0.01}
                                                         value={val[i]}
                                                         onChange={e => { const nv = [...val]; nv[i] = parseFloat(e.target.value); updateUniform(ctrl.name, nv); }}
@@ -2257,7 +2257,7 @@ const ShaderEditor: React.FC = () => {
                                         <div style={{ display: 'flex', gap: '6px' }}>
                                             {['X', 'Y'].map((ch, i) => (
                                                 <div key={ch} style={{ flex: 1 }}>
-                                                    <div style={{ color: '#666', fontSize: '0.65rem', fontFamily: "'VT323', monospace" }}>{ch}</div>
+                                                    <div style={{ color: THEME.textMute, fontSize: '0.65rem', fontFamily: "'VT323', monospace" }}>{ch}</div>
                                                     <input type="range" min={0} max={1} step={0.01}
                                                         value={val[i]}
                                                         onChange={e => { const nv = [...val]; nv[i] = parseFloat(e.target.value); updateUniform(ctrl.name, nv); }}
@@ -2270,9 +2270,9 @@ const ShaderEditor: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                    <div className="panel-header" style={{ borderTop: '1px solid #333' }}>
+                    <div className="panel-header" style={{ borderTop: '1px solid ' + THEME.borderMute }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>⏱ ANIMATION</span>
-                        <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                        <span style={{ fontSize: '0.75rem', color: THEME.textMute }}>
                             {Object.keys(keyframes).length} KF
                         </span>
                     </div>
@@ -2284,11 +2284,11 @@ const ShaderEditor: React.FC = () => {
                                 style={{ fontSize: '0.7rem', padding: '4px 8px', width: 'auto', minWidth: '32px' }}
                                 title={animPlaying ? 'Pause' : 'Play'}
                             >{animPlaying ? '⏸' : '▶'}</button>
-                            <span style={{ color: '#aaa', fontFamily: "'VT323', monospace", fontSize: '0.85rem' }}>
+                            <span style={{ color: THEME.textDim, fontFamily: "'VT323', monospace", fontSize: '0.85rem' }}>
                                 {animTime.toFixed(2)}s / {animDuration}s
                             </span>
                         </div>
-                        <div style={{ position: 'relative', height: '24px', background: '#111', border: '1px solid #222', borderRadius: '0px', marginTop: '4px' }}>
+                        <div style={{ position: 'relative', height: '24px', background: THEME.bgPanelAlt, border: '1px solid ' + THEME.borderMute, borderRadius: '0px', marginTop: '4px' }}>
                             <input
                                 type="range" min={0} max={animDuration} step={0.01}
                                 value={animTime}
@@ -2320,7 +2320,7 @@ const ShaderEditor: React.FC = () => {
                                                 top: '50%',
                                                 transform: 'translate(-50%, -50%)',
                                                 width: '8px', height: '8px',
-                                                background: 'var(--accent)',
+                                                background: THEME.accent,
                                                 clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
                                                 cursor: 'pointer',
                                                 pointerEvents: 'auto',
@@ -2347,34 +2347,34 @@ const ShaderEditor: React.FC = () => {
                     fontFamily: "'VT323', monospace"
                 }} onClick={() => setShowTemplates(false)}>
                     <div style={{
-                        background: '#0d0d14', border: '1px solid #2a2a3a', borderRadius: '8px',
+                        background: THEME.bgPanelAlt, border: '1px solid ' + THEME.border, borderRadius: '0px',
                         maxHeight: '80vh', width: '640px', overflow: 'hidden',
                         display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.6)'
                     }} onClick={e => e.stopPropagation()}>
                         <div style={{
-                            padding: '12px 16px', borderBottom: '1px solid #2a2a3a',
-                            color: 'var(--accent)', fontSize: '1.2rem', display: 'flex',
+                            padding: '12px 16px',                             borderBottom: '1px solid ' + THEME.border,
+                            color: THEME.accent, fontSize: '1.2rem', display: 'flex',
                             justifyContent: 'space-between', alignItems: 'center'
                         }}>
                             <span>SHADER TEMPLATES</span>
                             <button
                                 onClick={() => setShowTemplates(false)}
-                                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.2rem', width: 'auto', padding: '0 4px' }}
+                                style={{ background: 'none', border: 'none', color: THEME.textDim, cursor: 'pointer', fontSize: '1.2rem', width: 'auto', padding: '0 4px' }}
                             >✕</button>
                         </div>
-                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #1a1a2a' }}>
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid ' + THEME.borderMute }}>
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '6px',
-                                background: '#111', border: '1px solid #333', borderRadius: '4px',
+                                background: THEME.bgPanelAlt, border: '1px solid ' + THEME.border, borderRadius: '0px',
                                 padding: '6px 10px',
                             }}>
-                                <Search size={14} style={{ color: '#666', flexShrink: 0 }} />
+                                <Search size={14} style={{ color: THEME.textMute, flexShrink: 0 }} />
                                 <input
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     placeholder="Search templates..."
                                     style={{
-                                        flexGrow: 1, background: 'none', border: 'none', color: '#ccc',
+                                        flexGrow: 1, background: 'none', border: 'none', color: THEME.textDim,
                                         fontSize: '0.9rem', fontFamily: "'VT323', monospace", outline: 'none',
                                         width: 'auto', padding: 0,
                                     }}
@@ -2382,19 +2382,19 @@ const ShaderEditor: React.FC = () => {
                                 {searchQuery && (
                                     <button
                                         onClick={() => setSearchQuery('')}
-                                        style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '0.8rem', width: 'auto', padding: '0 2px' }}
+                                        style={{ background: 'none', border: 'none', color: THEME.textMute, cursor: 'pointer', fontSize: '0.8rem', width: 'auto', padding: '0 2px' }}
                                     >✕</button>
                                 )}
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '4px', padding: '8px 12px', borderBottom: '1px solid #1a1a2a', overflowX: 'auto', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: '4px', padding: '8px 12px', borderBottom: '1px solid ' + THEME.borderMute, overflowX: 'auto', flexShrink: 0 }}>
                             <button
                                 onClick={() => setSelectedCategory(null)}
                                 style={{
-                                    background: selectedCategory === null ? '#1a1a2a' : 'transparent',
-                                    border: '1px solid ' + (selectedCategory === null ? 'var(--accent)' : '#333'),
-                                    color: selectedCategory === null ? 'var(--accent)' : '#888',
-                                    borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem',
+                            background: selectedCategory === null ? THEME.bgPanel : 'transparent',
+                            border: '1px solid ' + (selectedCategory === null ? THEME.accent : THEME.borderMute),
+                                    color: selectedCategory === null ? THEME.accent : THEME.textDim,
+                                    borderRadius: '0px', cursor: 'pointer', fontSize: '0.75rem',
                                     padding: '4px 10px', whiteSpace: 'nowrap', fontFamily: "'VT323', monospace",
                                     width: 'auto',
                                 }}
@@ -2404,10 +2404,10 @@ const ShaderEditor: React.FC = () => {
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
                                     style={{
-                                        background: selectedCategory === cat ? '#1a1a2a' : 'transparent',
-                                        border: '1px solid ' + (selectedCategory === cat ? 'var(--accent)' : '#333'),
-                                        color: selectedCategory === cat ? 'var(--accent)' : '#888',
-                                        borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem',
+                                        background: selectedCategory === cat ? THEME.bgPanel : 'transparent',
+                                        border: '1px solid ' + (selectedCategory === cat ? THEME.accent : THEME.borderMute),
+                                        color: selectedCategory === cat ? THEME.accent : THEME.textDim,
+                                        borderRadius: '0px', cursor: 'pointer', fontSize: '0.75rem',
                                         padding: '4px 10px', whiteSpace: 'nowrap', fontFamily: "'VT323', monospace",
                                         width: 'auto',
                                     }}
@@ -2422,7 +2422,7 @@ const ShaderEditor: React.FC = () => {
                                 );
                                 if (filtered.length === 0) {
                                     return (
-                                        <div style={{ color: '#666', textAlign: 'center', padding: '40px 0', fontSize: '1rem' }}>
+                                        <div style={{ color: THEME.textMute, textAlign: 'center', padding: '40px 0', fontSize: '1rem' }}>
                                             No templates match "{searchQuery}"
                                         </div>
                                     );
@@ -2435,7 +2435,7 @@ const ShaderEditor: React.FC = () => {
                                 return Object.entries(grouped).map(([cat, tmpls]) => (
                                     <div key={cat} style={{ marginBottom: '16px' }}>
                                         <div style={{
-                                            color: '#666', fontSize: '0.85rem', textTransform: 'uppercase',
+                                            color: THEME.textMute, fontSize: '0.85rem', textTransform: 'uppercase',
                                             letterSpacing: '1px', marginBottom: '8px', paddingLeft: '4px'
                                         }}>{cat} ({tmpls.length})</div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -2444,15 +2444,15 @@ const ShaderEditor: React.FC = () => {
                                                     key={tpl.id}
                                                     onClick={() => applyTemplate(tpl)}
                                                     style={{
-                                                        padding: '8px 10px', cursor: 'pointer', borderRadius: '4px',
-                                                        background: '#111', border: '1px solid #1a1a2a',
-                                                        color: '#ccc', fontSize: '0.9rem', transition: 'all 0.1s',
+                                                        padding: '8px 10px', cursor: 'pointer', borderRadius: '0px',
+                                                        background: THEME.bgPanelAlt, border: '1px solid ' + THEME.borderMute,
+                                                        color: THEME.textDim, fontSize: '0.9rem', transition: 'all 0.1s',
                                                     }}
-                                                    onMouseEnter={e => { e.currentTarget.style.background = '#1a1a2a'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
-                                                    onMouseLeave={e => { e.currentTarget.style.background = '#111'; e.currentTarget.style.borderColor = '#1a1a2a'; }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = THEME.bgPanel; e.currentTarget.style.borderColor = THEME.accent; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = THEME.bgPanelAlt; e.currentTarget.style.borderColor = THEME.borderMute; }}
                                                 >
-                                                    <div style={{ color: 'var(--accent)', fontSize: '0.95rem' }}>{tpl.name}</div>
-                                                    <div style={{ color: '#666', fontSize: '0.75rem' }}>{tpl.desc}</div>
+                                                    <div style={{ color: THEME.accent, fontSize: '0.95rem' }}>{tpl.name}</div>
+                                                    <div style={{ color: THEME.textMute, fontSize: '0.75rem' }}>{tpl.desc}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -2461,8 +2461,8 @@ const ShaderEditor: React.FC = () => {
                             })()}
                         </div>
                         <div style={{
-                            padding: '8px 16px', borderTop: '1px solid #2a2a3a',
-                            color: '#555', fontSize: '0.8rem', textAlign: 'center'
+                            padding: '8px 16px', borderTop: '1px solid ' + THEME.border,
+                            color: THEME.textMute, fontSize: '0.8rem', textAlign: 'center'
                         }}>
                             {TEMPLATES.length} TEMPLATES AVAILABLE
                         </div>
