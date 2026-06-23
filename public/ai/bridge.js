@@ -195,5 +195,31 @@ if (typeof window.IrabBridge === 'undefined') {
     }
 
     window.IrabBridge = IrabBridge;
-    window.irab = new IrabBridge();
+
+    // Only auto-connect the native Cortex bridge when AI mode is enabled
+    if (isKaiModeEnabled()) {
+        window.irab = new IrabBridge();
+    }
 }
+
+function isKaiModeEnabled() {
+    const v = localStorage.getItem('kai_ai_enabled');
+    return v === 'true';
+}
+
+window.ensureIrabBridge = function ensureIrabBridge() {
+    if (!window.irab) {
+        window.irab = new IrabBridge();
+    }
+    return window.irab;
+};
+
+window.destroyIrabBridge = function destroyIrabBridge() {
+    if (window.irab) {
+        try { window.irab.socket?.close(); } catch (_) {}
+        window.irab.isConnected = false;
+        window.irab._connecting = false;
+        if (window.irab._retryTimer) clearTimeout(window.irab._retryTimer);
+        window.irab = null;
+    }
+};

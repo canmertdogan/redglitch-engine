@@ -1194,6 +1194,12 @@ window.setKaiMode = async (enabled) => {
 
     let ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance;
     if (mode) {
+        // Ensure the native Cortex bridge is running
+        const parentWin = window.parent || window;
+        if (parentWin.ensureIrabBridge) {
+            parentWin.ensureIrabBridge();
+        }
+
         const { RedGlitchAI } = await import('../redglitch-ai.js');
         ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance || ai;
         if (!ai) {
@@ -1203,8 +1209,19 @@ window.setKaiMode = async (enabled) => {
         window.AIChatUI.assistant = new IRABAssistantSimple();
         await window.AIChatUI.initialize();
         await ai.setEnabled(true);
-    } else if (ai?.setEnabled) {
-        await ai.setEnabled(false);
+    } else {
+        // Shut down everything
+        if (ai?.setEnabled) {
+            await ai.setEnabled(false);
+        }
+        const parentWin = window.parent || window;
+        if (parentWin.destroyIrabBridge) {
+            parentWin.destroyIrabBridge();
+        }
+        // Kill any local AI instance
+        if (window.RedGlitchAIInstance) {
+            window.RedGlitchAIInstance = null;
+        }
     }
     window.dispatchEvent(new CustomEvent('kai:mode-change', { detail: { enabled: mode } }));
     return mode;
