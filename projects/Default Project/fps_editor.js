@@ -436,8 +436,6 @@ const FPSEditor = (() => {
     function _init3d() {
         const canvas = document.getElementById('canvas-3d');
 
-        // Three.js is loaded as a global from lib/ only when available; 
-        // fall back to a placeholder canvas renderer if not available.
         if (typeof THREE === 'undefined') {
             _renderFallback3d(canvas);
             return;
@@ -513,19 +511,32 @@ const FPSEditor = (() => {
     }
 
     function _renderFallback3d(canvas) {
-        const ctx = canvas.getContext('2d');
-        const w = canvas.parentElement.clientWidth;
-        const h = canvas.parentElement.clientHeight - 24;
-        canvas.width  = w;
-        canvas.height = h;
-        ctx.fillStyle = '#0a0806';
-        ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#444';
-        ctx.font = '18px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('THREE.js not loaded — 3D preview unavailable', w/2, h/2 - 10);
-        ctx.fillStyle = '#333';
-        ctx.fillText('Block placement works in the 2D floor plan view', w/2, h/2 + 14);
+        const loadThree = () => {
+            const script = document.createElement('script');
+            script.src = '/lib/three/three.module.js';
+            script.type = 'module';
+            script.onload = () => {
+                if (typeof THREE !== 'undefined') _init3d();
+            };
+            script.onerror = () => {
+                const ctx = canvas.getContext('2d');
+                const w = canvas.parentElement.clientWidth;
+                const h = canvas.parentElement.clientHeight - 24;
+                canvas.width  = w;
+                canvas.height = h;
+                ctx.fillStyle = '#0a0806';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#666';
+                ctx.font = '16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('3D preview requires THREE.js', w/2, h/2 - 10);
+                ctx.fillStyle = '#444';
+                ctx.fillText('Click anywhere to retry loading', w/2, h/2 + 14);
+                canvas.addEventListener('click', loadThree, { once: true });
+            };
+            document.head.appendChild(script);
+        };
+        loadThree();
     }
 
     function _loop3d() {

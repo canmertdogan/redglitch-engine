@@ -2590,6 +2590,7 @@ export class AlgorithmStudio {
         const ast = {
             name: this.dom.scriptName.value,
             generatedAt: new Date().toISOString(),
+            vars: this.vars || [],
             events: {}
         };
 
@@ -2622,6 +2623,9 @@ export class AlgorithmStudio {
                 data: { ...nextNode.data }
             };
 
+            // Resolve data input wires (non-exec ports) into _inputs map
+            astNode._inputs = this.resolveDataWires(nextNode);
+
             // Handle flow control branching
             if (nextNode.type === 'flow_branch') {
                 astNode.true = this.walkASTChain(nextNode, 'true', depth + 1);
@@ -2636,6 +2640,10 @@ export class AlgorithmStudio {
                 astNode.next = this.walkASTChain(nextNode, 'out', depth + 1);
             } else if (nextNode.type === 'flow_for_loop' || nextNode.type === 'flow_while' || nextNode.type === 'flow_foreach') {
                 astNode.body = this.walkASTChain(nextNode, 'body', depth + 1);
+                astNode.next = this.walkASTChain(nextNode, 'out', depth + 1);
+            } else if (nextNode.type === 'flow_for') {
+                // Legacy flow_for maps 'loop' port -> body, 'out' -> next
+                astNode.body = this.walkASTChain(nextNode, 'loop', depth + 1);
                 astNode.next = this.walkASTChain(nextNode, 'out', depth + 1);
             } else if (nextNode.type === 'flow_sequence') {
                 astNode.steps = [
@@ -2652,6 +2660,43 @@ export class AlgorithmStudio {
         });
 
         return chain.length > 0 ? chain : null;
+    }
+
+    resolveDataWires(node) {
+        const def = LIB[node.type];
+        if (!def || !def.inputs) return {};
+        const dataPorts = def.inputs.filter(inp => inp.type !== 'exec');
+        if (dataPorts.length === 0) return {};
+        const resolved = {};
+        for (const port of dataPorts) {
+            const wire = this.wires.find(w => w.toNode === node.id && w.toPort === port.id);
+            if (!wire) continue;
+            const sourceNode = this.getNode(wire.fromNode);
+            if (!sourceNode) continue;
+            resolved[port.id] = this.astDataValue(sourceNode, wire.fromPort, 0);
+        }
+        return resolved;
+    }
+
+    astDataValue(node, portId, depth) {
+        if (depth > 50) return { type: 'literal', value: 0 };
+        const def = LIB[node.type];
+        if (!def) return { type: 'literal', value: node.data[portId] };
+
+        // Treat as value node if it has data outputs and is not an event trigger
+        const hasDataOutput = def.outputs && def.outputs.some(o => o.type !== 'exec');
+        if (def.cat !== 'Event' && hasDataOutput) {
+            const valNode = {
+                type: node.type,
+                data: { ...node.data },
+                _inputs: this.resolveDataWires(node)
+            };
+            return { type: 'node', node: valNode };
+        }
+
+        // Literal value from node data
+        const val = node.data[portId];
+        return { type: 'literal', value: val !== undefined ? val : 0 };
     }
 
     compile() {
@@ -3377,8 +3422,38 @@ export class AlgorithmStudio {
             d.style.color = isCore ? '#e74c3c' : '#ccc';
             d.innerHTML = `<div class="lib-icon" style="background:${isCore?'#e74c3c':'#2ecc71'}"></div> ${s} ${isCore?'<i class="fas fa-lock" style="font-size:10px; margin-left:auto;"></i>':''}`;
             d.onclick=()=>this.loadScript(s); 
+            if (!isCore) {
+                const delBtn = document.createElement('span');
+                delBtn.innerHTML = '<i class="fas fa-trash" style="margin-left:8px;color:#e74c3c;cursor:pointer;"></i>';
+                delBtn.title = 'Delete script';
+                delBtn.onclick = (e) => { e.stopPropagation(); this.deleteScript(s); };
+                d.appendChild(delBtn);
+            }
             this.dom.scriptList.appendChild(d); 
         }); 
+    }
+
+    async deleteScript(name) {
+        if (!confirm(`Delete script "${name}"?`)) return;
+        try {
+            const res = await fetch(`/api/logic/${name}`, { method: 'DELETE' });
+            if (res.ok) {
+                this.log(`Deleted script: ${name}`);
+                if (this.dom.scriptName.value === name) {
+                    this.nodes = []; this.wires = []; this.vars = [];
+                    this.dom.nodes.innerHTML = ''; this.dom.wires.innerHTML = '';
+                    this.dom.scriptName.value = '';
+                }
+                this.refreshScriptList();
+            } else {
+                const errText = await res.text().catch(() => 'Unknown error');
+                this.log(`Failed to delete script: ${name}`, 'err');
+                this.showNotification(`Delete failed: ${errText}`, 'error');
+            }
+        } catch (e) {
+            this.log(`Delete error: ${e.message}`, 'err');
+            this.showNotification(`Delete error: ${e.message}`, 'error');
+        }
     }
     
     // === PHASE B: TEST PANEL METHODS ===
@@ -3462,19 +3537,16 @@ I want to modify or add new logic to this graph.`;
             if (!res.ok) {
                 throw new Error(`Failed to save: ${res.statusText}`);
             }
-            
             this.logToTestConsole(`✓ Saved ${scriptName}.algorithm`, 'success');
             
-            // Check if AlgorithmRuntime is loaded
-            if (!window.AlgorithmRuntime) {
-                this.logToTestConsole('✗ AlgorithmRuntime not loaded', 'error');
+            // Check if LogicInterpreter is loaded
+            if (!window.LogicInterpreter) {
+                this.logToTestConsole('✗ LogicInterpreter not loaded', 'error');
                 return;
             }
             
-            if (!window.LogicRuntime) {
-                this.logToTestConsole('✗ LogicRuntime not loaded', 'error');
-                return;
-            }
+            // Compile AST
+            const ast = this.compileToAST();
             
             // Create mock game object
             const mockGame = {
@@ -3496,7 +3568,7 @@ I want to modify or add new logic to this graph.`;
                 type: 'test'
             };
             
-            // Create runtime
+            // Create interpreter
             this.logToTestConsole(`▶ Executing ${eventName} event...`, 'log');
             
             // Capture console.log during execution
@@ -3509,11 +3581,13 @@ I want to modify or add new logic to this graph.`;
                 this.logToTestConsole(message, 'log');
                 originalLog.apply(console, args);
             };
+            
             console.warn = (...args) => {
                 const message = args.join(' ');
                 this.logToTestConsole(message, 'warn');
                 originalWarn.apply(console, args);
             };
+            
             console.error = (...args) => {
                 const message = args.join(' ');
                 this.logToTestConsole(message, 'error');
@@ -3521,11 +3595,8 @@ I want to modify or add new logic to this graph.`;
             };
             
             try {
-                const runtime = new window.AlgorithmRuntime(data, mockGame, mockEntity);
-                
-                // Execute the event
-                await runtime.execute(eventName);
-                
+                const interp = new window.LogicInterpreter(mockGame);
+                await interp.runEvent(ast, mockEntity, eventName);
                 this.logToTestConsole(`✓ Script executed successfully`, 'success');
             } finally {
                 // Restore console
@@ -3533,7 +3604,6 @@ I want to modify or add new logic to this graph.`;
                 console.warn = originalWarn;
                 console.error = originalError;
             }
-            
         } catch (error) {
             this.logToTestConsole(`✗ Error: ${error.message}`, 'error');
             console.error('[TestScript]', error);

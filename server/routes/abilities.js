@@ -13,7 +13,6 @@ function isSafeName(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
 
-// Get abilities list (placeholder for future implementation)
 router.get('/', async (req, res) => {
     try {
         const activeProject = projectService.getActiveProject();
@@ -27,7 +26,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Save ability (placeholder for future implementation)
 router.post('/', async (req, res) => {
     try {
         const activeProject = projectService.getActiveProject();

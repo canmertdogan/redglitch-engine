@@ -503,7 +503,29 @@ window.IRAB = {
     },
     showEmoticons() { const icons = ["😊", "😂", "😎"]; const input = document.getElementById('irab-chat-input'); if (input) input.value += icons[Math.floor(Math.random() * icons.length)]; },
     formatText(fmt) { this.addMessage('system', `Formatting [${fmt}] is not supported in this version of MSN.`); },
-    changeBackground() { this.addMessage('system', "Feature coming soon!"); },
+    changeBackground(bg) {
+        const validBgs = ['default', 'dark', 'space', 'sunset', 'forest', 'ocean'];
+        const choice = bg || validBgs[Math.floor(Math.random() * validBgs.length)];
+        if (!validBgs.includes(choice)) {
+            this.addMessage('system', `Invalid background "${choice}". Options: ${validBgs.join(', ')}`);
+            return;
+        }
+        const root = document.documentElement;
+        const bgMap = {
+            default: { background: 'linear-gradient(135deg, #0a0a12, #1a1a2e)' },
+            dark: { background: '#000' },
+            space: { background: 'radial-gradient(ellipse at center, #0a0a2e 0%, #000 100%)' },
+            sunset: { background: 'linear-gradient(135deg, #2d1b00, #1a0a2e)' },
+            forest: { background: 'linear-gradient(135deg, #0a1a0a, #1a2e1a)' },
+            ocean: { background: 'linear-gradient(135deg, #001a2e, #0a2e1a)' },
+        };
+        const styles = bgMap[choice];
+        Object.entries(styles).forEach(([prop, val]) => {
+            root.style.setProperty(prop, val);
+        });
+        document.querySelector('.chat-container')?.style.setProperty('background', styles.background);
+        this.addMessage('system', `Background changed to "${choice}"`);
+    },
     
     // --- QUICK ACTIONS ---
     quickHelp() { if (window.irab) window.irab.prompt("How do I use RedGlitch Studio?"); },

@@ -164,7 +164,7 @@ export class RAGEngine {
         if (!this.isLoaded) await this.initialize();
         
         const queryEmbedding = await this.getQueryEmbedding(query);
-        const results = await this.vectorStore.query(queryEmbedding, limit);
+        const results = await this.vectorStore.query(queryEmbedding, limit, query);
         
         return results.map(r => `[Source: ${r.source}] ${r.text}`).join('\n\n');
     }

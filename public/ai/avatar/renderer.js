@@ -9,9 +9,27 @@ class IrabAvatar {
         this.container = null;
         this.canvas = null;
         this.ctx = null;
+        this._mouseX = 0;
+        this._mouseY = 0;
         
         this.initUI();
+        this._trackMouse();
         this.loop();
+    }
+
+    _trackMouse() {
+        document.addEventListener('mousemove', (e) => {
+            if (!this.canvas) return;
+            const rect = this.canvas.getBoundingClientRect();
+            this._mouseX = e.clientX - rect.left - rect.width / 2;
+            this._mouseY = e.clientY - rect.top - rect.height / 2;
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (!this.canvas || !e.touches[0]) return;
+            const rect = this.canvas.getBoundingClientRect();
+            this._mouseX = e.touches[0].clientX - rect.left - rect.width / 2;
+            this._mouseY = e.touches[0].clientY - rect.top - rect.height / 2;
+        }, { passive: true });
     }
 
     initUI() {
@@ -165,7 +183,13 @@ class IrabAvatar {
         ctx.fillRect(5, -10, 10, 10 * eyeSquint);
         
         // Pupil (follows mouse)
-        // TODO: Mouse tracking
+        const mx = this._mouseX ?? 0;
+        const my = this._mouseY ?? 0;
+        const px = Math.max(-3, Math.min(3, mx * 0.02));
+        const py = Math.max(-3, Math.min(3, my * 0.02));
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-13 + px, -8 + py, 4, 4);
+        ctx.fillRect(7 + px, -8 + py, 4, 4);
 
         // Mouth
         if (this.state === 'THINKING') {

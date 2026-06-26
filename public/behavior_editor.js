@@ -2987,7 +2987,8 @@ Created for RedGlitch Game Engine
         } else if (n.cat === 'express') {
             codeSnippet += `await npc.say("${n.data.text || 'Hello'}");\nyield;`;
         } else if (n.cat === 'logic') {
-            codeSnippet += `if (/* condition */) {\n  // do something\n}`;
+            const cond = n.data.condition || 'true';
+            codeSnippet += `if (${cond}) {\n  // logic path\n}`;
         }
         
         container.innerHTML = `

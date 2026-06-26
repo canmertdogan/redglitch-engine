@@ -89,7 +89,7 @@ window.onload = async () => {
     loadItem(0);
 
     // Click to Edit Sprite
-    document.getElementById('sprite-preview').onclick = () => {
+    document.getElementById('preview-box').onclick = () => {
         const spriteKey = items[currentIndex].sprite;
         if (window.parent && window.parent.editSpriteInStudio) {
             window.parent.editSpriteInStudio(spriteKey);

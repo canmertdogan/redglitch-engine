@@ -194,7 +194,7 @@ const path = require('path');
 require('./server.js');
 app.whenReady().then(() => {
     const win = new BrowserWindow({ width: 1280, height: 720, fullscreen: true, autoHideMenuBar: true });
-    win.loadURL('http://localhost:3000/launcher.html');
+    win.loadURL(\`http://localhost:\${process.env.PORT || 3000}/launcher.html\`);
 });
 app.on('window-all-closed', () => app.quit());
     `;

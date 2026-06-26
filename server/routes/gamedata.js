@@ -91,8 +91,7 @@ function createDefinitionRoutes(typeName, fileName) {
         }
     };
 
-    router.post(`/${typeName}`, saveHandler);
-    router.post(`/${typeName}-defs`, saveHandler); // Legacy support
+    router.post([`/${typeName}`, `/${typeName}-defs`], saveHandler);
 }
 
 // Create routes for all definition types

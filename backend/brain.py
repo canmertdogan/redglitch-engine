@@ -164,4 +164,20 @@ IRAB: "GRRR... Opening Platformer Studio!
         except Exception as e:
             yield f"Error: {str(e)}"
 
-brain = IrabBrain()
+class LazyBrain:
+    def __init__(self):
+        self._brain = None
+    @property
+    def brain(self):
+        if self._brain is None:
+            self._brain = IrabBrain()
+        return self._brain
+    def __getattr__(self, name):
+        return getattr(self.brain, name)
+    def __setattr__(self, name, value):
+        if name == '_brain':
+            super().__setattr__(name, value)
+        else:
+            setattr(self.brain, name, value)
+
+brain = LazyBrain()

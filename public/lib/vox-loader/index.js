@@ -1,8 +1,8 @@
 const Buffer = require('buffer').Buffer;
 const isBuffer = require('is-buffer');
-const parseHeader = require('./parseHeader');
-const useDefaultPalette = require('./useDefaultPalette');
-const recReadChunksInRange = require('./recReadChunksInRange');
+const parseHeader = require('./parseHeader.js');
+const useDefaultPalette = require('./useDefaultPalette.js');
+const recReadChunksInRange = require('./recReadChunksInRange.js');
 const debug = require('debug');
 const intByteLength = 4;
 

@@ -168,7 +168,7 @@ export class PermissionGate {
         const filePath = args.path || args.file || args.filePath;
         
         // Try to fetch original content if it's a file write
-        if (filePath && (toolName === 'fs.write' || toolName.includes('save'))) {
+        if (filePath && (toolName === 'fs.write' || toolName === 'fs.edit_file' || toolName.includes('save'))) {
             try {
                 const res = await fetch(`/api/ide/read?file=${encodeURIComponent(filePath)}`);
                 if (res.ok) originalContent = await res.text();
@@ -177,7 +177,7 @@ export class PermissionGate {
 
         return new Promise((resolve) => {
             let diffHtml = '';
-            const proposedCode = args.code || args.content || args.js || (typeof args === 'string' ? args : null);
+            const proposedCode = args.new_content || args.patch || args.code || args.content || args.js || (typeof args === 'string' ? args : null);
 
             if (proposedCode) {
                 let code = typeof proposedCode === 'string' ? proposedCode : JSON.stringify(proposedCode, null, 2);

@@ -192,6 +192,8 @@ class KaiChatUIController {
             // Hook into EventBus for Debug tab & Error Watcher
             const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
             if (eventBus) {
+                eventBus.on('ai:toggle_chat', () => this.toggleChat());
+                
                 // Live Debug Logs
                 eventBus.on('*', (eventData) => {
                     const stream = document.getElementById('debug-stream');
@@ -311,7 +313,7 @@ class KaiChatUIController {
         }
 
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 this.toggleChat();
             }

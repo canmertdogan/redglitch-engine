@@ -320,10 +320,16 @@ window.onload = async () => {
         // Cursor Position Update
         editor.onDidChangeCursorPosition(e => {
             document.getElementById('cursor-pos').innerText = `LN ${e.position.lineNumber}, COL ${e.position.column}`;
+            if (window.parent && window.parent.RedGlitchEventBus) {
+                window.parent.RedGlitchEventBus.emit('editor:cursor:moved', { line: e.position.lineNumber, col: e.position.column });
+            }
         });
         
         // Auto-Save Hook (Debounced)
         editor.onDidChangeModelContent(() => {
+            if (window.parent && window.parent.RedGlitchEventBus && activeTabPath) {
+                window.parent.RedGlitchEventBus.emit('editor:file:changed', { path: activeTabPath });
+            }
             if (SettingsManager.current.autoSave) {
                 if (autoSaveTimer) clearTimeout(autoSaveTimer);
                 autoSaveTimer = setTimeout(() => {
@@ -529,6 +535,10 @@ function setActiveTab(path) {
         // Update Lang Status
         const ext = path.split('.').pop().toUpperCase();
         document.getElementById('lang-status').innerText = ext || 'TXT';
+
+        if (window.parent && window.parent.RedGlitchEventBus) {
+            window.parent.RedGlitchEventBus.emit('editor:file:opened', { path: path });
+        }
     }
 
     renderTabs();

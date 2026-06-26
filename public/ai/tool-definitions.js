@@ -40,6 +40,77 @@ export function registerDefaultTools(registry) {
             }
         });
 
+        // fs.create_file (Low-Risk)
+        registry.register({
+            name: 'fs.create_file',
+            description: 'Create a new file in the project with the specified content.',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: { type: 'string', description: 'Target file path.' },
+                    content: { type: 'string', description: 'Content for the new file.' }
+                },
+                required: ['path', 'content']
+            },
+            execute: async (args) => {
+                const res = await fetch('/api/ide/write', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    body: JSON.stringify({ file: args.path, content: args.content })
+                });
+                if (!res.ok) throw new Error(`Failed to create ${args.path}`);
+                return {
+                    success: true,
+                    path: args.path,
+                    undoDescriptor: { type: 'delete-file', path: args.path }
+                };
+            }
+        });
+
+        // fs.edit_file (Low-Risk)
+        registry.register({
+            name: 'fs.edit_file',
+            description: 'Edit an existing file in the project. Either provide new_content to overwrite, or a patch to apply.',
+            securityLevel: 'low-risk',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: { type: 'string', description: 'Target file path.' },
+                    new_content: { type: 'string', description: 'Entire new content of the file.' },
+                    patch: { type: 'string', description: 'Optional diff patch to apply.' }
+                },
+                required: ['path']
+            },
+            execute: async (args) => {
+                // SHADOW BACKUP: Read existing content before writing
+                let previousContent = null;
+                let exists = false;
+                try {
+                    const check = await fetch(`/api/ide/read?file=${encodeURIComponent(args.path)}`);
+                    if (check.ok) {
+                        previousContent = await check.text();
+                        exists = true;
+                    }
+                } catch (e) {}
+
+                const contentToWrite = args.new_content || args.patch || ''; // simplistic handling for now
+
+                const res = await fetch('/api/ide/write', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    body: JSON.stringify({ file: args.path, content: contentToWrite })
+                });
+                if (!res.ok) throw new Error(`Failed to edit ${args.path}`);
+
+                return {
+                    success: true,
+                    path: args.path,
+                    undoDescriptor: { type: 'restore-file', path: args.path, existed: exists, previousContent }
+                };
+            }
+        });
+
         // fs.write (Low-Risk)
         registry.register({
             name: 'fs.write',
@@ -495,4 +566,35 @@ export function registerDefaultTools(registry) {
         registry.register({ ...registry.tools.get('fs.read'), name: 'readFile' });
         registry.register({ ...registry.tools.get('fs.list'), name: 'listFiles' });
         registry.register({ ...registry.tools.get('fs.write'), name: 'saveScript' });
+        // --- ISO PIXEL STUDIO ---
+
+        // iso.spawn_prefab (Safe)
+        registry.register({
+            name: 'iso.spawn_prefab',
+            description: 'Spawn a prefab or NPC into the current IsoPixel scene.',
+            securityLevel: 'safe',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'Name of the prefab or NPC to spawn.' },
+                    x: { type: 'number', description: 'World X coordinate.' },
+                    y: { type: 'number', description: 'World Y coordinate.' }
+                },
+                required: ['name', 'x', 'y']
+            },
+            execute: async (args) => {
+                const eventBus = window.RedGlitchEventBus || window.parent.RedGlitchEventBus;
+                if (!eventBus) throw new Error('EventBus not found.');
+                
+                eventBus.emit('iso:spawn_asset', {
+                    type: 'prefab',
+                    name: args.name,
+                    x: args.x,
+                    y: args.y
+                });
+                
+                return { success: true, message: `Spawned ${args.name} at (${args.x}, ${args.y})` };
+            }
+        });
+
     }

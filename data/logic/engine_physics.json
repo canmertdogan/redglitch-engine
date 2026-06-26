@@ -1,64 +1,71 @@
 {
   "nodes": [
     { "id": "n_tick", "type": "evt_tick", "x": 50, "y": 100, "data": {} },
-    { "id": "n_intro", "type": "eng_log", "x": 50, "y": 250, "data": { "msg": "Physics Engine: AABB Slide Logic" } },
-    
-    { "id": "n_player_ref", "type": "data_player", "x": 150, "y": 350, "data": {} },
-
-    { "id": "n_step1", "type": "eng_log", "x": 350, "y": 100, "data": { "msg": "1. Integrate Velocity X" } },
-    { "id": "n_get_x", "type": "data_pos", "x": 350, "y": 350, "data": {} },
-    { "id": "n_calc_next_x", "type": "math_add", "x": 350, "y": 500, "data": {} },
-    
-    { "id": "n_step2", "type": "eng_log", "x": 600, "y": 100, "data": { "msg": "2. Grid Lookup (Is Solid?)" } },
-    { "id": "n_to_grid_x", "type": "math_div", "x": 600, "y": 350, "data": { "b": 48 } },
-    { "id": "n_check_solid_x", "type": "flow_branch", "x": 600, "y": 500, "data": { "cond": "true" } },
-    
-    { "id": "n_col_x_hit", "type": "eng_log", "x": 850, "y": 650, "data": { "msg": "Collision! VX = 0" } },
-    { "id": "n_col_x_miss", "type": "eng_log", "x": 850, "y": 350, "data": { "msg": "Path Clear -> Update X" } },
-    
-    { "id": "n_step3", "type": "eng_log", "x": 1100, "y": 100, "data": { "msg": "3. Integrate Velocity Y" } },
-    { "id": "n_get_y", "type": "data_pos", "x": 1100, "y": 350, "data": {} },
-    { "id": "n_calc_next_y", "type": "math_add", "x": 1100, "y": 500, "data": {} },
-
-    { "id": "n_step4", "type": "eng_log", "x": 1350, "y": 100, "data": { "msg": "4. Grid Lookup (Is Solid?)" } },
-    { "id": "n_to_grid_y", "type": "math_div", "x": 1350, "y": 350, "data": { "b": 48 } },
-    { "id": "n_check_solid_y", "type": "flow_branch", "x": 1350, "y": 500, "data": { "cond": "true" } },
-
-    { "id": "n_col_y_hit", "type": "eng_log", "x": 1600, "y": 650, "data": { "msg": "Collision! VY = 0" } },
-    { "id": "n_col_y_miss", "type": "eng_log", "x": 1600, "y": 350, "data": { "msg": "Path Clear -> Update Y" } },
-
-    { "id": "n_step5", "type": "eng_log", "x": 1850, "y": 100, "data": { "msg": "5. Resolve & Render" } }
+    { "id": "n_player_ref", "type": "data_player", "x": 50, "y": 300, "data": {} },
+    { "id": "n_vx", "type": "var_get", "x": 50, "y": 450, "data": { "name": "velocity_x" } },
+    { "id": "n_vy", "type": "var_get", "x": 50, "y": 500, "data": { "name": "velocity_y" } },
+    { "id": "n_gravity", "type": "flow_reroute", "x": 50, "y": 600, "data": { "val": 980 } },
+    { "id": "n_dt", "type": "flow_reroute", "x": 50, "y": 700, "data": { "val": 0.016 } },
+    { "id": "n_apply_gravity", "type": "math_add", "x": 300, "y": 500, "data": {} },
+    { "id": "n_integrate_x", "type": "math_add", "x": 300, "y": 100, "data": {} },
+    { "id": "n_vel_x_dt", "type": "math_mul", "x": 200, "y": 200, "data": {} },
+    { "id": "n_integrate_y", "type": "math_add", "x": 300, "y": 650, "data": {} },
+    { "id": "n_vel_y_dt", "type": "math_mul", "x": 200, "y": 550, "data": {} },
+    { "id": "n_grid_size", "type": "flow_reroute", "x": 550, "y": 300, "data": { "val": 48 } },
+    { "id": "n_next_x", "type": "var_get", "x": 550, "y": 100, "data": { "name": "next_x" } },
+    { "id": "n_next_y", "type": "var_get", "x": 550, "y": 650, "data": { "name": "next_y" } },
+    { "id": "n_gx", "type": "math_div", "x": 750, "y": 100, "data": {} },
+    { "id": "n_gy", "type": "math_div", "x": 750, "y": 650, "data": {} },
+    { "id": "n_check_x", "type": "flow_branch", "x": 950, "y": 100, "data": { "cond": "true" } },
+    { "id": "n_check_y", "type": "flow_branch", "x": 950, "y": 650, "data": { "cond": "true" } },
+    { "id": "n_is_solid_x", "type": "var_get", "x": 750, "y": 250, "data": { "name": "tile_solid" } },
+    { "id": "n_is_solid_y", "type": "var_get", "x": 750, "y": 800, "data": { "name": "tile_solid" } },
+    { "id": "n_collide_x", "type": "var_set", "x": 1150, "y": 100, "data": { "name": "velocity_x", "val": 0 } },
+    { "id": "n_collide_y", "type": "var_set", "x": 1150, "y": 650, "data": { "name": "velocity_y", "val": 0 } },
+    { "id": "n_pass_x", "type": "var_set", "x": 1150, "y": 300, "data": { "name": "pos_x" } },
+    { "id": "n_pass_y", "type": "var_set", "x": 1150, "y": 800, "data": { "name": "pos_y" } },
+    { "id": "n_finalize", "type": "var_set", "x": 1400, "y": 100, "data": { "name": "physics_dirty", "val": 1 } }
   ],
   "wires": [
-    { "id": "w_0", "fromNode": "n_tick", "fromPort": "out", "toNode": "n_step1", "toPort": "in" },
-    { "id": "w_0a", "fromNode": "n_tick", "fromPort": "out", "toNode": "n_intro", "toPort": "in" },
-    
-    { "id": "w_p1", "fromNode": "n_player_ref", "fromPort": "val", "toNode": "n_get_x", "toPort": "target" },
-    { "id": "w_p2", "fromNode": "n_player_ref", "fromPort": "val", "toNode": "n_get_y", "toPort": "target" },
-
-    { "id": "w_1", "fromNode": "n_step1", "fromPort": "out", "toNode": "n_step2", "toPort": "in" },
-    { "id": "w_1a", "fromNode": "n_get_x", "fromPort": "x", "toNode": "n_calc_next_x", "toPort": "a" },
-    
-    { "id": "w_2", "fromNode": "n_step2", "fromPort": "out", "toNode": "n_check_solid_x", "toPort": "in" },
-    { "id": "w_2a", "fromNode": "n_calc_next_x", "fromPort": "res", "toNode": "n_to_grid_x", "toPort": "a" },
-    
-    { "id": "w_3", "fromNode": "n_check_solid_x", "fromPort": "true", "toNode": "n_col_x_hit", "toPort": "in" },
-    { "id": "w_4", "fromNode": "n_check_solid_x", "fromPort": "false", "toNode": "n_col_x_miss", "toPort": "in" },
-
-    { "id": "w_5", "fromNode": "n_col_x_miss", "fromPort": "out", "toNode": "n_step3", "toPort": "in" },
-    { "id": "w_5a", "fromNode": "n_col_x_hit", "fromPort": "out", "toNode": "n_step3", "toPort": "in" },
-
-    { "id": "w_6", "fromNode": "n_step3", "fromPort": "out", "toNode": "n_step4", "toPort": "in" },
-    { "id": "w_6a", "fromNode": "n_get_y", "fromPort": "y", "toNode": "n_calc_next_y", "toPort": "a" },
-
-    { "id": "w_7", "fromNode": "n_step4", "fromPort": "out", "toNode": "n_check_solid_y", "toPort": "in" },
-    { "id": "w_7a", "fromNode": "n_calc_next_y", "fromPort": "res", "toNode": "n_to_grid_y", "toPort": "a" },
-
-    { "id": "w_8", "fromNode": "n_check_solid_y", "fromPort": "true", "toNode": "n_col_y_hit", "toPort": "in" },
-    { "id": "w_9", "fromNode": "n_check_solid_y", "fromPort": "false", "toNode": "n_col_y_miss", "toPort": "in" },
-
-    { "id": "w_10", "fromNode": "n_col_y_miss", "fromPort": "out", "toNode": "n_step5", "toPort": "in" },
-    { "id": "w_11", "fromNode": "n_col_y_hit", "fromPort": "out", "toNode": "n_step5", "toPort": "in" }
+    { "id": "w_tick", "fromNode": "n_tick", "fromPort": "out", "toNode": "n_integrate_x", "toPort": "in" },
+    { "id": "w_vx_dt_a", "fromNode": "n_vx", "fromPort": "val", "toNode": "n_vel_x_dt", "toPort": "a" },
+    { "id": "w_dt_a", "fromNode": "n_dt", "fromPort": "val", "toNode": "n_vel_x_dt", "toPort": "b" },
+    { "id": "w_ix_a", "fromNode": "n_vel_x_dt", "fromPort": "res", "toNode": "n_integrate_x", "toPort": "a" },
+    { "id": "w_ix_b", "fromNode": "n_player_ref", "fromPort": "x", "toNode": "n_integrate_x", "toPort": "b" },
+    { "id": "w_ix_out", "fromNode": "n_integrate_x", "fromPort": "res", "toNode": "n_next_x", "toPort": "in" },
+    { "id": "w_g", "fromNode": "n_gravity", "fromPort": "val", "toNode": "n_apply_gravity", "toPort": "a" },
+    { "id": "w_dt_b", "fromNode": "n_dt", "fromPort": "val", "toNode": "n_apply_gravity", "toPort": "b" },
+    { "id": "w_gy_out", "fromNode": "n_apply_gravity", "fromPort": "res", "toNode": "n_vy", "toPort": "in" },
+    { "id": "w_vy_dt_a", "fromNode": "n_vy", "fromPort": "val", "toNode": "n_vel_y_dt", "toPort": "a" },
+    { "id": "w_dt_c", "fromNode": "n_dt", "fromPort": "val", "toNode": "n_vel_y_dt", "toPort": "b" },
+    { "id": "w_iy_a", "fromNode": "n_vel_y_dt", "fromPort": "res", "toNode": "n_integrate_y", "toPort": "a" },
+    { "id": "w_iy_b", "fromNode": "n_player_ref", "fromPort": "y", "toNode": "n_integrate_y", "toPort": "b" },
+    { "id": "w_iy_out", "fromNode": "n_integrate_y", "fromPort": "res", "toNode": "n_next_y", "toPort": "in" },
+    { "id": "w_gx_a", "fromNode": "n_next_x", "fromPort": "val", "toNode": "n_gx", "toPort": "a" },
+    { "id": "w_grid_a", "fromNode": "n_grid_size", "fromPort": "val", "toNode": "n_gx", "toPort": "b" },
+    { "id": "w_gx_res", "fromNode": "n_gx", "fromPort": "res", "toNode": "n_check_x", "toPort": "in" },
+    { "id": "w_solid_x", "fromNode": "n_is_solid_x", "fromPort": "val", "toNode": "n_check_x", "toPort": "cond" },
+    { "id": "w_cx_true", "fromNode": "n_check_x", "fromPort": "true", "toNode": "n_collide_x", "toPort": "in" },
+    { "id": "w_cx_false", "fromNode": "n_check_x", "fromPort": "false", "toNode": "n_pass_x", "toPort": "in" },
+    { "id": "w_gy_a", "fromNode": "n_next_y", "fromPort": "val", "toNode": "n_gy", "toPort": "a" },
+    { "id": "w_grid_b", "fromNode": "n_grid_size", "fromPort": "val", "toNode": "n_gy", "toPort": "b" },
+    { "id": "w_gy_res", "fromNode": "n_gy", "fromPort": "res", "toNode": "n_check_y", "toPort": "in" },
+    { "id": "w_solid_y", "fromNode": "n_is_solid_y", "fromPort": "val", "toNode": "n_check_y", "toPort": "cond" },
+    { "id": "w_cy_true", "fromNode": "n_check_y", "fromPort": "true", "toNode": "n_collide_y", "toPort": "in" },
+    { "id": "w_cy_false", "fromNode": "n_check_y", "fromPort": "false", "toNode": "n_pass_y", "toPort": "in" },
+    { "id": "w_fin", "fromNode": "n_collide_x", "fromPort": "out", "toNode": "n_finalize", "toPort": "in" },
+    { "id": "w_fin2", "fromNode": "n_pass_x", "fromPort": "out", "toNode": "n_finalize", "toPort": "in" },
+    { "id": "w_fin3", "fromNode": "n_collide_y", "fromPort": "out", "toNode": "n_finalize", "toPort": "in" },
+    { "id": "w_fin4", "fromNode": "n_pass_y", "fromPort": "out", "toNode": "n_finalize", "toPort": "in" }
   ],
-  "vars": []
+  "vars": [
+    { "name": "velocity_x", "type": "num", "value": 0 },
+    { "name": "velocity_y", "type": "num", "value": 0 },
+    { "name": "pos_x", "type": "num", "value": 0 },
+    { "name": "pos_y", "type": "num", "value": 0 },
+    { "name": "next_x", "type": "num", "value": 0 },
+    { "name": "next_y", "type": "num", "value": 0 },
+    { "name": "tile_solid", "type": "bool", "value": 0 },
+    { "name": "physics_dirty", "type": "bool", "value": 0 }
+  ]
 }

@@ -24,7 +24,7 @@
         body {
             margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
             font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
-            overflow: hidden; user-select: none; font-size: 18px;
+            overflow: hidden;  font-size: 18px;
             image-rendering: pixelated;
         }
 
@@ -228,7 +228,7 @@
         }
 
     </style>
-    <script src="theme.js"></script>
+    <script src= defer></script>
 </head>
 <body>
 
@@ -422,42 +422,7 @@
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <div class="section-title">Stats & AI</div>
-                    <div class="form-row">
-                        <div>
-                            <label>Speed <span class="hint" title="1-500">(? )</span></label>
-                            <input type="number" id="enemy-speed">
-                        </div>
-                        <div>
-                            <label>Range <span class="hint" title="Interaction range in pixels">(?)</span></label>
-                            <input type="number" id="enemy-range">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div>
-                            <label>Behavior</label>
-                            <select id="enemy-ai-type">
-                                <option value="static">Static</option>
-                                <option value="wander">Wander</option>
-                                <option value="patrol">Patrol</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Brain <span class="hint" title="AI behavior script">(?)</span></label>
-                            <div style="display:flex; gap:5px;">
-                                <select id="enemy-brain" style="flex:1;"></select>
-                                <button class="tool-btn" onclick="editBrain()" title="Edit">
-                                    <i class="fas fa-brain"></i>
-                                </button>
-                                <button class="tool-btn" onclick="newBrain()" title="New">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div>
+
                             <label>Wander Radius</label>
                             <input type="number" id="enemy-wander-radius">
                         </div>

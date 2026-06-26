@@ -103,9 +103,10 @@ router.post('/save-spritesheet', async (req, res) => {
         }
 
         const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
-        const spritesheetPath = path.join(__dirname, '..', '..', 'public', 'sprite-art', 'platformer_spritesheet.png');
+        const activeProject = projectService.getActiveProject();
+        const spritesheetPath = path.join(activeProject, 'assets', 'platformer_spritesheet.png');
         
-        await safeFs.safeWriteFullPath(path.resolve(__dirname, '..', '..'), spritesheetPath, base64Data, 'base64');
+        await safeFs.safeWriteFullPath(activeProject, spritesheetPath, base64Data, 'base64');
         
         console.log('[SERVER] Spritesheet saved to:', spritesheetPath);
 
@@ -121,8 +122,8 @@ router.post('/save-spritesheet', async (req, res) => {
             atlas[i + 1] = { x, y, w: tSize, h: tSize };
         }
 
-        const atlasPath = path.join(__dirname, '..', '..', 'public', 'sprite-art', 'platformer_atlas.json');
-        await safeFs.safeWriteFullPath(path.resolve(__dirname, '..', '..'), atlasPath, JSON.stringify(atlas, null, 2), 'utf8');
+        const atlasPath = path.join(activeProject, 'assets', 'platformer_atlas.json');
+        await safeFs.safeWriteFullPath(activeProject, atlasPath, JSON.stringify(atlas, null, 2), 'utf8');
 
         console.log('[SERVER] Atlas saved to:', atlasPath);
 

@@ -50,16 +50,28 @@ export class VectorStore {
         }
     }
 
-    async query(embedding, limit = 3) {
+    async query(embedding, limit = 3, textQuery = null) {
         if (!this.isInitialized) await this.initialize();
 
-        const results = await this._search(this.db, {
-            mode: 'vector',
-            vector: embedding,
-            similarity: 0.7,
-            limit: limit
-        });
+        const searchParams = { limit: limit };
 
+        if (textQuery) {
+            searchParams.mode = 'hybrid';
+            searchParams.term = textQuery;
+            searchParams.vector = {
+                value: embedding,
+                property: 'embeddings'
+            };
+            searchParams.hybridWeights = { text: 0.5, vector: 0.5 };
+        } else {
+            searchParams.mode = 'vector';
+            searchParams.vector = {
+                value: embedding,
+                property: 'embeddings'
+            };
+        }
+
+        const results = await this._search(this.db, searchParams);
         return results.hits.map(h => h.document);
     }
 }

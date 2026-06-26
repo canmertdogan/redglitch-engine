@@ -981,34 +981,48 @@ const Pf3dEditor = (() => {
     // HIERARCHY PANEL
     // ─────────────────────────────────────────────────────────────────────────
 
+    const _hierarchyCollapsed = { entities: false, objects: false };
+
+    function collapseHierarchy() {
+        _hierarchyCollapsed.entities = !_hierarchyCollapsed.entities;
+        _hierarchyCollapsed.objects = _hierarchyCollapsed.entities;
+        _rebuildHierarchy();
+    }
+
     function _rebuildHierarchy() {
         const list = document.getElementById('hierarchy-list');
         if (!list) return;
         let html = '';
 
         if (_state.entities.length > 0) {
-            html += `<div class="hier-item" style="color:var(--accent);font-size:0.7rem;pointer-events:none;padding:4px 10px;background:#060e08">▸ ENTITIES (${_state.entities.length})</div>`;
-            for (const en of _state.entities) {
-                const sel = en.id === _selectedId ? ' selected' : '';
-                html += `<div class="hier-item${sel}" data-id="${en.id}" onclick="Pf3dEditor._selectById('${en.id}','entity')">
-                    <span style="font-size:.75rem;width:14px;text-align:center;color:${_entityColorHex(en.type)}">●</span>
-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${en.type}</span>
-                    <span class="hier-type">ENT</span>
-                    <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility('${en.id}')" title="Toggle visibility"><i class="fas fa-eye"></i></button>
-                </div>`;
+            const arrow = _hierarchyCollapsed.entities ? '▸' : '▾';
+            html += `<div class="hier-item" style="color:var(--accent);font-size:0.7rem;padding:4px 10px;background:#060e08;cursor:pointer" onclick="Pf3dEditor._toggleSection('entities')">${arrow} ENTITIES (${_state.entities.length})</div>`;
+            if (!_hierarchyCollapsed.entities) {
+                for (const en of _state.entities) {
+                    const sel = en.id === _selectedId ? ' selected' : '';
+                    html += `<div class="hier-item${sel}" data-id="${en.id}" onclick="Pf3dEditor._selectById('${en.id}','entity')">
+                        <span style="font-size:.75rem;width:14px;text-align:center;color:${_entityColorHex(en.type)}">●</span>
+                        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${en.type}</span>
+                        <span class="hier-type">ENT</span>
+                        <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility('${en.id}')" title="Toggle visibility"><i class="fas fa-eye"></i></button>
+                    </div>`;
+                }
             }
         }
 
         if (_state.objects.length > 0) {
-            html += `<div class="hier-item" style="color:var(--accent);font-size:0.7rem;pointer-events:none;padding:4px 10px;background:#060e08">▸ OBJECTS (${_state.objects.length})</div>`;
-            for (const obj of _state.objects) {
-                const sel = obj.id === _selectedId ? ' selected' : '';
-                html += `<div class="hier-item${sel}" data-id="${obj.id}" onclick="Pf3dEditor._selectById('${obj.id}','object')">
-                    <span style="font-size:.75rem;width:14px;text-align:center;color:#${_getColor(obj.colorIdx ?? 12).toString(16).padStart(6,'0')}">■</span>
-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${obj.subtype || obj.type}</span>
-                    <span class="hier-type">OBJ</span>
-                    <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility('${obj.id}')" title="Toggle visibility"><i class="fas fa-eye"></i></button>
-                </div>`;
+            const arrow = _hierarchyCollapsed.objects ? '▸' : '▾';
+            html += `<div class="hier-item" style="color:var(--accent);font-size:0.7rem;padding:4px 10px;background:#060e08;cursor:pointer" onclick="Pf3dEditor._toggleSection('objects')">${arrow} OBJECTS (${_state.objects.length})</div>`;
+            if (!_hierarchyCollapsed.objects) {
+                for (const obj of _state.objects) {
+                    const sel = obj.id === _selectedId ? ' selected' : '';
+                    html += `<div class="hier-item${sel}" data-id="${obj.id}" onclick="Pf3dEditor._selectById('${obj.id}','object')">
+                        <span style="font-size:.75rem;width:14px;text-align:center;color:#${_getColor(obj.colorIdx ?? 12).toString(16).padStart(6,'0')}">■</span>
+                        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${obj.subtype || obj.type}</span>
+                        <span class="hier-type">OBJ</span>
+                        <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility('${obj.id}')" title="Toggle visibility"><i class="fas fa-eye"></i></button>
+                    </div>`;
+                }
             }
         }
 
@@ -1016,11 +1030,10 @@ const Pf3dEditor = (() => {
         list.innerHTML = html;
     }
 
-    function _entityColorHex(type) {
-        return '#' + _entityColor(type).toString(16).padStart(6, '0');
+    function _toggleSection(section) {
+        _hierarchyCollapsed[section] = !_hierarchyCollapsed[section];
+        _rebuildHierarchy();
     }
-
-    function collapseHierarchy() { /* stub — all sections visible */ }
 
     function _toggleVisibility(id) {
         const mesh = _meshMap.get(id);
@@ -1891,7 +1904,7 @@ const Pf3dEditor = (() => {
         // Properties (called from inline HTML)
         setPropPos, setPropScale, setPropRot, setPropColorHex, setPropTexture,
         // Hierarchy (called from inline HTML)
-        _selectById, _toggleVisibility, collapseHierarchy,
+        _selectById, _toggleVisibility, _toggleSection, collapseHierarchy,
         // Path Editor (Phase 54)
         pathStartSelected, pathFinalize, pathCancel,
         setPathMotionType, pathApplyConfig, pathPreviewToggle, pathRemoveSelected,

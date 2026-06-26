@@ -5,7 +5,7 @@
 
 /* Page fade-in animation */
 body {
-    animation: pageHideFadeIn 0.5s ease-in;
+    animation: pageFadeIn 0.5s ease-in;
 }
 
 @keyframes pageFadeIn {

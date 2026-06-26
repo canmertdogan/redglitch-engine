@@ -176,8 +176,8 @@ class RAGSystem:
         logger.info("Starting full project ingestion (Context 3.0)...")
         count = 0
 
-        ignore_dirs = {'.git', 'node_modules', 'dist', 'build', 'backend', '.gemini',
-                       '__pycache__', '.vscode', '.idea', 'android', 'ios', 'chroma_db'}
+        ignore_dirs = {'.git', 'node_modules', 'dist', 'build', '.gemini',
+                       '__pycache__', '.vscode', '.idea', 'android', 'ios', 'chroma_db', 'venv', '.venv'}
         valid_exts = {'.js', '.json', '.md', '.html', '.css', '.py', '.vsl'}
         manifesto_files = {'README.md', 'MANIFESTO.md', 'package.json', 'redglitch.json'}
 
@@ -186,9 +186,6 @@ class RAGSystem:
 
         with self._store_lock:
             for root, dirs, files in os.walk(self.project_root):
-                if 'backend' in root.split(os.sep):
-                    dirs[:] = []
-                    continue
                 dirs[:] = [d for d in dirs if d not in ignore_dirs and not d.startswith('.')]
 
                 for file in files:
@@ -254,7 +251,7 @@ class RAGSystem:
 
         if not is_manifesto and (filename.startswith('.') or not any(file_path.endswith(ext) for ext in valid_exts)):
             return
-        if 'backend' in file_path.split(os.sep) or '.git' in file_path.split(os.sep):
+        if '.git' in file_path.split(os.sep) or 'venv' in file_path.split(os.sep):
             return
         if filename.endswith(('-journal', '.sqlite3', '.pkl')):
             return
@@ -321,6 +318,23 @@ class RAGSystem:
 
 
 # Singleton
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-rag = RAGSystem(PROJECT_ROOT)
+from config import PROJECT_ROOT
+class LazyRAG:
+    def __init__(self, root):
+        self._root = root
+        self._rag = None
+    @property
+    def rag(self):
+        if self._rag is None:
+            self._rag = RAGSystem(self._root)
+        return self._rag
+    def __getattr__(self, name):
+        return getattr(self.rag, name)
+    def __setattr__(self, name, value):
+        if name in ['_root', '_rag']:
+            super().__setattr__(name, value)
+        else:
+            setattr(self.rag, name, value)
+
+rag = LazyRAG(PROJECT_ROOT)
 

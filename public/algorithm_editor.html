@@ -4,34 +4,35 @@
     <meta charset="UTF-8">
     <title>redglitch ALGORITHM STUDIO</title>
     <link href="fonts/fonts.css" rel="stylesheet">
-    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <link rel="stylesheet" href="daw/v6-premium.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <style>
         :root {
-            --bg-root: #050505;
-            --bg-panel: #0a0a0f;
+            /* KAS Design System Tokens (overrides v6-premium) */
+            --bg-root: #000000;
+            --bg-panel: #0a0a0a;
             --bg-header: #000000;
-            --bg-canvas: #080808;
+            --bg-canvas: #050505;
             --bg-input: #000000;
-            --border: #333;
-            --accent: #ff0000; /* Retro Gold */
-            --text-main: #e0e0e0;
-            --text-muted: #888;
-            --grid-line: #1a1a1a;
+            --border: rgba(255, 30, 39, 0.2);
+            --accent: #ff1e27;
+            --text-main: #ff1e27;
+            --text-muted: #991217;
+            --grid-line: rgba(255, 30, 39, 0.08);
             
-            /* Syntax Colors - Bright Pixel Palette */
-            --col-event: #c0392b;
-            --col-flow: #7f8c8d;
-            --col-func: #2980b9;
-            --col-var: #8e44ad;
-            --col-math: #27ae60;
+            /* Syntax Colors - Red Pixel Palette */
+            --col-event: #ff1e27;
+            --col-flow: #cc181f;
+            --col-func: #ff4444;
+            --col-var: #9b151b;
+            --col-math: #ff6666;
             
             /* Ports */
             --port-exec: #ffffff;
-            --port-bool: #e74c3c;
-            --port-num: #2ecc71;
-            --port-string: #ff0000;
-            --port-entity: #3498db;
+            --port-bool: #ff1e27;
+            --port-num: #ff4444;
+            --port-string: #ff1e27;
+            --port-entity: #cc181f;
         }
 
         * { box-sizing: border-box; outline: none; }
@@ -39,14 +40,14 @@
         body {
             margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
             font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
-            overflow: hidden; user-select: none; font-size: 16px; /* SCALED: 20px → 16px */
+            overflow: hidden;  font-size: 16px; /* SCALED: 20px → 16px */
             image-rendering: pixelated;
         }
 
         /* --- TOP BAR --- */
         #menubar {
             height: 32px; background: #000; display: flex; align-items: center; padding: 0 8px;
-            font-size: 0.95rem; border-bottom: 1px solid var(--border);
+            font-size: 0.95rem; border-bottom: 1px solid rgba(255,30,39,0.25);
             z-index: 6000; position: relative;
         }
         .menu-item-root { position: relative; height: 100%; display: flex; align-items: center; cursor: pointer; }
@@ -69,7 +70,7 @@
         .shortcut { font-size: 0.75rem; color: #666; margin-left: 15px; }
 
         #toolbar {
-            height: 40px; background: #000; border-bottom: 1px solid var(--border);
+            height: 40px; background: #000; border-bottom: 1px solid rgba(255,30,39,0.18);
             display: flex; align-items: center; padding: 0 8px; gap: 8px;
         }
         
@@ -128,13 +129,13 @@
         }
         
         .tool-btn {
-            background: #111; border: 1px solid #444; color: #aaa;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,30,39,0.12); color: rgba(255,30,39,0.6);
             width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-            font-size: 1rem; transition: transform 0.1s; position: relative;
+            font-size: 1rem; transition: all 0.15s; position: relative;
         }
-        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); transform: translateY(-1px); box-shadow: 0 1px 0 #000; }
-        .tool-btn:active { transform: translateY(0); box-shadow: none; }
-        .tool-btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tool-btn:hover { background: rgba(255,30,39,0.08); border-color: rgba(255,30,39,0.4); color: var(--accent); }
+        .tool-btn:active { }
+        .tool-btn.primary { background: rgba(255,30,39,0.15); color: var(--accent); border-color: rgba(255,30,39,0.6); }
         
         /* Grid toggle button with label */
         #grid-toggle {
@@ -143,11 +144,11 @@
         }
         
         .tool-btn-sm {
-            background: #111; border: 1px solid #444; color: #aaa;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,30,39,0.12); color: rgba(255,30,39,0.5);
             width: 24px; height: 24px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-            font-size: 0.8rem; transition: all 0.1s;
+            font-size: 0.8rem; transition: all 0.15s;
         }
-        .tool-btn-sm:hover { background: #222; border-color: var(--accent); color: var(--accent); }
+        .tool-btn-sm:hover { background: rgba(255,30,39,0.08); border-color: rgba(255,30,39,0.3); color: var(--accent); }
         
         .btn-label {
             font-size: 0.85rem;
@@ -158,7 +159,7 @@
         .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 4px; }
         
         input[type="text"] {
-            background: #000; border: 1px solid #444; color: var(--accent);
+            background: rgba(0,0,0,0.6); border: 1px solid rgba(255,30,39,0.2); color: var(--accent);
             padding: 4px 8px; font-family: inherit; font-size: 0.95rem;
         }
         input:focus { border-color: var(--accent); }
@@ -169,8 +170,8 @@
         /* PHASE 2: TOOL RAIL */
         #tool-rail {
             width: 44px;
-            background: #000;
-            border-right: 1px solid var(--border);
+            background: #050505;
+            border-right: 1px solid rgba(255,30,39,0.18);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -365,7 +366,7 @@
         .log-msg { border-bottom: 1px solid #222; padding: 1px 0; font-size: 0.9rem; }
         .log-info { color: #aaa; }
         .log-warn { color: var(--accent); }
-        .log-err { color: #e74c3c; }
+        .log-err { color: var(--accent); }
 
         /* RIGHT PANEL (Inspector) */
         #right-panel { width: 300px; min-width: 220px; border-left: 1px solid var(--border); border-right: none; }
@@ -462,8 +463,8 @@
         .console-badge {
             margin-left: 8px;
             padding: 1px 6px;
-            background: #e74c3c;
-            color: #fff;
+            background: var(--accent);
+            color: #000;
             font-size: 0.75rem;
             border-radius: 2px;
         }
@@ -486,8 +487,9 @@
 
         /* STATUS BAR */
         #statusbar {
-            height: 24px; background: var(--border); color: #888; display: flex; align-items: center;
-            padding: 0 10px; font-size: 0.9rem; gap: 10px; border-top: 1px solid #000;
+            height: 22px; background: #000; color: var(--text-muted); display: flex; align-items: center;
+            padding: 0 10px; font-size: 0.9rem; gap: 10px; border-top: 1px solid rgba(255,30,39,0.1);
+            border-bottom: 1px solid rgba(255,30,39,0.15);
         }
         
         .status-sep {
@@ -499,7 +501,7 @@
         }
         
         #status-validation.has-errors {
-            color: #e74c3c;
+            color: var(--accent);
         }
         
         #status-validation.has-warnings {
@@ -552,7 +554,7 @@
             font-size: 0.85rem;
             cursor: grab;
             border-radius: 2px 2px 0 0;
-            user-select: none;
+            
         }
         .comment-resizer {
             position: absolute;
@@ -592,21 +594,21 @@
         .node-info-icon:hover { opacity: 1; color: var(--accent); }
 
         /* Specific Colors */
-        .node[data-cat="Event"] .node-header { background: linear-gradient(90deg, #c0392b, #8e2116); }
-        .node[data-cat="Flow"] .node-header { background: linear-gradient(90deg, #7f8c8d, #555); }
-        .node[data-cat="Math"] .node-header { background: linear-gradient(90deg, #27ae60, #1e8449); }
-        .node[data-cat="Engine"] .node-header { background: linear-gradient(90deg, #2980b9, #1c5980); }
-        .node[data-cat="Var"] .node-header { background: linear-gradient(90deg, #8e44ad, #6c3483); }
-        .node[data-cat="Entity"] .node-header { background: linear-gradient(90deg, #9b59b6, #7d3c98); }
-        .node[data-cat="Player"] .node-header { background: linear-gradient(90deg, #e67e22, #d35400); }
-        .node[data-cat="Inventory"] .node-header { background: linear-gradient(90deg, #16a085, #1abc9c); }
-        .node[data-cat="GameState"] .node-header { background: linear-gradient(90deg, #f39c12, #e67e22); }
-        .node[data-cat="World"] .node-header { background: linear-gradient(90deg, #34495e, #2c3e50); }
-        .node[data-cat="Camera"] .node-header { background: linear-gradient(90deg, #3498db, #2980b9); }
-        .node[data-cat="FX"] .node-header { background: linear-gradient(90deg, #e74c3c, #c0392b); }
-        .node[data-cat="Audio"] .node-header { background: linear-gradient(90deg, #9b59b6, #8e44ad); }
-        .node[data-cat="Dialogue"] .node-header { background: linear-gradient(90deg, #1abc9c, #16a085); }
-        .node[data-cat="Time"] .node-header { background: linear-gradient(90deg, #95a5a6, #7f8c8d); }
+        .node[data-cat="Event"] .node-header { background: linear-gradient(90deg, #ff1e27, #9b151b); }
+        .node[data-cat="Flow"] .node-header { background: linear-gradient(90deg, #cc181f, #7f0f14); }
+        .node[data-cat="Math"] .node-header { background: linear-gradient(90deg, #ff6666, #cc3333); }
+        .node[data-cat="Engine"] .node-header { background: linear-gradient(90deg, #ff4444, #992222); }
+        .node[data-cat="Var"] .node-header { background: linear-gradient(90deg, #9b151b, #660e11); }
+        .node[data-cat="Entity"] .node-header { background: linear-gradient(90deg, #cc181f, #880f13); }
+        .node[data-cat="Player"] .node-header { background: linear-gradient(90deg, #ff1e27, #b3151b); }
+        .node[data-cat="Inventory"] .node-header { background: linear-gradient(90deg, #ff4444, #aa2222); }
+        .node[data-cat="GameState"] .node-header { background: linear-gradient(90deg, #cc181f, #7f0f14); }
+        .node[data-cat="World"] .node-header { background: linear-gradient(90deg, #1a1a1a, #0a0a0a); }
+        .node[data-cat="Camera"] .node-header { background: linear-gradient(90deg, #ff1e27, #991215); }
+        .node[data-cat="FX"] .node-header { background: linear-gradient(90deg, #ff4444, #992222); }
+        .node[data-cat="Audio"] .node-header { background: linear-gradient(90deg, #6b0e12, #3f080a); }
+        .node[data-cat="Dialogue"] .node-header { background: linear-gradient(90deg, #cc181f, #880f13); }
+        .node[data-cat="Time"] .node-header { background: linear-gradient(90deg, #333333, #1a1a1a); }
 
         .node-body { padding: 6px 0; background: #151515; border-radius: 0 0 3px 3px; }
         
@@ -1369,7 +1371,7 @@
             <button class="tool-btn" title="Save (Ctrl+S)" onclick="studio.save()"><i class="fas fa-save"></i></button>
             <button class="tool-btn" title="Open (Ctrl+O)" onclick="studio.showLoadDialog()"><i class="fas fa-folder-open"></i></button>
             <button class="tool-btn" title="Test Script (F5)" onclick="studio.testScript()" style="background: var(--accent); color: #000;"><i class="fas fa-play"></i> Test</button>
-            <button class="tool-btn" title="Eject to JS" onclick="studio.ejectToJS()" style="background: #2980b9; color: #fff; margin-left: 5px; width: auto; padding: 0 8px;"><i class="fas fa-file-code"></i> Eject</button>
+            <button class="tool-btn" title="Eject to JS" onclick="studio.ejectToJS()" style="background: var(--accent); color: #000; margin-left: 5px; width: auto; padding: 0 8px;"><i class="fas fa-file-code"></i> Eject</button>
         </div>
         
         <div class="tool-sep"></div>

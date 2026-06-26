@@ -14,10 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 import logging
 import asyncio
-import os
 import psutil
 import requests
-from huggingface_hub import hf_hub_download
+import re
 from contextlib import asynccontextmanager
 from brain import brain
 from watcher import IrabWatcher
@@ -33,6 +32,7 @@ logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
 process = psutil.Process(os.getpid())
+watcher = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -64,7 +64,7 @@ app.add_middleware(
 )
 
 # Initialize Watcher (Watching project root)
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+from config import PROJECT_ROOT
 
 @app.get("/api/ai/metrics")
 async def get_metrics():
@@ -157,7 +157,6 @@ async def save_history(data: dict):
     try:
         session_id = data.get("session_id", "latest")
         # Sanitize session_id: allow only alphanumeric, underscores, and hyphens
-        import re
         if not re.match(r"^[a-zA-Z0-9_\-]+$", session_id):
              return {"error": "Invalid session_id format"}
              
@@ -172,7 +171,6 @@ async def save_history(data: dict):
 @app.get("/api/history/load")
 async def load_history(session_id: str = "latest"):
     try:
-        import re
         if not re.match(r"^[a-zA-Z0-9_\-]+$", session_id):
              return {"error": "Invalid session_id format"}
 
@@ -197,7 +195,8 @@ async def reindex_rag():
     try:
         loop = asyncio.get_event_loop()
         # Run forced ingestion in a separate thread to avoid blocking the event loop
-        loop.run_in_executor(None, lambda: rag.ingest_project(force=True))
+        future = loop.run_in_executor(None, lambda: rag.ingest_project(force=True))
+        future.add_done_callback(lambda f: f.exception())
         return {"success": True, "message": "Background re-indexing started."}
     except Exception as e:
         return {"error": str(e)}

@@ -1,8 +1,8 @@
 {
   "name": "redglitch-engine",
-  "productName": "RedGlitch Game Studio",
+  "productName": "Redglitch Game Studio",
   "version": "7.0.1",
-  "description": "RedGlitch Engine Alpha - Professional Game Development Studio",
+  "description": "Redglitch Engine Alpha - Professional Game Development Studio",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
@@ -13,7 +13,6 @@
     "build:game:ios": "node build-game.js \"Default Project\" ios",
     "build:game:android": "node build-game.js \"Default Project\" android",
     "build:game:win": "node build-game.js \"Default Project\" windows",
-    "build:ai-worker": "node public/ai/build-worker.js",
     "build:corpus": "node public/ai/docs/build-corpus.js",
     "engine:lockstep": "node scripts/engine-lockstep.js",
     "ai:validate": "node --test public/ai/agent-loop.test.mjs public/ai/ai-mode.test.mjs public/ai/automation-contract.test.mjs public/ai/tool-call-parser.test.mjs public/ai/project-context-retriever.test.mjs server/utils/pathGuard.test.js server/utils/automationPolicy.test.js && node scripts/validate-opencode-zen.js",
@@ -57,7 +56,7 @@
   },
   "build": {
     "appId": "com.redglitch.engine",
-    "productName": "RedGlitch Game Studio",
+    "productName": "Redglitch Game Studio",
     "asar": true,
     "directories": {
       "output": "dist"

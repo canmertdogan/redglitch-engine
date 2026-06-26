@@ -73,7 +73,6 @@ fi
 echo -e "
 ${BLUE}[4/5] Building AI components (RAG & Workers)...${NC}"
 npm run build:corpus
-npm run build:ai-worker
 echo -e "${GREEN}✓ AI build scripts completed.${NC}"
 
 # 5. Finalizing

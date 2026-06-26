@@ -143,8 +143,43 @@ export default class FPS3DStrategy {
 
     // ── Campaign ability interface ────────────────────────────────────────────
 
+    constructor(game) {
+        this._game = game;
+        this._rayDir = new THREE.Vector3();
+        this._rayOrig = new THREE.Vector3();
+        this._abilityCooldowns = new Map(); // abilityId -> time remaining (seconds)
+        this._abilityConfigs = {
+            grenade: {
+                cooldown: 8,
+                ammoType: 'grenade',
+                action: 'projectile',
+                projectileDef: { speed: 18, gravity: 9.82, radius: 0.2, splashRadius: 5, splashDamage: 80 }
+            },
+            flashbang: {
+                cooldown: 15,
+                ammoType: 'flashbang',
+                action: 'projectile',
+                projectileDef: { speed: 20, gravity: 4, radius: 0.15, splashRadius: 12, splashDamage: 0, blindDuration: 3 }
+            },
+            smoke: {
+                cooldown: 12,
+                ammoType: 'smoke',
+                action: 'projectile',
+                projectileDef: { speed: 16, gravity: 3, radius: 0.18, splashRadius: 8, splashDamage: 0, smokeDuration: 8 }
+            },
+            melee: {
+                cooldown: 0.6,
+                ammoType: null,
+                action: 'melee',
+                range: 1.8,
+                damage: 15
+            }
+        };
+        this._abilityAmmo = new Map(); // abilityId -> count
+    }
+
     /**
-     * Use an ability (grenade, special weapon, etc.)
+     * Use an ability (grenade, flashbang, smoke, melee, etc.)
      * @param {string} abilityId - Ability identifier
      * @param {number} dirX - Direction X (unused in FPS, uses camera direction)
      * @param {number} dirY - Direction Y (unused in FPS, uses camera direction)
@@ -153,26 +188,83 @@ export default class FPS3DStrategy {
     useAbility(abilityId, dirX, dirY) {
         const game = this._game;
         if (!game || !game.weaponSystem) return false;
-        
-        // FPS abilities could be grenades, special weapons, etc.
-        // For now, just log and return false (to be implemented with actual ability system)
-        console.log(`[FPS3DStrategy] useAbility: ${abilityId} (not yet implemented)`);
-        
-        // TODO: Implement FPS ability system
-        // - Grenades
-        // - Special weapons
-        // - Tactical abilities (flashbang, smoke, etc.)
-        
-        return false;
+        if (!this.isAbilityReady(abilityId)) return false;
+
+        const config = this._abilityConfigs[abilityId];
+        if (!config) return false;
+
+        const ammo = this._abilityAmmo.get(abilityId);
+        if (config.ammoType && (ammo === undefined || ammo <= 0)) return false;
+
+        const cam = game.renderer3d?.camera;
+        if (!cam) return false;
+
+        cam.getWorldPosition(this._rayOrig);
+        cam.getWorldDirection(this._rayDir);
+
+        switch (config.action) {
+            case 'projectile': {
+                const origin = this._rayOrig.clone().addScaledVector(this._rayDir, 0.5);
+                const wpnSys = game.weaponSystem;
+                if (wpnSys.spawnProjectile) {
+                    wpnSys.spawnProjectile({
+                        origin,
+                        direction: this._rayDir.clone(),
+                        speed: config.projectileDef.speed,
+                        gravity: config.projectileDef.gravity,
+                        radius: config.projectileDef.radius,
+                        splashRadius: config.projectileDef.splashRadius,
+                        splashDamage: config.projectileDef.splashDamage,
+                        owner: 'player',
+                        onHit: (hit) => {
+                            if (config.projectileDef.smokeDuration) {
+                                this._spawnSmokeCloud(hit.point, config.projectileDef.smokeDuration);
+                            }
+                            if (config.projectileDef.blindDuration) {
+                                this._applyBlindEffect(hit, config.projectileDef.blindDuration);
+                            }
+                        }
+                    });
+                }
+                break;
+            }
+            case 'melee': {
+                const hit = game.raycast?.raycastWorld(this._rayOrig, this._rayDir, {
+                    maxDist: config.range,
+                    layerMask: 0b1110
+                });
+                if (hit?.object) {
+                    const target = hit.object.userData?.entity || hit.object.parent?.userData?.entity;
+                    if (target?.takeDamage) {
+                        target.takeDamage(config.damage, { source: 'player', type: 'melee', hitPoint: hit.point });
+                    }
+                    game.weaponSystem.playMeleeEffect?.(hit.point);
+                }
+                break;
+            }
+        }
+
+        this._abilityCooldowns.set(abilityId, config.cooldown);
+        if (config.ammoType) {
+            this._abilityAmmo.set(abilityId, ammo - 1);
+        }
+        return true;
     }
 
     /**
-     * Check if ability is ready (off cooldown)
+     * Check if ability is ready (off cooldown and has ammo)
      * @param {string} abilityId - Ability identifier
      * @returns {boolean}
      */
     isAbilityReady(abilityId) {
-        // TODO: Track ability cooldowns
+        const cd = this._abilityCooldowns.get(abilityId);
+        if (cd && cd > 0) return false;
+        const config = this._abilityConfigs[abilityId];
+        if (!config) return false;
+        if (config.ammoType) {
+            const ammo = this._abilityAmmo.get(abilityId);
+            if (ammo === undefined || ammo <= 0) return false;
+        }
         return true;
     }
 
@@ -182,7 +274,46 @@ export default class FPS3DStrategy {
      * @returns {number}
      */
     getCooldownFraction(abilityId) {
-        // TODO: Track ability cooldowns
-        return 0;
+        const cd = this._abilityCooldowns.get(abilityId);
+        const config = this._abilityConfigs[abilityId];
+        if (!cd || !config || config.cooldown <= 0) return 0;
+        return Math.min(cd / config.cooldown, 1);
+    }
+
+    /**
+     * Grant ability ammo (e.g. on pickup)
+     * @param {string} abilityId
+     * @param {number} amount
+     */
+    addAbilityAmmo(abilityId, amount) {
+        const current = this._abilityAmmo.get(abilityId) ?? 0;
+        this._abilityAmmo.set(abilityId, current + amount);
+    }
+
+    /**
+     * Tick cooldowns — called each frame by the game loop
+     * @param {number} dt — delta time in seconds
+     */
+    tickAbilities(dt) {
+        for (const [id, remaining] of this._abilityCooldowns) {
+            const next = remaining - dt;
+            if (next <= 0) {
+                this._abilityCooldowns.delete(id);
+            } else {
+                this._abilityCooldowns.set(id, next);
+            }
+        }
+    }
+
+    _spawnSmokeCloud(point, duration) {
+        const game = this._game;
+        if (!game.vfx) return;
+        game.vfx.addWorldEffect?.('smoke_cloud', { position: point, duration });
+    }
+
+    _applyBlindEffect(hit, duration) {
+        const game = this._game;
+        if (!game.fpsCamera) return;
+        game.fpsCamera.applyScreenEffect?.('blind', { duration });
     }
 }

@@ -33,6 +33,13 @@ export class RedGlitchAI {
         this.projectContextRetriever = new ProjectContextRetriever();
         this.isInitialized = false;
         this.enabled = true;
+        this.editorState = { activeFile: null, cursorLine: null };
+        
+        if (EventBus) {
+            EventBus.on('editor:file:opened', (data) => { this.editorState.activeFile = data.path; });
+            EventBus.on('editor:file:changed', (data) => { this.editorState.activeFile = data.path; });
+            EventBus.on('editor:cursor:moved', (data) => { this.editorState.cursorLine = data.line; });
+        }
     }
 
     _getKaiSettings() {
@@ -322,7 +329,7 @@ export class RedGlitchAI {
         const context = automationContext || await this._buildAutomationContext(message, options.context || {});
         const ragContext = [context.projectContext, context.ragContext].filter(Boolean).join('\n\n');
         const toolsPrompt = context.tools;
-        const prompt = this.contextManager.buildPrompt(message, ragContext, toolsPrompt);
+        const prompt = this.contextManager.buildPrompt(message, ragContext, toolsPrompt, this.editorState);
 
         // Merge config with options
         const generateOptions = {
@@ -335,7 +342,7 @@ export class RedGlitchAI {
         try {
             const responseText = await this.inferenceEngine.generate(prompt, generateOptions, options.onToken);
             const result = await this._runAgentLoop({ text: responseText, source: 'local' }, async (turn) => {
-                const nextPrompt = this.contextManager.buildPrompt(`PREVIOUS_ASSISTANT_RESPONSE:\n${turn.assistantText}\n\n${turn.feedback}`, ragContext, this.toolRegistry.getToolPrompt());
+                const nextPrompt = this.contextManager.buildPrompt(`PREVIOUS_ASSISTANT_RESPONSE:\n${turn.assistantText}\n\n${turn.feedback}`, ragContext, this.toolRegistry.getToolPrompt(), this.editorState);
                 const text = await this.inferenceEngine.generate(nextPrompt, generateOptions, options.onToken);
                 return { text, source: 'local' };
             });

@@ -30,7 +30,7 @@
   --glass-bg:      rgba(16, 16, 24, 0.65);
   --glass-border:  rgba(255, 255, 255, 0.1);
   --glass-shadow:  0 12px 40px 0 rgba(0, 0, 0, 0.7);
-  --glass-blur:    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  --glass-blur:    16px;
   
   --radius:      12px;
   --radius-lg:   24px;
@@ -124,7 +124,8 @@ body::after {
   z-index: 100;
   background: var(--glass-bg);
   border-bottom: 1px solid var(--border);
-  var(--glass-blur);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -529,7 +530,8 @@ body::after {
 
 .engine-card {
   background: var(--glass-bg);
-  var(--glass-blur);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 32px;
@@ -1430,7 +1432,7 @@ body::after {
   --glass-bg:      rgba(10, 10, 16, 0.72);
   --glass-border:  rgba(255, 255, 255, 0.08);
   --glass-shadow:  0 12px 40px 0 rgba(0, 0, 0, 0.6);
-  --glass-blur:    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  --glass-blur:    12px;
   
   --radius:      8px;
   --radius-lg:   16px;

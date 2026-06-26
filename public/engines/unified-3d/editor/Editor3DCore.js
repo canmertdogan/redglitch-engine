@@ -356,7 +356,7 @@ export default class Editor3DCore {
             
             // Dynamic import GLTFLoader and FacetTool
             const [{ GLTFLoader }, { default: FacetTool }] = await Promise.all([
-                import('https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js'),
+                import('/lib/three/loaders/GLTFLoader.js'),
                 import('/engines/shared/editor/FacetTool.js')
             ]);
             

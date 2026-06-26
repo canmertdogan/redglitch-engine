@@ -5,7 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { pipeline } = require('@xenova/transformers');
+const { pipeline } = require('@huggingface/transformers');
 
 async function generateEmbeddings() {
     const corpusPath = path.join(__dirname, 'corpus.json');

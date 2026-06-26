@@ -1141,7 +1141,6 @@ window.confirmClose = confirmClose;
 window.toggleConsole = toggleConsole;
 window.dispatchGlobalCommand = dispatchGlobalCommand;
 window.qaStressTest = qaStressTest;
-// window.Studio = new IDEStudio(); // FIXME: IDEStudio is not defined
 window.toggleFullscreen = toggleFullscreen;
 window.scanAssets = scanAssets;
 window.openProjectManager = openProjectManager;

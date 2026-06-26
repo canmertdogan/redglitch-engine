@@ -8,7 +8,7 @@
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="pixel_scrollbars.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <script src="theme.js?v=3"></script>
+    <script src= defer></script>
     <style>
         :root {
             --bg-root: #050508;
@@ -52,6 +52,7 @@
             color: var(--text);
             font-family: 'VT323', monospace;
             font-size: 18px;
+            zoom: 0.78;
         }
 
         body::before {
@@ -102,7 +103,7 @@
             gap: 12px;
             padding: 0 12px;
             border-bottom: 1px solid var(--border);
-            user-select: none;
+            
             -webkit-app-region: drag;
             isolation: isolate;
             overflow: visible;
@@ -747,7 +748,7 @@
             color: var(--green);
             margin-right: 10px;
             font-weight: bold;
-            user-select: none;
+            
             white-space: nowrap;
         }
 
@@ -779,7 +780,7 @@
             font-size: 12px;
             color: var(--text-muted);
             letter-spacing: 1px;
-            user-select: none;
+            
             z-index: 10;
             gap: 8px;
         }

@@ -58,22 +58,7 @@ router.get('/profile/:username', async (req, res) => {
 });
 
 // POST profile
-router.post('/profile/:username', async (req, res) => {
-    const { username } = req.params;
-    if (!isSafeKey(username)) return res.status(400).json({ error: 'Invalid username' });
-    const activeProject = projectService.getActiveProject();
-    const filePath = path.join(activeProject, 'data', 'profiles', `${username}.json`);
-    try {
-        await fs.mkdir(path.dirname(filePath), { recursive: true });
-        await safeFs.safeWriteFullPath(activeProject, filePath, JSON.stringify(req.body, null, 2), 'utf8');
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to save profile' });
-    }
-});
-
-// POST profile (alternate endpoint)
-router.post('/profiles/:username', async (req, res) => {
+router.post(['/profile/:username', '/profiles/:username'], async (req, res) => {
     const { username } = req.params;
     if (!isSafeKey(username)) return res.status(400).json({ error: 'Invalid username' });
     const activeProject = projectService.getActiveProject();

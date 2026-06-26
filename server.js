@@ -8,6 +8,14 @@ const multer = require('multer');
 // Import configuration
 const config = require('./server/config');
 
+// Global error handlers
+process.on('uncaughtException', (err) => {
+    console.error('[Global] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[Global] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Import services
 const projectService = require('./server/services/projectService');
 const safeFs = require('./server/utils/safeFs');
@@ -64,12 +72,12 @@ const setupWebSocket = require('./server/websocket');
 
 // Initialize Express app and HTTP server
 const app = express();
-app.use(cors({ origin: ['http://localhost:3000', 'file://'] })); // Restrict CORS origins
+app.use(cors({ origin: ['http://localhost:3000', 'null'] })); // Restrict CORS origins
 const server = http.createServer(app);
 
 // --- IRAB NATIVE PROXY ---
 // MUST BE BEFORE BODY PARSERS TO ALLOW PIPING
-const IRAB_BACKEND = 'http://localhost:8000';
+const IRAB_BACKEND = process.env.IRAB_BACKEND || 'http://localhost:8000';
 const isAIMetricsRequest = (req) => req.method === 'GET' && req.originalUrl.startsWith('/api/ai/metrics');
 const sendOfflineMetrics = (res) => res.status(200).json({
     status: 'offline',
@@ -120,6 +128,7 @@ app.use(securityHeaders);
 
 // Body parser
 app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 // Multer for file uploads (used by assets3d route for .blend/.obj conversion)
 const upload = multer({ limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
@@ -160,7 +169,9 @@ const serveMergedSprites = async (req, res, next) => {
         let engineContent = '';
         try {
             engineContent = await fs.readFile(engineSpritesPath, 'utf8');
-        } catch (e) {}
+        } catch (e) {
+            if (e.code !== 'ENOENT') console.error('[Sprites] Error reading engine sprites:', e);
+        }
 
         if (isRoot) {
             return res.send(engineContent);
@@ -169,7 +180,9 @@ const serveMergedSprites = async (req, res, next) => {
         let projectContent = '';
         try {
             projectContent = await fs.readFile(projectSpritesPath, 'utf8');
-        } catch (e) {}
+        } catch (e) {
+            if (e.code !== 'ENOENT') console.error('[Sprites] Error reading project sprites:', e);
+        }
 
         if (!projectContent) {
             return res.send(engineContent);
@@ -294,10 +307,10 @@ app.use('/sprite-art', (req, res, next) => {
 app.get('/fps_editor.html', (req, res) => res.redirect('/editor3d.html?mode=fps-3d&project=' + (req.query.project || '')));
 app.get('/topdown3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=topdown-3d&project=' + (req.query.project || '')));
 app.get('/platformer3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=platformer-3d&project=' + (req.query.project || '')));
+app.get('/shader_editor.html', (req, res) => res.redirect('/shader_lab.html'));
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/projects', express.static(path.join(__dirname, 'projects')));
 
 // Project management middleware
 app.use((req, res, next) => {
@@ -330,6 +343,15 @@ app.use('/api/debug', debug3dRouter);
 app.use('/api/monitor', monitor3dRouter);
 app.use('/api/ui-config', uiConfigRouter);
 app.use('/api/opencode-zen', openCodeZenRouter);
+
+// Express Error Handling Middleware
+app.use((err, req, res, next) => {
+    console.error('[Express] Global Error:', err);
+    if (res.headersSent) {
+        return next(err);
+    }
+    res.status(500).json({ error: 'Internal Server Error' });
+});
 
 // Fallback for API
 app.use('/api/*', (req, res) => {

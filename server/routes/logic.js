@@ -40,8 +40,7 @@ router.post('/save', async (req, res) => {
         // Save the visual workspace (JSON)
         if (json) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.json`), json, 'utf8');
         
-        // Save the executable code (JS) - DEPRECATED but kept for legacy
-        if (js) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.js`), js, 'utf8');
+
 
         // Save the AST (JSON)
         if (ast) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.ast.json`), typeof ast === 'string' ? ast : JSON.stringify(ast, null, 2), 'utf8');
@@ -120,6 +119,30 @@ router.get('/ast/:name', async (req, res) => {
         res.json(JSON.parse(ast));
     } catch (err) {
         res.status(404).json({ error: 'AST not found' });
+    }
+});
+
+// Delete logic script + AST
+router.delete('/:name', async (req, res) => {
+    try {
+        if (!isSafeBaseName(req.params.name)) return res.status(400).json({ error: 'Invalid name' });
+        const activeProject = projectService.getActiveProject();
+        const logicDir = path.join(activeProject, 'data', 'logic');
+        
+        const files = [`${req.params.name}.json`, `${req.params.name}.ast.json`, `${req.params.name}.js`];
+        let anyDeleted = false;
+        for (const f of files) {
+            const fp = path.join(logicDir, f);
+            try {
+                await fs.unlink(fp);
+                anyDeleted = true;
+            } catch (e) { if (e.code !== 'ENOENT') throw e; }
+        }
+        
+        if (!anyDeleted) return res.status(404).json({ error: 'Script not found' });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete script' });
     }
 });
 

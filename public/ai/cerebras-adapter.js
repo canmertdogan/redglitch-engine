@@ -5,7 +5,7 @@
 
 class CerebrasAdapter {
     constructor() {
-        this.baseUrl = 'https://api.cerebras.ai/v1';
+        this.baseUrl = (window.CEREBRAS_API_URL || 'https://api.cerebras.ai/v1');
     }
 
     getSettings() {

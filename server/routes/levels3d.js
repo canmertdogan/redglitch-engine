@@ -19,6 +19,7 @@ const router       = express.Router();
 const path         = require('path');
 const fs           = require('fs').promises;
 const { resolveUnderRoot } = require('../utils/pathGuard');
+const safeFs       = require('../utils/safeFs');
 
 const PROJECTS_ROOT = path.resolve(__dirname, '..', '..', 'projects');
 

@@ -110,8 +110,22 @@ export default class Platformer3DStrategy {
 
     // ── Campaign ability interface ────────────────────────────────────────────
 
+    constructor(game) {
+        this._game = game;
+        this._abilityCooldowns = new Map();
+        this._doubleJumpUsed = false;
+        this._dashUsed = false;
+        this._groundPoundUsed = false;
+        this._abilityConfigs = {
+            double_jump: { cooldown: 0.3, staminaCost: 20 },
+            dash: { cooldown: 2, staminaCost: 30, distance: 6, duration: 0.25 },
+            ground_pound: { cooldown: 0.8, staminaCost: 40, radius: 3, damage: 50 },
+            wall_jump: { cooldown: 0.1, staminaCost: 10, boost: { x: 0, y: 8, z: 0 } }
+        };
+    }
+
     /**
-     * Use an ability (double jump, dash, ground pound, etc.)
+     * Use an ability (double jump, dash, ground pound, wall jump)
      * @param {string} abilityId - Ability identifier
      * @param {number} dirX - Direction X
      * @param {number} dirY - Direction Y
@@ -120,28 +134,106 @@ export default class Platformer3DStrategy {
     useAbility(abilityId, dirX, dirY) {
         const game = this._game;
         if (!game || !game.player) return false;
-        
-        // Platformer abilities could be:
-        // - 'double_jump' - perform double jump
-        // - 'dash' - dash in direction
-        // - 'ground_pound' - slam downward
-        // - 'wall_jump' - jump off wall
-        
-        console.log(`[Platformer3DStrategy] useAbility: ${abilityId} (not yet implemented)`);
-        
-        // TODO: Implement platformer ability system
-        // This would hook into CharacterController3D and PlayerCharacter3D
-        
-        return false;
+        if (!this.isAbilityReady(abilityId)) return false;
+
+        const config = this._abilityConfigs[abilityId];
+        if (!config) return false;
+
+        const player = game.player;
+        const stamina = player._stamina ?? player.stamina ?? 100;
+        if (stamina < config.staminaCost) return false;
+
+        let used = false;
+
+        switch (abilityId) {
+            case 'double_jump': {
+                if (this._doubleJumpUsed) return false;
+                const jumpVelocity = player.jumpVelocity ?? 8;
+                if (player.setVelocity) {
+                    player.setVelocity(player.velocity?.x ?? 0, jumpVelocity, player.velocity?.z ?? 0);
+                } else if (player.velocity) {
+                    player.velocity.y = jumpVelocity;
+                }
+                this._doubleJumpUsed = true;
+                used = true;
+                break;
+            }
+            case 'dash': {
+                if (this._dashUsed) return false;
+                const dir = new THREE.Vector3(dirX ?? 0, 0, dirY ?? 0);
+                if (dir.lengthSq() === 0) {
+                    const forward = new THREE.Vector3(0, 0, -1);
+                    forward.applyQuaternion(player.root?.quaternion ?? player.quaternion ?? new THREE.Quaternion());
+                    dir.copy(forward);
+                }
+                dir.normalize().multiplyScalar(config.distance);
+                this._dashTarget = { x: (player.position?.x ?? 0) + dir.x, y: player.position?.y ?? 0, z: (player.position?.z ?? 0) + dir.z };
+                this._dashStartTime = performance.now();
+                this._dashDuration = config.duration;
+                this._dashUsed = true;
+                if (player.startDash) player.startDash(this._dashTarget, config.duration);
+                used = true;
+                break;
+            }
+            case 'ground_pound': {
+                if (this._groundPoundUsed) return false;
+                if (player.setVelocity) {
+                    player.setVelocity(player.velocity?.x ?? 0, -20, player.velocity?.z ?? 0);
+                } else if (player.velocity) {
+                    player.velocity.y = -20;
+                }
+                this._groundPoundActive = true;
+                this._groundPoundUsed = true;
+                if (player.startGroundPound) player.startGroundPound();
+                used = true;
+                break;
+            }
+            case 'wall_jump': {
+                const wallNormal = player._wallNormal ?? player.wallNormal ?? null;
+                if (!wallNormal) return false;
+                const boostX = -wallNormal.x * config.boost.y * 0.5;
+                const boostZ = -wallNormal.z * config.boost.y * 0.5;
+                if (player.setVelocity) {
+                    player.setVelocity(boostX, config.boost.y, boostZ);
+                } else if (player.velocity) {
+                    player.velocity.x = boostX;
+                    player.velocity.y = config.boost.y;
+                    player.velocity.z = boostZ;
+                }
+                used = true;
+                break;
+            }
+        }
+
+        if (used) {
+            this._abilityCooldowns.set(abilityId, config.cooldown);
+            if (player._stamina !== undefined) {
+                player._stamina = Math.max(0, stamina - config.staminaCost);
+            }
+            if (abilityId === 'double_jump') this._doubleJumpUsed = true;
+            if (abilityId === 'dash') this._dashUsed = true;
+            if (abilityId === 'ground_pound') this._groundPoundUsed = true;
+        }
+
+        return used;
     }
 
     /**
-     * Check if ability is ready (off cooldown)
+     * Check if ability is ready (off cooldown, has stamina, not already used)
      * @param {string} abilityId - Ability identifier
      * @returns {boolean}
      */
     isAbilityReady(abilityId) {
-        // TODO: Track ability cooldowns
+        const cd = this._abilityCooldowns.get(abilityId);
+        if (cd && cd > 0) return false;
+        const config = this._abilityConfigs[abilityId];
+        if (!config) return false;
+        const game = this._game;
+        const stamina = game?.player?._stamina ?? game?.player?.stamina ?? 100;
+        if (stamina < config.staminaCost) return false;
+        if (abilityId === 'double_jump' && this._doubleJumpUsed) return false;
+        if (abilityId === 'dash' && this._dashUsed) return false;
+        if (abilityId === 'ground_pound' && this._groundPoundUsed) return false;
         return true;
     }
 
@@ -151,7 +243,45 @@ export default class Platformer3DStrategy {
      * @returns {number}
      */
     getCooldownFraction(abilityId) {
-        // TODO: Track ability cooldowns
-        return 0;
+        const cd = this._abilityCooldowns.get(abilityId);
+        const config = this._abilityConfigs[abilityId];
+        if (!cd || !config || config.cooldown <= 0) return 0;
+        return Math.min(cd / config.cooldown, 1);
+    }
+
+    /**
+     * Reset per-life abilities (double jump, dash, ground pound) on landing/respawn
+     */
+    resetPerLifeAbilities() {
+        this._doubleJumpUsed = false;
+        this._dashUsed = false;
+        this._groundPoundUsed = false;
+        this._groundPoundActive = false;
+        this._dashUsed = false;
+    }
+
+    /**
+     * Tick cooldowns — called each frame
+     * @param {number} dt
+     */
+    tickAbilities(dt) {
+        for (const [id, remaining] of this._abilityCooldowns) {
+            const next = remaining - dt;
+            if (next <= 0) this._abilityCooldowns.delete(id);
+            else this._abilityCooldowns.set(id, next);
+        }
+
+        // Dash interpolation
+        if (this._dashTarget && this._dashDuration > 0) {
+            const elapsed = (performance.now() - this._dashStartTime) / 1000;
+            if (elapsed >= this._dashDuration) {
+                const game = this._game;
+                if (game?.player?.setPosition) {
+                    game.player.setPosition(this._dashTarget.x, this._dashTarget.y, this._dashTarget.z);
+                }
+                this._dashTarget = null;
+                this._dashDuration = 0;
+            }
+        }
     }
 }

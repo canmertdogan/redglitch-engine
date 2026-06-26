@@ -4,6 +4,7 @@ export const LIB = {
     evt_tick: { cat: 'Event', title: 'On Update', desc: 'Triggered every frame. Use sparingly.', outputs: [{id:'out', name:'Exec', type:'exec'}, {id:'dt', name:'DeltaTime', type:'num'}] },
     evt_input: { cat: 'Event', title: 'On Key', desc: 'Triggered when a specific key is pressed.', outputs: [{id:'out', name:'Exec', type:'exec'}], fields: [{key:'key', label:'Key Code (e.g. A)'}] },
     evt_collision: { cat: 'Event', title: 'On Hit', desc: 'Triggered when this entity touches another.', outputs: [{id:'out', name:'Exec', type:'exec'}, {id:'other', name:'Other Entity', type:'entity'}] },
+    evt_interact: { cat: 'Event', title: 'On Interact', desc: 'Triggered when the player interacts with this entity.', outputs: [{id:'out', name:'Exec', type:'exec'}] },
 
     // FLOW
     flow_branch: { cat: 'Flow', title: 'Branch', desc: 'If True, take top path. If False, bottom.', inputs: [{id:'in', name:'Exec', type:'exec'}, {id:'cond', name:'Condition', type:'bool'}], outputs: [{id:'true', name:'True', type:'exec'}, {id:'false', name:'False', type:'exec'}] },
@@ -14,6 +15,9 @@ export const LIB = {
     
     // MATH
     math_add: { cat: 'Math', title: 'Add', desc: 'A + B', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Result', type:'num'}] },
+    math_sub: { cat: 'Math', title: 'Subtract', desc: 'A - B', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Result', type:'num'}] },
+    math_mul: { cat: 'Math', title: 'Multiply', desc: 'A × B', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Result', type:'num'}] },
+    math_div: { cat: 'Math', title: 'Divide', desc: 'A ÷ B (returns 0 if B=0)', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Result', type:'num'}] },
     math_expression: { 
         cat: 'Math', 
         title: 'Expression', 
@@ -47,6 +51,10 @@ export const LIB = {
     
     // LOGIC
     logic_eq: { cat: 'Math', title: 'Equal', desc: 'Returns true if A equals B.', inputs: [{id:'a', name:'A', type:'any'}, {id:'b', name:'B', type:'any'}], outputs: [{id:'res', name:'Bool', type:'bool'}] },
+    logic_gt: { cat: 'Math', title: 'Greater Than', desc: 'True if A > B.', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Bool', type:'bool'}] },
+    logic_gte: { cat: 'Math', title: 'Greater/Equal', desc: 'True if A >= B.', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Bool', type:'bool'}] },
+    logic_lt: { cat: 'Math', title: 'Less Than', desc: 'True if A < B.', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Bool', type:'bool'}] },
+    logic_lte: { cat: 'Math', title: 'Less/Equal', desc: 'True if A <= B.', inputs: [{id:'a', name:'A', type:'num'}, {id:'b', name:'B', type:'num'}], outputs: [{id:'res', name:'Bool', type:'bool'}] },
     
     // VARS & ENV
     var_get: { cat: 'Var', title: 'Get Var', desc: 'Read a global variable.', outputs: [{id:'val', name:'Value', type:'any'}], fields: [{key:'name', label:'Variable Name'}] },
@@ -56,6 +64,7 @@ export const LIB = {
     // ENGINE
     eng_log: { cat: 'Engine', title: 'Log', desc: 'Print a message to the browser console.', inputs: [{id:'in', name:'Exec', type:'exec'}, {id:'msg', name:'Message', type:'string'}], outputs: [{id:'out', name:'Exec', type:'exec'}], fields: [{key:'msg', label:'Message'}] },
     eng_move: { cat: 'Engine', title: 'Move To', desc: 'Teleport Self to X, Y.', inputs: [{id:'in', name:'Exec', type:'exec'}, {id:'x', name:'X', type:'num'}, {id:'y', name:'Y', type:'num'}], outputs: [{id:'out', name:'Exec', type:'exec'}] },
+    eng_ui: { cat: 'Engine', title: 'Show Screen', desc: 'Navigate to a UI screen by name.', inputs: [{id:'in', name:'Exec', type:'exec'}], outputs: [{id:'out', name:'Exec', type:'exec'}], fields: [{key:'screen', label:'Screen Name'}], defaults: {screen: ''} },
     data_self: { cat: 'Var', title: 'Self', desc: 'Reference to this entity.', outputs: [{id:'val', name:'Self', type:'entity'}] },
     data_player: { cat: 'Var', title: 'Player', desc: 'Reference to the player.', outputs: [{id:'val', name:'Player', type:'entity'}] },
     
@@ -993,6 +1002,17 @@ export const LIB = {
         ],
         defaults: {value: 0},
         fields: [{key:'value', label:'Switch Value'}]
+    },
+    
+    // EXTENSIBILITY
+    custom: {
+        cat: 'Engine',
+        title: 'Custom Action',
+        desc: 'Generic action node for extensibility hooks.',
+        inputs: [{id:'in', name:'Exec', type:'exec'}],
+        outputs: [{id:'out', name:'Exec', type:'exec'}],
+        fields: [{key:'action', label:'Action Name'}],
+        defaults: {action: ''}
     }
 };
 

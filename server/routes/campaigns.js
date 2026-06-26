@@ -19,7 +19,9 @@ function normalizeCampaignFileName(rawName) {
 async function ensureDir(dir) {
     try {
         await fs.mkdir(dir, { recursive: true });
-    } catch (e) {}
+    } catch (e) {
+        if (e.code !== 'EEXIST') console.error(`Error creating directory ${dir}:`, e);
+    }
 }
 
 async function saveDefinition(filename, data) {

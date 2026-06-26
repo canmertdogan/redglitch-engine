@@ -116,3 +116,5 @@ projects/*/
 /b.png
 /test.png
 Ekran*
+.redglitch/ai_config.json
+screenshots/
