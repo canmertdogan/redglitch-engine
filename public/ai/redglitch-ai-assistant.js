@@ -187,7 +187,7 @@ class IRABAssistantSimple {
         console.log(`%c[Kai:Assistant]%c ${msg}`, 'background: #ff0000; color: #000; padding: 2px 5px;', '', data || '');
     }
 
-    async processQuery(query) {
+    async processQuery(query, options = {}) {
         try {
             // PHASE 1: HIGH-SPEED INTENT DETECTION (Regex)
             // We still use regex for instant response on very common studio commands
@@ -227,7 +227,7 @@ class IRABAssistantSimple {
                 context.activeEditor = localStorage.getItem('redglitch_last_editor');
             }
 
-            const response = await this.ai.chat(query, { context });
+            const response = await this.ai.chat(query, { context, onToken: options.onToken });
 
             // Normalize response text
             let text = "";

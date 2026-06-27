@@ -1301,6 +1301,13 @@ window.onload = async () => {
             }
             return;
         }
+        if (ctrl && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            if (window.parent && window.parent.RedGlitchEventBus) {
+                window.parent.RedGlitchEventBus.emit('ai:toggle_chat');
+            }
+            return;
+        }
         keys[e.code] = true;
         if (e.key.toLowerCase() === 'q') changeZ(1);
         if (e.key.toLowerCase() === 'e') changeZ(-1);

@@ -564,13 +564,27 @@ class KaiChatUIController {
         const statusDot = document.querySelector('.xp-status-dot');
         const statusText = document.getElementById('xp-status-text');
         if (statusDot) statusDot.classList.add('thinking');
-        if (statusText) statusText.textContent = 'PROCESSING...';
+        if (statusText) statusText.textContent = 'THINKING...';
         
         this.setAvatarState('working');
         this.playSound('typing');
 
+        let streamMsg = null;
+
         try {
-            const response = await this.assistant.processQuery(query);
+            const response = await this.assistant.processQuery(query, {
+                onToken: (token) => {
+                    if (statusText && statusText.textContent !== 'KAI IS TYPING...') {
+                        statusText.textContent = 'KAI IS TYPING...';
+                    }
+                    if (!streamMsg) streamMsg = this.createStreamingMessage();
+                    if (streamMsg) streamMsg.appendToken(token);
+                }
+            });
+
+            if (streamMsg) {
+                streamMsg.finish();
+            }
 
             if (statusDot) statusDot.classList.remove('thinking');
             if (statusText) statusText.textContent = 'ONLINE';
@@ -643,6 +657,129 @@ class KaiChatUIController {
             }
             this.setAvatarState('idle');
         }, 800);
+    }
+
+    renderMarkdownToBubble(text, bubble) {
+        bubble.innerHTML = ''; // Clear previous content
+        
+        const cleanText = text.replace(/--- FILE: .*? ---/g, '').trim();
+
+        if (cleanText.includes('```')) {
+            // Support unclosed code blocks for streaming
+            let parsingText = cleanText;
+            const openTags = (parsingText.match(/```/g) || []).length;
+            if (openTags % 2 !== 0) {
+                parsingText += '\n```'; // Auto-close for rendering
+            }
+
+            const parts = parsingText.split(/(```[\s\S]*?```)/g);
+            parts.forEach(part => {
+                if (part.startsWith('```')) {
+                    const lines = part.replace(/```\w*\n?/, '').replace(/```$/, '').split('\n');
+                    const codeBlock = document.createElement('div');
+                    codeBlock.style.background = '#000';
+                    codeBlock.style.border = '1px solid #333';
+                    codeBlock.style.padding = '8px';
+                    codeBlock.style.margin = '6px 0';
+                    codeBlock.style.whiteSpace = 'pre-wrap';
+                    codeBlock.style.fontFamily = 'var(--kai-font-mono)';
+                    codeBlock.style.fontSize = '0.9em';
+                    codeBlock.style.overflowX = 'auto';
+                    const codeText = lines.join('\n');
+                    codeBlock.textContent = codeText;
+
+                    const codeCopyBtn = document.createElement('button');
+                    codeCopyBtn.textContent = '[COPY]';
+                    codeCopyBtn.style.cssText = 'background:transparent;border:1px solid #444;color:#666;cursor:pointer;font-size:11px;font-family:inherit;padding:1px 6px;float:right;margin-bottom:4px; margin-left: 4px;';
+                    codeCopyBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(codeText).then(() => {
+                            codeCopyBtn.textContent = '[COPIED]';
+                            setTimeout(() => { codeCopyBtn.textContent = '[COPY]'; }, 2000);
+                        }).catch(() => {});
+                    };
+
+                    const applyBtn = document.createElement('button');
+                    applyBtn.textContent = '[APPLY TO EDITOR]';
+                    applyBtn.style.cssText = 'background:transparent;border:1px solid var(--kai-accent);color:var(--kai-accent);cursor:pointer;font-size:11px;font-family:inherit;padding:1px 6px;float:right;margin-bottom:4px; font-weight: bold;';
+                    applyBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+                        if (eventBus) {
+                            eventBus.emit('ai:command:request', {
+                                method: 'insert',
+                                params: { content: codeText }
+                            });
+                            applyBtn.textContent = '[APPLIED]';
+                            setTimeout(() => { applyBtn.textContent = '[APPLY TO EDITOR]'; }, 2000);
+                        }
+                    };
+
+                    const wrapper = document.createElement('div');
+                    wrapper.style.overflow = 'hidden';
+                    wrapper.appendChild(codeCopyBtn);
+                    wrapper.appendChild(applyBtn);
+                    wrapper.appendChild(codeBlock);
+                    bubble.appendChild(wrapper);
+                } else if (part.trim()) {
+                    const textNode = document.createElement('span');
+                    textNode.textContent = part;
+                    bubble.appendChild(textNode);
+                }
+            });
+        } else {
+            bubble.textContent = cleanText;
+        }
+    }
+
+    createStreamingMessage() {
+        const messagesContainer = document.getElementById('ai-chat-messages');
+        if (!messagesContainer) return null;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'ai-message assistant';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'ai-message-avatar';
+        avatar.textContent = 'K';
+
+        const content = document.createElement('div');
+        content.className = 'ai-message-content';
+
+        const nameBar = document.createElement('div');
+        nameBar.style.display = 'flex';
+        nameBar.style.alignItems = 'center';
+        nameBar.style.justifyContent = 'space-between';
+        
+        const nameName = document.createElement('span');
+        nameName.className = 'ai-message-name';
+        nameName.textContent = 'KAI';
+        
+        nameBar.appendChild(nameName);
+        content.appendChild(nameBar);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-message-bubble';
+        content.appendChild(bubble);
+
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(content);
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        let fullText = "";
+
+        return {
+            appendToken: (token) => {
+                fullText += token;
+                this.renderMarkdownToBubble(fullText, bubble);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            },
+            finish: () => {
+                messageDiv.remove();
+                return fullText;
+            }
+        };
     }
 
     addMessage(type, text) {
@@ -718,48 +855,11 @@ class KaiChatUIController {
         
         // Clean up the text (hide the RAG headers for a cleaner UI, but keep for logic)
         const hasManifesto = text.includes('[MANIFESTO]');
-        const cleanText = text.replace(/--- FILE: .*? ---/g, '').trim();
 
-        // Render code blocks with monospace and a copy button
-        if (type === 'assistant' && cleanText.includes('```')) {
-            const parts = cleanText.split(/(```[\s\S]*?```)/g);
-            parts.forEach(part => {
-                if (part.startsWith('```')) {
-                    const lines = part.replace(/```\w*\n?/, '').replace(/```$/, '').split('\n');
-                    const codeBlock = document.createElement('div');
-                    codeBlock.style.background = '#000';
-                    codeBlock.style.border = '1px solid #333';
-                    codeBlock.style.padding = '8px';
-                    codeBlock.style.margin = '6px 0';
-                    codeBlock.style.whiteSpace = 'pre-wrap';
-                    codeBlock.style.fontFamily = 'var(--kai-font-mono)';
-                    codeBlock.style.fontSize = '0.9em';
-                    codeBlock.style.overflowX = 'auto';
-                    const codeText = lines.join('\n');
-                    codeBlock.textContent = codeText;
-
-                    const codeCopyBtn = document.createElement('button');
-                    codeCopyBtn.textContent = '[COPY CODE]';
-                    codeCopyBtn.style.cssText = 'background:transparent;border:1px solid #444;color:#666;cursor:pointer;font-size:11px;font-family:inherit;padding:1px 6px;float:right;margin-bottom:4px;';
-                    codeCopyBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(codeText).then(() => {
-                            codeCopyBtn.textContent = '[COPIED]';
-                            setTimeout(() => { codeCopyBtn.textContent = '[COPY CODE]'; }, 2000);
-                        }).catch(() => {});
-                    };
-                    const wrapper = document.createElement('div');
-                    wrapper.style.overflow = 'hidden';
-                    wrapper.appendChild(codeCopyBtn);
-                    wrapper.appendChild(codeBlock);
-                    bubble.appendChild(wrapper);
-                } else if (part.trim()) {
-                    const textNode = document.createElement('span');
-                    textNode.textContent = part;
-                    bubble.appendChild(textNode);
-                }
-            });
+        if (type === 'assistant') {
+            this.renderMarkdownToBubble(text, bubble);
         } else {
+            const cleanText = text.replace(/--- FILE: .*? ---/g, '').trim();
             bubble.textContent = cleanText;
         }
 

@@ -317,6 +317,13 @@ window.onload = async () => {
             }
         });
 
+        // Add AI Chat toggle command
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
+            if (window.parent && window.parent.RedGlitchEventBus) {
+                window.parent.RedGlitchEventBus.emit('ai:toggle_chat');
+            }
+        });
+
         // Cursor Position Update
         editor.onDidChangeCursorPosition(e => {
             document.getElementById('cursor-pos').innerText = `LN ${e.position.lineNumber}, COL ${e.position.column}`;
@@ -354,10 +361,12 @@ window.onload = async () => {
                 // Only trigger if RedGlitchAI is ready
                 if (!window.RedGlitchAI || !window.RedGlitchAI.isInitialized) return { items: [] };
                 
-                // Debounce simple typing
+                // Debounce simple typing for 500ms
                 if (context.triggerKind === monaco.languages.InlineCompletionTriggerKind.Automatic) {
-                    // Optional: Check a global flag or wait for explicit trigger
-                    // return { items: [] }; 
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    if (token.isCancellationRequested) {
+                        return { items: [] };
+                    }
                 }
 
                 const textUntilPosition = model.getValueInRange({
@@ -372,7 +381,7 @@ window.onload = async () => {
 
                 try {
                     const suggestion = await window.RedGlitchAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
-                    if (suggestion) {
+                    if (suggestion && !token.isCancellationRequested) {
                         return {
                             items: [{
                                 insertText: suggestion,
@@ -768,6 +777,24 @@ if (window.parent && window.parent.RedGlitchEventBus) {
     window.parent.RedGlitchEventBus.on('system:global_save', () => {
         if (typeof saveAllFiles === 'function') {
             saveAllFiles(true);
+        }
+    });
+
+    window.parent.RedGlitchEventBus.on('ai:command:request', (payload) => {
+        if (payload.method === 'insert' && editor) {
+            const content = payload.params.content;
+            const position = editor.getPosition();
+            
+            // Execute the edit operation
+            editor.executeEdits("ai-assistant", [{
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                text: content,
+                forceMoveMarkers: true
+            }]);
+            
+            // Format document optionally
+            editor.getAction('editor.action.formatDocument').run();
+            editor.focus();
         }
     });
 }
