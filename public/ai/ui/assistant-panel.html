@@ -781,7 +781,7 @@
     </style>
 </head>
 <body>
-    <button id="kai-mode-toggle" class="off" onclick="window.toggleKaiMode()">AI: OFF</button>
+    <!-- Top task bar now controls the AI mode via window.parent -->
     <div id="kai-mode-choice" role="dialog" aria-modal="true" aria-labelledby="kai-mode-title">
         <div class="kai-mode-dialog">
             <h2 id="kai-mode-title">ENABLE AI FEATURES?</h2>
@@ -910,6 +910,11 @@
                             <option value="1024">1024 (FAST)</option>
                             <option value="2048">2048 (BALANCED)</option>
                             <option value="4096">4096 (DEEP)</option>
+                            <option value="8192">8192 (EXTENDED)</option>
+                            <option value="16384">16384 (RAG OPTIMIZED)</option>
+                            <option value="32768">32768 (LARGE)</option>
+                            <option value="65536">65536 (MASSIVE)</option>
+                            <option value="128000" selected>128000 (OMNI - 128K)</option>
                         </select>
                     </div>
                 </div>

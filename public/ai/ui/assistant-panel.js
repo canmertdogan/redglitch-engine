@@ -1062,7 +1062,7 @@ class KaiSettingsController {
             temp: 0.7,
             topP: 0.9,
             maxTokens: 512,
-            contextWindow: 2048,
+            contextWindow: 128000,
             quantization: 'q4f16',
             ragEnabled: true,
             historyLimit: 6,
@@ -1205,6 +1205,20 @@ class KaiSettingsController {
         this.saveSettings();
         window.setKaiMode?.(this.settings.aiEnabled);
         
+        const irab = window.irab || (window.parent && window.parent.irab);
+        if (irab && irab.socket) {
+            try {
+                irab.socket.send(JSON.stringify({ 
+                    type: 'UPDATE_CONFIG', 
+                    data: { 
+                        context_window: this.settings.contextWindow,
+                        max_tokens: this.settings.maxTokens,
+                        temperature: this.settings.temp 
+                    } 
+                }));
+            } catch(e) {}
+        }
+        
         if (window.AIChatUI) {
             window.AIChatUI.toggleSounds(this.settings.soundsEnabled);
             window.AIChatUI.addMessage('system', '>> KERNEL CONFIGURATION UPDATED.');
@@ -1273,6 +1287,17 @@ function applyKaiModeUI(enabled) {
         frame.style.right = 'auto';
         setTimeout(() => { frame.style.pointerEvents = 'none'; }, 50);
     }
+
+    // Sync state with parent UI if hosted in tools.html
+    if (window.parent && window.parent.document) {
+        const parentBtn = window.parent.document.getElementById('parent-kai-mode-toggle');
+        if (parentBtn) {
+            parentBtn.className = enabled ? 'tool-btn ai-toggle-btn on' : 'tool-btn ai-toggle-btn off';
+            parentBtn.innerHTML = enabled 
+                ? '<i class="fas fa-brain"></i> <span>AI: ON</span>' 
+                : '<i class="fas fa-brain" style="opacity: 0.5;"></i> <span>AI: OFF</span>';
+        }
+    }
 }
 
 function showKaiModeChoice() {
@@ -1337,16 +1362,16 @@ window.chooseKaiMode = (enabled) => window.setKaiMode(enabled).catch((error) => 
 window.toggleKaiMode = () => {
     const enabled = getStoredKaiMode() === true;
     if (enabled) window.chooseKaiMode(false);
-    else showKaiModeChoice();
+    else window.chooseKaiMode(true);
 };
 
 async function bootstrapKaiMode() {
-    const mode = getStoredKaiMode();
-    applyKaiModeUI(mode === true);
+    let mode = getStoredKaiMode();
     if (mode === null) {
-        showKaiModeChoice();
-        return;
+        mode = false;
+        localStorage.setItem('kai_ai_enabled', 'false');
     }
+    applyKaiModeUI(mode === true);
     if (mode === true) await window.setKaiMode(true);
 }
 

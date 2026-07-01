@@ -311,6 +311,7 @@ app.get('/shader_editor.html', (req, res) => res.redirect('/shader_lab.html'));
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/projects', express.static(config.PROJECTS_ROOT));
 
 // Project management middleware
 app.use((req, res, next) => {

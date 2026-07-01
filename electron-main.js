@@ -377,8 +377,9 @@ app.whenReady().then(() => {
     ({ app: expressApp, server: httpServer } = require('./server'));
     ({ PORT } = require('./server/config'));
 
-    // Start AI Cortex
-    cortex.start();
+    // Setup AI Cortex IPC handlers
+    ipcMain.handle('cortex-start', () => { cortex.start(); return true; });
+    ipcMain.handle('cortex-stop', () => { cortex.stop(); return true; });
 
     // Set dock icon for macOS as early as possible
     if (process.platform === 'darwin') {

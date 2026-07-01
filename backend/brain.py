@@ -15,6 +15,7 @@ class IrabBrain:
         
         # Optimized for 3B Model
         self.max_tokens = 600
+        self.context_window = 128000
         self.temperature = 0.4 # Higher for more creative reasoning on 3B
         self.top_p = 0.95
         self.is_aborted = False
@@ -35,15 +36,27 @@ class IrabBrain:
         if 'max_tokens' in config: self.max_tokens = int(config['max_tokens'])
         if 'temperature' in config: self.temperature = float(config['temperature'])
         if 'personality_text' in config: self.custom_personality = config['personality_text']
+        if 'context_window' in config:
+            new_ctx = int(config['context_window'])
+            if hasattr(self, 'context_window') and new_ctx != self.context_window:
+                self.context_window = new_ctx
+                logger.info(f"Context window changed to {new_ctx}. Reloading model...")
+                if hasattr(self, 'model_path') and self.model_path:
+                    # Offload the old model first to free RAM/VRAM
+                    self.llm = None
+                    self.load_model(self.model_path)
+            else:
+                self.context_window = new_ctx
             
     def load_model(self, model_path):
+        self.model_path = model_path
         self.status = "LOADING"
         try:
             self.llm = Llama(
                 model_path=model_path,
                 n_gpu_layers=self.n_gpu_layers,
                 n_threads=4, 
-                n_ctx=2048,  
+                n_ctx=self.context_window,  
                 verbose=False 
             )
             self.status = "READY"

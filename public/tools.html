@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="pixel_scrollbars.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="tools.css?v=13">
-    <script src= defer></script>
     <script>
         // --- Sidebar Management (In-Head to avoid ReferenceErrors) ---
         window.toggleSidebar = function() {
@@ -146,6 +145,12 @@
             <button class="tool-btn" title="Map Editor" onclick="openWindow(tools.find(t=>t.id==='editor'))"><i class="fas fa-map"></i></button>
             <button class="tool-btn" title="Script Editor" onclick="openWindow(tools.find(t=>t.id==='script'))"><i class="fas fa-code"></i></button>
             <button class="tool-btn" title="Pixel Art" onclick="openWindow(tools.find(t=>t.id==='pixel'))"><i class="fas fa-paint-brush"></i></button>
+        </div>
+
+        <div class="toolbar-group" style="margin-left: auto;">
+            <button id="parent-kai-mode-toggle" class="tool-btn ai-toggle-btn off" title="Toggle AI Assistant" onclick="window.KAI.toggleMode()">
+                <i class="fas fa-brain"></i> <span>AI: OFF</span>
+            </button>
         </div>
     </div>
 
@@ -596,6 +601,12 @@
     <script>
         // Kai Bridge to parent
         window.KAI = {
+            toggleMode: () => {
+                const iframe = document.getElementById('kai-ai-panel');
+                if (iframe && iframe.contentWindow && iframe.contentWindow.toggleKaiMode) {
+                    iframe.contentWindow.toggleKaiMode();
+                }
+            },
             showBalloon: (text) => {
                 const iframe = document.getElementById('kai-ai-panel');
                 if (iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI) {

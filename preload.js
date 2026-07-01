@@ -9,5 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     close: () => ipcRenderer.send('window-close'),
     openExternal: (url) => ipcRenderer.send('open-external', url),
     showItemInFolder: (path) => ipcRenderer.send('show-item-in-folder', path),
-    openDevTools: () => ipcRenderer.send('open-devtools')
+    openDevTools: () => ipcRenderer.send('open-devtools'),
+    cortexStart: () => ipcRenderer.invoke('cortex-start'),
+    cortexStop: () => ipcRenderer.invoke('cortex-stop')
 });

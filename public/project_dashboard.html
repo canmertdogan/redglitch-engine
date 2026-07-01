@@ -8,7 +8,6 @@
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="pixel_scrollbars.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
-    <script src= defer></script>
     <style>
         :root {
             --bg-root: #050508;
@@ -30,10 +29,10 @@
             --green: #2ecc71;
             --red: #e74c3c;
             --gold: #ffd700;
-            --header-h: 44px;
-            --toolbar-h: 38px;
-            --status-h: 24px;
-            --sidebar-w: 324px;
+            --header-h: 38px;
+            --toolbar-h: 32px;
+            --status-h: 20px;
+            --sidebar-w: 280px;
         }
 
         * {
@@ -51,8 +50,7 @@
             background: var(--bg-root);
             color: var(--text);
             font-family: 'VT323', monospace;
-            font-size: 18px;
-            zoom: 0.78;
+            font-size: 16px;
         }
 
         body::before {
@@ -100,8 +98,8 @@
             display: grid;
             grid-template-columns: auto minmax(0, 1fr) auto;
             align-items: center;
-            gap: 12px;
-            padding: 0 12px;
+            gap: 10px;
+            padding: 0 10px;
             border-bottom: 1px solid var(--border);
             
             -webkit-app-region: drag;
@@ -151,13 +149,13 @@
         .app-icon {
             width: auto;
             max-width: 100%;
-            padding: 0 14px 0 12px;
-            gap: 12px;
+            padding: 0 12px 0 10px;
+            gap: 10px;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             background: rgba(0, 0, 0, 0.25);
             color: var(--accent);
             border-right: 1px solid rgba(255, 255, 255, 0.06);
@@ -168,8 +166,8 @@
         }
 
         .app-icon-mark {
-            width: 32px;
-            height: 32px;
+            width: 26px;
+            height: 26px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -182,8 +180,8 @@
         }
 
         .app-icon-mark img {
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             display: block;
             image-rendering: pixelated;
             object-fit: contain;
@@ -202,20 +200,20 @@
             align-items: baseline;
             gap: 3px;
             white-space: nowrap;
-            font-size: 18px;
+            font-size: 16px;
             letter-spacing: 2px;
         }
 
         .brand-red {
             color: var(--accent);
             font-family: 'VT323', monospace;
-            font-size: 18px;
+            font-size: 16px;
         }
 
         .brand-glitch {
             color: #ffffff;
             font-family: 'VT323', monospace;
-            font-size: 18px;
+            font-size: 16px;
             position: relative;
             display: inline-block;
         }
@@ -255,11 +253,11 @@
         }
 
         .brand-tag {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--text-muted);
             letter-spacing: 3px;
             text-transform: uppercase;
-            margin-top: 3px;
+            margin-top: 2px;
         }
 
         .app-caption {
@@ -280,12 +278,12 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 12px;
+            padding: 5px 10px;
             background: rgba(0, 0, 0, 0.28);
             border: 1px solid var(--border);
             border-radius: 999px;
             color: var(--text);
-            font-size: 12px;
+            font-size: 11px;
             letter-spacing: 1.5px;
             text-transform: uppercase;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
@@ -310,7 +308,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            height: 34px;
+            height: 28px;
             padding: 4px 6px;
             background: rgba(0, 0, 0, 0.24);
             border: 1px solid var(--border);
@@ -320,8 +318,8 @@
         }
 
         .titlebar-btn {
-            width: 28px;
-            height: 28px;
+            width: 24px;
+            height: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -336,7 +334,7 @@
 
         .titlebar-btn i {
             color: var(--accent);
-            font-size: 11px;
+            font-size: 10px;
         }
 
         .titlebar-btn:hover {
@@ -377,16 +375,16 @@
             flex: 1;
             min-height: 0;
             display: grid;
-            grid-template-rows: auto minmax(0, 1fr) minmax(230px, 240px);
-            gap: 15px;
-            padding: 15px;
+            grid-template-rows: auto minmax(0, 1fr) minmax(200px, 210px);
+            gap: 12px;
+            padding: 12px;
             overflow: hidden;
         }
 
         #telemetry-strip {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
             min-width: 0;
             align-items: stretch;
         }
@@ -402,10 +400,10 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 0 18px;
-            min-height: 82px;
+            padding: 0 14px;
+            min-height: 72px;
             min-width: 0;
-            border-radius: 12px;
+            border-radius: 10px;
         }
 
         .tele-card::before,
@@ -422,8 +420,8 @@
         }
 
         .tele-icon {
-            width: 34px;
-            height: 34px;
+            width: 28px;
+            height: 28px;
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -444,7 +442,7 @@
 
         .tele-val {
             color: #fff;
-            font-size: 1.25rem;
+            font-size: 1rem;
             line-height: 1;
             letter-spacing: 1px;
             overflow: hidden;
@@ -461,8 +459,8 @@
 
         #workspace-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
             min-height: 0;
         }
 
@@ -477,21 +475,21 @@
             display: flex;
             flex-direction: column;
             min-height: 0;
-            border-radius: 12px;
+            border-radius: 10px;
         }
 
         .w-header {
-            height: 34px;
+            height: 28px;
             background: rgba(0, 0, 0, 0.38);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 12px;
+            padding: 0 10px;
             color: #fff;
             letter-spacing: 2px;
             text-transform: uppercase;
-            font-size: 0.82rem;
+            font-size: 0.7rem;
             flex-shrink: 0;
             gap: 12px;
         }
@@ -522,7 +520,7 @@
         .w-body {
             flex: 1;
             min-height: 0;
-            padding: 14px;
+            padding: 12px;
             overflow: auto;
         }
 
@@ -535,8 +533,8 @@
         .file-item {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
-            padding: 12px;
+            gap: 10px;
+            padding: 10px;
             border: 1px solid var(--border);
             background: rgba(0, 0, 0, 0.22);
             cursor: pointer;
@@ -578,13 +576,6 @@
             letter-spacing: 1px;
         }
 
-        .empty-state {
-            color: #555;
-            text-align: center;
-            margin-top: 20px;
-            letter-spacing: 1px;
-        }
-
         .scratchpad-wrap {
             padding: 0;
         }
@@ -598,9 +589,9 @@
             background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.55));
             color: #ddd;
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
+            font-size: 11px;
             line-height: 1.55;
-            padding: 14px;
+            padding: 12px;
         }
 
         .asset-row {
@@ -608,7 +599,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 10px 0;
+            padding: 8px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             color: var(--text);
         }
@@ -647,8 +638,8 @@
         .quick-action-btn {
             display: block;
             width: 100%;
-            padding: 10px;
-            margin-top: 10px;
+            padding: 8px;
+            margin-top: 8px;
             background: #1f2b42;
             border: 1px solid #34495e;
             color: #ccc;
@@ -656,7 +647,7 @@
             text-align: center;
             transition: all 0.1s;
             font-family: 'VT323', monospace;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             text-transform: uppercase;
             letter-spacing: 1px;
             box-shadow: 3px 3px 0 #000;
@@ -683,10 +674,10 @@
             flex: 1;
             min-height: 0;
             overflow: auto;
-            padding: 12px;
+            padding: 10px;
             background: rgba(0, 0, 0, 0.55);
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .log-line {
@@ -730,7 +721,7 @@
         }
 
         #cmd-bar {
-            height: 34px;
+            height: 28px;
             background: rgba(0, 0, 0, 0.72);
             border-top: 1px solid var(--border);
             display: flex;
@@ -767,6 +758,13 @@
             font-style: italic;
         }
 
+        .empty-state {
+            color: #555;
+            text-align: center;
+            margin-top: 14px;
+            letter-spacing: 1px;
+        }
+
         #status-bar {
             height: var(--status-h);
             background: rgba(0, 0, 0, 0.5);
@@ -776,8 +774,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 8px;
-            font-size: 12px;
+            padding: 0 6px;
+            font-size: 11px;
             color: var(--text-muted);
             letter-spacing: 1px;
             
@@ -797,7 +795,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 0 8px;
+            padding: 0 6px;
             height: 100%;
             cursor: pointer;
             transition: background 0.1s;

@@ -208,6 +208,9 @@ function isKaiModeEnabled() {
 }
 
 window.ensureIrabBridge = function ensureIrabBridge() {
+    if (window.electronAPI && window.electronAPI.cortexStart) {
+        window.electronAPI.cortexStart().catch(console.error);
+    }
     if (!window.irab) {
         window.irab = new IrabBridge();
     }
@@ -215,6 +218,9 @@ window.ensureIrabBridge = function ensureIrabBridge() {
 };
 
 window.destroyIrabBridge = function destroyIrabBridge() {
+    if (window.electronAPI && window.electronAPI.cortexStop) {
+        window.electronAPI.cortexStop().catch(console.error);
+    }
     if (window.irab) {
         try { window.irab.socket?.close(); } catch (_) {}
         window.irab.isConnected = false;
