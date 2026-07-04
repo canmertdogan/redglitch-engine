@@ -15,7 +15,7 @@
 
 </div>
 
-Redglitch Game Studio is a professional-grade game creation environment that ships as a desktop application (Electron) and runs as a web-based server. It provides a complete visual toolset for building 2D, 2.5D isometric, and 3D games—no traditional coding required, though deep code-level editing (Monaco, visual scripting, shader lab) is always available.
+Redglitch Game Studio is a game creation environment that ships as a desktop application (Electron) and runs as a web-based server. It provides a complete visual toolset for building 2D, 2.5D isometric, and 3D games—no traditional coding required, though deep code-level editing (Monaco, visual scripting, shader lab) is always available.
 
 ---
 
