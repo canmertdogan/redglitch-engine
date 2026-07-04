@@ -1,0 +1,1326 @@
+{
+  "format": "redglitch-ui",
+  "formatVersion": 1,
+  "resolution": {
+    "w": 800,
+    "h": 450
+  },
+  "designSystem": {
+    "name": "RedGlitch Retro Ops",
+    "grid": 4,
+    "palette": {
+      "void": "#05070d",
+      "panel": "#101723",
+      "panel2": "#172033",
+      "red": "#ff3147",
+      "gold": "#ffd36a",
+      "cyan": "#49e3ff",
+      "green": "#62ff9a",
+      "violet": "#b86cff",
+      "ink": "#f4f7ff"
+    },
+    "typography": {
+      "fontFamily": "VT323, monospace",
+      "letterSpacing": 0
+    },
+    "notes": [
+      "Use 4px grid increments. Keep panels sharp with 0-4px radius. Bars use strong color coding. Slots use gold/cyan borders."
+    ]
+  },
+  "screens": {
+    "main_hud": {
+      "elements": [
+        {
+          "id": "hud_core_panel",
+          "type": "panel",
+          "rect": {
+            "x": 12,
+            "y": 12,
+            "w": 250,
+            "h": 86
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(5,7,13,0.78)",
+            "borderWidth": 2,
+            "borderColor": "#ff3147",
+                        "boxShadow": "inset 0 0 0 2px rgba(255,255,255,0.04), 4px 4px 0 rgba(0,0,0,0.65), 0 0 18px rgba(255,49,71,0.22)",
+            "zIndex": 10
+          }
+        },
+        {
+          "id": "hud_player_name",
+          "type": "label",
+          "text": "REDGLITCH // LV {player.level}",
+          "rect": {
+            "x": 22,
+            "y": 18,
+            "w": 170,
+            "h": 18
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 16,
+            "fontWeight": "700",
+            "letterSpacing": 0,
+            "textShadow": "2px 2px 0 #000",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "hud_hp_bar",
+          "type": "bar",
+          "text": "HP {player.hp}/{player.maxHp}",
+          "rect": {
+            "x": 22,
+            "y": 40,
+            "w": 228,
+            "h": 16
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "#07090f",
+            "borderWidth": 2,
+            "borderColor": "#5a1f2b",
+                        "fontSize": 12,
+            "color": "#ffffff",
+            "boxShadow": "inset 0 0 0 1px #000",
+            "zIndex": 12
+          },
+          "props": {
+            "variable": "player.hp",
+            "maxVariable": "player.maxHp",
+            "fillColor": "#ff3147",
+            "flashOnDamage": true
+          }
+        },
+        {
+          "id": "hud_mp_bar",
+          "type": "bar",
+          "text": "MP {player.mana}/{player.maxMana}",
+          "rect": {
+            "x": 22,
+            "y": 60,
+            "w": 156,
+            "h": 12
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "#07090f",
+            "borderWidth": 2,
+            "borderColor": "#1b5261",
+                        "fontSize": 10,
+            "color": "#ffffff",
+            "zIndex": 12
+          },
+          "props": {
+            "variable": "player.mana",
+            "maxVariable": "player.maxMana",
+            "fillColor": "#49e3ff"
+          }
+        },
+        {
+          "id": "hud_st_bar",
+          "type": "bar",
+          "text": "ST {player.stamina}/{player.maxStamina}",
+          "rect": {
+            "x": 22,
+            "y": 76,
+            "w": 156,
+            "h": 12
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "#07090f",
+            "borderWidth": 2,
+            "borderColor": "#245331",
+                        "fontSize": 10,
+            "color": "#ffffff",
+            "zIndex": 12
+          },
+          "props": {
+            "variable": "player.stamina",
+            "maxVariable": "player.maxStamina",
+            "fillColor": "#62ff9a"
+          }
+        },
+        {
+          "id": "hud_xp_chip",
+          "type": "label",
+          "text": "XP {player.xp}",
+          "rect": {
+            "x": 188,
+            "y": 60,
+            "w": 62,
+            "h": 28
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(184,108,255,0.18)",
+            "borderWidth": 2,
+            "borderColor": "#b86cff",
+                        "color": "#d9c1ff",
+            "fontSize": 14,
+            "textAlign": "center",
+            "fontWeight": "700",
+            "boxShadow": "2px 2px 0 #000",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "hud_signal_panel",
+          "type": "panel",
+          "rect": {
+            "x": 12,
+            "y": 12,
+            "w": 174,
+            "h": 74
+          },
+          "anchor": "top-right",
+          "style": {
+            "backgroundColor": "rgba(5,7,13,0.74)",
+            "borderWidth": 2,
+            "borderColor": "#ffd36a",
+                        "boxShadow": "4px 4px 0 rgba(0,0,0,0.65), 0 0 18px rgba(255,211,106,0.2)",
+            "zIndex": 10
+          }
+        },
+        {
+          "id": "hud_time",
+          "type": "label",
+          "text": "TIME {gameTimeFormatted}",
+          "rect": {
+            "x": 22,
+            "y": 20,
+            "w": 154,
+            "h": 18
+          },
+          "anchor": "top-right",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 16,
+            "textAlign": "right",
+            "fontWeight": "700",
+            "textShadow": "2px 2px 0 #000",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "hud_coins",
+          "type": "label",
+          "text": "CR {player.coins}",
+          "rect": {
+            "x": 22,
+            "y": 42,
+            "w": 154,
+            "h": 16
+          },
+          "anchor": "top-right",
+          "style": {
+            "color": "#62ff9a",
+            "fontSize": 14,
+            "textAlign": "right",
+            "textShadow": "2px 2px 0 #000",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "hud_zone",
+          "type": "label",
+          "text": "ZONE // ACTIVE",
+          "rect": {
+            "x": 22,
+            "y": 60,
+            "w": 154,
+            "h": 14
+          },
+          "anchor": "top-right",
+          "style": {
+            "color": "#49e3ff",
+            "fontSize": 12,
+            "textAlign": "right",
+            "textShadow": "2px 2px 0 #000",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "hud_hotbar_back",
+          "type": "panel",
+          "rect": {
+            "x": 0,
+            "y": 14,
+            "w": 640,
+            "h": 58
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "backgroundColor": "rgba(5,7,13,0.72)",
+            "borderWidth": 2,
+            "borderColor": "#3d4b68",
+                        "boxShadow": "4px 4px 0 rgba(0,0,0,0.68), inset 0 0 0 2px rgba(255,255,255,0.04)",
+            "zIndex": 10
+          }
+        },
+        {
+          "id": "slot_1",
+          "type": "slot",
+          "text": "1",
+          "rect": {
+            "x": -164,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 18,
+            "color": "#ffd36a",
+            "borderColor": "#ffd36a",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "slot_2",
+          "type": "slot",
+          "text": "2",
+          "rect": {
+            "x": -116,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 18,
+            "color": "#ffd36a",
+            "borderColor": "#ffd36a",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "slot_3",
+          "type": "slot",
+          "text": "3",
+          "rect": {
+            "x": -68,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 18,
+            "color": "#ffd36a",
+            "borderColor": "#ffd36a",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "slot_4",
+          "type": "slot",
+          "text": "4",
+          "rect": {
+            "x": -20,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 18,
+            "color": "#ffd36a",
+            "borderColor": "#ffd36a",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "skill_1",
+          "type": "slot",
+          "text": "Q",
+          "rect": {
+            "x": 42,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 18,
+            "color": "#49e3ff",
+            "borderColor": "#49e3ff",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "skill_2",
+          "type": "slot",
+          "text": "E",
+          "rect": {
+            "x": 90,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 18,
+            "color": "#49e3ff",
+            "borderColor": "#49e3ff",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "skill_3",
+          "type": "slot",
+          "text": "R",
+          "rect": {
+            "x": 138,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 18,
+            "color": "#49e3ff",
+            "borderColor": "#49e3ff",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "power_1",
+          "type": "slot",
+          "text": "ULT",
+          "rect": {
+            "x": 196,
+            "y": 24,
+            "w": 36,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 12,
+            "color": "#b86cff",
+            "borderColor": "#b86cff",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "power_2",
+          "type": "slot",
+          "text": "SPC",
+          "rect": {
+            "x": 244,
+            "y": 24,
+            "w": 36,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 12,
+            "color": "#b86cff",
+            "borderColor": "#b86cff",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "power_3",
+          "type": "slot",
+          "text": "BOOST",
+          "rect": {
+            "x": 292,
+            "y": 24,
+            "w": 42,
+            "h": 42
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "fontSize": 12,
+            "color": "#b86cff",
+            "borderColor": "#b86cff",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "hud_pause_btn",
+          "type": "button",
+          "text": "❚❚",
+          "rect": {
+            "x": 8,
+            "y": 8,
+            "w": 36,
+            "h": 36
+          },
+          "anchor": "top-right",
+          "style": {
+            "backgroundColor": "rgba(5,7,13,0.8)",
+            "borderWidth": 2,
+            "borderColor": "#ffd36a",
+            "color": "#ffd36a",
+            "fontSize": 16,
+            "textAlign": "center",
+            "zIndex": 20
+          },
+          "props": {},
+          "script": "togglePause"
+        },
+        {
+          "id": "hud_objective_panel",
+          "type": "panel",
+          "rect": {
+            "x": 12,
+            "y": 104,
+            "w": 250,
+            "h": 42
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(5,7,13,0.62)",
+            "borderWidth": 2,
+            "borderColor": "#3d4b68",
+                        "boxShadow": "3px 3px 0 rgba(0,0,0,0.6)",
+            "zIndex": 10
+          }
+        },
+        {
+          "id": "hud_objective_label",
+          "type": "label",
+          "text": "OBJ // FIND THE EXIT",
+          "rect": {
+            "x": 22,
+            "y": 114,
+            "w": 230,
+            "h": 18
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#f4f7ff",
+            "fontSize": 14,
+            "fontWeight": "700",
+            "textShadow": "2px 2px 0 #000",
+            "zIndex": 12
+          }
+        },
+        {
+          "id": "hud_objective_sub",
+          "type": "label",
+          "text": "ENEMIES DETECTED",
+          "rect": {
+            "x": 22,
+            "y": 132,
+            "w": 230,
+            "h": 12
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ff3147",
+            "fontSize": 10,
+            "textShadow": "2px 2px 0 #000",
+            "zIndex": 12
+          }
+        }
+      ]
+    },
+    "pause_menu": {
+      "elements": [
+        {
+          "id": "pause_scrim",
+          "type": "panel",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 800,
+            "h": 450
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(0,0,0,0.72)",
+            "zIndex": 90
+          }
+        },
+        {
+          "id": "pause_panel",
+          "type": "panel",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 292,
+            "h": 268
+          },
+          "anchor": "center",
+          "style": {
+            "backgroundColor": "rgba(10,15,26,0.96)",
+            "borderWidth": 3,
+            "borderColor": "#ffd36a",
+                        "boxShadow": "6px 6px 0 #000, 0 0 28px rgba(255,211,106,0.22)",
+            "zIndex": 91
+          }
+        },
+        {
+          "id": "pause_title",
+          "type": "label",
+          "text": "SYSTEM PAUSED",
+          "rect": {
+            "x": 0,
+            "y": -108,
+            "w": 292,
+            "h": 32
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 28,
+            "textAlign": "center",
+            "fontWeight": "700",
+            "textShadow": "3px 3px 0 #000",
+            "zIndex": 92
+          }
+        },
+        {
+          "id": "pause_resume",
+          "type": "button",
+          "text": "RESUME",
+          "rect": {
+            "x": 0,
+            "y": -52,
+            "w": 208,
+            "h": 34
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#62ff9a",
+            "fontSize": 20,
+            "borderColor": "#62ff9a",
+            "backgroundColor": "rgba(98,255,154,0.12)",
+            "zIndex": 92
+          },
+          "script": "RESUME_GAME"
+        },
+        {
+          "id": "pause_inventory",
+          "type": "button",
+          "text": "INVENTORY",
+          "rect": {
+            "x": 0,
+            "y": -8,
+            "w": 208,
+            "h": 34
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#49e3ff",
+            "fontSize": 20,
+            "borderColor": "#49e3ff",
+            "backgroundColor": "rgba(73,227,255,0.12)",
+            "zIndex": 92
+          },
+          "script": "navigate:inventory"
+        },
+        {
+          "id": "pause_quit",
+          "type": "button",
+          "text": "QUIT",
+          "rect": {
+            "x": 0,
+            "y": 36,
+            "w": 208,
+            "h": 34
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ff3147",
+            "fontSize": 20,
+            "borderColor": "#ff3147",
+            "backgroundColor": "rgba(255,49,71,0.12)",
+            "zIndex": 92
+          },
+          "script": "QUIT"
+        }
+      ]
+    },
+    "inventory": {
+      "elements": [
+        {
+          "id": "inv_panel",
+          "type": "panel",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 520,
+            "h": 336
+          },
+          "anchor": "center",
+          "style": {
+            "backgroundColor": "rgba(10,15,26,0.96)",
+            "borderWidth": 3,
+            "borderColor": "#49e3ff",
+                        "boxShadow": "6px 6px 0 #000, 0 0 30px rgba(73,227,255,0.2)",
+            "zIndex": 70
+          }
+        },
+        {
+          "id": "inv_title",
+          "type": "label",
+          "text": "INVENTORY CACHE",
+          "rect": {
+            "x": -240,
+            "y": -146,
+            "w": 240,
+            "h": 28
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#49e3ff",
+            "fontSize": 24,
+            "fontWeight": "700",
+            "textShadow": "3px 3px 0 #000",
+            "zIndex": 71
+          }
+        },
+        {
+          "id": "inv_grid",
+          "type": "panel",
+          "rect": {
+            "x": -240,
+            "y": -104,
+            "w": 300,
+            "h": 230
+          },
+          "anchor": "center",
+          "style": {
+            "backgroundColor": "rgba(0,0,0,0.24)",
+            "borderWidth": 2,
+            "borderColor": "#263852",
+                        "zIndex": 71
+          }
+        },
+        {
+          "id": "inv_info",
+          "type": "panel",
+          "rect": {
+            "x": 86,
+            "y": -104,
+            "w": 154,
+            "h": 230
+          },
+          "anchor": "center",
+          "style": {
+            "backgroundColor": "rgba(0,0,0,0.32)",
+            "borderWidth": 2,
+            "borderColor": "#3d4b68",
+                        "zIndex": 71
+          }
+        },
+        {
+          "id": "inv_hint",
+          "type": "label",
+          "text": "SELECT ITEM",
+          "rect": {
+            "x": 100,
+            "y": -86,
+            "w": 126,
+            "h": 20
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 16,
+            "textAlign": "center",
+            "zIndex": 72
+          }
+        },
+        {
+          "id": "inv_slot_a",
+          "type": "slot",
+          "text": "A",
+          "rect": {
+            "x": -224,
+            "y": -84,
+            "w": 40,
+            "h": 40
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 16,
+            "zIndex": 72
+          }
+        },
+        {
+          "id": "inv_slot_b",
+          "type": "slot",
+          "text": "B",
+          "rect": {
+            "x": -176,
+            "y": -84,
+            "w": 40,
+            "h": 40
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 16,
+            "zIndex": 72
+          }
+        },
+        {
+          "id": "inv_slot_c",
+          "type": "slot",
+          "text": "C",
+          "rect": {
+            "x": -128,
+            "y": -84,
+            "w": 40,
+            "h": 40
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 16,
+            "zIndex": 72
+          }
+        },
+        {
+          "id": "inv_close",
+          "type": "button",
+          "text": "CLOSE",
+          "rect": {
+            "x": 86,
+            "y": 136,
+            "w": 154,
+            "h": 30
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ff3147",
+            "fontSize": 18,
+            "borderColor": "#ff3147",
+            "backgroundColor": "rgba(255,49,71,0.12)",
+            "zIndex": 72
+          },
+          "script": "CLOSE_MENU"
+        }
+      ]
+    },
+    "dialogue_box": {
+      "elements": [
+        {
+          "id": "dialogue_panel",
+          "type": "panel",
+          "rect": {
+            "x": 24,
+            "y": 24,
+            "w": 752,
+            "h": 112
+          },
+          "anchor": "bottom-left",
+          "style": {
+            "backgroundColor": "rgba(5,7,13,0.92)",
+            "borderWidth": 3,
+            "borderColor": "#ffd36a",
+                        "boxShadow": "5px 5px 0 #000, 0 0 24px rgba(255,211,106,0.18)",
+            "zIndex": 60
+          }
+        },
+        {
+          "id": "dialogue_name",
+          "type": "label",
+          "text": "TRANSMISSION",
+          "rect": {
+            "x": 44,
+            "y": 36,
+            "w": 180,
+            "h": 22
+          },
+          "anchor": "bottom-left",
+          "style": {
+            "backgroundColor": "#ffd36a",
+            "borderWidth": 0,
+                        "color": "#05070d",
+            "fontSize": 18,
+            "textAlign": "center",
+            "fontWeight": "700",
+            "zIndex": 61
+          }
+        },
+        {
+          "id": "dialogue_text",
+          "type": "label",
+          "text": "The interface is online. Move through the breach.",
+          "rect": {
+            "x": 48,
+            "y": 66,
+            "w": 704,
+            "h": 42
+          },
+          "anchor": "bottom-left",
+          "style": {
+            "color": "#f4f7ff",
+            "fontSize": 22,
+            "lineHeight": 24,
+            "textShadow": "2px 2px 0 #000",
+            "zIndex": 61
+          }
+        },
+        {
+          "id": "dialogue_continue",
+          "type": "label",
+          "text": "PRESS E",
+          "rect": {
+            "x": 668,
+            "y": 108,
+            "w": 84,
+            "h": 18
+          },
+          "anchor": "bottom-left",
+          "style": {
+            "color": "#62ff9a",
+            "fontSize": 14,
+            "textAlign": "right",
+            "zIndex": 61
+          }
+        }
+      ]
+    },
+    "gameover": {
+      "elements": [
+        {
+          "id": "gameover_overlay",
+          "type": "panel",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 800,
+            "h": 450
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(0,0,0,0.86)",
+            "zIndex": 100
+          }
+        },
+        {
+          "id": "gameover_title",
+          "type": "label",
+          "text": "SIGNAL LOST",
+          "rect": {
+            "x": 0,
+            "y": -70,
+            "w": 800,
+            "h": 60
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ff3147",
+            "fontSize": 54,
+            "textAlign": "center",
+            "fontWeight": "700",
+            "letterSpacing": 0,
+            "textShadow": "4px 4px 0 #000, 0 0 24px rgba(255,49,71,0.55)",
+            "zIndex": 101
+          }
+        },
+        {
+          "id": "gameover_stats",
+          "type": "label",
+          "text": "TIME {gameTimeFormatted} // LV {player.level}",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 800,
+            "h": 24
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 20,
+            "textAlign": "center",
+            "zIndex": 101
+          }
+        },
+        {
+          "id": "gameover_retry",
+          "type": "button",
+          "text": "RETRY",
+          "rect": {
+            "x": -88,
+            "y": 58,
+            "w": 176,
+            "h": 36
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#62ff9a",
+            "backgroundColor": "rgba(98,255,154,0.12)",
+            "borderWidth": 2,
+            "borderColor": "#62ff9a",
+            "fontSize": 20,
+            "zIndex": 101
+          },
+          "script": "retryLevel"
+        },
+        {
+          "id": "gameover_quit",
+          "type": "button",
+          "text": "QUIT",
+          "rect": {
+            "x": -88,
+            "y": 104,
+            "w": 176,
+            "h": 32
+          },
+          "anchor": "center",
+          "style": {
+            "color": "#ff3147",
+            "backgroundColor": "rgba(255,49,71,0.12)",
+            "borderWidth": 2,
+            "borderColor": "#ff3147",
+            "fontSize": 18,
+            "zIndex": 101
+          },
+          "script": "quitToMenu"
+        }
+      ]
+    },
+    "ui_kit_palette": {
+      "elements": [
+        {
+          "id": "kit_title",
+          "type": "label",
+          "text": "REDGLITCH UI KIT",
+          "rect": {
+            "x": 24,
+            "y": 20,
+            "w": 260,
+            "h": 32
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 30,
+            "fontWeight": "700",
+            "textShadow": "3px 3px 0 #000",
+            "zIndex": 1
+          }
+        },
+        {
+          "id": "kit_panel_gold",
+          "type": "panel",
+          "rect": {
+            "x": 24,
+            "y": 70,
+            "w": 220,
+            "h": 74
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(10,15,26,0.94)",
+            "borderWidth": 3,
+            "borderColor": "#ffd36a",
+                        "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(255,211,106,0.2)",
+            "zIndex": 1
+          }
+        },
+        {
+          "id": "kit_panel_cyan",
+          "type": "panel",
+          "rect": {
+            "x": 268,
+            "y": 70,
+            "w": 220,
+            "h": 74
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(10,15,26,0.94)",
+            "borderWidth": 3,
+            "borderColor": "#49e3ff",
+                        "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(73,227,255,0.2)",
+            "zIndex": 1
+          }
+        },
+        {
+          "id": "kit_panel_red",
+          "type": "panel",
+          "rect": {
+            "x": 512,
+            "y": 70,
+            "w": 220,
+            "h": 74
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "rgba(10,15,26,0.94)",
+            "borderWidth": 3,
+            "borderColor": "#ff3147",
+                        "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(255,49,71,0.2)",
+            "zIndex": 1
+          }
+        },
+        {
+          "id": "kit_label_header",
+          "type": "label",
+          "text": "MISSION HEADER",
+          "rect": {
+            "x": 34,
+            "y": 86,
+            "w": 200,
+            "h": 24
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 22,
+            "fontWeight": "700",
+            "textAlign": "center",
+            "zIndex": 2
+          }
+        },
+        {
+          "id": "kit_label_body",
+          "type": "label",
+          "text": "Compact body label",
+          "rect": {
+            "x": 278,
+            "y": 94,
+            "w": 200,
+            "h": 18
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#f4f7ff",
+            "fontSize": 16,
+            "textAlign": "center",
+            "zIndex": 2
+          }
+        },
+        {
+          "id": "kit_label_alert",
+          "type": "label",
+          "text": "ALERT STATE",
+          "rect": {
+            "x": 522,
+            "y": 94,
+            "w": 200,
+            "h": 18
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ff3147",
+            "fontSize": 18,
+            "fontWeight": "700",
+            "textAlign": "center",
+            "zIndex": 2
+          }
+        },
+        {
+          "id": "kit_hp",
+          "type": "bar",
+          "text": "HP {player.hp}/{player.maxHp}",
+          "rect": {
+            "x": 24,
+            "y": 176,
+            "w": 220,
+            "h": 18
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "#07090f",
+            "borderWidth": 2,
+            "borderColor": "#5a1f2b",
+                        "fontSize": 12,
+            "color": "#fff",
+            "zIndex": 1
+          },
+          "props": {
+            "variable": "player.hp",
+            "maxVariable": "player.maxHp",
+            "fillColor": "#ff3147"
+          }
+        },
+        {
+          "id": "kit_mp",
+          "type": "bar",
+          "text": "MP {player.mana}/{player.maxMana}",
+          "rect": {
+            "x": 268,
+            "y": 176,
+            "w": 220,
+            "h": 18
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "#07090f",
+            "borderWidth": 2,
+            "borderColor": "#1b5261",
+                        "fontSize": 12,
+            "color": "#fff",
+            "zIndex": 1
+          },
+          "props": {
+            "variable": "player.mana",
+            "maxVariable": "player.maxMana",
+            "fillColor": "#49e3ff"
+          }
+        },
+        {
+          "id": "kit_st",
+          "type": "bar",
+          "text": "ST {player.stamina}/{player.maxStamina}",
+          "rect": {
+            "x": 512,
+            "y": 176,
+            "w": 220,
+            "h": 18
+          },
+          "anchor": "top-left",
+          "style": {
+            "backgroundColor": "#07090f",
+            "borderWidth": 2,
+            "borderColor": "#245331",
+                        "fontSize": 12,
+            "color": "#fff",
+            "zIndex": 1
+          },
+          "props": {
+            "variable": "player.stamina",
+            "maxVariable": "player.maxStamina",
+            "fillColor": "#62ff9a"
+          }
+        },
+        {
+          "id": "kit_primary_button",
+          "type": "button",
+          "text": "PRIMARY",
+          "rect": {
+            "x": 24,
+            "y": 228,
+            "w": 156,
+            "h": 34
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#62ff9a",
+            "fontSize": 20,
+            "borderColor": "#62ff9a",
+            "backgroundColor": "rgba(98,255,154,0.12)",
+            "zIndex": 1
+          },
+          "script": "action:PRIMARY"
+        },
+        {
+          "id": "kit_secondary_button",
+          "type": "button",
+          "text": "SECONDARY",
+          "rect": {
+            "x": 196,
+            "y": 228,
+            "w": 156,
+            "h": 34
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#49e3ff",
+            "fontSize": 20,
+            "borderColor": "#49e3ff",
+            "backgroundColor": "rgba(73,227,255,0.12)",
+            "zIndex": 1
+          },
+          "script": "action:SECONDARY"
+        },
+        {
+          "id": "kit_danger_button",
+          "type": "button",
+          "text": "DANGER",
+          "rect": {
+            "x": 368,
+            "y": 228,
+            "w": 156,
+            "h": 34
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ff3147",
+            "fontSize": 20,
+            "borderColor": "#ff3147",
+            "backgroundColor": "rgba(255,49,71,0.12)",
+            "zIndex": 1
+          },
+          "script": "action:DANGER"
+        },
+        {
+          "id": "kit_slot_gold",
+          "type": "slot",
+          "text": "1",
+          "rect": {
+            "x": 24,
+            "y": 306,
+            "w": 48,
+            "h": 48
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ffd36a",
+            "borderColor": "#ffd36a",
+            "fontSize": 20,
+            "zIndex": 1
+          }
+        },
+        {
+          "id": "kit_slot_cyan",
+          "type": "slot",
+          "text": "Q",
+          "rect": {
+            "x": 84,
+            "y": 306,
+            "w": 48,
+            "h": 48
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#49e3ff",
+            "borderColor": "#49e3ff",
+            "fontSize": 20,
+            "zIndex": 1
+          }
+        },
+        {
+          "id": "kit_slot_red",
+          "type": "slot",
+          "text": "!",
+          "rect": {
+            "x": 144,
+            "y": 306,
+            "w": 48,
+            "h": 48
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#ff3147",
+            "borderColor": "#ff3147",
+            "fontSize": 20,
+            "zIndex": 1
+          }
+        },
+        {
+          "id": "kit_tip",
+          "type": "label",
+          "text": "Copy these into game screens or duplicate elements in the designer.",
+          "rect": {
+            "x": 24,
+            "y": 386,
+            "w": 660,
+            "h": 22
+          },
+          "anchor": "top-left",
+          "style": {
+            "color": "#8a93a8",
+            "fontSize": 16,
+            "zIndex": 1
+          }
+        }
+      ]
+    }
+  }
+}

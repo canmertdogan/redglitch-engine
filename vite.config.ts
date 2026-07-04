@@ -27,6 +27,7 @@ export default defineConfig({
         prefab_editor: path.resolve(__dirname, 'studio-ui/prefab_editor.html'),
         asset_manager: path.resolve(__dirname, 'studio-ui/asset_manager.html'),
         interactive_cutscene_editor: path.resolve(__dirname, 'studio-ui/interactive_cutscene_editor.html'),
+        ui_designer: path.resolve(__dirname, 'studio-ui/ui_designer.html'),
         studio_main: path.resolve(__dirname, 'studio-ui/studio_main.html'),
       }
     }

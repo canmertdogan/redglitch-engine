@@ -359,6 +359,7 @@
             z-index: 9000;
             min-width: 320px;
             image-rendering: pixelated;
+            display: none; /* Replaced by GameHUD */
         }
 
         .hud-row {
@@ -382,15 +383,8 @@
             color: #fff;
         }
 
-        /* Save Menu (Top Right) */
-        #save-menu {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9000;
-            display: flex;
-            gap: 12px;
-        }
+        /* Save Menu (Top Right) — hidden, replaced by GameHUD */
+        #save-menu { display: none; }
 
         .save-btn {
             background: #1a1a2e;
@@ -428,14 +422,8 @@
             margin-right: 8px;
         }
 
-        /* Notification System */
-        #notification-container {
-            position: fixed;
-            top: 100px;
-            right: 20px;
-            z-index: 9500;
-            max-width: 400px;
-        }
+        /* Notification System — hidden, GameHUD showToast handles this */
+        #notification-container { display: none; }
 
         .notification {
             background: #1a1a2e;
@@ -504,6 +492,7 @@
             font-family: 'VT323', monospace;
             min-width: 280px;
             image-rendering: pixelated;
+            display: none; /* Replaced by GameHUD */
         }
 
         .stat-bar-container {
@@ -558,16 +547,8 @@
             background: #3498db;
         }
 
-        /* Hotbar Quick-Slots */
-        #hotbar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9000;
-            display: flex;
-            gap: 8px;
-        }
+        /* Hotbar Quick-Slots (hidden — replaced by GameHUD) */
+        #hotbar { display: none; }
 
         .hotbar-slot {
             width: 64px;
@@ -691,15 +672,8 @@
             outline: none;
         }
 
-        /* Fullscreen & Controls Buttons */
-        #game-controls {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9000;
-            display: flex;
-            gap: 12px;
-        }
+        /* Fullscreen & Controls Buttons — hidden, replaced by GameHUD or engine-native controls */
+        #game-controls { display: none; }
 
         .control-btn {
             width: 56px;
@@ -727,16 +701,8 @@
             box-shadow: 0 0 0 2px #000;
         }
 
-        /* Mobile Touch Controls */
-        #mobile-controls {
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9000;
-            display: none;
-            gap: 60px;
-        }
+        /* Mobile Touch Controls — hidden, GameHUD replaces */
+        #mobile-controls { display: none !important; }
 
         @media (max-width: 768px), (pointer: coarse) {
             #mobile-controls {

@@ -154,6 +154,10 @@ if (!gotLock) {
 app.commandLine.appendSwitch('enable-features', 'WebMachineLearningNeuralNetwork,WebNN');
 app.commandLine.appendSwitch('enable-unsafe-webgpu');
 
+// Increase GPU memory limits to prevent tile memory errors when drawing huge maps
+app.commandLine.appendSwitch('force-gpu-mem-available-mb', '4096');
+app.commandLine.appendSwitch('max-decoded-image-size-mb', '250');
+
 // Set app name for macOS top bar - MUST BE DONE BEFORE READY
 if (process.platform === 'darwin') {
     app.setAboutPanelOptions({

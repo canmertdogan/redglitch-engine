@@ -303,6 +303,20 @@ app.use('/sprite-art', (req, res, next) => {
     });
 });
 
+// Dynamic Interface File Serving (for .redui files)
+app.use('/interfaces', (req, res, next) => {
+    const projectDir = projectService.getActiveProject();
+    const projectFilePath = path.join(projectDir, 'interfaces', req.path);
+    const rootFilePath = path.join(__dirname, 'public', 'interfaces', req.path);
+    
+    res.sendFile(projectFilePath, err => {
+        if (!err) return;
+        res.sendFile(rootFilePath, err2 => {
+            if (err2 && !res.headersSent) next();
+        });
+    });
+});
+
 // Redirect legacy 3D editors to unified editor
 app.get('/fps_editor.html', (req, res) => res.redirect('/editor3d.html?mode=fps-3d&project=' + (req.query.project || '')));
 app.get('/topdown3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=topdown-3d&project=' + (req.query.project || '')));

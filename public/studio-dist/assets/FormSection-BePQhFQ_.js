@@ -1,0 +1,1 @@
+import{i as e,t}from"./src-DtmcM03r.js";e();var n=t(),r=({title:e,children:t})=>(0,n.jsxs)(`div`,{className:`form-section`,children:[(0,n.jsx)(`div`,{className:`section-title`,children:e}),t]});export{r as t};

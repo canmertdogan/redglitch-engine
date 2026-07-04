@@ -1,4 +1,4 @@
-export const AI_MODE_KEY = 'kai_ai_enabled';
+const AI_MODE_KEY = 'kai_ai_enabled';
 
 export function getAIMode(storage = globalThis.localStorage) {
     const value = storage?.getItem(AI_MODE_KEY);

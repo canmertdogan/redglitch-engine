@@ -43,6 +43,7 @@ class CampaignController {
                 'shared/AchievementSystem.js',
                 'shared/Profiler.js',
                 'shared/VFXBridge.js',
+                'engines/shared/GameHUD.js',
                 'shared/LocalizationSystem.js',
                 'shared/SoundManager.js',
                 'strategies/TopDownStrategy.js',
@@ -72,15 +73,16 @@ class CampaignController {
                 'shared/AchievementSystem.js',
                 'shared/Profiler.js',
                 'shared/VFXBridge.js',
+                'engines/shared/GameHUD.js',
                 'shared/LocalizationSystem.js',
                 'shared/SoundManager.js',
                 'shared/LogicSystem.js',
                 'shared/LogicInterpreter.js',
                 'shared/BehaviorTreeRunner.js',
                 'strategies/IsoStrategy.js',
+                'engines/rpg-topdown/sprites.js',
                 'engines/iso-pixel/renderer.js',
                 'engines/iso-pixel/fxSystem.js',
-                'engines/iso-pixel/hudSystem.js',
                 'engines/iso-pixel/shaderSystem.js',
                 'engines/iso-pixel/IsoCombatSystem.js',
                 'engines/iso-pixel/IsoEntity.js',
@@ -91,9 +93,13 @@ class CampaignController {
                 'shared/AchievementSystem.js',
                 'shared/Profiler.js',
                 'shared/VFXBridge.js',
+                'engines/shared/GameHUD.js',
                 'shared/LocalizationSystem.js',
                 'shared/SoundManager.js',
+                'strategies/TopDownStrategy.js',
                 'strategies/PlatformerStrategy.js',
+                'engines/rpg-topdown/sprites.js',
+                'engines/rpg-topdown/fxSystem.js',
                 'engines/platformer-2d/PlatformerConfig.js',
                 'engines/platformer-2d/PlatformerAssetManager.js',
                 'engines/platformer-2d/ParallaxSystem.js',
@@ -123,6 +129,7 @@ class CampaignController {
                 'engines/unified-3d/Unified3DAdapter.js'
             ],
             'unified-3d': [
+                'engines/shared/GameHUD.js',
                 'engines/unified-3d/Unified3DAdapter.js'
             ]
         };
@@ -231,7 +238,11 @@ class CampaignController {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             this.campaignData = data.nodes || data;
-            this.campaignMetadata = data.nodes ? { name: data.name, description: data.description, project: data.project } : {};
+            this.campaignMetadata = data.nodes ? {
+                name: data.name || (data.metadata && data.metadata.name) || 'Unnamed Campaign',
+                description: data.description || (data.metadata && data.metadata.description) || '',
+                project: data.project || (data.metadata && data.metadata.project) || ''
+            } : {};
             
             if (this.slotId) await this.loadFromSlot();
             else await this.loadCampaignState();

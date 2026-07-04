@@ -29,17 +29,24 @@ class PlatformerGame {
             }
         };
 
-        // Universal UI Runtime (HUD)
-        import('../shared/UIRuntime.js').then(m => {
-            this.uiRuntime = new m.UIRuntime();
-            this.uiRuntime.init(document.body);
-            fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
-                if (data) {
-                    this.uiRuntime.load(data);
-                    this.uiRuntime.showScreen('main_hud');
-                }
-            }).catch(e => console.log('No HUD config found'));
-        }).catch(e => console.log('Could not load UIRuntime', e));
+        // HUD (GameHUD shared component)
+        this.hud = new window.GameHUD();
+        this.hud.init(document.getElementById('game-container') || document.body);
+        this.hud.onAction = (cmd) => this._handleHUDAction(cmd);
+        fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
+            if (data) {
+                this.hud.load(data);
+                this.hud.showScreen('main_hud');
+            } else {
+                // Fallback: create a minimal HUD from ui.json definitions
+                fetch('/dunyalar/definitions/ui.json').then(r2 => r2.ok ? r2.json() : null).then(defs => {
+                    if (defs) {
+                        this.hud.load(defs);
+                        this.hud.showScreen('hud');
+                    }
+                });
+            }
+        }).catch(e => console.log('[HUD] No config found, using defaults'));
 
         this.audio = window.Sound;
         if (this.audio && !this.audio.ctx) this.audio.init();
@@ -529,15 +536,19 @@ class PlatformerGame {
         this._checkGoal();
         this._checkDeathZones();
         
-        if (this.uiRuntime) this._syncUI();
+        if (this.hud) this._syncHUD();
     }
 
-    _syncUI() {
-        this.uiRuntime.sync({
+    _syncHUD() {
+        this.hud.sync({
             player: {
                 hp: this.player.hp || 100,
                 maxHp: this.player.maxHp || 100,
-                coins: this.player.coins || 0
+                coins: this.player.coins || 0,
+                stamina: this.player.stamina || 100,
+                maxStamina: this.player.maxStamina || 100,
+                xp: this.player.xp || 0,
+                level: this.player.level || 1
             },
             gameTimeFormatted: `${Math.floor(this.time)}:${String(Math.floor((this.time%1)*60)).padStart(2,'0')}`
         });
@@ -600,7 +611,39 @@ class PlatformerGame {
     }
 
     _checkDeathZones() {
-        if(this.player.y > this.map.height * this.tileSize) this.respawn();
+        if(this.player.y > this.map.height * this.tileSize || this.player.hp <= 0) {
+            if (this.hud) {
+                this.hud.state._showGameOver = true;
+                this.hud.showScreen('gameover');
+            }
+            this.isRunning = false;
+        }
+    }
+
+    _handleHUDAction(cmd) {
+        if (cmd === 'retryLevel') this.restartLevel();
+        if (cmd === 'quitToMenu') this._quitToMenu();
+        if (cmd === 'togglePause') this.isPaused ? this.resume() : this.pause();
+    }
+
+    _quitToMenu() {
+        if (window.CAMPAIGN_RUNTIME_MODE && window.parent) {
+            window.parent.location.href = 'slot_selection.html';
+        } else {
+            this.isRunning = false;
+            if (this.hud) this.hud.hide();
+        }
+    }
+
+    restartLevel() {
+        this.player.hp = this.player.maxHp || 100;
+        this.player.coins = 0;
+        this.respawn();
+        if (this.hud) {
+            this.hud.state._showGameOver = false;
+            this.hud.showScreen('main_hud');
+        }
+        this.isRunning = true;
     }
 
     _collision(a, b) {
@@ -685,9 +728,9 @@ class PlatformerGame {
 
     destroy() {
         this.isRunning = false;
-        if (this.uiRuntime) {
-            this.uiRuntime.destroy();
-            this.uiRuntime = null;
+        if (this.hud) {
+            this.hud.destroy();
+            this.hud = null;
         }
     }
 }

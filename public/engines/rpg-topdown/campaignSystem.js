@@ -9,6 +9,14 @@ window.CampaignSystem = class CampaignSystem {
         this.controller = null;
     }
 
+    incrementVariable(key, amount = 1) {
+        if (this.useController && this.controller) {
+            this.controller.incrementVariable(key, amount);
+        } else if (this.game.flags) {
+            this.game.flags[key] = (this.game.flags[key] || 0) + amount;
+        }
+    }
+
     init(campaignData) {
         this.data = campaignData || [];
         

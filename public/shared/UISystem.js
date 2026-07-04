@@ -16,6 +16,7 @@ window.UISystem = class UISystem {
             if (!res.ok) res = await fetch('/dunyalar/definitions/ui.json');
             if (res.ok) { 
                 const data = await res.json(); 
+                this.document = data;
                 this.config = data.screens || {}; 
             } 
         } catch (e) { 
@@ -55,7 +56,11 @@ window.UISystem = class UISystem {
         if (window.UIRenderer) {
             window.UIRenderer.render(this.config[screenId], root, {
                 onClick: (action, e) => this.handleAction(action, e),
-                variables: this.game.player // For {hp} bindings
+                resolution: this.document?.resolution || { w: 800, h: 450 },
+                game: this.game,
+                player: this.game.player,
+                variables: this.game.player,
+                state: this.game.state || {}
             });
         }
 

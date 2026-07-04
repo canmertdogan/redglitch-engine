@@ -25,7 +25,7 @@ class PlatformerRenderer {
         this.spriteCache = {}; // name_state_frame -> Canvas
 
         // Parallax
-        this.parallax = window.ParallaxSystem ? new window.ParallaxSystem(this) : { addLayer: () => {}, render: () => {} };
+        this.parallax = window.ParallaxSystem ? new window.ParallaxSystem(this) : { addLayer: () => {}, clear: () => {}, render: () => {} };
 
         // Shake
         this.shakeAmount = 0;
@@ -386,8 +386,11 @@ class PlatformerRenderer {
         this.ctx.fillRect(0, 0, this.viewW, this.viewH);
         this.ctx.restore();
 
-        // 12. HUD
-        this.drawHUD(player);
+        // 12. HUD (handled by GameHUD DOM overlay)
+        if (window.game?.hud?.showDamageFlash && player._lastHp !== undefined && player.hp < player._lastHp) {
+            window.game.hud.showDamageFlash(0.3);
+        }
+        if (player) player._lastHp = player.hp;
     }
 
     drawDecorations(decorations, foregroundOnly = false) {
@@ -694,8 +697,9 @@ class PlatformerRenderer {
             this.ctx.scale(pos.dir, 1);
             this.ctx.fillStyle = glowColor;
             
-            if (window.game?.playerBody) {
-                this.ctx.drawImage(window.game.playerBody, -sw/2, -sh/2 + wobble, sw, sh);
+            const bodyImg = player.playerBody || window.game?.playerBody;
+            if (bodyImg) {
+                this.ctx.drawImage(bodyImg, -sw/2, -sh/2 + wobble, sw, sh);
             } else {
                 this.ctx.beginPath();
                 this.ctx.arc(0, wobble, sw/2, 0, Math.PI * 2);
@@ -709,8 +713,9 @@ class PlatformerRenderer {
         this.ctx.translate(player.x + player.w/2, player.y + player.h/2 + headWobble);
         this.ctx.scale(player.facingRight ? 1 : -1, 1);
         
-        if (window.game?.playerHead) {
-            this.ctx.drawImage(window.game.playerHead, -player.w/2, -player.h/2, player.w, player.h);
+        const headImg = player.playerHead || window.game?.playerHead;
+        if (headImg) {
+            this.ctx.drawImage(headImg, -player.w/2, -player.h/2, player.w, player.h);
         } else {
             this.ctx.fillStyle = glowColor;
             this.ctx.beginPath();
@@ -773,54 +778,6 @@ class PlatformerRenderer {
         this.ctx.restore();
     }
 
-    drawHUD(player) {
-        this.ctx.save();
-        
-        // HUD Container (Glassmorphism)
-        this.ctx.fillStyle = 'rgba(10, 10, 15, 0.7)';
-        this.ctx.strokeStyle = 'rgba(255, 30, 39, 0.4)';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.roundRect(20, 20, 240, 80, 8);
-        this.ctx.fill();
-        this.ctx.stroke();
-
-        this.ctx.font = '22px VT323, monospace';
-        
-        // Coins
-        const coinText = `COINS: ${player.coins || 0}`;
-        this.ctx.fillStyle = '#ffcc00';
-        this.ctx.shadowColor = 'rgba(255, 204, 0, 0.5)';
-        this.ctx.shadowBlur = 8;
-        this.ctx.fillText(coinText, 35, 45);
-
-        // HP Bar
-        const hpBarW = 180;
-        const hpBarH = 14;
-        const hpBarX = 35;
-        const hpBarY = 65;
-        
-        this.ctx.shadowBlur = 0;
-        this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        this.ctx.fillRect(hpBarX, hpBarY, hpBarW, hpBarH);
-        
-        const hpPercent = (player.hp || 100) / (player.maxHp || 100);
-        this.ctx.fillStyle = hpPercent > 0.5 ? '#ff1e27' : '#ff0055';
-        this.ctx.shadowColor = this.ctx.fillStyle;
-        this.ctx.shadowBlur = 10;
-        this.ctx.fillRect(hpBarX, hpBarY, hpBarW * hpPercent, hpBarH);
-        
-        this.ctx.shadowBlur = 0;
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(hpBarX, hpBarY, hpBarW, hpBarH);
-        
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '16px VT323, monospace';
-        this.ctx.fillText(`${Math.floor(player.hp || 100)} / ${player.maxHp || 100}`, hpBarX + hpBarW + 10, hpBarY + 12);
-        
-        this.ctx.restore();
-    }
 }
 
 window.PlatformerRenderer = PlatformerRenderer;

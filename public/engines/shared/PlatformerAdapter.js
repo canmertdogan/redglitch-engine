@@ -370,6 +370,23 @@ class PlatformerAdapter extends EngineAdapter {
     }
 
     /**
+     * Restart the current level (used by retry from game-over)
+     * @returns {Promise<void>}
+     */
+    async restart() {
+        if (!this.engine) return;
+        this.engine.isRunning = false;
+        this.engine.player.hp = this.engine.player.maxHp;
+        this.engine.player.coins = 0;
+        this.engine.levelComplete = false;
+        const levelId = this.engine.currentLevelId;
+        const path = `dunyalar/${levelId}.json`;
+        await this.engine.loadLevel(levelId, path).catch(() => this.engine.loadLevel(levelId));
+        this.engine.isRunning = true;
+        this.engine.loop();
+    }
+
+    /**
      * Trigger level completion manually
      */
     completeLevelManually() {

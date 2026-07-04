@@ -30,23 +30,17 @@ window.Core = class Core {
             console.log("Interactive Cutscene Engine initialized");
         } 
         
-        // Initialize Universal UI Runtime (HUD)
-        import('../shared/UIRuntime.js').then(m => {
-            this.uiRuntime = new m.UIRuntime();
-            // Container is usually body or a specific #game-container
-            this.uiRuntime.init(document.body);
-            this.uiRuntime.onAction((action) => {
-                // If the UI Designer button is mapped to an action
-                console.log('[HUD] Action Triggered:', action);
-            });
-            fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
-                if (data) {
-                    this.uiRuntime.load(data);
-                    this.uiRuntime.showScreen('main_hud');
-                    this.updateHUD(); // force sync
-                }
-            }).catch(e => console.log('No HUD config found'));
-        });
+        // Initialize GameHUD (DOM overlay)
+        this.gameHUD = new window.GameHUD();
+        this.gameHUD.init(document.getElementById('game-container') || document.body);
+        this.gameHUD.onAction = (cmd) => this._handleHUDAction(cmd);
+        fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
+            if (data) {
+                this.gameHUD.load(data);
+                this.gameHUD.showScreen('main_hud');
+                this.updateHUD();
+            }
+        }).catch(e => console.log('[HUD] No config found'));
         
         this.isRunning = false; this.isPaused = false;
         this.player = {
@@ -84,11 +78,6 @@ window.Core = class Core {
         
         this.revives = 5;
         this.respawns = 3;
-        this.uiBars = { 
-            hp: document.querySelector('.bar-fill.hp') || document.getElementById('hp_bar_fill'), 
-            stamina: document.querySelector('.bar-fill.stamina') || document.getElementById('stamina_bar_fill'), 
-            mana: document.querySelector('.bar-fill.mana') || document.getElementById('mana_bar_fill') 
-        };
         this.interactionHint = document.getElementById('interaction-hint');
         this.lastTime = performance.now();
         this.accumulator = 0;
@@ -149,11 +138,6 @@ window.Core = class Core {
     }
 
     refreshUI() {
-        this.uiBars = { 
-            hp: document.querySelector('.bar-fill.hp') || document.getElementById('hp_bar_fill'), 
-            stamina: document.querySelector('.bar-fill.stamina') || document.getElementById('stamina_bar_fill'), 
-            mana: document.querySelector('.bar-fill.mana') || document.getElementById('mana_bar_fill') 
-        };
     }
 
     log(msg, type = 'info') { const color = type === 'error' ? 'red' : (type === 'success' ? 'green' : 'white'); console.log(`%c[GAME] ${msg}`, `color: ${color}`); if (this.console && this.console.log) this.console.log(msg, type); }
@@ -164,9 +148,22 @@ window.Core = class Core {
         if (btnRespawn) btnRespawn.onclick = () => this.respawn();
         if (btnQuit) btnQuit.onclick = () => { document.getElementById('death-screen').classList.add('hidden'); window.menuSystem.switchScreen('mainMenu'); this.stop(); };
     }
-    die() { this.isRunning = false; const deathScreen = document.getElementById('death-screen'); if (deathScreen) { deathScreen.classList.remove('hidden'); document.getElementById('revive-count').innerText = this.revives; document.getElementById('respawn-count').innerText = this.respawns; document.getElementById('btn-revive').style.display = this.revives > 0 ? 'block' : 'none'; document.getElementById('btn-respawn').style.display = this.respawns > 0 ? 'block' : 'none'; } }
-    revive() { if (this.revives > 0) { this.revives--; this.player.hp = this.player.maxHp; this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
-    async respawn() { if (this.respawns > 0) { this.respawns--; this.inventory = []; this.updateInventoryHUD(); this.player.hp = this.player.maxHp; this.player.mana = this.player.maxMana; this.player.stamina = this.player.maxStamina; await this.loadLevel(this.currentLevelId || 'level1'); this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
+    die() { this.isRunning = false; const deathScreen = document.getElementById('death-screen'); if (this.gameHUD) { this.gameHUD.state._showGameOver = true; this.gameHUD.showScreen('gameover'); } if (deathScreen) { deathScreen.classList.remove('hidden'); document.getElementById('revive-count').innerText = this.revives; document.getElementById('respawn-count').innerText = this.respawns; document.getElementById('btn-revive').style.display = this.revives > 0 ? 'block' : 'none'; document.getElementById('btn-respawn').style.display = this.respawns > 0 ? 'block' : 'none'; } }
+    revive() { if (this.revives > 0) { this.revives--; this.player.hp = this.player.maxHp; this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); if (this.gameHUD) { this.gameHUD.state._showGameOver = false; this.gameHUD.showScreen('main_hud'); } this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
+    async respawn() { if (this.respawns > 0) { this.respawns--; this.inventory = []; this.updateInventoryHUD(); this.player.hp = this.player.maxHp; this.player.mana = this.player.maxMana; this.player.stamina = this.player.maxStamina; await this.loadLevel(this.currentLevelId || 'level1'); this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); if (this.gameHUD) { this.gameHUD.state._showGameOver = false; this.gameHUD.showScreen('main_hud'); } this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
+    _handleHUDAction(cmd) {
+        if (cmd === 'retryLevel') this.respawn();
+        if (cmd === 'quitToMenu') this._quitToMenu();
+        if (cmd === 'togglePause') this.menuSystem?.togglePause();
+    }
+    _quitToMenu() {
+        if (window.CAMPAIGN_RUNTIME_MODE && window.parent) {
+            window.parent.location.href = 'slot_selection.html';
+        } else {
+            this.isRunning = false;
+            if (this.gameHUD) this.gameHUD.hide();
+        }
+    }
     loadProfileData(data) { 
         let p = data;
         if (!p) {
@@ -323,10 +320,10 @@ window.Core = class Core {
             this.input.destroy();
         }
 
-        // Cleanup UIRuntime
-        if (this.uiRuntime) {
-            this.uiRuntime.destroy();
-            this.uiRuntime = null;
+        // Cleanup GameHUD
+        if (this.gameHUD) {
+            this.gameHUD.destroy();
+            this.gameHUD = null;
         }
 
         // Remove Resize Listener
@@ -699,17 +696,20 @@ window.Core = class Core {
         this.updateHUD();
     }
     updateHUD() { 
-        // Legacy HUD updates
-        if (this.player && this.uiBars) { if (this.uiBars.hp) this.uiBars.hp.style.width = `${(this.player.hp/this.player.maxHp)*100}%`; if (this.uiBars.stamina) this.uiBars.stamina.style.width = `${(this.player.stamina/this.player.maxStamina)*100}%`; if (this.uiBars.mana) this.uiBars.mana.style.width = `${(this.player.mana/this.player.maxMana)*100}%`; }
-        const hours = Math.floor(this.gameTime); const minutes = Math.floor((this.gameTime - hours) * 60); const clockEl = document.getElementById('game-clock') || document.getElementById('clock'); if (clockEl) { clockEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`; }
+        const gameTime = Number.isFinite(this.gameTime) ? this.gameTime : 0;
+        const hours = Math.floor(gameTime);
+        const minutes = Math.floor((gameTime - hours) * 60);
 
-        // New Universal HUD Sync
-        if (this.uiRuntime && this.player) {
-            this.uiRuntime.sync({
+        // GameHUD DOM overlay sync
+        if (this.gameHUD && this.player) {
+            this.gameHUD.sync({
                 player: {
                     hp: this.player.hp, maxHp: this.player.maxHp,
                     mana: this.player.mana, maxMana: this.player.maxMana,
-                    stamina: this.player.stamina, maxStamina: this.player.maxStamina
+                    stamina: this.player.stamina, maxStamina: this.player.maxStamina,
+                    coins: this.player.coins || 0,
+                    xp: this.player.xp || 0,
+                    level: this.player.level || 1
                 },
                 gameTimeFormatted: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
                 inventory: this.inventory || [],
@@ -753,7 +753,7 @@ window.Core = class Core {
             }
         });
         
-        if (this.uiRuntime) this.updateHUD();
+        if (this.gameHUD) this.updateHUD();
     }
 
     updateInventoryHUD() {
@@ -769,7 +769,7 @@ window.Core = class Core {
             }
         });
         
-        if (this.uiRuntime) this.updateHUD();
+        if (this.gameHUD) this.updateHUD();
     }
     draw(alpha) {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); 

@@ -190,7 +190,7 @@
             top: 50%; transform: translateY(-50%);
         }
 
-        /* Health / ammo bars (FPS / Platformer HUD) */
+        /* HUD bottom-left — FPS stats (HUD_FPS dynamically updates these) */
         #hud-bottom-left {
             position: absolute;
             bottom: 20px; left: 20px;
@@ -224,18 +224,7 @@
         }
 
         /* Platformer HUD — lives + coins */
-        #hud-top-right {
-            position: absolute;
-            top: 16px; right: 16px;
-            display: flex;
-            gap: 24px;
-            font-size: 26px;
-            color: #e74c3c;
-            letter-spacing: 2px;
-        }
-        #hud-top-right.hidden { display: none; }
-
-        /* ── Pointer-lock overlay (click to capture mouse — FPS) ── */
+        /* Platformer HUD removed — migrated to GameHUD */
         #pointer-lock-overlay {
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.65);
@@ -359,11 +348,6 @@
                     <span id="hud-ammo-text">30/90</span>
                 </div>
             </div>
-            <div id="hud-top-right" class="hidden">
-                <span id="hud-lives">♥ 3</span>
-                <span id="hud-coins">★ 0</span>
-                <span id="hud-score">SCORE: 0</span>
-            </div>
         </div>
 
         <!-- Click-to-capture pointer-lock overlay -->
@@ -388,6 +372,9 @@
     <!-- Error banner -->
     <div id="error-banner" class="hidden"></div>
 
+    <!-- Shared GameHUD (loaded before module scripts) -->
+    <script src="../shared/GameHUD.js"></script>
+
     <!-- Engine bootstrap (ES module) -->
     <script type="module">
         import Unified3DGame from './Unified3DGame.js';
@@ -406,10 +393,7 @@
         const gameoverOverlay     = document.getElementById('gameover-overlay');
         const errorBanner         = document.getElementById('error-banner');
         const hudProject          = document.getElementById('hud-project');
-        const hudHealthFill       = document.getElementById('hud-health-fill');
-        const hudAmmoText         = document.getElementById('hud-ammo-text');
         const crosshair           = document.getElementById('crosshair');
-        const hudTopRight         = document.getElementById('hud-top-right');
 
         // ── Mode display names ────────────────────────────────────────────
         const MODE_NAMES = {
@@ -432,13 +416,8 @@
 
         function showModeHUD(engineType) {
             const isFPS  = engineType === 'fps-3d';
-            const isPlat = engineType === 'platformer-3d';
-            // FPS: show crosshair + ammo, hide lives/coins
             crosshair.style.display    = isFPS ? 'block' : 'none';
-            hudAmmoText.style.display  = isFPS ? '' : 'none';
             gameContainer.style.cursor = isFPS ? 'none' : '';
-            // Platformer: show lives/coins/score
-            hudTopRight.classList.toggle('hidden', !isPlat);
         }
 
         // ── URL params ────────────────────────────────────────────────────

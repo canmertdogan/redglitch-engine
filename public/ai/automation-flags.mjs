@@ -22,4 +22,4 @@ export function getAutomationFlags(storage = globalThis.localStorage) {
     }
 }
 
-export { DEFAULTS as AUTOMATION_FLAG_DEFAULTS };
+

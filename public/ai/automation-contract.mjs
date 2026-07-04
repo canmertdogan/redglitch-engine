@@ -1,4 +1,4 @@
-export const KAP_VERSION = '1.0';
+const KAP_VERSION = '1.0';
 
 export const ACTION_STATUS = Object.freeze({
     PLANNED: 'planned',

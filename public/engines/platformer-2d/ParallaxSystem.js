@@ -16,6 +16,10 @@ class ParallaxSystem {
      * @param {number} scrollSpeedY - Scroll speed relative to camera
      * @param {number} opacity - Layer opacity
      */
+    clear() {
+        this.layers = [];
+    }
+
     addLayer(image, scrollSpeedX = 0.5, scrollSpeedY = 0.5, opacity = 1.0) {
         this.layers.push({
             image,

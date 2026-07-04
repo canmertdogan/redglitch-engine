@@ -160,6 +160,10 @@ IRAB: "GRRR... Opening Platformer Studio!
         if stop is None:
             stop = ["<|im_end|>", "<|im_start|>", "User:"]
 
+        if not self.llm:
+            yield "Error: KAI Kernel (Model) is not loaded or failed to initialize. Please check the backend logs."
+            return
+
         try:
             stream = self.llm(
                 full_prompt,

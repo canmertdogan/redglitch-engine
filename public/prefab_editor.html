@@ -2,217 +2,463 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>redglitch PREFAB CONSTRUCTOR</title>
-    <link href="fonts/fonts.css" rel="stylesheet">
-    <link rel="stylesheet" href="pixel_scrollbars.css">
+    <title>RedGlitch — Prefab Builder v5</title>
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="pixel_scrollbars.css">
     <style>
         :root {
-            --bg-root: #050505;
-            --bg-panel: #0a0a0f;
-            --bg-header: #000000;
-            --bg-canvas: #080808;
-            --bg-input: #000000;
-            --border: #333;
-            --accent: #ff0000;
-            --text-main: #e0e0e0;
-            --text-muted: #888;
+            --bg-base:   #1e1e1e;
+            --bg-panel:  #2d2d2d;
+            --bg-well:   #1a1a1a;
+            --bg-item:   #3a3a3a;
+            --bg-sel:    #4a3000;
+            --accent:    #ff6600;
+            --green:     #33cc66;
+            --red:       #cc3333;
+            --yellow:    #ccaa00;
+            --text:      #cccccc;
+            --text-dim:  #888888;
+            --text-lbl:  #aaaaaa;
+            --bhi:       #555555;
+            --blo:       #111111;
+            --bmid:      #3f3f3f;
         }
+        *{box-sizing:border-box;margin:0;padding:0;outline:none;}
+        body{background:var(--bg-base);color:var(--text);font-family:'Tahoma','Arial',sans-serif;font-size:11px;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none;}
 
-        * { box-sizing: border-box; outline: none; }
-        
-        body {
-            margin: 0; padding: 0; background-color: var(--bg-root); color: var(--text-main);
-            font-family: 'VT323', monospace; height: 100vh; display: flex; flex-direction: column;
-            overflow: hidden;  font-size: 18px;
-            image-rendering: pixelated;
-        }
+        /* ── BEVEL ── */
+        .bevel-out{border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);}
 
-        /* --- MENUBAR --- */
-        #menubar {
-            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
-            font-size: 1.1rem; border-bottom: 1px solid var(--border);
-            z-index: 3000; flex-shrink: 0;
-        }
-        .menu-item { padding: 0 15px; cursor: pointer; color: #888; text-transform: uppercase; height: 100%; display: flex; align-items: center; }
-        .menu-item:hover { background: var(--accent); color: #000; }
+        /* ── MENUBAR ── */
+        #menubar{height:22px;background:var(--bg-panel);display:flex;align-items:center;padding:0 8px;border-bottom:1px solid var(--blo);flex-shrink:0;gap:2px;position:relative;z-index:300;}
+        #menubar .brand{color:var(--accent);font-weight:bold;font-size:12px;letter-spacing:1px;margin-right:14px;}
+        .menu-item{padding:2px 10px;cursor:pointer;color:var(--text);position:relative;}
+        .menu-item:hover,.menu-item.open{background:var(--accent);color:#000;}
 
-        /* --- TOOLBAR --- */
-        #toolbar {
-            height: 44px; background: #000; border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; padding: 0 10px; gap: 8px; flex-shrink: 0;
+        /* Dropdown menus */
+        .menu-dropdown-content{
+            display:none;position:absolute;top:100%;left:0;
+            background:var(--bg-panel);
+            border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);
+            min-width:160px;z-index:9999;
+            box-shadow:3px 3px 6px rgba(0,0,0,0.6);
         }
-        .tool-btn {
-            background: #111; border: 1px solid #444; color: #aaa;
-            width: 32px; height: 32px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-            font-size: 1rem; border-radius: 3px;
-        }
-        .tool-btn:hover { background: #222; border-color: var(--accent); color: var(--accent); }
-        .tool-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
-        .tool-sep { width: 1px; height: 20px; background: #333; margin: 0 5px; }
+        .menu-dropdown-content.open{display:block;}
+        .menu-dd-item{padding:4px 16px;font-size:11px;cursor:pointer;color:var(--text);white-space:nowrap;display:flex;align-items:center;gap:8px;}
+        .menu-dd-item:hover{background:var(--accent);color:#000;}
+        .menu-dd-item .shortcut{margin-left:auto;color:var(--text-dim);font-size:10px;}
+        .menu-dd-item:hover .shortcut{color:#000;}
+        .menu-dd-sep{height:1px;background:var(--blo);margin:2px 0;box-shadow:0 1px 0 var(--bhi);}
+        .menu-dd-danger:hover{background:var(--red) !important;}
 
-        input[type="text"], input[type="number"], select {
-            background: #000; border: 1px solid #444; color: var(--accent);
-            padding: 4px 8px; font-family: inherit; font-size: 1rem; outline: none; flex-grow: 1;
-        }
-        input:focus { border-color: var(--accent); }
+        /* ── TOOLBAR ── */
+        #toolbar{height:34px;background:var(--bg-panel);border-bottom:2px solid;border-color:var(--blo) var(--blo) var(--bhi) var(--blo);display:flex;align-items:center;padding:0 6px;gap:3px;flex-shrink:0;}
+        .tb-sep{width:1px;height:22px;background:var(--blo);margin:0 3px;box-shadow:1px 0 0 var(--bhi);}
+        .tb-btn{width:26px;height:26px;background:var(--bg-item);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);color:var(--text);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+        .tb-btn:hover{color:var(--accent);border-color:var(--accent) var(--blo) var(--blo) var(--accent);}
+        .tb-btn:active,.tb-btn.active,.tb-btn.accent-active{border-color:var(--blo) var(--bhi) var(--bhi) var(--blo);background:var(--bg-well);color:var(--accent);}
+        .tb-btn.accent-active{color:var(--accent);}
+        #prefab-name-input{width:180px;height:22px;background:var(--bg-well);border:1px solid;border-color:var(--blo) var(--bhi) var(--bhi) var(--blo);color:var(--accent);font-family:'Courier New',monospace;font-size:12px;padding:0 6px;}
+        .tb-label{color:var(--text-dim);font-size:10px;white-space:nowrap;}
+        #grid-size-input{width:36px;height:22px;background:var(--bg-well);border:1px solid;border-color:var(--blo) var(--bhi) var(--bhi) var(--blo);color:var(--text);font-family:'Courier New',monospace;font-size:11px;text-align:center;}
 
-        /* --- LAYOUT --- */
-        #layout { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+        /* ── LAYOUT ── */
+        #layout{flex-grow:1;display:flex;overflow:hidden;}
 
-        /* --- PANELS --- */
-        .panel { display: flex; flex-direction: column; background: var(--bg-panel); border-right: 1px solid var(--border); }
-        .panel-header {
-            height: 32px; background: #000; display: flex; align-items: center; padding: 0 10px;
-            font-weight: bold; color: var(--accent); border-bottom: 1px solid var(--border); 
-            text-transform: uppercase; font-size: 1rem; cursor: pointer;
-            justify-content: space-between; letter-spacing: 1px; flex-shrink: 0;
-        }
-        .panel-content { flex-grow: 1; overflow-y: auto; padding: 0; }
+        /* ── LEFT PANEL ── */
+        #left-panel{width:240px;min-width:170px;background:var(--bg-panel);border-right:2px solid;border-color:var(--blo) var(--bhi) var(--blo) var(--blo);display:flex;flex-direction:column;flex-shrink:0;}
+        .p-header{background:var(--bg-well);padding:4px 8px;font-size:10px;letter-spacing:1px;color:var(--accent);font-weight:bold;border-bottom:1px solid var(--blo);border-top:1px solid var(--bhi);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+        .p-hbtns{display:flex;gap:2px;}
+        .p-hbtn{width:18px;height:16px;background:var(--bg-item);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);color:var(--text-dim);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+        .p-hbtn:hover{color:var(--accent);}
+        .p-hbtn.danger:hover{color:var(--red);}
+        #prefab-library{flex:0 0 30%;overflow-y:auto;border-bottom:2px solid;border-color:var(--blo) var(--blo) var(--bhi) var(--blo);}
+        .lib-item{padding:4px 8px;display:flex;align-items:center;gap:5px;cursor:pointer;border-bottom:1px solid var(--blo);font-size:11px;}
+        .lib-item:hover{background:var(--bg-item);}
+        .lib-item.active{background:var(--bg-sel);color:var(--accent);}
+        #modifier-stack-wrap{flex:1 1 auto;display:flex;flex-direction:column;overflow:hidden;}
+        #modifier-stack{flex-grow:1;overflow-y:auto;padding:3px;display:flex;flex-direction:column;gap:2px;}
+        .mod-item{display:flex;align-items:center;background:var(--bg-item);border:1px solid var(--blo);padding:3px 5px;cursor:pointer;gap:4px;min-height:24px;}
+        .mod-item:hover{border-color:var(--bmid);}
+        .mod-item.selected{background:var(--bg-sel);border-color:var(--accent);color:var(--accent);}
+        .mod-item.hidden-comp{opacity:0.38;}
+        .mod-item.drag-over{border-top:2px solid var(--accent);}
+        .mod-icon{font-size:11px;width:14px;flex-shrink:0;}
+        .mod-name{flex-grow:1;font-size:11px;}
+        .mod-btns{display:flex;gap:1px;margin-left:auto;}
+        .mod-btn{width:16px;height:16px;font-size:9px;background:transparent;border:none;cursor:pointer;color:var(--text-dim);display:flex;align-items:center;justify-content:center;}
+        .mod-btn:hover{color:var(--text);}
+        .mod-btn.del:hover{color:var(--red);}
+        #add-comp-section{flex-shrink:0;}
+        #comp-filter{width:100%;height:22px;background:var(--bg-well);border:none;border-bottom:1px solid var(--blo);color:var(--text);font-family:'Tahoma',sans-serif;font-size:11px;padding:0 8px;}
+        #comp-filter::placeholder{color:var(--text-dim);}
+        #add-comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:4px;}
+        .add-comp-btn{background:var(--bg-item);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);color:var(--text-dim);font-size:10px;padding:5px 4px;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:'Tahoma',sans-serif;}
+        .add-comp-btn:hover{background:var(--bg-sel);color:var(--accent);border-color:var(--accent) var(--blo) var(--blo) var(--accent);}
+        .add-comp-btn.disabled{opacity:0.28;cursor:not-allowed;}
+        .add-comp-btn.disabled:hover{background:var(--bg-item);color:var(--text-dim);border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);}
+        .add-comp-btn i{font-size:11px;width:13px;text-align:center;}
 
-        /* --- SIDEBAR (COMPONENTS) --- */
-        #sidebar { width: 280px; border-right: 1px solid var(--border); }
-        
-        .comp-item {
-            padding: 8px 15px; cursor: pointer; color: #888; border-bottom: 1px solid #1a1a1a;
-            display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem;
-        }
-        .comp-item:hover { background: #111; color: #fff; }
-        .comp-item i { width: 20px; text-align: center; }
+        /* ── VIEWPORT ── */
+        #viewport{flex-grow:1;position:relative;overflow:hidden;}
+        #editor-canvas{display:block;image-rendering:pixelated;cursor:crosshair;}
+        #viewport-hud{position:absolute;top:8px;left:8px;font-family:'Courier New',monospace;font-size:11px;color:var(--accent);pointer-events:none;text-shadow:1px 1px 0 #000;line-height:1.7;}
+        #viewport-hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.85);border:1px solid var(--bmid);padding:4px 12px;font-size:10px;color:var(--text-dim);display:flex;gap:14px;pointer-events:none;}
+        #ctx-menu{position:fixed;background:var(--bg-panel);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);z-index:9999;display:none;min-width:150px;box-shadow:3px 3px 6px rgba(0,0,0,0.5);}
+        .ctx-item{padding:4px 16px;font-size:11px;cursor:pointer;color:var(--text);border-bottom:1px solid var(--blo);display:flex;align-items:center;gap:8px;}
+        .ctx-item:hover{background:var(--accent);color:#000;}
+        .ctx-sep{height:1px;background:var(--blo);margin:2px 0;box-shadow:0 1px 0 var(--bhi);}
 
-        /* --- HIERARCHY --- */
-        .active-comp {
-            padding: 8px 10px; background: #111; border-bottom: 1px solid #222;
-            cursor: pointer;
-        }
-        .active-comp.selected { border-left: 3px solid var(--accent); background: #1a1a1a; }
-        .active-comp-header { display: flex; justify-content: space-between; align-items: center; color: #ccc; }
-        .active-comp.selected .active-comp-header { color: var(--accent); }
+        /* ── RIGHT PANEL ── */
+        #right-panel{width:295px;min-width:200px;background:var(--bg-panel);border-left:2px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);display:flex;flex-direction:column;flex-shrink:0;}
+        #inspector-content{flex-grow:1;overflow-y:auto;padding:7px;display:flex;flex-direction:column;gap:5px;}
+        #inspector-content.hidden{display:none;}
+        .insp-group{background:var(--bg-well);border:1px solid var(--blo);}
+        .insp-group-title{background:var(--bg-item);padding:3px 8px;font-size:10px;letter-spacing:1px;color:var(--accent);border-bottom:1px solid var(--blo);display:flex;align-items:center;gap:6px;}
+        .insp-fields{padding:7px;display:flex;flex-direction:column;gap:5px;}
+        .field-row{display:flex;align-items:center;gap:5px;}
+        .field-label{width:38%;color:var(--text-lbl);font-size:10px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        .field-control{flex-grow:1;display:flex;align-items:center;gap:2px;}
+        .f-input{width:100%;background:var(--bg-well);border:1px solid;border-color:var(--blo) var(--bhi) var(--bhi) var(--blo);color:var(--accent);font-family:'Courier New',monospace;font-size:11px;padding:2px 5px;height:20px;}
+        .f-input:focus{border-color:var(--accent);}
+        select.f-input{cursor:pointer;color:var(--text);background:var(--bg-well);font-family:'Tahoma',sans-serif;font-size:10px;}
+        .f-spin{width:16px;height:20px;background:var(--bg-item);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);color:var(--text-dim);font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+        .f-spin:hover{color:var(--accent);}
+        .f-check{width:16px;height:16px;appearance:none;background:var(--bg-well);border:1px solid;border-color:var(--blo) var(--bhi) var(--bhi) var(--blo);cursor:pointer;position:relative;flex-shrink:0;}
+        .f-check:checked{background:var(--accent);}
+        .f-check:checked::after{content:'✓';position:absolute;color:#000;font-size:11px;top:50%;left:50%;transform:translate(-50%,-50%);}
+        .f-color-swatch{width:30px;height:20px;border:1px solid var(--blo);cursor:pointer;flex-shrink:0;}
+        .f-color-hidden{position:absolute;opacity:0;width:0;height:0;}
+        .f-action-btn{width:100%;background:var(--bg-item);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);color:var(--text-lbl);font-size:10px;padding:4px 6px;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:'Tahoma',sans-serif;}
+        .f-action-btn:hover{color:var(--accent);}
 
-        /* --- CENTER (CANVAS) --- */
-        #center-panel { 
-            flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-canvas);
-            position: relative;
-        }
-        #canvas-wrapper {
-            flex-grow: 1; overflow: hidden; display: flex; justify-content: center; align-items: center;
-            background-image: radial-gradient(#222 1px, transparent 1px); background-size: 20px 20px;
-        }
-        canvas { box-shadow: 0 0 30px #000; }
-        
-        /* --- INSPECTOR --- */
-        #inspector { width: 320px; border-left: 1px solid var(--border); border-right: none; }
-        
-        .inspector-group { margin-bottom: 10px; border-bottom: 1px solid #222; }
-        .inspector-label { 
-            padding: 5px 10px; background: #000; color: #666; font-size: 0.9rem; text-transform: uppercase;
-        }
-        .inspector-fields { padding: 10px; }
-        
-        .field-row { display: flex; align-items: center; margin-bottom: 5px; gap: 10px; }
-        .field-name { width: 40%; color: #aaa; font-size: 1rem; }
-        .field-input-wrap { flex-grow: 1; }
-        .f-val { width: 100%; }
+        /* Tag chips */
+        .tag-chips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px;}
+        .tag-chip{background:var(--bg-item);border:1px solid var(--bmid);padding:2px 5px;font-size:9px;display:flex;align-items:center;gap:3px;color:var(--text-lbl);}
+        .tag-chip-del{cursor:pointer;opacity:0.5;font-size:8px;}
+        .tag-chip-del:hover{opacity:1;color:var(--red);}
 
-        /* --- MODAL --- */
-        #file-browser {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 5000; display: none;
-            align-items: center; justify-content: center;
-        }
-        .modal-box {
-            width: 500px; height: 400px; background: var(--bg-panel); border: 1px solid var(--accent);
-            display: flex; flex-direction: column;
-        }
+        /* HP bar */
+        .hp-bar-canvas{width:100%;image-rendering:pixelated;display:block;}
 
+        /* JSON panel */
+        #json-panel{flex-grow:1;display:none;flex-direction:column;}
+        #json-panel.visible{display:flex;}
+        #json-textarea{flex-grow:1;background:#0d0d0d;color:#33ff66;font-family:'Courier New',monospace;font-size:11px;border:none;padding:8px;resize:none;tab-size:2;}
+        #json-apply-btn{background:var(--bg-item);border-top:1px solid var(--bhi);padding:6px;text-align:center;cursor:pointer;font-size:11px;color:var(--accent);}
+        #json-apply-btn:hover{background:var(--bg-sel);}
+
+        /* ── STATUS BAR ── */
+        #statusbar{height:20px;background:var(--bg-well);border-top:1px solid var(--bhi);display:flex;align-items:center;padding:0 8px;gap:14px;flex-shrink:0;font-family:'Courier New',monospace;font-size:10px;color:var(--text-dim);}
+        #statusbar .s-item{display:flex;align-items:center;gap:3px;}
+        #statusbar .s-item span{color:var(--text);}
+        #status-dirty{color:var(--red) !important;display:none;}
+        #status-dirty-lbl{display:none;color:var(--red);}
+        #status-msg{margin-left:auto;color:var(--accent);}
+
+        /* ── TOAST ── */
+        #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-panel);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);padding:7px 20px;font-family:'Courier New',monospace;font-size:12px;color:var(--accent);opacity:0;transition:opacity 0.25s,transform 0.25s;z-index:8000;pointer-events:none;box-shadow:3px 3px 6px rgba(0,0,0,0.6);}
+        #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+        #toast.error{color:var(--red);}
+
+        /* ── MODALS ── */
+        .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:5000;display:none;align-items:center;justify-content:center;}
+        .modal-overlay.open{display:flex;}
+        .modal-box{background:var(--bg-panel);border:2px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);min-width:380px;max-width:720px;max-height:82vh;display:flex;flex-direction:column;box-shadow:6px 6px 0 rgba(0,0,0,0.6);}
+        .modal-header{background:var(--bg-well);padding:6px 12px;font-size:11px;font-weight:bold;color:var(--accent);letter-spacing:1px;border-bottom:1px solid var(--blo);display:flex;align-items:center;justify-content:space-between;}
+        .modal-close{width:18px;height:18px;background:var(--bg-item);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);color:var(--text-dim);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+        .modal-close:hover{color:var(--red);}
+        .modal-body{flex-grow:1;overflow-y:auto;padding:12px;}
+        .modal-footer{padding:6px 12px;border-top:1px solid var(--blo);display:flex;justify-content:flex-end;gap:6px;align-items:center;}
+        .modal-btn{background:var(--bg-item);border:1px solid;border-color:var(--bhi) var(--blo) var(--blo) var(--bhi);color:var(--text);font-size:11px;padding:4px 14px;cursor:pointer;font-family:'Tahoma',sans-serif;}
+        .modal-btn:hover{color:var(--accent);}
+        .modal-btn.primary{color:var(--accent);}
+        .modal-btn.danger:hover{color:var(--red);}
+        .modal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:7px;}
+        .modal-card{background:var(--bg-item);border:1px solid var(--blo);padding:10px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;}
+        .modal-card:hover{border-color:var(--accent);background:var(--bg-sel);}
+        .modal-card i{font-size:18px;color:var(--accent);}
+        .modal-card .mc-label{font-size:10px;color:var(--text);word-break:break-all;}
+        .modal-card canvas{image-rendering:pixelated;}
+        .modal-input{width:100%;height:26px;background:var(--bg-well);border:1px solid;border-color:var(--blo) var(--bhi) var(--bhi) var(--blo);color:var(--accent);font-family:'Courier New',monospace;font-size:13px;padding:0 8px;}
+        .modal-input:focus{border-color:var(--accent);}
+        .m-empty{text-align:center;color:var(--text-dim);padding:28px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+        .m-empty i{font-size:28px;}
+
+        /* Help modal table */
+        .help-table{width:100%;border-collapse:collapse;font-size:11px;}
+        .help-table th{background:var(--bg-item);color:var(--accent);padding:4px 10px;text-align:left;border-bottom:1px solid var(--blo);font-size:10px;letter-spacing:1px;}
+        .help-table td{padding:4px 10px;border-bottom:1px solid var(--blo);color:var(--text);}
+        .help-table tr:hover td{background:var(--bg-item);}
+        .help-table .key{font-family:'Courier New',monospace;color:var(--accent);background:var(--bg-item);border:1px solid var(--bmid);padding:1px 5px;font-size:10px;}
+        .help-section{color:var(--accent);font-size:10px;letter-spacing:1px;padding:8px 10px 3px;background:var(--bg-well);border-bottom:1px solid var(--blo);}
     </style>
 </head>
 <body>
 
-    <!-- MENUBAR -->
-    <div id="menubar">
-        <div style="color:var(--accent); font-weight:bold; margin-right:20px; letter-spacing:2px;">
-            <i class="fas fa-cube"></i> PREFAB CONSTRUCTOR
-        </div>
-        <div class="menu-item" onclick="editor.showLoadDialog()">File</div>
-        <div class="menu-item">View</div>
-        <div class="menu-item">Help</div>
-    </div>
+<!-- MENU BAR -->
+<div id="menubar">
+    <div class="brand"><i class="fas fa-cubes"></i> PREFAB STUDIO</div>
 
-    <!-- TOOLBAR -->
-    <div id="toolbar">
-        <button class="tool-btn" title="Save" onclick="editor.save()"><i class="fas fa-save"></i></button>
-        <button class="tool-btn" title="Load" onclick="editor.showLoadDialog()"><i class="fas fa-folder-open"></i></button>
-        <div class="tool-sep"></div>
-        <button class="tool-btn" title="New" onclick="editor.createNew()"><i class="fas fa-file"></i></button>
-        <div class="tool-sep"></div>
-        <input type="text" id="prefab-name" placeholder="Entity_Name" style="max-width: 200px;">
-        <div style="flex-grow:1"></div>
-        <div id="status-msg" style="color:var(--accent); margin-right:10px; font-size:0.9rem;">READY</div>
-    </div>
-
-    <!-- LAYOUT -->
-    <div id="layout">
-        
-        <!-- LEFT: HIERARCHY & LIBRARY -->
-        <div id="sidebar" class="panel">
-            
-            <div class="panel-header">HIERARCHY <i class="fas fa-layer-group"></i></div>
-            <div class="panel-content" id="hierarchy-list" style="height: 50%; border-bottom: 1px solid var(--border);">
-                <!-- Active Components -->
-            </div>
-
-            <div class="panel-header" style="border-top:1px solid var(--border);">ADD COMPONENT <i class="fas fa-plus"></i></div>
-            <div class="panel-content">
-                <div class="comp-item" onclick="editor.addComponent('Transform')"><span><i class="fas fa-arrows-alt"></i> TRANSFORM</span></div>
-                <div class="comp-item" onclick="editor.addComponent('Stats')"><span><i class="fas fa-heart"></i> STATS</span></div>
-                <div class="comp-item" onclick="editor.addComponent('Collider')"><span><i class="fas fa-vector-square"></i> COLLIDER</span></div>
-                <div class="comp-item" onclick="editor.addComponent('Script')"><span><i class="fas fa-code"></i> SCRIPT</span></div>
-                <div class="comp-item" onclick="editor.addComponent('Light')"><span><i class="fas fa-sun"></i> LIGHT</span></div>
-                <div class="comp-item" onclick="editor.addComponent('Loot')"><span><i class="fas fa-coins"></i> LOOT</span></div>
-                <div class="comp-item" onclick="editor.addComponent('Particle')"><span><i class="fas fa-atom"></i> PARTICLE</span></div>
-                <div class="comp-item" onclick="editor.addComponent('Prefab')"><span><i class="fas fa-cubes"></i> PREFAB</span></div>
-            </div>
-        </div>
-
-        <!-- CENTER: VIEWPORT -->
-        <div id="center-panel">
-            <div id="canvas-wrapper">
-                <canvas id="editor-canvas" width="600" height="600"></canvas>
-            </div>
-            <div class="viewport-overlay" style="position:absolute; bottom:5px; left:10px; color:#666; font-size:0.8rem; pointer-events:none;">
-                [SCROLL] ZOOM | [ALT+DRAG] PAN
-            </div>
-        </div>
-
-        <!-- RIGHT: INSPECTOR -->
-        <div id="inspector" class="panel">
-            <div class="panel-header">PROPERTIES <i class="fas fa-sliders-h"></i></div>
-            <div id="inspector-content" class="panel-content">
-                <div style="text-align:center; margin-top:50px; color:#444;">SELECT COMPONENT</div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- LOAD DIALOG -->
-    <div id="file-browser">
-        <div class="modal-box">
-            <div class="panel-header">
-                <span>OPEN PREFAB</span>
-                <i class="fas fa-times" onclick="editor.hideLoadDialog()" style="cursor:pointer;"></i>
-            </div>
-            <div class="panel-content" id="file-list">
-                <!-- File list -->
-            </div>
+    <div class="menu-item" onclick="editor.menuFile(this)">File
+        <div class="menu-dropdown-content" id="dd-file">
+            <div class="menu-dd-item" onclick="editor.newPrefab()"><i class="fas fa-file"></i>New Prefab<span class="shortcut">Ctrl+N</span></div>
+            <div class="menu-dd-item" onclick="editor.openLoadModal()"><i class="fas fa-folder-open"></i>Open from Disk…</div>
+            <div class="menu-dd-sep"></div>
+            <div class="menu-dd-item" onclick="editor.save()"><i class="fas fa-save"></i>Save<span class="shortcut">Ctrl+S</span></div>
+            <div class="menu-dd-item" onclick="editor.exportToClipboard()"><i class="fas fa-clipboard"></i>Copy JSON</div>
+            <div class="menu-dd-sep"></div>
+            <div class="menu-dd-item" onclick="editor.duplicatePrefab()"><i class="fas fa-clone"></i>Duplicate<span class="shortcut">Ctrl+D</span></div>
+            <div class="menu-dd-item menu-dd-danger" onclick="editor.deletePrefab()"><i class="fas fa-trash-alt"></i>Remove from Session</div>
         </div>
     </div>
 
-    <!-- Integration System -->
-    <script src="/shared/EventBus.js"></script>
-    <script src="/shared/SharedProjectState.js"></script>
-    <script src="/shared/AssetManager.js"></script>
+    <div class="menu-item" onclick="editor.menuEdit(this)">Edit
+        <div class="menu-dropdown-content" id="dd-edit">
+            <div class="menu-dd-item" onclick="editor.undo()"><i class="fas fa-undo"></i>Undo<span class="shortcut">Ctrl+Z</span></div>
+            <div class="menu-dd-item" onclick="editor.redo()"><i class="fas fa-redo"></i>Redo<span class="shortcut">Ctrl+Y</span></div>
+            <div class="menu-dd-sep"></div>
+            <div class="menu-dd-item" onclick="editor.copyComponent()"><i class="fas fa-copy"></i>Copy Component<span class="shortcut">C</span></div>
+            <div class="menu-dd-item" onclick="editor.pasteComponent()"><i class="fas fa-paste"></i>Paste Component<span class="shortcut">V</span></div>
+        </div>
+    </div>
 
-    <script src="prefab_editor.js"></script>
+    <div class="menu-item" onclick="editor.menuView(this)">View
+        <div class="menu-dropdown-content" id="dd-view">
+            <div class="menu-dd-item" onclick="editor.toggleGrid()"><i class="fas fa-th"></i>Toggle Grid<span class="shortcut">G</span></div>
+            <div class="menu-dd-item" onclick="editor.toggleSnap()"><i class="fas fa-magnet"></i>Toggle Snap</div>
+            <div class="menu-dd-sep"></div>
+            <div class="menu-dd-item" onclick="editor.resetView()"><i class="fas fa-compress-arrows-alt"></i>Reset View<span class="shortcut">F</span></div>
+            <div class="menu-dd-item" onclick="editor.centerOrigin()"><i class="fas fa-crosshairs"></i>Center Origin</div>
+            <div class="menu-dd-sep"></div>
+            <div class="menu-dd-item" onclick="editor.toggleJsonMode()"><i class="fas fa-code"></i>Toggle JSON Mode</div>
+        </div>
+    </div>
+
+    <div class="menu-item" onclick="editor.menuTemplate(this)">Templates
+        <div class="menu-dropdown-content" id="dd-template">
+            <div class="menu-dd-item" onclick="editor.applyTemplate('Player')"><i class="fas fa-user-ninja"></i>Player</div>
+            <div class="menu-dd-item" onclick="editor.applyTemplate('Enemy')"><i class="fas fa-skull"></i>Enemy</div>
+            <div class="menu-dd-item" onclick="editor.applyTemplate('Chest')"><i class="fas fa-box"></i>Chest</div>
+            <div class="menu-dd-item" onclick="editor.applyTemplate('Torch')"><i class="fas fa-fire"></i>Torch</div>
+            <div class="menu-dd-item" onclick="editor.applyTemplate('Static Prop')"><i class="fas fa-cube"></i>Static Prop</div>
+        </div>
+    </div>
+
+    <div class="menu-item" onclick="editor.showHelp()">Help</div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+    <button class="tb-btn" title="New (Ctrl+N)" onclick="editor.newPrefab()"><i class="fas fa-file"></i></button>
+    <button class="tb-btn" title="Open" onclick="editor.openLoadModal()"><i class="fas fa-folder-open"></i></button>
+    <button class="tb-btn" title="Save (Ctrl+S)" onclick="editor.save()"><i class="fas fa-save"></i></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" title="Undo (Ctrl+Z)" id="btn-undo" onclick="editor.undo()"><i class="fas fa-undo"></i></button>
+    <button class="tb-btn" title="Redo (Ctrl+Y)" id="btn-redo" onclick="editor.redo()"><i class="fas fa-redo"></i></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" title="Duplicate (Ctrl+D)" onclick="editor.duplicatePrefab()"><i class="fas fa-clone"></i></button>
+    <button class="tb-btn" title="Delete Prefab" onclick="editor.deletePrefab()" style="color:#cc5555"><i class="fas fa-trash-alt"></i></button>
+    <div class="tb-sep"></div>
+    <span class="tb-label">NAME:</span>
+    <input type="text" id="prefab-name-input" placeholder="prefab_name" />
+    <div class="tb-sep"></div>
+    <button class="tb-btn" title="Select Mode" id="btn-mode-sel" onclick="editor.setMode('select')"><i class="fas fa-mouse-pointer"></i></button>
+    <button class="tb-btn" title="Translate/Resize Mode (Tab)" id="btn-mode-tr" onclick="editor.setMode('translate')"><i class="fas fa-arrows-alt"></i></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" title="Toggle Grid (G)" id="btn-grid" onclick="editor.toggleGrid()"><i class="fas fa-th"></i></button>
+    <button class="tb-btn" title="Snap to Grid" id="btn-snap" onclick="editor.toggleSnap()"><i class="fas fa-magnet"></i></button>
+    <span class="tb-label">GRID:</span>
+    <input type="number" id="grid-size-input" value="16" min="1" max="256" onchange="editor.setGridSize(this.value)" />
+    <div class="tb-sep"></div>
+    <button class="tb-btn" title="JSON Mode" id="btn-json" onclick="editor.toggleJsonMode()"><i class="fas fa-code"></i></button>
+    <button class="tb-btn" title="Copy JSON to Clipboard" onclick="editor.exportToClipboard()"><i class="fas fa-clipboard"></i></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" title="Reset View (F)" onclick="editor.resetView()"><i class="fas fa-compress-arrows-alt"></i></button>
+    <button class="tb-btn" title="Scan Sprites" onclick="editor.refreshSprites()"><i class="fas fa-sync"></i></button>
+</div>
+
+<!-- LAYOUT -->
+<div id="layout">
+
+    <!-- LEFT PANEL -->
+    <div id="left-panel">
+        <div class="p-header">PREFAB LIBRARY
+            <div class="p-hbtns">
+                <div class="p-hbtn" title="New" onclick="editor.newPrefab()"><i class="fas fa-plus"></i></div>
+                <div class="p-hbtn" title="Duplicate" onclick="editor.duplicatePrefab()"><i class="fas fa-clone"></i></div>
+                <div class="p-hbtn danger" title="Delete" onclick="editor.deletePrefab()"><i class="fas fa-times"></i></div>
+            </div>
+        </div>
+        <div id="prefab-library"></div>
+
+        <div id="modifier-stack-wrap">
+            <div class="p-header">MODIFIER STACK
+                <div class="p-hbtns">
+                    <div class="p-hbtn" title="Paste Component (V)" onclick="editor.pasteComponent()"><i class="fas fa-paste"></i></div>
+                </div>
+            </div>
+            <div id="modifier-stack"></div>
+
+            <div id="add-comp-section">
+                <div class="p-header">ADD COMPONENT</div>
+                <input type="text" id="comp-filter" placeholder="🔍 filter components..." oninput="editor._buildAddCompGrid()" />
+                <div id="add-comp-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEWPORT -->
+    <div id="viewport">
+        <canvas id="editor-canvas"></canvas>
+        <div id="viewport-hud">
+            <div id="hud-zoom">ZOOM 2.00x</div>
+            <div id="hud-name"></div>
+        </div>
+        <div id="viewport-hint">
+            <span>Scroll=Zoom</span>
+            <span>Alt+Drag=Pan</span>
+            <span>G=Grid</span>
+            <span>F=Reset</span>
+            <span>Tab=Mode</span>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="right-panel">
+        <div class="p-header">PROPERTIES <div id="insp-comp-type" style="font-size:9px;color:var(--text-dim);margin-left:auto;font-weight:normal;letter-spacing:0;"></div></div>
+        <div id="inspector-content"></div>
+        <div id="json-panel">
+            <textarea id="json-textarea" spellcheck="false"></textarea>
+            <div id="json-apply-btn" onclick="editor.applyJsonEdit()"><i class="fas fa-check"></i> APPLY JSON CHANGES</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+    <div class="s-item"><i class="fas fa-cubes" style="color:var(--accent)"></i><span id="s-prefab">—</span></div>
+    <div class="s-item"><i class="fas fa-layer-group"></i><span id="s-comps">0</span></div>
+    <div class="s-item"><i class="fas fa-search"></i><span id="s-zoom">2.0</span>x</div>
+    <div class="s-item"><i class="fas fa-crosshairs"></i><span id="s-cursor">0, 0</span></div>
+    <div class="s-item"><i class="fas fa-circle" id="status-dirty"></i><span id="status-dirty-lbl">UNSAVED</span></div>
+    <div id="status-msg"></div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctx-menu">
+    <div class="ctx-item" onclick="editor.resetView()"><i class="fas fa-compress-arrows-alt"></i>Reset View</div>
+    <div class="ctx-item" onclick="editor.centerOrigin()"><i class="fas fa-crosshairs"></i>Center Origin</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="editor.toggleGrid()"><i class="fas fa-th"></i>Toggle Grid</div>
+    <div class="ctx-item" onclick="editor.toggleSnap()"><i class="fas fa-magnet"></i>Toggle Snap</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="editor.copyComponent()"><i class="fas fa-copy"></i>Copy Component</div>
+    <div class="ctx-item" onclick="editor.pasteComponent()"><i class="fas fa-paste"></i>Paste Component</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- MODAL: New Prefab -->
+<div class="modal-overlay" id="modal-newprefab">
+    <div class="modal-box" style="min-width:320px;max-width:400px">
+        <div class="modal-header"><span><i class="fas fa-file"></i> &nbsp;NEW PREFAB</span>
+            <div class="modal-close" onclick="editor.closeModal('modal-newprefab')"><i class="fas fa-times"></i></div>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom:8px;color:var(--text-lbl);font-size:10px">NAME (alphanumeric, _ and -)</div>
+            <input type="text" id="new-prefab-name" class="modal-input" placeholder="My_Entity" maxlength="64"
+                onkeydown="if(event.key==='Enter')editor.confirmNewPrefab()" />
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="editor.closeModal('modal-newprefab')">CANCEL</button>
+            <button class="modal-btn primary" onclick="editor.confirmNewPrefab()">CREATE ▶</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Load Prefab -->
+<div class="modal-overlay" id="modal-load">
+    <div class="modal-box" style="width:680px">
+        <div class="modal-header"><span><i class="fas fa-folder-open"></i> &nbsp;OPEN PREFAB DEFINITION</span>
+            <div class="modal-close" onclick="editor.closeModal('modal-load')"><i class="fas fa-times"></i></div>
+        </div>
+        <div class="modal-body"><div id="load-file-grid" class="modal-grid"></div></div>
+        <div class="modal-footer"><button class="modal-btn" onclick="editor.closeModal('modal-load')">CANCEL</button></div>
+    </div>
+</div>
+
+<!-- MODAL: Sprite Browser -->
+<div class="modal-overlay" id="modal-sprites">
+    <div class="modal-box" style="width:680px">
+        <div class="modal-header"><span><i class="fas fa-images"></i> &nbsp;SPRITE BROWSER</span>
+            <div class="modal-close" onclick="editor.closeModal('modal-sprites')"><i class="fas fa-times"></i></div>
+        </div>
+        <div class="modal-body">
+            <div id="sprite-grid" class="modal-grid"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="editor.refreshSprites();editor._rebuildSpriteBrowserGrid()"><i class="fas fa-sync"></i> RESCAN</button>
+            <button class="modal-btn" onclick="editor.closeModal('modal-sprites')">CANCEL</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Help / Shortcuts -->
+<div class="modal-overlay" id="modal-help">
+    <div class="modal-box" style="width:560px">
+        <div class="modal-header"><span><i class="fas fa-keyboard"></i> &nbsp;KEYBOARD SHORTCUTS — PREFAB BUILDER v5</span>
+            <div class="modal-close" onclick="editor.closeModal('modal-help')"><i class="fas fa-times"></i></div>
+        </div>
+        <div class="modal-body" style="padding:0">
+            <div class="help-section">FILE</div>
+            <table class="help-table"><tbody>
+                <tr><td><span class="key">Ctrl+N</span></td><td>New Prefab</td></tr>
+                <tr><td><span class="key">Ctrl+S</span></td><td>Save to disk</td></tr>
+                <tr><td><span class="key">Ctrl+D</span></td><td>Duplicate current prefab</td></tr>
+            </tbody></table>
+            <div class="help-section">EDIT</div>
+            <table class="help-table"><tbody>
+                <tr><td><span class="key">Ctrl+Z</span></td><td>Undo</td></tr>
+                <tr><td><span class="key">Ctrl+Y</span></td><td>Redo</td></tr>
+                <tr><td><span class="key">C</span></td><td>Copy selected component</td></tr>
+                <tr><td><span class="key">V</span></td><td>Paste component</td></tr>
+                <tr><td><span class="key">Del</span></td><td>Remove selected component</td></tr>
+            </tbody></table>
+            <div class="help-section">VIEWPORT</div>
+            <table class="help-table"><tbody>
+                <tr><td><span class="key">Scroll</span></td><td>Zoom in / out</td></tr>
+                <tr><td><span class="key">Alt+Drag</span> / <span class="key">MMB</span></td><td>Pan viewport</td></tr>
+                <tr><td><span class="key">F</span></td><td>Reset view to center</td></tr>
+                <tr><td><span class="key">G</span></td><td>Toggle grid</td></tr>
+                <tr><td><span class="key">Tab</span></td><td>Switch Select / Translate mode</td></tr>
+                <tr><td><span class="key">Esc</span></td><td>Close modals / dropdowns</td></tr>
+            </tbody></table>
+            <div class="help-section">GIZMOS (TRANSLATE MODE)</div>
+            <table class="help-table"><tbody>
+                <tr><td><span class="key">Drag origin dot</span></td><td>Move Transform / Collider offset / Prefab offset</td></tr>
+                <tr><td><span class="key">Drag edge handles</span></td><td>Resize Collider (8 handles)</td></tr>
+            </tbody></table>
+        </div>
+        <div class="modal-footer"><button class="modal-btn primary" onclick="editor.closeModal('modal-help')">CLOSE</button></div>
+    </div>
+</div>
+
+<script src="/shared/EventBus.js"></script>
+<script src="/shared/SharedProjectState.js"></script>
+<script src="/shared/AssetManager.js"></script>
+<script src="prefab_editor.js?v=5.0"></script>
+<script>
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.menu-item')) {
+            document.querySelectorAll('.menu-dropdown-content').forEach(d => d.classList.remove('open'));
+        }
+        if (!e.target.closest('#ctx-menu')) {
+            document.getElementById('ctx-menu').style.display = 'none';
+        }
+    });
+</script>
 </body>
 </html>

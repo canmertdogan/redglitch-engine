@@ -45,12 +45,16 @@ body, html {
     display: block;
 }
 
-/* === HUD (CORNER PINNED) === */
+/* === HUD (CORNER PINNED) - Legacy (hidden, replaced by GameHUD) === */
 #game-hud {
     position: fixed; top: 0; left: 0;
     width: 100%; height: 100%;
     pointer-events: none; z-index: 10;
 }
+#game-hud #status-bars,
+#game-hud #game-clock,
+#game-hud #skill-bar,
+#game-hud #inventory-bar { display: none; }
 
 #status-bars {
     position: absolute; top: 20px; left: 20px;

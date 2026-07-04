@@ -127,6 +127,23 @@ class TopDownAdapter extends EngineAdapter {
         window.CrossEngineSerializer.deserializePlayerState(this.engine, playerData, false);
     }
     
+    /**
+     * Restart the current level (used by retry from game-over)
+     * @returns {Promise<void>}
+     */
+    async restart() {
+        if (!this.engine) return;
+        this.engine.isRunning = false;
+        this.engine.player.hp = this.engine.player.maxHp;
+        this.engine.player.mana = this.engine.player.maxMana;
+        this.engine.player.stamina = this.engine.player.maxStamina;
+        this.engine.levelComplete = false;
+        const levelId = this.engine.currentLevelId;
+        await this.engine.loadLevel(levelId);
+        this.engine.isRunning = true;
+        if (this.engine.gameLoop) this.engine.gameLoop(performance.now());
+    }
+
     useAbility(abilityId, dirX, dirY) {
         if (!this.engine || !window.AbilityDefinitions) return false;
         const def = window.AbilityDefinitions.getAbility(abilityId);

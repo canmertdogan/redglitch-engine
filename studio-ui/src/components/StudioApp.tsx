@@ -6,14 +6,14 @@ import {
     Music, Play, Rocket, Save, Scroll, Settings, Skull, Terminal, 
     Trash2, User, UserPlus, Zap, X, Minus, Square, Columns, Maximize2,
     HardDrive, Activity, ChevronRight, ChevronDown, Clock, Search,
-    Loader2
+    Loader2, Monitor
 } from 'lucide-react';
 import Toast, { ToastHandle } from './shared/Toast';
 
 // Icon Map for serializable state handling
 const IconMap: Record<string, any> = {
     Rocket, Activity, Code, ImageIcon, UserPlus, Skull, Scroll, 
-    Flag, MessageSquare, Music, Zap, Box, Folder, Layout, Settings
+    Flag, MessageSquare, Music, Zap, Box, Folder, Layout, Settings, Monitor
 };
 
 interface Tool {
@@ -67,7 +67,8 @@ const StudioApp: React.FC = () => {
         { id: 'fxpro', category: 'ASSETS', title: 'FX Master', iconName: 'Zap', src: 'fx_editor.html', w: 900, h: 650 },
         { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_lab.html', w: 1200, h: 800 },
         { id: 'assets', category: 'ASSETS', title: 'File Manager', iconName: 'Folder', src: 'asset_manager.html', w: 900, h: 600 },
-        { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700 }
+        { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700 },
+        { id: 'ui_designer', category: 'INTERFACE', title: 'UI Designer', iconName: 'Monitor', src: 'ui_designer.html', w: 1200, h: 800 }
     ];
 
     useEffect(() => {

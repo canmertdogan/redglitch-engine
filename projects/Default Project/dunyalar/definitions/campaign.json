@@ -52,7 +52,7 @@
     "x": 1020,
     "y": 300,
     "name": "LEVEL",
-    "levelId": "layahheilpernsass",
+    "levelId": "platformer_demo",
     "engineType": "platformer-2d"
   }
 ]

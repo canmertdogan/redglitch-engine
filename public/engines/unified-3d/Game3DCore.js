@@ -141,6 +141,12 @@ export default class Game3DCore extends Engine3DAdapter {
         this.mode = modeModule;
         this._engineType3D = modeModule.modeId;
         await this.mode.onInit(this);
+        this.mode.onGameOver = () => {
+            if (this.gameHUD) {
+                this.gameHUD.state._showGameOver = true;
+                this.gameHUD.showScreen('gameover');
+            }
+        };
         console.log(`[Game3DCore] Mode set → ${modeModule.modeId}`);
     }
 
@@ -220,19 +226,19 @@ export default class Game3DCore extends Engine3DAdapter {
             ).catch(() => {});
         }
 
-        // ── Universal UI Runtime ──────────────────────────────────────────
+        // ── GameHUD ───────────────────────────────────────────────────────
         try {
-            const m = await import('../shared/UIRuntime.js');
-            this.uiRuntime = new m.UIRuntime();
-            this.uiRuntime.init(this.container);
+            this.gameHUD = new window.GameHUD();
+            this.gameHUD.init(this.container);
+            this.gameHUD.onAction = (cmd) => this._handleHUDAction(cmd);
             const r = await fetch('/interfaces/main.redui');
             if (r.ok) {
                 const data = await r.json();
-                this.uiRuntime.load(data);
-                this.uiRuntime.showScreen('main_hud');
+                this.gameHUD.load(data);
+                this.gameHUD.showScreen('main_hud');
             }
         } catch (e) {
-            console.log('[Game3DCore] No UIRuntime or HUD config found', e);
+            console.log('[Game3DCore] No HUD config found', e);
         }
 
         console.log('[Game3DCore] initCore() complete');
@@ -331,6 +337,31 @@ export default class Game3DCore extends Engine3DAdapter {
         this.isRunning = false;
     }
 
+    _handleHUDAction(cmd) {
+        if (cmd === 'retryLevel') this._retryLevel();
+        if (cmd === 'quitToMenu') this._quitToMenu();
+        if (cmd === 'togglePause') this.togglePause();
+    }
+
+    _quitToMenu() {
+        if (window.CAMPAIGN_RUNTIME_MODE && window.parent) {
+            window.parent.location.href = 'slot_selection.html';
+        } else {
+            this._stopLoop();
+            if (this.gameHUD) this.gameHUD.hide();
+        }
+    }
+
+    async _retryLevel() {
+        this.isRunning = false;
+        if (this.gameHUD) {
+            this.gameHUD.state._showGameOver = false;
+            this.gameHUD.showScreen('main_hud');
+        }
+        this.mode?.dispose?.();
+        await this.initCore();
+    }
+
     _loop(timestamp) {
         if (!this.isRunning) return;
         requestAnimationFrame(ts => this._loop(ts));
@@ -403,16 +434,20 @@ export default class Game3DCore extends Engine3DAdapter {
             this.hybridScene.update(dt, this.camera3d.camera);
         }
 
-        // 7. Universal HUD Sync
-        if (this.uiRuntime && this.mode && this.mode.player) {
-            this.uiRuntime.sync({
+        // 7. GameHUD Sync
+        if (this.gameHUD && this.mode && this.mode.player) {
+            const p = this.mode.player;
+            this.gameHUD.sync({
                 player: {
-                    hp: this.mode.player.hp || 100,
-                    maxHp: this.mode.player.maxHp || 100,
-                    mana: this.mode.player.mana || 50,
-                    maxMana: this.mode.player.maxMana || 50,
-                    stamina: this.mode.player.stamina || 100,
-                    maxStamina: this.mode.player.maxStamina || 100
+                    hp: p.hp || 100,
+                    maxHp: p.maxHp || 100,
+                    mana: p.mana || 50,
+                    maxMana: p.maxMana || 50,
+                    stamina: p.stamina || 100,
+                    maxStamina: p.maxStamina || 100,
+                    coins: p.coins || 0,
+                    xp: p.xp || 0,
+                    level: p.level || 1
                 },
                 gameTimeFormatted: `${Math.floor(this.gameTime)}:${String(Math.floor((this.gameTime%1)*60)).padStart(2,'0')}`
             });
@@ -569,9 +604,9 @@ export default class Game3DCore extends Engine3DAdapter {
         this.raycast?.dispose();
 
         // ── Clean up UI ───────────────────────────────────────────────────
-        if (this.uiRuntime) {
-            this.uiRuntime.destroy();
-            this.uiRuntime = null;
+        if (this.gameHUD) {
+            this.gameHUD.destroy();
+            this.gameHUD = null;
         }
 
         this._listeners.clear();

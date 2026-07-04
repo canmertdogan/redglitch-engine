@@ -4,21 +4,16 @@ class IsoGame {
         this.renderer = new IsoRenderer(this.canvas);
         this.running = false;
         
-        // Initialize new FX and HUD systems (loaded via script tags)
+        // Initialize new FX system (loaded via script tags)
         this.fx = null;
-        this.hud = null;
 
-        // Universal UI Runtime (HUD)
-        import('../shared/UIRuntime.js').then(m => {
-            this.uiRuntime = new m.UIRuntime();
-            this.uiRuntime.init(document.body);
-            fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
-                if (data) {
-                    this.uiRuntime.load(data);
-                    this.uiRuntime.showScreen('main_hud');
-                }
-            }).catch(e => console.log('No HUD config found'));
-        }).catch(e => console.log('Could not load UIRuntime', e));
+        // GameHUD (DOM overlay, always available)
+        this.gameHUD = new window.GameHUD();
+        this.gameHUD.init(document.getElementById('game-container') || document.body);
+        this.gameHUD.onAction = (cmd) => this._handleHUDAction(cmd);
+        fetch('/interfaces/main.redui').then(r => r.ok ? r.json() : null).then(data => {
+            if (data) { this.gameHUD.load(data); this.gameHUD.showScreen('main_hud'); }
+        }).catch(() => {});
         
         // Shader system (WebGL post-processing)
         this.shaders = null;
@@ -30,6 +25,8 @@ class IsoGame {
         // Caterpillar/worm sprites (loaded in init)
         this.playerHead = null;
         this.playerBody = null;
+
+        this.onPlayerDeath = null; // Callback for campaign/adapter death handling
         
         this.player = { 
             x: 5, y: 5, z: 0, 
@@ -155,10 +152,10 @@ class IsoGame {
             this.eventBusIds.forEach(id => eventBus.off('*', id));
         }
 
-        // Cleanup UIRuntime
-        if (this.uiRuntime) {
-            this.uiRuntime.destroy();
-            this.uiRuntime = null;
+        // Cleanup GameHUD
+        if (this.gameHUD) {
+            this.gameHUD.destroy();
+            this.gameHUD = null;
         }
 
         console.log('[IsoEngine] Destroyed and cleaned up listeners.');
@@ -330,43 +327,12 @@ class IsoGame {
             console.warn('[IsoEngine] IsoCombatSystem class not found!');
         }
         
-        // Initialize HUD System
-        if (window.IsoHUDSystem) {
-            this.hud = new IsoHUDSystem(this);
-            
-            // Hide HUD in campaign runtime mode (campaign has its own HUD)
-            if (window.CAMPAIGN_RUNTIME_MODE) {
-                this.hud.visible = false;
-                console.log('[IsoEngine] HUD hidden in campaign runtime mode');
-            } else {
-                this.syncHUDStats();
-                
-                // Set up some demo skills
-                this.hud.setSkill(0, { icon: '⚔', color: '#e74c3c', cooldown: 2 });
-                this.hud.setSkill(1, { icon: '🔥', color: '#f39c12', cooldown: 5 });
-                this.hud.setSkill(2, { icon: '❄', color: '#3498db', cooldown: 8 });
-                this.hud.setSkill(3, { icon: '⚡', color: '#9b59b6', cooldown: 10 });
-            }
-        }
+        // HUD is handled by GameHUD overlay (initialized in constructor)
     }
     
     syncHUDStats() {
-        if (this.hud) {
-            this.hud.setStats({
-                hp: this.player.hp,
-                maxHp: this.player.maxHp,
-                mana: this.player.mana,
-                maxMana: this.player.maxMana,
-                stamina: this.player.stamina,
-                maxStamina: this.player.maxStamina,
-                xp: this.player.xp,
-                level: this.player.level
-            });
-        }
-
-        // Universal UI Runtime
-        if (this.uiRuntime) {
-            this.uiRuntime.sync({
+        if (this.gameHUD) {
+            this.gameHUD.sync({
                 player: {
                     hp: this.player.hp,
                     maxHp: this.player.maxHp,
@@ -374,6 +340,7 @@ class IsoGame {
                     maxMana: this.player.maxMana,
                     stamina: this.player.stamina,
                     maxStamina: this.player.maxStamina,
+                    coins: this.player.coins || 0,
                     xp: this.player.xp,
                     level: this.player.level
                 }
@@ -455,6 +422,8 @@ class IsoGame {
             return;
         }
 
+        this._isDead = false;
+        this.levelComplete = false;
         this.levelMetadata = levelData;
         this.map = levelData; // Alias for compatibility
         
@@ -539,6 +508,10 @@ class IsoGame {
             // Initialize render position to spawn (no interpolation lag at start)
             this.player.renderX = this.player.x;
             this.player.renderY = this.player.y;
+            this.player.renderZ = this.player.z;
+        } else {
+            // No explicit spawn: snap to ground at the default (x, y)
+            this.player.z = this.getZAt(this.player.x, this.player.y);
             this.player.renderZ = this.player.z;
         }
         
@@ -769,6 +742,18 @@ class IsoGame {
         
         p.z = nextZ;
         
+        // === DEATH CHECKS ===
+        // Void death: fell off the map
+        if (p.z < -10) {
+            this.playerDie('void');
+            return;
+        }
+        // HP death
+        if (p.hp <= 0) {
+            this.playerDie('hp');
+            return;
+        }
+        
         // === ANIMATION STATE ===
         const isMoving = Math.abs(p.velocity.x) > 0.005 || Math.abs(p.velocity.y) > 0.005;
         
@@ -854,12 +839,58 @@ class IsoGame {
         }
     }
 
+    playerDie(cause) {
+        if (this._isDead) return;
+        this._isDead = true;
+        this.running = false;
+        console.log(`[IsoEngine] Player died: ${cause}`);
+        if (this.gameHUD) {
+            this.gameHUD.state._showGameOver = true;
+            this.gameHUD.showScreen('gameover');
+        }
+        if (this.onPlayerDeath) {
+            this.onPlayerDeath({ cause });
+        }
+    }
+
+    _handleHUDAction(cmd) {
+        if (cmd === 'retryLevel') this.restartLevel();
+        if (cmd === 'quitToMenu') this._quitToMenu();
+        if (cmd === 'togglePause') this._togglePause();
+    }
+
+    _togglePause() {
+        this.timeScale = (this.timeScale === 0) ? 1 : 0;
+    }
+
+    _quitToMenu() {
+        if (window.CAMPAIGN_RUNTIME_MODE && window.parent) {
+            window.parent.location.href = 'slot_selection.html';
+        } else {
+            this.running = false;
+            if (this.gameHUD) this.gameHUD.hide();
+        }
+    }
+
+    restartLevel() {
+        this._isDead = false;
+        this.running = true;
+        this.player.hp = this.player.maxHp || 100;
+        this.player.mana = this.player.maxMana || 50;
+        this.player.stamina = this.player.maxStamina || 100;
+        if (this.gameHUD) {
+            this.gameHUD.state._showGameOver = false;
+            this.gameHUD.showScreen('main_hud');
+        }
+        this.onPlayerDeath = null;
+    }
+
     handleLevelComplete() {
         this.levelComplete = true;
         console.log("Level Complete!");
         
         // Visual feedback
-        if (this.hud) this.hud.showNotification("Level Complete!", "success");
+        if (this.gameHUD) this.gameHUD.showToast("LEVEL COMPLETE!", "#2ecc71", 2500);
         
         // If running under adapter/campaign mode, let it handle the event
         // The adapter monitors 'levelComplete' flag, so we are good.
@@ -979,11 +1010,8 @@ class IsoGame {
             this.player.stamina = Math.min(this.player.maxStamina, this.player.stamina + (regenRate * 2));
         }
         
-        // HUD System update
-        if (this.hud) {
-            this.hud.update(dt);
-            this.syncHUDStats();
-        }
+        // Sync HUD stats
+        this.syncHUDStats();
     }
 
     draw() {
@@ -1065,10 +1093,7 @@ class IsoGame {
             this.fx.renderScreen(ctx);
         }
 
-        // 4. HUD layer (always on top)
-        if (this.hud) {
-            this.hud.render();
-        }
+        // 4. HUD handled by GameHUD DOM overlay
     }
 
     _drawCrosshair(ctx) {

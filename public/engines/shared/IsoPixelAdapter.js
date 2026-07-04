@@ -15,8 +15,14 @@ class IsoPixelAdapter extends EngineAdapter {
         if (typeof IsoGame === 'undefined') throw new Error('ISO-Pixel engine not loaded');
         this.engine = new IsoGame();
         window.game = this.engine;
+        this.engine.onPlayerDeath = () => this._handlePlayerDeath();
         this.setupLiveBridge();
         this.isInitialized = true;
+    }
+
+    _handlePlayerDeath() {
+        // GameHUD handles gameover display inside the engine.
+        // Campaign-level quit-to-menu is handled by GameHUD's "quit" action.
     }
 
     /**
@@ -59,11 +65,15 @@ class IsoPixelAdapter extends EngineAdapter {
                 await this.engine.loadLevelData(data);
             }
             
-            const spawn = data.spawnPoint || data.spawn || { x: 5, y: 5, z: 0 };
-            this.engine.player.x = spawn.x;
-            this.engine.player.y = spawn.y;
-            this.engine.player.z = spawn.z || 0;
-            if (this.engine.camera) { this.engine.camera.x = spawn.x; this.engine.camera.y = spawn.y; }
+            const spawn = data.spawnPoint || data.spawn;
+            if (spawn) {
+                this.engine.player.x = spawn.x;
+                this.engine.player.y = spawn.y;
+                this.engine.player.z = spawn.z !== undefined ? spawn.z : this.engine.getZAt(spawn.x, spawn.y);
+            }
+            // If no spawn data, the player position was already set by init()/getZAt(); don't override.
+            if (spawn && this.engine.camera) { this.engine.camera.x = spawn.x; this.engine.camera.y = spawn.y; }
+            if (!spawn && this.engine.camera) { this.engine.camera.x = this.engine.player.x; this.engine.camera.y = this.engine.player.y; }
             if (this.engine.spawnEntities) this.engine.spawnEntities();
             
             this.isLoaded = true;
@@ -169,6 +179,27 @@ class IsoPixelAdapter extends EngineAdapter {
 
     _stopCompletionMonitoring() {
         if (this.completionChecker) { clearInterval(this.completionChecker); this.completionChecker = null; }
+    }
+
+    restart() {
+        if (!this.engine || !this.engine.levelMetadata) {
+            window.location.reload();
+            return;
+        }
+        this.engine._isDead = false;
+        this.engine.running = false;
+        const p = this.engine.player;
+        p.hp = p.maxHp;
+        p.mana = p.maxMana;
+        p.stamina = p.maxStamina;
+        p.velocity = { x: 0, y: 0, z: 0 };
+        p.grounded = true;
+        const levelData = this.engine.levelMetadata;
+        this.engine.loadLevelData(levelData).then(() => {
+            if (this.engine.spawnEntities) this.engine.spawnEntities();
+            this.engine.running = true;
+            this.engine.loop(performance.now());
+        });
     }
 
     destroy() {

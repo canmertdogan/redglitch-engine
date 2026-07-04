@@ -1,4 +1,4 @@
-export const EDITOR_CATALOG = Object.freeze({
+const EDITOR_CATALOG = Object.freeze({
     world: { id: 'editor', file: 'editor.html', capabilities: ['world'] },
     pixel: { id: 'iso_studio', file: 'iso_editor.html', capabilities: ['pixel', 'isopixel', 'iso'] },
     platformer: { id: 'platformer_studio', file: 'platformer_editor.html', capabilities: ['platformer'] },
