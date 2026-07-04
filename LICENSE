@@ -1,0 +1,43 @@
+# Licensing for Redglitch Game Studio
+
+Redglitch Game Studio is dual-licensed to provide both open-source freedom and commercial protection. 
+
+Depending on your use case, you may use this software under one of the following tracks:
+
+---
+
+## 1. Open Source Track (GNU AGPLv3)
+
+For open-source projects, personal learning, and community contributions, this software is licensed under the **GNU Affero General Public License v3 (AGPL-3.0)**. 
+
+### Key Rules under AGPLv3:
+* **Attribution:** You must keep all copyright notices, author credits, and license notices intact in the source code and user interface.
+* **Share-Alike (Copyleft):** If you modify this software or build upon it, your modified version **must also be open-sourced under the AGPLv3**.
+* **Network / SaaS Clause:** If you host a modified version of this engine on a server (e.g., as a cloud service or website) for others to access, you **must make your source code public** to all users accessing the service.
+
+A copy of the full GNU AGPLv3 license text is included below.
+
+---
+
+## 2. Proprietary & Commercial Track
+
+If you want to use, modify, or redistribute Redglitch Game Studio **without** sharing your source code (e.g., in a closed-source product, commercial distribution, or private enterprise application), you cannot use the AGPLv3 track.
+
+Instead, you must obtain a **Commercial License** or explicit written permission from the copyright owner.
+
+For commercial licensing inquiries or custom terms, please contact:
+* **Copyright Owner:** Redglitch Engine Authors
+
+---
+
+## GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+
+Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.
+
+### Preamble
+
+The GNU Affero General Public License is a free, copyleft license for servers and other network software, specifically designed to ensure that modified versions of the software become available to the community in the network server context.
+
+[Remaining standard AGPLv3 terms apply. For the full text, see https://www.gnu.org/licenses/agpl-3.0.txt]

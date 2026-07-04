@@ -1692,6 +1692,22 @@
             letter-spacing: 0.5px;
         }
 
+        /* ── Prop Library ── */
+        .prop-categories { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 6px; }
+        .prop-categories .tool-btn { font-size: 9px; padding: 3px 7px; flex: 1; min-width: 0; }
+        .prop-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; max-height: 280px; overflow-y: auto; }
+        .prop-grid::-webkit-scrollbar { width: 2px; }
+        .prop-grid::-webkit-scrollbar-thumb { background: rgba(255,30,39,0.3); }
+        .prop-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 3px; padding: 6px 4px; cursor: pointer; text-align: center;
+            transition: all 0.15s; user-select: none;
+        }
+        .prop-card:hover { background: rgba(255,30,39,0.12); border-color: rgba(255,30,39,0.4); transform: translateY(-1px); }
+        .prop-card.active { background: rgba(255,30,39,0.16); border-color: rgba(255,30,39,0.55); }
+        .prop-card:active { transform: translateY(0); }
+        .prop-icon { font-size: 20px; line-height: 1.2; }
+        .prop-label { font-size: 8px; color: rgba(255,255,255,0.6); margin-top: 2px; font-family: 'VT323', monospace; letter-spacing: 0.5px; text-transform: uppercase; }
     </style>
 
 </head>
@@ -1729,6 +1745,21 @@
             <button class="mode-pill-btn" id="mtab-platformer-3d" data-mode="platformer-3d">
                 <i class="fas fa-running"></i> PLATFORMER
             </button>
+            <button class="mode-pill-btn" id="mtab-terrain" data-mode="terrain">
+                <i class="fas fa-mountain"></i> TERRAIN
+            </button>
+            <button class="mode-pill-btn" id="mtab-proplib" data-mode="proplib">
+                <i class="fas fa-couch"></i> PROPS
+            </button>
+            <button class="mode-pill-btn" id="mtab-playerstudio" data-mode="playerstudio">
+                <i class="fas fa-user"></i> PLAYER
+            </button>
+            <button class="mode-pill-btn" id="mtab-npcstudio" data-mode="npcstudio">
+                <i class="fas fa-user-friends"></i> NPC
+            </button>
+            <button class="mode-pill-btn" id="mtab-sculptstudio" data-mode="sculptstudio">
+                <i class="fas fa-hand-paper"></i> SCULPT
+            </button>
         </div>
 
         <!-- Hidden native select (keeps JS compatible) -->
@@ -1736,6 +1767,11 @@
             <option value="fps-3d">FPS 3D</option>
             <option value="topdown-3d">TOP-DOWN 3D</option>
             <option value="platformer-3d">PLATFORMER 3D</option>
+            <option value="terrain">TERRAIN</option>
+            <option value="proplib">PROP LIBRARY</option>
+            <option value="playerstudio">PLAYER STUDIO</option>
+            <option value="npcstudio">NPC STUDIO</option>
+            <option value="sculptstudio">SCULPT STUDIO</option>
         </select>
 
         <!-- Compatibility wrapper for JS that targets mode-selector-wrap -->
@@ -1885,6 +1921,9 @@
                     </div>
                     <div class="toolbox-item" onclick="window.editor3d?.spawnEntity()" data-tooltip="Entity">
                         <i class="fas fa-user-circle"></i><span class="toolbox-label">Entity</span>
+                    </div>
+                    <div class="toolbox-item" onclick="window.editor3d?.spawnVehicle()" data-tooltip="Vehicle">
+                        <i class="fas fa-car-side"></i><span class="toolbox-label">Vehicle</span>
                     </div>
                     
                     <div class="toolbox-divider"></div>
@@ -2126,19 +2165,29 @@
 <script src="/shared/SchemaRegistry.js"></script>
 <script src="lib/monaco/vs/loader.js"></script>
 <script type="module">
-    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust6';
+    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust7';
 
     // ── Mode panel registry ───────────────────────────────────────────
     const PANEL_REGISTRY = {
         'fps-3d':        () => import('/engines/unified-3d/editor/FPSEditorPanel.js'),
         'topdown-3d':    () => import('/engines/unified-3d/editor/TopDownEditorPanel.js'),
         'platformer-3d': () => import('/engines/unified-3d/editor/PlatformerEditorPanel.js'),
+        'terrain':       () => import('/engines/unified-3d/editor/TerrainEditorPanel.js'),
+        'proplib':       () => import('/engines/unified-3d/editor/PropLibraryPanel.js'),
+        'playerstudio':  () => import('/engines/unified-3d/editor/PlayerStudioPanel.js'),
+        'npcstudio':     () => import('/engines/unified-3d/editor/NPCStudioPanel.js'),
+        'sculptstudio':  () => import('/engines/unified-3d/editor/SculptStudioPanel.js'),
     };
 
     const MODE_NAMES = {
         'fps-3d':        'FPS 3D',
         'topdown-3d':    'TOP-DOWN 3D',
         'platformer-3d': 'PLATFORMER 3D',
+        'terrain':       'TERRAIN',
+        'proplib':       'PROP LIBRARY',
+        'playerstudio':  'PLAYER STUDIO',
+        'npcstudio':     'NPC STUDIO',
+        'sculptstudio':  'SCULPT STUDIO',
     };
 
     // ── URL params ────────────────────────────────────────────────────

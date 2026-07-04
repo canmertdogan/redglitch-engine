@@ -72,6 +72,56 @@ export default class PropertiesPanel {
                     <input type="number" step="1" class="prop-input" value="${sky.sun?.elevation || 45}" data-env-field="sun.elevation">
                 </div>
                 <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
+                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Moon</div>
+                <div class="prop-group">
+                    <div class="prop-label">Moon Enabled</div>
+                    <input type="checkbox" ${sky.moon?.enabled !== false ? 'checked' : ''} data-env-field="moon.enabled">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Moon Color</div>
+                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${sky.moon?.color || '#dce8ff'}" data-env-field="moon.color">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Moon Intensity</div>
+                    <input type="number" step="0.05" class="prop-input" value="${sky.moon?.intensity !== undefined ? sky.moon.intensity : 0.25}" data-env-field="moon.intensity">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Moon Azimuth</div>
+                    <input type="number" step="1" class="prop-input" value="${sky.moon?.azimuth !== undefined ? sky.moon.azimuth : 225}" data-env-field="moon.azimuth">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Moon Elevation</div>
+                    <input type="number" step="1" class="prop-input" value="${sky.moon?.elevation !== undefined ? sky.moon.elevation : 25}" data-env-field="moon.elevation">
+                </div>
+                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
+                <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Weather</div>
+                <div class="prop-group">
+                    <div class="prop-label">Enabled</div>
+                    <input type="checkbox" ${sky.weather?.enabled ? 'checked' : ''} data-env-field="weather.enabled">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Type</div>
+                    <select class="prop-input" data-env-field="weather.type">
+                        <option value="clear" ${(sky.weather?.type || 'clear') === 'clear' ? 'selected' : ''}>Clear</option>
+                        <option value="rain" ${sky.weather?.type === 'rain' ? 'selected' : ''}>Rain</option>
+                        <option value="snow" ${sky.weather?.type === 'snow' ? 'selected' : ''}>Snow</option>
+                        <option value="fog" ${sky.weather?.type === 'fog' ? 'selected' : ''}>Fog</option>
+                        <option value="ash" ${sky.weather?.type === 'ash' ? 'selected' : ''}>Ash</option>
+                    </select>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Intensity</div>
+                    <input type="number" step="0.05" min="0" max="1" class="prop-input" value="${sky.weather?.intensity !== undefined ? sky.weather.intensity : 0.35}" data-env-field="weather.intensity">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Wind X</div>
+                    <input type="number" step="0.1" class="prop-input" value="${sky.weather?.windX !== undefined ? sky.weather.windX : 0.4}" data-env-field="weather.windX">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Wind Z</div>
+                    <input type="number" step="0.1" class="prop-input" value="${sky.weather?.windZ !== undefined ? sky.weather.windZ : 0.1}" data-env-field="weather.windZ">
+                </div>
+                <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
                 <div class="prop-group">
                     <div class="prop-label">Voxel Seed</div>
                     <input type="number" step="1" class="prop-input" value="${sky.seed || 1337}" data-env-field="seed">
@@ -101,7 +151,7 @@ export default class PropertiesPanel {
         }
 
         if (obj._isMaterial) {
-            const mat = this.editor._levelData.materials.find(m => m.id === obj.id);
+            const mat = (this.editor._levelData?.materials || []).find(m => m.id === obj.id);
             if (!mat) return;
 
             panel.innerHTML = `
@@ -204,7 +254,7 @@ export default class PropertiesPanel {
                     const key = e.target.dataset.key;
                     const matId = e.target.dataset.matId;
                     
-                    const matDef = this.editor._levelData.materials.find(m => m.id === matId);
+                    const matDef = (this.editor._levelData?.materials || []).find(m => m.id === matId);
                     if (!matDef) return;
                     if (!matDef.shader_uniforms) matDef.shader_uniforms = {};
                     
@@ -486,6 +536,7 @@ export default class PropertiesPanel {
 
     _renderMaterialAssignmentsUI(obj) {
         let html = '';
+        const materials = this.editor._levelData?.materials || [];
         if (obj.geometry && obj.geometry.groups && obj.geometry.groups.length > 0) {
             html += `<div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Material Assignments</div>`;
             const assignments = obj.userData.material_assignments || {};
@@ -497,7 +548,7 @@ export default class PropertiesPanel {
                         <div class="prop-label">Group ${index} [${group.start}-${group.start+group.count}]</div>
                         <select class="prop-input custom-mat-assignment" data-group-index="${index}">
                             <option value="">(None)</option>
-                            ${(this.editor._levelData.materials || []).map(m => `<option value="${m.id}" ${matId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                            ${materials.map(m => `<option value="${m.id}" ${matId === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
                         </select>
                     </div>
                 `;
@@ -508,7 +559,7 @@ export default class PropertiesPanel {
                     <div class="prop-label">Material</div>
                     <select class="prop-input" data-field="material_id">
                         <option value="">(None)</option>
-                        ${(this.editor._levelData.materials || []).map(m => `<option value="${m.id}" ${obj.userData?.material_id === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                        ${materials.map(m => `<option value="${m.id}" ${obj.userData?.material_id === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
                     </select>
                 </div>
             `;

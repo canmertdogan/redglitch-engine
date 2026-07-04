@@ -12,6 +12,8 @@
 import ModeInterface from '../ModeInterface.js';
 import { CameraMode } from '../../shared/Camera3DController.js';
 import { LayerMask }   from '../../shared/Raycast3D.js';
+import TerrainRuntime3D, { normalizeTerrainLevel } from '../TerrainRuntime3D.js';
+import VehicleSystem3D from '../VehicleSystem3D.js';
 import {
     serialize3DPlayerState,
     deserialize3DPlayerState,
@@ -45,6 +47,8 @@ export default class FPSMode extends ModeInterface {
         this.hud            = null;   // HUD_FPS
         this.decals         = null;   // DecalSystem
         this.vfx            = null;   // VFX_FPS
+        this.terrainRuntime = null;   // Shared playable terrain
+        this.vehicles       = null;   // Shared vehicles
 
         // ── Player state ──────────────────────────────────────────────────
         this._health         = 100;
@@ -75,6 +79,9 @@ export default class FPSMode extends ModeInterface {
         // ── Strategy ──────────────────────────────────────────────────────
         this.strategy = new FPS3DStrategy(game);
         this.strategy.initialize();
+
+        this.terrainRuntime = new TerrainRuntime3D(game);
+        this.vehicles = new VehicleSystem3D(game);
 
         // ── FPS Camera ────────────────────────────────────────────────────
         this.fpsCamera = new FPSCamera(camera3d, container, {
@@ -225,30 +232,35 @@ export default class FPSMode extends ModeInterface {
 
     async onLevelLoaded(level) {
         this._initialEnemyCount = 0;
+        const runtimeLevel = this.terrainRuntime?.load(level) ?? normalizeTerrainLevel(level);
 
         // Strategy: set player spawn from level data
-        this.strategy?.loadLevel(level);
+        this.strategy?.loadLevel(runtimeLevel);
 
         // Re-position controller at spawn
         if (this.fpsController) {
-            const spawn = level?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
+            const spawn = runtimeLevel?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
             await this.fpsController.init(spawn);
         }
 
         // Load world geometry + collision
-        if (this.worldGeometry) {
-            await this.worldGeometry.loadFromLevel(level, this.game?.currentProject ?? '');
+        if (this.worldGeometry && (this._hasExplicitWorldGeometry(runtimeLevel) || !runtimeLevel?.terrain)) {
+            await this.worldGeometry.loadFromLevel(runtimeLevel, this.game?.currentProject ?? '');
         }
 
         // Load enemies and cover points
         if (this.enemyAI) {
-            await this.enemyAI.loadFromLevel(level, this.game?.currentProject ?? '');
+            await this.enemyAI.loadFromLevel(runtimeLevel, this.game?.currentProject ?? '');
             this._initialEnemyCount = this._countLivingEnemies();
         }
+
+        this.vehicles?.load(runtimeLevel);
     }
 
     onLevelUnloaded() {
         this._initialEnemyCount = 0;
+        this.vehicles?.dispose();
+        this.terrainRuntime?.dispose();
         this.worldGeometry?.dispose();
         this.weaponSystem?.dispose();
         this.enemyAI?.dispose();
@@ -272,6 +284,14 @@ export default class FPSMode extends ModeInterface {
 
         // World geometry (stairs, triggers, portals)
         this.worldGeometry?.update(dt, game.gameTime);
+        this.terrainRuntime?.update(dt, game.gameTime);
+
+        this.vehicles?.update(
+            dt,
+            game.input,
+            this.fpsController?.getPosition?.(),
+            (x, y, z) => this.fpsController?.setPosition?.(x, y, z),
+        );
 
         // Decals (particle physics + lifetime)
         this.decals?.update(dt);
@@ -316,6 +336,12 @@ export default class FPSMode extends ModeInterface {
             initialEnemies:  this._initialEnemyCount,
             remainingEnemies: remaining,
         });
+    }
+
+    _hasExplicitWorldGeometry(level) {
+        return !!level?.gltfUrl
+            || (Array.isArray(level?.geometry) && level.geometry.length > 0)
+            || !!(level?.voxelGrid && Object.keys(level.voxelGrid).length > 0);
     }
 
     // ── Save / Load ───────────────────────────────────────────────────────────

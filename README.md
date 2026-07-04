@@ -9,7 +9,7 @@
 ![Node](https://img.shields.io/badge/Node-%3E%3D18-339933?style=flat-square&logo=node.js)
 ![Three.js](https://img.shields.io/badge/Three.js-0.183-000000?style=flat-square&logo=three.js)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
-![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-ff1e27?style=flat-square)
+![License](https://img.shields.io/badge/license-AGPLv3%20%2F%20Commercial-blue?style=flat-square)
 
 **Desktop app · Web server · Mobile export · AI-powered**
 
@@ -601,7 +601,11 @@ User Input → Editor → JSON → Server (REST/WS) → File System
 
 ## License
 
-**All Rights Reserved.** Redglitch Engine — Copyright © 2024–2026. This software and its source code are proprietary and confidential.
+Redglitch Engine is dual-licensed under:
+- **GNU AGPLv3** (for open-source use with attribution and copyleft requirements).
+- **Commercial License** (for proprietary/closed-source distribution or commercial use).
+
+See the [LICENSE](LICENSE) file for the full terms. Copyright © 2024–2026 Redglitch Engine Authors. All rights reserved.
 
 ---
 

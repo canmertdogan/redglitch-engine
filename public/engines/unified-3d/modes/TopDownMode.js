@@ -12,6 +12,8 @@
 import * as THREE from '/lib/three/three.module.js';
 import ModeInterface from '../ModeInterface.js';
 import { CameraMode } from '../../shared/Camera3DController.js';
+import { normalizeTerrainLevel } from '../TerrainRuntime3D.js';
+import VehicleSystem3D from '../VehicleSystem3D.js';
 import {
     serialize3DPlayerState,
     deserialize3DPlayerState,
@@ -45,6 +47,7 @@ export default class TopDownMode extends ModeInterface {
         this.vfx           = null;   // VFXSystem3D
         this.minimap       = null;   // Minimap3D
         this.strategy      = null;   // TopDown3DStrategy
+        this.vehicles      = null;   // Shared vehicles
 
         // ── Game state ────────────────────────────────────────────────────
         this.selectedUnits       = [];
@@ -71,15 +74,20 @@ export default class TopDownMode extends ModeInterface {
         skybox.setGradient('#3a6a8a', '#ccddee');
 
         // ── Default lighting ──────────────────────────────────────────────
-        const amb = new THREE.AmbientLight(0xffffff, 1.0);
+        const amb = new THREE.AmbientLight(0xffffff, 0.45);
         scene.add(amb);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        const fill = new THREE.HemisphereLight(0xcfe7ff, 0x4a3828, 0.65);
+        fill.name = '__softFillLight';
+        scene.add(fill);
+        const sun = new THREE.DirectionalLight(0xfff4dc, 1.25);
         sun.position.set(30, 60, 30);
         sun.castShadow = true;
+        sun.shadow?.mapSize?.set?.(1024, 1024);
         scene.add(sun);
 
         // ── Terrain ───────────────────────────────────────────────────────
         this.terrain = new TerrainSystem3D(scene, palette, physics);
+        game.terrain = this.terrain;
 
         // ── Entities ──────────────────────────────────────────────────────
         this.entities = new EntitySystem3D(scene, assets, physics, palette, this.terrain);
@@ -123,6 +131,7 @@ export default class TopDownMode extends ModeInterface {
 
         // ── Strategy ──────────────────────────────────────────────────────
         this.strategy = new TopDown3DStrategy(game);
+        this.vehicles = new VehicleSystem3D(game);
 
         console.log('[TopDownMode] onInit() complete');
     }
@@ -134,7 +143,7 @@ export default class TopDownMode extends ModeInterface {
         this._initialHostileCount = 0;
 
         // Normalise legacy editor level format
-        const normalized = this._normalizeLegacyEditorLevel(level);
+        const normalized = normalizeTerrainLevel(level);
 
         // Phase-13+: hydrate subsystems
         if (this.terrain)  this.terrain.onLevelLoaded(normalized);
@@ -173,6 +182,7 @@ export default class TopDownMode extends ModeInterface {
         }
 
         if (this.minimap)  this.minimap.onLevelLoaded(normalized);
+        this.vehicles?.load(normalized);
 
         if (this.topdownCamera) {
             const center = this._resolveLevelCenter(normalized);
@@ -188,6 +198,7 @@ export default class TopDownMode extends ModeInterface {
         this._initialHostileCount  = 0;
 
         if (this.terrain)  this.terrain.dispose();
+        this.vehicles?.dispose();
         if (this.entities) this.entities.dispose();
         if (this.fogOfWar) this.fogOfWar.dispose();
         if (this.vfx)      this.vfx.dispose();
@@ -202,6 +213,12 @@ export default class TopDownMode extends ModeInterface {
 
         // Terrain animations (water sine-wave, etc.)
         this.terrain?.update(dt, game.gameTime);
+        this.vehicles?.update(
+            dt,
+            game.input,
+            this._getHeroPosition(),
+            (x, y, z) => this._setHeroPosition(x, y, z),
+        );
 
         // Entity / NPC AI + movement
         this.entities?.update(dt);
@@ -272,6 +289,22 @@ export default class TopDownMode extends ModeInterface {
     deselectAll() {
         this.selectedUnits = [];
         this.entities?.setSelected([]);
+    }
+
+    _getHeroPosition() {
+        return this.entities?.getHero?.()?.root?.position
+            ?? this.entities?.getHero?.()?.mesh?.position
+            ?? this._getSelectionCentroid();
+    }
+
+    _setHeroPosition(x, y, z) {
+        const hero = this.entities?.getHero?.();
+        const root = hero?.root ?? hero?.mesh;
+        if (root?.position) root.position.set(x, y, z);
+        if (hero?.physicsBody?.body) {
+            hero.physicsBody.body.position.set(x, y, z);
+            hero.physicsBody.body.velocity.set(0, 0, 0);
+        }
     }
 
     screenToMap(sx, sy)     { return this.strategy?.screenToMap(sx, sy) ?? { wx: 0, wz: 0, wy: 0, hit: false }; }

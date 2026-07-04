@@ -40,8 +40,16 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background: var(--bg);
-  background-image: radial-gradient(circle at 50% -20%, rgba(255, 42, 95, 0.15) 0%, transparent 60%);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 18%, rgba(255, 30, 39, 0.22) 0%, rgba(255, 30, 39, 0.08) 22%, transparent 48%),
+    linear-gradient(180deg, rgba(255, 30, 39, 0.12) 0%, transparent 38%, rgba(5, 5, 9, 0.9) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 30, 39, 0.08) 0 1px, transparent 1px 84px),
+    repeating-linear-gradient(0deg, rgba(255, 30, 39, 0.07) 0 1px, transparent 1px 48px);
+  background-size: 100% 100%, 100% 100%, 84px 84px, 84px 48px;
+  background-position: center, center, 0 0, 0 0;
+  background-attachment: fixed;
+  animation: redVaporwaveDrift 18s linear infinite;
   color: var(--text);
   font-family: var(--font);
   font-size: 16px;
@@ -116,6 +124,15 @@ body::after {
 }
 
 @keyframes blink { 50% { opacity: 0; } }
+
+@keyframes redVaporwaveDrift {
+  0% {
+    background-position: center, center, 0 0, 0 0;
+  }
+  100% {
+    background-position: center, center, 84px 0, 0 48px;
+  }
+}
 
 /* ---------- Navigation ---------- */
 .nav {
@@ -331,7 +348,13 @@ body::after {
 /* ---------- Sections ---------- */
 .section { padding: 88px 0; }
 
-.section-alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.section-alt {
+  background: rgba(16, 16, 24, 0.82);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
 
 .section-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
 
@@ -1325,8 +1348,16 @@ body::after {
 html { scroll-behavior: smooth; }
 
 body {
-  background: var(--bg);
-  background-image: radial-gradient(circle at 50% -20%, rgba(255, 30, 39, 0.08) 0%, transparent 60%);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 18%, rgba(255, 30, 39, 0.24) 0%, rgba(255, 30, 39, 0.09) 22%, transparent 48%),
+    linear-gradient(180deg, rgba(255, 30, 39, 0.13) 0%, transparent 38%, rgba(5, 5, 8, 0.92) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 30, 39, 0.09) 0 1px, transparent 1px 84px),
+    repeating-linear-gradient(0deg, rgba(255, 30, 39, 0.075) 0 1px, transparent 1px 48px);
+  background-size: 100% 100%, 100% 100%, 84px 84px, 84px 48px;
+  background-position: center, center, 0 0, 0 0;
+  background-attachment: fixed;
+  animation: redVaporwaveDrift 18s linear infinite;
   color: var(--text);
   font-family: var(--font);
   font-size: 19px;
@@ -1402,6 +1433,15 @@ body::after {
 }
 
 @keyframes blink { 50% { opacity: 0; } }
+
+@keyframes redVaporwaveDrift {
+  0% {
+    background-position: center, center, 0 0, 0 0;
+  }
+  100% {
+    background-position: center, center, 84px 0, 0 48px;
+  }
+}
 
 /* ---------- Navigation ---------- */
 .nav {
@@ -1610,7 +1650,13 @@ body::after {
 /* ---------- Sections ---------- */
 .section { padding: 88px 0; }
 
-.section-alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.section-alt {
+  background: rgba(10, 10, 10, 0.84);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
 
 .section-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
 
@@ -3226,3 +3272,9 @@ body::after {
   .tablet-leftbar, .tablet-sidebar { display: none; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .tablet-game-character {
+    animation: none;
+  }
+}

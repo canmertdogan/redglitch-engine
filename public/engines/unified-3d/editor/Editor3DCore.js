@@ -34,6 +34,15 @@ export default class Editor3DCore {
         /** @type {string} Current editing mode */
         this._mode = options.mode || 'fps-3d';
 
+        /** @type {Array<THREE.Mesh>} Terrain meshes (for terrain mode) */
+        this._terrainMeshes = [];
+        /** @type {Array<THREE.Mesh>} Water plane meshes (terrain mode) */
+        this._waterMeshes = [];
+        /** @type {Array<THREE.Group>} Foliage groups (terrain mode) */
+        this._foliageMeshes = [];
+        /** @type {Array<{id:string,propId:string,position:number[],scale:number,meshNames:string[]}>} Prop groups (prop library) */
+        this._propGroups = [];
+
         /** @type {string} Active project name */
         this._project = options.project || '';
 
@@ -112,12 +121,14 @@ export default class Editor3DCore {
                 createDefaultSkyboxConfig,
                 normalizeSkyboxConfig,
             },
+            { default: WeatherSystem3D },
             { MaterialPreviewRenderer },
             { TransformControls }
         ] = await Promise.all([
             import('/lib/three/three.module.js'),
             import('/engines/shared/Renderer3D.js'),
             import('/engines/shared/SkyboxSystem.js'),
+            import('/engines/shared/WeatherSystem3D.js'),
             import('/engines/shared/MaterialPreviewRenderer.js'),
             import('/lib/three/addons/controls/TransformControls.js?v=cachebust'),
         ]);
@@ -125,6 +136,7 @@ export default class Editor3DCore {
         this.THREE         = THREE_MODULE;
         this._Renderer3D   = Renderer3D;
         this._SkyboxSystem = SkyboxSystem;
+        this._WeatherSystem3D = WeatherSystem3D;
         this._createDefaultSkyboxConfig = createDefaultSkyboxConfig;
         this._normalizeSkyboxConfig = normalizeSkyboxConfig;
 
@@ -151,12 +163,16 @@ export default class Editor3DCore {
         // ── Lighting ──────────────────────────────────────────────────────
         this._ambLight = new THREE.AmbientLight(0xffffff, 4.0);
         this.scene.add(this._ambLight);
+
+        this._hemiLight = new THREE.HemisphereLight(0xbfdfff, 0x4a3828, 1.2);
+        this._hemiLight.name = '__softFillLight';
+        this.scene.add(this._hemiLight);
         
         this._sunLight = new THREE.DirectionalLight(0xfffbe0, 2.0);
         this._sunLight.position.set(30, 60, 30);
         this._sunLight.target.position.set(0, 0, 0);
         this._sunLight.castShadow = true;
-        this._sunLight.shadow.mapSize.set(2048, 2048);
+        this._sunLight.shadow.mapSize.set(1024, 1024);
         this._sunLight.shadow.camera.left = -100;
         this._sunLight.shadow.camera.right = 100;
         this._sunLight.shadow.camera.top = 100;
@@ -170,6 +186,7 @@ export default class Editor3DCore {
 
         // ── Skybox ────────────────────────────────────────────────────────
         this.skybox = new SkyboxSystem(this.scene, { engineType: this._mode });
+        this.weatherSystem = new WeatherSystem3D(this.scene, this.camera, { THREE });
         this._applySkyboxToViewport({ skybox: this._getDefaultSkybox(this._mode) }, this._mode);
 
         // ── Grid ──────────────────────────────────────────────────────────
@@ -530,6 +547,8 @@ export default class Editor3DCore {
             fogSync: true,
             fallbackMode: 'gradient',
             sun: { color: '#fffbe0', intensity: 1.2, azimuth: 45, elevation: 45 },
+            moon: { enabled: true, color: '#dce8ff', intensity: 0.25, azimuth: 225, elevation: 25 },
+            weather: { enabled: false, type: 'clear', intensity: 0.35, windX: 0.4, windZ: 0.1 },
         };
     }
 
@@ -573,6 +592,7 @@ export default class Editor3DCore {
             fallbackFog: levelData?.fog ?? null,
         });
         this.skybox.update(this.camera);
+        this.weatherSystem?.applyConfig(skybox);
 
         // Update Sun & Ambient
         if (this._sunLight && skybox.sun) {
@@ -594,7 +614,12 @@ export default class Editor3DCore {
             this._ambLight.color.set(skybox.ambientColor);
         }
         if (this._ambLight && typeof skybox.ambientIntensity === 'number') {
-            this._ambLight.intensity = skybox.ambientIntensity * Math.PI; // Compensate for physical lighting
+            this._ambLight.intensity = skybox.ambientIntensity * Math.PI * 0.55;
+        }
+        if (this._hemiLight) {
+            this._hemiLight.color.set(skybox.topColor || skybox.sun?.color || '#bfdfff');
+            this._hemiLight.groundColor.set(skybox.bottomColor || '#4a3828');
+            this._hemiLight.intensity = Math.max(0.15, (skybox.ambientIntensity ?? 0.35) * 1.4);
         }
 
         // Apply Fog directly if fogSync is true
@@ -703,6 +728,7 @@ export default class Editor3DCore {
         if (!this._levelData) {
             this._levelData = { geometry: [], entities: [], lights: [], materials: [] };
         }
+        this._syncProceduralTerrainToLevelData();
         if (!this._levelData.geometry) this._levelData.geometry = [];
 
         this._pushUndo();
@@ -764,6 +790,33 @@ export default class Editor3DCore {
         this._levelData.entities.push({
             id, type: 'spawn',
             position: [0, 1, 0]
+        });
+        this._rebuildScene(this._levelData);
+        this._markDirty();
+        const mesh = this.scene.getObjectByName(id);
+        if (mesh) this.select(mesh);
+    }
+
+    spawnVehicle() {
+        if (!this._levelData) {
+            this._levelData = { geometry: [], entities: [], lights: [], materials: [] };
+        }
+        this._syncProceduralTerrainToLevelData();
+        if (!this._levelData.entities) this._levelData.entities = [];
+
+        this._pushUndo();
+        const id = `vehicle_${Date.now().toString(36)}`;
+        this._levelData.entities.push({
+            id,
+            type: 'vehicle',
+            position: [0, 1, 0],
+            rotation: [0, 0, 0, 1],
+            scale: [1, 1, 1],
+            width: 1.8,
+            height: 0.75,
+            depth: 3,
+            colorHex: '#3f6fb4',
+            properties: { studio: 'vehicle', label: 'Vehicle' },
         });
         this._rebuildScene(this._levelData);
         this._markDirty();
@@ -897,6 +950,12 @@ export default class Editor3DCore {
             if (field.startsWith('sun.')) {
                 this._levelData.skybox.sun = this._levelData.skybox.sun || {};
                 this._levelData.skybox.sun[field.split('.')[1]] = value;
+            } else if (field.startsWith('moon.')) {
+                this._levelData.skybox.moon = this._levelData.skybox.moon || {};
+                this._levelData.skybox.moon[field.split('.')[1]] = value;
+            } else if (field.startsWith('weather.')) {
+                this._levelData.skybox.weather = this._levelData.skybox.weather || {};
+                this._levelData.skybox.weather[field.split('.')[1]] = value;
             } else {
                 this._levelData.skybox[field] = value;
             }
@@ -1234,14 +1293,16 @@ export default class Editor3DCore {
             }
         }
 
-        const mat = new THREE.MeshLambertMaterial({ 
+        const mat = new THREE.MeshPhongMaterial({
             color: new THREE.Color(overrides.colorHex || color), 
             emissive: new THREE.Color(overrides.emissive || emissive),
-            emissiveIntensity: overrides.emissiveIntensity ?? emissiveIntensity,
+            emissiveIntensity: overrides.emissiveIntensity ?? Math.min(emissiveIntensity, 0.02),
             opacity, 
             transparent,
             side: THREE.DoubleSide,
-            flatShading: true
+            flatShading: true,
+            shininess: overrides.shininess ?? Math.max(4, (1 - roughness) * 28),
+            specular: new THREE.Color(metalness > 0.2 ? 0x666666 : 0x242424),
         });
 
         if (materialId) {
@@ -1334,7 +1395,13 @@ export default class Editor3DCore {
 
                 // Choose geometry based on shape_type
                 let geo;
-                if (def.shape_type === 'custom_csg') {
+                if ((def.type === 'trimesh' || def.type === 'prop') && def.positions) {
+                    geo = new THREE.BufferGeometry();
+                    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(def.positions), 3));
+                    if (def.normals) geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(def.normals), 3));
+                    if (def.colors) geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(def.colors), 3));
+                    if (!def.normals) geo.computeVertexNormals();
+                } else if (def.shape_type === 'custom_csg') {
                     geo = new THREE.BufferGeometry();
                     if (def.custom_vertices) geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(def.custom_vertices), 3));
                     if (def.custom_normals) geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(def.custom_normals), 3));
@@ -1451,7 +1518,9 @@ export default class Editor3DCore {
         if (Array.isArray(levelData.entities)) {
             for (const ent of levelData.entities) {
                 const entColor = this._entityColor(ent.type);
-                const geo = new THREE.SphereGeometry(0.3, 8, 6);
+                const geo = ent.type === 'vehicle'
+                    ? new THREE.BoxGeometry(ent.width || 1.8, ent.height || 0.75, ent.depth || 3)
+                    : new THREE.SphereGeometry(0.3, 8, 6);
                 const mat = new THREE.MeshLambertMaterial({ 
                     color: new THREE.Color(entColor),
                     emissive: new THREE.Color(entColor),
@@ -1460,6 +1529,7 @@ export default class Editor3DCore {
                 });
                 const mesh = new THREE.Mesh(geo, mat);
                 if (ent.position) mesh.position.set(...ent.position);
+                if (Array.isArray(ent.rotation) && ent.rotation.length === 4) mesh.quaternion.set(...ent.rotation);
                 mesh.name = ent.id || `ent_${this.entityGroup.children.length}`;
                 mesh.userData = { ...ent, _isEntity: true };
                 this.entityGroup.add(mesh);
@@ -1481,6 +1551,96 @@ export default class Editor3DCore {
             }
         }
 
+        // Restore terrain meshes from serialized data (not in meshGroup)
+        for (const list of [this._terrainMeshes, this._waterMeshes, this._foliageMeshes]) {
+            if (list) {
+                for (const m of list) {
+                    m.parent?.remove(m);
+                    if (m.geometry) m.geometry?.dispose();
+                    if (m.material) {
+                        if (Array.isArray(m.material)) m.material.forEach(x => x.dispose());
+                        else m.material.dispose();
+                    }
+                    if (m.traverse) {
+                        m.traverse(c => {
+                            c.geometry?.dispose();
+                            if (c.material) { if (Array.isArray(c.material)) c.material.forEach(x => x.dispose()); else c.material.dispose(); }
+                        });
+                    }
+                }
+                list.length = 0;
+            }
+        }
+        if (this._propGroups) this._propGroups = [];
+        if (Array.isArray(levelData.terrainMeshes)) {
+            for (const td of levelData.terrainMeshes) {
+                if (td.elevationGrid) {
+                    const elev = new Float32Array(td.elevationGrid);
+                    const opts = {
+                        tileSize: 1,
+                        maxHeight: td.heightScale || 8,
+                        jitter: 0.05,
+                    };
+                    import('/engines/shared/LowPolyTerrainGen.js').then(mod => {
+                        const style = td.terrainStyle || td.style || 'lowpoly';
+                        let mesh;
+                        if (Array.isArray(td.sculptedPositions)) {
+                            const geo = new this.THREE.BufferGeometry();
+                            geo.setAttribute('position', new this.THREE.BufferAttribute(new Float32Array(td.sculptedPositions), 3));
+                            if (Array.isArray(td.sculptedNormals)) {
+                                geo.setAttribute('normal', new this.THREE.BufferAttribute(new Float32Array(td.sculptedNormals), 3));
+                            }
+                            if (Array.isArray(td.sculptedColors)) {
+                                geo.setAttribute('color', new this.THREE.BufferAttribute(new Float32Array(td.sculptedColors), 3));
+                            }
+                            if (!Array.isArray(td.sculptedNormals)) geo.computeVertexNormals();
+                            mesh = new this.THREE.Mesh(geo, new this.THREE.MeshPhongMaterial({
+                                vertexColors: Array.isArray(td.sculptedColors),
+                                flatShading: true,
+                                shininess: 0,
+                            }));
+                        } else if (style === 'minecraft' || style === 'veloren') {
+                            const geo = this._buildRestoredVoxelTerrainGeometry(elev, td.genWidth || 65, td.genDepth || 65, opts.maxHeight, style);
+                            mesh = new this.THREE.Mesh(geo, new this.THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true, shininess: 0 }));
+                        } else {
+                            const gen = new mod.default();
+                            mesh = gen.generate(elev, td.genWidth || 65, td.genDepth || 65, opts).mesh;
+                        }
+                        mesh.name = td.id || `terrain_restored_${Date.now().toString(36)}`;
+                        mesh.userData = {
+                            type: 'terrain',
+                            _isTerrain: true,
+                            elevationGrid: Array.from(elev),
+                            genWidth: td.genWidth,
+                            genDepth: td.genDepth,
+                            heightScale: td.heightScale,
+                            biome: td.biome,
+                            terrainStyle: style,
+                            sculptedPositions: td.sculptedPositions,
+                            sculptedNormals: td.sculptedNormals,
+                            sculptedColors: td.sculptedColors,
+                            waterLevel: td.waterLevel,
+                            waterMask: td.waterMask,
+                            riverPaths: td.riverPaths,
+                            waterfallInstances: td.waterfallInstances,
+                            lakeCount: td.lakeCount,
+                            lakeSize: td.lakeSize,
+                            riverCount: td.riverCount,
+                            riverWidth: td.riverWidth,
+                            waterfallsEnabled: td.waterfallsEnabled,
+                            foliageInstances: td.foliageInstances,
+                        };
+                        if (td.position) mesh.position.set(...td.position);
+                        mesh.receiveShadow = true;
+                        this.scene.add(mesh);
+                        this._terrainMeshes.push(mesh);
+                        this._restoreTerrainExtras(td);
+                        this._updateSceneTree();
+                    }).catch(e => console.warn('[Editor3DCore] Failed to restore terrain:', e));
+                }
+            }
+        }
+
         // Notify mode panel
         if (this._modePanel && typeof this._modePanel.onSceneRebuilt === 'function') {
             this._modePanel.onSceneRebuilt(levelData);
@@ -1488,6 +1648,214 @@ export default class Editor3DCore {
 
         this._updateMaterialManager();
         this._updateSceneTree();
+    }
+
+    _restoreTerrainExtras(td) {
+        const THREE = this.THREE;
+        if (!THREE || !td) return;
+
+        const w = td.genWidth || 65;
+        const d = td.genDepth || 65;
+        const maxHeight = td.heightScale || 8;
+        const waterLevel = td.waterLevel ?? 0;
+        const waterMask = Array.isArray(td.waterMask) ? td.waterMask : null;
+
+        if (waterMask && waterLevel > 0.02) {
+            const waterY = waterLevel * maxHeight;
+            const geo = this._buildRestoredWaterGeometry(waterMask, w, d, 1, waterY);
+            const mat = new THREE.MeshPhongMaterial({
+                color: 0x2a6a9a,
+                transparent: true,
+                opacity: 0.62,
+                shininess: 60,
+                flatShading: true,
+                side: THREE.DoubleSide,
+            });
+            const water = new THREE.Mesh(geo, mat);
+            water.name = `water_${td.id || Date.now().toString(36)}`;
+            water.userData = { type: 'water', _isWater: true, waterLevelY: waterY, waterMask, riverPaths: td.riverPaths, genWidth: w, genDepth: d };
+            this.scene.add(water);
+            this._waterMeshes.push(water);
+        }
+
+        if (Array.isArray(td.waterfallInstances) && td.waterfallInstances.length > 0) {
+            const group = this._makeRestoredWaterfalls(td.waterfallInstances, maxHeight);
+            this.scene.add(group);
+            this._waterMeshes.push(group);
+        }
+
+        if (Array.isArray(td.foliageInstances) && td.foliageInstances.length > 0) {
+            const group = new THREE.Group();
+            group.name = `foliage_${td.id || Date.now().toString(36)}`;
+            group.userData = { type: 'foliage', _isFoliage: true, instances: td.foliageInstances };
+            let idx = 0;
+            for (const inst of td.foliageInstances) {
+                const obj = this._makeRestoredFoliage(inst.kind || 'grass', inst.scale || 1);
+                if (!obj) continue;
+                obj.position.set(...(inst.position || [0, 0, 0]));
+                obj.rotation.y = inst.rotationY || 0;
+                obj.name = `${inst.kind || 'foliage'}_${idx++}`;
+                group.add(obj);
+            }
+            this.scene.add(group);
+            this._foliageMeshes.push(group);
+        }
+    }
+
+    _buildRestoredWaterGeometry(mask, w, d, tileSize, waterY) {
+        const positions = [];
+        const addTri = (ax, az, bx, bz, cx, cz) => {
+            positions.push(ax, waterY + 0.025, az, bx, waterY + 0.025, bz, cx, waterY + 0.025, cz);
+        };
+        for (let z = 0; z < d - 1; z++) {
+            for (let x = 0; x < w - 1; x++) {
+                const m = Math.max(mask[z * w + x] || 0, mask[z * w + x + 1] || 0, mask[(z + 1) * w + x] || 0, mask[(z + 1) * w + x + 1] || 0);
+                if (m <= 0.02) continue;
+                const x0 = x * tileSize;
+                const x1 = (x + 1) * tileSize;
+                const z0 = z * tileSize;
+                const z1 = (z + 1) * tileSize;
+                addTri(x0, z0, x0, z1, x1, z1);
+                addTri(x0, z0, x1, z1, x1, z0);
+            }
+        }
+        const geo = new this.THREE.BufferGeometry();
+        geo.setAttribute('position', new this.THREE.BufferAttribute(new Float32Array(positions), 3));
+        geo.computeVertexNormals();
+        return geo;
+    }
+
+    _buildRestoredVoxelTerrainGeometry(elevation, w, d, maxHeight, style) {
+        const THREE = this.THREE;
+        const positions = [];
+        const colors = [];
+        const cellsX = w - 1;
+        const cellsZ = d - 1;
+        const quant = style === 'veloren' ? 2 : 1;
+        const minStep = style === 'veloren' ? 0.5 : 1;
+        const color = new THREE.Color();
+
+        const heightAt = (x, z) => {
+            const v = elevation[Math.max(0, Math.min(d - 1, z)) * w + Math.max(0, Math.min(w - 1, x))] || 0;
+            return Math.max(minStep, Math.round(v * maxHeight * quant) / quant);
+        };
+        const colorFor = (h) => {
+            const n = Math.min(1, h / maxHeight);
+            if (n < 0.2) return color.set(0x2e6b8a).clone();
+            if (n < 0.32) return color.set(0xc2a86b).clone();
+            if (n < 0.62) return color.set(0x4a7c3f).clone();
+            if (n < 0.84) return color.set(0x6b6b5e).clone();
+            return color.set(0xe8e8e8).clone();
+        };
+        const pushColor = (c, shade = 1) => {
+            for (let i = 0; i < 6; i++) colors.push(Math.min(1, c.r * shade), Math.min(1, c.g * shade), Math.min(1, c.b * shade));
+        };
+        const addQuad = (verts, c, shade = 1) => {
+            const [a, b, c0, d0] = verts;
+            positions.push(...a, ...b, ...c0, ...a, ...c0, ...d0);
+            pushColor(c, shade);
+        };
+
+        for (let z = 0; z < cellsZ; z++) {
+            for (let x = 0; x < cellsX; x++) {
+                const h = heightAt(x, z);
+                const c = colorFor(h);
+                const x0 = x, x1 = x + 1, z0 = z, z1 = z + 1;
+                addQuad([[x0, h, z0], [x0, h, z1], [x1, h, z1], [x1, h, z0]], c, 1.04);
+                const neighbors = [
+                    { h: z > 0 ? heightAt(x, z - 1) : 0, face: 'north' },
+                    { h: z < cellsZ - 1 ? heightAt(x, z + 1) : 0, face: 'south' },
+                    { h: x > 0 ? heightAt(x - 1, z) : 0, face: 'west' },
+                    { h: x < cellsX - 1 ? heightAt(x + 1, z) : 0, face: 'east' },
+                ];
+                for (const n of neighbors) {
+                    if (n.h >= h) continue;
+                    const side = colorFor(h * 0.78);
+                    if (n.face === 'north') addQuad([[x1, h, z0], [x0, h, z0], [x0, n.h, z0], [x1, n.h, z0]], side, 0.72);
+                    if (n.face === 'south') addQuad([[x0, h, z1], [x1, h, z1], [x1, n.h, z1], [x0, n.h, z1]], side, 0.78);
+                    if (n.face === 'west') addQuad([[x0, h, z0], [x0, h, z1], [x0, n.h, z1], [x0, n.h, z0]], side, 0.68);
+                    if (n.face === 'east') addQuad([[x1, h, z1], [x1, h, z0], [x1, n.h, z0], [x1, n.h, z1]], side, 0.82);
+                }
+            }
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+        geo.computeVertexNormals();
+        return geo;
+    }
+
+    _makeRestoredFoliage(kind, scale) {
+        const THREE = this.THREE;
+        if (kind === 'rock') {
+            const mesh = new THREE.Mesh(
+                new THREE.DodecahedronGeometry(scale * 0.4),
+                new THREE.MeshPhongMaterial({ color: 0x77746d, flatShading: true })
+            );
+            mesh.userData = { type: 'vegetation', kind: 'rock' };
+            return mesh;
+        }
+        if (kind === 'grass') {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshPhongMaterial({ color: 0x3f8a2f, side: THREE.DoubleSide, flatShading: true });
+            const bladeH = scale * 1.8;
+            for (let i = 0; i < 5; i++) {
+                const blade = new THREE.Mesh(new THREE.PlaneGeometry(scale * 0.18, bladeH), mat);
+                const a = (i / 5) * Math.PI * 2;
+                blade.position.set(Math.cos(a) * scale * 0.08, bladeH * 0.5, Math.sin(a) * scale * 0.08);
+                blade.rotation.y = a;
+                blade.rotation.x = 0.25;
+                group.add(blade);
+            }
+            group.userData = { type: 'grass', kind: 'grass' };
+            return group;
+        }
+
+        const group = new THREE.Group();
+        const trunkH = scale * 1.2;
+        const trunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(scale * 0.08, scale * 0.1, trunkH, 5),
+            new THREE.MeshPhongMaterial({ color: 0x6B4226, flatShading: true })
+        );
+        trunk.position.y = trunkH / 2;
+        group.add(trunk);
+        const crown = new THREE.Mesh(
+            new THREE.SphereGeometry(scale * 0.55, 5, 4),
+            new THREE.MeshPhongMaterial({ color: kind === 'pine' ? 0x1a5a2f : 0x3a8a3f, flatShading: true })
+        );
+        crown.position.y = trunkH + scale * 0.25;
+        crown.scale.y = kind === 'pine' ? 1.8 : 0.9;
+        group.add(crown);
+        group.userData = { type: 'vegetation', kind };
+        return group;
+    }
+
+    _makeRestoredWaterfalls(instances, maxHeight) {
+        const THREE = this.THREE;
+        const group = new THREE.Group();
+        group.name = `waterfalls_restored_${Date.now().toString(36)}`;
+        group.userData = { type: 'waterfalls', _isWater: true, instances };
+        const mat = new THREE.MeshPhongMaterial({
+            color: 0x9ddcff,
+            transparent: true,
+            opacity: 0.72,
+            shininess: 80,
+            flatShading: true,
+            side: THREE.DoubleSide,
+        });
+        for (let i = 0; i < instances.length; i++) {
+            const wf = instances[i];
+            const width = Math.max(0.8, wf.width || 1);
+            const height = Math.max(0.8, wf.height || 1);
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height, 3, 6), mat.clone());
+            mesh.name = `waterfall_${i}`;
+            mesh.position.set(wf.position?.[0] || 0, (wf.position?.[1] || 0) * maxHeight + height * 0.5, wf.position?.[2] || 0);
+            mesh.rotation.y = wf.rotationY || 0;
+            mesh.userData = { type: 'waterfall', _isWater: true };
+            group.add(mesh);
+        }
+        return group;
     }
 
     _clearGroup(group) {
@@ -1529,6 +1897,41 @@ export default class Editor3DCore {
         addGroup(this.meshGroup,   '📦 Geometry');
         addGroup(this.entityGroup, '👤 Entities');
         addGroup(this.lightGroup,  '💡 Lights');
+
+        if (this._terrainMeshes && this._terrainMeshes.length > 0) {
+            html += `<div class="tree-group"><div class="tree-group-label">🏔️ Terrain (${this._terrainMeshes.length})</div>`;
+            for (const child of this._terrainMeshes) {
+                const selected = this._selected.includes(child) ? 'selected' : '';
+                html += `<div class="tree-item ${selected}" data-name="${child.name}">${child.name || '(terrain)'}</div>`;
+            }
+            html += '</div>';
+        }
+
+        if (this._waterMeshes && this._waterMeshes.length > 0) {
+            html += `<div class="tree-group"><div class="tree-group-label">💧 Water (${this._waterMeshes.length})</div>`;
+            for (const child of this._waterMeshes) {
+                const selected = this._selected.includes(child) ? 'selected' : '';
+                html += `<div class="tree-item ${selected}" data-name="${child.name}">${child.name || '(water)'}</div>`;
+            }
+            html += '</div>';
+        }
+
+        if (this._foliageMeshes && this._foliageMeshes.length > 0) {
+            const allItems = [];
+            for (const group of this._foliageMeshes) {
+                for (const child of group.children) {
+                    allItems.push(child);
+                }
+            }
+            if (allItems.length > 0) {
+                html += `<div class="tree-group"><div class="tree-group-label">🌿 Foliage (${allItems.length})</div>`;
+                for (const child of allItems) {
+                    const selected = this._selected.includes(child) ? 'selected' : '';
+                    html += `<div class="tree-item ${selected}" data-name="${child.name}">${child.name || '(foliage)'}</div>`;
+                }
+                html += '</div>';
+            }
+        }
 
         tree.innerHTML = html;
 
@@ -1656,6 +2059,12 @@ export default class Editor3DCore {
                     receiveShadow: true,
                     imported:      ud.imported || false
                 };
+                if (ud.propId) {
+                    geoData.type = 'prop';
+                    geoData.propId = ud.propId;
+                    geoData.propGroup = ud.propGroup || null;
+                    geoData.propPart = ud.propPart ?? null;
+                }
                 if (ud.material_assignments) {
                     geoData.material_assignments = { ...ud.material_assignments };
                 }
@@ -1663,7 +2072,7 @@ export default class Editor3DCore {
                     geoData.material_overrides = { ...ud.material_overrides };
                 }
                 
-                if (ud.type === 'trimesh' && mesh.geometry) {
+                if ((ud.type === 'trimesh' || ud.type === 'prop') && mesh.geometry) {
                     const pos = mesh.geometry.getAttribute('position');
                     if (pos) geoData.positions = Array.from(pos.array);
                     const nrm = mesh.geometry.getAttribute('normal');
@@ -1683,9 +2092,30 @@ export default class Editor3DCore {
                     id:       mesh.name,
                     type:     ud.type || 'unknown',
                     position: [mesh.position.x, mesh.position.y, mesh.position.z],
+                    rotation: [mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w],
+                    scale:    [mesh.scale.x, mesh.scale.y, mesh.scale.z],
+                    width:    ud.width,
+                    height:   ud.height,
+                    depth:    ud.depth,
+                    colorHex: ud.colorHex,
                     properties: ud.properties || {},
                 });
             }
+        }
+        const playerSpawn = data.entities.find(ent =>
+            ent.type === 'player-spawn' || ent.type === 'player_spawn' || ent.properties?.studio === 'player'
+        );
+        if (playerSpawn?.position) {
+            data.playerSpawn = {
+                x: playerSpawn.position[0],
+                y: playerSpawn.position[1],
+                z: playerSpawn.position[2],
+            };
+            data.player = { ...(data.player || {}), ...(playerSpawn.properties || {}) };
+        }
+        const npcStudioCount = data.entities.filter(ent => ent.properties?.studio === 'npc').length;
+        if (npcStudioCount > 0) {
+            data.npcStudio = { ...(data.npcStudio || {}), count: npcStudioCount };
         }
 
         if (this.lightGroup) {
@@ -1699,6 +2129,64 @@ export default class Editor3DCore {
                     intensity: ud.intensity ?? 1.0,
                     distance:  ud.distance ?? 20,
                     castShadow: ud.castShadow ?? false,
+                });
+            }
+        }
+
+        // Serialize terrain meshes + water + foliage (stored separately from meshGroup)
+        if (this._terrainMeshes && this._terrainMeshes.length > 0) {
+            data.terrainMeshes = [];
+            for (const mesh of this._terrainMeshes) {
+                const ud = mesh.userData || {};
+                if (ud.elevationGrid) {
+                    data.terrainMeshes.push({
+                        id: mesh.name,
+                        type: 'terrain',
+                        elevationGrid: ud.elevationGrid,
+                        genWidth: ud.genWidth,
+                        genDepth: ud.genDepth,
+                        heightScale: ud.heightScale,
+                        biome: ud.biome,
+                        terrainStyle: ud.terrainStyle,
+                        sculptedPositions: ud.sculptedPositions,
+                        sculptedNormals: ud.sculptedNormals,
+                        sculptedColors: ud.sculptedColors,
+                        waterLevel: ud.waterLevel,
+                        waterMask: ud.waterMask,
+                        riverPaths: ud.riverPaths,
+                        waterfallInstances: ud.waterfallInstances,
+                        lakeCount: ud.lakeCount,
+                        lakeSize: ud.lakeSize,
+                        riverCount: ud.riverCount,
+                        riverWidth: ud.riverWidth,
+                        waterfallsEnabled: ud.waterfallsEnabled,
+                        foliageInstances: ud.foliageInstances,
+                        position: [mesh.position.x, mesh.position.y, mesh.position.z],
+                    });
+                }
+            }
+        }
+        if (this._waterMeshes && this._waterMeshes.length > 0) {
+            data.waterMeshes = [];
+            for (const m of this._waterMeshes) {
+                data.waterMeshes.push({
+                    id: m.name,
+                    position: [m.position.x, m.position.y, m.position.z],
+                    waterLevel: m.userData.waterLevel ?? m.userData.waterLevelY ?? null,
+                    waterMask: m.userData.waterMask ?? null,
+                    genWidth: m.userData.genWidth ?? null,
+                    genDepth: m.userData.genDepth ?? null,
+                });
+            }
+        }
+        if (this._foliageMeshes && this._foliageMeshes.length > 0) {
+            data.foliageMeshes = [];
+            for (const g of this._foliageMeshes) {
+                data.foliageMeshes.push({
+                    id: g.name,
+                    position: [g.position.x, g.position.y, g.position.z],
+                    count: g.children.length,
+                    instances: g.userData?.instances ?? [],
                 });
             }
         }
@@ -1805,8 +2293,51 @@ export default class Editor3DCore {
         return raycaster;
     }
 
+    _getPlacementRaycastObjects() {
+        return [
+            ...(this.meshGroup?.children || []),
+            ...(this._terrainMeshes || []),
+        ].filter(Boolean);
+    }
+
+    _syncProceduralTerrainToLevelData() {
+        if (!this._levelData) return;
+        if (this._terrainMeshes && this._terrainMeshes.length > 0) {
+            this._levelData.terrainMeshes = this._terrainMeshes
+                .filter(mesh => mesh?.userData?.elevationGrid)
+                .map(mesh => {
+                    const ud = mesh.userData || {};
+                    return {
+                        id: mesh.name,
+                        type: 'terrain',
+                        elevationGrid: ud.elevationGrid,
+                        genWidth: ud.genWidth,
+                        genDepth: ud.genDepth,
+                        heightScale: ud.heightScale,
+                        biome: ud.biome,
+                        terrainStyle: ud.terrainStyle,
+                        sculptedPositions: ud.sculptedPositions,
+                        sculptedNormals: ud.sculptedNormals,
+                        sculptedColors: ud.sculptedColors,
+                        waterLevel: ud.waterLevel,
+                        waterMask: ud.waterMask,
+                        riverPaths: ud.riverPaths,
+                        waterfallInstances: ud.waterfallInstances,
+                        lakeCount: ud.lakeCount,
+                        lakeSize: ud.lakeSize,
+                        riverCount: ud.riverCount,
+                        riverWidth: ud.riverWidth,
+                        waterfallsEnabled: ud.waterfallsEnabled,
+                        foliageInstances: ud.foliageInstances,
+                        position: [mesh.position.x, mesh.position.y, mesh.position.z],
+                    };
+                });
+        }
+    }
+
     _onPointerDown(e) {
         if (this._gizmoDragging) return;
+        if (this._modePanel?.handlePointerDown?.(e)) return;
         if (this.transformCtrl && this.transformCtrl.enabled && this.transformCtrl.axis !== null) {
             return;
         }
@@ -1818,13 +2349,18 @@ export default class Editor3DCore {
             if (state && state.mode === 'pencil') {
                 if (this.ghostMesh && this.ghostMesh.visible) {
                     const tool = state.tool || 'block';
-                    if (tool === 'entity' || tool === 'enemy' || tool === 'collectible' || tool === 'checkpoint' || tool === 'hazard' || tool === 'trigger' || tool === 'npc' || tool === 'building' || tool === 'resource') {
+                    if ((tool === 'player-studio' || tool === 'npc-studio') && this._modePanel?.placeSelectedAt) {
+                        this._modePanel.placeSelectedAt(this.ghostMesh.position);
+                    } else if (tool === 'entity' || tool === 'enemy' || tool === 'collectible' || tool === 'checkpoint' || tool === 'hazard' || tool === 'trigger' || tool === 'npc' || tool === 'building' || tool === 'resource') {
                         const entityType = state.entity || state.block || 'spawn';
-                        const props = {};
+                        const props = { ...(state.properties || {}) };
                         if (state.team !== undefined) props.team = state.team;
                         this.placeEntityAt(this.ghostMesh.position, entityType, props);
                     } else if (tool === 'light') {
                         this.placeLightAt(this.ghostMesh.position, state.lightType || 'point');
+                    } else if (tool === 'prop' && this._modePanel?.placeSelectedAt) {
+                        this._pushUndo();
+                        this._modePanel.placeSelectedAt(this.ghostMesh.position);
                     } else {
                         // Place standard block
                         this._placeBlock(this.ghostMesh.position, state);
@@ -1870,6 +2406,7 @@ export default class Editor3DCore {
 
     _onPointerMove(e) {
         if (this._gizmoDragging) return;
+        if (this._modePanel?.handlePointerMove?.(e)) return;
         // ── Transform drag (move/rotate/scale) ───────────────────────────
         if (this._transformDrag) {
             const td = this._transformDrag;
@@ -1935,7 +2472,7 @@ export default class Editor3DCore {
 
                 const raycaster = this._getRaycaster(e);
                 if (raycaster) {
-                    const hits = raycaster.intersectObjects(this.meshGroup?.children || [], false);
+                    const hits = raycaster.intersectObjects(this._getPlacementRaycastObjects(), true);
                     let hitPos = null;
                     let normal = new this.THREE.Vector3(0, 1, 0);
                     if (hits.length > 0) {
@@ -1996,6 +2533,7 @@ export default class Editor3DCore {
 
     _onPointerUp(e) {
         if (this._gizmoDragging) return;
+        if (this._modePanel?.handlePointerUp?.(e)) return;
         // Commit a completed transform drag back to levelData
         if (this._transformDrag) {
             const td = this._transformDrag;
@@ -2014,7 +2552,8 @@ export default class Editor3DCore {
             if (state && state.mode === 'pencil') {
                 const raycaster = this._getRaycaster(e);
                 if (raycaster) {
-                    const hits = raycaster.intersectObjects(this.meshGroup?.children || [], false);
+                    const hits = raycaster.intersectObjects(this._getPlacementRaycastObjects(), true)
+                        .filter(hit => !hit.object.userData?._isTerrain);
                     if (hits.length > 0) this._deleteBlock(hits[0].object);
                 }
             }
@@ -2115,7 +2654,10 @@ export default class Editor3DCore {
     }
 
     placeLightAt(pos, type = 'point') {
-        if (!this._levelData) return;
+        if (!this._levelData) {
+            this._levelData = { geometry: [], entities: [], lights: [], materials: [] };
+        }
+        this._syncProceduralTerrainToLevelData();
         if (!this._levelData.lights) this._levelData.lights = [];
 
         this._pushUndo();
@@ -2136,7 +2678,10 @@ export default class Editor3DCore {
     }
 
     placeEntityAt(pos, type = 'spawn', properties = {}) {
-        if (!this._levelData) return;
+        if (!this._levelData) {
+            this._levelData = { geometry: [], entities: [], lights: [], materials: [] };
+        }
+        this._syncProceduralTerrainToLevelData();
         if (!this._levelData.entities) this._levelData.entities = [];
 
         this._pushUndo();
@@ -2158,6 +2703,21 @@ export default class Editor3DCore {
     _deleteBlock(meshObj) {
         if (!meshObj || !meshObj.userData) return;
         this._pushUndo();
+
+        if (meshObj.userData.propId) {
+            this._removePropMeshFromTracking(meshObj.name);
+            meshObj.parent?.remove(meshObj);
+            if (meshObj.geometry) meshObj.geometry.dispose();
+            if (meshObj.material) {
+                if (Array.isArray(meshObj.material)) meshObj.material.forEach(m => m.dispose());
+                else meshObj.material.dispose();
+            }
+
+            this.deselectAll();
+            this._updateSceneTree();
+            this._markDirty();
+            return;
+        }
         
         const index = this._levelData.geometry.findIndex(g => g.id === meshObj.name);
         if (index !== -1) {
@@ -2174,6 +2734,16 @@ export default class Editor3DCore {
             this._updateSceneTree();
             this._markDirty();
         }
+    }
+
+    _removePropMeshFromTracking(meshName) {
+        if (!Array.isArray(this._propGroups)) return;
+        for (const group of this._propGroups) {
+            if (Array.isArray(group.meshNames)) {
+                group.meshNames = group.meshNames.filter(name => name !== meshName);
+            }
+        }
+        this._propGroups = this._propGroups.filter(group => group.meshNames?.length > 0);
     }
 
     _onWheel(e) {
@@ -2261,6 +2831,9 @@ export default class Editor3DCore {
                 const eIdx = (this._levelData.entities || []).findIndex(e => e.id === name);
                 if (eIdx !== -1) this._levelData.entities.splice(eIdx, 1);
             }
+            if (obj.userData?.propId) {
+                this._removePropMeshFromTracking(name);
+            }
 
             // Remove from Three.js scene
             obj.parent?.remove(obj);
@@ -2313,6 +2886,7 @@ export default class Editor3DCore {
 
         // Skybox follows camera
         if (this.skybox) this.skybox.update(this.camera, dt);
+        this.weatherSystem?.update(this.camera, dt);
 
         // Update shaders
         ShaderRegistry.update(now);
@@ -2333,6 +2907,7 @@ export default class Editor3DCore {
             'door': '#e67e22', 'trigger': '#f39c12',
             'level-exit': '#ff6b35', 'checkpoint': '#9b59b6',
             'npc': '#1abc9c', 'collectible': '#f1c40f',
+            'vehicle': '#3f6fb4',
         };
         return map[type] || '#aaaaaa';
     }
@@ -2367,5 +2942,29 @@ export default class Editor3DCore {
         if (this._modePanel?.dispose) this._modePanel.dispose();
         this.renderer3d?.dispose();
         this.materialPreviewRenderer?.dispose();
+        this.weatherSystem?.dispose?.();
+        for (const list of [this._terrainMeshes, this._waterMeshes, this._foliageMeshes]) {
+            if (list) {
+                for (const m of list) {
+                    m.parent?.remove(m);
+                    if (m.geometry) m.geometry?.dispose();
+                    if (m.material) {
+                        if (Array.isArray(m.material)) m.material.forEach(x => x.dispose());
+                        else m.material.dispose();
+                    }
+                    if (m.traverse) {
+                        m.traverse(c => {
+                            c.geometry?.dispose();
+                            if (c.material) {
+                                if (Array.isArray(c.material)) c.material.forEach(x => x.dispose());
+                                else c.material.dispose();
+                            }
+                        });
+                    }
+                }
+                list.length = 0;
+            }
+        }
+        if (this._propGroups) this._propGroups = [];
     }
 }

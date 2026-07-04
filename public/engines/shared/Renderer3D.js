@@ -201,6 +201,8 @@ class Renderer3D {
             outlinePx: opts.outlinePx || 1.5,
             cel:       opts.cel !== false,
             tones:     opts.tones || 3.0,
+            toneMapping: opts.toneMapping !== false,
+            softShadows: opts.softShadows !== false,
             ...opts
         };
         this._resizeObserver = null;
@@ -216,9 +218,10 @@ class Renderer3D {
         this.webgl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.webgl.setSize(width, height);
         this.webgl.outputColorSpace = THREE.SRGBColorSpace;
-        this.webgl.toneMapping = THREE.NoToneMapping;
+        this.webgl.toneMapping = this._opts.toneMapping ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+        this.webgl.toneMappingExposure = this._opts.exposure ?? 1.05;
         this.webgl.shadowMap.enabled = true;
-        this.webgl.shadowMap.type = THREE.PCFShadowMap;
+        this.webgl.shadowMap.type = this._opts.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
         if (!this._opts.canvas) this.container.appendChild(this.webgl.domElement);
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
@@ -414,11 +417,13 @@ export function applyFlatShading(obj) {
 const _hexMatCache = {};
 export function hexMaterial(color) {
     if (!_hexMatCache[color]) {
-        _hexMatCache[color] = new THREE.MeshLambertMaterial({ 
+        _hexMatCache[color] = new THREE.MeshPhongMaterial({
             color: new THREE.Color(color), 
             flatShading: true,
             emissive: new THREE.Color(color),
-            emissiveIntensity: 0.02 // Reduced from 0.05 to restore shadow depth
+            emissiveIntensity: 0.012,
+            shininess: 12,
+            specular: new THREE.Color(0x222222),
         });
     }
     return _hexMatCache[color];

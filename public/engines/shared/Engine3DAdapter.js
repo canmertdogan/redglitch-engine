@@ -135,7 +135,7 @@ export default class Engine3DAdapter extends Engine3DBase {
 
             // Populate scene
             this._populateLights(level.lights);
-            this._populateGeometry(level.geometry);
+            await this._populateGeometry(level.geometry);
             
             // Phase 37: Advanced Lighting & Fog Integration
             if (level.lighting) {
@@ -386,6 +386,13 @@ export default class Engine3DAdapter extends Engine3DBase {
         if (sun) {
             sun.color.set(config.sunColor);
             sun.intensity = config.sunIntensity;
+            sun.castShadow = true;
+            if (sun.shadow) {
+                sun.shadow.mapSize.set(1024, 1024);
+                sun.shadow.radius = 3;
+                sun.shadow.bias = -0.0004;
+                sun.shadow.normalBias = 0.02;
+            }
             
             // Calculate direction from Azimuth/Elevation
             const az = (config.sunAzimuth ?? 45) * Math.PI / 180;
@@ -408,7 +415,19 @@ export default class Engine3DAdapter extends Engine3DBase {
         }
         if (amb) {
             amb.color.set(config.ambientColor);
-            amb.intensity = config.ambientIntensity;
+            amb.intensity = config.ambientIntensity * 0.6;
+        }
+
+        let hemi = this.scene.getObjectByName('__softFillLight');
+        if (!hemi) {
+            hemi = new THREE.HemisphereLight(config.skyTop || config.ambientColor || '#bfdfff', '#3a3026', 0.5);
+            hemi.name = '__softFillLight';
+            this.scene.add(hemi);
+        }
+        if (hemi) {
+            hemi.color.set(config.skyTop || config.ambientColor || '#bfdfff');
+            hemi.groundColor.set(config.skyHorizon || '#3a3026');
+            hemi.intensity = Math.max(0.1, (config.ambientIntensity ?? 0.4) * 0.9);
         }
 
         // 3. Fog
@@ -445,6 +464,13 @@ export default class Engine3DAdapter extends Engine3DBase {
             if (sun && sky.sunColor) {
                 sun.color.set(sky.sunColor);
                 if (typeof sky.sunIntensity === 'number') sun.intensity = sky.sunIntensity;
+                sun.castShadow = true;
+                if (sun.shadow) {
+                    sun.shadow.mapSize.set(1024, 1024);
+                    sun.shadow.radius = 3;
+                    sun.shadow.bias = -0.0004;
+                    sun.shadow.normalBias = 0.02;
+                }
                 
                 const az = (sky.sunAzimuth ?? 45) * Math.PI / 180;
                 const el = (sky.sunElevation ?? 45) * Math.PI / 180;
@@ -460,7 +486,19 @@ export default class Engine3DAdapter extends Engine3DBase {
             const amb = this.scene.getObjectByName('__ambLight') || this.scene.getObjectByName('__ambient__');
             if (amb && sky.ambientColor) {
                 amb.color.set(sky.ambientColor);
-                if (typeof sky.ambientIntensity === 'number') amb.intensity = sky.ambientIntensity;
+                if (typeof sky.ambientIntensity === 'number') amb.intensity = sky.ambientIntensity * 0.6;
+            }
+
+            let hemi = this.scene.getObjectByName('__softFillLight');
+            if (!hemi) {
+                hemi = new this.THREE.HemisphereLight(sky.topColor || sky.ambientColor || '#bfdfff', sky.bottomColor || '#3a3026', 0.5);
+                hemi.name = '__softFillLight';
+                this.scene.add(hemi);
+            }
+            if (hemi) {
+                hemi.color.set(sky.topColor || sky.ambientColor || '#bfdfff');
+                hemi.groundColor.set(sky.bottomColor || '#3a3026');
+                hemi.intensity = Math.max(0.1, (sky.ambientIntensity ?? 0.4) * 0.9);
             }
         }
 

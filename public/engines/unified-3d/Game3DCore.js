@@ -39,6 +39,7 @@ import SkyboxSystem, {
     createDefaultSkyboxConfig,
     normalizeSkyboxConfig,
 } from '../shared/SkyboxSystem.js';
+import WeatherSystem3D        from '../shared/WeatherSystem3D.js';
 import {
     serializeSavePayload3D,
     deserializeSavePayload3D,
@@ -100,6 +101,8 @@ export default class Game3DCore extends Engine3DAdapter {
         this.raycast    = null;
         /** @type {SkyboxSystem|null} */
         this.skybox     = null;
+        /** @type {WeatherSystem3D|null} */
+        this.weatherSystem = null;
 
         // ── Active mode module ────────────────────────────────────────────
         /** @type {import('./ModeInterface.js').default|null} */
@@ -213,6 +216,8 @@ export default class Game3DCore extends Engine3DAdapter {
             engineType: this.engineType3D,
         });
         this.skybox.update(this.renderer3d.camera, 0);
+        this.weatherSystem = new WeatherSystem3D(this.scene, this.renderer3d.camera, { THREE });
+        this.weatherSystem.applyConfig(createDefaultSkyboxConfig(this.engineType3D));
 
         // ── Window resize ─────────────────────────────────────────────────
         this._boundOnResize = () => this._onResize();
@@ -293,6 +298,7 @@ export default class Game3DCore extends Engine3DAdapter {
                 fallbackFog: level.fog ?? null,
             });
             this.skybox.update(this.renderer3d?.camera, 0);
+            this.weatherSystem?.applyConfig(skyboxData);
         }
 
         // Sync raycaster layers
@@ -417,6 +423,7 @@ export default class Game3DCore extends Engine3DAdapter {
 
         // 4. Skybox follows camera
         this.skybox?.update(this.renderer3d?.camera, dt);
+        this.weatherSystem?.update(this.renderer3d?.camera, dt);
 
         // 5. Spatial audio listener follows camera
         if (this.audio && this.renderer3d?.camera) {
@@ -599,6 +606,7 @@ export default class Game3DCore extends Engine3DAdapter {
         this.releasePointerLock();
         this.input?.detach();
         this.skybox?.dispose?.();
+        this.weatherSystem?.dispose?.();
         this.audio?.dispose();
         this.renderer3d?.dispose();
         this.raycast?.dispose();

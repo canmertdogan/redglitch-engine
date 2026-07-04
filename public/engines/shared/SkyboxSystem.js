@@ -24,6 +24,8 @@ const SKYBOX_PRESETS = {
         top_index: null,
         bottom_index: null,
         sun: { color: '#fffbe0', intensity: 1.4, azimuth: 45, elevation: 45 },
+        moon: { enabled: true, color: '#dce8ff', intensity: 0.25, azimuth: 225, elevation: 25 },
+        weather: { enabled: false, type: 'clear', intensity: 0.35, windX: 0.4, windZ: 0.1 },
     },
     'topdown-3d': {
         type: 'gradient',
@@ -36,6 +38,8 @@ const SKYBOX_PRESETS = {
         top_index: null,
         bottom_index: null,
         sun: { color: '#fffbe0', intensity: 1.2, azimuth: 45, elevation: 45 },
+        moon: { enabled: true, color: '#dce8ff', intensity: 0.22, azimuth: 225, elevation: 25 },
+        weather: { enabled: false, type: 'clear', intensity: 0.35, windX: 0.4, windZ: 0.1 },
     },
     'fps-3d': {
         type: 'gradient',
@@ -48,6 +52,8 @@ const SKYBOX_PRESETS = {
         top_index: null,
         bottom_index: null,
         sun: { color: '#ffefcc', intensity: 0.8, azimuth: 30, elevation: 40 },
+        moon: { enabled: true, color: '#c9d8ff', intensity: 0.35, azimuth: 210, elevation: 30 },
+        weather: { enabled: false, type: 'clear', intensity: 0.35, windX: 0.4, windZ: 0.1 },
     },
     'platformer-3d': {
         type: 'gradient',
@@ -60,6 +66,8 @@ const SKYBOX_PRESETS = {
         top_index: null,
         bottom_index: null,
         sun: { color: '#fff4cc', intensity: 1.3, azimuth: 45, elevation: 50 },
+        moon: { enabled: true, color: '#dce8ff', intensity: 0.18, azimuth: 225, elevation: 22 },
+        weather: { enabled: false, type: 'clear', intensity: 0.35, windX: 0.4, windZ: 0.1 },
     },
 };
 

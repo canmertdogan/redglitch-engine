@@ -14,6 +14,8 @@ import * as THREE from '/lib/three/three.module.js';
 import ModeInterface from '../ModeInterface.js';
 import { CameraMode } from '../../shared/Camera3DController.js';
 import { BodyType, ShapeType } from '../../shared/Physics3DWorld.js';
+import TerrainRuntime3D, { normalizeTerrainLevel } from '../TerrainRuntime3D.js';
+import VehicleSystem3D from '../VehicleSystem3D.js';
 import {
     serializeSavePayload3D,
     deserializeSavePayload3D,
@@ -53,6 +55,8 @@ export default class PlatformerMode extends ModeInterface {
         this.checkpoints     = null;   // CheckpointSystem3D
         this.enemies         = null;   // EnemyPlatformer3D
         this.vfx             = null;   // VFX_Platformer3D
+        this.terrainRuntime  = null;   // Shared playable terrain
+        this.vehicles        = null;   // Shared vehicles
 
         // ── Player state ──────────────────────────────────────────────────
         this._lives          = MAX_LIVES;
@@ -101,11 +105,15 @@ export default class PlatformerMode extends ModeInterface {
         skybox.setGradient('#1a3a6a', '#ffffff');
 
         // ── Default Lighting ──────────────────────────────────────────────
-        const amb = new THREE.AmbientLight(0xffffff, 1.0);
+        const amb = new THREE.AmbientLight(0xffffff, 0.45);
         scene.add(amb);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        const fill = new THREE.HemisphereLight(0xddefff, 0x4a3828, 0.65);
+        fill.name = '__softFillLight';
+        scene.add(fill);
+        const sun = new THREE.DirectionalLight(0xfff4dc, 1.25);
         sun.position.set(30, 60, 30);
         sun.castShadow = true;
+        sun.shadow?.mapSize?.set?.(1024, 1024);
         scene.add(sun);
 
         // ── Input ─────────────────────────────────────────────────────────
@@ -124,6 +132,9 @@ export default class PlatformerMode extends ModeInterface {
             gravity:  -20,
             airJumps: 1,
         });
+
+        this.terrainRuntime = new TerrainRuntime3D(game);
+        this.vehicles = new VehicleSystem3D(game);
 
         // ── Character controller ──────────────────────────────────────────
         this.charController = new CharacterController3D({
@@ -237,14 +248,17 @@ export default class PlatformerMode extends ModeInterface {
     // ── Level lifecycle ───────────────────────────────────────────────────────
 
     async onLevelLoaded(level) {
+        const playableLevel = this.terrainRuntime?.load(level) ?? normalizeTerrainLevel(level);
+
         // Build runtime level data with geometry + lights
-        const runtimeLevel = this._buildRuntimeLevelData(level);
+        const runtimeLevel = this._buildRuntimeLevelData(playableLevel);
 
         // Rebuild collision world from geometry
         this._rebuildCollisionWorld(runtimeLevel);
+        this._appendTerrainCollisionMeshes();
 
         // Read platformer-specific fields
-        this._deathY = level.deathY ?? -20;
+        this._deathY = playableLevel.deathY ?? -20;
 
         // Clear and re-hydrate systems for new level
         this.checkpoints?.clear?.();
@@ -253,9 +267,9 @@ export default class PlatformerMode extends ModeInterface {
 
         // Checkpoints
         if (this.checkpoints) {
-            if (Array.isArray(level.checkpoints) && level.checkpoints.length > 0) {
-                const merged = { ...level };
-                merged.checkpoints = level.checkpoints.map(cp => ({
+            if (Array.isArray(playableLevel.checkpoints) && playableLevel.checkpoints.length > 0) {
+                const merged = { ...playableLevel };
+                merged.checkpoints = playableLevel.checkpoints.map(cp => ({
                     id:  cp.id,
                     x:   cp.pos?.x ?? cp.x ?? 0,
                     y:   cp.pos?.y ?? cp.y ?? 0,
@@ -264,7 +278,7 @@ export default class PlatformerMode extends ModeInterface {
                 }));
                 this.checkpoints.spawnFromLevelData(merged);
             } else {
-                this.checkpoints.spawnFromLevelData(level);
+                this.checkpoints.spawnFromLevelData(playableLevel);
             }
             this._deathY = this.checkpoints.deathY;
         }
@@ -272,8 +286,8 @@ export default class PlatformerMode extends ModeInterface {
         // Collectibles
         if (this.collectibles) {
             const colEntities = [];
-            if (Array.isArray(level.collectibles)) {
-                level.collectibles.forEach(c => colEntities.push({
+            if (Array.isArray(playableLevel.collectibles)) {
+                playableLevel.collectibles.forEach(c => colEntities.push({
                     type: c.type || 'coin',
                     x: c.pos?.x ?? c.x ?? 0,
                     y: c.pos?.y ?? c.y ?? 0,
@@ -281,18 +295,20 @@ export default class PlatformerMode extends ModeInterface {
                     ...c.config,
                 }));
             }
-            if (Array.isArray(level.entities)) {
+            if (Array.isArray(playableLevel.entities)) {
                 const collectibleTypes = new Set(['coin', 'star', 'key', 'powerup', 'coin_trail_arc']);
-                level.entities.filter(e => collectibleTypes.has(e.type)).forEach(e => colEntities.push(e));
+                playableLevel.entities.filter(e => collectibleTypes.has(e.type)).forEach(e => colEntities.push(e));
             }
             if (colEntities.length) this.collectibles.spawnFromLevelData(colEntities);
         }
 
         // Enemies
-        if (this.enemies && level.entities?.length) {
+        if (this.enemies && playableLevel.entities?.length) {
             this.enemies.clear();
-            await this.enemies.loadFromLevel(level);
+            await this.enemies.loadFromLevel(playableLevel);
         }
+
+        this.vehicles?.load(playableLevel);
 
         // Place player at spawn
         this._respawn();
@@ -311,6 +327,8 @@ export default class PlatformerMode extends ModeInterface {
         this.thirdPersonCam?.setCollisionMeshes?.([]);
         this.playerChar?.setCollisionMeshes?.([]);
 
+        this.vehicles?.dispose();
+        this.terrainRuntime?.dispose();
         this.collectibles?.clear?.();
         this.enemies?.clear?.();
         this.vfx?.clear?.();
@@ -328,6 +346,13 @@ export default class PlatformerMode extends ModeInterface {
         // Character controller
         this.charController?.update?.(dt, inputState);
         this.playerChar?.update?.(dt);
+        this.terrainRuntime?.update(dt, game.gameTime);
+        this.vehicles?.update(
+            dt,
+            game.input,
+            this._getPlayerPosition(),
+            (x, y, z) => this._setPlayerPosition(x, y, z),
+        );
 
         // Third-person camera
         this.thirdPersonCam?.update?.(dt, this._getPlayerPosition());
@@ -599,6 +624,16 @@ export default class PlatformerMode extends ModeInterface {
             }
             this._worldPhysicsBodies.push(body);
         }
+        this._worldCollisionMeshes = meshes;
+        this.charController?.setCollisionMeshes?.(meshes);
+        this.thirdPersonCam?.setCollisionMeshes?.(meshes);
+        this.playerChar?.setCollisionMeshes?.(meshes);
+    }
+
+    _appendTerrainCollisionMeshes() {
+        const terrainMeshes = this.terrainRuntime?.getCollisionMeshes?.() ?? [];
+        if (!terrainMeshes.length) return;
+        const meshes = [...this._worldCollisionMeshes, ...terrainMeshes];
         this._worldCollisionMeshes = meshes;
         this.charController?.setCollisionMeshes?.(meshes);
         this.thirdPersonCam?.setCollisionMeshes?.(meshes);
