@@ -148,8 +148,7 @@ async function copyGameFromPublic(projectPath, options = {}) {
         'muzikler',
         'sprite-art',
         'dunyalar',
-        'data',
-        'profiles'
+        'data'
     ];
     const allowedFiles = options.allowedFiles || [
         'index.html',
