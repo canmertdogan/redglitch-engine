@@ -24,7 +24,7 @@
  */
 
 import * as THREE              from '/lib/three/three.module.js';
-import Engine3DAdapter         from '../shared/Engine3DAdapter.js';
+import Engine3DAdapter         from '../shared/Engine3DAdapter.js?v=cachebust2';
 import Renderer3D              from '../shared/Renderer3D.js';
 import Camera3DController,
        { CameraMode }          from '../shared/Camera3DController.js';
@@ -231,19 +231,23 @@ export default class Game3DCore extends Engine3DAdapter {
             ).catch(() => {});
         }
 
-        // ── GameHUD ───────────────────────────────────────────────────────
-        try {
-            this.gameHUD = new window.GameHUD();
-            this.gameHUD.init(this.container);
-            this.gameHUD.onAction = (cmd) => this._handleHUDAction(cmd);
-            const r = await fetch('/interfaces/main.redui');
-            if (r.ok) {
-                const data = await r.json();
-                this.gameHUD.load(data);
-                this.gameHUD.showScreen('main_hud');
+        // ── Generic editable HUD ──────────────────────────────────────────
+        // FPS owns a purpose-built HUD_FPS overlay. Loading the generic .redui HUD
+        // there creates duplicate panels and unresolved RPG-style bindings.
+        if (this._usesGenericHUD()) {
+            try {
+                this.gameHUD = new window.GameHUD();
+                this.gameHUD.init(this.container);
+                this.gameHUD.onAction = (cmd) => this._handleHUDAction(cmd);
+                const r = await fetch('/interfaces/main.redui');
+                if (r.ok) {
+                    const data = await r.json();
+                    this.gameHUD.load(data);
+                    this.gameHUD.showScreen('main_hud');
+                }
+            } catch (e) {
+                console.log('[Game3DCore] No HUD config found', e);
             }
-        } catch (e) {
-            console.log('[Game3DCore] No HUD config found', e);
         }
 
         console.log('[Game3DCore] initCore() complete');
@@ -349,6 +353,10 @@ export default class Game3DCore extends Engine3DAdapter {
         if (cmd === 'togglePause') this.togglePause();
     }
 
+    _usesGenericHUD() {
+        return this._engineType3D !== 'fps-3d';
+    }
+
     _quitToMenu() {
         if (window.CAMPAIGN_RUNTIME_MODE && window.parent) {
             window.parent.location.href = 'slot_selection.html';
@@ -442,7 +450,7 @@ export default class Game3DCore extends Engine3DAdapter {
         }
 
         // 7. GameHUD Sync
-        if (this.gameHUD && this.mode && this.mode.player) {
+        if (this._usesGenericHUD() && this.gameHUD && this.mode && this.mode.player) {
             const p = this.mode.player;
             this.gameHUD.sync({
                 player: {

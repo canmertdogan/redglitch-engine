@@ -2203,7 +2203,10 @@ export default class Editor3DCore {
 
     _validateLevelForPlaytest() {
         const errors = [];
-        
+
+        // No level loaded yet — nothing to validate
+        if (!this._levelData) return errors;
+
         // 1. Validate Materials -> Shaders
         if (this._levelData.materials) {
             this._levelData.materials.forEach(mat => {
@@ -2235,15 +2238,39 @@ export default class Editor3DCore {
     }
 
     playtest() {
+        if (!this._levelData) {
+            alert('No level is loaded. Please create or open a level before playtesting.');
+            return;
+        }
+
         const validationErrors = this._validateLevelForPlaytest();
         if (validationErrors.length > 0) {
             alert("Pre-playtest Validation Failed. Please fix these errors:\n\n" + validationErrors.join('\n\n'));
             return;
         }
 
+        // Editor-only modes don't map 1:1 to a runtime engine.
+        // Resolve them to the closest playable equivalent.
+        const PLAYTEST_MODE_MAP = {
+            'fps-3d':        'fps-3d',
+            'topdown-3d':    'topdown-3d',
+            'platformer-3d': 'platformer-3d',
+            // Editor-only → nearest runtime
+            'terrain':       'fps-3d',
+            'proplib':       'fps-3d',
+            'playerstudio':  'fps-3d',
+            'npcstudio':     'fps-3d',
+            'sculptstudio':  'fps-3d',
+        };
+
+        const runtimeMode = PLAYTEST_MODE_MAP[this._mode] || 'fps-3d';
+        if (runtimeMode !== this._mode) {
+            console.info(`[Editor3DCore] Editor mode "${this._mode}" has no direct runtime — playtesting as "${runtimeMode}".`);
+        }
+
         const data = this._serializeLevelData();
         sessionStorage.setItem('redglitch_playtest_data', JSON.stringify(data));
-        const url = `/engines/unified-3d/index.html?engine=${encodeURIComponent(this._mode)}&playtest=true`;
+        const url = `/engines/unified-3d/index.html?engine=${encodeURIComponent(runtimeMode)}&playtest=true`;
         window.open(url, '_blank');
     }
 

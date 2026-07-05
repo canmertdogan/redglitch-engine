@@ -20,6 +20,16 @@ export default class Platformer3DStrategy {
     /** @param {Platformer3DGame} game — live Platformer3DGame instance */
     constructor(game) {
         this._game = game;
+        this._abilityCooldowns = new Map();
+        this._doubleJumpUsed = false;
+        this._dashUsed = false;
+        this._groundPoundUsed = false;
+        this._abilityConfigs = {
+            double_jump: { cooldown: 0.3, staminaCost: 20 },
+            dash: { cooldown: 2, staminaCost: 30, distance: 6, duration: 0.25 },
+            ground_pound: { cooldown: 0.8, staminaCost: 40, radius: 3, damage: 50 },
+            wall_jump: { cooldown: 0.1, staminaCost: 10, boost: { x: 0, y: 8, z: 0 } }
+        };
     }
 
     // ── EngineStrategy interface ──────────────────────────────────────────────
@@ -109,20 +119,6 @@ export default class Platformer3DStrategy {
     }
 
     // ── Campaign ability interface ────────────────────────────────────────────
-
-    constructor(game) {
-        this._game = game;
-        this._abilityCooldowns = new Map();
-        this._doubleJumpUsed = false;
-        this._dashUsed = false;
-        this._groundPoundUsed = false;
-        this._abilityConfigs = {
-            double_jump: { cooldown: 0.3, staminaCost: 20 },
-            dash: { cooldown: 2, staminaCost: 30, distance: 6, duration: 0.25 },
-            ground_pound: { cooldown: 0.8, staminaCost: 40, radius: 3, damage: 50 },
-            wall_jump: { cooldown: 0.1, staminaCost: 10, boost: { x: 0, y: 8, z: 0 } }
-        };
-    }
 
     /**
      * Use an ability (double jump, dash, ground pound, wall jump)

@@ -233,14 +233,14 @@ export default class FPSMode extends ModeInterface {
     async onLevelLoaded(level) {
         this._initialEnemyCount = 0;
         const runtimeLevel = this.terrainRuntime?.load(level) ?? normalizeTerrainLevel(level);
+        runtimeLevel.playerSpawn = this._resolvePlayableSpawn(runtimeLevel);
 
         // Strategy: set player spawn from level data
         this.strategy?.loadLevel(runtimeLevel);
 
         // Re-position controller at spawn
         if (this.fpsController) {
-            const spawn = runtimeLevel?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
-            await this.fpsController.init(spawn);
+            await this.fpsController.init(runtimeLevel.playerSpawn);
         }
 
         // Load world geometry + collision
@@ -342,6 +342,54 @@ export default class FPSMode extends ModeInterface {
         return !!level?.gltfUrl
             || (Array.isArray(level?.geometry) && level.geometry.length > 0)
             || !!(level?.voxelGrid && Object.keys(level.voxelGrid).length > 0);
+    }
+
+    _resolvePlayableSpawn(level) {
+        const requested = level?.playerSpawn || {};
+        let x = Number(requested.x);
+        let z = Number(requested.z);
+
+        if (!Number.isFinite(x) || !Number.isFinite(z)) {
+            x = 0;
+            z = 0;
+        }
+
+        const terrainMeshes = this.terrainRuntime?.getCollisionMeshes?.() ?? [];
+        const candidate = this._sampleTerrainSpawnAt(x, z);
+        if (!candidate.hit && terrainMeshes.length > 0) {
+            const box = new THREE.Box3();
+            for (const mesh of terrainMeshes) box.expandByObject(mesh);
+            if (!box.isEmpty()) {
+                x = (box.min.x + box.max.x) * 0.5;
+                z = (box.min.z + box.max.z) * 0.5;
+            }
+        }
+
+        const terrain = this._sampleTerrainSpawnAt(x, z);
+        const requestedY = Number(requested.y);
+        const fallbackY = Number.isFinite(requestedY) ? requestedY : 1.8;
+        const surfaceY = terrain.hit ? terrain.y : fallbackY;
+        const y = Math.max(fallbackY, surfaceY + 0.15);
+
+        return { x, y, z };
+    }
+
+    _sampleTerrainSpawnAt(x, z) {
+        const meshes = this.terrainRuntime?.getCollisionMeshes?.() ?? [];
+        if (!meshes.length) {
+            const y = this.terrainRuntime?.sampleHeight?.(x, z);
+            return Number.isFinite(y) ? { hit: true, y } : { hit: false, y: 0 };
+        }
+
+        const ray = new THREE.Raycaster(
+            new THREE.Vector3(x, 4096, z),
+            new THREE.Vector3(0, -1, 0),
+            0,
+            8192,
+        );
+        const hits = ray.intersectObjects(meshes, false);
+        if (hits.length > 0) return { hit: true, y: hits[0].point.y };
+        return { hit: false, y: 0 };
     }
 
     // ── Save / Load ───────────────────────────────────────────────────────────

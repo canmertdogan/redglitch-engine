@@ -14,12 +14,12 @@
  *   await game.loadProject('MyProject', 'level1');
  */
 
-import Game3DCore from './Game3DCore.js';
+import Game3DCore from './Game3DCore.js?v=cachebust2';
 
 // ── Mode registry ─────────────────────────────────────────────────────────────
 
 const MODE_REGISTRY = Object.freeze({
-    'fps-3d':        () => import('./modes/FPSMode.js'),
+    'fps-3d':        () => import('./modes/FPSMode.js?v=cachebust2'),
     'topdown-3d':    () => import('./modes/TopDownMode.js'),
     'platformer-3d': () => import('./modes/PlatformerMode.js'),
 });
@@ -28,6 +28,11 @@ const MODE_ALIASES = Object.freeze({
     fps: 'fps-3d',
     topdown: 'topdown-3d',
     platformer: 'platformer-3d',
+    terrain: 'fps-3d',
+    proplib: 'fps-3d',
+    playerstudio: 'fps-3d',
+    npcstudio: 'fps-3d',
+    sculptstudio: 'fps-3d',
 });
 
 export function normalize3DMode(engineType, fallback = 'fps-3d') {
@@ -164,7 +169,11 @@ export default class Unified3DGame {
             : levelData?.engineType;
         const mode = normalize3DMode(requestedMode, this._requestedType);
         if (mode !== this.core.engineType3D) await this.switchMode(mode);
-        await this.core.loadLevelFromData(levelData);
+        await this.core.loadLevelFromData({
+            ...(levelData || {}),
+            sourceEngineType: levelData?.sourceEngineType || levelData?.engineType,
+            engineType: mode,
+        });
     }
 
     async saveGame(slot) { await this.core?.saveGame(slot); }

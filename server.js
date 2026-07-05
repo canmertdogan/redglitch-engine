@@ -223,13 +223,15 @@ app.get('/engines/rpg-topdown/sprites.js', serveMergedSprites);
 app.get('/base_game/sprites.js', serveMergedSprites);
 
 app.use('/engines', (req, res, next) => {
-    const projectDir = projectService.getActiveProject();
+    // Engine core files live in public/ — always serve those first.
+    // Project-local engine overrides are a fallback, not the primary source.
+    const rootFilePath    = path.join(__dirname, 'public', 'engines', req.path);
+    const projectDir      = projectService.getActiveProject();
     const projectFilePath = path.join(projectDir, 'engines', req.path);
-    const rootFilePath = path.join(__dirname, 'public', 'engines', req.path);
-    
-    res.sendFile(projectFilePath, err => {
-        if (!err) return;
-        res.sendFile(rootFilePath, err2 => {
+
+    res.sendFile(rootFilePath, err => {
+        if (!err) return; // served from public/
+        res.sendFile(projectFilePath, err2 => {
             if (err2 && !res.headersSent) next();
         });
     });
@@ -323,9 +325,10 @@ app.get('/topdown3d_editor.html', (req, res) => res.redirect('/editor3d.html?mod
 app.get('/platformer3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=platformer-3d&project=' + (req.query.project || '')));
 app.get('/shader_editor.html', (req, res) => res.redirect('/shader_lab.html'));
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/projects', express.static(config.PROJECTS_ROOT));
+// Static files — no caching in dev so edits are always reflected immediately
+const staticOpts = { etag: false, lastModified: false, setHeaders: (res) => { res.setHeader('Cache-Control', 'no-store'); } };
+app.use(express.static(path.join(__dirname, 'public'), staticOpts));
+app.use('/projects', express.static(config.PROJECTS_ROOT, staticOpts));
 
 // Project management middleware
 app.use((req, res, next) => {

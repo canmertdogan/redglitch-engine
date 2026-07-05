@@ -516,8 +516,8 @@ export default class Engine3DAdapter extends Engine3DBase {
             ? (sky.colorHex || sky.bottomColor || sky.topColor)
             : (sky.bottomColor || sky.colorHex || sky.topColor);
 
-        if (backgroundColor && THREE?.Color) {
-            this.scene.background = new THREE.Color(backgroundColor);
+        if (backgroundColor && this.THREE?.Color) {
+            this.scene.background = new this.THREE.Color(backgroundColor);
         }
 
         if (sky.fogSync && this.scene.fog?.color && backgroundColor) {

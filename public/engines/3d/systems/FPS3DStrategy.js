@@ -21,6 +21,35 @@ export default class FPS3DStrategy {
         this._game = game;
         this._rayDir = new THREE.Vector3();
         this._rayOrig = new THREE.Vector3();
+        this._abilityCooldowns = new Map(); // abilityId -> time remaining (seconds)
+        this._abilityConfigs = {
+            grenade: {
+                cooldown: 8,
+                ammoType: 'grenade',
+                action: 'projectile',
+                projectileDef: { speed: 18, gravity: 9.82, radius: 0.2, splashRadius: 5, splashDamage: 80 }
+            },
+            flashbang: {
+                cooldown: 15,
+                ammoType: 'flashbang',
+                action: 'projectile',
+                projectileDef: { speed: 20, gravity: 4, radius: 0.15, splashRadius: 12, splashDamage: 0, blindDuration: 3 }
+            },
+            smoke: {
+                cooldown: 12,
+                ammoType: 'smoke',
+                action: 'projectile',
+                projectileDef: { speed: 16, gravity: 3, radius: 0.18, splashRadius: 8, splashDamage: 0, smokeDuration: 8 }
+            },
+            melee: {
+                cooldown: 0.6,
+                ammoType: null,
+                action: 'melee',
+                range: 1.8,
+                damage: 15
+            }
+        };
+        this._abilityAmmo = new Map(); // abilityId -> count
     }
 
     // ── EngineStrategy interface ──────────────────────────────────────────────
@@ -142,41 +171,6 @@ export default class FPS3DStrategy {
     }
 
     // ── Campaign ability interface ────────────────────────────────────────────
-
-    constructor(game) {
-        this._game = game;
-        this._rayDir = new THREE.Vector3();
-        this._rayOrig = new THREE.Vector3();
-        this._abilityCooldowns = new Map(); // abilityId -> time remaining (seconds)
-        this._abilityConfigs = {
-            grenade: {
-                cooldown: 8,
-                ammoType: 'grenade',
-                action: 'projectile',
-                projectileDef: { speed: 18, gravity: 9.82, radius: 0.2, splashRadius: 5, splashDamage: 80 }
-            },
-            flashbang: {
-                cooldown: 15,
-                ammoType: 'flashbang',
-                action: 'projectile',
-                projectileDef: { speed: 20, gravity: 4, radius: 0.15, splashRadius: 12, splashDamage: 0, blindDuration: 3 }
-            },
-            smoke: {
-                cooldown: 12,
-                ammoType: 'smoke',
-                action: 'projectile',
-                projectileDef: { speed: 16, gravity: 3, radius: 0.18, splashRadius: 8, splashDamage: 0, smokeDuration: 8 }
-            },
-            melee: {
-                cooldown: 0.6,
-                ammoType: null,
-                action: 'melee',
-                range: 1.8,
-                damage: 15
-            }
-        };
-        this._abilityAmmo = new Map(); // abilityId -> count
-    }
 
     /**
      * Use an ability (grenade, flashbang, smoke, melee, etc.)

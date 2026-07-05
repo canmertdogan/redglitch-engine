@@ -221,7 +221,7 @@ class Renderer3D {
         this.webgl.toneMapping = this._opts.toneMapping ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
         this.webgl.toneMappingExposure = this._opts.exposure ?? 1.05;
         this.webgl.shadowMap.enabled = true;
-        this.webgl.shadowMap.type = this._opts.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+        this.webgl.shadowMap.type = THREE.PCFShadowMap;
         if (!this._opts.canvas) this.container.appendChild(this.webgl.domElement);
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();

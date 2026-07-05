@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-07-05T04:55:09.997Z",
+  "root": "/Users/n0rthstar/Documents/GitHub/redglitch-engine",
+  "publicEngines": "/Users/n0rthstar/Documents/GitHub/redglitch-engine/public/engines",
+  "selectedProjects": [],
+  "engineFilters": [],
+  "apply": false,
+  "backup": true,
+  "allowEntries": [],
+  "projects": {},
+  "totals": {
+    "missingInProject": 0,
+    "differentContent": 0,
+    "extraInProject": 0,
+    "candidates": 0,
+    "applied": 0
+  }
+}
