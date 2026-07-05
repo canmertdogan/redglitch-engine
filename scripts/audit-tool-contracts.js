@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, '..');
 const SERVER_JS = path.join(ROOT, 'server.js');
 const ROUTES_DIR = path.join(ROOT, 'server', 'routes');
 const TOOL_DEFINITIONS = path.join(ROOT, 'public', 'ai', 'tool-definitions.js');
+const TOOL_ALIASES = path.join(ROOT, 'public', 'ai', 'tool-aliases.mjs');
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete'];
 
@@ -167,6 +168,11 @@ async function loadEditorCatalog() {
   return mod.editorForTool;
 }
 
+async function loadEditorTargets() {
+  const mod = await import(pathToFileURL(TOOL_ALIASES).href);
+  return mod.EDITOR_TARGETS || {};
+}
+
 function toolRisk(tool) {
   return tool.risk || (tool.securityLevel === 'safe' ? 'read' : tool.securityLevel === 'low-risk' ? 'low' : 'high');
 }
@@ -181,10 +187,16 @@ function findRouteMatch(routes, method, endpoint) {
   return routes.find((route) => route.method === method && routePatternToRegex(route.path).test(pathname));
 }
 
-function audit(tools, routes) {
+function editorFileExists(file) {
+  return fs.existsSync(path.join(ROOT, 'public', file));
+}
+
+function audit(tools, routes, editorForTool, editorTargets) {
   const endpointChecks = [];
   const missingEndpoints = [];
   const toolsWithoutEndpoint = [];
+  const editorFileChecks = [];
+  const missingEditorFiles = [];
 
   for (const tool of tools) {
     const endpoints = collectFetchEndpoints(tool.execute);
@@ -201,9 +213,22 @@ function audit(tools, routes) {
         if (!matched) missingEndpoints.push(check);
       }
     }
+
+    const editor = editorForTool(tool.name);
+    if (editor?.file) {
+      const check = { source: `tool:${tool.name}`, target: editor.id, file: editor.file, exists: editorFileExists(editor.file) };
+      editorFileChecks.push(check);
+      if (!check.exists) missingEditorFiles.push(check);
+    }
   }
 
-  return { endpointChecks, missingEndpoints, toolsWithoutEndpoint };
+  for (const [target, file] of Object.entries(editorTargets)) {
+    const check = { source: 'tool-aliases', target, file, exists: editorFileExists(file) };
+    editorFileChecks.push(check);
+    if (!check.exists) missingEditorFiles.push(check);
+  }
+
+  return { endpointChecks, missingEndpoints, toolsWithoutEndpoint, editorFileChecks, missingEditorFiles };
 }
 
 function printReport({ tools, routes, result, editorForTool }) {
@@ -214,6 +239,8 @@ function printReport({ tools, routes, result, editorForTool }) {
   console.log(`Tool endpoint checks: ${result.endpointChecks.length}`);
   console.log(`Tools without direct /api fetch endpoint: ${result.toolsWithoutEndpoint.length}`);
   console.log(`Missing endpoint matches: ${result.missingEndpoints.length}`);
+  console.log(`Editor file checks: ${result.editorFileChecks.length}`);
+  console.log(`Missing editor files: ${result.missingEditorFiles.length}`);
 
   if (result.missingEndpoints.length) {
     console.log('\nMissing endpoint matches:');
@@ -223,6 +250,15 @@ function printReport({ tools, routes, result, editorForTool }) {
   }
   if (result.missingEndpoints.length === 0) {
     console.log('\nNo missing endpoint matches found.');
+  }
+  if (result.missingEditorFiles.length) {
+    console.log('\nMissing editor files:');
+    for (const item of result.missingEditorFiles) {
+      console.log(`- ${item.source}: ${item.target} -> public/${item.file}`);
+    }
+  }
+  if (result.missingEditorFiles.length === 0) {
+    console.log('No missing editor files found.');
   }
 
   console.log('\nRegistered tool summary:');
@@ -237,10 +273,11 @@ async function main() {
   const routes = collectServerRoutes();
   const tools = await collectRegisteredTools();
   const editorForTool = await loadEditorCatalog();
-  const result = audit(tools, routes);
+  const editorTargets = await loadEditorTargets();
+  const result = audit(tools, routes, editorForTool, editorTargets);
   printReport({ tools, routes, result, editorForTool });
 
-  if (result.missingEndpoints.length) {
+  if (result.missingEndpoints.length || result.missingEditorFiles.length) {
     process.exitCode = 1;
   }
 }

@@ -27,7 +27,6 @@ export const EDITOR_TARGETS = Object.freeze({
     background: 'background_editor.html',
     shader: 'shader_lab.html',
     input: 'input_editor.html',
-    val_suite: 'ai/val-suite.html',
 });
 
 export const EDITOR_ALIASES = Object.freeze({
@@ -75,4 +74,3 @@ export function editorFileForTarget(value) {
 export function editorTargetIds() {
     return Object.keys(EDITOR_TARGETS);
 }
-
