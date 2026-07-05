@@ -969,7 +969,7 @@ async function saveToServer() {
     }
     
     try {
-        const response = await fetch('/api/npc-defs', {
+        const response = await fetch('/api/npcs-defs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(npcs)

@@ -1,4 +1,5 @@
 import { parseToolCalls } from './tool-call-parser.mjs';
+import { ERROR_CODE } from './automation-contract.mjs';
 
 /**
  * RedGlitch AI - Workflow Manager (Phase 8)
@@ -39,17 +40,27 @@ export class WorkflowManager {
 
         const results = [];
         const executedActions = [];
+        let failedStep = null;
 
         try {
             for (let index = 0; index < calls.length; index++) {
                 const call = calls[index];
                 if (this.cancelRequested) throw Object.assign(new Error('Workflow cancelled'), { code: 'CANCELLED' });
-                this.eventBus.emit('ai:workflow:step', { name: call.name, args: call.args });
+                this.eventBus?.emit('ai:workflow:step', { index, name: call.name, args: call.args });
                 
                 const response = await this.registry.execute(call.name, call.args, call.id || `${workflowId}:${index}`);
                 
                 if (!response.success) {
-                    throw new Error(`Step failed: ${call.name} - ${response.error?.message || 'Unknown error'}`);
+                    failedStep = {
+                        index,
+                        name: call.name,
+                        args: call.args,
+                        error: response.error || { code: ERROR_CODE.EXECUTION_FAILED, message: 'Unknown error' },
+                        response
+                    };
+                    const error = new Error(`Step failed: ${call.name} - ${failedStep.error.message}`);
+                    error.code = failedStep.error.code || ERROR_CODE.EXECUTION_FAILED;
+                    throw error;
                 }
 
                 results.push(response.result);
@@ -57,15 +68,24 @@ export class WorkflowManager {
             }
 
             this.isExecuting = false;
-            this.eventBus.emit('ai:workflow:complete', { success: true, count: calls.length });
-            return { success: true, results };
+            const successResult = { success: true, results, count: calls.length };
+            this.eventBus?.emit('ai:workflow:complete', successResult);
+            return successResult;
 
         } catch (error) {
             console.error("[WorkflowManager] Workflow failed. Rolling back...", error);
-            await this.rollback(executedActions);
+            const rollbackResults = await this.rollback(executedActions);
             this.isExecuting = false;
-            this.eventBus.emit('ai:workflow:complete', { success: false, error: error.message });
-            return { success: false, error: error.message };
+            const failureResult = {
+                success: false,
+                error: error.message,
+                errorCode: error.code || ERROR_CODE.EXECUTION_FAILED,
+                failedStep,
+                results,
+                rollbackResults
+            };
+            this.eventBus?.emit('ai:workflow:complete', failureResult);
+            return failureResult;
         }
     }
 
@@ -79,29 +99,58 @@ export class WorkflowManager {
      * Rollback a list of actions in reverse order.
      */
     async rollback(actions) {
+        const rollbackResults = [];
         // Rollback in reverse order
         for (let i = actions.length - 1; i >= 0; i--) {
             const action = actions[i];
-            const tool = this.registry.tools.get(action.name);
-            
             const descriptor = action.result?.undoDescriptor;
-            if (descriptor?.type === 'restore-file') {
-                try {
-                    console.log(`[WorkflowManager] Rolling back: ${action.name}`);
-                    const endpoint = descriptor.existed ? '/api/ide/write' : '/api/ide/delete';
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
-                        body: JSON.stringify({ file: descriptor.path, content: descriptor.previousContent })
-                    });
-                    if (!response.ok) throw new Error(`Rollback request failed (${response.status})`);
-                } catch (undoError) {
-                    console.error(`[WorkflowManager] Rollback failed for ${action.name}:`, undoError);
+            if (!descriptor) {
+                const warning = `No undo descriptor for ${action.name}. Manual cleanup may be required.`;
+                console.warn(`[WorkflowManager] ${warning}`);
+                rollbackResults.push({ action: action.name, success: false, skipped: true, error: warning });
+                continue;
+            }
+
+            try {
+                console.log(`[WorkflowManager] Rolling back: ${action.name}`);
+                const request = this._rollbackRequestForDescriptor(descriptor);
+                if (!request) {
+                    const warning = `Unsupported undo descriptor: ${descriptor.type}`;
+                    console.warn(`[WorkflowManager] ${warning}`);
+                    rollbackResults.push({ action: action.name, success: false, skipped: true, error: warning, descriptor });
+                    continue;
                 }
-            } else {
-                console.warn(`[WorkflowManager] No undo function for ${action.name}. Manual cleanup may be required.`);
+
+                const response = await fetch(request.endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    body: JSON.stringify(request.body)
+                });
+                if (!response.ok) throw new Error(`Rollback request failed (${response.status})`);
+                rollbackResults.push({ action: action.name, success: true, descriptor });
+            } catch (undoError) {
+                console.error(`[WorkflowManager] Rollback failed for ${action.name}:`, undoError);
+                rollbackResults.push({ action: action.name, success: false, error: undoError.message, descriptor });
             }
         }
+        return rollbackResults;
+    }
+
+    _rollbackRequestForDescriptor(descriptor) {
+        if (descriptor.type === 'delete-file') {
+            return { endpoint: '/api/ide/delete', body: { file: descriptor.path } };
+        }
+        if (descriptor.type === 'restore-file') {
+            if (descriptor.existed) {
+                return {
+                    endpoint: '/api/ide/write',
+                    body: { file: descriptor.path, content: descriptor.previousContent || '' }
+                };
+            } else {
+                return { endpoint: '/api/ide/delete', body: { file: descriptor.path } };
+            }
+        }
+        return null;
     }
 
     /**

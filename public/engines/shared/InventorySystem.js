@@ -30,23 +30,29 @@ window.InventorySystem = class InventorySystem {
             const existingItem = this.items.find(item => item.id === itemData.id);
             if (existingItem) {
                 const maxStack = itemData.maxStack || 99;
-                const newQuantity = existingItem.quantity + quantity;
-                
-                if (newQuantity <= maxStack) {
-                    existingItem.quantity = newQuantity;
-                    existingItem.metadata.isNew = true;
-                    return true;
+
+                // If existing is already full, fall through to create a new stack
+                if (existingItem.quantity >= maxStack) {
+                    /* create new stack below */
                 } else {
-                    // Overflow - max out existing stack and create new
-                    const overflow = newQuantity - maxStack;
-                    existingItem.quantity = maxStack;
-                    
-                    // Try to add overflow as new item
-                    if (this.items.length < this.maxSlots) {
-                        return this.addItem(itemData, overflow);
+                    const newQuantity = existingItem.quantity + quantity;
+
+                    if (newQuantity <= maxStack) {
+                        existingItem.quantity = newQuantity;
+                        existingItem.metadata.isNew = true;
+                        return true;
                     } else {
-                        console.warn('Inventory full, lost overflow items');
-                        return false;
+                        // Overflow - max out existing stack and create new
+                        const overflow = newQuantity - maxStack;
+                        existingItem.quantity = maxStack;
+
+                        // Try to add overflow as new item
+                        if (this.items.length < this.maxSlots) {
+                            return this.addItem(itemData, overflow);
+                        } else {
+                            console.warn('Inventory full, lost overflow items');
+                            return false;
+                        }
                     }
                 }
             }

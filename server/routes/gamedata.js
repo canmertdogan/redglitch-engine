@@ -20,6 +20,14 @@ async function ensureDir(dirPath) {
 
 // Helper for consistent route creation
 function createDefinitionRoutes(typeName, fileName) {
+    const singularAliases = {
+        quests: 'quest',
+        npcs: 'npc',
+        items: 'item',
+        enemies: 'enemy',
+        skills: 'skill',
+    };
+    const singularType = singularAliases[typeName];
     // GET
     router.get(`/${typeName}`, async (req, res) => {
         try {
@@ -91,7 +99,9 @@ function createDefinitionRoutes(typeName, fileName) {
         }
     };
 
-    router.post([`/${typeName}`, `/${typeName}-defs`], saveHandler);
+    const postRoutes = [`/${typeName}`, `/${typeName}-defs`];
+    if (singularType) postRoutes.push(`/${singularType}-defs`);
+    router.post(postRoutes, saveHandler);
 }
 
 // Create routes for all definition types

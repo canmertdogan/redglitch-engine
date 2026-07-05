@@ -1,5 +1,3 @@
-import TerrainSystem3D from '../3d/systems/TerrainSystem3D.js';
-
 export function normalizeTerrainLevel(levelData = {}) {
     if (!levelData || typeof levelData !== 'object') return levelData;
 
@@ -43,11 +41,12 @@ export default class TerrainRuntime3D {
         this.system = null;
     }
 
-    load(levelData) {
+    async load(levelData) {
         this.dispose();
         const normalized = normalizeTerrainLevel(levelData);
         if (!normalized?.terrain) return normalized;
 
+        const { default: TerrainSystem3D } = await import('../3d/systems/TerrainSystem3D.js');
         this.system = new TerrainSystem3D(this.game.scene, this.game.palette, this.game.physics);
         this.system.onLevelLoaded(normalized);
         this._tagCollisionBodies();

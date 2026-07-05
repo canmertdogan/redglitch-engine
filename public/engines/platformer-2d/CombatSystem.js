@@ -92,7 +92,7 @@ class PlatformerCombatSystem {
             if (proj.isEnemy) {
                 // Enemy hits player
                 if (this.checkCollision(proj, this.game.player)) {
-                    this.hitEntity({ damage: proj.damage, owner: proj.owner, getRect: () => proj }, this.game.player);
+                    this.hitEntity({ damage: proj.damage, owner: proj.owner, getRect: () => proj, hitEntities: new Set() }, this.game.player);
                     proj.isDead = true;
                     return false;
                 }
@@ -101,7 +101,7 @@ class PlatformerCombatSystem {
                 for (let ent of this.game.entities) {
                     if ((ent.type === 'enemy' || ent.hp !== undefined) && !ent.isDead) {
                         if (this.checkCollision(proj, ent)) {
-                            this.hitEntity({ damage: proj.damage, owner: proj.owner, getRect: () => proj }, ent);
+                            this.hitEntity({ damage: proj.damage, owner: proj.owner, getRect: () => proj, hitEntities: new Set() }, ent);
                             proj.isDead = true;
                             return false;
                         }

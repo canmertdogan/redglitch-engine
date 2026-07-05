@@ -1,3 +1,5 @@
+import { EDITOR_TARGETS, editorFileForTarget, editorTargetIds, normalizeEditorTarget } from './tool-aliases.mjs';
+
 export function registerDefaultTools(registry) {
         // --- FILE SYSTEM (fs) ---
 
@@ -282,7 +284,7 @@ export function registerDefaultTools(registry) {
                     'npcs': '/api/npcs',
                     'items': '/api/items',
                     'quests': '/api/quests',
-                    'skills': '/api/skill-defs' 
+                    'skills': '/api/skills'
                 };
                 const res = await fetch(endpoint[args.type] || `/api/${args.type}`);
                 if (!res.ok) throw new Error(`Could not list ${args.type}`);
@@ -305,10 +307,10 @@ export function registerDefaultTools(registry) {
             },
             execute: async (args) => {
                 const endpoint = {
-                    'npcs': '/api/npc-defs',
-                    'items': '/api/item-defs',
+                    'npcs': '/api/npcs-defs',
+                    'items': '/api/items-defs',
                     'quests': '/api/quests',
-                    'skills': '/api/skill-defs'
+                    'skills': '/api/skills-defs'
                 };
                 const res = await fetch(endpoint[args.type], {
                     method: 'POST',
@@ -490,9 +492,10 @@ export function registerDefaultTools(registry) {
                     target: { 
                         type: 'string', 
                         enum: [
-                            'dashboard', 'project_dashboard', 'editor', 'iso_studio', 
-                            'platformer_studio', 'script', 'asset-manager', 'npc', 
-                            'enemy', 'item', 'quest', 'dialogue', 'pixel', 'val_suite'
+                            ...editorTargetIds(),
+                            'asset-manager',
+                            'achievement',
+                            'algorithm_studio'
                         ],
                         description: 'The ID of the tool to open. "editor"=Top-down RPG Level Editor, "iso_studio"=IsoPixel/Isometric Studio, "platformer_studio"=2D Platformer Editor, "script"=Code Forge.'
                     }
@@ -504,15 +507,7 @@ export function registerDefaultTools(registry) {
                 
                 if (!target) throw new Error("Navigation target missing");
 
-                // Normalize common aliases so LLM typos still work
-                const targetAliases = {
-                    'topdown': 'editor', 'topdown_studio': 'editor', 'rpg': 'editor', 'rpg_studio': 'editor', 'level_editor': 'editor', 'world': 'editor',
-                    'isopixel': 'iso_studio', 'isometric': 'iso_studio', 'iso': 'iso_studio',
-                    'platformer': 'platformer_studio', 'platform': 'platformer_studio',
-                    'code_forge': 'script', 'code': 'script',
-                    'logic': 'algorithm_studio', 'algorithm': 'algorithm_studio'
-                };
-                target = targetAliases[target] || target;
+                target = normalizeEditorTarget(target);
 
                 registry._debug(`Navigating to: ${target}`);
 
@@ -528,26 +523,8 @@ export function registerDefaultTools(registry) {
                     }
                 }
 
-                const nav = {
-                    'dashboard': 'dashboard.html',
-                    'project_dashboard': 'project_dashboard.html',
-                    'editor': 'editor.html',
-                    'iso_studio': 'iso_editor.html',
-                    'platformer_studio': 'platformer_editor.html',
-                    'script': 'script_editor.html',
-                    'asset-manager': 'asset_manager.html',
-                    'npc': 'npc_editor.html',
-                    'enemy': 'enemy_editor.html',
-                    'item': 'item_editor.html',
-                    'quest': 'quest_editor.html',
-                    'dialogue': 'dialogue_editor.html',
-                    'pixel': 'iso_editor.html',
-                    'val_suite': 'ai/val-suite.html',
-                    'algorithm_studio': 'algorithm_editor.html'
-                };
-                
-                if (nav[target]) {
-                    const url = nav[target];
+                const url = EDITOR_TARGETS[target] || editorFileForTarget(target);
+                if (url) {
                     // Avoid redundant reloads
                     const currentPath = window.location.pathname;
                     if (currentPath.includes(url) || (url === 'dashboard.html' && currentPath === '/')) {

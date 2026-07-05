@@ -1,0 +1,563 @@
+REDGLITCH ENGINE HONEST PROJECT REPORT
+Generated: 2026-07-05
+Repository: /Users/n0rthstar/Documents/GitHub/redglitch-engine
+Output format: plain text
+
+Important evidence rule for this report:
+I did not use any .md files as sources. This report is based on source files, config files, package scripts, server routes, tests, project data, generated build behavior, and commands run directly against the repository.
+
+============================================================
+1. EXECUTIVE VERDICT
+============================================================
+
+Redglitch Engine is now in a stronger state than the previous audit because the project has a real test phase wired into package.json and the full Node-side test suite passes when run with local server bind permission.
+
+The honest current status is:
+
+Redglitch Engine is a serious experimental alpha game studio with a large amount of implemented functionality, verified Node-side test coverage, a working studio build, a working web game export path, and a much more credible engine test surface than before. It is still not production-grade because key release risks remain unverified: GUI/editor end-to-end behavior, Electron desktop runtime, Python AI backend tests, local model startup, mobile builds, packaged desktop builds, real creator workflows, and security hardening.
+
+Current completion estimates:
+
+- As an impressive local prototype: 82%
+- As a stable technical alpha: 68%
+- As an external beta for technical creators: 55%
+- As a production-grade commercial studio/engine: 45%
+
+Overall honest completion toward a stable, usable alpha/beta product: about 68%.
+
+This estimate increased because tests now cover AI parser/mode behavior, server routes, engine serializers, inventory, item/ability definitions, campaign validation, platformer physics/combat/generators, RPG top-down runtime helpers, and unified 3D terrain/mode contracts. It does not increase to 80-90% because automated unit/contract tests are not the same thing as complete product verification.
+
+============================================================
+2. WHAT I VERIFIED DIRECTLY
+============================================================
+
+2.1 Full Node test suite
+
+Command:
+npm test
+
+Sandbox result:
+Failed in the restricted sandbox because server route tests need to bind a local HTTP server and hit EPERM on 0.0.0.0.
+
+Escalated/local-bind result:
+Passed.
+
+Breakdown:
+- AI tests: 14 passed, 0 failed.
+- Server route and utility tests: 48 passed, 0 failed.
+- Engine Node tests: 390 passed, 0 failed.
+- 3D campaign integration validator: 39 checks passed before the engine Node tests.
+
+Practical reading:
+The declared package-level test suite is green when allowed to bind local test servers. This is a major improvement over the previous state.
+
+2.2 AI validation
+
+Command:
+npm run ai:validate
+
+Result:
+Passed.
+
+Details:
+- AI tests passed: 14/14.
+- OpenCode Zen integration validation passed.
+
+Practical reading:
+The previous automationPolicy export mismatch is fixed. The AI/tooling validation path is currently green.
+
+2.3 Studio production build
+
+Command:
+npm run studio:build
+
+Result:
+Passed.
+
+Details:
+- Vite transformed 1806 modules.
+- Output generated under public/studio-dist.
+- Warning: dashboard chunk is above 500 kB after minification.
+- Warning: some CSS paths do not exist at build time and are left for runtime resolution:
+  - /fonts/fonts.css
+  - /lib/fontawesome/css/all.min.css
+  - ../fonts/fonts.css
+
+Practical reading:
+The React/Vite studio build is currently working, but there are still bundle-size and runtime asset assumptions to clean up.
+
+2.4 Web game export
+
+Command:
+node build-game.js "Default Project" web
+
+Result:
+Passed.
+
+Details:
+- Build started for project: Default Project.
+- Target: WEB.
+- Output: dist/game.
+- Engine core copied.
+- Project assets merged.
+- Build completed.
+
+Practical reading:
+The web export path can complete for Default Project. This proves the script can produce an output folder; it does not prove the exported game was opened and fully played.
+
+2.5 Python backend tests
+
+Commands:
+backend/venv/bin/python -m pytest backend/tests
+python3 -m pytest backend/tests
+
+Result:
+Could not run.
+
+Reason:
+pytest is not installed in backend/venv or the system Python visible in this environment.
+
+Practical reading:
+The Python backend has test source, but those tests cannot honestly be counted as passed in the current environment.
+
+============================================================
+3. REPOSITORY SCOPE OBSERVED WITHOUT MD FILES
+============================================================
+
+Broad non-md file count excluding node_modules, backend/venv, and .git:
+12,855 files.
+
+Top-level distribution from that scan:
+- projects: 9,759 files
+- public: 2,376 files
+- dist: 417 files
+- studio-ui: 57 files
+- data: 54 files
+- android: 53 files
+- server: 42 files
+- backend: 20 files
+- ios: 18 files
+- website: 10 files
+- templates: 9 files
+- scripts: 5 files
+
+Focused source/config/data scan, excluding binary/model/build-heavy paths:
+- public/engines: 168 files, about 63,489 lines
+- public/ai: 58 files, about 14,934 lines
+- public/shared: 19 files, about 5,536 lines
+- public/strategies: 3 files, about 1,004 lines
+- studio-ui/src: 40 files, about 11,086 lines
+- server: 42 files, about 6,836 lines
+- backend: 14 files, about 1,294 lines
+- scripts: 5 files, about 757 lines
+- data: 54 files, about 14,580 lines
+- dunyalar: 5 files, about 25,011 lines
+- projects/Default Project: 103 non-binary-ish files in the focused scan, about 136,066 lines
+
+Engine directory inventory:
+- public/engines/shared: 42 files
+- public/engines/rpg-topdown: 36 files
+- public/engines/3d: 35 files
+- public/engines/platformer-2d: 27 files
+- public/engines/unified-3d: 24 files
+- public/engines/__tests__: 23 file-system entries, including 19 test files
+- public/engines/iso-pixel: 6 files
+
+Studio and server inventory:
+- server/routes contains 24 route modules.
+- public root contains 43 HTML entry points.
+- studio-ui contains 17 Vite HTML entry points.
+
+============================================================
+4. CURRENT WORKTREE STATE
+============================================================
+
+Current uncommitted changes:
+- package.json modified.
+- public/engines/platformer-2d/CombatSystem.js modified.
+- public/engines/shared/InventorySystem.js modified.
+- public/engines/unified-3d/TerrainRuntime3D.js modified.
+- public/engines/__tests__/ is untracked.
+
+Diff summary:
+- 4 tracked files changed.
+- 26 insertions, 21 deletions in tracked files.
+- A new engine test directory exists and is not yet committed.
+
+Meaning:
+The project is in a better tested state, but the current test-phase work is not fully committed. This is not a clean release baseline yet.
+
+Notable code changes observed:
+- package.json now runs engine unit tests as part of test:engines instead of only the 3D campaign validator.
+- Platformer CombatSystem projectile collision now passes hitEntities: new Set() into hitEntity calls, matching duplicate-hit protection expectations.
+- InventorySystem stack handling now allows creation of a new stack when the existing stack is already full.
+- TerrainRuntime3D now lazy-imports TerrainSystem3D inside async load(), reducing static import issues for test/runtime contexts.
+- automationPolicy.js now exports normalizeAutomationPath as well as canAutomateMutation, matching the server utility tests.
+
+============================================================
+5. WHAT GOT BETTER AFTER THE TEST PHASE
+============================================================
+
+5.1 The project now has a credible Node test suite
+
+This is the largest improvement.
+
+The test suite now covers:
+- AI agent loop.
+- AI mode persistence.
+- AI automation contract.
+- AI tool-call parsing.
+- Active project context retrieval.
+- Server path guards.
+- Automation mutation policy.
+- Project route behavior.
+- Level route behavior.
+- Campaign route behavior.
+- 3D level route behavior.
+- Shared engine condition evaluation.
+- Cross-engine serialization.
+- 3D save schema behavior.
+- Inventory system.
+- Ability definitions.
+- Item definitions.
+- Campaign validation.
+- Platformer configuration.
+- Platformer advanced generator.
+- Platformer smart generator.
+- Platformer combat.
+- Platformer physics.
+- RPG top-down spatial hash.
+- RPG top-down state machine.
+- RPG top-down brain runtime.
+- RPG top-down save system.
+- RPG top-down logic runtime.
+- Unified 3D mode interface.
+- Unified 3D terrain runtime normalization.
+
+This is no longer just a codebase with features. It is becoming a codebase with regression gates.
+
+5.2 The AI validation path is fixed
+
+The earlier failure around normalizeAutomationPath is gone. The current AI validation command passes.
+
+5.3 The server API test surface is much stronger
+
+Server tests now exercise actual HTTP route behavior through local test servers. They cover project creation/listing/deletion/state/file access, level CRUD, campaign CRUD/state, and 3D level validation/read/write/listing.
+
+This meaningfully reduces risk in the file-backed local studio model.
+
+5.4 Engine runtime logic has better safety coverage
+
+The new engine tests cover high-risk data contracts:
+- Serialization/deserialization.
+- Inventory persistence.
+- Item defaults and loading.
+- Ability lookup and registration.
+- Campaign graph validation.
+- Save3D schema guards.
+- Platformer collision/combat/generation.
+- RPG top-down state/logic/save helpers.
+- Unified 3D terrain normalization.
+
+5.5 Build and export commands still work
+
+Both studio build and web game export completed after the test-phase changes.
+
+============================================================
+6. WHAT IS STILL NOT PROVEN
+============================================================
+
+6.1 GUI/editor end-to-end workflows are not proven by the current tests
+
+The tests are strong for units, route contracts, and data/runtime helpers. They do not prove that a user can reliably:
+- Open the desktop app.
+- Use every editor.
+- Create a game from scratch.
+- Save and reload all authored content.
+- Playtest from the editor.
+- Export and play the exported result.
+- Move between campaign nodes in a real browser session.
+
+There are no Playwright/browser automation results in this audit.
+
+6.2 Electron runtime was not verified
+
+I did not run:
+npm start
+
+Electron startup, splash behavior, Cortex process management, window lifecycle, preload bridge, and packaged desktop runtime remain unverified in this report.
+
+6.3 Python AI backend was not verified by tests
+
+The Python backend has FastAPI source and test files, but pytest is missing in both visible Python environments. The local AI backend also depends on heavy ML/model/runtime dependencies. I did not prove:
+- FastAPI backend test pass.
+- model loading works.
+- llama-cpp runtime works.
+- watcher/RAG indexing works.
+- Electron CortexManager can start and monitor the backend successfully.
+
+6.4 Mobile builds were not verified
+
+Android and iOS folders exist, and Capacitor config exists:
+- appId: com.redglitch.engine
+- appName: RedglitchEngine
+- webDir: public
+
+But I did not run Android Gradle builds, iOS Xcode builds, device tests, signing, or Capacitor sync. Mobile export should be described as scaffolded, not complete.
+
+6.5 Desktop installers were not rebuilt
+
+dist contains existing macOS and Windows artifacts, but I did not rebuild them in this audit. Existing artifacts are evidence of previous packaging, not proof that packaging currently works after the latest changes.
+
+6.6 Full security posture is still not production-grade
+
+There are now path guard and automation policy tests, which is good. But the app still exposes powerful local capabilities:
+- Project file reads/writes.
+- Project creation/deletion.
+- Build route.
+- Git route.
+- IDE route.
+- AI proxy.
+- Asset upload/conversion.
+
+This is acceptable for a local-only studio if guarded properly. It is not enough for a remote or multi-user deployment without authentication, authorization, strict local binding assumptions, CSRF review, file operation review, and upload hardening.
+
+6.7 Default Project is still a mixed sandbox, not a polished game
+
+The Default Project has mixed engine content:
+- iso_world_1.json uses iso-pixel.
+- many levelN files use rpg-topdown.
+- platformer_demo.json uses platformer-2d.
+
+Observed Default Project level summary:
+- iso_world_1.json: iso-pixel, 8 layers, no detected entities/goal/exit.
+- level1.json: rpg-topdown, has goal.
+- level2.json: rpg-topdown, no detected goal/exit.
+- level3.json: rpg-topdown, has exit.
+- level4.json: rpg-topdown, no detected goal/exit.
+- level5.json: rpg-topdown, has exit.
+- level7.json: rpg-topdown, has exit.
+- level8.json: rpg-topdown, has exit.
+- level9.json: rpg-topdown, has exit.
+- platformer_demo.json: platformer-2d, 3 entities, 3 collectibles, has goal.
+- unnamed.json: rpg-topdown, no detected goal/exit.
+
+The Default Project did not show its own top-level redglitch.json in the project folder during this audit. The root redglitch.json says engineType is iso-pixel. That is fine for a development sandbox, but it weakens the claim that Default Project is a clean, coherent exported game.
+
+============================================================
+7. ARCHITECTURAL STATUS
+============================================================
+
+7.1 Core architecture
+
+Current architecture is real and substantial:
+- Electron desktop shell in electron-main.js.
+- Express server in server.js.
+- 24 server route modules.
+- WebSocket setup under server/websocket.
+- React/Vite studio under studio-ui.
+- Static/vanilla editor tools under public.
+- Multiple engine runtimes under public/engines.
+- Shared engine/runtime systems under public/engines/shared and public/shared.
+- Browser AI under public/ai.
+- Python FastAPI AI backend under backend.
+- Project data under projects.
+- Build/export pipeline in build-game.js and build-adapter.js.
+- Native mobile scaffolds under android and ios.
+
+7.2 Strong architecture choices
+
+- File-backed local studio model is pragmatic for a creator tool.
+- Project overlay/copy model supports customization.
+- Shared engine modules reduce some cross-engine duplication.
+- Tests now protect important data contracts.
+- 3D level routes normalize engine-specific schema fields.
+- Unified 3D campaign integration has an explicit validator.
+- AI tool automation has an explicit mutation policy.
+
+7.3 Weak architecture areas
+
+- There are still two studio patterns: Vite/React entries and many standalone public HTML/JS editors.
+- public/ is still a large mixed area containing editor UIs, runtime engines, AI, shared systems, assets, and static pages.
+- Build-game creates a simplified runtime server and does not prove every platform-specific export path.
+- Some build-time warnings show unresolved asset assumptions.
+- Python AI backend is operationally separate and heavy, with incomplete test verification in this environment.
+- Project metadata and Default Project structure are not fully clean.
+
+============================================================
+8. TESTING STATUS
+============================================================
+
+Current testing grade: B- for an alpha, C for a production product.
+
+Why B- for alpha:
+- 452 Node tests pass.
+- 39 3D campaign validator checks pass.
+- Server route tests are real HTTP route tests.
+- Engine tests cover meaningful runtime/data behavior.
+- AI validation passes.
+- Studio build passes.
+- Web game export command passes.
+
+Why only C for production:
+- No browser end-to-end suite was run.
+- No Electron GUI test was run.
+- No Python pytest execution was possible.
+- No mobile device/simulator tests were run.
+- No desktop installer rebuild was run.
+- No performance or load tests were run.
+- No security scan was run.
+- No full manual creator workflow was verified.
+
+============================================================
+9. RELEASE READINESS
+============================================================
+
+Local developer build:
+Mostly ready.
+
+Technical alpha for the owner/developer:
+Reasonably ready.
+
+Technical alpha for a trusted external tester:
+Close, but needs setup documentation, known-working paths, and cleanup of current uncommitted changes.
+
+Public beta:
+Not ready yet.
+
+Commercial production:
+Not ready yet.
+
+The project can now credibly say:
+"We have a multi-engine local game studio with passing Node-side tests, a working studio build, and a working web export command."
+
+The project should not yet say:
+"This is a finished, production-grade engine for external creators."
+
+============================================================
+10. UPDATED COMPLETION BREAKDOWN
+============================================================
+
+Architecture and system shape: 78%
+Major pieces exist and are connected. Still has mixed patterns and heavy public/ sprawl.
+
+Engine/runtime implementation: 72%
+Multiple engines exist with meaningful tests. Real-world playability still needs browser and demo validation.
+
+Unified 3D path: 76%
+3D campaign validator passes 39 checks and terrain runtime has tests. Still needs full editor-to-runtime browser playtest evidence.
+
+Studio/editor surface: 62%
+Many editors exist and Vite build passes. Editor UX, save/load consistency, and E2E behavior are not fully proven.
+
+Server/API layer: 76%
+24 routes exist and key route tests pass. Security and production exposure still need hardening.
+
+AI integration: 62%
+Browser AI tests and OpenCode validation pass. Python/model runtime remains unverified.
+
+Build/export pipeline: 60%
+Studio build and web game export pass. Desktop/mobile packaging not currently proven.
+
+Content/demo readiness: 52%
+There is real content and Default Project data, but it reads like a mixed sandbox rather than a polished cohesive game.
+
+Testing/QA: 63%
+This improved significantly. Still missing browser/Electron/mobile/Python/performance/security layers.
+
+Security/release hardening: 45%
+Some path and automation safeguards are tested. Broader production-grade security is not done.
+
+Documentation/status reliability: not scored here because .md files were intentionally not used.
+
+Overall current honest completion toward stable alpha/beta: 68%.
+
+============================================================
+11. BIGGEST REMAINING RISKS
+============================================================
+
+1. Browser editor workflows may still fail despite unit tests.
+The most important next proof is Playwright-level testing of create/save/reload/playtest/export flows.
+
+2. Python AI backend may fail on user machines.
+The backend has model files and heavy dependencies, but tests did not run because pytest is unavailable.
+
+3. Electron may expose different behavior than server/browser tests.
+The desktop app manages the Express server and Python Cortex process. That path was not exercised.
+
+4. Mobile and packaged desktop exports are unproven after current changes.
+Existing folders/artifacts are not the same as fresh successful builds.
+
+5. Default Project is not a polished reference game.
+It contains useful sample data, but it is not cleanly proven as a coherent shippable game.
+
+6. public/ remains too broad.
+The project has many real systems, but long-term maintainability will suffer if editor/runtime/shared/AI boundaries are not kept clean.
+
+7. Security is still local-tool security, not hosted-app security.
+Keep assuming localhost-only until proven otherwise.
+
+============================================================
+12. BEST NEXT STEPS
+============================================================
+
+1. Commit or otherwise preserve the current passing test phase.
+The untracked public/engines/__tests__ directory and modified package/runtime files are important. They should not remain loose.
+
+2. Add Playwright smoke tests.
+Minimum flows:
+- dashboard loads
+- project list loads
+- 3D editor loads
+- create simple 3D level
+- save level
+- reload level
+- playtest level
+- campaign runtime advances on completion
+
+3. Make Python backend tests runnable.
+Add pytest/httpx/anyio to the backend test environment or requirements, then run backend/tests.
+
+4. Add an Electron smoke check.
+Verify that npm start launches the server, opens the shell, and starts or gracefully degrades Cortex.
+
+5. Verify a clean web export by opening dist/game.
+The export command completed, but the exported result should be opened in a browser and smoke-tested.
+
+6. Test one desktop package from scratch.
+Run a fresh Electron Builder package and open the generated app.
+
+7. Test one mobile path.
+Start with Android because it is easier to automate than iOS signing.
+
+8. Clean Default Project metadata.
+Give Default Project its own redglitch.json or clearly define it as a multi-engine sample sandbox. If it is meant to be a reference game, reduce it to a coherent flow.
+
+9. Reduce build warnings.
+Resolve missing build-time CSS assumptions or document why they are runtime-only.
+
+10. Keep future feature work behind tests.
+The new test phase is the right direction. The next goal should be fewer unverified features and more verified workflows.
+
+============================================================
+13. FINAL HONEST SUMMARY
+============================================================
+
+Redglitch Engine is in a genuinely better state after the completed test phase. The project now has enough passing automated Node tests to support the claim that core AI, server, and engine contracts are being actively protected. The studio build works. The AI validation command works. The Default Project web export command works. The unified 3D campaign validator works.
+
+That is a real milestone.
+
+The honest caveat is that this milestone proves code and route contracts, not the whole product experience. The remaining gap is end-to-end product reliability: browser editors, Electron, Python Cortex, model loading, desktop/mobile packaging, exported-game playability, and coherent sample content.
+
+Updated honest status:
+
+- Not a toy.
+- Not just a mockup.
+- Not production-grade yet.
+- Stronger than a normal early prototype.
+- Credible as a technical alpha.
+- Still needs E2E hardening before beta.
+
+Best one-line assessment:
+Redglitch Engine is now about 68% complete as a stable alpha/beta game studio, with a strong test-phase foundation but important product-level verification still unfinished.
+

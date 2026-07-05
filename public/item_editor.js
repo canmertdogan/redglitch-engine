@@ -278,7 +278,7 @@ function renderPreview() {
 }
 async function saveToServer() {
     try {
-        const response = await fetch('/api/item-defs', {
+        const response = await fetch('/api/items-defs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(items)

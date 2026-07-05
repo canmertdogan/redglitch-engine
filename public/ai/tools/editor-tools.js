@@ -5,6 +5,7 @@
  */
 
 import { PermissionGate } from '../permission-gate.js';
+import { editorFileForTarget, normalizeEditorTarget } from '../tool-aliases.mjs';
 
 export class EditorTools {
     constructor(permissionGate) {
@@ -21,47 +22,8 @@ export class EditorTools {
      * @param {string} editorName - Name of editor (e.g., 'npc', 'quest', 'dialogue')
      */
     async openEditor(editorName) {
-        const editorMap = {
-            'npc': 'npc_editor.html',
-            'quest': 'quest_editor.html',
-            'dialogue': 'dialogue_editor.html',
-            'script': 'script_editor.html',
-            'item': 'item_editor.html',
-            'enemy': 'enemy_editor.html',
-            'character': 'character_editor.html',
-            'skill': 'skill_editor.html',
-            'achievement': 'achievement_editor.html',
-            'cutscene': 'interactive_cutscene_editor.html',
-            'campaign': 'campaign_editor.html',
-            'menu': 'menu_editor.html',
-            'logic': 'logic_editor.html',
-            'algorithm': 'algorithm_editor.html',
-            'behavior': 'behavior_editor.html',
-            'prefab': 'prefab_editor.html',
-            'localization': 'localization_editor.html',
-            // Iso / Isometric aliases
-            'iso': 'iso_editor.html',
-            'isopixel': 'iso_editor.html',
-            'isopixelstudio': 'iso_editor.html',
-            'isopixel studio': 'iso_editor.html',
-            'isostudio': 'iso_editor.html',
-            'isometric': 'iso_editor.html',
-            'isometricstudio': 'iso_editor.html',
-            'iso-pixel': 'iso_editor.html',
-            // Platformer aliases
-            'platformer': 'platformer_editor.html',
-            'platformer_studio': 'platformer_editor.html',
-            'platformerstudio': 'platformer_editor.html',
-            'platform': 'platformer_editor.html',
-            'sidescroller': 'platformer_editor.html',
-            'pixel': 'pixel_editor.html',
-            'fx': 'fx_editor.html',
-            'background': 'background_editor.html',
-            'shader': 'shader_lab.html',
-            'input': 'input_editor.html'
-        };
-
-        const editorFile = editorMap[editorName.toLowerCase()];
+        const target = normalizeEditorTarget(editorName);
+        const editorFile = editorFileForTarget(target);
         if (!editorFile) {
             throw new Error(`Unknown editor: ${editorName}`);
         }
@@ -73,8 +35,8 @@ export class EditorTools {
             window.location.href = editorFile;
         }
         
-        this.currentEditor = editorName;
-        return { success: true, editor: editorName };
+        this.currentEditor = target;
+        return { success: true, editor: target };
     }
 
     /**
@@ -88,10 +50,12 @@ export class EditorTools {
      * Get current project name
      */
     getCurrentProject() {
-        if (typeof SharedProjectState !== 'undefined' && SharedProjectState.currentProject) {
-            return SharedProjectState.currentProject;
-        }
-        return localStorage.getItem('currentProject') || 'Default Project';
+        const projectState =
+            window.RedGlitchProjectState ||
+            (typeof SharedProjectState !== 'undefined' ? SharedProjectState : null);
+        if (projectState?.currentProject) return projectState.currentProject;
+        if (projectState?.projectName) return projectState.projectName;
+        return window.localStorage?.getItem('currentProject') || 'Default Project';
     }
 
     /**
@@ -174,15 +138,14 @@ export class EditorTools {
             return { success: false, reason: 'Permission denied' };
         }
 
-        // Use EventBus if available
-        if (typeof EventBus !== 'undefined') {
-            EventBus.emit(`asset:create:${assetType}`, data);
-        }
+        const eventBus = window.RedGlitchEventBus || (typeof EventBus !== 'undefined' ? EventBus : null);
+        if (eventBus?.emit) eventBus.emit(`asset:create:${assetType}`, data);
 
         // Also set dirty flag
-        if (typeof SharedProjectState !== 'undefined') {
-            SharedProjectState.setDirty(true);
-        }
+        const projectState =
+            window.RedGlitchProjectState ||
+            (typeof SharedProjectState !== 'undefined' ? SharedProjectState : null);
+        if (projectState?.setDirty) projectState.setDirty(true);
 
         return { success: true, assetType, data };
     }
@@ -213,8 +176,9 @@ export class EditorTools {
         }
 
         // Or emit save event
-        if (typeof EventBus !== 'undefined') {
-            EventBus.emit('editor:save');
+        const eventBus = window.RedGlitchEventBus || (typeof EventBus !== 'undefined' ? EventBus : null);
+        if (eventBus?.emit) {
+            eventBus.emit('editor:save');
             return { success: true };
         }
 

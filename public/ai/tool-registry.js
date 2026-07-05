@@ -114,6 +114,15 @@ export class ToolRegistry {
                 this.eventBus.emit('ai:command:result', response);
             } catch (error) {
                 this._debug(`Remote command failed: ${request.method}`, error.message);
+                this.eventBus.emit('ai:command:result', {
+                    id: request.id,
+                    success: false,
+                    status: ACTION_STATUS.FAILED,
+                    error: {
+                        code: error.code || ERROR_CODE.EXECUTION_FAILED,
+                        message: error.message || 'Unknown execution error'
+                    }
+                });
             }
         });
     }
@@ -367,7 +376,12 @@ export class ToolRegistry {
             let result;
             if (typeof tool.execute === 'function') {
                 this._debug(`Invoking local execution for ${name}`);
-                result = await tool.execute(args);
+                result = await this._withTimeout(
+                    Promise.resolve().then(() => tool.execute(args)),
+                    tool.timeout,
+                    `Tool execution timed out: ${name}`,
+                    ERROR_CODE.TOOL_TIMEOUT
+                );
             } else {
                 this._debug(`Invoking remote execution for ${name}. Waiting for result...`);
                 if (typeof tool.prepare === 'function') await tool.prepare(args);
@@ -399,6 +413,28 @@ export class ToolRegistry {
         }
     }
 
+    _withTimeout(promise, timeoutMs = 15000, message = 'Tool execution timed out', code = ERROR_CODE.EXECUTION_FAILED) {
+        const ms = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000;
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                const error = new Error(message);
+                error.code = code;
+                reject(error);
+            }, ms);
+
+            promise.then(
+                (value) => {
+                    clearTimeout(timeout);
+                    resolve(value);
+                },
+                (error) => {
+                    clearTimeout(timeout);
+                    reject(error);
+                }
+            );
+        });
+    }
+
     async _waitForRemoteResult(requestId, timeoutMs = 15000) {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
@@ -414,7 +450,11 @@ export class ToolRegistry {
                     clearTimeout(timeout);
                     this.eventBus.off('studio:action:result', handler);
                     if (response.success) resolve(response.result);
-                    else reject(new Error(response.error?.message || "Remote execution failed"));
+                    else {
+                        const error = new Error(response.error?.message || "Remote execution failed");
+                        error.code = response.error?.code || ERROR_CODE.EXECUTION_FAILED;
+                        reject(error);
+                    }
                 }
             };
 
