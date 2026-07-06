@@ -110,23 +110,45 @@ function collectServerRoutes() {
 }
 
 function collectFetchEndpoints(fn) {
+  return collectFetchCalls(fn).map((call) => call.endpoint);
+}
+
+function extractFetchMethod(source, offset) {
+  const rest = source.slice(offset, offset + 500).trimStart();
+  if (!rest.startsWith(',')) return null;
+  const methodMatch = rest.match(/^,[\s\S]*?method\s*:\s*['"`]([A-Za-z]+)['"`]/);
+  return methodMatch ? methodMatch[1].toUpperCase() : null;
+}
+
+function collectFetchCalls(fn) {
   const source = String(fn || '');
-  const endpoints = [];
+  const calls = [];
   const fetchRegex = /fetch\(\s*(?:`([^`]+)`|'([^']+)'|"([^"]+)")/g;
   let match;
   while ((match = fetchRegex.exec(source))) {
     const endpoint = match[1] || match[2] || match[3];
-    if (endpoint?.startsWith('/api/')) endpoints.push(endpoint);
+    if (endpoint?.startsWith('/api/')) {
+      calls.push({ endpoint, method: extractFetchMethod(source, fetchRegex.lastIndex) });
+    }
   }
 
   const endpointMapRegex = /const\s+endpoint\s*=\s*\{([\s\S]*?)\};/g;
   while ((match = endpointMapRegex.exec(source))) {
+    const afterMap = source.slice(match.index + match[0].length);
+    const fetchEndpointCall = afterMap.match(/fetch\(\s*endpoint[\s\S]*?(?:,\s*\{[\s\S]*?method\s*:\s*['"`]([A-Za-z]+)['"`])?/);
+    const method = fetchEndpointCall?.[1]?.toUpperCase() || null;
     for (const endpoint of extractStringArray(match[1])) {
-      if (endpoint.startsWith('/api/')) endpoints.push(endpoint);
+      if (endpoint.startsWith('/api/')) calls.push({ endpoint, method });
     }
   }
 
-  return [...new Set(endpoints)];
+  const seen = new Set();
+  return calls.filter((call) => {
+    const key = `${call.method || ''} ${call.endpoint}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function inferMethods(toolName, endpoint) {
@@ -199,14 +221,16 @@ function audit(tools, routes, editorForTool, editorTargets) {
   const missingEditorFiles = [];
 
   for (const tool of tools) {
-    const endpoints = collectFetchEndpoints(tool.execute);
-    if (endpoints.length === 0) {
+    const fetchCalls = collectFetchCalls(tool.execute);
+    if (fetchCalls.length === 0) {
       toolsWithoutEndpoint.push(tool.name);
       continue;
     }
 
-    for (const endpoint of endpoints) {
-      for (const method of inferMethods(tool.name, endpoint)) {
+    for (const fetchCall of fetchCalls) {
+      const methods = fetchCall.method ? [fetchCall.method] : inferMethods(tool.name, fetchCall.endpoint);
+      for (const method of methods) {
+        const endpoint = fetchCall.endpoint;
         const matched = findRouteMatch(routes, method, endpoint);
         const check = { tool: tool.name, method, endpoint, matched: matched ? matched.path : null };
         endpointChecks.push(check);
