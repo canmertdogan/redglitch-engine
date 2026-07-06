@@ -23,4 +23,4 @@ function canAutomateMutation(filePath) {
         : { allowed: true, path: normalized };
 }
 
-module.exports = { canAutomateMutation, normalizeAutomationPath };
+module.exports = { canAutomateMutation };
