@@ -98,9 +98,36 @@ test('local tool execution respects the tool timeout contract', async () => {
     const response = await registry.execute('fixture.slow', {}, 'slow-timeout');
 
     assert.equal(response.success, false);
+    assert.equal(response.tool, 'fixture.slow');
     assert.equal(response.status, ACTION_STATUS.FAILED);
+    assert.equal(typeof response.durationMs, 'number');
     assert.equal(response.error.code, ERROR_CODE.TOOL_TIMEOUT);
     assert.match(response.error.message, /fixture\.slow/);
+});
+
+test('successful tool responses include stable metadata and normalize undefined result', async () => {
+    const { registry, eventBus } = buildRegistry();
+    registry.register({
+        name: 'fixture.empty',
+        description: 'Empty fixture tool',
+        securityLevel: 'safe',
+        mutates: false,
+        parameters: { type: 'object', properties: {} },
+        execute: async () => undefined,
+    });
+
+    const response = await registry.execute('fixture.empty', {}, 'empty-success');
+
+    assert.equal(response.id, 'empty-success');
+    assert.equal(response.tool, 'fixture.empty');
+    assert.equal(response.success, true);
+    assert.equal(response.status, ACTION_STATUS.SUCCEEDED);
+    assert.equal(response.result, null);
+    assert.equal(typeof response.durationMs, 'number');
+
+    const resultEvent = eventBus.events.find((event) => event.type === 'studio:action:result');
+    assert.equal(resultEvent.data.result, null);
+    assert.equal(resultEvent.data.tool, 'fixture.empty');
 });
 
 test('remote editor failures preserve their error code', async () => {
@@ -127,6 +154,8 @@ test('remote editor failures preserve their error code', async () => {
     const response = await registry.execute('fixture.remote', {}, 'remote-failure');
 
     assert.equal(response.success, false);
+    assert.equal(response.tool, 'fixture.remote');
+    assert.equal(typeof response.durationMs, 'number');
     assert.equal(response.error.code, ERROR_CODE.EDITOR_UNAVAILABLE);
     assert.equal(response.error.message, 'Editor panel closed');
 });

@@ -260,7 +260,14 @@ export class ToolRegistry {
         const id = requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         if (localStorage.getItem('kai_ai_enabled') !== 'true') {
-            return { id, success: false, status: ACTION_STATUS.CANCELLED, error: { code: 'AI_DISABLED', message: 'AI features are disabled.' } };
+            return {
+                id,
+                tool: name,
+                success: false,
+                status: ACTION_STATUS.CANCELLED,
+                durationMs: 0,
+                error: { code: 'AI_DISABLED', message: 'AI features are disabled.' }
+            };
         }
 
         if (this.completedRequests.has(id)) return this.completedRequests.get(id);
@@ -280,11 +287,19 @@ export class ToolRegistry {
     }
 
     async _execute(name, args, id) {
+        const startedAt = Date.now();
 
         // Resolve aliases before any routing decisions
         let { resolvedName, tool } = this._resolveToolName(name);
         name = resolvedName;
         args = normalizeArguments(tool, args);
+
+        const buildResponse = (response) => ({
+            id,
+            tool: name,
+            durationMs: Math.max(0, Date.now() - startedAt),
+            ...response
+        });
 
         const parts = name.split('.');
         const namespace = parts.length > 1 ? parts[0] : null;
@@ -294,7 +309,17 @@ export class ToolRegistry {
         const editor = this.flags.explicitCapabilityRouting ? editorForTool(name) : null;
         if (!tool && editor) {
             // Prevent recursive or multiple redirects
-            if (window._ai_redirecting) return { success: false, pending: true };
+            if (window._ai_redirecting) {
+                return buildResponse({
+                    success: false,
+                    pending: true,
+                    status: ACTION_STATUS.PENDING_EDITOR,
+                    error: {
+                        code: 'PENDING_EDITOR',
+                        message: `Already waiting for ${name} to register.`
+                    }
+                });
+            }
             window._ai_redirecting = true;
 
             const target = editor.id;
@@ -309,8 +334,7 @@ export class ToolRegistry {
 
             await this.execute('navigateTo', { target });
             
-            const response = { 
-                id, 
+            const response = buildResponse({
                 success: false, 
                 pending: true, 
                 status: ACTION_STATUS.PENDING_EDITOR,
@@ -318,7 +342,7 @@ export class ToolRegistry {
                     code: 'PENDING_EDITOR',
                     message: `Waiting for ${name}. Navigated to ${target} for tool registration.` 
                 }
-            };
+            });
             if (this.eventBus) this.eventBus.emit('studio:action:result', response);
             return response;
         }
@@ -326,14 +350,18 @@ export class ToolRegistry {
         if (!tool) {
             this._debug(`ERROR: Unknown tool ${name}`);
             const error = { code: ERROR_CODE.UNKNOWN_TOOL, message: `Unknown tool: ${name}` };
-            const response = { id, success: false, status: ACTION_STATUS.FAILED, error };
+            const response = buildResponse({ success: false, status: ACTION_STATUS.FAILED, error });
             if (this.eventBus) this.eventBus.emit('studio:action:result', response);
             return response;
         }
 
         const validationErrors = this.flags.contractValidation ? validateSchema(tool.inputSchema, args || {}) : [];
         if (validationErrors.length) {
-            const response = { id, success: false, status: ACTION_STATUS.FAILED, error: { code: ERROR_CODE.INVALID_ARGUMENTS, message: validationErrors.join('; '), details: validationErrors } };
+            const response = buildResponse({
+                success: false,
+                status: ACTION_STATUS.FAILED,
+                error: { code: ERROR_CODE.INVALID_ARGUMENTS, message: validationErrors.join('; '), details: validationErrors }
+            });
             this.eventBus?.emit('studio:action:result', response);
             return response;
         }
@@ -359,7 +387,7 @@ export class ToolRegistry {
             if (!allowed) {
                 this._debug(`Permission denied for ${name}`);
                 const error = { code: ERROR_CODE.PERMISSION_DENIED, message: `User rejected action: ${name}` };
-                const response = { id, success: false, status: ACTION_STATUS.CANCELLED, error };
+                const response = buildResponse({ success: false, status: ACTION_STATUS.CANCELLED, error });
                 this.eventBus.emit('ai:tool:rejected', { name, id });
                 this.eventBus.emit('studio:action:result', response);
                 return response;
@@ -391,13 +419,14 @@ export class ToolRegistry {
             }
             
             this._debug(`Execution success for ${name}`, result);
+            const normalizedResult = result === undefined ? null : result;
             
             // Record the action for undo/audit
-            this.permissionGate.recordAction(name, args, result, result?.undoDescriptor || tool.undoDescriptor);
+            this.permissionGate.recordAction(name, args, normalizedResult, normalizedResult?.undoDescriptor || tool.undoDescriptor);
             
-            const response = { id, success: true, status: ACTION_STATUS.SUCCEEDED, result };
+            const response = buildResponse({ success: true, status: ACTION_STATUS.SUCCEEDED, result: normalizedResult });
             this.eventBus.emit('studio:action:result', response);
-            this.eventBus.emit('ai:tool:success', { name, id, result });
+            this.eventBus.emit('ai:tool:success', { name, id, result: normalizedResult });
             
             return response;
         } catch (error) {
@@ -406,7 +435,7 @@ export class ToolRegistry {
                 code: error.code || ERROR_CODE.EXECUTION_FAILED,
                 message: error.message || 'Unknown execution error'
             };
-            const response = { id, success: false, status: ACTION_STATUS.FAILED, error: actionError };
+            const response = buildResponse({ success: false, status: ACTION_STATUS.FAILED, error: actionError });
             this.eventBus.emit('studio:action:result', response);
             this.eventBus.emit('ai:tool:error', { name, id, error: actionError.message });
             return response;
