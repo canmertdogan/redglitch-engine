@@ -1,6 +1,6 @@
 # Redglitch Game Studio (prototype-unstable-Alpha)
 
-**An all-in-one, multi-engine game development studio with AI copilot, visual scripting, and a built-in DAW.**
+**An all-in-one, multi-engine game development studio with AI copilot, visual scripting, and a built-in sound system.**
 
 <div align="center">
 
