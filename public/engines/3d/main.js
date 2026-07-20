@@ -19,7 +19,7 @@
 
 import * as THREE               from '/lib/three/three.module.js';
 import Engine3DAdapter           from '../shared/Engine3DAdapter.js';
-import Renderer3D                from '../shared/Renderer3D.js';
+import Renderer3D                from '../shared/Renderer3D.js?v=fps-atmosphere2';
 import Camera3DController,
        { CameraMode }           from '../shared/Camera3DController.js';
 import Physics3DWorld            from '../shared/Physics3DWorld.js';
@@ -35,6 +35,7 @@ import {
     serialize3DPlayerState,
     deserialize3DPlayerState,
 } from '../shared/Save3D.js';
+import TerrainRuntime3D, { normalizeTerrainLevel } from '../unified-3d/TerrainRuntime3D.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -243,6 +244,20 @@ class RedGlitch3DGame extends Engine3DAdapter {
 
         // ── Dispose current mode systems ───────────────────────────────────
         await this._disposeModeSystems();
+
+        // Clean up any lingering global or mode-specific lights to prevent leaks
+        if (this.scene) {
+            const names = [
+                '_rg3d_sun', '_rg3d_ambient',
+                '__sunLight', '__ambLight', '__softFillLight',
+                '__sunLightTarget', '__fpsSunLight', '__fpsAmbientLight',
+                '__fpsDayHemisphere', '__fpsSunTarget'
+            ];
+            for (const name of names) {
+                const obj = this.scene.getObjectByName(name);
+                if (obj) this.scene.remove(obj);
+            }
+        }
 
         // ── Load mode config ───────────────────────────────────────────────
         const mod = await MODE_LOADERS[mode]();
@@ -460,17 +475,38 @@ class RedGlitch3DGame extends Engine3DAdapter {
 
         // ── Mode-specific level loading ────────────────────────────────────
 
-        // FPS: reposition controller + load world geometry + enemies
-        if (this.fpsController) {
-            const spawn = level?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
-            await this.fpsController.init(spawn);
-        }
-        if (this.worldGeometry) {
-            await this.worldGeometry.loadFromLevel(level, this.currentProject ?? '');
-        }
-        if (this.enemyAI) {
-            await this.enemyAI.loadFromLevel(level, this.currentProject ?? '');
-            this._initialEnemyCount = this._countLivingEnemies();
+        // FPS: terrain/foliage + reposition controller + world geometry + enemies
+        if (this._engineType3D === 'fps-3d') {
+            const runtimeLevel = normalizeTerrainLevel(level);
+            const hasTerrain = Array.isArray(level.terrainMeshes) && level.terrainMeshes.some(m => m?.type === 'terrain');
+            if (hasTerrain) {
+                this._terrainRuntime = new TerrainRuntime3D(this);
+                await this._terrainRuntime.load(runtimeLevel);
+            }
+            if (this.fpsController) {
+                const spawn = runtimeLevel?.playerSpawn ?? level?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
+                await this.fpsController.init(spawn);
+            }
+            if (this.worldGeometry && (this._hasExplicitWorldGeometry(runtimeLevel) || !runtimeLevel?.terrain)) {
+                await this.worldGeometry.loadFromLevel(runtimeLevel, this.currentProject ?? '');
+            }
+            if (this.enemyAI) {
+                await this.enemyAI.loadFromLevel(runtimeLevel, this.currentProject ?? '');
+                this._initialEnemyCount = this._countLivingEnemies();
+            }
+        } else {
+            // Non-FPS modes: original behavior
+            if (this.fpsController) {
+                const spawn = level?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
+                await this.fpsController.init(spawn);
+            }
+            if (this.worldGeometry) {
+                await this.worldGeometry.loadFromLevel(level, this.currentProject ?? '');
+            }
+            if (this.enemyAI) {
+                await this.enemyAI.loadFromLevel(level, this.currentProject ?? '');
+                this._initialEnemyCount = this._countLivingEnemies();
+            }
         }
 
         // TopDown: terrain + entities + pathfinding + fog
@@ -527,6 +563,9 @@ class RedGlitch3DGame extends Engine3DAdapter {
         this._levelComplete = false;
         this._initialEnemyCount   = 0;
         this._initialHostileCount = 0;
+
+        this._terrainRuntime?.dispose?.();
+        this._terrainRuntime = null;
 
         // Dispose level-scoped data from each system
         for (const { instance } of this._modeSystems) {
@@ -716,6 +755,12 @@ class RedGlitch3DGame extends Engine3DAdapter {
     }
 
     // ── Utility ───────────────────────────────────────────────────────────────
+
+    _hasExplicitWorldGeometry(level) {
+        return !!level?.gltfUrl
+            || (Array.isArray(level?.geometry) && level.geometry.length > 0)
+            || !!(level?.voxelGrid && Object.keys(level.voxelGrid).length > 0);
+    }
 
     pause() {
         this.isPaused = true;

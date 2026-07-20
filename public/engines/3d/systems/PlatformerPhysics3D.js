@@ -291,6 +291,14 @@ export default class PlatformerPhysics3D {
             this._body.velocity.y += gravity * dt;
         }
 
+        // ── Grounded velocity clamp ─────────────────────────────────────────
+        // Prevent small residual downward velocity from sinking the body
+        // out of the grounded raycast window (which would flip isGrounded=false
+        // every other frame, causing the hop-loop).
+        if (this._isGrounded && this._body.velocity.y < 0) {
+            this._body.velocity.y = 0;
+        }
+
         // ── Terminal velocity ───────────────────────────────────────────────
         if (this._body.velocity.y < this._terminalVel) {
             this._body.velocity.y = this._terminalVel;

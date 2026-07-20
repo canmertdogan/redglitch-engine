@@ -25,7 +25,7 @@
 
 import * as THREE              from '/lib/three/three.module.js';
 import Engine3DAdapter         from '../shared/Engine3DAdapter.js?v=cachebust2';
-import Renderer3D              from '../shared/Renderer3D.js';
+import Renderer3D              from '../shared/Renderer3D.js?v=fps-atmosphere2';
 import Camera3DController,
        { CameraMode }          from '../shared/Camera3DController.js';
 import Physics3DWorld          from '../shared/Physics3DWorld.js';

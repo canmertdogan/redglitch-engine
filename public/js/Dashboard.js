@@ -58,6 +58,7 @@ async function loadProjects() {
                     </div>
                 </div>
                 <div class="p-icon"><i class="${engineIcon}"></i></div>
+                ${p.name === 'Default Project' ? '<div class="beta-badge"><i class="fas fa-rocket"></i> Beta path</div>' : ''}
                 <div class="p-title">${escapeHtml(p.name)}</div>
                 <div class="p-path">${escapeHtml(p.path || p.name)}</div>
                 <div class="p-meta">
@@ -151,6 +152,10 @@ async function launchProject(name) {
         });
         alert(`Failed to launch project: ${error.message}`);
     }
+}
+
+async function launchBetaProject() {
+    return launchProject('Default Project');
 }
 
 // --- PROJECT WIZARD ---

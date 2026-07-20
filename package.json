@@ -1,13 +1,17 @@
 {
   "name": "redglitch-engine",
   "productName": "Redglitch Game Studio",
-  "version": "7.0.1-beta.1",
-  "description": "Redglitch Game Studio public beta - local-first game creation tools",
+  "version": "0.1.0-experimental-alpha",
+  "description": "Redglitch Game Studio experimental alpha - local-first game creation tools",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
     "server": "node server.js",
     "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "release:build": "npm run beta:check && npm run dist:mac && npm run dist:win && npm run dist:linux",
     "build:game": "node build-game.js",
     "build:game:mac": "node build-game.js \"Default Project\" macos",
     "build:game:ios": "node build-game.js \"Default Project\" ios",
@@ -24,6 +28,8 @@
     "test:coverage": "c8 node --test --test-concurrency=1 server/",
     "beta:check": "npm run test:server && npm run test:engines && npm run studio:build",
     "beta:build:mac": "npm run beta:check && electron-builder --mac",
+    "beta:build:win": "npm run beta:check && electron-builder --win",
+    "beta:build:linux": "npm run beta:check && electron-builder --linux",
     "ai:validate": "npm run test:ai && node scripts/validate-opencode-zen.js",
     "studio:dev": "vite",
     "studio:build": "vite build",
@@ -84,16 +90,31 @@
       "!projects/**/*",
       "projects/Default Project/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "n0rthstar",
+      "repo": "redglitch-engine",
+      "releaseType": "prerelease"
+    },
     "win": {
       "target": "nsis",
-      "icon": "public/icons/icon.png"
+      "icon": "favicon.ico"
     },
     "mac": {
-      "icon": "public/icons/icon.icns"
+      "target": "dmg",
+      "icon": "public/icons/icon.icns",
+      "category": "public.app-category.games"
     },
     "linux": {
       "target": "AppImage",
+      "icon": "public/icons/icon.png",
       "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "favicon.ico",
+      "uninstallerIcon": "favicon.ico"
     }
   }
 }

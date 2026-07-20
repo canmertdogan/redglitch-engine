@@ -103,6 +103,13 @@ class Physics3DWorld {
         this.world.broadphase = new CANNON.SAPBroadphase(this.world);
         this.world.broadphase.useBoundingBoxes = true;
 
+        // Global contact material: restitution=0 means no bounce by default.
+        // Without this, cannon-es uses an internal default that can return energy
+        // on any contact regardless of per-body restitution values, causing the
+        // character to hop on every frame it touches the floor.
+        this.world.defaultContactMaterial.restitution = 0;
+        this.world.defaultContactMaterial.friction     = 0.5;
+
         // Allow bodies to sleep when idle — reduces simulation cost
         this.world.allowSleep = true;
 
@@ -137,8 +144,19 @@ class Physics3DWorld {
     }
 
     // Backward-compatible API expected by current engines.
+    // Game3DCore manages its own fixed-step accumulator and calls step(FIXED_STEP)
+    // once per logical tick.  Routing through update() would re-apply an internal
+    // accumulator, causing cannon-es to run ~2 sub-steps per tick (doubling gravity
+    // and contact forces → character slams down → bounce → hop loop).
     step(delta) {
-        this.update(delta);
+        if (!this.world) return;
+        this.world.step(delta);
+        // Sync Three.js transforms
+        for (const pb of this._bodies) {
+            if (pb.type !== BodyType.STATIC) {
+                pb._sync();
+            }
+        }
     }
 
     setGravity(x = 0, y = -20, z = 0) {

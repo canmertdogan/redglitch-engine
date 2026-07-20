@@ -869,8 +869,8 @@
         #kas-topbar {
             gap: 0;
             padding: 0;
-            height: 48px;
-            min-height: 48px;
+            height: 40px;
+            min-height: 40px;
             background: linear-gradient(180deg, #0d0d0d 0%, #080808 100%);
             border-bottom: 1px solid rgba(255,30,39,0.25);
             display: flex;
@@ -898,22 +898,22 @@
         #tb-brand {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 0 16px;
+            gap: 8px;
+            padding: 0 10px 0 12px;
             border-right: 1px solid rgba(255,30,39,0.15);
-            min-width: 180px;
             flex-shrink: 0;
+            min-width: 0;
         }
 
         #tb-brand-icon {
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             background: linear-gradient(135deg, rgba(255,30,39,0.2), rgba(255,30,39,0.05));
             border: 1px solid rgba(255,30,39,0.35);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 13px;
+            font-size: 12px;
             color: #ff1e27;
             flex-shrink: 0;
             box-shadow: 0 0 12px rgba(255,30,39,0.15), inset 0 0 6px rgba(255,30,39,0.05);
@@ -921,90 +921,91 @@
 
         #tb-brand-text {
             display: flex;
-            flex-direction: column;
-            gap: 1px;
+            align-items: baseline;
+            gap: 6px;
+            min-width: 0;
         }
 
         #tb-brand-title {
             font-family: 'VT323', monospace;
-            font-size: 14px;
+            font-size: 13px;
             color: #fff;
             letter-spacing: 2px;
             line-height: 1;
             text-shadow: 0 0 10px rgba(255,30,39,0.3);
+            white-space: nowrap;
         }
 
         #tb-brand-sub {
-            font-family: 'VT323', monospace;
-            font-size: 9px;
-            color: rgba(255,30,39,0.4);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            line-height: 1;
+            display: none;
         }
 
-        /* ── Project name chip ── */
         #tb-project-chip {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 8px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,30,39,0.12);
+            display: inline-block;
             font-family: 'VT323', monospace;
             font-size: 10px;
             color: rgba(255,30,39,0.5);
             letter-spacing: 0.8px;
-            max-width: 130px;
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
+            max-width: 120px;
+            vertical-align: bottom;
+            line-height: 1;
         }
 
         #tb-project-chip i {
-            font-size: 9px;
-            flex-shrink: 0;
+            display: none;
+        }
+
+        #tb-project-chip::before {
+            content: '|';
+            color: rgba(255,30,39,0.2);
+            margin-right: 6px;
         }
 
         /* ── Mode zone ── */
         #tb-mode-zone {
             display: flex;
             align-items: center;
-            padding: 0 8px;
-            border-right: 1px solid rgba(255,30,39,0.12);
-            gap: 3px;
+            padding: 0 6px;
+            gap: 2px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+
+        #tb-mode-zone::-webkit-scrollbar {
+            display: none;
         }
 
         #tb-mode-label {
-            font-family: 'VT323', monospace;
-            font-size: 8px;
-            color: rgba(255,30,39,0.3);
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            padding-right: 8px;
-            border-right: 1px solid rgba(255,30,39,0.1);
-            margin-right: 3px;
+            display: none;
         }
 
         .mode-pill-btn {
             display: flex;
             align-items: center;
-            gap: 5px;
-            height: 28px;
-            padding: 0 10px;
+            gap: 4px;
+            height: 26px;
+            padding: 0 7px;
             background: rgba(0,0,0,0.4);
             border: 1px solid rgba(255,30,39,0.12);
             color: rgba(255,30,39,0.4);
             font-family: 'VT323', monospace;
-            font-size: 10px;
-            letter-spacing: 1px;
+            font-size: 9px;
+            letter-spacing: 0.5px;
             cursor: pointer;
             transition: all 0.15s;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .mode-pill-btn i {
-            font-size: 9px;
+            font-size: 8px;
         }
 
         .mode-pill-btn:hover {
@@ -1110,8 +1111,8 @@
         #tb-stats-zone {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 0 14px;
+            gap: 8px;
+            padding: 0 10px;
             border-left: 1px solid rgba(255,30,39,0.12);
         }
 
@@ -1124,14 +1125,14 @@
 
         .tb-stat-value {
             font-family: 'VT323', monospace;
-            font-size: 13px;
+            font-size: 12px;
             color: rgba(255,30,39,0.8);
             line-height: 1;
         }
 
         .tb-stat-label {
             font-family: 'VT323', monospace;
-            font-size: 7px;
+            font-size: 6px;
             color: rgba(255,30,39,0.3);
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -1140,7 +1141,7 @@
 
         .tb-stat-div {
             width: 1px;
-            height: 24px;
+            height: 20px;
             background: rgba(255,30,39,0.1);
         }
 
@@ -1149,27 +1150,27 @@
             display: flex;
             align-items: center;
             gap: 2px;
-            padding: 0 10px;
+            padding: 0 6px;
             border-left: 1px solid rgba(255,30,39,0.12);
         }
 
         .tb-action-btn {
             display: flex;
             align-items: center;
-            gap: 5px;
-            height: 28px;
-            padding: 0 10px;
+            gap: 4px;
+            height: 26px;
+            padding: 0 8px;
             background: rgba(0,0,0,0.4);
             border: 1px solid rgba(255,30,39,0.12);
             color: rgba(255,30,39,0.6);
             font-family: 'VT323', monospace;
-            font-size: 10px;
+            font-size: 9px;
             letter-spacing: 0.8px;
             cursor: pointer;
             transition: all 0.15s;
         }
 
-        .tb-action-btn i { font-size: 9px; }
+        .tb-action-btn i { font-size: 8px; }
 
         .tb-action-btn:hover {
             color: #ff1e27;
@@ -1178,7 +1179,7 @@
         }
 
         .tb-action-btn.icon-only {
-            width: 28px;
+            width: 26px;
             padding: 0;
             justify-content: center;
         }
@@ -1205,22 +1206,22 @@
         #tb-play-zone {
             display: flex;
             align-items: center;
-            padding: 0 14px;
+            padding: 0 10px;
             border-left: 1px solid rgba(255,30,39,0.15);
         }
 
-        #tb-play-btn {
+        #btn-playtest {
             display: flex;
             align-items: center;
-            gap: 7px;
-            height: 34px;
-            padding: 0 18px;
+            gap: 5px;
+            height: 30px;
+            padding: 0 14px;
             background: linear-gradient(135deg, rgba(255,30,39,0.25) 0%, rgba(255,30,39,0.1) 100%);
             border: 1px solid rgba(255,30,39,0.5);
             color: #ff1e27;
             font-family: 'VT323', monospace;
-            font-size: 13px;
-            letter-spacing: 2px;
+            font-size: 11px;
+            letter-spacing: 1.5px;
             cursor: pointer;
             transition: all 0.2s;
             text-shadow: 0 0 10px rgba(255,30,39,0.6);
@@ -1229,7 +1230,7 @@
             overflow: hidden;
         }
 
-        #tb-play-btn::before {
+        #btn-playtest::before {
             content: '';
             position: absolute;
             top: 0; left: -100%;
@@ -1238,15 +1239,72 @@
             transition: left 0.4s;
         }
 
-        #tb-play-btn:hover::before { left: 100%; }
+        #btn-playtest:hover::before { left: 100%; }
 
-        #tb-play-btn:hover {
+        #btn-playtest:hover {
             background: linear-gradient(135deg, rgba(255,30,39,0.35) 0%, rgba(255,30,39,0.15) 100%);
             border-color: #ff1e27;
             box-shadow: 0 0 20px rgba(255,30,39,0.3), inset 0 0 12px rgba(255,30,39,0.08);
         }
 
-        #tb-play-btn i { font-size: 11px; }
+        #btn-playtest i { font-size: 10px; }
+
+        @media (max-width: 1200px) {
+            #tb-brand {
+                padding: 0 8px 0 10px;
+            }
+            #tb-brand-icon {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+            }
+            #tb-brand-title {
+                font-size: 11px;
+            }
+            #tb-project-chip {
+                font-size: 9px;
+                max-width: 80px;
+            }
+            #tb-mode-zone {
+                padding: 0 4px;
+            }
+            .mode-pill-btn {
+                font-size: 8px;
+                height: 24px;
+                padding: 0 5px;
+            }
+            #tb-stats-zone {
+                padding: 0 6px;
+            }
+            .tb-stat-value {
+                font-size: 10px;
+            }
+            #tb-file-zone {
+                padding: 0 4px;
+            }
+            .tb-action-btn {
+                font-size: 8px;
+                height: 24px;
+                padding: 0 6px;
+            }
+            .tb-action-btn.icon-only {
+                width: 24px;
+            }
+            #tb-play-zone {
+                padding: 0 6px;
+            }
+            #btn-playtest {
+                font-size: 10px;
+                height: 26px;
+                padding: 0 10px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            #tb-stats-zone {
+                display: none;
+            }
+        }
 
         /* ── Mode Selector Styled (kept for JS compatibility) ── */
         #mode-selector-wrap {
@@ -2165,18 +2223,18 @@
 <script src="/shared/SchemaRegistry.js"></script>
 <script src="lib/monaco/vs/loader.js"></script>
 <script type="module">
-    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust11';
+    import Editor3DCore from '/engines/unified-3d/editor/Editor3DCore.js?v=cachebust14';
 
     // ── Mode panel registry ───────────────────────────────────────────
     const PANEL_REGISTRY = {
-        'fps-3d':        () => import('/engines/unified-3d/editor/FPSEditorPanel.js'),
-        'topdown-3d':    () => import('/engines/unified-3d/editor/TopDownEditorPanel.js'),
-        'platformer-3d': () => import('/engines/unified-3d/editor/PlatformerEditorPanel.js'),
-        'terrain':       () => import('/engines/unified-3d/editor/TerrainEditorPanel.js'),
-        'proplib':       () => import('/engines/unified-3d/editor/PropLibraryPanel.js'),
-        'playerstudio':  () => import('/engines/unified-3d/editor/PlayerStudioPanel.js'),
-        'npcstudio':     () => import('/engines/unified-3d/editor/NPCStudioPanel.js'),
-        'sculptstudio':  () => import('/engines/unified-3d/editor/SculptStudioPanel.js'),
+        'fps-3d':        () => import('/engines/unified-3d/editor/FPSEditorPanel.js?v=cachebust13'),
+        'topdown-3d':    () => import('/engines/unified-3d/editor/TopDownEditorPanel.js?v=cachebust13'),
+        'platformer-3d': () => import('/engines/unified-3d/editor/PlatformerEditorPanel.js?v=cachebust13'),
+        'terrain':       () => import('/engines/unified-3d/editor/TerrainEditorPanel.js?v=cachebust13'),
+        'proplib':       () => import('/engines/unified-3d/editor/PropLibraryPanel.js?v=cachebust13'),
+        'playerstudio':  () => import('/engines/unified-3d/editor/PlayerStudioPanel.js?v=cachebust13'),
+        'npcstudio':     () => import('/engines/unified-3d/editor/NPCStudioPanel.js?v=cachebust13'),
+        'sculptstudio':  () => import('/engines/unified-3d/editor/SculptStudioPanel.js?v=cachebust13'),
     };
 
     const MODE_NAMES = {
@@ -2215,6 +2273,8 @@
         await loadModePanel(mode);
         if (project && level) {
             await editor.loadLevel(project, level);
+        } else {
+            await editor.newLevel();
         }
         
         // ── Phase 9: Handle Drag and Drop Drops ───────────────────────────

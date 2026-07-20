@@ -166,7 +166,10 @@ class Camera3DController {
         this._modeConfig = config;
 
         if (mode === CameraMode.FPS) {
-            this.requestPointerLock();
+            // FPSCamera handles pointer lock via its own attach()/click handler.
+            // Do NOT request pointer lock here — during onInit() it fires before
+            // FPSCamera's pointerlockchange listener is registered, which can lose
+            // the lock-state transition and prevent mouse look.
         } else if (this._pointerLocked) {
             document.exitPointerLock();
         }

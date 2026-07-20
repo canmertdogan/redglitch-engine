@@ -1582,13 +1582,16 @@ class IsoGame {
     }
 }
 
-window.onload = () => {
+window.onload = async () => {
     // Skip auto-init in campaign runtime mode - adapter will handle it
     if (window.CAMPAIGN_RUNTIME_MODE) {
         console.log('[IsoEngine] Campaign runtime mode detected, skipping auto-init');
         return;
     }
-    
+
+    // Wait for the bootstrap map-seeder to finish (if running)
+    if (window.__mapBootstrap) await window.__mapBootstrap;
+
     window.game = new IsoGame();
     if (document.getElementById('demo-title') || !document.getElementById('login-screen')) {
         window.game.init();

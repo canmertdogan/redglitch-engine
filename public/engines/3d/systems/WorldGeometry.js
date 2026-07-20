@@ -339,10 +339,11 @@ export default class WorldGeometry {
 
         try {
             const body = this._physics.createBody({
-                type:     BodyType.STATIC,
-                shape:    ShapeType.TRIMESH,
-                geometry: worldGeo,
-                mass:     0,
+                type:         BodyType.STATIC,
+                shape:        ShapeType.TRIMESH,
+                geometry:     worldGeo,
+                mass:         0,
+                restitution:  0,
             });
             body.body.userData = { surface, meshName: mesh.name };
             this._staticBodies.push(body);
@@ -403,11 +404,12 @@ export default class WorldGeometry {
 
     _addBoxCollider(cx, cy, cz, sx, sy, sz, surface = 'concrete') {
         const body = this._physics.createBody({
-            type:     BodyType.STATIC,
-            shape:    ShapeType.BOX,
-            halfExtents: { x: sx / 2, y: sy / 2, z: sz / 2 },
-            position: new THREE.Vector3(cx, cy, cz),
-            mass:     0,
+            type:         BodyType.STATIC,
+            shape:        ShapeType.BOX,
+            halfExtents:  { x: sx / 2, y: sy / 2, z: sz / 2 },
+            position:     new THREE.Vector3(cx, cy, cz),
+            mass:         0,
+            restitution:  0,
         });
         body.body.userData = { surface };
         this._staticBodies.push(body);

@@ -817,6 +817,47 @@
             border-top: 1px solid var(--border);
         }
 
+        .beta-panel {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255, 30, 39, 0.06);
+            border: 1px solid var(--border-accent);
+            margin: 0 0 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+        }
+
+        .beta-panel-title {
+            color: #fff;
+            font-size: 20px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .beta-panel-copy {
+            color: var(--text-muted);
+            font-size: 14px;
+            letter-spacing: 1px;
+            line-height: 1.4;
+        }
+
+        .beta-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+            padding: 3px 8px;
+            color: var(--accent);
+            border: 1px solid var(--border-accent);
+            background: var(--accent-soft);
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
         .btn-action {
             background: transparent;
             color: var(--accent);
@@ -1339,7 +1380,7 @@
             <div class="sidebar-quick-grid">
                 <button class="sidebar-action" onclick="View.show('projects')"><i class="fas fa-sync"></i> Refresh</button>
                 <button class="sidebar-action" onclick="View.show('create')"><i class="fas fa-plus"></i> New</button>
-                <button class="sidebar-action primary" onclick="window.location.href='tools.html'"><i class="fas fa-rocket"></i> Studio</button>
+                <button class="sidebar-action primary" onclick="launchBetaProject()"><i class="fas fa-rocket"></i> Beta</button>
                 <button class="sidebar-action" onclick="LogManager.show()"><i class="fas fa-terminal"></i> Logs</button>
             </div>
         </div>
@@ -1411,7 +1452,7 @@
         </nav>
         <div class="sidebar-footer">
             &copy; 2026 RedGlitch Corp.
-            <strong>Stable Build v7.0.1</strong>
+            <strong>Public Beta v7.0.1-beta.1</strong>
         </div>
     </aside>
 
@@ -1422,6 +1463,13 @@
                 My Projects
                 <button class="btn-action" onclick="View.show('create')"><i class="fas fa-plus"></i> NEW</button>
             </h1>
+            <div class="beta-panel">
+                <div>
+                    <div class="beta-panel-title">Public beta path</div>
+                    <div class="beta-panel-copy">Start with the bundled Default Project. Advanced editors and local AI setup are still experimental for this beta.</div>
+                </div>
+                <button class="btn-action" onclick="launchBetaProject()"><i class="fas fa-rocket"></i> Open Beta Project</button>
+            </div>
             <div id="project-list" class="projects-grid">
                 <div style="padding:20px; color:#666;">Loading projects...</div>
             </div>

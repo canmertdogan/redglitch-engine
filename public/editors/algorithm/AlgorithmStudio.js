@@ -306,10 +306,11 @@ export class AlgorithmStudio {
         this.populateLibrary();
         this.setupDragDrop();
         this.refreshScriptList();
-        
-        // PHASE 7: Initialize enhancements (after library populated)
-        this.initNodeGrouping();
-        this.initUndoSystem();
+
+        // Real-time render loop (drives wire redraws + pan/zoom sync) and initial script load
+        this.initEnhancements();
+        // Tooltips, welcome overlay, save indicator, status bar polish
+        this.initPolishFeatures();
     }
     
     // PHASE 7: Custom JS Node Wrappers
@@ -1685,8 +1686,8 @@ export class AlgorithmStudio {
     // ==================== END PHASE 6 ====================
     
     // ==================== PHASE 7: POLISH & REFINEMENTS ====================
-    
-    initEnhancements() {
+
+    initPolishFeatures() {
         // Enhanced tooltip system
         this.initEnhancedTooltips();
         

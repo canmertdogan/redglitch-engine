@@ -1,34 +1,34 @@
 {
   "nodes": [
-    { "id": "n_start", "type": "evt_start", "x": 100, "y": 100, "data": {} },
-    { "id": "n_set_locale", "type": "var_set", "x": 350, "y": 100, "data": { "name": "locale", "val": "en" } },
-    { "id": "n_load_music", "type": "var_set", "x": 600, "y": 100, "data": { "name": "music_config_loaded", "val": 1 } },
-    { "id": "n_locale_check", "type": "flow_branch", "x": 600, "y": 250, "data": {} },
-    { "id": "n_sys_lang", "type": "var_get", "x": 450, "y": 350, "data": { "name": "system_language" } },
-    { "id": "n_is_turkish", "type": "logic_eq", "x": 600, "y": 400, "data": {} },
-    { "id": "n_set_tr", "type": "var_set", "x": 850, "y": 200, "data": { "name": "locale", "val": "tr" } },
-    { "id": "n_init_core", "type": "var_set", "x": 850, "y": 100, "data": { "name": "core_engine_ready", "val": 1 } },
-    { "id": "n_init_menu", "type": "var_set", "x": 1100, "y": 100, "data": { "name": "menu_system_ready", "val": 1 } },
-    { "id": "n_set_ready", "type": "var_set", "x": 1350, "y": 100, "data": { "name": "sys_ready", "val": 1 } }
+    {"id": "n_start", "type": "evt_start", "x": 60, "y": 60, "data": {}},
+    {"id": "n_set_locale", "type": "var_set", "x": 400, "y": 60, "data": {"name": "locale", "val": "en"}},
+    {"id": "n_load_music", "type": "var_set", "x": 740, "y": 60, "data": {"name": "music_config_loaded", "val": 1}},
+    {"id": "n_locale_check", "type": "flow_branch", "x": 1080, "y": 60, "data": {}},
+    {"id": "n_sys_lang", "type": "var_get", "x": 60, "y": 209, "data": {"name": "system_language"}},
+    {"id": "n_is_turkish", "type": "logic_eq", "x": 400, "y": 273, "data": {}},
+    {"id": "n_set_tr", "type": "var_set", "x": 1420, "y": 60, "data": {"name": "locale", "val": "tr"}},
+    {"id": "n_init_core", "type": "var_set", "x": 1760, "y": 60, "data": {"name": "core_engine_ready", "val": 1}},
+    {"id": "n_init_menu", "type": "var_set", "x": 2100, "y": 60, "data": {"name": "menu_system_ready", "val": 1}},
+    {"id": "n_set_ready", "type": "var_set", "x": 2440, "y": 60, "data": {"name": "sys_ready", "val": 1}}
   ],
   "wires": [
-    { "id": "w_1", "fromNode": "n_start", "fromPort": "out", "toNode": "n_set_locale", "toPort": "in" },
-    { "id": "w_2", "fromNode": "n_set_locale", "fromPort": "out", "toNode": "n_load_music", "toPort": "in" },
-    { "id": "w_3", "fromNode": "n_load_music", "fromPort": "out", "toNode": "n_locale_check", "toPort": "in" },
-    { "id": "w_4", "fromNode": "n_sys_lang", "fromPort": "val", "toNode": "n_is_turkish", "toPort": "a" },
-    { "id": "w_5", "fromNode": "n_is_turkish", "fromPort": "res", "toNode": "n_locale_check", "toPort": "cond" },
-    { "id": "w_6", "fromNode": "n_locale_check", "fromPort": "true", "toNode": "n_set_tr", "toPort": "in" },
-    { "id": "w_7", "fromNode": "n_set_tr", "fromPort": "out", "toNode": "n_init_core", "toPort": "in" },
-    { "id": "w_8", "fromNode": "n_locale_check", "fromPort": "false", "toNode": "n_init_core", "toPort": "in" },
-    { "id": "w_9", "fromNode": "n_init_core", "fromPort": "out", "toNode": "n_init_menu", "toPort": "in" },
-    { "id": "w_10", "fromNode": "n_init_menu", "fromPort": "out", "toNode": "n_set_ready", "toPort": "in" }
+    {"id": "w_1", "fromNode": "n_start", "fromPort": "out", "toNode": "n_set_locale", "toPort": "in"},
+    {"id": "w_2", "fromNode": "n_set_locale", "fromPort": "out", "toNode": "n_load_music", "toPort": "in"},
+    {"id": "w_3", "fromNode": "n_load_music", "fromPort": "out", "toNode": "n_locale_check", "toPort": "in"},
+    {"id": "w_4", "fromNode": "n_sys_lang", "fromPort": "val", "toNode": "n_is_turkish", "toPort": "a"},
+    {"id": "w_5", "fromNode": "n_is_turkish", "fromPort": "res", "toNode": "n_locale_check", "toPort": "cond"},
+    {"id": "w_6", "fromNode": "n_locale_check", "fromPort": "true", "toNode": "n_set_tr", "toPort": "in"},
+    {"id": "w_7", "fromNode": "n_set_tr", "fromPort": "out", "toNode": "n_init_core", "toPort": "in"},
+    {"id": "w_8", "fromNode": "n_locale_check", "fromPort": "false", "toNode": "n_init_core", "toPort": "in"},
+    {"id": "w_9", "fromNode": "n_init_core", "fromPort": "out", "toNode": "n_init_menu", "toPort": "in"},
+    {"id": "w_10", "fromNode": "n_init_menu", "fromPort": "out", "toNode": "n_set_ready", "toPort": "in"}
   ],
   "vars": [
-    { "name": "sys_ready", "type": "num", "value": 0 },
-    { "name": "locale", "type": "string", "value": "en" },
-    { "name": "system_language", "type": "string", "value": "en" },
-    { "name": "music_config_loaded", "type": "bool", "value": 0 },
-    { "name": "core_engine_ready", "type": "bool", "value": 0 },
-    { "name": "menu_system_ready", "type": "bool", "value": 0 }
+    {"name": "sys_ready", "type": "num", "value": 0},
+    {"name": "locale", "type": "string", "value": "en"},
+    {"name": "system_language", "type": "string", "value": "en"},
+    {"name": "music_config_loaded", "type": "bool", "value": 0},
+    {"name": "core_engine_ready", "type": "bool", "value": 0},
+    {"name": "menu_system_ready", "type": "bool", "value": 0}
   ]
 }

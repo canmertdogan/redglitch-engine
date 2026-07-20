@@ -99,7 +99,101 @@
                 background: rgba(231, 76, 60, 0.1);
                 border-color: var(--accent);
             }
-            
+
+        /* --- AI KILLSWITCH --- */
+        .ai-toggle-btn {
+            width: auto !important;
+            height: 28px;
+            padding: 0 10px;
+            gap: 6px;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-radius: 3px;
+        }
+        .ai-toggle-btn.off {
+            color: var(--text-dim);
+            border-color: var(--border);
+        }
+        .ai-toggle-btn.off:hover {
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border);
+            box-shadow: none;
+        }
+        .ai-toggle-btn.connecting {
+            color: #f1c40f;
+            border-color: rgba(241, 196, 15, 0.4);
+            background: rgba(241, 196, 15, 0.08);
+        }
+        .ai-toggle-btn.online {
+            color: #2ecc71;
+            border-color: rgba(46, 204, 113, 0.45);
+            background: rgba(46, 204, 113, 0.08);
+            box-shadow: 0 0 12px rgba(46, 204, 113, 0.2);
+        }
+        .ai-toggle-btn.online:hover {
+            background: rgba(46, 204, 113, 0.15);
+            box-shadow: 0 0 16px rgba(46, 204, 113, 0.35);
+        }
+        .ai-toggle-btn.offline {
+            color: #e67e22;
+            border-color: rgba(230, 126, 34, 0.45);
+            background: rgba(230, 126, 34, 0.08);
+        }
+        .ai-toggle-btn.thinking {
+            color: #fff;
+            background: var(--accent);
+            border-color: var(--accent);
+            animation: ai-thinking-pulse 1s ease-in-out infinite;
+            cursor: pointer;
+        }
+        .ai-toggle-btn.thinking:hover {
+            background: #ff444c;
+            box-shadow: 0 0 18px var(--accent-glow);
+        }
+        @keyframes ai-thinking-pulse {
+            0%, 100% { box-shadow: 0 0 6px var(--accent-glow); }
+            50% { box-shadow: 0 0 18px var(--accent), 0 0 4px #fff inset; }
+        }
+
+        /* --- AI MODEL SELECT --- */
+        .ai-model-select {
+            height: 28px;
+            padding: 0 22px 0 8px;
+            font-family: 'VT323', monospace;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            background: var(--bg-card) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="6" viewBox="0 0 8 6"><path d="M0 0 L8 0 L4 6 Z" fill="%23777"/></svg>') no-repeat right 8px center;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: all 0.25s ease;
+        }
+        .ai-model-select:hover {
+            color: var(--accent);
+            border-color: var(--border-accent);
+            box-shadow: 0 0 12px rgba(255, 30, 39, 0.08);
+        }
+        .ai-model-select:focus {
+            outline: none;
+            color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+        .ai-model-select:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .ai-model-select option {
+            background: #0a0a0e;
+            color: var(--text);
+            font-family: 'VT323', monospace;
+        }
+
         /* --- RUNNING STATE OVERRIDES --- */
         .running-text {
             color: var(--accent) !important;
@@ -1674,20 +1768,7 @@
         background: rgba(51, 65, 85, 0.1);
     }
 
-/* AI Toggle Button in Top Task Bar */
-.ai-toggle-btn {
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: bold;
-    padding: 0 12px;
-}
-.ai-toggle-btn.on {
-    background: linear-gradient(135deg, #4facfe, #00f2fe);
-    color: white;
-    text-shadow: 0 0 5px rgba(255,255,255,0.5);
-    box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
-    border-color: transparent;
-}
+/* AI Toggle Button in Top Task Bar -- state machine lives in the
+   ".ai-toggle-btn" rules near the other .tool-btn definitions above
+   (off / connecting / online / thinking / offline). */
 

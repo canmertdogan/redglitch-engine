@@ -291,11 +291,11 @@ test('startQuest — creates quest entry', () => {
 });
 
 test('startQuest — calls achievementSystem if present', () => {
-  let checked = false;
-  const game = makeGame({ achievementSystem: { checkQuestStart(id) { checked = true; } } });
+  let triggerCode = null;
+  const game = makeGame({ achievementSystem: { unlock(code) { triggerCode = code; } } });
   const rt = makeRuntime(game);
   rt.startQuest('q_test');
-  assert.equal(checked, true);
+  assert.equal(triggerCode, 'QUEST_START_q_test');
 });
 
 test('completeQuest — marks quest completed', () => {
@@ -306,14 +306,14 @@ test('completeQuest — marks quest completed', () => {
 });
 
 test('completeQuest — calls achievementSystem if present', () => {
-  let checked = false;
+  let triggerCode = null;
   const game = makeGame({
     activeQuests: { q_test: { status: 'active' } },
-    achievementSystem: { checkQuestComplete(id) { checked = true; } }
+    achievementSystem: { unlock(code) { triggerCode = code; } }
   });
   const rt = makeRuntime(game);
   rt.completeQuest('q_test');
-  assert.equal(checked, true);
+  assert.equal(triggerCode, 'QUEST_COMPLETE_q_test');
 });
 
 test('failQuest — marks quest failed', () => {

@@ -1117,6 +1117,4 @@ function showValidationError(message) {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
-});
-    }, 3000);
 }

@@ -9,10 +9,11 @@
  * `engines/fps-3d/` and are imported from there.
  */
 
+import * as THREE from '/lib/three/three.module.js';
 import ModeInterface from '../ModeInterface.js';
 import { CameraMode } from '../../shared/Camera3DController.js';
 import { LayerMask }   from '../../shared/Raycast3D.js';
-import TerrainRuntime3D, { normalizeTerrainLevel } from '../TerrainRuntime3D.js';
+import TerrainRuntime3D, { normalizeTerrainLevel } from '../TerrainRuntime3D.js?v=fps-swim3';
 import VehicleSystem3D from '../VehicleSystem3D.js';
 import {
     serialize3DPlayerState,
@@ -21,14 +22,35 @@ import {
 
 // FPS-specific subsystems (still live in engines/fps-3d/)
 import FPS3DStrategy     from '../../3d/systems/FPS3DStrategy.js';
-import FPSCamera         from '../../3d/systems/FPSCamera.js';
-import FPSController, { MoveState } from '../../3d/systems/FPSController.js';
+import FPSCamera         from '../../3d/systems/FPSCamera.js?v=hopfix1';
+import FPSController, { MoveState } from '../../3d/systems/FPSController.js?v=fps-swim3';
 import WorldGeometry     from '../../3d/systems/WorldGeometry.js';
 import WeaponSystem, { WeaponState } from '../../3d/systems/WeaponSystem.js';
 import EnemyAI, { EnemyState, Difficulty } from '../../3d/systems/EnemyAI.js';
 import HUD_FPS           from '../../3d/systems/HUD_FPS.js';
 import DecalSystem       from '../../3d/systems/DecalSystem.js';
-import VFX_FPS           from '../../3d/systems/VFX_FPS.js';
+import VFX_FPS           from '../../3d/systems/VFX_FPS.js?v=fps-soft-shadows1';
+
+const FPS_SKY_TOP = '#2f5f78';
+const FPS_SKY_BOTTOM = '#8eaeb8';
+const FPS_BIOME_PALETTE = [
+    { threshold: 0.18, color: '#56684d' },
+    { threshold: 0.38, color: '#5f7f46' },
+    { threshold: 0.62, color: '#718a4c' },
+    { threshold: 0.82, color: '#74684d' },
+    { threshold: 1.00, color: '#8a8370' },
+];
+const FPS_FOLIAGE_COLORS = {
+    pine: '#2f6f42',
+    oak: '#4f8a42',
+    palm: '#3f9950',
+    tree: '#3f7f3f',
+    bush: '#4f9a4f',
+    grass: '#4f9a4f',
+    reed: '#7f9a3f',
+    lily: '#4f8f3a',
+    rock: '#78736a',
+};
 
 // ── FPSMode ───────────────────────────────────────────────────────────────────
 
@@ -73,8 +95,12 @@ export default class FPSMode extends ModeInterface {
         // Set camera to FPS mode
         camera3d.setMode(CameraMode.FPS);
 
-        // Default moody sky for FPS
-        skybox.setGradient('#1a2a3a', '#0a0806');
+        // Balanced daylight default for FPS playtests: readable terrain without
+        // washing out faces, props, or weapon VFX.
+        skybox.setGradient(FPS_SKY_TOP, FPS_SKY_BOTTOM, {
+            sun: { color: '#ffe0ad', intensity: 0.9, azimuth: 38, elevation: 48 },
+            fogSync: true,
+        });
 
         // ── Strategy ──────────────────────────────────────────────────────
         this.strategy = new FPS3DStrategy(game);
@@ -86,10 +112,10 @@ export default class FPSMode extends ModeInterface {
         // ── FPS Camera ────────────────────────────────────────────────────
         this.fpsCamera = new FPSCamera(camera3d, container, {
             sensitivity: 0.0015,
-            bobEnabled:  true,
+            bobEnabled:  false,
             leanEnabled: true,
             fovBase:     75,
-            fovSprint:   10,
+            fovSprint:   6,
         });
         this.fpsCamera.attach();
         this.fpsCamera.onUnlocked = () => {
@@ -105,7 +131,7 @@ export default class FPSMode extends ModeInterface {
             input,
             audio,
         }, {
-            bunnyHop:     true,
+            bunnyHop:     false,
             proneEnabled: false,
         });
         this.fpsController._gameTimeRef = () => game.gameTime;
@@ -159,7 +185,23 @@ export default class FPSMode extends ModeInterface {
             renderer3d,
             palette,
         });
-        this.vfx.configureDirectionalLight();
+        this.vfx.configureDirectionalLight({
+            color: 0xffe0ad,
+            intensity: 0.95,
+            position: [46, 76, 34],
+            castShadow: true,
+            mapSize: 2048,
+            shadowCamSize: 130,
+            shadowFar: 320,
+            shadowRadius: 3.2,
+            shadowBias: -0.00004,
+            shadowNormalBias: 0.075,
+            ambientColor: 0xb7c2bd,
+            ambientIntensity: 0.42,
+            skyColor: 0xb7d2dc,
+            groundColor: 0x6b745b,
+            hemisphereIntensity: 0.48,
+        });
 
         // ── Wire callbacks ────────────────────────────────────────────────
         this._wireCallbacks(game);
@@ -232,20 +274,30 @@ export default class FPSMode extends ModeInterface {
 
     async onLevelLoaded(level) {
         this._initialEnemyCount = 0;
-        const runtimeLevel = this.terrainRuntime?.load(level) ?? normalizeTerrainLevel(level);
-        runtimeLevel.playerSpawn = this._resolvePlayableSpawn(runtimeLevel);
+        const visualLevel = this._prepareFpsVisualLevel(level);
+        this._applyFpsVisualProfile();
 
-        // Strategy: set player spawn from level data
-        this.strategy?.loadLevel(runtimeLevel);
-
-        // Re-position controller at spawn
-        if (this.fpsController) {
-            await this.fpsController.init(runtimeLevel.playerSpawn);
+        if (this.terrainRuntime) {
+            await this.terrainRuntime.load(visualLevel);
         }
+        const runtimeLevel = normalizeTerrainLevel(visualLevel);
 
-        // Load world geometry + collision
+        // Load world geometry FIRST so the scene contains voxel/geometry meshes.
+        // This allows _resolvePlayableSpawn to use the scene raycaster to find
+        // the true floor height instead of falling back to sampleHeight (which
+        // returns 0 by default when there is no terrain system).
         if (this.worldGeometry && (this._hasExplicitWorldGeometry(runtimeLevel) || !runtimeLevel?.terrain)) {
             await this.worldGeometry.loadFromLevel(runtimeLevel, this.game?.currentProject ?? '');
+        }
+
+        // Resolve spawn AFTER world geometry is loaded (scene has meshes)
+        runtimeLevel.playerSpawn = this._resolvePlayableSpawn(runtimeLevel);
+
+        this.strategy?.loadLevel(runtimeLevel);
+
+        if (this.fpsController) {
+            this._configureTerrainGrounding();
+            await this.fpsController.init(runtimeLevel.playerSpawn);
         }
 
         // Load enemies and cover points
@@ -255,6 +307,90 @@ export default class FPSMode extends ModeInterface {
         }
 
         this.vehicles?.load(runtimeLevel);
+    }
+
+    _prepareFpsVisualLevel(level) {
+        const out = JSON.parse(JSON.stringify(level || {}));
+
+        out.skybox = {
+            type: 'gradient',
+            mode: 'gradient',
+            topColor: FPS_SKY_TOP,
+            bottomColor: FPS_SKY_BOTTOM,
+            colorHex: FPS_SKY_BOTTOM,
+            fogSync: false,
+            sun: { color: '#ffe0ad', intensity: 0.9, azimuth: 38, elevation: 48 },
+        };
+        out.sky = out.skybox;
+        out.lighting = null;
+        out.fog = null;
+
+        if (out.terrain && typeof out.terrain === 'object') {
+            out.terrain.biomePalette = FPS_BIOME_PALETTE;
+            out.terrain.waterColorHex = '#4a9cb0';
+            out.terrain.waterOpacity = Number.isFinite(out.terrain.waterOpacity) ? Math.max(Math.min(out.terrain.waterOpacity, 0.58), 0.42) : 0.48;
+        }
+
+        if (Array.isArray(out.terrainMeshes)) {
+            for (const mesh of out.terrainMeshes) {
+                if (!mesh || mesh.type !== 'terrain') continue;
+                mesh.biomePalette = FPS_BIOME_PALETTE;
+                mesh.waterColorHex = '#4a9cb0';
+                mesh.waterOpacity = Number.isFinite(mesh.waterOpacity) ? Math.max(Math.min(mesh.waterOpacity, 0.58), 0.42) : 0.48;
+                if (Array.isArray(mesh.foliageInstances)) {
+                    for (const inst of mesh.foliageInstances) {
+                        const kind = String(inst.kind || inst.type || 'tree').toLowerCase();
+                        inst.colorHex = FPS_FOLIAGE_COLORS[kind] || FPS_FOLIAGE_COLORS.tree;
+                    }
+                }
+            }
+        }
+
+        if (Array.isArray(out.terrain?.foliage)) {
+            for (const inst of out.terrain.foliage) {
+                const kind = String(inst.kind || inst.type || 'tree').toLowerCase();
+                inst.colorHex = FPS_FOLIAGE_COLORS[kind] || FPS_FOLIAGE_COLORS.tree;
+            }
+        }
+
+        return out;
+    }
+
+    _applyFpsVisualProfile() {
+        const game = this.game;
+        game?.skybox?.setGradient?.(FPS_SKY_TOP, FPS_SKY_BOTTOM, {
+            colorHex: FPS_SKY_BOTTOM,
+            sun: { color: '#ffe0ad', intensity: 0.9, azimuth: 38, elevation: 48 },
+            fogSync: false,
+        });
+
+        if (game?.scene) {
+            game.scene.fog = null;
+            game.scene.background = new THREE.Color(FPS_SKY_BOTTOM);
+        }
+
+        const renderer = game?.renderer3d;
+        if (renderer?.webgl) {
+            renderer.webgl.toneMappingExposure = 1.0;
+        }
+        renderer?.rebuildPostProcessing?.([
+            {
+                type: 'color_grading',
+                brightness: 1.04,
+                contrast: 1.02,
+                saturation: 1.06,
+            },
+            {
+                type: 'fps_atmosphere',
+                vignette: 0.07,
+                grain: 0.012,
+                scanline: 0.012,
+                chromatic: 0.00045,
+                tint: '#8fd7e8',
+                tintStrength: 0.006,
+                lift: 0.07,
+            },
+        ]);
     }
 
     onLevelUnloaded() {
@@ -275,6 +411,7 @@ export default class FPSMode extends ModeInterface {
 
         // Player controller
         this.fpsController?.update(dt);
+        this._recoverControllerFromTerrainVoid();
 
         // AI tick
         this.enemyAI?.update(dt);
@@ -348,20 +485,32 @@ export default class FPSMode extends ModeInterface {
         const requested = level?.playerSpawn || {};
         let x = Number(requested.x);
         let z = Number(requested.z);
+        const hasExplicitXZ = Number.isFinite(x) && Number.isFinite(z);
+        const terrainBox = this._getTerrainBounds();
 
-        if (!Number.isFinite(x) || !Number.isFinite(z)) {
-            x = 0;
-            z = 0;
+        if (!hasExplicitXZ) {
+            if (terrainBox) {
+                x = (terrainBox.min.x + terrainBox.max.x) * 0.5;
+                z = (terrainBox.min.z + terrainBox.max.z) * 0.5;
+            } else {
+                x = 0;
+                z = 0;
+            }
         }
 
         const terrainMeshes = this.terrainRuntime?.getCollisionMeshes?.() ?? [];
         const candidate = this._sampleTerrainSpawnAt(x, z);
-        if (!candidate.hit && terrainMeshes.length > 0) {
-            const box = new THREE.Box3();
-            for (const mesh of terrainMeshes) box.expandByObject(mesh);
-            if (!box.isEmpty()) {
-                x = (box.min.x + box.max.x) * 0.5;
-                z = (box.min.z + box.max.z) * 0.5;
+        if (!candidate.hit && terrainMeshes.length > 0 && terrainBox) {
+            x = (terrainBox.min.x + terrainBox.max.x) * 0.5;
+            z = (terrainBox.min.z + terrainBox.max.z) * 0.5;
+        }
+
+        const spawnNeedsClearance = !hasExplicitXZ || this._isNearFoliage(level, x, z, 4.5);
+        if (terrainBox && spawnNeedsClearance) {
+            const drySpawn = this._findDryTerrainSpawn(level, x, z, terrainBox);
+            if (drySpawn) {
+                x = drySpawn.x;
+                z = drySpawn.z;
             }
         }
 
@@ -369,26 +518,180 @@ export default class FPSMode extends ModeInterface {
         const requestedY = Number(requested.y);
         const fallbackY = Number.isFinite(requestedY) ? requestedY : 1.8;
         const surfaceY = terrain.hit ? terrain.y : fallbackY;
-        const y = Math.max(fallbackY, surfaceY + 0.15);
+        const y = terrain.hit ? surfaceY + 0.05 : fallbackY;
 
         return { x, y, z };
+    }
+
+    _recoverControllerFromTerrainVoid() {
+        if (!this.fpsController || !this.terrainRuntime?.system) return;
+        const pos = this.fpsController.getPosition?.();
+        if (!pos) return;
+        const sample = this._sampleTerrainSpawnAt(pos.x, pos.z);
+        if (!sample.hit || !Number.isFinite(sample.y)) return;
+
+        // getPosition() is eye-level. In normal standing posture the eye should
+        // stay well above the sampled feet-level terrain height. If it drops
+        // below that guard band, the physics body has fallen through terrain.
+        if (pos.y < sample.y + 0.5) {
+            this.fpsController.setPosition?.(pos.x, sample.y + 0.05, pos.z);
+        }
+    }
+
+    _configureTerrainGrounding() {
+        if (!this.fpsController?.setTerrainGroundProvider) return;
+
+        const terrainBox = this._getTerrainBounds();
+        if (!this.terrainRuntime?.system || !terrainBox) {
+            this.fpsController.setTerrainGroundProvider(null);
+            return;
+        }
+
+        const margin = 0.25;
+        this.fpsController.setTerrainGroundProvider((x, z) => {
+            if (
+                x < terrainBox.min.x - margin || x > terrainBox.max.x + margin ||
+                z < terrainBox.min.z - margin || z > terrainBox.max.z + margin
+            ) {
+                return null;
+            }
+
+            const water = this.terrainRuntime.sampleWater?.(x, z);
+            if (water?.inWater) {
+                return { water, surface: 'water' };
+            }
+
+            const y = this.terrainRuntime.sampleHeight(x, z);
+            if (!Number.isFinite(y)) return null;
+            return { y, surface: 'grass' };
+        });
+    }
+
+    _getTerrainBounds() {
+        const meshes = this.terrainRuntime?.getCollisionMeshes?.() ?? [];
+        if (!meshes.length) return null;
+        const box = new THREE.Box3();
+        for (const mesh of meshes) {
+            if (!mesh) continue;
+            mesh.updateMatrixWorld?.(true);
+            box.expandByObject(mesh);
+        }
+        return box.isEmpty() ? null : box;
+    }
+
+    _findDryTerrainSpawn(level, preferredX, preferredZ, box) {
+        const terrain = level?.terrain || {};
+        const waterLevel = Number.isFinite(terrain.waterLevel) ? terrain.waterLevel : -Infinity;
+        const foliage = this._collectFoliageInstances(level);
+        const minX = box.min.x;
+        const maxX = box.max.x;
+        const minZ = box.min.z;
+        const maxZ = box.max.z;
+        const spanX = Math.max(1, maxX - minX);
+        const spanZ = Math.max(1, maxZ - minZ);
+        const stepX = Math.max(1, spanX / 16);
+        const stepZ = Math.max(1, spanZ / 16);
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        const originX = clamp(preferredX, minX + stepX, maxX - stepX);
+        const originZ = clamp(preferredZ, minZ + stepZ, maxZ - stepZ);
+        let best = null;
+        let bestScore = Infinity;
+
+        for (let dz = -8; dz <= 8; dz++) {
+            for (let dx = -8; dx <= 8; dx++) {
+                const x = clamp(originX + dx * stepX, minX + stepX, maxX - stepX);
+                const z = clamp(originZ + dz * stepZ, minZ + stepZ, maxZ - stepZ);
+                const sample = this._sampleTerrainSpawnAt(x, z);
+                if (!sample.hit) continue;
+                const dryClearance = sample.y - waterLevel;
+                const isDry = dryClearance > 0.35;
+                const dist = Math.hypot(x - preferredX, z - preferredZ);
+                const foliagePenalty = this._foliagePenalty(foliage, x, z);
+                const score = (isDry ? 0 : 100000) + foliagePenalty + dist - Math.max(0, dryClearance) * 2;
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = { x, y: sample.y, z, isDry };
+                }
+            }
+        }
+
+        return best;
+    }
+
+    _collectFoliageInstances(level) {
+        const out = [];
+        const add = (inst) => {
+            if (!inst) return;
+            const pos = Array.isArray(inst.position) ? inst.position : null;
+            const x = Number(inst.x ?? pos?.[0]);
+            const z = Number(inst.z ?? pos?.[2]);
+            if (Number.isFinite(x) && Number.isFinite(z)) out.push({ x, z });
+        };
+
+        if (Array.isArray(level?.terrain?.foliage)) {
+            for (const inst of level.terrain.foliage) add(inst);
+        }
+        if (Array.isArray(level?.terrainMeshes)) {
+            for (const mesh of level.terrainMeshes) {
+                if (Array.isArray(mesh?.foliageInstances)) {
+                    for (const inst of mesh.foliageInstances) add(inst);
+                }
+            }
+        }
+        return out;
+    }
+
+    _isNearFoliage(level, x, z, radius) {
+        return this._foliagePenalty(this._collectFoliageInstances(level), x, z, radius) > 0;
+    }
+
+    _foliagePenalty(foliage, x, z, radius = 5.5) {
+        if (!foliage.length) return 0;
+        let penalty = 0;
+        for (const inst of foliage) {
+            const dist = Math.hypot(x - inst.x, z - inst.z);
+            if (dist < radius) penalty += (radius - dist) * 600;
+        }
+        return penalty;
     }
 
     _sampleTerrainSpawnAt(x, z) {
         const meshes = this.terrainRuntime?.getCollisionMeshes?.() ?? [];
         if (!meshes.length) {
+            // Only trust sampleHeight when an actual terrain system is active.
+            // When terrainRuntime.system is null, sampleHeight defaults to 0,
+            // which would place the player inside voxel geometry (whose floor
+            // is usually at Y=1 for a voxel at grid Y=0).
             const y = this.terrainRuntime?.sampleHeight?.(x, z);
-            return Number.isFinite(y) ? { hit: true, y } : { hit: false, y: 0 };
+            if (Number.isFinite(y) && this.terrainRuntime?.system) return { hit: true, y };
+            if (this.game?.scene) {
+                const ray = new THREE.Raycaster(
+                    new THREE.Vector3(x + 0.01, 4096, z + 0.01),
+                    new THREE.Vector3(0, -1, 0),
+                    0, 8192,
+                );
+                const hits = ray.intersectObjects(this.game.scene.children, true);
+                for (const h of hits) {
+                    if (h.object.isMesh && h.object.visible && !h.object.userData._isWater) {
+                        return { hit: true, y: h.point.y };
+                    }
+                }
+            }
+            const fallback = this.terrainRuntime?.sampleHeight?.(x, z);
+            if (Number.isFinite(fallback)) return { hit: true, y: fallback };
+            return { hit: false, y: 0 };
         }
 
         const ray = new THREE.Raycaster(
-            new THREE.Vector3(x, 4096, z),
+            new THREE.Vector3(x + 0.01, 4096, z + 0.01),
             new THREE.Vector3(0, -1, 0),
             0,
             8192,
         );
         const hits = ray.intersectObjects(meshes, false);
         if (hits.length > 0) return { hit: true, y: hits[0].point.y };
+        const fallback = this.terrainRuntime?.sampleHeight?.(x, z);
+        if (Number.isFinite(fallback)) return { hit: true, y: fallback };
         return { hit: false, y: 0 };
     }
 

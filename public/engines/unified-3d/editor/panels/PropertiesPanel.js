@@ -18,7 +18,7 @@ export default class PropertiesPanel {
         const obj = this.editor._selected[0];
 
         if (obj._isEnvironment) {
-            const sky = this.editor._levelData.skybox || this.editor._getDefaultSkybox(this.editor._mode);
+            const sky = this.editor._levelData?.skybox || this.editor._getDefaultSkybox(this.editor._mode);
             panel.innerHTML = `
                 <div class="prop-group">
                     <div class="prop-label">Mode</div>

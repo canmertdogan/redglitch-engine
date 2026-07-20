@@ -15,6 +15,7 @@ if (typeof window.IrabBridge === 'undefined') {
             this._retryDelay = 3000;
             this._maxRetryDelay = 30000;
             this._callbacks = new Map();
+            this._destroyed = false;
             
             // Hooks for UI
             this.onToken = null;
@@ -27,13 +28,14 @@ if (typeof window.IrabBridge === 'undefined') {
         }
 
         async connect() {
-            if (this._connecting || this.isConnected) return;
+            if (this._destroyed || this._connecting || this.isConnected) return;
             this._connecting = true;
 
             console.log("[IrabBridge] Connecting to Native Cortex...");
             if (this.onStateChange) this.onStateChange('CONNECTING');
 
             const backendReady = await this._probeBackend();
+            if (this._destroyed) { this._connecting = false; return; }
             if (!backendReady) {
                 this._connecting = false;
                 this.isConnected = false;
@@ -46,6 +48,7 @@ if (typeof window.IrabBridge === 'undefined') {
                 this.socket = new WebSocket(this.url);
 
                 this.socket.onopen = () => {
+                    if (this._destroyed) { try { this.socket.close(); } catch (_) {} return; }
                     this.isConnected = true;
                     this._connecting = false;
                     this._retryDelay = 3000;
@@ -67,6 +70,7 @@ if (typeof window.IrabBridge === 'undefined') {
                 this.socket.onclose = () => {
                     this._connecting = false;
                     this.isConnected = false;
+                    if (this._destroyed) return;
                     if (this.onStateChange) this.onStateChange('OFFLINE');
                     console.warn("[IrabBridge] Connection closed. Retrying...");
                     this._scheduleReconnect();
@@ -93,6 +97,7 @@ if (typeof window.IrabBridge === 'undefined') {
         }
 
         _scheduleReconnect(delay = this._retryDelay) {
+            if (this._destroyed) return;
             if (this._retryTimer) clearTimeout(this._retryTimer);
             this._retryTimer = setTimeout(() => {
                 this._retryTimer = null;
@@ -222,6 +227,7 @@ window.destroyIrabBridge = function destroyIrabBridge() {
         window.electronAPI.cortexStop().catch(console.error);
     }
     if (window.irab) {
+        window.irab._destroyed = true;
         try { window.irab.socket?.close(); } catch (_) {}
         window.irab.isConnected = false;
         window.irab._connecting = false;

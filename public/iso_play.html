@@ -96,6 +96,26 @@
         }
     </style>
 
+    <!-- Bootstrap: seed a default map so direct page loads always render something -->
+    <script>
+        window.__mapBootstrap = (async () => {
+            const hasMap = sessionStorage.getItem('redglitch_playtest_data') || 
+                           sessionStorage.getItem('redglitch_playtest_map');
+            if (!hasMap) {
+                try {
+                    const res = await fetch('dunyalar/iso_world_1.json');
+                    if (res.ok) {
+                        const data = await res.text();
+                        sessionStorage.setItem('redglitch_playtest_data', data);
+                        console.log('[Bootstrap] Loaded iso_world_1.json as default map');
+                    }
+                } catch(e) {
+                    console.warn('[Bootstrap] Could not pre-load default map:', e);
+                }
+            }
+        })();
+    </script>
+
     <!-- Sprites (shared with 2D engine for caterpillar worm) -->
     <script src="engines/rpg-topdown/sprites.js"></script>
     <script src="engines/shared/GameHUD.js"></script>
@@ -105,6 +125,10 @@
     <script src="engines/iso-pixel/shaderSystem.js"></script> <!-- WebGL Post-Processing -->
     <script src="strategies/IsoStrategy.js"></script>
     
+    <!-- Engine Classes (must load before main.js) -->
+    <script src="engines/iso-pixel/IsoEntity.js"></script>
+    <script src="engines/iso-pixel/IsoCombatSystem.js"></script>
+
     <!-- Engine -->
     <script src="engines/iso-pixel/renderer.js"></script>
     <script src="engines/iso-pixel/main.js"></script>

@@ -125,6 +125,7 @@ export default class TerrainSystem3D {
 
         // ── Working matrix ─────────────────────────────────────────────────
         this._mtx = new THREE.Matrix4();
+        this._scaleVec = new THREE.Vector3();
         this._col = new THREE.Color();
         this._ray = new THREE.Raycaster();
 
@@ -420,6 +421,49 @@ export default class TerrainSystem3D {
         return this._lowpolySampleHeight(wx, wz);
     }
 
+    sampleWater(wx, wz) {
+        const td = this._levelData;
+        if (!td || this._mode !== 'lowpoly' || !Array.isArray(td.waterMask)) {
+            return { inWater: false, waterY: null, depth: 0 };
+        }
+
+        const gridW = this._gridW || td.gridW || 0;
+        const gridD = this._gridD || td.gridD || 0;
+        const cellSize = this._cellSize || td.cellSize || 1;
+        const waterY = Number(td.waterLevel);
+        if (gridW < 2 || gridD < 2 || !Number.isFinite(waterY)) {
+            return { inWater: false, waterY: null, depth: 0 };
+        }
+
+        const gx = wx / cellSize;
+        const gz = wz / cellSize;
+        if (gx < 0 || gz < 0 || gx > gridW - 1 || gz > gridD - 1) {
+            return { inWater: false, waterY, depth: 0 };
+        }
+
+        const ix = Math.max(0, Math.min(gridW - 2, Math.floor(gx)));
+        const iz = Math.max(0, Math.min(gridD - 2, Math.floor(gz)));
+        const fx = gx - ix;
+        const fz = gz - iz;
+        const mask = td.waterMask;
+        const m00 = Number(mask[iz * gridW + ix] ?? 0) || 0;
+        const m10 = Number(mask[iz * gridW + ix + 1] ?? 0) || 0;
+        const m01 = Number(mask[(iz + 1) * gridW + ix] ?? 0) || 0;
+        const m11 = Number(mask[(iz + 1) * gridW + ix + 1] ?? 0) || 0;
+        const mx0 = THREE.MathUtils.lerp(m00, m10, fx);
+        const mx1 = THREE.MathUtils.lerp(m01, m11, fx);
+        const wetness = THREE.MathUtils.lerp(mx0, mx1, fz);
+        const floorY = this.sampleHeight(wx, wz);
+        const depth = Math.max(0, waterY - floorY);
+        return {
+            inWater: wetness > 0.04 && depth > 0.04,
+            waterY,
+            floorY,
+            depth,
+            wetness,
+        };
+    }
+
     // ── Voxel build ───────────────────────────────────────────────────────────
 
     _buildVoxelWorld(td) {
@@ -435,6 +479,71 @@ export default class TerrainSystem3D {
                 this._chunks.set(key, data);
                 this._buildChunkMesh(cd.cx, cd.cy, cd.cz, key, data);
             }
+        }
+
+        // Build a physics collider from merged chunk geometry
+        this._rebuildVoxelCollider();
+    }
+
+    _rebuildVoxelCollider() {
+        if (!this.physics?.createBody || !this.physics?.world) return;
+
+        // Remove old voxel collider
+        if (this._terrainBody && this.physics?.removeBody) {
+            this.physics.removeBody(this._terrainBody);
+            this._terrainBody = null;
+        }
+
+        // For voxel terrain, find surface bounds from chunk data and create
+        // a flat, thin static BOX collider whose top face is at surfaceY.
+        let minX = Infinity, minZ = Infinity;
+        let maxX = -Infinity, maxZ = -Infinity;
+        let surfaceY = -Infinity;
+
+        for (const [key, data] of this._chunks) {
+            const [cx, cy, cz] = key.split(',').map(Number);
+            const baseX = cx * CHUNK_SIZE;
+            const baseY = cy * CHUNK_SIZE;
+            const baseZ = cz * CHUNK_SIZE;
+            for (let bx = 0; bx < CHUNK_SIZE; bx++) {
+                for (let by = 0; by < CHUNK_SIZE; by++) {
+                    for (let bz = 0; bz < CHUNK_SIZE; bz++) {
+                        if (data[_chunkIdx(bx, by, bz)] === BlockType.AIR) continue;
+                        const wy = baseY + by;
+                        if (wy + 1 > surfaceY) surfaceY = wy + 1;
+                        const wx = baseX + bx;
+                        const wz = baseZ + bz;
+                        if (wx < minX) minX = wx;
+                        if (wz < minZ) minZ = wz;
+                        if (wx + 1 > maxX) maxX = wx + 1;
+                        if (wz + 1 > maxZ) maxZ = wz + 1;
+                    }
+                }
+            }
+        }
+
+        if (!Number.isFinite(surfaceY)) return;
+
+        const halfW = (maxX - minX) / 2;
+        const halfD = (maxZ - minZ) / 2;
+        const halfH = 0.25;
+        const cx = (minX + maxX) / 2;
+        const cz = (minZ + maxZ) / 2;
+        const cy = surfaceY - halfH;  // top face at surfaceY
+
+        this._terrainBody = this.physics.createBody({
+            type: BodyType.STATIC,
+            shape: ShapeType.BOX,
+            halfExtents: { x: halfW, y: halfH, z: halfD },
+            position: new THREE.Vector3(cx, cy, cz),
+            mass: 0,
+            restitution: 0,
+        });
+        if (this._terrainBody?.body) {
+            this._terrainBody.body.userData = { surface: 'concrete' };
+            // Collision filter group: terrain = 4.  Player sphere excludes
+            // this group from its mask to prevent Sphere-vs-Trimesh jitter.
+            this._terrainBody.body.collisionFilterGroup = 4;
         }
     }
 
@@ -608,18 +717,27 @@ export default class TerrainSystem3D {
         // Build elevation array
         let elev = td.elevation;
         if (!elev || elev.length < W * D) {
-            // Flat default
+            console.warn('[TerrainSystem3D] _buildLowPolyWorld — bad elevation, using flat. elev:', typeof elev, 'length:', elev?.length, 'expected:', W * D);
             elev = new Array(W * D).fill(0);
         }
         this._elevGrid = new Float32Array(elev);
 
         // ── Build terrain mesh ─────────────────────────────────────────────
-        const faceColors = td.faceColors || [];
-        const positions  = [];
-        const normals    = [];
-        const colors     = [];
-        const idxArr     = [];
+        const faceColors   = td.faceColors || [];
+        const biomePalette = td.biomePalette || null;
+        const _c           = this._col;          // reusable THREE.Color
+        const positions    = [];
+        const normals      = [];
+        const colors       = [];
+        const idxArr       = [];
         let vi = 0;
+
+        // Pre-compute max elevation for biome-palette colour mapping
+        let _biomeMax = 0;
+        if (biomePalette) {
+            for (let i = 0; i < elev.length; i++) { const v = elev[i]; if (v > _biomeMax) _biomeMax = v; }
+            if (_biomeMax <= 0) _biomeMax = 1;
+        }
 
         // Each cell → 2 triangles (split along diagonal)
         for (let iz = 0; iz < D - 1; iz++) {
@@ -632,16 +750,24 @@ export default class TerrainSystem3D {
                 const x0 = ix * C,       z0 = iz * C;
                 const x1 = (ix + 1) * C, z1 = (iz + 1) * C;
 
-                // Face colour lookup (2 triangles per cell)
-                const cellIdx = iz * (W - 1) + ix;
-                const palA    = faceColors[cellIdx * 2]     ?? 2; // default grass
-                const palB    = faceColors[cellIdx * 2 + 1] ?? 2;
+                // Resolve colour for triangle A (00→10→11) and B (00→11→01)
+                let colA, colB;
+                if (biomePalette) {
+                    const avgA = (h00 + h10 + h11) / 3;
+                    const avgB = (h00 + h11 + h01) / 3;
+                    colA = _elevationToBiomeColor(avgA, _biomeMax, _c, biomePalette);
+                    colB = _elevationToBiomeColor(avgB, _biomeMax, _c, biomePalette);
+                } else {
+                    const cellIdx = iz * (W - 1) + ix;
+                    const palA    = faceColors[cellIdx * 2]     ?? 2;
+                    const palB    = faceColors[cellIdx * 2 + 1] ?? 2;
+                    colA = this.palette.getColor(palA);
+                    colB = this.palette.getColor(palB);
+                }
 
-                const colA = this.palette.getColor(palA);
-                const colB = this.palette.getColor(palB);
-
-                // Triangle A: (00, 10, 11)
-                const vA = [[x0,h00,z0],[x1,h10,z0],[x1,h11,z1]];
+                // Upward winding for Three.js/Cannon. The previous order made
+                // terrain visible from below and culled from above.
+                const vA = [[x0,h00,z0],[x1,h11,z1],[x1,h10,z0]];
                 const nA = _triNormal(...vA);
                 for (const [px,py,pz] of vA) {
                     positions.push(px, py, pz);
@@ -650,8 +776,7 @@ export default class TerrainSystem3D {
                 }
                 idxArr.push(vi, vi+1, vi+2); vi += 3;
 
-                // Triangle B: (00, 11, 01)
-                const vB = [[x0,h00,z0],[x1,h11,z1],[x0,h01,z1]];
+                const vB = [[x0,h00,z0],[x0,h01,z1],[x1,h11,z1]];
                 const nB = _triNormal(...vB);
                 for (const [px,py,pz] of vB) {
                     positions.push(px, py, pz);
@@ -668,7 +793,13 @@ export default class TerrainSystem3D {
         geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
         geo.setIndex(idxArr);
 
-        const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+        const mat = new THREE.MeshLambertMaterial({
+            vertexColors: true,
+            flatShading: true,
+            side: THREE.DoubleSide,
+            emissive: 0x263026,
+            emissiveIntensity: 0.08,
+        });
         this._terrainMesh = new THREE.Mesh(geo, mat);
         this._terrainMesh.receiveShadow = true;
         this._terrainMesh.castShadow    = false;
@@ -680,7 +811,11 @@ export default class TerrainSystem3D {
         if (Number.isFinite(td.waterLevel)) {
             const waterLevel = td.waterLevel;
             this._waterBaseY = waterLevel;
-            this._buildWaterPlane((W - 1) * C, (D - 1) * C, waterLevel, td.waterPaletteIndex ?? 9);
+            if (Array.isArray(td.waterMask)) {
+                this._buildWaterPlaneFromMask(td.waterMask, W, D, C, waterLevel, td.waterPaletteIndex ?? 9, td);
+            } else {
+                this._buildWaterPlane((W - 1) * C, (D - 1) * C, waterLevel, td.waterPaletteIndex ?? 9, td);
+            }
         }
 
         // ── Foliage ────────────────────────────────────────────────────────
@@ -714,6 +849,9 @@ export default class TerrainSystem3D {
             vertexColors: !!geo.getAttribute('color'),
             flatShading: true,
             color: geo.getAttribute('color') ? 0xffffff : this.palette.getColor(2),
+            side: THREE.DoubleSide,
+            emissive: 0x263026,
+            emissiveIntensity: 0.08,
         });
         this._terrainMesh = new THREE.Mesh(geo, mat);
         this._terrainMesh.receiveShadow = true;
@@ -728,7 +866,7 @@ export default class TerrainSystem3D {
         if (Number.isFinite(td.waterLevel)) {
             const waterLevel = td.waterLevel;
             this._waterBaseY = waterLevel;
-            this._buildWaterPlane(w, d, waterLevel, td.waterPaletteIndex ?? 9);
+            this._buildWaterPlane(w, d, waterLevel, td.waterPaletteIndex ?? 9, td);
             if (this._waterMesh) {
                 this._waterMesh.position.x = box.min.x + w * 0.5;
                 this._waterMesh.position.z = box.min.z + d * 0.5;
@@ -736,27 +874,78 @@ export default class TerrainSystem3D {
         }
     }
 
-    _buildWaterPlane(w, d, y, palIdx) {
+    _buildWaterPlane(w, d, y, palIdx, td = {}) {
         // Subdivided plane for sine-wave animation (16×16 segments)
         const segs = 16;
         const geo  = new THREE.PlaneGeometry(w, d, segs, segs);
         geo.rotateX(-Math.PI / 2);
+        geo.setAttribute('waterEdge', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count), 1));
 
         // Store water geometry for animation
         this._waterGeo = geo;
 
-        const col = this.palette.getColor(palIdx);
-        const mat = new THREE.MeshLambertMaterial({
-            color:       col,
-            transparent: true,
-            opacity:     0.82,
-            flatShading: true,
-        });
+        const col = _resolveTerrainColor(td.waterColorHex, this.palette, palIdx);
+        const mat = _makeWaterMaterial(col, td.waterOpacity);
 
         this._waterMesh = new THREE.Mesh(geo, mat);
         this._waterMesh.position.set(w / 2, y, d / 2);
         this._waterMesh.receiveShadow = false;
         this._waterMesh.name          = 'water_plane';
+        this.scene.add(this._waterMesh);
+    }
+
+    _buildWaterPlaneFromMask(mask, gridW, gridD, cellSize, y, palIdx, td = {}) {
+        const elevation = td.elevation;
+        const filledMask = _fillWaterMask(mask, elevation, gridW, gridD, y);
+        const waterY = y + 0.025;
+        const positions = [];
+        const edges = [];
+        const addTri = (ax, az, bx, bz, cx, cz) => {
+            positions.push(ax, waterY, az, bx, waterY, bz, cx, waterY, cz);
+        };
+        const addEdgeTri = (edge) => {
+            edges.push(edge, edge, edge);
+        };
+        for (let iz = 0; iz < gridD - 1; iz++) {
+            for (let ix = 0; ix < gridW - 1; ix++) {
+                const m = Math.max(
+                    filledMask[iz * gridW + ix] || 0,
+                    filledMask[iz * gridW + (ix + 1)] || 0,
+                    filledMask[(iz + 1) * gridW + ix] || 0,
+                    filledMask[(iz + 1) * gridW + (ix + 1)] || 0,
+                );
+                const i00 = iz * gridW + ix;
+                const i10 = iz * gridW + (ix + 1);
+                const i01 = (iz + 1) * gridW + ix;
+                const i11 = (iz + 1) * gridW + (ix + 1);
+                const avgHeight = ((elevation?.[i00] || 0) + (elevation?.[i10] || 0) + (elevation?.[i01] || 0) + (elevation?.[i11] || 0)) / 4;
+                const submerged = avgHeight <= y + 0.08;
+                if (m <= 0.02 && !submerged) continue;
+                const edge = _waterCellEdgeFactor(filledMask, gridW, gridD, ix, iz);
+                const x0 = ix * cellSize, z0 = iz * cellSize;
+                const x1 = (ix + 1) * cellSize, z1 = (iz + 1) * cellSize;
+                addTri(x0, z0, x0, z1, x1, z1);
+                addEdgeTri(edge);
+                addTri(x0, z0, x1, z1, x1, z0);
+                addEdgeTri(edge);
+            }
+        }
+        if (positions.length === 0) {
+            this._waterMesh = null;
+            this._waterGeo = null;
+            return;
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('waterEdge', new THREE.Float32BufferAttribute(edges, 1));
+        geo.computeVertexNormals();
+        this._waterGeo = geo;
+
+        const col = _resolveTerrainColor(td.waterColorHex, this.palette, palIdx);
+        const mat = _makeWaterMaterial(col, td.waterOpacity);
+        this._waterMesh = new THREE.Mesh(geo, mat);
+        this._waterMesh.receiveShadow = false;
+        this._waterMesh.name = 'water_plane';
         this.scene.add(this._waterMesh);
     }
 
@@ -768,7 +957,6 @@ export default class TerrainSystem3D {
         for (let i = 0; i < count; i++) {
             const x = pos.getX(i);
             const z = pos.getZ(i);
-            // Sine wave: two overlapping waves for organic look
             const y = baseY
                 + Math.sin(x * 0.5 + gameTime * 1.2) * 0.06
                 + Math.sin(z * 0.4 + gameTime * 0.9) * 0.04;
@@ -776,40 +964,57 @@ export default class TerrainSystem3D {
         }
         pos.needsUpdate = true;
         this._waterGeo.computeVertexNormals();
+        if (this._waterMesh?.material?.uniforms?.uTime) {
+            this._waterMesh.material.uniforms.uTime.value = Number(gameTime) || 0;
+        }
     }
 
     _buildFoliage(foliageDefs) {
-        // Group instances by foliage type
+        // Group instances by render key so editor-authored kinds survive into runtime.
         const groups = {};
         for (const f of foliageDefs) {
-            const t = f.type || 'tree';
-            if (!groups[t]) groups[t] = [];
-            groups[t].push(f);
+            const key = _foliageRenderKey(f);
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(f);
         }
 
-        for (const [type, instances] of Object.entries(groups)) {
+        for (const [renderKey, instances] of Object.entries(groups)) {
             if (instances.length === 0) continue;
-            const geo = _foliageGeometry(type);
-            const palIdx = instances[0].paletteIndex ?? _foliageDefaultPalette(type);
-            const col    = this.palette.getColor(palIdx);
-            const mat    = new THREE.MeshLambertMaterial({ color: col, flatShading: true });
+            const baseType = _foliageBaseType(renderKey);
+            const geo = _foliageGeometry(renderKey);
+            const hasVertexColors = !!geo.getAttribute('color');
+            const palIdx = instances[0].paletteIndex ?? _foliageDefaultPalette(baseType);
+            const col    = _resolveTerrainColor(instances[0].colorHex, this.palette, palIdx);
+            const mat    = new THREE.MeshLambertMaterial({
+                color: hasVertexColors ? 0xffffff : col,
+                vertexColors: hasVertexColors,
+                flatShading: true,
+                side: THREE.DoubleSide,
+                emissive: hasVertexColors ? 0x1f2a20 : col,
+                emissiveIntensity: 0.16,
+            });
 
             const count = Math.min(instances.length, 10000);
             const im    = new THREE.InstancedMesh(geo, mat, count);
             im.castShadow    = true;
             im.receiveShadow = false;
-            im.name          = `foliage_${type}`;
+            im.name          = `foliage_${renderKey}`;
 
             for (let i = 0; i < count; i++) {
                 const f = instances[i];
-                const s = f.scale ?? 1;
-                this._mtx.makeScale(s, s, s);
+                const rawScale = Number(f.scale ?? 1);
+                const baseScale = Number.isFinite(rawScale) ? Math.max(0.25, Math.min(rawScale, 1.35)) : 1;
+                const s = baseScale * _foliageScaleMultiplier(renderKey);
+                const rotY = Number(f.rotationY ?? 0) || 0;
+                this._mtx.makeRotationY(rotY);
+                this._scaleVec.set(s, s, s);
+                this._mtx.scale(this._scaleVec);
                 this._mtx.setPosition(f.x ?? 0, f.y ?? 0, f.z ?? 0);
                 im.setMatrixAt(i, this._mtx);
 
                 // Per-instance colour variation (±1 palette index)
-                if (f.paletteIndex != null) {
-                    const c = this.palette.getColor(f.paletteIndex);
+                if (!hasVertexColors && (f.colorHex || f.paletteIndex != null)) {
+                    const c = _resolveTerrainColor(f.colorHex, this.palette, f.paletteIndex ?? palIdx);
                     im.setColorAt(i, c);
                 }
             }
@@ -817,7 +1022,7 @@ export default class TerrainSystem3D {
             if (im.instanceColor) im.instanceColor.needsUpdate = true;
 
             this.scene.add(im);
-            this._foliageMeshes.set(type, im);
+            this._foliageMeshes.set(renderKey, im);
         }
     }
 
@@ -850,13 +1055,19 @@ export default class TerrainSystem3D {
 
     _trimeshSampleHeight(wx, wz) {
         if (!this._terrainMesh) return 0;
-        this._ray.set(new THREE.Vector3(wx, 4096, wz), new THREE.Vector3(0, -1, 0));
+        // Add a tiny, non-zero offset to avoid shooting directly down the shared edges/vertices of the triangles
+        const rx = wx + 0.007;
+        const rz = wz + 0.007;
+        this._ray.set(new THREE.Vector3(rx, 4096, rz), new THREE.Vector3(0, -1, 0));
         const hits = this._ray.intersectObject(this._terrainMesh, false);
         return hits[0]?.point?.y ?? 0;
     }
 
     _rebuildTerrainCollider(mesh) {
-        if (!this.physics?.createBody || !this.physics?.world || !mesh?.geometry) return;
+        if (!this.physics?.createBody || !this.physics?.world || !mesh?.geometry) {
+            console.warn('[TerrainSystem3D] _rebuildTerrainCollider skipped — physics:', !!this.physics, 'createBody:', !!this.physics?.createBody, 'world:', !!this.physics?.world, 'geometry:', !!mesh?.geometry);
+            return;
+        }
 
         if (this._terrainBody && this.physics?.world && this.physics?.removeBody) {
             this.physics.removeBody(this._terrainBody);
@@ -874,6 +1085,13 @@ export default class TerrainSystem3D {
             restitution: 0.0,
         });
         worldGeo.dispose();
+        // Collision filter group: terrain = 4.  Player sphere excludes
+        // this group from its mask to prevent Sphere-vs-Trimesh edge-seam
+        // jitter (character hopping on terrain every frame).
+        if (this._terrainBody?.body) {
+            this._terrainBody.body.collisionFilterGroup = 4;
+        }
+        console.log('[TerrainSystem3D] _rebuildTerrainCollider — body created:', !!this._terrainBody);
     }
 
     // ── Default flat world ────────────────────────────────────────────────────
@@ -882,6 +1100,7 @@ export default class TerrainSystem3D {
         // Single grass chunk at origin
         this._mode = 'voxel';
         this._generateDefaultVoxelChunk(0, 0, 0);
+        this._rebuildVoxelCollider();
     }
 
     // ── Coordinate helpers ────────────────────────────────────────────────────
@@ -916,16 +1135,243 @@ function _triNormal(a, b, c) {
     return [nx/len, ny/len, nz/len];
 }
 
+/**
+ * Map an elevation value to a THREE.Color via a biome palette (threshold + hex array).
+ * @param {number} elev     elevation value (world unit)
+ * @param {number} maxElev  pre-computed max elevation for normalisation
+ * @param {THREE.Color} out reusable color target
+ * @param {Array<{threshold:number,color:string}>} palette  biome palette bands
+ * @returns {THREE.Color}
+ */
+function _elevationToBiomeColor(elev, maxElev, out, palette) {
+    const norm = maxElev > 0 ? elev / maxElev : 0;
+    let hex = '#888888';
+    for (const band of palette) {
+        if (norm <= band.threshold) { hex = band.color; break; }
+    }
+    return out.set(hex);
+}
+
+function _resolveTerrainColor(colorHex, palette, paletteIndex) {
+    if (typeof colorHex === 'string' && colorHex.trim()) {
+        return new THREE.Color(colorHex);
+    }
+    return palette.getColor(paletteIndex);
+}
+
+function _makeWaterMaterial(color, opacity) {
+    const base = color instanceof THREE.Color ? color : new THREE.Color(color || 0x3f8fa8);
+    const deep = base.clone().multiplyScalar(0.48);
+    deep.b += 0.08;
+    const shallow = base.clone().lerp(new THREE.Color(0x8ed0c8), 0.34);
+
+    return new THREE.ShaderMaterial({
+        uniforms: {
+            uTime: { value: 0 },
+            uWaterColor: { value: shallow },
+            uDeepColor: { value: deep },
+            uFoamColor: { value: new THREE.Color(0xd7f3ea) },
+            uOpacity: { value: _clampWaterOpacity(opacity) },
+        },
+        vertexShader: `
+            attribute float waterEdge;
+            varying vec3 vWorldPos;
+            varying vec3 vNormalView;
+            varying vec3 vViewDir;
+            varying float vWaterEdge;
+
+            void main() {
+                vec4 world = modelMatrix * vec4(position, 1.0);
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                vWorldPos = world.xyz;
+                vNormalView = normalize(normalMatrix * normal);
+                vViewDir = normalize(-mvPosition.xyz);
+                vWaterEdge = waterEdge;
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
+        fragmentShader: `
+            uniform float uTime;
+            uniform vec3 uWaterColor;
+            uniform vec3 uDeepColor;
+            uniform vec3 uFoamColor;
+            uniform float uOpacity;
+            varying vec3 vWorldPos;
+            varying vec3 vNormalView;
+            varying vec3 vViewDir;
+            varying float vWaterEdge;
+
+            float waveLine(vec2 p, float speed, float scale) {
+                float a = sin((p.x + p.y * 0.42) * scale + uTime * speed);
+                float b = sin((p.y - p.x * 0.28) * (scale * 0.73) - uTime * (speed * 0.82));
+                return smoothstep(0.72, 1.0, a * 0.55 + b * 0.45);
+            }
+
+            void main() {
+                vec2 p = vWorldPos.xz;
+                float broad = waveLine(p, 0.92, 0.105);
+                float fine = waveLine(p + vec2(7.0, -3.0), 1.75, 0.42);
+                float ripple = broad * 0.18 + fine * 0.12;
+                float fresnel = pow(1.0 - clamp(abs(dot(normalize(vNormalView), normalize(vViewDir))), 0.0, 1.0), 2.2);
+                float edgeFoam = vWaterEdge * (0.45 + fine * 0.55);
+                vec3 color = mix(uDeepColor, uWaterColor, 0.58 + ripple);
+                color += vec3(0.10, 0.17, 0.18) * fresnel;
+                color = mix(color, uFoamColor, clamp(edgeFoam * 0.48, 0.0, 0.65));
+                float alpha = clamp(uOpacity + fresnel * 0.18 + edgeFoam * 0.22, 0.22, 0.78);
+                gl_FragColor = vec4(color, alpha);
+            }
+        `,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+    });
+}
+
+function _clampWaterOpacity(value) {
+    const opacity = Number.isFinite(value) ? value : 0.62;
+    return Math.max(0.12, Math.min(0.82, opacity));
+}
+
+function _waterCellEdgeFactor(mask, gridW, gridD, ix, iz) {
+    let dry = 0;
+    let wet = 0;
+    for (let dz = -1; dz <= 2; dz++) {
+        for (let dx = -1; dx <= 2; dx++) {
+            const x = ix + dx;
+            const z = iz + dz;
+            if (x < 0 || z < 0 || x >= gridW || z >= gridD) continue;
+            if ((mask[z * gridW + x] || 0) > 0.02) wet++;
+            else dry++;
+        }
+    }
+    if (wet === 0 || dry === 0) return 0;
+    return Math.min(1, dry / 8);
+}
+
+function _fillWaterMask(mask, elevation, gridW, gridD, waterLevel) {
+    const total = gridW * gridD;
+    const filled = new Float32Array(total);
+    for (let i = 0; i < total; i++) {
+        filled[i] = Number(mask?.[i] ?? 0) || 0;
+        if (Array.isArray(elevation) || ArrayBuffer.isView(elevation)) {
+            const y = Number(elevation[i]);
+            if (Number.isFinite(y) && y <= waterLevel + 0.08) {
+                filled[i] = Math.max(filled[i], 0.55);
+            }
+        }
+    }
+
+    for (let pass = 0; pass < 2; pass++) {
+        const next = new Float32Array(filled);
+        for (let z = 1; z < gridD - 1; z++) {
+            for (let x = 1; x < gridW - 1; x++) {
+                const idx = z * gridW + x;
+                if (filled[idx] > 0.02) continue;
+                let wet = 0;
+                for (let dz = -1; dz <= 1; dz++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dz === 0) continue;
+                        if (filled[(z + dz) * gridW + (x + dx)] > 0.02) wet++;
+                    }
+                }
+                if (wet >= 5) next[idx] = 0.45;
+            }
+        }
+        filled.set(next);
+    }
+
+    return filled;
+}
+
+function _foliageRenderKey(f) {
+    const kind = String(f?.kind || f?.type || 'tree').toLowerCase();
+    if (kind === 'pine' || kind === 'oak' || kind === 'palm') return kind;
+    if (kind === 'grass') return 'grass';
+    if (kind === 'bush') return 'bush';
+    if (kind === 'reed') return 'reed';
+    if (kind === 'lily') return 'lily';
+    return kind;
+}
+
+function _foliageBaseType(renderKey) {
+    if (renderKey === 'pine' || renderKey === 'oak' || renderKey === 'palm') return 'tree';
+    if (renderKey === 'grass') return 'grass';
+    if (renderKey === 'reed') return 'reed';
+    if (renderKey === 'lily') return 'lily';
+    return renderKey;
+}
+
+function _foliageScaleMultiplier(renderKey) {
+    if (renderKey === 'pine' || renderKey === 'oak') return 1.65;
+    if (renderKey === 'palm') return 1.85;
+    if (renderKey === 'grass') return 1.15;
+    if (renderKey === 'reed') return 1.2;
+    if (renderKey === 'lily') return 1;
+    if (renderKey === 'bush') return 1.25;
+    return 1;
+}
+
 /** Low-poly foliage geometry (≤50 triangles each) */
-function _foliageGeometry(type) {
-    switch (type) {
+function _foliageGeometry(renderKey) {
+    switch (renderKey) {
+        case 'pine': {
+            const trunk = new THREE.CylinderGeometry(0.1, 0.14, 1.55, 5);
+            trunk.translate(0, 0.775, 0);
+
+            const crown = new THREE.SphereGeometry(0.78, 7, 5);
+            crown.scale(0.92, 1.75, 0.92);
+            crown.translate(0, 1.95, 0);
+
+            return _mergeColoredGeos([
+                { geo: trunk, color: '#6B4226' },
+                { geo: crown, color: '#1a5a2f' },
+            ]);
+        }
+        case 'oak': {
+            const trunk = new THREE.CylinderGeometry(0.13, 0.18, 1.45, 6);
+            trunk.translate(0, 0.725, 0);
+
+            const crownA = new THREE.SphereGeometry(0.78, 7, 5);
+            crownA.scale(1.08, 0.78, 1);
+            crownA.translate(-0.1, 1.75, 0);
+            const crownB = new THREE.SphereGeometry(0.58, 6, 4);
+            crownB.scale(1, 0.8, 1);
+            crownB.translate(0.55, 1.82, 0.18);
+
+            return _mergeColoredGeos([
+                { geo: trunk, color: '#6B4226' },
+                { geo: crownA, color: '#3a8a3f' },
+                { geo: crownB, color: '#347d39' },
+            ]);
+        }
+        case 'palm': {
+            const trunk = new THREE.CylinderGeometry(0.08, 0.17, 2.25, 6);
+            trunk.translate(0, 1.125, 0);
+            const fronds = [];
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const frond = new THREE.PlaneGeometry(1.2, 0.34);
+                frond.rotateX(Math.PI * 0.35);
+                frond.rotateY(angle);
+                frond.translate(Math.cos(angle) * 0.42, 2.15, Math.sin(angle) * 0.42);
+                fronds.push({ geo: frond, color: '#2d8a3f' });
+            }
+
+            return _mergeColoredGeos([
+                { geo: trunk, color: '#8B5A2B' },
+                ...fronds,
+            ]);
+        }
         case 'tree': {
-            // Trunk: thin box + canopy: octahedron
-            const trunk   = new THREE.BoxGeometry(0.2, 1.0, 0.2);
-            trunk.translate(0, 0.5, 0);
-            const canopy  = new THREE.OctahedronGeometry(0.7, 0);
-            canopy.translate(0, 1.5, 0);
-            return _mergeGeos([trunk, canopy]);
+            const trunk   = new THREE.CylinderGeometry(0.1, 0.14, 1.4, 5);
+            trunk.translate(0, 0.7, 0);
+            const canopy  = new THREE.SphereGeometry(0.72, 6, 4);
+            canopy.scale(1, 0.9, 1);
+            canopy.translate(0, 1.75, 0);
+            return _mergeColoredGeos([
+                { geo: trunk, color: '#6B4226' },
+                { geo: canopy, color: '#2f7d3c' },
+            ]);
         }
         case 'rock': {
             // Dodecahedron for chunky rock look
@@ -933,34 +1379,96 @@ function _foliageGeometry(type) {
             geo.scale(1, 0.6, 1);
             return geo;
         }
+        case 'grass': {
+            const blades = [];
+            for (let i = 0; i < 4; i++) {
+                const blade = new THREE.PlaneGeometry(0.22, 0.78);
+                const angle = (i / 4) * Math.PI;
+                blade.rotateY(angle);
+                blade.rotateX(0.18);
+                blade.translate(0, 0.39, 0);
+                blades.push({ geo: blade, color: i % 2 === 0 ? '#4f9a3a' : '#6fb34a' });
+            }
+            return _mergeColoredGeos(blades);
+        }
+        case 'reed': {
+            const stems = [];
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * Math.PI * 2;
+                const stem = new THREE.CylinderGeometry(0.018, 0.024, 1.15 + (i % 2) * 0.25, 4);
+                stem.translate(Math.cos(angle) * 0.09, 0.58, Math.sin(angle) * 0.09);
+                const tip = new THREE.CylinderGeometry(0.035, 0.025, 0.22, 5);
+                tip.translate(Math.cos(angle) * 0.09, 1.23 + (i % 2) * 0.25, Math.sin(angle) * 0.09);
+                stems.push({ geo: stem, color: '#6f8f3a' }, { geo: tip, color: '#8a5d2c' });
+            }
+            return _mergeColoredGeos(stems);
+        }
+        case 'lily': {
+            const pad = new THREE.CircleGeometry(0.42, 7, 0.18, Math.PI * 1.72);
+            pad.rotateX(-Math.PI / 2);
+            pad.translate(0, 0.035, 0);
+            const flower = new THREE.ConeGeometry(0.07, 0.08, 5);
+            flower.translate(0.08, 0.095, 0.02);
+            return _mergeColoredGeos([
+                { geo: pad, color: '#4f8f3a' },
+                { geo: flower, color: '#d9b6d8' },
+            ]);
+        }
         case 'bush':
         default: {
-            // Two crossed box planes
-            const a = new THREE.BoxGeometry(0.8, 0.5, 0.1);
-            a.translate(0, 0.25, 0);
-            const b = new THREE.BoxGeometry(0.1, 0.5, 0.8);
-            b.translate(0, 0.25, 0);
-            return _mergeGeos([a, b]);
+            const core = new THREE.SphereGeometry(0.42, 6, 4);
+            core.scale(1.25, 0.58, 1);
+            core.translate(0, 0.32, 0);
+            const side = new THREE.SphereGeometry(0.28, 5, 3);
+            side.scale(1, 0.55, 1);
+            side.translate(0.34, 0.28, 0.16);
+            return _mergeColoredGeos([
+                { geo: core, color: '#2d8a3f' },
+                { geo: side, color: '#3f9950' },
+            ]);
         }
     }
 }
 
+function _mergeColoredGeos(items) {
+    const geos = [];
+    for (const item of items) {
+        const geo = item.geo.toNonIndexed ? item.geo.toNonIndexed() : item.geo;
+        const pos = geo.attributes.position;
+        const color = new THREE.Color(item.color || '#ffffff');
+        const colors = new Float32Array(pos.count * 3);
+        for (let i = 0; i < pos.count; i++) {
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+        }
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geos.push(geo);
+    }
+    return _mergeGeos(geos);
+}
+
 function _foliageDefaultPalette(type) {
-    return { tree: 2, rock: 5, bush: 2 }[type] ?? 2;
+    return { tree: 2, rock: 5, bush: 2, grass: 2, reed: 2, lily: 2 }[type] ?? 2;
 }
 
 /** Merge multiple BufferGeometries into one (position + normal only) */
 function _mergeGeos(geos) {
-    const posArr = [], nrmArr = [], idxArr = [];
+    const posArr = [], nrmArr = [], colArr = [], idxArr = [];
+    let hasColors = false;
     let base = 0;
     for (const g of geos) {
         const pos = g.attributes.position;
         const nrm = g.attributes.normal;
+        const col = g.attributes.color;
         const idx = g.index;
+        if (col) hasColors = true;
         for (let i = 0; i < pos.count; i++) {
             posArr.push(pos.getX(i), pos.getY(i), pos.getZ(i));
             if (nrm) nrmArr.push(nrm.getX(i), nrm.getY(i), nrm.getZ(i));
             else nrmArr.push(0, 1, 0);
+            if (col) colArr.push(col.getX(i), col.getY(i), col.getZ(i));
+            else colArr.push(1, 1, 1);
         }
         if (idx) {
             for (let i = 0; i < idx.count; i++) idxArr.push(idx.getX(i) + base);
@@ -972,6 +1480,7 @@ function _mergeGeos(geos) {
     const out = new THREE.BufferGeometry();
     out.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
     out.setAttribute('normal',   new THREE.Float32BufferAttribute(nrmArr, 3));
+    if (hasColors) out.setAttribute('color', new THREE.Float32BufferAttribute(colArr, 3));
     out.setIndex(idxArr);
     return out;
 }

@@ -15,7 +15,7 @@ class IrabBrain:
         
         # Optimized for 3B Model
         self.max_tokens = 600
-        self.context_window = 128000
+        self.context_window = 32768  # Qwen2.5-Coder-3B's trained context (n_ctx_train); larger values fail llama_context creation
         self.temperature = 0.4 # Higher for more creative reasoning on 3B
         self.top_p = 0.95
         self.is_aborted = False

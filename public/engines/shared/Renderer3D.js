@@ -187,6 +187,70 @@ const GlowShader = {
     `
 };
 
+// ── FPS Atmosphere Shader ────────────────────────────────────────────────────
+const FPSAtmosphereShader = {
+    name: 'FPSAtmosphereShader',
+    uniforms: {
+        tDiffuse:       { value: null },
+        uTime:          { value: 0 },
+        uVignette:      { value: 0.18 },
+        uGrain:         { value: 0.02 },
+        uScanline:      { value: 0.02 },
+        uChromatic:     { value: 0.0008 },
+        uTintColor:     { value: new THREE.Color(0x8fd7e8) },
+        uTintStrength:  { value: 0.015 },
+        uLift:          { value: 0.04 },
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float uTime;
+        uniform float uVignette;
+        uniform float uGrain;
+        uniform float uScanline;
+        uniform float uChromatic;
+        uniform vec3 uTintColor;
+        uniform float uTintStrength;
+        uniform float uLift;
+        varying vec2 vUv;
+
+        float hash(vec2 p) {
+            p = fract(p * vec2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return fract(p.x * p.y);
+        }
+
+        void main() {
+            vec2 center = vUv - vec2(0.5);
+            float edge = smoothstep(0.18, 0.78, length(center));
+            vec2 aberration = normalize(center + 0.00001) * uChromatic * edge;
+
+            float r = texture2D(tDiffuse, vUv + aberration).r;
+            float g = texture2D(tDiffuse, vUv).g;
+            float b = texture2D(tDiffuse, vUv - aberration).b;
+            vec3 color = vec3(r, g, b);
+
+            color = mix(color, color * uTintColor, uTintStrength);
+            color = mix(color, vec3(1.0), uLift * (1.0 - smoothstep(0.12, 0.9, max(max(color.r, color.g), color.b))));
+            color *= 1.0 - edge * uVignette;
+
+            float scan = sin((vUv.y + uTime * 0.018) * 900.0) * 0.5 + 0.5;
+            color -= scan * uScanline * 0.035;
+
+            float grain = hash(vUv * 1800.0 + uTime * 17.0) - 0.5;
+            color += grain * uGrain;
+
+            gl_FragColor = vec4(max(color, vec3(0.0)), 1.0);
+        }
+    `
+};
+
 class Renderer3D {
     constructor(container, opts = {}) {
         this.container = container;
@@ -195,12 +259,14 @@ class Renderer3D {
         this.camera    = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
         this.webgl     = null;
         this.composer  = null;
+        this._shaderClock = new THREE.Clock();
+        this._animatedPasses = [];
         this._opts     = {
             canvas:    opts.canvas || null,
             outline:   opts.outline !== false,
             outlinePx: opts.outlinePx || 1.5,
             cel:       opts.cel !== false,
-            tones:     opts.tones || 3.0,
+            tones:     opts.tones || 4.0,
             toneMapping: opts.toneMapping !== false,
             softShadows: opts.softShadows !== false,
             ...opts
@@ -221,7 +287,7 @@ class Renderer3D {
         this.webgl.toneMapping = this._opts.toneMapping ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
         this.webgl.toneMappingExposure = this._opts.exposure ?? 1.05;
         this.webgl.shadowMap.enabled = true;
-        this.webgl.shadowMap.type = THREE.PCFShadowMap;
+        this.webgl.shadowMap.type = this._opts.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
         if (!this._opts.canvas) this.container.appendChild(this.webgl.domElement);
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
@@ -236,8 +302,8 @@ class Renderer3D {
         if (this._opts.cel) {
             const cp = new ShaderPass(CelQuantizeShader);
             cp.uniforms.uTones.value = this._opts.tones;
-            cp.uniforms.uSatBoost.value = this._opts.satBoost ?? 1.1;
-            cp.uniforms.uMinBright.value = this._opts.minBright ?? 0.25;
+            cp.uniforms.uSatBoost.value = this._opts.satBoost ?? 1.06;
+            cp.uniforms.uMinBright.value = this._opts.minBright ?? 0.32;
             this.composer.addPass(cp);
         }
         this.composer.addPass(new OutputPass());
@@ -255,6 +321,7 @@ class Renderer3D {
         // Clear existing passes
         this.composer.passes.forEach(p => { if (p.dispose) p.dispose(); });
         this.composer.passes = [];
+        this._animatedPasses = [];
         this.outlinePass = null; // Reset outline pass reference
 
         // Base render pass
@@ -300,13 +367,34 @@ class Renderer3D {
                 gp.uniforms.uRadius.value = passConfig.radius ?? 0.005;
                 this.composer.addPass(gp);
             }
+            else if (passConfig.type === 'fps_atmosphere') {
+                const ap = new ShaderPass(FPSAtmosphereShader);
+                ap.uniforms.uVignette.value = passConfig.vignette ?? 0.18;
+                ap.uniforms.uGrain.value = passConfig.grain ?? 0.02;
+                ap.uniforms.uScanline.value = passConfig.scanline ?? 0.02;
+                ap.uniforms.uChromatic.value = passConfig.chromatic ?? 0.0008;
+                ap.uniforms.uTintColor.value = new THREE.Color(passConfig.tint || '#8fd7e8');
+                ap.uniforms.uTintStrength.value = passConfig.tintStrength ?? 0.015;
+                ap.uniforms.uLift.value = passConfig.lift ?? 0.04;
+                this._animatedPasses.push(ap);
+                this.composer.addPass(ap);
+            }
         }
 
         // Final output
         this.composer.addPass(new OutputPass());
     }
 
-    render() { if (this.composer) this.composer.render(); }
+    render() {
+        if (!this.composer) return;
+        if (this._animatedPasses.length) {
+            const elapsed = this._shaderClock.getElapsedTime();
+            for (const pass of this._animatedPasses) {
+                if (pass.uniforms?.uTime) pass.uniforms.uTime.value = elapsed;
+            }
+        }
+        this.composer.render();
+    }
 
     resize(width, height) {
         if (width > 0 && height > 0 && this.webgl) {

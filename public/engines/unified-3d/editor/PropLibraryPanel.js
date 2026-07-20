@@ -22,7 +22,7 @@ export default class PropLibraryPanel {
         const stone = (c) => ({ color: c || 0x888888, flatShading: true });
         const fabric = (c) => ({ color: c || 0xCC4444, flatShading: true });
 
-        const P = (THREE, opts) => new THREE.MeshPhongMaterial(opts);
+        const P = (THREE, opts) => new THREE.MeshLambertMaterial(opts);
         const exampleProp = (id, name, icon, shape, color = 0x888888) => ({
             id, name, icon,
             create(THREE) {

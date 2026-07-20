@@ -106,13 +106,91 @@ test('normalizeTerrainLevel — converts terrainMeshes with elevationGrid', () =
       type: 'terrain',
       genWidth: 4,
       genDepth: 4,
+      cellSize: 2,
       heightScale: 2,
       elevationGrid: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
     }],
   };
   const result = normalizeTerrainLevel(input);
   assert.equal(result.terrain.mode, 'lowpoly');
+  assert.equal(result.terrain.cellSize, 2);
+  assert.equal(result.bounds.width, 6);
+  assert.equal(result.bounds.height, 6);
   assert.ok(Array.isArray(result.terrain.elevation));
+});
+
+test('normalizeTerrainLevel — preserves editor water appearance for generated terrainMeshes', () => {
+  const input = {
+    terrainMeshes: [{
+      type: 'terrain',
+      genWidth: 3,
+      genDepth: 3,
+      cellSize: 2,
+      heightScale: 8,
+      elevationGrid: [0, 0.2, 0.4, 0.1, 0.3, 0.5, 0.2, 0.4, 0.6],
+      waterLevel: 0.15,
+      waterColorHex: '#2a6a9a',
+      waterOpacity: 0.62,
+      waterMask: [0, 1, 0, 0, 1, 1, 0, 0, 0],
+    }],
+  };
+  const result = normalizeTerrainLevel(input);
+  assert.equal(result.terrain.waterLevel, 1.2);
+  assert.equal(result.terrain.waterColorHex, '#2a6a9a');
+  assert.equal(result.terrain.waterOpacity, 0.62);
+  assert.deepEqual(result.terrain.waterMask, [0, 1, 0, 0, 1, 1, 0, 0, 0]);
+});
+
+test('normalizeTerrainLevel — maps editor foliage instances to runtime colors', () => {
+  const input = {
+    terrainMeshes: [{
+      type: 'terrain',
+      genWidth: 2,
+      genDepth: 2,
+      cellSize: 1,
+      heightScale: 4,
+      elevationGrid: [0, 0.25, 0.5, 0.75],
+      foliageInstances: [
+        { kind: 'pine', position: [1, 2, 3], scale: 0.8, rotationY: 0.5 },
+        { kind: 'rock', position: [4, 5, 6], scale: 0.4 },
+      ],
+    }],
+  };
+  const result = normalizeTerrainLevel(input);
+  assert.deepEqual(result.terrain.foliage[0], {
+    type: 'tree',
+    kind: 'pine',
+    x: 1,
+    y: 2,
+    z: 3,
+    scale: 0.8,
+    rotationY: 0.5,
+    colorHex: '#1a5a2f',
+  });
+  assert.equal(result.terrain.foliage[1].type, 'rock');
+  assert.equal(result.terrain.foliage[1].colorHex, '#56504a');
+});
+
+test('normalizeTerrainLevel — prefers elevationGrid over raw sculpt buffer for generated terrainMeshes', () => {
+  const input = {
+    terrainMeshes: [{
+      type: 'terrain',
+      genWidth: 3,
+      genDepth: 3,
+      cellSize: 3,
+      heightScale: 4,
+      elevationGrid: [0, 0.5, 1, 0, 0.25, 0.5, 0, 0, 0.25],
+      sculptedPositions: [0, 0, 0, 100, 0, 0, 0, 0, 100],
+      sculptedColors: [1, 0, 1, 1, 0, 1, 1, 0, 1],
+    }],
+  };
+  const result = normalizeTerrainLevel(input);
+  assert.equal(result.terrain.mode, 'lowpoly');
+  assert.equal(result.terrain.cellSize, 3);
+  assert.equal(result.bounds.width, 6);
+  assert.equal(result.bounds.height, 6);
+  assert.equal(result.trimesh, undefined);
+  assert.deepEqual(result.terrain.elevation.slice(0, 3), [0, 2, 4]);
 });
 
 test('normalizeTerrainLevel — normalizes legacy navmesh triangles', () => {

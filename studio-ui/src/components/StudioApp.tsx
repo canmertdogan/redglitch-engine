@@ -24,6 +24,7 @@ interface Tool {
     src: string;
     w: number;
     h: number;
+    betaStatus?: 'supported' | 'experimental' | 'optional';
 }
 
 interface WindowState {
@@ -54,21 +55,21 @@ const StudioApp: React.FC = () => {
     const toastRef = useRef<ToastHandle>(null);
 
     const tools: Tool[] = [
-        { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', iconName: 'Rocket', src: '../dashboard.html', w: 900, h: 700 },
-        { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', iconName: 'Activity', src: '../project_dashboard.html', w: 1000, h: 600 },
+        { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', iconName: 'Rocket', src: '../dashboard.html', w: 900, h: 700, betaStatus: 'supported' },
+        { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', iconName: 'Activity', src: '../project_dashboard.html', w: 1000, h: 600, betaStatus: 'supported' },
         { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', iconName: 'Code', src: 'script_editor.html', w: 1000, h: 700 },
         { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', iconName: 'ImageIcon', src: 'pixel_editor.html', w: 900, h: 650 },
         { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', iconName: 'UserPlus', src: 'npc_editor.html', w: 700, h: 500 },
         { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', iconName: 'Skull', src: 'enemy_editor.html', w: 700, h: 500 },
         { id: 'item', category: 'ENTITIES', title: 'Item Database', iconName: 'Scroll', src: 'item_editor.html', w: 700, h: 500 },
-        { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', iconName: 'Flag', src: 'quest_editor.html', w: 900, h: 600 },
-        { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', iconName: 'MessageSquare', src: 'dialogue_editor.html', w: 800, h: 500 },
-        { id: 'daw', category: 'ASSETS', title: 'Audio Studio', iconName: 'Music', src: 'daw_editor.html', w: 800, h: 500 },
+        { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', iconName: 'Flag', src: 'quest_editor.html', w: 900, h: 600, betaStatus: 'experimental' },
+        { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', iconName: 'MessageSquare', src: 'dialogue_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
+        { id: 'daw', category: 'ASSETS', title: 'Audio Studio', iconName: 'Music', src: 'daw_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
         { id: 'fxpro', category: 'ASSETS', title: 'FX Master', iconName: 'Zap', src: 'fx_editor.html', w: 900, h: 650 },
-        { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_lab.html', w: 1200, h: 800 },
+        { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_lab.html', w: 1200, h: 800, betaStatus: 'optional' },
         { id: 'assets', category: 'ASSETS', title: 'File Manager', iconName: 'Folder', src: 'asset_manager.html', w: 900, h: 600 },
-        { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700 },
-        { id: 'ui_designer', category: 'INTERFACE', title: 'UI Designer', iconName: 'Monitor', src: 'ui_designer.html', w: 1200, h: 800 }
+        { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700, betaStatus: 'experimental' },
+        { id: 'ui_designer', category: 'INTERFACE', title: 'UI Designer', iconName: 'Monitor', src: 'ui_designer.html', w: 1200, h: 800, betaStatus: 'experimental' }
     ];
 
     useEffect(() => {
@@ -174,26 +175,20 @@ const StudioApp: React.FC = () => {
             <Toast ref={toastRef} />
             
             {/* TITLE BAR */}
-            <header style={{ height: '40px', background: '#000', borderBottom: '1px solid #1f2b42', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0', zIndex: 10000 }}>
-                <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                    <div style={{ width: '40px', height: '100%', background: '#020408', borderRight: '1px solid #1f2b42', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Atom size={20} color="var(--accent)" className="fa-spin" />
+            <header style={{ height: '36px', background: '#000', borderBottom: '1px solid #1f2b42', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0', zIndex: 10000, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: '8px', minWidth: 0, paddingRight: '8px' }}>
+                    <div style={{ width: '36px', height: '100%', background: '#020408', borderRight: '1px solid #1f2b42', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Atom size={18} color="var(--accent)" className="fa-spin" />
                     </div>
-                    <div style={{ display: 'flex', gap: '15px', padding: '0 15px', color: '#8fa0bc', fontSize: '14px' }}>
-                        <span style={{ cursor: 'pointer' }}>File</span>
-                        <span style={{ cursor: 'pointer' }}>Build</span>
-                        <span style={{ cursor: 'pointer' }}>View</span>
-                    </div>
-                </div>
-                
-                <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontWeight: 'bold', letterSpacing: '2px', color: 'var(--accent)', fontSize: '14px', whiteSpace: 'nowrap' }}>
-                    REDGLITCH STUDIO <span style={{ color: '#444', fontWeight: 'normal', margin: '0 10px' }}>|</span> {activeProject}
+                    <span style={{ fontWeight: 'bold', letterSpacing: '2px', color: 'var(--accent)', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        REDGLITCH STUDIO <span style={{ color: '#444', fontWeight: 'normal', margin: '0 6px' }}>|</span> {activeProject}
+                    </span>
                 </div>
 
-                <div style={{ display: 'flex', height: '100%' }}>
-                    <div className="win-control-btn"><Minus size={14} /></div>
-                    <div className="win-control-btn"><Square size={12} /></div>
-                    <div className="win-control-btn close" onClick={() => window.location.href = '../dashboard.html'}><X size={16} /></div>
+                <div style={{ display: 'flex', height: '100%', flexShrink: 0 }}>
+                    <div className="win-control-btn"><Minus size={13} /></div>
+                    <div className="win-control-btn"><Square size={11} /></div>
+                    <div className="win-control-btn close" onClick={() => window.location.href = '../dashboard.html'}><X size={15} /></div>
                 </div>
             </header>
 
@@ -218,7 +213,7 @@ const StudioApp: React.FC = () => {
                 {/* LEFT SIDEBAR */}
                 {!leftSidebarCollapsed && (
                     <aside style={{ width: '220px', background: '#080c18', borderRight: '2px solid #020408', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-                        <div style={{ padding: '10px', color: 'var(--accent)', borderBottom: '1px solid #2c3e50', fontSize: '13px', letterSpacing: '1px' }}>WORKSPACE TOOLS</div>
+                        <div style={{ padding: '10px', color: 'var(--accent)', borderBottom: '1px solid #2c3e50', fontSize: '13px', letterSpacing: '1px' }}>PUBLIC BETA TOOLS</div>
                         <div style={{ flex: 1, overflowY: 'auto', padding: '5px' }} className="pixel-scroll">
                             {['SYSTEM', 'WORLD ARCHITECT', 'ENTITIES', 'LOGIC & AI', 'ASSETS'].map(cat => (
                                 <div key={cat} style={{ marginBottom: '15px' }}>
@@ -235,6 +230,9 @@ const StudioApp: React.FC = () => {
                                                     <Icon size={16} color="var(--accent)" />
                                                     <span>{tool.title.toLowerCase()}</span>
                                                 </div>
+                                                {tool.betaStatus && tool.betaStatus !== 'supported' && (
+                                                    <span className={`beta-status ${tool.betaStatus}`}>{tool.betaStatus}</span>
+                                                )}
                                                 {windows[tool.id]?.isOpen && <div className="opened-indicator" />}
                                             </div>
                                         );
@@ -337,7 +335,8 @@ const StudioApp: React.FC = () => {
             <footer style={{ height: '25px', background: '#000', borderTop: '1px solid #1f2b42', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', fontSize: '12px', color: '#8fa0bc' }}>
                 <div style={{ display: 'flex', gap: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Folder size={12} /> {activeProject}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2ecc71' }}>● KERNEL ONLINE</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2ecc71' }}>● KERNEL ONLINE</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent)' }}>PUBLIC BETA</div>
                 </div>
                 <div style={{ display: 'flex', gap: '20px' }}>
                     <div>CPU: {systemStats.cpu}%</div>
@@ -350,7 +349,7 @@ const StudioApp: React.FC = () => {
                 .spin { animation: spin 1s linear infinite; }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 
-                .win-control-btn { width: 45px; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.1s; color: #555; }
+                .win-control-btn { width: 36px; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.1s; color: #555; }
                 .win-control-btn:hover { background: #1f2b42; color: #fff; }
                 .win-control-btn.close:hover { background: #e74c3c; }
                 
@@ -361,6 +360,9 @@ const StudioApp: React.FC = () => {
                 .module-btn:hover { background: #1a243a; color: #fff; }
                 .module-btn.active { background: #1f2b42; color: var(--accent); }
                 .opened-indicator { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 8px var(--accent); }
+                .beta-status { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; border: 1px solid #333; color: #777; padding: 2px 5px; }
+                .beta-status.experimental { border-color: rgba(255, 30, 39, 0.28); color: #ff8f95; }
+                .beta-status.optional { border-color: rgba(46, 204, 113, 0.25); color: #80c99a; }
                 
                 .sidebar-tab { flex: 1; padding: 10px; text-align: center; color: #444; font-size: 11px; cursor: pointer; border-bottom: 2px solid transparent; letter-spacing: 1px; }
                 .sidebar-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: #080c18; }

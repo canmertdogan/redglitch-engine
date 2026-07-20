@@ -432,13 +432,45 @@ class KaiChatUIController {
         if (bubble) bubble.classList.remove('show');
     }
 
+    updateChatMeta() {
+        const modelLabels = { native: 'NATIVE_CORTEX', local: 'WEBGPU_LOCAL', cerebras: 'CEREBRAS_CLOUD', 'opencode-zen': 'OPENCODE_ZEN' };
+        const settings = (window.AISettings && window.AISettings.settings) || {};
+        const provider = settings.provider || 'native';
+
+        const modelEl = document.getElementById('ai-chat-meta-model');
+        if (modelEl) modelEl.textContent = modelLabels[provider] || provider.toUpperCase();
+
+        const irab = window.irab || (window.parent && window.parent.irab);
+        const connected = provider !== 'native' || (irab && irab.isConnected);
+        const dot = document.getElementById('ai-chat-meta-dot');
+        if (dot) dot.classList.toggle('live', !!connected);
+
+        const ragEl = document.getElementById('ai-chat-meta-rag');
+        if (ragEl) ragEl.textContent = 'RAG: ' + (settings.ragEnabled === false ? 'OFF' : 'ENABLED');
+    }
+
+    startSessionClock() {
+        if (this._sessionStart) return; // already running
+        this._sessionStart = Date.now();
+        setInterval(() => {
+            const el = document.getElementById('ai-chat-meta-session');
+            if (!el) return;
+            const sec = Math.floor((Date.now() - this._sessionStart) / 1000);
+            const m = String(Math.floor(sec / 60)).padStart(2, '0');
+            const s = String(sec % 60).padStart(2, '0');
+            el.textContent = 'SESSION: ' + m + ':' + s;
+        }, 1000);
+    }
+
     openChat() {
         const panel = document.getElementById('ai-chat-panel');
         if (panel) {
             panel.classList.add('show');
             this.dismiss();
             this.playSound('online');
-            
+            this.updateChatMeta();
+            this.startSessionClock();
+
             setTimeout(() => {
                 const input = document.getElementById('ai-chat-input');
                 if (input) input.focus();
@@ -819,10 +851,15 @@ class KaiChatUIController {
         nameBar.style.justifyContent = 'space-between';
         const nameName = document.createElement('span');
         nameName.className = 'ai-message-name';
-        nameName.textContent = type === 'user' ? 'USER' : 
+        nameName.textContent = type === 'user' ? 'USER' :
                                type === 'assistant' ? 'KAI' :
                                type === 'system' ? 'SYSTEM' : 'ERROR';
-        
+
+        const timeStamp = document.createElement('span');
+        timeStamp.className = 'ai-message-time';
+        timeStamp.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        nameName.appendChild(timeStamp);
+
         nameBar.appendChild(nameName);
 
         // Copy button for assistant messages
@@ -1204,7 +1241,8 @@ class KaiSettingsController {
 
         this.saveSettings();
         window.setKaiMode?.(this.settings.aiEnabled);
-        
+        window.AIChatUI?.updateChatMeta();
+
         const irab = window.irab || (window.parent && window.parent.irab);
         if (irab && irab.socket) {
             try {
@@ -1288,16 +1326,10 @@ function applyKaiModeUI(enabled) {
         setTimeout(() => { frame.style.pointerEvents = 'none'; }, 50);
     }
 
-    // Sync state with parent UI if hosted in tools.html
-    if (window.parent && window.parent.document) {
-        const parentBtn = window.parent.document.getElementById('parent-kai-mode-toggle');
-        if (parentBtn) {
-            parentBtn.className = enabled ? 'tool-btn ai-toggle-btn on' : 'tool-btn ai-toggle-btn off';
-            parentBtn.innerHTML = enabled 
-                ? '<i class="fas fa-brain"></i> <span>AI: ON</span>' 
-                : '<i class="fas fa-brain" style="opacity: 0.5;"></i> <span>AI: OFF</span>';
-        }
-    }
+    // Note: the parent toolbar button (#parent-kai-mode-toggle in tools.html) owns its own
+    // off/connecting/online/thinking/offline state machine driven by the IrabBridge directly
+    // (see tools.html's setupAIKillswitch). We intentionally don't touch its DOM from here
+    // anymore -- doing so used to clobber that state machine's classes/markup on every toggle.
 }
 
 function showKaiModeChoice() {
@@ -1368,8 +1400,8 @@ window.toggleKaiMode = () => {
 async function bootstrapKaiMode() {
     let mode = getStoredKaiMode();
     if (mode === null) {
-        mode = false;
-        localStorage.setItem('kai_ai_enabled', 'false');
+        showKaiModeChoice();
+        return;
     }
     applyKaiModeUI(mode === true);
     if (mode === true) await window.setKaiMode(true);

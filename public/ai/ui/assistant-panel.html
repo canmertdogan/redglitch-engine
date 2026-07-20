@@ -262,14 +262,20 @@
         #ai-chat-header {
             background: var(--kai-accent);
             color: var(--kai-bg);
+            display: flex;
+            flex-direction: column;
+            cursor: move;
+            z-index: 10002;
+            box-shadow: 0 2px 12px rgba(255, 0, 0, 0.35);
+        }
+
+        #ai-chat-header-row {
             padding: 5px 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: bold;
             font-size: 22px;
-            cursor: move;
-            z-index: 10002;
         }
 
         #ai-chat-title::before {
@@ -288,92 +294,194 @@
         }
         .xp-control-btn:hover { color: #fff; }
 
+        /* Header meta strip: live model/session readout under the title bar */
+        #ai-chat-meta {
+            background: rgba(0, 0, 0, 0.35);
+            border-top: 1px solid rgba(0, 0, 0, 0.3);
+            padding: 3px 10px;
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: rgba(2, 11, 28, 0.75);
+            letter-spacing: 0.5px;
+        }
+        #ai-chat-meta .meta-item { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+        #ai-chat-meta .meta-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #033; box-shadow: 0 0 4px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+        #ai-chat-meta .meta-dot.live { background: #003300; animation: pulse 1.2s infinite; }
+
         /* MESSAGES */
         #ai-chat-messages {
             flex: 1;
-            padding: 15px;
+            padding: 15px 15px 6px;
             overflow-y: auto;
-            background: rgba(0, 20, 46, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 4px;
             font-family: var(--kai-font);
+            position: relative;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(255, 0, 0, 0.05), transparent 60%),
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px),
+                linear-gradient(180deg, rgba(0, 20, 46, 0.95), rgba(0, 12, 30, 0.98));
+        }
+
+        /* Idle watermark so an empty/short log doesn't read as a bare void */
+        #ai-chat-messages::before {
+            content: 'K A I // AWAITING INPUT';
+            position: absolute;
+            left: 20px;
+            bottom: 14px;
+            font-size: 13px;
+            letter-spacing: 3px;
+            color: rgba(255, 0, 0, 0.12);
+            pointer-events: none;
         }
 
         .ai-message {
-            margin-bottom: 15px;
             display: flex;
-            gap: 10px;
+            gap: 8px;
             animation: fadeIn 0.2s;
+            position: relative;
+            padding: 6px 0;
         }
+        .ai-message + .ai-message { border-top: 1px solid rgba(255, 255, 255, 0.04); }
 
         .ai-message-avatar {
-            width: 40px;
-            height: 40px;
-            background: var(--kai-panel);
+            flex-shrink: 0;
+            width: 28px;
+            height: 22px;
+            margin-top: 1px;
+            background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--kai-accent);
+            border-radius: 2px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 14px;
+            font-weight: bold;
             color: var(--kai-accent);
+            text-shadow: 0 0 6px currentColor;
         }
 
         .ai-message-content {
             flex: 1;
             display: flex;
             flex-direction: column;
+            min-width: 0;
         }
 
         .ai-message-name {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 2px;
+            font-size: 15px;
+            color: #667;
+            margin-bottom: 3px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .ai-message-time {
+            font-size: 13px;
+            color: #445;
+            margin-left: 6px;
+            letter-spacing: 0;
+            text-transform: none;
         }
 
         .ai-message-bubble {
-            background: transparent;
+            background: rgba(255, 255, 255, 0.02);
             border: 1px solid #334455;
+            border-left: 3px solid #334455;
+            border-radius: 0 3px 3px 0;
             padding: 8px 12px;
             color: var(--kai-text);
-            font-size: 20px;
-            line-height: 1.3;
+            font-size: 19px;
+            line-height: 1.35;
             position: relative;
         }
-        
+
         /* Message Variants */
         .ai-message.assistant .ai-message-bubble {
-            border-color: var(--kai-accent);
-            color: var(--kai-accent);
-            box-shadow: 0 0 5px rgba(255, 0, 0, 0.1);
+            background: rgba(255, 0, 0, 0.05);
+            border-color: rgba(255, 0, 0, 0.35);
+            border-left-color: var(--kai-accent);
+            color: #ffb0b0;
+            box-shadow: 0 0 12px rgba(255, 0, 0, 0.08) inset;
         }
         .ai-message.assistant .ai-message-name { color: var(--kai-accent); }
+        .ai-message.assistant .ai-message-avatar { box-shadow: 0 0 8px rgba(255,0,0,0.35); }
 
+        .ai-message.user {
+            flex-direction: row-reverse;
+            text-align: right;
+        }
+        .ai-message.user .ai-message-name { justify-content: flex-end; }
         .ai-message.user .ai-message-bubble {
-            border-color: #0088ff;
+            background: rgba(0, 136, 255, 0.06);
+            border-color: rgba(0, 136, 255, 0.35);
+            border-left: 1px solid rgba(0, 136, 255, 0.35);
+            border-right: 3px solid #0088ff;
+            border-radius: 3px 0 0 3px;
             color: #aaddff;
         }
         .ai-message.user .ai-message-name { color: #0088ff; }
+        .ai-message.user .ai-message-avatar { border-color: #0088ff; color: #0088ff; }
 
         .ai-message.system .ai-message-bubble {
-            border: 1px dashed #666;
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px dashed #555;
+            border-left: 3px dashed #555;
             color: #888;
             font-style: italic;
         }
+        .ai-message.system .ai-message-avatar { border-color: #666; color: #999; }
 
         .ai-message.error .ai-message-bubble {
-            border-color: #ff3333;
-            color: #ff3333;
+            background: rgba(255, 51, 51, 0.07);
+            border-color: rgba(255, 51, 51, 0.5);
+            border-left-color: #ff3333;
+            color: #ff8888;
         }
+        .ai-message.error .ai-message-avatar { border-color: #ff3333; color: #ff3333; }
 
         /* INPUT */
         #ai-chat-input-container {
             background: var(--kai-panel);
             padding: 10px;
             border-top: 2px solid var(--kai-accent);
+            position: relative;
+        }
+
+        #ai-chat-input-wrap {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            background: #000;
+            border: 1px solid #333;
+        }
+        #ai-chat-input-wrap:focus-within {
+            border-color: var(--kai-accent);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.25);
+        }
+        #ai-chat-prompt-glyph {
+            flex-shrink: 0;
+            width: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--kai-accent);
+            font-size: 20px;
+            border-right: 1px solid #222;
+            animation: pulse 1s infinite;
         }
 
         #ai-chat-input {
+            flex: 1;
             width: 100%;
-            background: #000;
-            border: 1px solid #333;
+            background: transparent;
+            border: none;
             color: var(--kai-accent);
             font-family: var(--kai-font);
             font-size: 20px;
@@ -381,11 +489,7 @@
             resize: none;
             height: 60px;
         }
-        #ai-chat-input:focus {
-            outline: none;
-            border-color: var(--kai-accent);
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
-        }
+        #ai-chat-input:focus { outline: none; }
 
         .xp-input-toolbar {
             display: flex;
@@ -838,17 +942,27 @@
     <!-- Chat Window -->
     <div id="ai-chat-panel">
         <div id="ai-chat-header">
-            <span id="ai-chat-title">KAI_TERMINAL // STUDIO_PRO</span>
-            <div class="xp-window-controls">
-                <button class="xp-control-btn settings" onclick="AISettings.toggle()" title="Kernel Config">[*]</button>
-                <button class="xp-control-btn" onclick="AIChatUI.closeChat()" title="Shutdown">[X]</button>
+            <div id="ai-chat-header-row">
+                <span id="ai-chat-title">KAI_TERMINAL // STUDIO_PRO</span>
+                <div class="xp-window-controls">
+                    <button class="xp-control-btn settings" onclick="AISettings.toggle()" title="Kernel Config">[*]</button>
+                    <button class="xp-control-btn" onclick="AIChatUI.closeChat()" title="Shutdown">[X]</button>
+                </div>
+            </div>
+            <div id="ai-chat-meta">
+                <span class="meta-item"><span class="meta-dot live" id="ai-chat-meta-dot"></span><span id="ai-chat-meta-model">NATIVE_CORTEX</span></span>
+                <span class="meta-item" id="ai-chat-meta-rag">RAG: --</span>
+                <span class="meta-item" id="ai-chat-meta-session">SESSION: 00:00</span>
             </div>
         </div>
 
         <div id="ai-chat-messages"></div>
 
         <div id="ai-chat-input-container">
-            <textarea id="ai-chat-input" placeholder=">> ENTER COMMAND OR QUERY..."></textarea>
+            <div id="ai-chat-input-wrap">
+                <div id="ai-chat-prompt-glyph">&gt;</div>
+                <textarea id="ai-chat-input" placeholder="ENTER COMMAND OR QUERY..."></textarea>
+            </div>
             <div class="xp-input-toolbar">
                 <div class="xp-toolbar-section">
                     <button class="xp-tool-btn" title="Clear History" onclick="document.getElementById('ai-chat-messages').innerHTML=''">[CLR]</button>

@@ -8,23 +8,24 @@ export default class TerrainEditorPanel {
         this._foliageGroup = null;
         this._sculptTool  = null;
 
-        this._genW     = 65;
-        this._genD     = 65;
+        this._genW     = 129;
+        this._genD     = 129;
+        this._cellSize = 2;
         this._heightScale = 8;
         this._seed     = Math.floor(Math.random() * 99999);
         this._biome    = 'temperate';
         this._terrainStyle = 'lowpoly';
 
-        this._waterLevel = 0.15;
+        this._waterLevel = 0.28;
         this._erosion    = false;
-        this._vegDensity = 0.03;
+        this._vegDensity = 0.055;
         this._lakeCount  = 3;
         this._lakeSize   = 0.16;
         this._riverCount = 2;
         this._riverWidth = 2.2;
         this._waterfalls = true;
-        this._grassDensity = 0.14;
-        this._rockDensity  = 0.015;
+        this._grassDensity = 0.22;
+        this._rockDensity  = 0.012;
 
         this._octaves    = 4;
         this._lacunarity = 2.0;
@@ -45,10 +46,10 @@ export default class TerrainEditorPanel {
                 label: 'Temperate Forest',
                 noiseType: 'perlin',
                 heightScale: 8,
-                waterLevel: 0.15,
+                waterLevel: 0.28,
                 octaves: 4, lacunarity: 2.0, gain: 0.5, freq: 0.025,
-                vegDensity: 0.04,
-                vegTypes: ['pine', 'oak', 'rock', 'grass'],
+                vegDensity: 0.065,
+                vegTypes: ['pine', 'oak', 'bush', 'rock', 'grass'],
                 palette: [
                     { threshold: 0.10, color: '#1a3a5c' },
                     { threshold: 0.20, color: '#2e6b8a' },
@@ -63,7 +64,7 @@ export default class TerrainEditorPanel {
                 label: 'Desert',
                 noiseType: 'hills',
                 heightScale: 5,
-                waterLevel: 0.05,
+                waterLevel: 0.18,
                 octaves: 3, lacunarity: 2.5, gain: 0.4, freq: 0.015,
                 vegDensity: 0.005,
                 vegTypes: ['cactus', 'rock'],
@@ -79,10 +80,10 @@ export default class TerrainEditorPanel {
                 label: 'Tundra',
                 noiseType: 'hills',
                 heightScale: 4,
-                waterLevel: 0.08,
+                waterLevel: 0.22,
                 octaves: 3, lacunarity: 2.0, gain: 0.45, freq: 0.02,
-                vegDensity: 0.01,
-                vegTypes: ['pine', 'rock', 'grass'],
+                vegDensity: 0.018,
+                vegTypes: ['pine', 'bush', 'rock', 'grass'],
                 palette: [
                     { threshold: 0.10, color: '#3a4a5c' },
                     { threshold: 0.20, color: '#5a6a7c' },
@@ -96,9 +97,9 @@ export default class TerrainEditorPanel {
                 label: 'Tropical',
                 noiseType: 'perlin',
                 heightScale: 10,
-                waterLevel: 0.18,
+                waterLevel: 0.30,
                 octaves: 5, lacunarity: 2.0, gain: 0.5, freq: 0.03,
-                vegDensity: 0.07,
+                vegDensity: 0.095,
                 vegTypes: ['palm', 'bush', 'rock', 'grass'],
                 palette: [
                     { threshold: 0.10, color: '#1a4a5c' },
@@ -114,7 +115,7 @@ export default class TerrainEditorPanel {
                 label: 'Volcanic',
                 noiseType: 'mountains',
                 heightScale: 14,
-                waterLevel: 0.05,
+                waterLevel: 0.16,
                 octaves: 5, lacunarity: 2.2, gain: 0.55, freq: 0.035,
                 vegDensity: 0.002,
                 vegTypes: ['rock'],
@@ -132,10 +133,10 @@ export default class TerrainEditorPanel {
                 label: 'Alpine',
                 noiseType: 'mountains',
                 heightScale: 18,
-                waterLevel: 0.08,
+                waterLevel: 0.18,
                 octaves: 5, lacunarity: 2.5, gain: 0.6, freq: 0.04,
-                vegDensity: 0.015,
-                vegTypes: ['pine', 'rock', 'grass'],
+                vegDensity: 0.028,
+                vegTypes: ['pine', 'bush', 'rock', 'grass'],
                 palette: [
                     { threshold: 0.10, color: '#1a2a3c' },
                     { threshold: 0.20, color: '#2e4a5a' },
@@ -152,8 +153,8 @@ export default class TerrainEditorPanel {
                 heightScale: 6,
                 waterLevel: 0.35,
                 octaves: 4, lacunarity: 2.0, gain: 0.5, freq: 0.02,
-                vegDensity: 0.02,
-                vegTypes: ['palm', 'rock', 'grass'],
+                vegDensity: 0.04,
+                vegTypes: ['palm', 'bush', 'rock', 'grass'],
                 palette: [
                     { threshold: 0.10, color: '#0a1a3c' },
                     { threshold: 0.20, color: '#1a3a6a' },
@@ -170,7 +171,7 @@ export default class TerrainEditorPanel {
                 heightScale: 4,
                 waterLevel: 0.30,
                 octaves: 3, lacunarity: 1.8, gain: 0.45, freq: 0.02,
-                vegDensity: 0.05,
+                vegDensity: 0.085,
                 vegTypes: ['bush', 'rock', 'grass'],
                 palette: [
                     { threshold: 0.10, color: '#1a2a1a' },
@@ -235,6 +236,11 @@ export default class TerrainEditorPanel {
                         <input type="number" id="terr-gen-d" value="${this._genD}" min="8" max="257" step="2" class="tool-input-sm" style="flex:1;">
                     </div>
                     <div class="tool-row">
+                        <label>Scale:</label>
+                        <input type="range" id="terr-cell-size" min="1" max="4" step="0.25" value="${this._cellSize}" style="flex:1;">
+                        <span id="terr-cell-size-val" style="min-width:28px;text-align:center;">${this._cellSize}</span>
+                    </div>
+                    <div class="tool-row">
                         <label>Height:</label>
                         <input type="range" id="terr-gen-h" min="1" max="30" step="0.5" value="${this._heightScale}" style="flex:1;">
                         <span id="terr-h-val" style="min-width:28px;text-align:center;">${this._heightScale}</span>
@@ -270,12 +276,12 @@ export default class TerrainEditorPanel {
                     </div>
                     <div class="tool-row">
                         <label>Veg:</label>
-                        <input type="range" id="terr-veg-density" min="0" max="0.15" step="0.005" value="${this._vegDensity}" style="flex:1;">
+                        <input type="range" id="terr-veg-density" min="0" max="0.22" step="0.005" value="${this._vegDensity}" style="flex:1;">
                         <span id="terr-veg-val" style="min-width:28px;text-align:center;">${(this._vegDensity * 100).toFixed(0)}%</span>
                     </div>
                     <div class="tool-row">
                         <label>Grass:</label>
-                        <input type="range" id="terr-grass-density" min="0" max="0.30" step="0.005" value="${this._grassDensity}" style="flex:1;">
+                        <input type="range" id="terr-grass-density" min="0" max="0.55" step="0.005" value="${this._grassDensity}" style="flex:1;">
                         <span id="terr-grass-val" style="min-width:28px;text-align:center;">${(this._grassDensity * 100).toFixed(0)}%</span>
                     </div>
                     <div class="tool-row">
@@ -366,6 +372,10 @@ export default class TerrainEditorPanel {
             this._heightScale = parseFloat(c.querySelector('#terr-gen-h').value);
             c.querySelector('#terr-h-val').textContent = this._heightScale;
         });
+        c.querySelector('#terr-cell-size')?.addEventListener('input', () => {
+            this._cellSize = parseFloat(c.querySelector('#terr-cell-size').value) || 1;
+            c.querySelector('#terr-cell-size-val').textContent = this._cellSize;
+        });
 
         c.querySelector('#terr-water-level')?.addEventListener('input', () => {
             this._waterLevel = parseFloat(c.querySelector('#terr-water-level').value);
@@ -438,6 +448,7 @@ export default class TerrainEditorPanel {
         const gW = c.querySelector('#terr-gen-w');
         const gD = c.querySelector('#terr-gen-d');
         const gS = c.querySelector('#terr-gen-seed');
+        const cellSize = c.querySelector('#terr-cell-size');
         const gB = c.querySelector('#terr-biome');
         const style = c.querySelector('#terr-style');
         const oct = c.querySelector('#terr-octaves');
@@ -449,8 +460,9 @@ export default class TerrainEditorPanel {
         const grass = c.querySelector('#terr-grass-density');
         const rocks = c.querySelector('#terr-rock-density');
 
-        if (gW) this._genW = parseInt(gW.value) || 65;
-        if (gD) this._genD = parseInt(gD.value) || 65;
+        if (gW) this._genW = parseInt(gW.value) || 129;
+        if (gD) this._genD = parseInt(gD.value) || 129;
+        if (cellSize) this._cellSize = Math.max(1, parseFloat(cellSize.value) || 2);
         if (gS) this._seed = parseInt(gS.value) || 0;
         if (gB) this._biome = gB.value;
         if (style) this._terrainStyle = style.value || 'lowpoly';
@@ -468,11 +480,10 @@ export default class TerrainEditorPanel {
         const editor = this.editor;
         if (!editor || !editor.THREE) return;
 
+        this._readGenParams();
         const biome = this._biomes[this._biome] || this._biomes.temperate;
         const w = this._genW;
         const d = this._genD;
-
-        this._readGenParams();
 
         const { elevation, moisture } = this._generateElevationWithMoisture(w, d);
         const lakeData = this._carveLakes(elevation, w, d);
@@ -486,7 +497,7 @@ export default class TerrainEditorPanel {
 
         this._currentPalette = paletteColors;
 
-        const tileSize = 1;
+        const tileSize = this._cellSize;
         const maxHeight = this._heightScale;
 
         const elevationOffset = this._waterLevel * maxHeight * 0.5;
@@ -494,6 +505,8 @@ export default class TerrainEditorPanel {
         for (let i = 0; i < elevation.length; i++) {
             elevOffset[i] = Math.max(0, Math.min(1, elevation[i] * (1 - this._waterLevel * 0.3) + this._waterLevel * 0.15));
         }
+        const filledWaterMask = this._fillWaterMask(lakeData.mask, elevOffset, w, d);
+        this._deepenWaterBasins(elevOffset, filledWaterMask, w, d);
 
         let geo;
         if (this._terrainStyle === 'minecraft' || this._terrainStyle === 'veloren') {
@@ -523,10 +536,9 @@ export default class TerrainEditorPanel {
             geo.setAttribute('color', new editor.THREE.BufferAttribute(colAttr, 3));
         }
 
-        const mat = new editor.THREE.MeshPhongMaterial({
+        const mat = new editor.THREE.MeshLambertMaterial({
             vertexColors: true,
             flatShading: true,
-            shininess: 0,
         });
 
         editor.THREE.GeometryUtils?.mergeVertices?.(geo);
@@ -542,11 +554,15 @@ export default class TerrainEditorPanel {
             elevationGrid: elevGrid,
             genWidth: w,
             genDepth: d,
+            cellSize: tileSize,
             heightScale: maxHeight,
             biome: this._biome,
+            biomePalette: biome.palette,
             terrainStyle: this._terrainStyle,
             waterLevel: this._waterLevel,
-            waterMask: Array.from(lakeData.mask),
+            waterColorHex: '#2a6a9a',
+            waterOpacity: 0.82,
+            waterMask: Array.from(filledWaterMask),
             riverPaths: riverData.paths,
             waterfallInstances: riverData.waterfalls,
             lakeCount: this._lakeCount,
@@ -567,18 +583,28 @@ export default class TerrainEditorPanel {
 
         if (this._waterLevel > 0.02) {
             const waterY = this._waterLevel * maxHeight;
-            const waterGeo = this._buildWaterGeometry(editor.THREE, lakeData.mask, w, d, tileSize, waterY);
-            const waterMat = new editor.THREE.MeshPhongMaterial({
+            const waterGeo = this._buildWaterGeometry(editor.THREE, filledWaterMask, elevOffset, w, d, tileSize, waterY);
+            const waterMat = new editor.THREE.MeshLambertMaterial({
                 color: 0x2a6a9a,
                 transparent: true,
-                opacity: 0.62,
-                shininess: 60,
+                opacity: 0.82,
                 flatShading: true,
                 side: editor.THREE.DoubleSide,
             });
             const water = new editor.THREE.Mesh(waterGeo, waterMat);
             water.name = `water_${Date.now().toString(36)}`;
-            water.userData = { type: 'water', _isWater: true, waterLevelY: waterY, waterMask: Array.from(lakeData.mask), riverPaths: riverData.paths, genWidth: w, genDepth: d };
+            water.userData = {
+                type: 'water',
+                _isWater: true,
+                waterLevelY: waterY,
+                waterColorHex: '#2a6a9a',
+                waterOpacity: 0.82,
+                waterMask: Array.from(filledWaterMask),
+                riverPaths: riverData.paths,
+                genWidth: w,
+                genDepth: d,
+                cellSize: tileSize,
+            };
             editor.scene.add(water);
             if (editor._waterMeshes) {
                 for (const old of editor._waterMeshes) {
@@ -599,7 +625,7 @@ export default class TerrainEditorPanel {
         }
 
         if ((this._vegDensity > 0 || this._grassDensity > 0 || this._rockDensity > 0) && biome.vegTypes.length > 0) {
-            const foliageInstances = this._generateVegetation(editor, elevOffset, w, d, tileSize, maxHeight, biome, moisture, lakeData.mask);
+            const foliageInstances = this._generateVegetation(editor, elevOffset, w, d, tileSize, maxHeight, biome, moisture, filledWaterMask);
             finalMesh.userData.foliageInstances = foliageInstances;
         }
 
@@ -714,16 +740,73 @@ export default class TerrainEditorPanel {
         }
     }
 
+    _fillWaterMask(mask, elevation, w, d) {
+        const filled = new Float32Array(mask);
+        if (this._waterLevel <= 0.02) return filled;
+
+        for (let i = 0; i < elevation.length; i++) {
+            if (elevation[i] <= this._waterLevel + 0.015) {
+                filled[i] = Math.max(filled[i], 0.55);
+            }
+        }
+
+        for (let pass = 0; pass < 2; pass++) {
+            const next = new Float32Array(filled);
+            for (let z = 1; z < d - 1; z++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const idx = z * w + x;
+                    if (filled[idx] > 0.02) continue;
+                    let wet = 0;
+                    for (let dz = -1; dz <= 1; dz++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (dx === 0 && dz === 0) continue;
+                            if (filled[(z + dz) * w + (x + dx)] > 0.02) wet++;
+                        }
+                    }
+                    if (wet >= 5) next[idx] = 0.45;
+                }
+            }
+            filled.set(next);
+        }
+
+        return filled;
+    }
+
+    _deepenWaterBasins(elevation, waterMask, w, d) {
+        if (!waterMask || this._waterLevel <= 0.02) return;
+
+        for (let z = 1; z < d - 1; z++) {
+            for (let x = 1; x < w - 1; x++) {
+                const idx = z * w + x;
+                const wet = Math.max(0, Math.min(1, Number(waterMask[idx] || 0)));
+                if (wet <= 0.02) continue;
+
+                let neighborDry = 0;
+                for (let dz = -1; dz <= 1; dz++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dz === 0) continue;
+                        if ((waterMask[(z + dz) * w + (x + dx)] || 0) <= 0.02) neighborDry++;
+                    }
+                }
+
+                const shoreBlend = Math.max(0, Math.min(1, neighborDry / 5));
+                const targetDepth = 0.08 + wet * 0.30;
+                const shoreShelf = shoreBlend * 0.12;
+                const bed = Math.max(0.012, this._waterLevel - targetDepth + shoreShelf);
+                elevation[idx] = Math.min(elevation[idx], bed);
+            }
+        }
+    }
+
     _generateWaterfalls(editor, waterfalls, tileSize, maxHeight) {
         const THREE = editor.THREE;
         const group = new THREE.Group();
         group.name = `waterfalls_${Date.now().toString(36)}`;
         group.userData = { type: 'waterfalls', _isWater: true, instances: waterfalls };
-        const mat = new THREE.MeshPhongMaterial({
+        const mat = new THREE.MeshLambertMaterial({
             color: 0x9ddcff,
             transparent: true,
             opacity: 0.72,
-            shininess: 80,
             flatShading: true,
             side: THREE.DoubleSide,
         });
@@ -821,15 +904,21 @@ export default class TerrainEditorPanel {
         return geo;
     }
 
-    _buildWaterGeometry(THREE, mask, w, d, tileSize, waterY) {
+    _buildWaterGeometry(THREE, mask, elevation, w, d, tileSize, waterY) {
         const positions = [];
         const addTri = (ax, az, bx, bz, cx, cz) => {
             positions.push(ax, waterY + 0.025, az, bx, waterY + 0.025, bz, cx, waterY + 0.025, cz);
         };
         for (let z = 0; z < d - 1; z++) {
             for (let x = 0; x < w - 1; x++) {
-                const m = Math.max(mask[z * w + x], mask[z * w + x + 1], mask[(z + 1) * w + x], mask[(z + 1) * w + x + 1]);
-                if (m <= 0.02) continue;
+                const i00 = z * w + x;
+                const i10 = z * w + x + 1;
+                const i01 = (z + 1) * w + x;
+                const i11 = (z + 1) * w + x + 1;
+                const m = Math.max(mask[i00] || 0, mask[i10] || 0, mask[i01] || 0, mask[i11] || 0);
+                const avgHeight = ((elevation?.[i00] || 0) + (elevation?.[i10] || 0) + (elevation?.[i01] || 0) + (elevation?.[i11] || 0)) / 4;
+                const submerged = avgHeight <= this._waterLevel + 0.025;
+                if (m <= 0.02 && !submerged) continue;
                 const x0 = x * tileSize;
                 const x1 = (x + 1) * tileSize;
                 const z0 = z * tileSize;
@@ -1002,21 +1091,64 @@ export default class TerrainEditorPanel {
         const vegGroup = new THREE.Group();
         vegGroup.name = `foliage_${Date.now().toString(36)}`;
 
-        const treeTarget = Math.floor(w * d * this._vegDensity);
+        const hasBushes = biome.vegTypes.includes('bush');
+        const treeTarget = Math.floor(w * d * this._vegDensity * (hasBushes ? 0.72 : 1));
+        const bushTarget = hasBushes ? Math.floor(w * d * this._vegDensity * 0.95) : 0;
+        const shoreCells = this._collectShoreCells(elevation, w, d, maxHeight, waterMask);
+        const waterEdgeCells = this._collectWaterEdgeCells(elevation, w, d, waterMask);
         const rockTarget = Math.floor(w * d * this._rockDensity);
+        const shoreTarget = Math.min(shoreCells.length, Math.floor(shoreCells.length * 0.52));
+        const aquaticTarget = Math.min(waterEdgeCells.length, Math.floor(waterEdgeCells.length * 0.62));
         const grassTarget = Math.floor(w * d * this._grassDensity);
 
         const treePositions = [];
+        const bushPositions = [];
         const rockPositions = [];
+        const shorePositions = [];
+        const aquaticPositions = [];
         const grassPositions = [];
+        const totalTarget = treeTarget + bushTarget + rockTarget + shoreTarget + aquaticTarget + grassTarget;
 
-        for (let i = 0; i < (treeTarget + rockTarget + grassTarget) * 12; i++) {
-            if (treePositions.length >= treeTarget && rockPositions.length >= rockTarget && grassPositions.length >= grassTarget) break;
+        for (let i = 0; i < totalTarget * 14; i++) {
+            if (
+                treePositions.length >= treeTarget &&
+                bushPositions.length >= bushTarget &&
+                rockPositions.length >= rockTarget &&
+                shorePositions.length >= shoreTarget &&
+                aquaticPositions.length >= aquaticTarget &&
+                grassPositions.length >= grassTarget
+            ) break;
+
+            if (aquaticPositions.length < aquaticTarget && waterEdgeCells.length > 0 && rand() < 0.48) {
+                const cell = waterEdgeCells[Math.floor(rand() * waterEdgeCells.length)];
+                const jitter = tileSize * 0.55;
+                const x = cell.gx * tileSize + (rand() - 0.5) * jitter;
+                const z = cell.gz * tileSize + (rand() - 0.5) * jitter;
+                const waterY = this._waterLevel * maxHeight;
+                const roll = rand();
+                const kind = roll < 0.50 ? 'lily' : roll < 0.86 ? 'reed' : 'rock';
+                const y = kind === 'lily' ? waterY + 0.045 : waterY - 0.06;
+                aquaticPositions.push({ x, z, y, kind, s: 0.28 + rand() * 0.45, r: rand() * Math.PI * 2 });
+                continue;
+            }
+
+            if (shorePositions.length < shoreTarget && shoreCells.length > 0 && rand() < 0.34) {
+                const cell = shoreCells[Math.floor(rand() * shoreCells.length)];
+                const jitter = tileSize * 0.42;
+                const x = cell.gx * tileSize + (rand() - 0.5) * jitter;
+                const z = cell.gz * tileSize + (rand() - 0.5) * jitter;
+                const y = cell.height * maxHeight;
+                const roll = rand();
+                const kind = roll < 0.58 ? 'reed' : roll < 0.82 ? 'bush' : 'rock';
+                shorePositions.push({ x, z, y, kind, s: 0.22 + rand() * 0.42, r: rand() * Math.PI * 2 });
+                continue;
+            }
+
             const x = rand() * (w - 1) * tileSize;
             const z = rand() * (d - 1) * tileSize;
             const gx = Math.round(x / tileSize);
             const gz = Math.round(z / tileSize);
-            if (gx < 0 || gx >= w || gz < 0 || gz >= d) continue;
+            if (gx <= 1 || gx >= w - 2 || gz <= 1 || gz >= d - 2) continue;
             if (waterMask && waterMask[gz * w + gx] > 0.03) continue;
 
             const h = elevation[gz * w + gx];
@@ -1026,18 +1158,23 @@ export default class TerrainEditorPanel {
             if (worldY < waterY + 0.3 || worldY > maxHeight * 0.85) continue;
 
             const noiseVal = this._perlin3D(gx * 0.3, 0, gz * 0.3, perm);
+            const groveNoise = this._perlin3D(gx * 0.08, 0, gz * 0.08, perm);
+            const meadowNoise = this._perlin3D(gx * 0.16, 9.3, gz * 0.16, perm);
             const m = moisture[gz * w + gx] || 0.5;
+            const slope = this._vegetationSlope(elevation, w, d, gx, gz);
 
-            if (rockPositions.length < rockTarget && noiseVal < -0.05 && biome.vegTypes.includes('rock')) {
+            if (rockPositions.length < rockTarget && noiseVal < -0.08 && biome.vegTypes.includes('rock')) {
                 rockPositions.push({ x, z, y: worldY, s: 0.3 + rand() * 0.5, r: rand() * Math.PI * 2 });
-            } else if (treePositions.length < treeTarget && noiseVal > 0.1 && m > 0.3) {
-                let type = 'tree';
-                const t = biome.vegTypes.includes('pine') ? 'pine' :
-                          biome.vegTypes.includes('palm') ? 'palm' :
-                          biome.vegTypes.includes('oak') ? 'oak' : 'bush';
-                treePositions.push({ x, z, y: worldY, type: t, s: 0.6 + rand() * 0.8, r: rand() * Math.PI * 2 });
-            } else if (grassPositions.length < grassTarget && noiseVal > -0.35 && m > 0.2 && biome.vegTypes.includes('grass')) {
-                grassPositions.push({ x, z, y: worldY, s: 0.15 + rand() * 0.2, r: rand() * Math.PI * 2 });
+            } else if (treePositions.length < treeTarget && slope < 0.095 && groveNoise > -0.12 && noiseVal > -0.05 && m > 0.28) {
+                const treeKinds = biome.vegTypes.filter(t => t === 'pine' || t === 'oak' || t === 'palm');
+                const t = treeKinds.length > 0
+                    ? treeKinds[Math.floor(rand() * treeKinds.length)]
+                    : 'bush';
+                treePositions.push({ x, z, y: worldY, type: t, s: 0.45 + rand() * 0.65, r: rand() * Math.PI * 2 });
+            } else if (bushPositions.length < bushTarget && slope < 0.13 && noiseVal > -0.28 && m > 0.24) {
+                bushPositions.push({ x, z, y: worldY, s: 0.35 + rand() * 0.5, r: rand() * Math.PI * 2 });
+            } else if (grassPositions.length < grassTarget && slope < 0.16 && meadowNoise > -0.45 && m > 0.16 && biome.vegTypes.includes('grass')) {
+                grassPositions.push({ x, z, y: worldY, s: 0.12 + rand() * 0.22, r: rand() * Math.PI * 2 });
             }
         }
 
@@ -1059,6 +1196,41 @@ export default class TerrainEditorPanel {
             rock.name = `rock_${vegIdx++}`;
             vegGroup.add(rock);
             instances.push({ kind: 'rock', position: [r.x, r.y, r.z], scale: r.s, rotationY: r.r });
+        }
+
+        for (const s of shorePositions) {
+            const obj = s.kind === 'reed'
+                ? this._makeReed(THREE, s.s)
+                : s.kind === 'rock'
+                    ? this._makeRock(THREE, s.s)
+                    : this._makeBush(THREE, s.s);
+            obj.position.set(s.x, s.y, s.z);
+            obj.rotation.y = s.r;
+            obj.name = `${s.kind}_${vegIdx++}`;
+            vegGroup.add(obj);
+            instances.push({ kind: s.kind, position: [s.x, s.y, s.z], scale: s.s, rotationY: s.r });
+        }
+
+        for (const a of aquaticPositions) {
+            const obj = a.kind === 'lily'
+                ? this._makeLily(THREE, a.s)
+                : a.kind === 'reed'
+                    ? this._makeReed(THREE, a.s * 1.15)
+                    : this._makeRock(THREE, a.s * 0.85);
+            obj.position.set(a.x, a.y, a.z);
+            obj.rotation.y = a.r;
+            obj.name = `${a.kind}_${vegIdx++}`;
+            vegGroup.add(obj);
+            instances.push({ kind: a.kind, position: [a.x, a.y, a.z], scale: a.s, rotationY: a.r });
+        }
+
+        for (const b of bushPositions) {
+            const bush = this._makeBush(THREE, b.s);
+            bush.position.set(b.x, b.y, b.z);
+            bush.rotation.y = b.r;
+            bush.name = `bush_${vegIdx++}`;
+            vegGroup.add(bush);
+            instances.push({ kind: 'bush', position: [b.x, b.y, b.z], scale: b.s, rotationY: b.r });
         }
 
         for (const g of grassPositions) {
@@ -1084,6 +1256,59 @@ export default class TerrainEditorPanel {
         return instances;
     }
 
+    _collectShoreCells(elevation, w, d, maxHeight, waterMask = null) {
+        if (!waterMask || this._waterLevel <= 0.02) return [];
+        const cells = [];
+        const waterY = this._waterLevel * maxHeight;
+        for (let gz = 2; gz < d - 2; gz++) {
+            for (let gx = 2; gx < w - 2; gx++) {
+                const idx = gz * w + gx;
+                if (waterMask[idx] > 0.03) continue;
+                const worldY = (elevation[idx] || 0) * maxHeight;
+                if (worldY < waterY + 0.08 || worldY > waterY + 1.25) continue;
+                let wetNeighbors = 0;
+                for (let dz = -1; dz <= 1; dz++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dz === 0) continue;
+                        if (waterMask[(gz + dz) * w + (gx + dx)] > 0.08) wetNeighbors++;
+                    }
+                }
+                if (wetNeighbors > 0 && wetNeighbors < 7) {
+                    cells.push({ gx, gz, height: elevation[idx] || 0, wetNeighbors });
+                }
+            }
+        }
+        return cells;
+    }
+
+    _collectWaterEdgeCells(elevation, w, d, waterMask = null) {
+        if (!waterMask || this._waterLevel <= 0.02) return [];
+        const cells = [];
+        for (let gz = 2; gz < d - 2; gz++) {
+            for (let gx = 2; gx < w - 2; gx++) {
+                const idx = gz * w + gx;
+                if (waterMask[idx] <= 0.08 || waterMask[idx] > 0.78) continue;
+                let landNeighbors = 0;
+                for (let dz = -2; dz <= 2; dz++) {
+                    for (let dx = -2; dx <= 2; dx++) {
+                        if (dx === 0 && dz === 0) continue;
+                        const n = (gz + dz) * w + (gx + dx);
+                        if (waterMask[n] <= 0.03) landNeighbors++;
+                    }
+                }
+                if (landNeighbors >= 2) cells.push({ gx, gz, height: elevation[idx] || 0, landNeighbors });
+            }
+        }
+        return cells;
+    }
+
+    _vegetationSlope(elevation, w, d, gx, gz) {
+        const c = elevation[gz * w + gx] || 0;
+        const dx = Math.abs((elevation[gz * w + Math.min(w - 1, gx + 1)] || c) - (elevation[gz * w + Math.max(0, gx - 1)] || c));
+        const dz = Math.abs((elevation[Math.min(d - 1, gz + 1) * w + gx] || c) - (elevation[Math.max(0, gz - 1) * w + gx] || c));
+        return Math.max(dx, dz);
+    }
+
     _makeTree(THREE, type, scale) {
         const group = new THREE.Group();
         const trunkH = scale * 1.2;
@@ -1092,7 +1317,7 @@ export default class TerrainEditorPanel {
         if (type === 'palm') {
             const trunk = new THREE.Mesh(
                 new THREE.CylinderGeometry(trunkR * 0.5, trunkR * 1.5, trunkH, 5),
-                new THREE.MeshPhongMaterial({ color: 0x8B5A2B, flatShading: true })
+                new THREE.MeshLambertMaterial({ color: 0x8B5A2B, flatShading: true })
             );
             trunk.position.y = trunkH / 2;
             group.add(trunk);
@@ -1101,7 +1326,7 @@ export default class TerrainEditorPanel {
                 const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.3;
                 const frond = new THREE.Mesh(
                     new THREE.PlaneGeometry(scale * 0.8, scale * 0.25),
-                    new THREE.MeshPhongMaterial({ color: 0x2d8a3f, side: THREE.DoubleSide, flatShading: true })
+                    new THREE.MeshLambertMaterial({ color: 0x2d8a3f, side: THREE.DoubleSide, flatShading: true })
                 );
                 frond.position.set(Math.cos(angle) * scale * 0.3, trunkH - 0.1, Math.sin(angle) * scale * 0.3);
                 frond.rotation.x = 0.6 + Math.random() * 0.3;
@@ -1111,7 +1336,7 @@ export default class TerrainEditorPanel {
         } else {
             const trunk = new THREE.Mesh(
                 new THREE.CylinderGeometry(trunkR, trunkR * 1.3, trunkH, 5),
-                new THREE.MeshPhongMaterial({ color: 0x6B4226, flatShading: true })
+                new THREE.MeshLambertMaterial({ color: 0x6B4226, flatShading: true })
             );
             trunk.position.y = trunkH / 2;
             group.add(trunk);
@@ -1119,7 +1344,7 @@ export default class TerrainEditorPanel {
             const crownR = scale * 0.6;
             const crown = new THREE.Mesh(
                 new THREE.SphereGeometry(crownR, 5, 4),
-                new THREE.MeshPhongMaterial({ color: type === 'pine' ? 0x1a5a2f : 0x3a8a3f, flatShading: true })
+                new THREE.MeshLambertMaterial({ color: type === 'pine' ? 0x1a5a2f : 0x3a8a3f, flatShading: true })
             );
             crown.position.y = trunkH + crownR * 0.4;
             crown.scale.y = type === 'pine' ? 1.8 : 0.9;
@@ -1140,7 +1365,7 @@ export default class TerrainEditorPanel {
 
     _makeRock(THREE, scale) {
         const geo = new THREE.DodecahedronGeometry(scale * 0.4);
-        const mat = new THREE.MeshPhongMaterial({
+        const mat = new THREE.MeshLambertMaterial({
             color: new THREE.Color().setHSL(0.08, 0.05, 0.35 + Math.random() * 0.25),
             flatShading: true,
         });
@@ -1149,10 +1374,73 @@ export default class TerrainEditorPanel {
         return mesh;
     }
 
+    _makeBush(THREE, scale) {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshLambertMaterial({
+            color: new THREE.Color().setHSL(0.30 + Math.random() * 0.04, 0.58, 0.28 + Math.random() * 0.16),
+            flatShading: true,
+        });
+        const core = new THREE.Mesh(new THREE.SphereGeometry(scale * 0.46, 6, 4), mat);
+        core.scale.set(1.2, 0.62, 1);
+        core.position.y = scale * 0.28;
+        group.add(core);
+        const lobe = core.clone();
+        lobe.scale.set(0.75, 0.5, 0.75);
+        lobe.position.set(scale * 0.32, scale * 0.24, scale * 0.18);
+        group.add(lobe);
+        group.userData = { type: 'vegetation', kind: 'bush' };
+        return group;
+    }
+
+    _makeReed(THREE, scale) {
+        const group = new THREE.Group();
+        const stemMat = new THREE.MeshLambertMaterial({ color: 0x6f8f3a, flatShading: true });
+        const tipMat = new THREE.MeshLambertMaterial({ color: 0x8a5d2c, flatShading: true });
+        const count = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < count; i++) {
+            const h = scale * (1.4 + Math.random() * 1.1);
+            const a = (i / count) * Math.PI * 2 + Math.random() * 0.35;
+            const off = scale * 0.12;
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(scale * 0.018, scale * 0.024, h, 4), stemMat);
+            stem.position.set(Math.cos(a) * off, h * 0.5, Math.sin(a) * off);
+            stem.rotation.z = (Math.random() - 0.5) * 0.16;
+            group.add(stem);
+            const tip = new THREE.Mesh(new THREE.CylinderGeometry(scale * 0.035, scale * 0.025, scale * 0.28, 5), tipMat);
+            tip.position.set(stem.position.x, h + scale * 0.12, stem.position.z);
+            group.add(tip);
+        }
+        group.userData = { type: 'vegetation', kind: 'reed' };
+        return group;
+    }
+
+    _makeLily(THREE, scale) {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshLambertMaterial({
+            color: new THREE.Color().setHSL(0.29 + Math.random() * 0.05, 0.54, 0.28 + Math.random() * 0.12),
+            side: THREE.DoubleSide,
+            flatShading: true,
+        });
+        const geo = new THREE.CircleGeometry(scale * 0.42, 7, 0.18, Math.PI * 1.72);
+        const pad = new THREE.Mesh(geo, mat);
+        pad.rotation.x = -Math.PI / 2;
+        pad.position.y = 0.012;
+        group.add(pad);
+        if (Math.random() > 0.55) {
+            const flower = new THREE.Mesh(
+                new THREE.ConeGeometry(scale * 0.07, scale * 0.08, 5),
+                new THREE.MeshLambertMaterial({ color: 0xd9b6d8, flatShading: true })
+            );
+            flower.position.set(scale * 0.08, scale * 0.06, scale * 0.02);
+            group.add(flower);
+        }
+        group.userData = { type: 'vegetation', kind: 'lily' };
+        return group;
+    }
+
     _makeGrass(THREE, scale) {
         const group = new THREE.Group();
         const bladeH = scale * 1.8;
-        const mat = new THREE.MeshPhongMaterial({
+        const mat = new THREE.MeshLambertMaterial({
             color: new THREE.Color().setHSL(0.28 + Math.random() * 0.08, 0.65, 0.28 + Math.random() * 0.18),
             side: THREE.DoubleSide,
             flatShading: true,
@@ -1281,6 +1569,7 @@ export default class TerrainEditorPanel {
         data.terrain = data.terrain || {};
         data.terrain.genWidth = this._genW;
         data.terrain.genDepth = this._genD;
+        data.terrain.cellSize = this._cellSize;
         data.terrain.heightScale = this._heightScale;
         data.terrain.seed = this._seed;
         data.terrain.biome = this._biome;

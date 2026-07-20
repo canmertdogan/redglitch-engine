@@ -23,7 +23,7 @@ from watcher import IrabWatcher
 from rag import rag
 
 # Setup logging
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("IRAB-Cortex")
 
 # Silence uvicorn access logs
@@ -274,11 +274,16 @@ async def load_brain_task():
         
         # 3. Load model in thread
         await loop.run_in_executor(None, brain.load_model, model_path)
-        
+
+        if brain.llm is None:
+            # load_model already set status="ERROR" and logged the reason; don't mask it
+            await manager.broadcast({"type": "LOAD_PROGRESS", "data": {"percent": 0, "status": "Model load failed. Check backend logs."}})
+            return
+
         # 4. Warmup (Trigger Metal compilation)
         await manager.broadcast({"type": "LOAD_PROGRESS", "data": {"percent": 95, "status": "Firing synapses..."}})
         await loop.run_in_executor(None, brain.warmup)
-        
+
         # 5. Finish
         brain.loading_progress = 100
         brain.status = "READY"

@@ -115,6 +115,7 @@
         const project = params.get('project') || '';
         const level   = params.get('level')   || '';
         const user    = params.get('user')    || 'player';
+        const playtest = params.get('playtest') === '1' || params.get('playtest') === 'true';
 
         // ── DOM refs ──────────────────────────────────────────────────────
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -139,7 +140,24 @@
             setProgress(50, 'ENGINE READY');
             modeBadge.textContent = game.currentMode?.label || mode.toUpperCase();
 
-            if (project && level) {
+            if (playtest) {
+                setProgress(60, 'LOADING PLAYTEST DATA...');
+                const playtestData = sessionStorage.getItem('redglitch_playtest_data')
+                    || localStorage.getItem('temp_playtest_fps3d');
+                if (playtestData) {
+                    try {
+                        const data = JSON.parse(playtestData);
+                        await game.loadLevelFromData(data);
+                        setProgress(90, 'PLAYTEST LEVEL LOADED');
+                    } catch (e) {
+                        console.error('[Playtest] Failed to parse playtest data:', e);
+                        setProgress(0, 'ERROR: Invalid playtest data');
+                    }
+                } else {
+                    console.warn('[Playtest] No playtest data found in storage');
+                    setProgress(0, 'ERROR: No playtest data found');
+                }
+            } else if (project && level) {
                 setProgress(60, 'LOADING LEVEL...');
                 await game.loadProject(project, level);
                 setProgress(90, 'LEVEL LOADED');

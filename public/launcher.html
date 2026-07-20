@@ -377,6 +377,22 @@
             box-shadow: none !important;
         }
 
+        .beta-note {
+            color: #ffb3b3;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin: -4px 0 10px;
+        }
+
+        .experimental-note {
+            color: var(--dim);
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin: 12px 0 2px;
+        }
+
         /* ═══ RESPONSIVE ═══ */
         @media (max-width: 520px) {
             .terminal-window { min-width: auto; width: 92%; padding: 28px; }
@@ -417,10 +433,18 @@
     <div id="main-menu" class="screen">
         <div class="menu-container">
             <h1 class="menu-title">REDGLITCH ENGINE</h1>
-            <p class="menu-subtitle">MULTI-ENGINE GAME PLATFORM</p>
+            <p class="menu-subtitle">PUBLIC BETA</p>
+            <p class="beta-note">Start with the bundled Default Project</p>
             <div class="menu-divider"></div>
 
             <div class="menu-buttons">
+                <button class="retro-btn" onclick="launchBetaProject()">
+                    <i class="fas fa-rocket"></i> OPEN BETA PROJECT
+                </button>
+                <button class="retro-btn" onclick="smoothNavigate('dashboard.html')">
+                    <i class="fas fa-folder-open"></i> PROJECT DASHBOARD
+                </button>
+                <div class="experimental-note">Experimental tools</div>
                 <button class="retro-btn" onclick="smoothNavigate('slot_selection.html')">
                     <i class="fas fa-gamepad"></i> CAMPAIGN MODE
                 </button>

@@ -235,6 +235,9 @@ class AdvancedGenerator {
                 }
             }
         }
+        if (map.entities.length === 0 && diff >= 0.5) {
+            this._spawnFallbackEnemy(map, biome);
+        }
 
         // Add collectibles
         for (let i = 0; i < 10; i++) {
@@ -247,6 +250,28 @@ class AdvancedGenerator {
                         y: ry - 1
                     });
                     break;
+                }
+            }
+        }
+    }
+
+    _spawnFallbackEnemy(map, biome) {
+        const preferredX = Math.floor(map.width * 0.55);
+        for (let radius = 0; radius < map.width; radius++) {
+            for (const x of [preferredX - radius, preferredX + radius]) {
+                if (x < 10 || x >= map.width - 5) continue;
+                for (let y = 1; y < map.height; y++) {
+                    const idx = y * map.width + x;
+                    const aboveIdx = (y - 1) * map.width + x;
+                    if (map.collision[idx] === 1 && map.collision[aboveIdx] === 0) {
+                        map.entities.push({
+                            type: biome.entities[0],
+                            x,
+                            y: y - 1,
+                            behavior: 'patrol'
+                        });
+                        return;
+                    }
                 }
             }
         }

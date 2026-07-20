@@ -21,7 +21,7 @@ import { ShaderRegistry } from '/engines/shared/ShaderRegistry.js';
 import { ShaderEditorUI } from './ShaderEditorUI.js';
 import { MaterialPackManager } from '/engines/shared/MaterialPresets.js';
 import { Evaluator, Brush, ADDITION, SUBTRACTION, INTERSECTION } from 'three-bvh-csg';
-import PropertiesPanel from './panels/PropertiesPanel.js';
+import PropertiesPanel from './panels/PropertiesPanel.js?v=cachebust12';
 import AssetLoader3D from '/engines/shared/AssetLoader3D.js';
 
 export default class Editor3DCore {
@@ -147,11 +147,10 @@ export default class Editor3DCore {
 
         // ── Renderer ──────────────────────────────────────────────────────
         this.renderer3d = new Renderer3D(this.container, {
-            outline:   false,
-            cel:       true,
-            tones:     5,
-            satBoost:  1.1,
-            minBright: 0.25,
+            antialias:  false,
+            shadows:    true,
+            shadowType: 1,       // PCFSoftShadowMap
+            pixelRatio: Math.min(window.devicePixelRatio, 2),
         });
         await this.renderer3d.init();
         this.scene    = this.renderer3d.scene;
@@ -161,7 +160,7 @@ export default class Editor3DCore {
         this._updateOrbitCamera();
 
         // ── Lighting ──────────────────────────────────────────────────────
-        this._ambLight = new THREE.AmbientLight(0xffffff, 4.0);
+        this._ambLight = new THREE.AmbientLight(0xffffff, 0.8);
         this.scene.add(this._ambLight);
 
         this._hemiLight = new THREE.HemisphereLight(0xbfdfff, 0x4a3828, 1.2);
@@ -598,7 +597,7 @@ export default class Editor3DCore {
         if (this._sunLight && skybox.sun) {
             this._sunLight.color.set(skybox.sun.color || '#ffffff');
             const sunInt = typeof skybox.sun.intensity === 'number' ? skybox.sun.intensity : 1.2;
-            this._sunLight.intensity = sunInt * Math.PI; // Compensate for physical lighting
+            this._sunLight.intensity = sunInt;
             
             const az = (skybox.sun.azimuth ?? 45) * Math.PI / 180;
             const el = (skybox.sun.elevation ?? 45) * Math.PI / 180;
@@ -608,18 +607,34 @@ export default class Editor3DCore {
                 r * Math.sin(el),
                 r * Math.cos(el) * Math.cos(az)
             );
+            this._sunLight.target.position.set(0, 0, 0);
+
+            if (this._sunLight.shadow) {
+                this._sunLight.shadow.mapSize.set(1024, 1024);
+                this._sunLight.shadow.radius = 3;
+                this._sunLight.shadow.bias = -0.0004;
+                this._sunLight.shadow.normalBias = 0.02;
+            }
         }
         
         if (this._ambLight && skybox.ambientColor) {
             this._ambLight.color.set(skybox.ambientColor);
         }
         if (this._ambLight && typeof skybox.ambientIntensity === 'number') {
-            this._ambLight.intensity = skybox.ambientIntensity * Math.PI * 0.55;
+            this._ambLight.intensity = skybox.ambientIntensity * 0.6;
         }
         if (this._hemiLight) {
-            this._hemiLight.color.set(skybox.topColor || skybox.sun?.color || '#bfdfff');
-            this._hemiLight.groundColor.set(skybox.bottomColor || '#4a3828');
-            this._hemiLight.intensity = Math.max(0.15, (skybox.ambientIntensity ?? 0.35) * 1.4);
+            this._hemiLight.color.set(skybox.topColor || skybox.ambientColor || '#bfdfff');
+            // Only override groundColor/intensity when ambientIntensity is explicitly
+            // provided in the skybox config. The skybox bottomColor is the horizon sky
+            // gradient, not the ground, so using it as hemi groundColor washes out
+            // warm colors (trees look gray-tinted).
+            if (typeof skybox.ambientColor === 'string') {
+                this._hemiLight.groundColor.set(skybox.ambientColor);
+            }
+            if (typeof skybox.ambientIntensity === 'number') {
+                this._hemiLight.intensity = Math.max(0.1, skybox.ambientIntensity * 0.9);
+            }
         }
 
         // Apply Fog directly if fogSync is true
@@ -940,6 +955,10 @@ export default class Editor3DCore {
 
     _updatePropertiesPanel() {
         this.propertiesPanel._updatePropertiesPanel();
+    }
+
+    _syncEnvironmentPanel() {
+        this.select({ _isEnvironment: true, name: 'Environment' });
     }
 
     // UI Rendering methods moved to PropertiesPanel.js
@@ -1293,16 +1312,14 @@ export default class Editor3DCore {
             }
         }
 
-        const mat = new THREE.MeshPhongMaterial({
+        const mat = new THREE.MeshLambertMaterial({
             color: new THREE.Color(overrides.colorHex || color), 
             emissive: new THREE.Color(overrides.emissive || emissive),
             emissiveIntensity: overrides.emissiveIntensity ?? Math.min(emissiveIntensity, 0.02),
             opacity, 
             transparent,
             side: THREE.DoubleSide,
-            flatShading: true,
-            shininess: overrides.shininess ?? Math.max(4, (1 - roughness) * 28),
-            specular: new THREE.Color(metalness > 0.2 ? 0x666666 : 0x242424),
+            flatShading: true
         });
 
         if (materialId) {
@@ -1378,6 +1395,16 @@ export default class Editor3DCore {
     _rebuildScene(levelData) {
         const THREE = this.THREE;
         if (!THREE || !this.scene) return;
+        const preserveLiveTerrain = this._preserveLiveTerrainOnNextRebuild === true
+            && levelData === this._levelData
+            && Array.isArray(this._terrainMeshes)
+            && this._terrainMeshes.length > 0;
+        this._preserveLiveTerrainOnNextRebuild = false;
+
+        // Detach TransformControls to avoid stale object reference after clear
+        if (this.transformCtrl) {
+            this.transformCtrl.detach();
+        }
 
         // Clear groups
         this._clearGroup(this.meshGroup);
@@ -1551,40 +1578,47 @@ export default class Editor3DCore {
             }
         }
 
-        // Restore terrain meshes from serialized data (not in meshGroup)
-        for (const list of [this._terrainMeshes, this._waterMeshes, this._foliageMeshes]) {
-            if (list) {
-                for (const m of list) {
-                    m.parent?.remove(m);
-                    if (m.geometry) m.geometry?.dispose();
-                    if (m.material) {
-                        if (Array.isArray(m.material)) m.material.forEach(x => x.dispose());
-                        else m.material.dispose();
+        // Restore terrain meshes from serialized data (not in meshGroup). For
+        // block placement on live generated terrain, preserve the existing
+        // terrain objects so rebuild does not visibly erase them while the
+        // async restore import resolves.
+        if (!preserveLiveTerrain) {
+            for (const list of [this._terrainMeshes, this._waterMeshes, this._foliageMeshes]) {
+                if (list) {
+                    for (const m of list) {
+                        m.parent?.remove(m);
+                        if (m.geometry) m.geometry?.dispose();
+                        if (m.material) {
+                            if (Array.isArray(m.material)) m.material.forEach(x => x.dispose());
+                            else m.material.dispose();
+                        }
+                        if (m.traverse) {
+                            m.traverse(c => {
+                                c.geometry?.dispose();
+                                if (c.material) { if (Array.isArray(c.material)) c.material.forEach(x => x.dispose()); else c.material.dispose(); }
+                            });
+                        }
                     }
-                    if (m.traverse) {
-                        m.traverse(c => {
-                            c.geometry?.dispose();
-                            if (c.material) { if (Array.isArray(c.material)) c.material.forEach(x => x.dispose()); else c.material.dispose(); }
-                        });
-                    }
+                    list.length = 0;
                 }
-                list.length = 0;
             }
         }
         if (this._propGroups) this._propGroups = [];
-        if (Array.isArray(levelData.terrainMeshes)) {
+        if (!preserveLiveTerrain && Array.isArray(levelData.terrainMeshes)) {
             for (const td of levelData.terrainMeshes) {
                 if (td.elevationGrid) {
                     const elev = new Float32Array(td.elevationGrid);
+                    const cellSize = Math.max(0.25, Number(td.cellSize ?? 1) || 1);
                     const opts = {
-                        tileSize: 1,
+                        tileSize: cellSize,
                         maxHeight: td.heightScale || 8,
                         jitter: 0.05,
                     };
                     import('/engines/shared/LowPolyTerrainGen.js').then(mod => {
                         const style = td.terrainStyle || td.style || 'lowpoly';
                         let mesh;
-                        if (Array.isArray(td.sculptedPositions)) {
+                        const useRawSculptMesh = style === 'trimesh' || td.mode === 'trimesh' || td.preferSculptedMesh === true;
+                        if (useRawSculptMesh && Array.isArray(td.sculptedPositions)) {
                             const geo = new this.THREE.BufferGeometry();
                             geo.setAttribute('position', new this.THREE.BufferAttribute(new Float32Array(td.sculptedPositions), 3));
                             if (Array.isArray(td.sculptedNormals)) {
@@ -1594,14 +1628,13 @@ export default class Editor3DCore {
                                 geo.setAttribute('color', new this.THREE.BufferAttribute(new Float32Array(td.sculptedColors), 3));
                             }
                             if (!Array.isArray(td.sculptedNormals)) geo.computeVertexNormals();
-                            mesh = new this.THREE.Mesh(geo, new this.THREE.MeshPhongMaterial({
+                            mesh = new this.THREE.Mesh(geo, new this.THREE.MeshLambertMaterial({
                                 vertexColors: Array.isArray(td.sculptedColors),
-                                flatShading: true,
-                                shininess: 0,
+                                flatShading: true
                             }));
                         } else if (style === 'minecraft' || style === 'veloren') {
                             const geo = this._buildRestoredVoxelTerrainGeometry(elev, td.genWidth || 65, td.genDepth || 65, opts.maxHeight, style);
-                            mesh = new this.THREE.Mesh(geo, new this.THREE.MeshPhongMaterial({ vertexColors: true, flatShading: true, shininess: 0 }));
+                            mesh = new this.THREE.Mesh(geo, new this.THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
                         } else {
                             const gen = new mod.default();
                             mesh = gen.generate(elev, td.genWidth || 65, td.genDepth || 65, opts).mesh;
@@ -1613,13 +1646,17 @@ export default class Editor3DCore {
                             elevationGrid: Array.from(elev),
                             genWidth: td.genWidth,
                             genDepth: td.genDepth,
+                            cellSize,
                             heightScale: td.heightScale,
                             biome: td.biome,
+                            biomePalette: td.biomePalette,
                             terrainStyle: style,
                             sculptedPositions: td.sculptedPositions,
                             sculptedNormals: td.sculptedNormals,
                             sculptedColors: td.sculptedColors,
                             waterLevel: td.waterLevel,
+                            waterColorHex: td.waterColorHex,
+                            waterOpacity: td.waterOpacity,
                             waterMask: td.waterMask,
                             riverPaths: td.riverPaths,
                             waterfallInstances: td.waterfallInstances,
@@ -1656,24 +1693,27 @@ export default class Editor3DCore {
 
         const w = td.genWidth || 65;
         const d = td.genDepth || 65;
+        const cellSize = Math.max(0.25, Number(td.cellSize ?? 1) || 1);
         const maxHeight = td.heightScale || 8;
         const waterLevel = td.waterLevel ?? 0;
+        const waterColorHex = td.waterColorHex || '#2a6a9a';
+        const waterOpacity = Math.max(Number.isFinite(td.waterOpacity) ? td.waterOpacity : 0.82, 0.82);
         const waterMask = Array.isArray(td.waterMask) ? td.waterMask : null;
+        const elevation = Array.isArray(td.elevationGrid) ? td.elevationGrid : null;
 
         if (waterMask && waterLevel > 0.02) {
             const waterY = waterLevel * maxHeight;
-            const geo = this._buildRestoredWaterGeometry(waterMask, w, d, 1, waterY);
-            const mat = new THREE.MeshPhongMaterial({
-                color: 0x2a6a9a,
+            const geo = this._buildRestoredWaterGeometry(waterMask, elevation, w, d, cellSize, waterY, waterLevel);
+            const mat = new THREE.MeshLambertMaterial({
+                color: new THREE.Color(waterColorHex),
                 transparent: true,
-                opacity: 0.62,
-                shininess: 60,
+                opacity: waterOpacity,
                 flatShading: true,
                 side: THREE.DoubleSide,
             });
             const water = new THREE.Mesh(geo, mat);
             water.name = `water_${td.id || Date.now().toString(36)}`;
-            water.userData = { type: 'water', _isWater: true, waterLevelY: waterY, waterMask, riverPaths: td.riverPaths, genWidth: w, genDepth: d };
+            water.userData = { type: 'water', _isWater: true, waterLevelY: waterY, waterColorHex, waterOpacity, waterMask, riverPaths: td.riverPaths, genWidth: w, genDepth: d, cellSize };
             this.scene.add(water);
             this._waterMeshes.push(water);
         }
@@ -1702,15 +1742,21 @@ export default class Editor3DCore {
         }
     }
 
-    _buildRestoredWaterGeometry(mask, w, d, tileSize, waterY) {
+    _buildRestoredWaterGeometry(mask, elevation, w, d, tileSize, waterY, waterLevel = 0) {
         const positions = [];
         const addTri = (ax, az, bx, bz, cx, cz) => {
             positions.push(ax, waterY + 0.025, az, bx, waterY + 0.025, bz, cx, waterY + 0.025, cz);
         };
         for (let z = 0; z < d - 1; z++) {
             for (let x = 0; x < w - 1; x++) {
-                const m = Math.max(mask[z * w + x] || 0, mask[z * w + x + 1] || 0, mask[(z + 1) * w + x] || 0, mask[(z + 1) * w + x + 1] || 0);
-                if (m <= 0.02) continue;
+                const i00 = z * w + x;
+                const i10 = z * w + x + 1;
+                const i01 = (z + 1) * w + x;
+                const i11 = (z + 1) * w + x + 1;
+                const m = Math.max(mask[i00] || 0, mask[i10] || 0, mask[i01] || 0, mask[i11] || 0);
+                const avgHeight = ((elevation?.[i00] || 0) + (elevation?.[i10] || 0) + (elevation?.[i01] || 0) + (elevation?.[i11] || 0)) / 4;
+                const submerged = avgHeight <= waterLevel + 0.025;
+                if (m <= 0.02 && !submerged) continue;
                 const x0 = x * tileSize;
                 const x1 = (x + 1) * tileSize;
                 const z0 = z * tileSize;
@@ -1791,14 +1837,14 @@ export default class Editor3DCore {
         if (kind === 'rock') {
             const mesh = new THREE.Mesh(
                 new THREE.DodecahedronGeometry(scale * 0.4),
-                new THREE.MeshPhongMaterial({ color: 0x77746d, flatShading: true })
+                new THREE.MeshLambertMaterial({ color: 0x77746d, flatShading: true })
             );
             mesh.userData = { type: 'vegetation', kind: 'rock' };
             return mesh;
         }
         if (kind === 'grass') {
             const group = new THREE.Group();
-            const mat = new THREE.MeshPhongMaterial({ color: 0x3f8a2f, side: THREE.DoubleSide, flatShading: true });
+            const mat = new THREE.MeshLambertMaterial({ color: 0x3f8a2f, side: THREE.DoubleSide, flatShading: true });
             const bladeH = scale * 1.8;
             for (let i = 0; i < 5; i++) {
                 const blade = new THREE.Mesh(new THREE.PlaneGeometry(scale * 0.18, bladeH), mat);
@@ -1816,13 +1862,13 @@ export default class Editor3DCore {
         const trunkH = scale * 1.2;
         const trunk = new THREE.Mesh(
             new THREE.CylinderGeometry(scale * 0.08, scale * 0.1, trunkH, 5),
-            new THREE.MeshPhongMaterial({ color: 0x6B4226, flatShading: true })
+            new THREE.MeshLambertMaterial({ color: 0x6B4226, flatShading: true })
         );
         trunk.position.y = trunkH / 2;
         group.add(trunk);
         const crown = new THREE.Mesh(
             new THREE.SphereGeometry(scale * 0.55, 5, 4),
-            new THREE.MeshPhongMaterial({ color: kind === 'pine' ? 0x1a5a2f : 0x3a8a3f, flatShading: true })
+            new THREE.MeshLambertMaterial({ color: kind === 'pine' ? 0x1a5a2f : 0x3a8a3f, flatShading: true })
         );
         crown.position.y = trunkH + scale * 0.25;
         crown.scale.y = kind === 'pine' ? 1.8 : 0.9;
@@ -1836,11 +1882,10 @@ export default class Editor3DCore {
         const group = new THREE.Group();
         group.name = `waterfalls_restored_${Date.now().toString(36)}`;
         group.userData = { type: 'waterfalls', _isWater: true, instances };
-        const mat = new THREE.MeshPhongMaterial({
+        const mat = new THREE.MeshLambertMaterial({
             color: 0x9ddcff,
             transparent: true,
             opacity: 0.72,
-            shininess: 80,
             flatShading: true,
             side: THREE.DoubleSide,
         });
@@ -2132,6 +2177,12 @@ export default class Editor3DCore {
                 });
             }
         }
+        // Ensure at least one light exists for the runtime. When no gizmos were
+        // created (e.g. default __ambient__/__sun__ are skipped in _rebuildScene),
+        // fall back to the level data's original light definitions.
+        if (data.lights.length === 0 && Array.isArray(this._levelData?.lights) && this._levelData.lights.length > 0) {
+            data.lights = [...this._levelData.lights];
+        }
 
         // Serialize terrain meshes + water + foliage (stored separately from meshGroup)
         if (this._terrainMeshes && this._terrainMeshes.length > 0) {
@@ -2146,12 +2197,16 @@ export default class Editor3DCore {
                         genWidth: ud.genWidth,
                         genDepth: ud.genDepth,
                         heightScale: ud.heightScale,
+                        cellSize: ud.cellSize,
                         biome: ud.biome,
+                        biomePalette: ud.biomePalette,
                         terrainStyle: ud.terrainStyle,
                         sculptedPositions: ud.sculptedPositions,
                         sculptedNormals: ud.sculptedNormals,
                         sculptedColors: ud.sculptedColors,
                         waterLevel: ud.waterLevel,
+                        waterColorHex: ud.waterColorHex,
+                        waterOpacity: ud.waterOpacity,
                         waterMask: ud.waterMask,
                         riverPaths: ud.riverPaths,
                         waterfallInstances: ud.waterfallInstances,
@@ -2173,9 +2228,12 @@ export default class Editor3DCore {
                     id: m.name,
                     position: [m.position.x, m.position.y, m.position.z],
                     waterLevel: m.userData.waterLevel ?? m.userData.waterLevelY ?? null,
+                    waterColorHex: m.userData.waterColorHex ?? null,
+                    waterOpacity: m.userData.waterOpacity ?? null,
                     waterMask: m.userData.waterMask ?? null,
                     genWidth: m.userData.genWidth ?? null,
                     genDepth: m.userData.genDepth ?? null,
+                    cellSize: m.userData.cellSize ?? null,
                 });
             }
         }
@@ -2340,13 +2398,17 @@ export default class Editor3DCore {
                         elevationGrid: ud.elevationGrid,
                         genWidth: ud.genWidth,
                         genDepth: ud.genDepth,
+                        cellSize: ud.cellSize,
                         heightScale: ud.heightScale,
                         biome: ud.biome,
+                        biomePalette: ud.biomePalette,
                         terrainStyle: ud.terrainStyle,
                         sculptedPositions: ud.sculptedPositions,
                         sculptedNormals: ud.sculptedNormals,
                         sculptedColors: ud.sculptedColors,
                         waterLevel: ud.waterLevel,
+                        waterColorHex: ud.waterColorHex,
+                        waterOpacity: ud.waterOpacity,
                         waterMask: ud.waterMask,
                         riverPaths: ud.riverPaths,
                         waterfallInstances: ud.waterfallInstances,
@@ -2619,10 +2681,11 @@ export default class Editor3DCore {
     }
 
     _placeBlock(pos, stateOrBlock) {
-        this._pushUndo();
         if (!this._levelData) {
             this._levelData = { geometry: [], entities: [], lights: [], materials: [] };
         }
+        this._syncProceduralTerrainToLevelData();
+        this._pushUndo();
         if (!this._levelData.geometry) this._levelData.geometry = [];
         
         let w = 1, h = 1, d = 1;
@@ -2672,6 +2735,7 @@ export default class Editor3DCore {
         }
         
         this._levelData.geometry.push(newBlock);
+        this._preserveLiveTerrainOnNextRebuild = true;
         this._rebuildScene(this._levelData);
         this._markDirty();
         

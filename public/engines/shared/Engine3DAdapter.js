@@ -257,6 +257,28 @@ export default class Engine3DAdapter extends Engine3DBase {
         const paletteManager = this._getPaletteManager();
 
         for (const def of lights) {
+            // Prevent duplicate default lights if they are already in the scene.
+            if (def.id === '__ambient__') {
+                const existing = this.scene.getObjectByName('__ambient__') || 
+                                 this.scene.getObjectByName('__ambLight') || 
+                                 this.scene.getObjectByName('__fpsAmbientLight') ||
+                                 this.scene.getObjectByName('_rg3d_ambient');
+                if (existing) {
+                    console.log('[Engine3DAdapter] Ambient light already exists, skipping default ambient population.');
+                    continue;
+                }
+            }
+            if (def.id === '__sun__') {
+                const existing = this.scene.getObjectByName('__sun__') || 
+                                 this.scene.getObjectByName('__sunLight') || 
+                                 this.scene.getObjectByName('__fpsSunLight') ||
+                                 this.scene.getObjectByName('_rg3d_sun');
+                if (existing) {
+                    console.log('[Engine3DAdapter] Sun light already exists, skipping default sun population.');
+                    continue;
+                }
+            }
+
             let light = null;
 
             const color = _resolveColor(def, paletteManager);
@@ -296,7 +318,9 @@ export default class Engine3DAdapter extends Engine3DBase {
             if (def.id) light.name = def.id;
 
             this.scene.add(light);
-            if (def.id) this._levelObjects.set(def.id, light);
+            // Track all level lights so they are cleaned up on unload
+            const trackId = def.id || `__levelLight_${Math.random().toString(36).substr(2, 9)}`;
+            this._levelObjects.set(trackId, light);
         }
     }
 

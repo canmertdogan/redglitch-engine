@@ -19,5 +19,12 @@
         "desc": "Talk to your first NPC.",
         "icon": "💬",
         "trigger": "TALK_NPC"
+    },
+    {
+        "id": "adventurer",
+        "title": "Adventurer",
+        "desc": "Complete your first quest.",
+        "icon": "📜",
+        "trigger": "QUEST_COMPLETE_quest_intro_01"
     }
 ]

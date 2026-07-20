@@ -148,6 +148,12 @@
         </div>
 
         <div class="toolbar-group" style="margin-left: auto;">
+            <select id="parent-kai-model-select" class="ai-model-select" title="AI Model / Backend" onchange="window.KAI.setModel(this.value)">
+                <option value="native">NATIVE // QWEN3B</option>
+                <option value="local">WEBGPU // LOCAL</option>
+                <option value="cerebras">CEREBRAS // CLOUD</option>
+                <option value="opencode-zen">OPENCODE // ZEN</option>
+            </select>
             <button id="parent-kai-mode-toggle" class="tool-btn ai-toggle-btn off" title="Toggle AI Assistant" onclick="window.KAI.toggleMode()">
                 <i class="fas fa-brain"></i> <span>AI: OFF</span>
             </button>
@@ -562,6 +568,7 @@
         </div>
     </div>
 
+    <script src="theme.js?v=1"></script>
     <script src="js/Studio.js"></script>
 
     <!-- Auto-Maximize Logic -->
@@ -602,9 +609,37 @@
         // Kai Bridge to parent
         window.KAI = {
             toggleMode: () => {
+                // Killswitch: while the AI is actively generating, a click aborts
+                // just the in-flight response instead of tearing down the whole session.
+                const btn = document.getElementById('parent-kai-mode-toggle');
+                if (btn && btn.classList.contains('thinking')) {
+                    if (window.irab && window.irab.abort) window.irab.abort();
+                    return;
+                }
                 const iframe = document.getElementById('kai-ai-panel');
                 if (iframe && iframe.contentWindow && iframe.contentWindow.toggleKaiMode) {
                     iframe.contentWindow.toggleKaiMode();
+                }
+            },
+            setModel: (provider) => {
+                let settings = {};
+                try { settings = JSON.parse(localStorage.getItem('kai_settings') || '{}'); } catch (_) {}
+                settings.provider = provider;
+                localStorage.setItem('kai_settings', JSON.stringify(settings));
+
+                // Push into the live settings controller (if the Kai panel is already loaded)
+                // so the switch takes effect immediately without a page reload.
+                const iframe = document.getElementById('kai-ai-panel');
+                const AISettings = iframe && iframe.contentWindow && iframe.contentWindow.AISettings;
+                if (AISettings) {
+                    AISettings.settings.provider = provider;
+                    AISettings.saveSettings();
+                }
+                const AIChatUI = iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI;
+                if (AIChatUI) AIChatUI.updateChatMeta();
+                if (window.KAI.showBalloon) {
+                    const labels = { native: 'Native Cortex', local: 'WebGPU (local)', cerebras: 'Cerebras Cloud', 'opencode-zen': 'OpenCode Zen' };
+                    window.KAI.showBalloon(`Model switched to ${labels[provider] || provider}.`);
                 }
             },
             showBalloon: (text) => {
@@ -688,7 +723,91 @@
 
     <!-- IRAB Native Cortex Bridges -->
     <script src="ai/bridge.js?v=8"></script>
-    
+
+    <script>
+        // AI Killswitch: reflect the real bridge/backend state on the toolbar button
+        // (off / connecting / online / thinking / offline) instead of a static ON/OFF label,
+        // and let it double as an abort button while a response is being generated.
+        (function setupAIKillswitch() {
+            const btn = document.getElementById('parent-kai-mode-toggle');
+            if (!btn) return;
+            const icon = btn.querySelector('i');
+            const label = btn.querySelector('span');
+
+            const STATES = {
+                off:        { icon: 'fas fa-brain',                label: 'AI: OFF',      title: 'AI Assistant is disabled. Click to enable.' },
+                connecting: { icon: 'fas fa-circle-notch fa-spin',  label: 'AI: LINKING',  title: 'Connecting to the local AI backend...' },
+                online:     { icon: 'fas fa-brain',                 label: 'AI: ON',       title: 'AI Assistant is active. Click to disable.' },
+                thinking:   { icon: 'fas fa-stop',                  label: 'STOP',         title: 'AI is generating a response. Click to abort it.' },
+                offline:    { icon: 'fas fa-plug-circle-xmark',     label: 'AI: NO LINK',  title: 'AI is enabled but the local backend is unreachable. Click to disable.' }
+            };
+
+            const modelSelect = document.getElementById('parent-kai-model-select');
+
+            function setState(state) {
+                const cfg = STATES[state] || STATES.off;
+                btn.classList.remove('off', 'connecting', 'online', 'thinking', 'offline');
+                btn.classList.add(state);
+                if (icon) icon.className = cfg.icon;
+                if (label) label.textContent = cfg.label;
+                btn.title = cfg.title;
+                // Can't swap the backend mid-generation.
+                if (modelSelect) modelSelect.disabled = (state === 'thinking');
+            }
+
+            // Reflect whatever provider is already saved, without waiting for the Kai panel to load.
+            if (modelSelect) {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('kai_settings') || '{}');
+                    if (saved.provider) modelSelect.value = saved.provider;
+                } catch (_) {}
+            }
+
+            function attachBridgeHooks(irab) {
+                if (!irab || irab.__killswitchHooked) return;
+                irab.__killswitchHooked = true;
+                const prevStateChange = irab.onStateChange;
+                irab.onStateChange = (state) => {
+                    if (prevStateChange) prevStateChange(state);
+                    const s = String(state || '').toUpperCase();
+                    if (s === 'ONLINE' || s === 'IDLE') setState('online');
+                    else if (s === 'CONNECTING') setState('connecting');
+                    else if (s === 'OFFLINE') setState('offline');
+                    else if (s === 'THINKING') setState('thinking');
+                };
+            }
+
+            // Wrap the bridge lifecycle so the button always reflects reality,
+            // regardless of whether it was toggled from here or from the Kai panel itself.
+            const rawEnsure = window.ensureIrabBridge;
+            window.ensureIrabBridge = function (...args) {
+                const hadBridge = !!window.irab;
+                if (!hadBridge) setState('connecting');
+                const result = rawEnsure ? rawEnsure.apply(this, args) : undefined;
+                attachBridgeHooks(window.irab);
+                // Reusing an already-connected bridge won't re-fire onopen/onStateChange,
+                // so reflect its real current state immediately instead of showing a
+                // "connecting" spinner that would otherwise never resolve.
+                if (hadBridge && window.irab) setState(window.irab.isConnected ? 'online' : 'connecting');
+                return result;
+            };
+
+            const rawDestroy = window.destroyIrabBridge;
+            window.destroyIrabBridge = function (...args) {
+                if (rawDestroy) rawDestroy.apply(this, args);
+                setState('off');
+            };
+
+            // Pick up an already-running bridge (AI mode was on from a previous session)
+            if (window.irab) {
+                attachBridgeHooks(window.irab);
+                setState(window.irab.isConnected ? 'online' : 'connecting');
+            } else {
+                setState(localStorage.getItem('kai_ai_enabled') === 'true' ? 'connecting' : 'off');
+            }
+        })();
+    </script>
+
     <script type="module">
         // Initialize AI Micro for ghost-text and Command Bus (ToolRegistry)
         import { RedGlitchAI } from './ai/redglitch-ai.js?v=7';

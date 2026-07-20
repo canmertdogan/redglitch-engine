@@ -105,16 +105,40 @@ export default class PlatformerMode extends ModeInterface {
         skybox.setGradient('#1a3a6a', '#ffffff');
 
         // ── Default Lighting ──────────────────────────────────────────────
+        // Use named lights so Engine3DAdapter's skybox sync can find and
+        // update them by name (__sunLight, __ambLight, __softFillLight).
         const amb = new THREE.AmbientLight(0xffffff, 0.45);
+        amb.name = '__ambLight';
         scene.add(amb);
+
         const fill = new THREE.HemisphereLight(0xddefff, 0x4a3828, 0.65);
         fill.name = '__softFillLight';
         scene.add(fill);
+
         const sun = new THREE.DirectionalLight(0xfff4dc, 1.25);
+        sun.name = '__sunLight';
         sun.position.set(30, 60, 30);
         sun.castShadow = true;
-        sun.shadow?.mapSize?.set?.(1024, 1024);
+        // Proper shadow frustum to cover the playable area
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.left   = -80;
+        sun.shadow.camera.right  =  80;
+        sun.shadow.camera.top    =  80;
+        sun.shadow.camera.bottom = -80;
+        sun.shadow.camera.near   =  1;
+        sun.shadow.camera.far    = 200;
+        sun.shadow.bias          = -0.0004;
+        sun.shadow.normalBias    =  0.02;
+        sun.shadow.radius        =  2;
+        sun.target.position.set(0, 0, 0);
         scene.add(sun);
+        scene.add(sun.target);
+
+        // ── Gravity: zero out cannon-es world gravity ─────────────────────
+        // PlatformerPhysics3D manually accumulates Y-velocity each fixed step
+        // (gravity = -20 m/s²). Leaving cannon-es world gravity at -9.82
+        // causes double-gravity → body slams into ground → micro-hop loop.
+        physics.setGravity(0, 0, 0);
 
         // ── Input ─────────────────────────────────────────────────────────
         await input.init?.();
@@ -143,6 +167,7 @@ export default class PlatformerMode extends ModeInterface {
             input,
             audio,
             camera3d,
+            terrainRuntime: this.terrainRuntime,
         });
         await this.charController.init();
 
@@ -173,6 +198,7 @@ export default class PlatformerMode extends ModeInterface {
             assets,
             palette,
             charController: this.charController,
+            terrainRuntime: this.terrainRuntime,
             audio,
         });
         await this.playerChar.init();
@@ -248,14 +274,29 @@ export default class PlatformerMode extends ModeInterface {
     // ── Level lifecycle ───────────────────────────────────────────────────────
 
     async onLevelLoaded(level) {
-        const playableLevel = this.terrainRuntime?.load(level) ?? normalizeTerrainLevel(level);
+        const playableLevel = this.terrainRuntime ? (await this.terrainRuntime.load(level)) : normalizeTerrainLevel(level);
 
         // Build runtime level data with geometry + lights
         const runtimeLevel = this._buildRuntimeLevelData(playableLevel);
 
+        // Populate visual platform meshes into the scene since they are loaded
+        // from the 'platforms' format instead of the 'geometry' format.
+        if (this.game && typeof this.game._populateGeometry === 'function') {
+            await this.game._populateGeometry(runtimeLevel.geometry);
+        }
+
         // Rebuild collision world from geometry
         this._rebuildCollisionWorld(runtimeLevel);
         this._appendTerrainCollisionMeshes();
+
+        // Re-assert zero cannon-es world gravity for the platformer.
+        // Game3DCore.onLevelLoaded() calls physics.setGravity() from the level's
+        // physics config which defaults to [0, -9.82, 0] (Engine3DAdapter DEFAULT_PHYSICS).
+        // PlatformerPhysics3D manually applies -20 m/s², so the cannon-es world
+        // gravity MUST be zero or the character gets double-gravity and hops.
+        if (this.game?.physics) {
+            this.game.physics.setGravity(0, 0, 0);
+        }
 
         // Read platformer-specific fields
         this._deathY = playableLevel.deathY ?? -20;
@@ -326,6 +367,16 @@ export default class PlatformerMode extends ModeInterface {
         this.charController?.setCollisionMeshes?.([]);
         this.thirdPersonCam?.setCollisionMeshes?.([]);
         this.playerChar?.setCollisionMeshes?.([]);
+
+        // Dispose synthetic invisible collision meshes created for platforms-format levels
+        if (this._syntheticCollisionMeshes) {
+            for (const m of this._syntheticCollisionMeshes) {
+                this.game?.scene?.remove(m);
+                m.geometry?.dispose();
+                m.material?.dispose();
+            }
+            this._syntheticCollisionMeshes = [];
+        }
 
         this.vehicles?.dispose();
         this.terrainRuntime?.dispose();
@@ -485,7 +536,7 @@ export default class PlatformerMode extends ModeInterface {
     _setPlayerPosition(x, y, z) {
         this.charController?.teleport?.(x, y, z);
         if (this.playerChar?.mesh) {
-            this.playerChar.mesh.position.set(x, y, z);
+            this.playerChar.mesh.position.set(0, 0, 0);
         }
     }
 
@@ -536,7 +587,19 @@ export default class PlatformerMode extends ModeInterface {
         }
         runtimeLevel.lights = normalizedLights;
         if (!Array.isArray(runtimeLevel.geometry) || runtimeLevel.geometry.length === 0) {
-            const platforms = Array.isArray(runtimeLevel.platforms) ? runtimeLevel.platforms : [];
+            let platforms = Array.isArray(runtimeLevel.platforms) ? runtimeLevel.platforms : [];
+            const hasTerrain = !!(runtimeLevel.terrain || runtimeLevel.terrainMeshes?.length || runtimeLevel.trimesh);
+            if (hasTerrain) {
+                platforms = platforms.filter(p => {
+                    const px = p.pos?.x ?? p.x ?? 0;
+                    const py = p.pos?.y ?? p.y ?? 0;
+                    const pz = p.pos?.z ?? p.z ?? 0;
+                    const sx = p.scale?.x ?? p.w ?? p.width ?? 1;
+                    const sz = p.scale?.z ?? p.d ?? p.depth ?? 1;
+                    const isDefaultFloor = (px === 0 && py === -0.5 && pz === 0 && sx === 20 && sz === 20);
+                    return !isDefaultFloor;
+                });
+            }
             runtimeLevel.geometry = platforms.map((p, idx) => this._platformToGeometry(p, idx));
         }
         return runtimeLevel;
@@ -594,32 +657,64 @@ export default class PlatformerMode extends ModeInterface {
         }
         this._worldPhysicsBodies = [];
         const meshes = [];
+
         const geometryDefs = Array.isArray(runtimeLevel?.geometry) ? runtimeLevel.geometry : [];
         for (const def of geometryDefs) {
+            // Find the visible scene mesh that was created by _populateGeometry
             const mesh = def?.id ? game.getLevelObject(def.id) : null;
             if (!mesh || !mesh.isMesh) continue;
+
             meshes.push(mesh);
+
             if (!game.physics?.world || typeof game.physics.createBody !== 'function') continue;
-            const w = Math.max(0.1, Number(def.width ?? 1));
+
+            const w = Math.max(0.1, Number(def.width  ?? 1));
             const h = Math.max(0.1, Number(def.height ?? 1));
-            const d = Math.max(0.1, Number(def.depth ?? 1));
-            const body = game.physics.createBody({
-                type:  BodyType.STATIC,
-                shape: ShapeType.BOX,
-                size:  { x: w * 0.5, y: h * 0.5, z: d * 0.5 },
+            const d = Math.max(0.1, Number(def.depth  ?? 1));
+
+            // Use pixel-accurate TRIMESH collision shapes for slopes, stairs, and other non-box primitives
+            const platformType = String(def.type || '').toLowerCase();
+            const isCustomShape = ['slope', 'wedge', 'stairs', 'arch', 'cone', 'cylinder', 'pillar', 'sphere'].includes(platformType);
+
+            const bodyConfig = {
+                type:        BodyType.STATIC,
                 position: {
                     x: Number(def.position?.[0] ?? mesh.position.x),
                     y: Number(def.position?.[1] ?? mesh.position.y),
                     z: Number(def.position?.[2] ?? mesh.position.z),
                 },
                 friction:    Number.isFinite(def._friction) ? def._friction : 0.7,
-                restitution: Number.isFinite(def._restitution) ? def._restitution : 0.05,
-            });
-            if (body?.body && Array.isArray(def.rotation) && def.rotation.length === 4) {
-                body.body.quaternion.set(
-                    Number(def.rotation[0] ?? 0), Number(def.rotation[1] ?? 0),
-                    Number(def.rotation[2] ?? 0), Number(def.rotation[3] ?? 1),
-                );
+                restitution: Number.isFinite(def._restitution) ? def._restitution : 0,  // 0 = no bounce
+            };
+
+            if (isCustomShape) {
+                bodyConfig.shape = ShapeType.TRIMESH;
+                bodyConfig.geometry = mesh.geometry;
+            } else {
+                bodyConfig.shape = ShapeType.BOX;
+                bodyConfig.size = { x: w * 0.5, y: h * 0.5, z: d * 0.5 };
+            }
+
+            const body = game.physics.createBody(bodyConfig);
+
+            if (body?.body) {
+                if (isCustomShape) {
+                    body.body.collisionResponse = false;
+                    body.body.collisionFilterGroup = 0;
+                    body.body.collisionFilterMask = 0;
+                }
+                // Set rotation on the CANNON.js body
+                if (Array.isArray(def.rotation) && def.rotation.length === 4) {
+                    body.body.quaternion.set(
+                        Number(def.rotation[0] ?? 0), Number(def.rotation[1] ?? 0),
+                        Number(def.rotation[2] ?? 0), Number(def.rotation[3] ?? 1),
+                    );
+                } else {
+                    body.body.quaternion.set(
+                        mesh.quaternion.x, mesh.quaternion.y,
+                        mesh.quaternion.z, mesh.quaternion.w
+                    );
+                }
                 body.body.aabbNeedsUpdate = true;
             }
             this._worldPhysicsBodies.push(body);
@@ -704,6 +799,14 @@ export default class PlatformerMode extends ModeInterface {
         this.checkpoints?.destroy?.();
         this.enemies?.destroy?.();
         this.vfx?.destroy?.();
+
+        // Clean up mode-specific lights
+        const names = ['__sunLight', '__ambLight', '__softFillLight', '__sunLightTarget'];
+        for (const name of names) {
+            const obj = this.game?.scene?.getObjectByName(name);
+            if (obj) this.game.scene.remove(obj);
+        }
+
         super.dispose();
     }
 }

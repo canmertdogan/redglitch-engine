@@ -75,11 +75,13 @@ export default class TopDownMode extends ModeInterface {
 
         // ── Default lighting ──────────────────────────────────────────────
         const amb = new THREE.AmbientLight(0xffffff, 0.45);
+        amb.name = '__ambLight';
         scene.add(amb);
         const fill = new THREE.HemisphereLight(0xcfe7ff, 0x4a3828, 0.65);
         fill.name = '__softFillLight';
         scene.add(fill);
         const sun = new THREE.DirectionalLight(0xfff4dc, 1.25);
+        sun.name = '__sunLight';
         sun.position.set(30, 60, 30);
         sun.castShadow = true;
         sun.shadow?.mapSize?.set?.(1024, 1024);
@@ -376,6 +378,14 @@ export default class TopDownMode extends ModeInterface {
 
     dispose() {
         this.onLevelUnloaded();
+
+        // Clean up mode-specific lights
+        const names = ['__sunLight', '__ambLight', '__softFillLight', '__sunLightTarget'];
+        for (const name of names) {
+            const obj = this.game?.scene?.getObjectByName(name);
+            if (obj) this.game.scene.remove(obj);
+        }
+
         super.dispose();
     }
 

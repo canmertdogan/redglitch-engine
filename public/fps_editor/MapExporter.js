@@ -317,9 +317,7 @@ const MapExporter = (() => {
             alert('[MapExporter] localStorage quota exceeded — map too large for playtest.');
             return;
         }
-        // Determine path to fps engine relative to editor location
-        const base   = window.location.pathname.replace(/\/[^/]*$/, '/');
-        const target = `${base}engines/fps-3d/index.html?playtest=1`;
+        const target = '/engines/unified-3d/index.html?engine=fps-3d&playtest=true';
         const win    = window.open(target, 'fps3d_preview');
         if (!win) {
             alert('Popup blocked. Allow popups for this page and try again, or navigate to:\n' + target);

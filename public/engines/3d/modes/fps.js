@@ -37,28 +37,54 @@ export default {
     systems: [
         {
             key: 'fpsCamera',
-            loader: () => import('../systems/FPSCamera.js'),
-            initArgs: (engine) => [engine.camera3d, engine.input, engine.container],
+            loader: () => import('../systems/FPSCamera.js?v=hopfix1'),
+            initArgs: (engine) => [engine.camera3d, engine.container, {
+                bobEnabled: false,
+                fovSprint: 6,
+            }],
         },
         {
             key: 'fpsController',
-            loader: () => import('../systems/FPSController.js'),
-            initArgs: (engine) => [engine, engine.physics, engine.input],
+            loader: () => import('../systems/FPSController.js?v=hopfix1'),
+            initArgs: (engine) => [{
+                physics: engine.physics,
+                fpsCamera: engine.fpsCamera,
+                input: engine.input,
+                audio: engine.audio,
+            }, {
+                bunnyHop: false,
+            }],
         },
         {
             key: 'worldGeometry',
             loader: () => import('../systems/WorldGeometry.js'),
-            initArgs: (engine) => [engine.scene, engine.physics, engine.palette],
+            initArgs: (engine) => [{ scene: engine.scene, physics: engine.physics, assets: engine.assets, fpsController: engine.fpsController }],
         },
         {
             key: 'weaponSystem',
             loader: () => import('../systems/WeaponSystem.js'),
-            initArgs: (engine) => [engine],
+            initArgs: (engine) => [{
+                scene: engine.scene,
+                camera: engine.renderer3d?.camera ?? engine.camera3d?.camera,
+                raycast: engine.raycast,
+                fpsCamera: engine.fpsCamera,
+                fpsController: engine.fpsController,
+                assets: engine.assets,
+                audio: engine.audio,
+            }],
         },
         {
             key: 'enemyAI',
             loader: () => import('../systems/EnemyAI.js'),
-            initArgs: (engine) => [engine],
+            initArgs: (engine) => [{
+                scene: engine.scene,
+                physics: engine.physics,
+                assets: engine.assets,
+                palette: engine.palette,
+                raycast: engine.raycast,
+                weaponSystem: engine.weaponSystem,
+                difficulty: engine._options?.difficulty ?? 'normal',
+            }],
         },
         {
             key: 'hud',
@@ -68,12 +94,20 @@ export default {
         {
             key: 'decals',
             loader: () => import('../systems/DecalSystem.js'),
-            initArgs: (engine) => [engine.scene],
+            initArgs: (engine) => [{
+                scene: engine.scene,
+                raycast: engine.raycast,
+                palette: engine.palette,
+            }],
         },
         {
             key: 'vfx',
-            loader: () => import('../systems/VFX_FPS.js'),
-            initArgs: (engine) => [engine.scene, engine.palette],
+            loader: () => import('../systems/VFX_FPS.js?v=fps-soft-shadows1'),
+            initArgs: (engine) => [{
+                scene: engine.scene,
+                renderer3d: engine.renderer3d,
+                palette: engine.palette,
+            }],
         },
     ],
 
@@ -90,6 +124,46 @@ export default {
         if (engine.hud) {
             engine.hud.bindEngine(engine);
         }
+        if (engine.enemyAI && engine.fpsController) {
+            engine.enemyAI.setPlayerRef(engine.fpsController);
+        }
+        if (engine.vfx) {
+            engine.vfx.configureDirectionalLight({
+                color: 0xffe0ad,
+                intensity: 0.95,
+                position: [46, 76, 34],
+                castShadow: true,
+                mapSize: 2048,
+                shadowCamSize: 130,
+                shadowFar: 320,
+                shadowRadius: 3.2,
+                shadowBias: -0.00004,
+                shadowNormalBias: 0.075,
+                ambientColor: 0xb7c2bd,
+                ambientIntensity: 0.42,
+                skyColor: 0xb7d2dc,
+                groundColor: 0x6b745b,
+                hemisphereIntensity: 0.48,
+            });
+        }
+        engine.renderer3d?.rebuildPostProcessing?.([
+            {
+                type: 'color_grading',
+                brightness: 1.04,
+                contrast: 1.02,
+                saturation: 1.06,
+            },
+            {
+                type: 'fps_atmosphere',
+                vignette: 0.07,
+                grain: 0.012,
+                scanline: 0.012,
+                chromatic: 0.00045,
+                tint: '#8fd7e8',
+                tintStrength: 0.006,
+                lift: 0.07,
+            },
+        ]);
     },
 
     /**
@@ -97,8 +171,8 @@ export default {
      * Returns array of system keys in tick order.
      */
     updateOrder: [
-        'fpsCamera',
         'fpsController',
+        'fpsCamera',
         'weaponSystem',
         'enemyAI',
         'decals',

@@ -60,6 +60,30 @@
         }
     };
 
+    window.launchBetaProject = async function() {
+        const projectName = 'Default Project';
+        try {
+            const res = await fetch('/api/projects/switch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: projectName })
+            });
+
+            if (!res.ok) {
+                throw new Error(`Project switch failed: ${res.status}`);
+            }
+
+            window.location.href = 'tools.html';
+        } catch (error) {
+            console.error('[Launcher] Failed to open beta project:', error);
+            if (window.showNotification) {
+                window.showNotification('Could not open Default Project. Open My Projects from the dashboard.', 'error');
+            } else {
+                alert('Could not open Default Project. Open My Projects from the dashboard.');
+            }
+        }
+    };
+
     // Auto-login and initialization
     window.addEventListener('load', () => {
         const input = document.getElementById('username-input');

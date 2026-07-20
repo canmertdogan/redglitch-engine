@@ -34,7 +34,7 @@ import * as THREE from '/lib/three/three.module.js';
 // Muzzle flash
 const MF_DURATION    = 0.04;   // seconds (≈2-3 frames at 60fps)
 const MF_LIGHT_RANGE = 4.0;    // metres
-const MF_LIGHT_INT   = 2.5;
+const MF_LIGHT_INT   = 1.15;
 const MF_SIZE        = 0.18;   // diamond half-size in world units
 const MF_COLOR       = 0xffcc44;
 
@@ -44,8 +44,8 @@ const TRACER_COLOR    = 0xffee88;
 
 // Explosion
 const EXP_DURATION     = 0.65;  // total effect seconds
-const EXP_LIGHT_INT    = 6.0;
-const EXP_LIGHT_RANGE  = 12.0;
+const EXP_LIGHT_INT    = 3.2;
+const EXP_LIGHT_RANGE  = 9.0;
 const EXP_CUBE_COUNT   = 18;
 const EXP_CUBE_SPEED   = 8.0;   // m/s outward
 const EXP_RING_SEGS    = 8;     // segments on shockwave ring (octagon = low-poly)
@@ -60,10 +60,10 @@ const VOX_DRAG          = 2.5;
 const VOX_DEBRIS_LIFE   = 0.9;  // seconds
 
 // Shadow map defaults
-const SHADOW_MAP_SIZE = 1024;
-const SHADOW_CAM_SIZE = 40;     // world-units the shadow camera covers
+const SHADOW_MAP_SIZE = 2048;
+const SHADOW_CAM_SIZE = 140;    // generated terrains are much wider than room maps
 const SHADOW_NEAR     = 0.5;
-const SHADOW_FAR      = 120;
+const SHADOW_FAR      = 260;
 
 // ── VFX_FPS ───────────────────────────────────────────────────────────────────
 
@@ -292,36 +292,39 @@ export default class VFX_FPS {
      * @param {number}  [opts.mapSize=1024]
      */
     configureDirectionalLight(opts = {}) {
-        if (this._sun) {
-            this._scene.remove(this._sun);
-            this._scene.remove(this._sun.target);
-        }
-        if (this._ambient) {
-            this._scene.remove(this._ambient);
-        }
+        this._removeManagedLightSet();
 
         const intensity = opts.intensity ?? 1.2;
         const color     = opts.color     ?? 0xffeedd;
         const pos       = opts.position  ?? [30, 60, 30];
         const doShadow  = opts.castShadow !== false;
         const mapSize   = opts.mapSize   ?? SHADOW_MAP_SIZE;
+        const camSize   = opts.shadowCamSize ?? SHADOW_CAM_SIZE;
+        const shadowFar = opts.shadowFar ?? SHADOW_FAR;
+        const shadowNear = opts.shadowNear ?? SHADOW_NEAR;
 
         const sun = new THREE.DirectionalLight(color, intensity);
+        sun.name = '__sunLight';
         sun.position.set(...pos);
+        sun.target.position.set(0, 0, 0);
+        sun.target.name = '__sunLightTarget';
 
         if (doShadow) {
             sun.castShadow             = true;
             sun.shadow.mapSize.width   = mapSize;
             sun.shadow.mapSize.height  = mapSize;
-            sun.shadow.camera.near     = SHADOW_NEAR;
-            sun.shadow.camera.far      = SHADOW_FAR;
-            sun.shadow.camera.left     = -SHADOW_CAM_SIZE;
-            sun.shadow.camera.right    =  SHADOW_CAM_SIZE;
-            sun.shadow.camera.top      =  SHADOW_CAM_SIZE;
-            sun.shadow.camera.bottom   = -SHADOW_CAM_SIZE;
-            // Flat-shading bias: slight positive to reduce acne on low-poly surfaces
-            sun.shadow.bias            = 0.001;
-            sun.shadow.normalBias      = 0.04;
+            sun.shadow.camera.near     = shadowNear;
+            sun.shadow.camera.far      = shadowFar;
+            sun.shadow.camera.left     = -camSize;
+            sun.shadow.camera.right    =  camSize;
+            sun.shadow.camera.top      =  camSize;
+            sun.shadow.camera.bottom   = -camSize;
+            sun.shadow.radius          = opts.shadowRadius ?? 2.0;
+            // Low-poly terrain needs enough normal bias to avoid faceted acne
+            // without disconnecting tree shadows from the ground.
+            sun.shadow.bias            = opts.shadowBias ?? -0.00015;
+            sun.shadow.normalBias      = opts.shadowNormalBias ?? 0.055;
+            sun.shadow.camera.updateProjectionMatrix();
         }
 
         this._scene.add(sun);
@@ -329,19 +332,58 @@ export default class VFX_FPS {
         this._sun = sun;
 
         // Add matching ambient light for unlit areas
-        const ambColor = opts.ambientColor ?? 0x1a1208;
-        const ambInt   = opts.ambientIntensity ?? 0.8;
+        const ambColor = opts.ambientColor ?? 0x9fc7df;
+        const ambInt   = opts.ambientIntensity ?? 0.32;
         this._ambient = new THREE.AmbientLight(ambColor, ambInt);
+        this._ambient.name = '__ambLight';
         this._scene.add(this._ambient);
+
+        let hemi = this._scene.getObjectByName('__softFillLight');
+        if (hemi) this._scene.remove(hemi);
+        hemi = new THREE.HemisphereLight(
+            opts.skyColor ?? 0xcceeff,
+            opts.groundColor ?? 0x4f5f42,
+            opts.hemisphereIntensity ?? 0.34,
+        );
+        hemi.name = '__softFillLight';
+        this._scene.add(hemi);
 
         // Ensure renderer accepts shadows
         if (this._renderer?.webgl) {
             this._renderer.webgl.shadowMap.enabled = true;
-            this._renderer.webgl.shadowMap.type    = THREE.PCFShadowMap;
+            this._renderer.webgl.shadowMap.type    = opts.softShadows === false
+                ? THREE.PCFShadowMap
+                : THREE.PCFSoftShadowMap;
         }
 
         console.log('[VFX_FPS] Lighting configured', { intensity, pos, doShadow, ambient: ambInt });
         return sun;
+    }
+
+    _removeManagedLightSet() {
+        const names = [
+            '__fpsSunLight',
+            '__fpsSunTarget',
+            '__sunLightTarget',
+            '__fpsAmbientLight',
+            '__fpsDayHemisphere',
+            '__sunLight',
+            '__sun__',
+            '_rg3d_sun',
+            '_rg3d_ambient',
+            '__ambLight',
+            '__ambient__',
+            '__softFillLight',
+        ];
+        for (const name of names) {
+            const obj = this._scene.getObjectByName(name);
+            if (obj) this._scene.remove(obj);
+        }
+        if (this._sun?.target?.parent) this._scene.remove(this._sun.target);
+        if (this._sun?.parent) this._scene.remove(this._sun);
+        if (this._ambient?.parent) this._scene.remove(this._ambient);
+        this._sun = null;
+        this._ambient = null;
     }
 
     // ── Per-frame update ──────────────────────────────────────────────────────
@@ -471,16 +513,12 @@ export default class VFX_FPS {
         for (const fx of this._effects) this._destroyEffect(fx);
         this._effects = [];
 
+        // Clean up lights
+        this._removeManagedLightSet();
+
         // Shared geometry + materials
         this._mfGeo?.dispose();
         this._mfMat?.dispose();
         this._tracerMat?.dispose();
-
-        // Sun light
-        if (this._sun) {
-            this._scene.remove(this._sun);
-            this._scene.remove(this._sun.target);
-            this._sun = null;
-        }
     }
 }

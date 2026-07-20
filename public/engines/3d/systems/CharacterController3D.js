@@ -119,12 +119,13 @@ export default class CharacterController3D {
      * @param {boolean}[opts.dash=true]     Enable dash
      * @param {boolean}[opts.groundPound=true] Enable ground pound
      */
-    constructor({ physics, platformerPhys, input = null, audio = null, camera3d = null }, opts = {}) {
+    constructor({ physics, platformerPhys, input = null, audio = null, camera3d = null, terrainRuntime = null }, opts = {}) {
         this._physics        = physics;
         this._platPhys       = platformerPhys;
         this._input          = input;
         this._audio          = audio;
         this._camera3d       = camera3d;
+        this._terrainRuntime = terrainRuntime;
 
         // Config
         this._runSpeed       = opts.runSpeed   ?? SPEED_RUN;
@@ -186,17 +187,24 @@ export default class CharacterController3D {
         this._mesh = new THREE.Mesh(geo, mat);
         this._mesh.name = 'playerProxy';
 
-        // Create cannon-es dynamic sphere body
+        // Create cannon-es DYNAMIC sphere body.
+        // DYNAMIC is required so the physics world naturally handles static
+        // collisions (walls, obstacles, slopes) and prevents the player from
+        // walking through geometry.
         this._pb = this._physics.createBody({
-            shape:        ShapeType.SPHERE,
-            type:         BodyType.DYNAMIC,
-            mass:         70,
-            radius:       CAPSULE_RADIUS,
-            position:     [0, 2, 0],
+            shape:         ShapeType.SPHERE,
+            type:          BodyType.DYNAMIC,
+            mass:          70,
+            radius:        CAPSULE_RADIUS,
+            position:      [0, 2, 0],
             fixedRotation: true,
             linearDamping: 0,
+            restitution:   0,
+            friction:      0.01,
         });
         this._body = this._pb.body;
+        this._body.allowSleep = false;
+        this._body.wakeUp?.();
 
         // Give body to PlatformerPhysics3D
         this._platPhys.setBody(this._body);
@@ -222,10 +230,27 @@ export default class CharacterController3D {
     fixedUpdate(dt) {
         if (!this._body) return;
 
-        // ── Ground detection ────────────────────────────────────────────────
-        this._detectGround();
+        // ── Compute current XZ velocity ──────────────────────────────────────
+        if (!this._isDashing) {
+            this._body.velocity.x = this._velocity.x;
+            this._body.velocity.z = this._velocity.z;
+        }
+        if (this._isDashing) {
+            this._body.velocity.x = this._dashDir.x * DASH_SPEED;
+            this._body.velocity.z = this._dashDir.z * DASH_SPEED;
+        }
+        if (this._isGroundPounding) {
+            this._body.velocity.x = 0;
+            this._body.velocity.z = 0;
+            this._body.velocity.y = -GROUND_POUND_SPEED;
+        }
 
-        // ── Wall detection ──────────────────────────────────────────────────
+        // ── Ground & wall detection ───────────────────────────────────────────
+        // _detectGround() snaps body.y to the floor surface when grounded
+        // (sets body.position.y = hitPoint.y + CAPSULE_RADIUS, velocity.y = 0).
+        this._detectGround();
+        this._platPhys.setGrounded(this._isGrounded);
+
         if (this._wallJumpEnabled && !this._isGrounded) {
             this._detectWalls();
         } else {
@@ -234,33 +259,11 @@ export default class CharacterController3D {
 
         // ── Slope slide ─────────────────────────────────────────────────────
         if (this._isGrounded && this._slopeAngle > MAX_SLOPE_DEG) {
-            // Project gravity down the slope
             const slideDir = new THREE.Vector3(
-                this._groundNormal.x,
-                0,
-                this._groundNormal.z
+                this._groundNormal.x, 0, this._groundNormal.z
             ).normalize();
             this._body.velocity.x += slideDir.x * SLOPE_SLIDE_FORCE * dt;
             this._body.velocity.z += slideDir.z * SLOPE_SLIDE_FORCE * dt;
-        }
-
-        // ── Apply XZ velocity ────────────────────────────────────────────────
-        if (!this._isDashing) {
-            this._body.velocity.x = this._velocity.x;
-            this._body.velocity.z = this._velocity.z;
-        }
-
-        // ── Dash override ────────────────────────────────────────────────────
-        if (this._isDashing) {
-            this._body.velocity.x = this._dashDir.x * DASH_SPEED;
-            this._body.velocity.z = this._dashDir.z * DASH_SPEED;
-        }
-
-        // ── Ground-pound override ────────────────────────────────────────────
-        if (this._isGroundPounding) {
-            this._body.velocity.x = 0;
-            this._body.velocity.z = 0;
-            this._body.velocity.y = -GROUND_POUND_SPEED;
         }
 
         // ── Sync proxy mesh ─────────────────────────────────────────────────
@@ -335,9 +338,6 @@ export default class CharacterController3D {
         if (!this._isDashing && !this._isGroundPounding) {
             this._applyMovement(dt, inputState);
         }
-
-        // Update PlatformerPhysics3D grounded state
-        this._platPhys.setGrounded(this._isGrounded);
 
         // Update move state enum
         this._updateMoveState();
@@ -499,21 +499,62 @@ export default class CharacterController3D {
         this._groundRay.far = GROUND_RAY_LEN;
 
         const wasGrounded = this._isGrounded;
+        let groundY = -99999;
+        const groundNormal = new THREE.Vector3(0, 1, 0);
+        let hasGround = false;
 
-        if (this._collisionMeshes.length > 0) {
-            const hits = this._groundRay.intersectObjects(this._collisionMeshes, false);
-            this._isGrounded = hits.length > 0 && this._body.velocity.y <= 0.1;
+        // 1. Raycast against platforms/meshes (filtering out the terrain meshes to avoid precision bugs)
+        const platformMeshes = this._collisionMeshes.filter(m => !m.name || !m.name.includes('terrain'));
 
+        if (platformMeshes.length > 0) {
+            const hits = this._groundRay.intersectObjects(platformMeshes, true);
             if (hits.length > 0) {
-                const n = hits[0].face?.normal ?? new THREE.Vector3(0, 1, 0);
-                this._groundNormal.copy(n);
-                this._slopeAngle = THREE.MathUtils.radToDeg(
-                    Math.acos(Math.min(1, n.dot(new THREE.Vector3(0, 1, 0))))
-                );
+                const hit = hits[0];
+                // Only count hits below the character's vertical midpoint
+                if (hit.point.y <= origin.y + 0.1) {
+                    groundY = hit.point.y;
+                    groundNormal.copy(hit.face?.normal ?? new THREE.Vector3(0, 1, 0));
+                    hasGround = true;
+                }
             }
-        } else {
-            // Fallback: grounded if moving downward and body near y≈0
-            this._isGrounded = this._body.velocity.y <= 0.15 && this._body.position.y <= CAPSULE_RADIUS + 0.2;
+        }
+
+        // 2. Query mathematically precise terrain height if available
+        if (this._terrainRuntime) {
+            const terrainY = this._terrainRuntime.sampleHeight(origin.x, origin.z);
+            // If the terrain is higher than the platform hit (or if we didn't hit any platform),
+            // and the player is within vertical range of it.
+            if (terrainY > groundY) {
+                groundY = terrainY;
+                groundNormal.set(0, 1, 0);
+                hasGround = true;
+            }
+        }
+
+        // 3. Fallback to default CAPSULE_RADIUS floor level if no terrain or platforms exist yet
+        if (!hasGround && this._collisionMeshes.length === 0) {
+            groundY = 0;
+            groundNormal.set(0, 1, 0);
+            hasGround = true;
+        }
+
+        // 4. Ground detection check
+        const dist = origin.y - groundY;
+        const inRange = hasGround && dist <= GROUND_RAY_LEN && dist >= -0.25;
+
+        this._isGrounded = inRange && this._body.velocity.y <= 1.5;
+
+        if (this._isGrounded) {
+            this._groundNormal.copy(groundNormal);
+            this._slopeAngle = THREE.MathUtils.radToDeg(
+                Math.acos(Math.min(1, groundNormal.dot(new THREE.Vector3(0, 1, 0))))
+            );
+
+            // Ground snap: lock body.y slightly above the floor surface (5mm bias).
+            // This prevents CANNON.js from detecting penetration and triggering
+            // its contact solver (which pushes the body up, causing the hop loop).
+            this._body.position.y = groundY + CAPSULE_RADIUS + 0.005;
+            this._body.velocity.y = 0;
         }
 
         if (!wasGrounded && this._isGrounded) {

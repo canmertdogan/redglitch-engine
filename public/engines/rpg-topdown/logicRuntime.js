@@ -222,7 +222,7 @@ window.LogicRuntime = class LogicRuntime {
         
         // Trigger achievement system if exists
         if (this.game.achievementSystem) {
-            this.game.achievementSystem.checkQuestStart(questId);
+            this.game.achievementSystem.unlock('QUEST_START_' + questId);
         }
     }
 
@@ -233,7 +233,7 @@ window.LogicRuntime = class LogicRuntime {
             console.log(`[LogicRuntime] Completed quest: ${questId}`);
             
             if (this.game.achievementSystem) {
-                this.game.achievementSystem.checkQuestComplete(questId);
+                this.game.achievementSystem.unlock('QUEST_COMPLETE_' + questId);
             }
         }
     }

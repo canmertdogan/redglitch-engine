@@ -46,7 +46,7 @@ export default class TerrainRuntime3D {
         const normalized = normalizeTerrainLevel(levelData);
         if (!normalized?.terrain) return normalized;
 
-        const { default: TerrainSystem3D } = await import('../3d/systems/TerrainSystem3D.js');
+        const { default: TerrainSystem3D } = await import('../3d/systems/TerrainSystem3D.js?v=fps-swim3');
         this.system = new TerrainSystem3D(this.game.scene, this.game.palette, this.game.physics);
         this.system.onLevelLoaded(normalized);
         this._tagCollisionBodies();
@@ -64,6 +64,10 @@ export default class TerrainRuntime3D {
 
     sampleHeight(x, z) {
         return this.system?.sampleHeight?.(x, z) ?? 0;
+    }
+
+    sampleWater(x, z) {
+        return this.system?.sampleWater?.(x, z) ?? { inWater: false, waterY: null, depth: 0 };
     }
 
     getCollisionMeshes() {
@@ -87,7 +91,11 @@ function _normalizeEditorTerrainMeshes(levelData) {
     const mesh = meshes.find(m => m?.type === 'terrain' && (Array.isArray(m.sculptedPositions) || Array.isArray(m.elevationGrid)));
     if (!mesh) return;
 
-    if (Array.isArray(mesh.sculptedPositions) && mesh.sculptedPositions.length >= 9) {
+    const gridW = Math.max(2, Number(mesh.genWidth) || 32);
+    const gridD = Math.max(2, Number(mesh.genDepth) || 32);
+    const hasElevationGrid = Array.isArray(mesh.elevationGrid) && mesh.elevationGrid.length >= gridW * gridD;
+
+    if (!hasElevationGrid && Array.isArray(mesh.sculptedPositions) && mesh.sculptedPositions.length >= 9) {
         levelData.trimesh = {
             ...(levelData.trimesh || {}),
             positions: mesh.sculptedPositions,
@@ -102,19 +110,33 @@ function _normalizeEditorTerrainMeshes(levelData) {
         return;
     }
 
-    const gridW = Math.max(2, Number(mesh.genWidth) || 32);
-    const gridD = Math.max(2, Number(mesh.genDepth) || 32);
+    if (!hasElevationGrid) return;
+
     const heightScale = Number(mesh.heightScale ?? 1) || 1;
-    const elevation = (mesh.elevationGrid || []).map(v => (Number(v) || 0) * heightScale);
+    const cellSize = Math.max(0.25, Number(mesh.cellSize ?? 1) || 1);
+    const elevation = mesh.elevationGrid.slice(0, gridW * gridD).map(v => (Number(v) || 0) * heightScale);
+    const worldW = (gridW - 1) * cellSize;
+    const worldH = (gridD - 1) * cellSize;
+    levelData.bounds = {
+        ...(levelData.bounds || {}),
+        width: Number(levelData.bounds?.width) || worldW,
+        height: Number(levelData.bounds?.height) || worldH,
+    };
+    const biomePalette = Array.isArray(mesh.biomePalette) ? mesh.biomePalette : null;
     levelData.terrain = {
         ...(levelData.terrain || {}),
         mode: 'lowpoly',
         gridW,
         gridD,
-        cellSize: 1,
+        cellSize,
         elevation,
+        faceColors: _computeFaceColorsFromElevation(elevation, gridW, gridD),
+        biomePalette,
         waterLevel: Number.isFinite(mesh.waterLevel) ? mesh.waterLevel * heightScale : undefined,
-        foliage: Array.isArray(mesh.foliageInstances) ? mesh.foliageInstances : [],
+        waterColorHex: mesh.waterColorHex || '#2a6a9a',
+        waterOpacity: Number.isFinite(mesh.waterOpacity) ? mesh.waterOpacity : 0.62,
+        waterMask: Array.isArray(mesh.waterMask) ? mesh.waterMask : null,
+        foliage: Array.isArray(mesh.foliageInstances) ? mesh.foliageInstances.map(_normalizeFoliageInstance) : [],
     };
 }
 
@@ -183,14 +205,18 @@ function _normalizeLegacyTerrain(levelData, worldW, worldH) {
     }
     const gridW = Math.max(2, Math.floor(worldW / cellSize) + 1);
     const gridD = Math.max(2, Math.floor(worldH / cellSize) + 1);
+    const elevation = _buildLegacyElevation(td.heightMap, gridW, gridD, worldW, worldH);
+    const faceColors = Array.isArray(td.faceColors) && td.faceColors.length > 0
+        ? td.faceColors
+        : _computeFaceColorsFromElevation(elevation, gridW, gridD);
     levelData.terrain = {
         ...td,
         mode: 'lowpoly',
         cellSize,
         gridW,
         gridD,
-        elevation: _buildLegacyElevation(td.heightMap, gridW, gridD, worldW, worldH),
-        faceColors: Array.isArray(td.faceColors) ? td.faceColors : [],
+        elevation,
+        faceColors,
     };
 }
 
@@ -218,4 +244,61 @@ function _buildLegacyElevation(heightMap, gridW, gridD, worldW, worldH) {
         }
     }
     return elevation;
+}
+
+const FOLIAGE_KIND_MAP = { pine: 'tree', oak: 'tree', palm: 'tree', rock: 'rock', grass: 'grass', bush: 'bush', reed: 'reed', lily: 'lily' };
+
+function _normalizeFoliageInstance(inst) {
+    if (inst.type !== undefined) return inst;
+    const kind = inst.kind || 'grass';
+    const pos = Array.isArray(inst.position) ? inst.position : [0, 0, 0];
+    const type = FOLIAGE_KIND_MAP[kind] || 'bush';
+    return {
+        type,
+        kind,
+        x: pos[0] || 0,
+        y: pos[1] || 0,
+        z: pos[2] || 0,
+        scale: inst.scale ?? 1,
+        rotationY: inst.rotationY || 0,
+        colorHex: _foliageColorHex(kind, type),
+    };
+}
+
+function _foliageColorHex(kind, type) {
+    if (kind === 'rock' || type === 'rock') return '#56504a';
+    if (kind === 'grass' || type === 'grass') return '#4f9a3a';
+    if (kind === 'reed' || type === 'reed') return '#6f8f3a';
+    if (kind === 'lily' || type === 'lily') return '#4f8f3a';
+    if (kind === 'bush' || type === 'bush') return '#2d8a3f';
+    if (kind === 'pine') return '#1a5a2f';
+    if (kind === 'palm') return '#2d8a3f';
+    if (kind === 'oak') return '#3a8a3f';
+    return '#2d8a3f';
+}
+
+function _computeFaceColorsFromElevation(elevation, gridW, gridD) {
+    const maxElev = elevation.reduce((a, b) => Math.max(a, b), 0) || 1;
+    const faceColors = [];
+    for (let iz = 0; iz < gridD - 1; iz++) {
+        for (let ix = 0; ix < gridW - 1; ix++) {
+            const h = (
+                elevation[iz * gridW + ix] +
+                elevation[iz * gridW + (ix + 1)] +
+                elevation[(iz + 1) * gridW + ix] +
+                elevation[(iz + 1) * gridW + (ix + 1)]
+            ) / 4;
+            const norm = h / maxElev;
+            let pal;
+            if (norm < 0.10) pal = 9;
+            else if (norm < 0.22) pal = 4;
+            else if (norm < 0.40) pal = 2;
+            else if (norm < 0.55) pal = 3;
+            else if (norm < 0.70) pal = 5;
+            else if (norm < 0.88) pal = 6;
+            else pal = 1;
+            faceColors.push(pal, pal);
+        }
+    }
+    return faceColors;
 }

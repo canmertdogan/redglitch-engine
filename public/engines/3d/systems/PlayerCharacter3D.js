@@ -91,12 +91,13 @@ export default class PlayerCharacter3D {
      * @param {CharacterController3D}    systems.charController Movement controller
      * @param {AudioSpatial3D}           [systems.audio]        Spatial audio
      */
-    constructor({ scene, assets, palette, charController, audio = null }) {
+    constructor({ scene, assets, palette, charController, audio = null, terrainRuntime = null }) {
         this._scene    = scene;
         this._assets   = assets;
         this._palette  = palette;
         this._cc       = charController;
         this._audio    = audio;
+        this._terrainRuntime = terrainRuntime;
 
         // Mesh & animation
         this._root     = null;    // THREE.Group — parent for model + accessories
@@ -123,6 +124,8 @@ export default class PlayerCharacter3D {
         this._footR        = null;
         this._footLOffset  = 0;      // current Y correction
         this._footROffset  = 0;
+        this._lastFootLY   = undefined; // raw un-IK'd positions
+        this._lastFootRY   = undefined;
         this._ikRayL       = new THREE.Raycaster();
         this._ikRayR       = new THREE.Raycaster();
         this._collisionMeshes = [];  // world geometry for IK raycasts
@@ -262,6 +265,17 @@ export default class PlayerCharacter3D {
     update(dt) {
         if (!this._root || this._isDead) return;
 
+        // Restore visual foot bone positions to their raw un-IK'd states before mixer updates
+        if (this._footL && this._lastFootLY !== undefined) {
+            this._footL.position.y = this._lastFootLY;
+        }
+        if (this._footR && this._lastFootRY !== undefined) {
+            this._footR.position.y = this._lastFootRY;
+        }
+
+        // ── Face direction of movement ───────────────────────────────────────
+        this._faceMovement(dt);
+
         // ── Advance animation mixer ─────────────────────────────────────────
         this._mixer?.update(dt);
 
@@ -344,19 +358,21 @@ export default class PlayerCharacter3D {
         const lerpT = Math.min(1, IK_BLEND * dt);
 
         if (this._footL) {
+            this._lastFootLY = this._footL.position.y;
             const worldL = new THREE.Vector3();
             this._footL.getWorldPosition(worldL);
             const targetL = this._getFootGroundY(worldL);
             this._footLOffset = THREE.MathUtils.lerp(this._footLOffset, targetL, lerpT);
-            this._footL.position.y += Math.min(IK_MAX_OFFSET, this._footLOffset);
+            this._footL.position.y += THREE.MathUtils.clamp(this._footLOffset, -IK_MAX_OFFSET, IK_MAX_OFFSET);
         }
 
         if (this._footR) {
+            this._lastFootRY = this._footR.position.y;
             const worldR = new THREE.Vector3();
             this._footR.getWorldPosition(worldR);
             const targetR = this._getFootGroundY(worldR);
             this._footROffset = THREE.MathUtils.lerp(this._footROffset, targetR, lerpT);
-            this._footR.position.y += Math.min(IK_MAX_OFFSET, this._footROffset);
+            this._footR.position.y += THREE.MathUtils.clamp(this._footROffset, -IK_MAX_OFFSET, IK_MAX_OFFSET);
         }
     }
 
@@ -364,10 +380,32 @@ export default class PlayerCharacter3D {
         const origin = new THREE.Vector3(footWorldPos.x, footWorldPos.y + 0.1, footWorldPos.z);
         this._ikRayL.set(origin, new THREE.Vector3(0, -1, 0));
         this._ikRayL.far = IK_RAY_LEN;
-        const hits = this._ikRayL.intersectObjects(this._collisionMeshes, false);
-        if (hits.length === 0) return 0;
+
+        let groundY = -99999;
+        let hasGround = false;
+
+        // 1. Raycast against platforms/meshes (filtering out the terrain meshes)
+        const platformMeshes = this._collisionMeshes.filter(m => !m.name || !m.name.includes('terrain'));
+        if (platformMeshes.length > 0) {
+            const hits = this._ikRayL.intersectObjects(platformMeshes, false);
+            if (hits.length > 0) {
+                groundY = hits[0].point.y;
+                hasGround = true;
+            }
+        }
+
+        // 2. Query mathematically precise terrain height if available
+        if (this._terrainRuntime) {
+            const terrainY = this._terrainRuntime.sampleHeight(footWorldPos.x, footWorldPos.z);
+            if (terrainY > groundY) {
+                groundY = terrainY;
+                hasGround = true;
+            }
+        }
+
+        if (!hasGround) return 0;
         // Desired offset = ground Y - foot Y
-        return hits[0].point.y - footWorldPos.y;
+        return groundY - footWorldPos.y;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
