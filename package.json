@@ -1,8 +1,8 @@
 {
   "name": "redglitch-engine",
   "productName": "Redglitch Game Studio",
-  "version": "7.0.1",
-  "description": "Redglitch Engine Alpha - Professional Game Development Studio",
+  "version": "7.0.1-beta.1",
+  "description": "Redglitch Game Studio public beta - local-first game creation tools",
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
@@ -22,6 +22,8 @@
     "test:server": "node --test --test-concurrency=1 server/utils/pathGuard.test.js server/utils/automationPolicy.test.js server/routes/__tests__/projects.test.js server/routes/__tests__/levels.test.js server/routes/__tests__/campaigns.test.js server/routes/__tests__/levels3d.test.js server/routes/__tests__/gamedata.test.js",
     "test:engines": "node scripts/validate-3d-campaign.js && node --test public/engines/__tests__/shared/ConditionEvaluator.test.js public/engines/__tests__/shared/CrossEngineSerializer.test.js public/engines/__tests__/shared/Save3D.test.mjs public/engines/__tests__/shared/InventorySystem.test.js public/engines/__tests__/shared/AbilityDefinitions.test.js public/engines/__tests__/shared/ItemDefinitions.test.js public/engines/__tests__/shared/CampaignValidator.test.js public/engines/__tests__/platformer-2d/PlatformerConfig.test.js public/engines/__tests__/platformer-2d/AdvancedGenerator.test.js public/engines/__tests__/platformer-2d/SmartGenerator.test.js public/engines/__tests__/platformer-2d/CombatSystem.test.js public/engines/__tests__/platformer-2d/PhysicsSystem.test.js public/engines/__tests__/rpg-topdown/spatialHash.test.js public/engines/__tests__/rpg-topdown/stateMachine.test.js public/engines/__tests__/rpg-topdown/BrainRuntime.test.js public/engines/__tests__/rpg-topdown/saveSystem.test.js public/engines/__tests__/rpg-topdown/logicRuntime.test.js public/engines/__tests__/unified-3d/ModeInterface.test.mjs public/engines/__tests__/unified-3d/TerrainRuntime3D.test.mjs",
     "test:coverage": "c8 node --test --test-concurrency=1 server/",
+    "beta:check": "npm run test:server && npm run test:engines && npm run studio:build",
+    "beta:build:mac": "npm run beta:check && electron-builder --mac",
     "ai:validate": "npm run test:ai && node scripts/validate-opencode-zen.js",
     "studio:dev": "vite",
     "studio:build": "vite build",
@@ -70,11 +72,17 @@
     },
     "files": [
       "**/*",
-      "!dist/*",
-      "!builds/*",
-      "!scratch/*",
-      "!backend/venv/*",
-      "!backend/models/*"
+      "!dist/**/*",
+      "!builds/**/*",
+      "!scratch/**/*",
+      "!backend/venv/**/*",
+      "!backend/models/**/*",
+      "!portfolio-screenshots/**/*",
+      "!website/**/*",
+      "!.gemini/**/*",
+      "!.antigravitycli/**/*",
+      "!projects/**/*",
+      "projects/Default Project/**/*"
     ],
     "win": {
       "target": "nsis",
@@ -82,6 +90,10 @@
     },
     "mac": {
       "icon": "public/icons/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Development"
     }
   }
 }

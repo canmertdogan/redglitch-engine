@@ -1,26 +1,103 @@
-# Redglitch Game Studio (prototype-unstable-Alpha)
+# Redglitch Game Studio (experimental-alpha)
 
 **An all-in-one, multi-engine game development studio with AI copilot, visual scripting, and a built-in sound system.**
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-7.0.1-ff1e27?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.1.0--experimental--alpha-ff1e27?style=flat-square)
 ![Electron](https://img.shields.io/badge/Electron-40.x-47848F?style=flat-square&logo=electron)
 ![Node](https://img.shields.io/badge/Node-%3E%3D18-339933?style=flat-square&logo=node.js)
 ![Three.js](https://img.shields.io/badge/Three.js-0.183-000000?style=flat-square&logo=three.js)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
 ![License](https://img.shields.io/badge/license-AGPLv3%20%2F%20Commercial-blue?style=flat-square)
 
-**Desktop app · Web server · Mobile export · AI-powered**
+**Desktop app · Local web server · Beta demo project · Optional AI tools**
 
 </div>
 
-Redglitch Game Studio is a game creation environment that ships as a desktop application (Electron) and runs as a web-based server. It provides a complete visual toolset for building 2D, 2.5D isometric, and 3D games—no traditional coding required, though deep code-level editing (Monaco, visual scripting, shader lab) is always available.
+Redglitch Game Studio is currently being prepared as a public beta. The beta target is simple: launch the macOS desktop app, open the bundled `Default Project`, use the studio tools, play a bundled demo, and save/reload without a crash.
+
+The codebase includes many experimental systems. For the public beta, the supported path is narrower than the full feature list below.
+
+## Public Beta Quick Start
+
+```bash
+npm install
+npm start
+```
+
+The desktop app opens the project dashboard. For beta testing, start with **Open Beta Project** or the bundled `Default Project`.
+
+## Beta Verification
+
+Before sharing a beta build, run:
+
+```bash
+npm run beta:check
+```
+
+For a macOS beta package:
+
+```bash
+npm run beta:build:mac
+```
+
+See [docs/PUBLIC_BETA_CHECKLIST.md](docs/PUBLIC_BETA_CHECKLIST.md) for the manual smoke test and release checklist.
+
+## Beta Scope
+
+| Area | Beta status |
+|---|---|
+| Project dashboard and default project loading | Supported path |
+| Core engine tests and 3D campaign validator | Required release gate |
+| Studio UI production build | Required release gate |
+| Local AI tools | Optional / experimental unless model setup is present |
+| DAW, mobile export, advanced campaign authoring | Experimental for beta |
+
+---
+
+## Screenshots
+
+<details>
+<summary><b>Click to expand the studio screenshot gallery</b></summary>
+
+### 🖥️ Dashboard & Project Hub
+![Dashboard](portfolio-screenshots/dashboard.png)
+
+### 🗺️ 3D Map Editor & Terrain Sculpting
+![3D Map Editor](portfolio-screenshots/3d_map_editor.png)
+
+### 🧱 Prefab Builder
+![Prefab Builder](portfolio-screenshots/prefab_builder.png)
+
+### 🤖 NPC & Character Editors
+| NPC Studio | Player Profiles |
+| :---: | :---: |
+| ![NPC Editor](portfolio-screenshots/npc_editor.png) | ![Character Editor](portfolio-screenshots/character_editor.png) |
+
+### ⚡ Logic, Dialogue & AI Editors
+| Visual Scripting / Node Logic | Dialogue Tree Studio |
+| :---: | :---: |
+| ![Node Logic](portfolio-screenshots/node_logic_editor.png) | ![Dialogue Editor](portfolio-screenshots/dialogue_editor.png) |
+
+### 🎨 Art & FX Studios
+| Pixel Art Editor | Particle FX Emitter |
+| :---: | :---: |
+| ![Pixel Art Editor](portfolio-screenshots/pixel_art_editor.png) | ![FX Emitter](portfolio-screenshots/fx_editor.png) |
+
+### 🎵 Audio Workstation & DAW
+![Audio Workstation](portfolio-screenshots/audio_studio.png)
+
+### 🔮 Skill Editor
+![Skill Editor](portfolio-screenshots/skill_editor.png)
+
+</details>
 
 ---
 
 ## Table of Contents
 
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Game Engines](#game-engines)
 - [Editors](#editors)
@@ -371,7 +448,11 @@ redglitch-engine/
 |---------|-------------|
 | `npm start` | Launch Electron desktop app |
 | `npm run server` | Start web server (port 3000) |
-| `npm run dist` | Build Electron distributable |
+| `npm run dist` | Build Electron distributable (current platform) |
+| `npm run dist:mac` | Build macOS DMG |
+| `npm run dist:win` | Build Windows NSIS installer |
+| `npm run dist:linux` | Build Linux AppImage |
+| `npm run release:build` | Build all 3 platforms locally |
 | `npm run build:game` | Build game for all platforms |
 | `npm run build:game:mac` | Build for macOS |
 | `npm run build:game:ios` | Build for iOS |
@@ -438,9 +519,17 @@ DELETE /api/logic/:name
 
 ### Desktop
 ```bash
-npm run dist
-# → dist/Redglitch Game Studio-{version}.dmg (macOS)
-# → dist/Redglitch Game Studio-{version}.exe (Windows)
+npm run dist              # Build for current platform
+npm run dist:mac          # macOS DMG
+npm run dist:win          # Windows NSIS installer
+npm run dist:linux        # Linux AppImage
+```
+
+### Cross-Platform Release
+```bash
+# Tag and push to trigger GitHub Actions CI/CD builds
+git tag v0.1.0-experimental-alpha
+git push origin main --tags
 ```
 
 ### Mobile
