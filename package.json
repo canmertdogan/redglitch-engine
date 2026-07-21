@@ -1,7 +1,7 @@
 {
   "name": "redglitch-engine",
   "productName": "Redglitch Game Studio",
-  "version": "0.1.0-experimental-alpha",
+  "version": "0.1.1-experimental-alpha",
   "description": "Redglitch Game Studio experimental alpha - local-first game creation tools",
   "main": "electron-main.js",
   "scripts": {
