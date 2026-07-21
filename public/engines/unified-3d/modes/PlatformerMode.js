@@ -32,6 +32,7 @@ import CollectibleSystem3D  from '../../3d/systems/CollectibleSystem3D.js';
 import CheckpointSystem3D   from '../../3d/systems/CheckpointSystem3D.js';
 import EnemyPlatformer3D, { EnemyState } from '../../3d/systems/EnemyPlatformer3D.js';
 import VFX_Platformer3D     from '../../3d/systems/VFX_Platformer3D.js';
+import Platformer3DStrategy from '../../3d/systems/Platformer3DStrategy.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ export default class PlatformerMode extends ModeInterface {
         super();
 
         // ── Platformer-specific systems ───────────────────────────────────
+        this.strategy         = null;   // Platformer3DStrategy
         this.thirdPersonCam  = null;   // ThirdPersonCamera
         this.platformerPhys  = null;   // PlatformerPhysics3D
         this.charController  = null;   // CharacterController3D
@@ -150,6 +152,10 @@ export default class PlatformerMode extends ModeInterface {
             { distance: 6, pivotHeight: 1.2, autoRotate: true }
         );
         this.thirdPersonCam.attach();
+
+        // ── Strategy ──────────────────────────────────────────────────────
+        this.strategy = new Platformer3DStrategy(game);
+        this.strategy.initialize();
 
         // ── Platformer physics layer ──────────────────────────────────────
         this.platformerPhys = new PlatformerPhysics3D(physics, {
@@ -393,6 +399,9 @@ export default class PlatformerMode extends ModeInterface {
         if (!game) return;
 
         const inputState = this._buildInputState(game.input);
+
+        // Ability cooldowns
+        this.strategy?.tickAbilities(dt);
 
         // Character controller
         this.charController?.update?.(dt, inputState);

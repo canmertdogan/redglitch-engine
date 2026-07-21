@@ -429,10 +429,6 @@ class CampaignController {
                 this._showTransitionScreen(newEngineType);
                 await this._loadEngineScripts(newEngineType);
 
-                // Phase 24: Toggle 2D Atmosphere based on engine type
-                if (window.atmosphere) {
-                }
-
                 let adapter;
                 switch (newEngineType) {
                     case 'rpg-topdown': adapter = new TopDownAdapter(); break;
@@ -520,14 +516,33 @@ class CampaignController {
     }
 
     async _handleCutsceneNode(node) {
-        if (window.game && window.game.interactiveCutsceneEngine) {
-            await window.game.interactiveCutsceneEngine.play(node.cutsceneId || node.id);
-            this.continueFlow(node);
-        } else {
-            console.warn("[Campaign] CutsceneEngine not found, skipping cutscene node");
-            // Fallback for non-rpg engines or missing engine
+        const cutsceneId = node.cutsceneId || node.id;
+        if (!window.InteractiveCutsceneEngine) {
+            console.warn("[Campaign] InteractiveCutsceneEngine not loaded, skipping cutscene node");
             setTimeout(() => this.continueFlow(node), 1000);
+            return;
         }
+        try {
+            if (!this._cutsceneEngine) {
+                this._cutsceneEngine = new window.InteractiveCutsceneEngine(window.game || {});
+            }
+            const response = await fetch(`/api/cutscenes/${encodeURIComponent(cutsceneId)}`);
+            if (!response.ok) throw new Error(`Cutscene not found: ${cutsceneId}`);
+            const cutsceneData = await response.json();
+
+            await this._cutsceneEngine.loadCutscene(cutsceneData);
+            await new Promise((resolve) => {
+                const onEnded = () => {
+                    this._cutsceneEngine.eventBus.removeEventListener('cutscene:ended', onEnded);
+                    resolve();
+                };
+                this._cutsceneEngine.eventBus.addEventListener('cutscene:ended', onEnded);
+                this._cutsceneEngine.play();
+            });
+        } catch (err) {
+            console.error("[Campaign] Cutscene playback failed:", err);
+        }
+        this.continueFlow(node);
     }
 
     async _handleWaitNode(node) {

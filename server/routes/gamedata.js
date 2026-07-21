@@ -71,7 +71,9 @@ function createDefinitionRoutes(typeName, fileName) {
                         const engineFilePath = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions', fileName);
                         const engineRaw = await fs.readFile(engineFilePath, 'utf8');
                         mergedData = JSON.parse(engineRaw);
-                    } catch(e) {}
+                    } catch(e) {
+                        if (e.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading engine fallback:`, e);
+                    }
                 }
             }
             
@@ -172,10 +174,14 @@ router.get('/templates/:category', async (req, res) => {
                                 data: content,
                                 source: source
                             });
-                        } catch (e) {}
+                        } catch (e) {
+                            if (e.code !== 'ENOENT') console.error(`[Templates:${category}] Error parsing template file:`, e);
+                        }
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                if (e.code !== 'ENOENT') console.error(`[Templates:${category}] Error scanning ${source} dir:`, e);
+            }
         };
 
         // 1. Scan engine

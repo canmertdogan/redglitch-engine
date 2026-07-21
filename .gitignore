@@ -102,11 +102,6 @@ public/ai/docs/corpus.json
 # Project Data (Ignore all except specific demos)
 projects/*/
 !projects/Default Project/
-!projects/Iso Pixel Demo/
-!projects/My Awesome Game/
-!projects/Platformer Demo/
-!projects/FPS3D Demo/
-!projects/Platformer3D Demo/
 
 # Exclude Debug and Temp Files
 *.bak

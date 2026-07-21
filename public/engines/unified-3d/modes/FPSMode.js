@@ -409,6 +409,9 @@ export default class FPSMode extends ModeInterface {
         const game = this.game;
         if (!game) return;
 
+        // Ability cooldowns
+        this.strategy?.tickAbilities(dt);
+
         // Player controller
         this.fpsController?.update(dt);
         this._recoverControllerFromTerrainVoid();

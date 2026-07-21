@@ -6,12 +6,14 @@
 const tools = [
     // SYSTEM
     { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', icon: 'fa-rocket', src: 'dashboard.html', w: 900, h: 700 },
+    { id: 'dashboard_v2', category: 'SYSTEM', title: 'Launcher (New)', icon: 'fa-rocket', src: 'studio-dist/dashboard.html', w: 900, h: 700 },
     { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', icon: 'fa-tachometer-alt', src: 'project_dashboard.html', w: 1000, h: 600 },
     { id: 'menu', category: 'SYSTEM', title: 'Interface (UI)', icon: 'fa-window-restore', src: 'menu_editor.html', w: 1280, h: 760 },
+    { id: 'ui_designer', category: 'SYSTEM', title: 'UI Designer', icon: 'fa-th-large', src: 'studio-dist/ui_designer.html', w: 1000, h: 700 },
     { id: 'loc', category: 'SYSTEM', title: 'Localization', icon: 'fa-globe', src: 'localization_editor.html', w: 900, h: 600 },
     { id: 'input', category: 'SYSTEM', title: 'Input Map', icon: 'fa-gamepad', src: 'input_editor.html', w: 600, h: 600 },
     { id: 'console', category: 'SYSTEM', title: 'System Logs', icon: 'fa-terminal', src: 'console.html', w: 800, h: 500 },
-    
+
     // WORLD ARCHITECT
     { id: 'editor', category: 'WORLD ARCHITECT', title: 'Level Editor', icon: 'fa-map', src: 'editor.html', w: 1000, h: 700 },
     { id: 'studio_3d', category: 'WORLD ARCHITECT', title: '3D Studio', icon: 'fa-cube', src: 'editor3d.html', w: 1400, h: 900 },
@@ -19,30 +21,44 @@ const tools = [
     { id: 'platformer_studio', category: 'WORLD ARCHITECT', title: 'Platformer Studio', icon: 'fa-running', src: 'platformer_editor.html', w: 1200, h: 800 },
     { id: 'background', category: 'WORLD ARCHITECT', title: 'Backgrounds', icon: 'fa-image', src: 'background_editor.html', w: 900, h: 600 },
     { id: 'campaign', category: 'WORLD ARCHITECT', title: 'Campaign Flow', icon: 'fa-flag', src: 'campaign_editor.html', w: 800, h: 500 },
-    
+
     // ENTITIES
     { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', icon: 'fa-cubes', src: 'prefab_editor.html', w: 800, h: 600 },
+    { id: 'prefab_v2', category: 'ENTITIES', title: 'Prefab Builder (New)', icon: 'fa-cubes', src: 'studio-dist/prefab_editor.html', w: 800, h: 600 },
     { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', icon: 'fa-user-friends', src: 'npc_editor.html', w: 700, h: 500 },
+    { id: 'npc_v2', category: 'ENTITIES', title: 'NPC Editor (New)', icon: 'fa-user-friends', src: 'studio-dist/npc_editor.html', w: 700, h: 500 },
     { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', icon: 'fa-skull', src: 'enemy_editor.html', w: 700, h: 500 },
+    { id: 'enemy_v2', category: 'ENTITIES', title: 'Enemy Editor (New)', icon: 'fa-skull', src: 'studio-dist/enemy_editor.html', w: 700, h: 500 },
     { id: 'item', category: 'ENTITIES', title: 'Item Database', icon: 'fa-scroll', src: 'item_editor.html', w: 700, h: 500 },
+    { id: 'item_v2', category: 'ENTITIES', title: 'Item Database (New)', icon: 'fa-scroll', src: 'studio-dist/item_editor.html', w: 700, h: 500 },
     { id: 'character', category: 'ENTITIES', title: 'Player Profiles', icon: 'fa-user-ninja', src: 'character_editor.html', w: 700, h: 500 },
     { id: 'skill', category: 'ENTITIES', title: 'Skills', icon: 'fa-bolt', src: 'skill_editor.html', w: 700, h: 500 },
     { id: 'achievements', category: 'ENTITIES', title: 'Trophies', icon: 'fa-trophy', src: 'achievements_editor.html', w: 700, h: 500 },
-    
+
     // LOGIC & AI
     { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', icon: 'fa-code', src: 'script_editor.html', w: 1000, h: 700 },
+    { id: 'script_v2', category: 'LOGIC & AI', title: 'Script Editor (New)', icon: 'fa-code', src: 'studio-dist/script_editor.html', w: 1000, h: 700 },
     { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', icon: 'fa-project-diagram', src: 'algorithm_editor.html', w: 1000, h: 700 },
+    { id: 'algorithm_v2', category: 'LOGIC & AI', title: 'Node Logic (New)', icon: 'fa-project-diagram', src: 'studio-dist/algorithm_editor.html', w: 1000, h: 700 },
     { id: 'behavior', category: 'LOGIC & AI', title: 'AI Brains', icon: 'fa-brain', src: 'behavior_editor.html', w: 900, h: 600 },
     { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'quest_editor.html', w: 900, h: 600 },
+    { id: 'quests_v2', category: 'LOGIC & AI', title: 'Quest Designer (New)', icon: 'fa-exclamation-circle', src: 'studio-dist/quest_editor.html', w: 900, h: 600 },
     { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', icon: 'fa-comments', src: 'dialogue_editor.html', w: 800, h: 500 },
+    { id: 'dialogue_v2', category: 'LOGIC & AI', title: 'Dialogues (New)', icon: 'fa-comments', src: 'studio-dist/dialogue_editor.html', w: 800, h: 500 },
     { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'interactive_cutscene_editor.html', w: 1200, h: 800 },
-    
+    { id: 'interactive_cutscene_v2', category: 'LOGIC & AI', title: 'Cutscene Studio (New)', icon: 'fa-theater-masks', src: 'studio-dist/interactive_cutscene_editor.html', w: 1200, h: 800 },
+
     // ASSETS
     { id: 'daw', category: 'ASSETS', title: 'Audio Studio', icon: 'fa-music', src: 'daw.html', w: 800, h: 500 },
+    { id: 'daw_v2', category: 'ASSETS', title: 'Audio Studio (New)', icon: 'fa-music', src: 'studio-dist/daw_editor.html', w: 800, h: 500 },
     { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', icon: 'fa-paint-brush', src: 'pixel_editor.html', w: 900, h: 650 },
+    { id: 'pixel_v2', category: 'ASSETS', title: 'Pixel Art (New)', icon: 'fa-paint-brush', src: 'studio-dist/pixel_editor.html', w: 900, h: 650 },
     { id: 'fxpro', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'fx_editor.html', w: 900, h: 650 },
-    { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'studio-dist/shader_editor.html', w: 1200, h: 800 },
-    { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'asset_manager.html', w: 900, h: 600 }
+    { id: 'fxpro_v2', category: 'ASSETS', title: 'FX Master (New)', icon: 'fa-magic', src: 'studio-dist/fx_editor.html', w: 900, h: 650 },
+    { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'shader_lab.html', w: 1200, h: 800 },
+    { id: 'shader_v2', category: 'ASSETS', title: 'Shader Lab (New)', icon: 'fa-eye', src: 'studio-dist/shader_editor.html', w: 1200, h: 800 },
+    { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'asset_manager.html', w: 900, h: 600 },
+    { id: 'assets_v2', category: 'ASSETS', title: 'File Manager (New)', icon: 'fa-folder', src: 'studio-dist/asset_manager.html', w: 900, h: 600 }
 ];
 
 let zIndexCounter = 100;

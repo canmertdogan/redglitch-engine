@@ -50,7 +50,9 @@ class AssetRegistry {
                         const asset = this._mapFileToAsset(file, entry.type, true);
                         assets.set(asset.id, asset);
                     }
-                } catch (e) {}
+                } catch (e) {
+                    if (e.code !== 'ENOENT') console.error('[AssetRegistry] Error scanning core engine dir:', e);
+                }
             }
         }
 
@@ -65,9 +67,11 @@ class AssetRegistry {
                     // Project asset overrides core if ID is the same
                     assets.set(asset.id, asset);
                 }
-            } catch (e) {}
+            } catch (e) {
+                if (e.code !== 'ENOENT') console.error('[AssetRegistry] Error scanning project dir:', e);
+            }
         }
-        
+
         return Array.from(assets.values());
     }
 

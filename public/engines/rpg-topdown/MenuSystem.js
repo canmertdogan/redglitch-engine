@@ -160,11 +160,7 @@ window.MenuSystem = class MenuSystem {
         else if (screenName === 'settings') { this.uiSystem.showScreen('settings_menu'); }
         else { const old = document.getElementById('dynamic-ui-root'); if (old) old.remove(); }
         
-        if (this.atmosphere && this.atmosphere.canvas) {
-            // Hide atmosphere in-game or in-pause (since game is visible)
-            this.atmosphere.canvas.style.display = (screenName === 'game' || screenName === 'pause') ? 'none' : 'block';
-        }
-        if (screenName === 'game') { 
+        if (screenName === 'game') {
             this.screens.game.style.display = 'block'; 
             this.screens.game.classList.remove('hidden'); 
             this.stopMusic(); 

@@ -175,15 +175,15 @@ export default class Unified3DAdapter extends EngineAdapter {
     // ── Ability system (forwarded to mode) ───────────────────────────────────
 
     useAbility(abilityId, dirX, dirY) {
-        return this.game?.mode?.useAbility?.(abilityId, dirX, dirY) ?? false;
+        return this.game?.mode?.strategy?.useAbility?.(abilityId, dirX, dirY) ?? false;
     }
 
     isAbilityReady(abilityId) {
-        return this.game?.mode?.isAbilityReady?.(abilityId) ?? true;
+        return this.game?.mode?.strategy?.isAbilityReady?.(abilityId) ?? true;
     }
 
     getCooldownFraction(abilityId) {
-        return this.game?.mode?.getCooldownFraction?.(abilityId) ?? 0;
+        return this.game?.mode?.strategy?.getCooldownFraction?.(abilityId) ?? 0;
     }
 
     // ── Config setters ───────────────────────────────────────────────────────

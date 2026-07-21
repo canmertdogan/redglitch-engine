@@ -9,7 +9,7 @@ Redglitch Game Studio — a local-first Electron desktop app that bundles six ga
 ## What's actually verified vs. not
 
 - **Verified by automated tests**: AI agent-loop/parser/mode/automation-contract logic, server REST routes (projects, levels, levels3d, campaigns), path guard / automation policy, and per-engine runtime logic (inventory, abilities, items, campaign validation, platformer physics/combat/generators, RPG top-down state/save/logic, unified-3D terrain/mode contracts).
-- **Not covered by any test in this repo**: browser/editor end-to-end workflows (no Playwright or similar), `npm start` / Electron shell behavior (window lifecycle, preload bridge, Cortex process management), the Python AI backend (`backend/tests` requires `pytest`, which is not installed in `backend/venv` by default — treat backend test claims as unverified until you confirm `pytest` is present), Android/iOS builds via Capacitor, and desktop installer packaging (`npm run dist`).
+- **Not covered by any test in this repo**: browser/editor end-to-end workflows (no Playwright or similar), `npm start` / Electron shell behavior (window lifecycle, preload bridge, Cortex process management), Android/iOS builds via Capacitor, and desktop installer packaging (`npm run dist`). The Python AI backend (`backend/tests`, run via `pytest`) is *not* part of any npm script or CI-like check here, but as of 2026-07-21 `pytest` is installed in `backend/venv` and its 3 tests collect/run successfully — don't assume it's absent, but do re-verify before relying on it since the venv isn't reproducibly managed.
 - When asked to validate a change, match the claim to what's actually checked: `npm test` proves logic/contracts, not that an editor works in the browser or that Electron starts cleanly. If a task depends on one of the unverified areas above, say so explicitly rather than inferring success from the Node test suite.
 
 ## Commands
@@ -43,7 +43,7 @@ There is no lint script; there is no top-level `tsconfig` build step (TypeScript
 cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
 python3 main.py    # FastAPI server on :8000, standalone mode
 ```
-In the Electron app this process is spawned/managed automatically ("AI Cortex": auto-start, 20s heartbeat, crash-loop protection capped at 5 restarts/60s). `backend/tests` exists but needs `pytest`/`httpx`/`anyio` added to the venv — it is not part of any npm script and isn't currently run in CI-like checks here.
+In the Electron app this process is spawned/managed automatically ("AI Cortex": auto-start, 20s heartbeat, crash-loop protection capped at 5 restarts/60s). `backend/tests` exists and `pytest` is installed in `backend/venv` (verified 2026-07-21, 3 tests collect/run) — but it is not part of any npm script and isn't currently run in CI-like checks here, so re-confirm before relying on it if the venv has been rebuilt since.
 
 ## Architecture
 

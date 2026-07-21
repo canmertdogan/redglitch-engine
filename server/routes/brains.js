@@ -27,7 +27,9 @@ router.get('/list', async (req, res) => {
         try {
             const files = await fs.readdir(engineDir);
             files.filter(f => f.endsWith('.json')).forEach(f => brainFiles.add(f.replace('.json', '')));
-        } catch (e) {}
+        } catch (e) {
+            if (e.code !== 'ENOENT') console.error('[Brains] Error scanning engine brains:', e);
+        }
 
         // 2. Scan project brains
         if (!isRoot) {
@@ -35,7 +37,9 @@ router.get('/list', async (req, res) => {
                 await ensureDir(projectDir);
                 const files = await fs.readdir(projectDir);
                 files.filter(f => f.endsWith('.json')).forEach(f => brainFiles.add(f.replace('.json', '')));
-            } catch (e) {}
+            } catch (e) {
+                if (e.code !== 'ENOENT') console.error('[Brains] Error scanning project brains:', e);
+            }
         }
         
         res.json(Array.from(brainFiles));

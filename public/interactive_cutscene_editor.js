@@ -162,8 +162,8 @@ class InteractiveCutsceneEditor {
             statusInfo: document.getElementById('status-info')
         };
         
-        // Load example cutscene first
-        await this.loadExampleCutscene();
+        // Load a saved cutscene if one exists, otherwise fall back to the bundled demo
+        await this.loadInitialCutscene();
         
         // Load assets
         await this.loadAssets();
@@ -228,6 +228,19 @@ class InteractiveCutsceneEditor {
         } catch (error) {
             console.warn("Could not load example cutscene, using defaults");
         }
+    }
+
+    async loadInitialCutscene() {
+        try {
+            const cutscenes = await this.listCutscenes();
+            if (cutscenes.length > 0) {
+                await this.loadCutsceneById(cutscenes[0].id);
+                return;
+            }
+        } catch (error) {
+            console.warn("Could not list saved cutscenes, falling back to demo:", error);
+        }
+        await this.loadExampleCutscene();
     }
     
     async loadAssets() {
@@ -543,12 +556,46 @@ class InteractiveCutsceneEditor {
                 }
             }
         });
+
+        this.setupKeyframeDrag();
     }
-    
+
+    setupKeyframeDrag() {
+        this._keyframeDrag = null;
+
+        document.addEventListener('mousemove', (e) => {
+            if (!this._keyframeDrag) return;
+            const { el, trackIndex, keyframeIndex, startX, startTime } = this._keyframeDrag;
+            const deltaTime = (e.clientX - startX) / this.playback.zoom;
+            const duration = this.getActiveDuration();
+            const newTime = Math.max(0, Math.min(duration, startTime + deltaTime));
+            const track = this.getActiveTracks()[trackIndex];
+            const keyframe = track?.keyframes?.[keyframeIndex];
+            if (!keyframe) return;
+            keyframe.time = newTime;
+            el.style.left = `${newTime * this.playback.zoom}px`;
+            el.title = `${el.dataset.type} keyframe at ${newTime.toFixed(1)}s`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!this._keyframeDrag) return;
+            const { trackIndex } = this._keyframeDrag;
+            this._keyframeDrag = null;
+            const track = this.getActiveTracks()[trackIndex];
+            if (track?.keyframes) {
+                track.keyframes.sort((a, b) => a.time - b.time);
+            }
+            this.updateInspector();
+            this.seekTo(this.playback.currentTime);
+            this.updateStatus('KEYFRAME MOVED');
+        });
+    }
+
     initEngine() {
         // Initialize the Interactive Cutscene Engine when available
         if (window.InteractiveCutsceneEngine) {
             this.engine = new InteractiveCutsceneEngine(this);
+            this.engine.previewContainer = document.querySelector('.preview-area');
             console.log("Interactive Cutscene Engine connected to editor");
         } else {
             console.warn("InteractiveCutsceneEngine not found - loading...");
@@ -557,6 +604,7 @@ class InteractiveCutsceneEditor {
             script.src = 'engines/rpg-topdown/InteractiveCutsceneEngine.js';
             script.onload = () => {
                 this.engine = new InteractiveCutsceneEngine(this);
+                this.engine.previewContainer = document.querySelector('.preview-area');
                 console.log("Interactive Cutscene Engine loaded and connected");
             };
             document.head.appendChild(script);
@@ -630,10 +678,22 @@ class InteractiveCutsceneEditor {
             e.stopPropagation();
             this.selectKeyframe(trackIndex, keyframeIndex);
         };
-        
+
+        keyDiv.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            this.selectKeyframe(trackIndex, keyframeIndex);
+            this._keyframeDrag = {
+                el: keyDiv,
+                trackIndex,
+                keyframeIndex,
+                startX: e.clientX,
+                startTime: keyframe.time
+            };
+        });
+
         // Add tooltip
         keyDiv.title = `${trackType} keyframe at ${keyframe.time.toFixed(1)}s`;
-        
+
         lane.appendChild(keyDiv);
     }
     
@@ -1709,16 +1769,13 @@ class InteractiveCutsceneEditor {
         this.updateStatus(`UPDATED CUTSCENE ${path.toUpperCase()}`);
     }
 
-    async listCutsceneFiles() {
-        const response = await fetch('/api/ide/list?dir=dunyalar/definitions/interactive_cutscenes');
+    async listCutscenes() {
+        const response = await fetch('/api/cutscenes/list');
         if (!response.ok) {
-            throw new Error('Could not list cutscene files');
+            throw new Error('Could not list cutscenes');
         }
-        const files = await response.json();
-        return files
-            .filter(file => !file.isDirectory && file.name.endsWith('.json'))
-            .map(file => file.name)
-            .sort((a, b) => a.localeCompare(b));
+        const cutscenes = await response.json();
+        return cutscenes.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
     }
 
     normalizeLoadedCutscene(data, fallbackId = 'cutscene') {
@@ -1759,16 +1816,13 @@ class InteractiveCutsceneEditor {
         });
     }
 
-    async loadCutsceneFile(fileName) {
-        const filePath = `dunyalar/definitions/interactive_cutscenes/${fileName}`;
-        const response = await fetch(`/api/ide/read?file=${encodeURIComponent(filePath)}`);
+    async loadCutsceneById(id) {
+        const response = await fetch(`/api/cutscenes/${encodeURIComponent(id)}`);
         if (!response.ok) {
-            throw new Error(`Could not read ${fileName}`);
+            throw new Error(`Could not read cutscene ${id}`);
         }
-        const content = await response.text();
-        const parsed = JSON.parse(content);
-        const fallbackId = fileName.replace(/\.json$/i, '');
-        this.data = this.normalizeLoadedCutscene(parsed, fallbackId);
+        const parsed = await response.json();
+        this.data = this.normalizeLoadedCutscene(parsed, id);
         this.normalizeCutsceneSchema();
         this.currentBranch = 'main';
         this.playback.currentTime = 0;
@@ -1792,28 +1846,27 @@ class InteractiveCutsceneEditor {
     
     async openCutscene() {
         try {
-            const files = await this.listCutsceneFiles();
-            if (!files.length) {
+            const cutscenes = await this.listCutscenes();
+            if (!cutscenes.length) {
                 this.updateStatus('NO SAVED CUTSCENES FOUND');
                 return;
             }
 
-            const menu = files.map((name, idx) => `${idx + 1}. ${name}`).join('\n');
-            const pick = prompt(`OPEN CUTSCENE:\n${menu}\n\nEnter number or filename:`);
+            const menu = cutscenes.map((c, idx) => `${idx + 1}. ${c.name || c.id} (${c.id})`).join('\n');
+            const pick = prompt(`OPEN CUTSCENE:\n${menu}\n\nEnter number or id:`);
             if (!pick) return;
 
             const trimmed = pick.trim();
             const index = Number.parseInt(trimmed, 10);
-            let fileName = Number.isInteger(index) && index > 0 && index <= files.length
-                ? files[index - 1]
-                : trimmed;
-            if (!fileName.endsWith('.json')) fileName += '.json';
-            if (!files.includes(fileName)) {
-                this.updateStatus(`CUTSCENE NOT FOUND: ${fileName}`);
+            const match = Number.isInteger(index) && index > 0 && index <= cutscenes.length
+                ? cutscenes[index - 1]
+                : cutscenes.find(c => c.id === trimmed);
+            if (!match) {
+                this.updateStatus(`CUTSCENE NOT FOUND: ${trimmed}`);
                 return;
             }
 
-            await this.loadCutsceneFile(fileName);
+            await this.loadCutsceneById(match.id);
         } catch (error) {
             console.error('[InteractiveCutscene] Open failed:', error);
             this.updateStatus('FAILED TO OPEN CUTSCENE');
@@ -1832,17 +1885,14 @@ class InteractiveCutsceneEditor {
 
         this.data.id = fileStem;
         if (!this.data.name) this.data.name = fileStem;
-        const fileName = `${fileStem}.json`;
-        const filePath = `dunyalar/definitions/interactive_cutscenes/${fileName}`;
 
-        const serialized = JSON.stringify(this.data, null, 2);
         let savedToFile = false;
 
         try {
-            const response = await fetch('/api/ide/write', {
+            const response = await fetch(`/api/cutscenes/${encodeURIComponent(fileStem)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file: filePath, content: serialized })
+                body: JSON.stringify(this.data)
             });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -1856,7 +1906,7 @@ class InteractiveCutsceneEditor {
         if (projectState) {
             projectState.set(`cutscenes.${this.data.id}`, this.data);
         }
-        
+
         // Broadcast save event
         if (eventBus) {
             eventBus.emit('cutscene:saved', {
@@ -1865,7 +1915,7 @@ class InteractiveCutsceneEditor {
                 timestamp: Date.now()
             });
         }
-        
+
         if (!savedToFile && window.cutsceneAPI) {
             try {
                 await window.cutsceneAPI.saveCutscene(this.data);
@@ -1875,7 +1925,7 @@ class InteractiveCutsceneEditor {
         }
 
         this.updateStatus(savedToFile
-            ? `SAVED: ${this.data.name} (${fileName})`
+            ? `SAVED: ${this.data.name} (${fileStem}.json)`
             : `SAVED TO LOCAL STATE: ${this.data.name}`);
     }
     
@@ -2554,7 +2604,7 @@ async function loadCutsceneById(cutsceneId) {
             }
         } else {
             try {
-                await editor.loadCutsceneFile(`${editor.sanitizeCutsceneId(cutsceneId)}.json`);
+                await editor.loadCutsceneById(editor.sanitizeCutsceneId(cutsceneId));
             } catch {
                 editor.updateStatus(`CUTSCENE NOT FOUND: ${cutsceneId}`);
             }

@@ -49,7 +49,9 @@ function buildProjectConfig(fields) {
 async function ensureDir(dir) {
     try {
         await fs.mkdir(dir, { recursive: true });
-    } catch (e) {}
+    } catch (e) {
+        if (e.code !== 'EEXIST') console.error(`[Projects] Error creating directory ${dir}:`, e);
+    }
 }
 
 function sanitizeProjectName(name) {

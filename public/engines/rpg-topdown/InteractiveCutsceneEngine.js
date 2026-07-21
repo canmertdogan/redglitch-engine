@@ -355,10 +355,12 @@ class InteractiveCutsceneTimeline {
     
     async init(cutsceneData) {
         if (!this.overlay) {
+            const container = this.engine.previewContainer || document.body;
+            const position = this.engine.previewContainer ? 'absolute' : 'fixed';
             this.overlay = document.createElement('div');
             this.overlay.id = 'cutscene-timeline-overlay';
-            this.overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2000';
-            document.body.appendChild(this.overlay);
+            this.overlay.style.cssText = `position:${position};top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2000`;
+            container.appendChild(this.overlay);
         }
         this.overlay.innerHTML = '';
         this.tracks = [];
@@ -516,7 +518,7 @@ class InteractiveCutsceneDialogue {
                 <div id="cutscene-speaker" style="color:#ff4444;font-weight:bold;margin-bottom:6px"></div>
                 <div id="cutscene-text" style="color:#eee;font-size:16px;line-height:1.5;min-height:48px"></div>
             `;
-            document.body.appendChild(this.dialogueContainer);
+            (this.engine.previewContainer || document.body).appendChild(this.dialogueContainer);
         }
     }
     
@@ -622,10 +624,11 @@ class InteractiveCutsceneChoices {
     }
     
     createChoicesUI() {
+        const position = this.engine.previewContainer ? 'absolute' : 'fixed';
         this.choicesUI = document.createElement('div');
         this.choicesUI.id = 'cutscene-choices';
         this.choicesUI.style.cssText = `
-            position:fixed;top:0;left:0;width:100%;height:100%;
+            position:${position};top:0;left:0;width:100%;height:100%;
             display:none;z-index:3000;
             background:rgba(0,0,0,0.6);
             justify-content:center;align-items:center;
@@ -650,7 +653,7 @@ class InteractiveCutsceneChoices {
                 <div id="cutscene-choices-list"></div>
             </div>
         `;
-        document.body.appendChild(this.choicesUI);
+        (this.engine.previewContainer || document.body).appendChild(this.choicesUI);
     }
     
     showChoices(choiceData) {

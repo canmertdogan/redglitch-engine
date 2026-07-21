@@ -139,11 +139,15 @@ router.get('/assets', async (req, res) => {
                     try {
                         const stat = await fs.stat(fullPath);
                         sizeMb = +(stat.size / 1024 / 1024).toFixed(2);
-                    } catch(e) {}
+                    } catch(e) {
+                        if (e.code !== 'ENOENT') console.error('[Audio] Error stat-ing audio file:', e);
+                    }
                     results.push({ name: entry.name, ext, sizeMb });
                 }
             }
-        } catch(e) {}
+        } catch(e) {
+            if (e.code !== 'ENOENT') console.error('[Audio] Error scanning audio dir:', e);
+        }
         return results;
     }
 
