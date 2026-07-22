@@ -92,7 +92,7 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "n0rthstar",
+      "owner": "canmertdogan",
       "repo": "redglitch-engine",
       "releaseType": "prerelease"
     },
