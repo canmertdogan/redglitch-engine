@@ -281,6 +281,8 @@ class CampaignController {
             case 'dialogue': await this._handleDialogueNode(node); break;
             case 'cutscene': await this._handleCutsceneNode(node); break;
             case 'wait': await this._handleWaitNode(node); break;
+            case 'random': await this._handleRandomNode(node); break;
+            case 'quest': await this._handleQuestNode(node); break;
             default: await this.continueFlow(node); break;
         }
     }
@@ -476,6 +478,36 @@ class CampaignController {
         if (value && node.nextTrue) await this.processNode(node.nextTrue);
         else if (!value && node.nextFalse) await this.processNode(node.nextFalse);
         else await this.continueFlow(node);
+    }
+
+    async _handleRandomNode(node) {
+        const hit = Math.random() * 100 < (node.chance ?? 50);
+        if (hit && node.nextTrue) await this.processNode(node.nextTrue);
+        else if (!hit && node.nextFalse) await this.processNode(node.nextFalse);
+        else await this.continueFlow(node);
+    }
+
+    async _handleQuestNode(node) {
+        try {
+            const questSystem = window.game && window.game.questSystem;
+            if (questSystem && node.questId) {
+                if (node.questAction === 'complete') {
+                    questSystem.complete(node.questId);
+                } else if (node.questAction === 'fail') {
+                    if (questSystem.active && questSystem.active[node.questId]) {
+                        delete questSystem.active[node.questId];
+                        if (Array.isArray(questSystem.failed)) questSystem.failed.push(node.questId);
+                    }
+                } else {
+                    questSystem.accept(node.questId);
+                }
+            } else {
+                console.warn('[Campaign] QuestSystem not available on the active engine, skipping quest node');
+            }
+        } catch (err) {
+            console.error('[Campaign] Quest node failed:', err);
+        }
+        await this.continueFlow(node);
     }
 
     async _handleRewardNode(node) {

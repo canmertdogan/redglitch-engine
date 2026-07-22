@@ -116,6 +116,27 @@ export default class PropLibraryPanel {
         });
 
         return {
+            vehicles: {
+                label: 'Vehicles',
+                items: [
+                    {
+                        id: 'car', name: 'Car', icon: '🚗', entityType: 'vehicle',
+                        properties: {
+                            colorHex: '#3f6fb4',
+                            width: 1.8, height: 0.75, depth: 3.0,
+                            mass: 450, acceleration: 18, maxSpeed: 18, reverseSpeed: 7, turnRate: 2.3, brake: 16,
+                        },
+                    },
+                    {
+                        id: 'truck', name: 'Truck', icon: '🚚', entityType: 'vehicle',
+                        properties: {
+                            colorHex: '#8a7a5a',
+                            width: 2.2, height: 1.1, depth: 4.6,
+                            mass: 900, acceleration: 12, maxSpeed: 14, reverseSpeed: 5, turnRate: 1.6, brake: 12,
+                        },
+                    },
+                ]
+            },
             examples: {
                 label: 'Examples',
                 items: [
@@ -569,7 +590,19 @@ export default class PropLibraryPanel {
     }
 
     placeSelectedAt(position) {
+        const def = this._findProp(this._selectedPropId);
+        if (def?.entityType) return this._placeEntityProp(def, position);
         return this._placeProp(this._selectedPropId, position);
+    }
+
+    // Vehicles (and any future interactable premade asset) are placed as real
+    // gameplay entities via placeEntityAt, not baked into static level geometry
+    // like decorative props - this is what makes them usable (VehicleSystem3D
+    // already drives any entity with type:'vehicle' across every 3D mode).
+    _placeEntityProp(def, position = null) {
+        if (!this.editor?.placeEntityAt) return;
+        const center = position ? position.clone() : new this.editor.THREE.Vector3(0, 0, 0);
+        this.editor.placeEntityAt(center, def.entityType, { ...(def.properties || {}) });
     }
 
     _placeProp(id, position = null) {

@@ -4,6 +4,11 @@
 // Integration system references
 let eventBus, projectState, assetManager;
 
+// Node types with full editor UI but no runtime handler in CampaignController yet.
+// Configuring one of these produces content that has zero effect when the campaign
+// is actually played - flagged in the UI rather than left as a silent gap.
+const UNWIRED_NODE_TYPES = new Set(['battle', 'mini-game', 'hub', 'challenge-mode', 'boss-rush', 'exploration']);
+
 // Initialize integration
 function initializeCampaignIntegration() {
     if (typeof window !== 'undefined') {
@@ -62,6 +67,7 @@ class CampaignEditor {
         this.connections = [];
         this.transform = { x: 0, y: 0, scale: 1 };
         this.selection = null;
+        this.multiSelection = new Set();
         this.dragState = null;
         
         // Campaign metadata
@@ -304,7 +310,8 @@ class CampaignEditor {
     createNodeDOM(node) {
         if (!node.type) node.type = 'unknown'; // Safety fix
         const div = document.createElement('div');
-        div.className = `node ${node.type} ${this.selection === node.id ? 'selected' : ''}`;
+        const isMultiSelected = this.multiSelection.has(node.id);
+        div.className = `node ${node.type} ${(this.selection === node.id || isMultiSelected) ? 'selected' : ''} ${isMultiSelected ? 'multi-selected' : ''}`;
         div.id = node.id;
         div.style.left = `${node.x || 0}px`;
         div.style.top = `${node.y || 0}px`;
@@ -384,9 +391,13 @@ class CampaignEditor {
                 engineBadge = `<span class="engine-badge ${node.engineType}">${engineNames[node.engineType] || 'UNK'}</span>`;
             }
 
+            const unwiredBadge = UNWIRED_NODE_TYPES.has(node.type)
+                ? `<span class="engine-badge" style="background:#3a2a00;color:#ffb300;border:1px solid #ffb300;" title="This node type has no runtime handler yet - it will be skipped when the campaign plays.">&#9888; NOT WIRED</span>`
+                : '';
+
             div.innerHTML = `
                 <div class="node-header" style="color:${color}; border-bottom-color:${color}">
-                    <span><i class="fas fa-${icon}"></i> ${node.type.toUpperCase()}${engineBadge}</span>
+                    <span><i class="fas fa-${icon}"></i> ${node.type.toUpperCase()}${engineBadge}${unwiredBadge}</span>
                 </div>
                 <div class="node-body">
                     ${this.getNodeLabel(node)}
@@ -406,8 +417,16 @@ class CampaignEditor {
 
         div.onmousedown = (e) => {
             if (e.target.classList.contains('port')) return;
-            e.stopPropagation(); 
+            e.stopPropagation();
             if(e.button === 2) { this.showContextMenu(e, node.id); return; }
+            if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                if (this.multiSelection.has(node.id)) this.multiSelection.delete(node.id);
+                else this.multiSelection.add(node.id);
+                this.selection = null;
+                this.renderGraph();
+                this.renderInspector();
+                return;
+            }
             this.startDragNode(e, node.id);
         };
 
@@ -493,9 +512,10 @@ class CampaignEditor {
             if (e.target === this.dom.workspace || e.target.id === 'map-background' || e.target === this.dom.svg) {
                 this.dragState = { type: 'pan', sx: e.clientX, sy: e.clientY, ox: this.transform.x, oy: this.transform.y };
                 this.selection = null;
+                this.multiSelection.clear();
                 this.dom.ctxMenu.style.display = 'none';
                 this.renderInspector();
-                this.updatePositions();
+                this.renderGraph();
             }
         });
 
@@ -521,11 +541,18 @@ class CampaignEditor {
                     
                     if (n.type === 'group' && this.dragState.children) {
                         this.dragState.children.forEach(c => {
-                            c.node.x = c.ox + dx; 
+                            c.node.x = c.ox + dx;
                             c.node.y = c.oy + dy;
                         });
                     }
-                    this.updatePositions(); 
+                    if (this.dragState.multi) {
+                        this.dragState.multi.forEach(m => {
+                            if (m.node.id === n.id) return;
+                            m.node.x = Math.round((m.ox + dx) / 20) * 20;
+                            m.node.y = Math.round((m.oy + dy) / 20) * 20;
+                        });
+                    }
+                    this.updatePositions();
                 }
             }
             else if (this.dragState.type === 'resize') {
@@ -601,7 +628,9 @@ class CampaignEditor {
                 if (e.key === 's') { e.preventDefault(); this.save(); }
             }
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (this.selection) {
+                if (this.multiSelection.size > 1) {
+                    this.deleteNodes(Array.from(this.multiSelection));
+                } else if (this.selection) {
                     this.deleteNode(this.selection);
                 }
             }
@@ -648,21 +677,34 @@ class CampaignEditor {
 
     startDragNode(e, id) {
         if (e.button !== 0) return;
-        this.selection = id;
         const n = this.nodes.find(x => x.id === id);
-        
+
+        // Plain click on a node outside the current multi-selection replaces it;
+        // clicking a node that's already part of the multi-selection preserves it
+        // so the whole group can be dragged together.
+        let multi = null;
+        if (this.multiSelection.size > 1 && this.multiSelection.has(id)) {
+            multi = Array.from(this.multiSelection)
+                .map(mid => this.nodes.find(x => x.id === mid))
+                .filter(Boolean)
+                .map(node => ({ node, ox: node.x, oy: node.y }));
+        } else {
+            this.multiSelection.clear();
+        }
+        this.selection = id;
+
         let children = null;
         if (n.type === 'group') {
-            children = this.nodes.filter(c => 
-                c.id !== id && 
+            children = this.nodes.filter(c =>
+                c.id !== id &&
                 c.x > n.x && c.x < n.x + (n.w||300) &&
                 c.y > n.y && c.y < n.y + (n.h||300)
             ).map(c => ({ node: c, ox: c.x, oy: c.y }));
         }
 
-        this.dragState = { type: 'node', id, sx: e.clientX, sy: e.clientY, ox: n.x, oy: n.y, children };
+        this.dragState = { type: 'node', id, sx: e.clientX, sy: e.clientY, ox: n.x, oy: n.y, children, multi };
         this.renderInspector();
-        this.updatePositions(); 
+        this.updatePositions();
     }
 
     startDragGroupResize(e, id) {
@@ -854,9 +896,14 @@ class CampaignEditor {
     }
 
     deleteNode(id) {
+        if (this.multiSelection.size > 1 && this.multiSelection.has(id)) {
+            this.deleteNodes(Array.from(this.multiSelection));
+            return;
+        }
         if(confirm("Delete this node?")) {
             this.pushHistory();
             this.nodes = this.nodes.filter(n => n.id !== id);
+            this._clearDanglingRefs(new Set([id]));
             this.rebuildConnections();
             this.selection = null;
             this.renderGraph();
@@ -864,13 +911,56 @@ class CampaignEditor {
         }
     }
 
+    deleteNodes(ids) {
+        if (!ids || ids.length === 0) return;
+        if (!confirm(`Delete ${ids.length} selected nodes?`)) return;
+        this.pushHistory();
+        const idSet = new Set(ids);
+        this.nodes = this.nodes.filter(n => !idSet.has(n.id));
+        this._clearDanglingRefs(idSet);
+        this.rebuildConnections();
+        this.selection = null;
+        this.multiSelection.clear();
+        this.renderGraph();
+        this.renderInspector();
+    }
+
+    // Clear next/nextTrue/nextFalse references on remaining nodes that pointed
+    // at any of the just-deleted ids, so saved campaigns never carry dangling ids.
+    _clearDanglingRefs(deletedIds) {
+        this.nodes.forEach(n => {
+            if (deletedIds.has(n.next)) delete n.next;
+            if (deletedIds.has(n.nextTrue)) delete n.nextTrue;
+            if (deletedIds.has(n.nextFalse)) delete n.nextFalse;
+        });
+    }
+
     renderInspector() {
         const ins = this.dom.inspector;
         ins.innerHTML = '';
+
+        if (this.multiSelection.size > 1) {
+            ins.innerHTML = `<div style="text-align:center;color:#ccc;margin-top:40px;">${this.multiSelection.size} NODES SELECTED</div>`;
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-full';
+            delBtn.style.marginTop = '15px';
+            delBtn.innerHTML = '<i class="fas fa-trash"></i> DELETE SELECTED';
+            delBtn.onclick = () => this.deleteNodes(Array.from(this.multiSelection));
+            ins.appendChild(delBtn);
+            return;
+        }
+
         if (!this.selection) { ins.innerHTML = `<div style="text-align:center;color:#555;margin-top:50px;">SELECT NODE</div>`; return; }
 
         const node = this.nodes.find(n => n.id === this.selection);
         if (!node) return;
+
+        if (UNWIRED_NODE_TYPES.has(node.type)) {
+            const warning = document.createElement('div');
+            warning.style.cssText = 'background:#3a2a00;color:#ffb300;border:1px solid #ffb300;padding:8px 10px;margin-bottom:12px;font-size:0.85rem;line-height:1.4;';
+            warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> This node type has no runtime handler yet. Fields below can be configured and saved, but the campaign flow will just skip through this node when played.';
+            ins.appendChild(warning);
+        }
 
         const createInput = (label, key, type='text', options=null) => {
             const wrap = document.createElement('div');
@@ -1357,7 +1447,10 @@ class CampaignEditor {
         }
     }
     async save() {
-        try { 
+        try {
+            await this.validate();
+            const issueCount = (this.validationResults && this.validationResults.errors) ? this.validationResults.errors.length : 0;
+
             // Use new campaigns API
             const campaignData = {
                 metadata: this.campaignMetadata,
@@ -1380,7 +1473,11 @@ class CampaignEditor {
             // Broadcast to integration system
             this.broadcastUpdate('saved');
             
-            this.showToast(`Campaign "${this.campaignName}" saved successfully!`, false, true);
+            if (issueCount > 0) {
+                this.showToast(`Saved "${this.campaignName}" with ${issueCount} validation issue(s) - check flagged nodes`, true, false);
+            } else {
+                this.showToast(`Campaign "${this.campaignName}" saved successfully!`, false, true);
+            }
             
             const btn = document.querySelector('#toolbar .tool-btn[title*="Save"]'); 
             if(btn) { btn.style.color = '#2ecc71'; setTimeout(() => btn.style.color = '', 1000); } 
@@ -1834,8 +1931,12 @@ window.deleteSelectedNode = () => {
 };
 
 window.selectAll = () => {
-    // For now, just show a message - multi-select would require more work
-    window.editor.showToast('Multi-select coming soon!', false, false);
+    const editor = window.editor;
+    editor.multiSelection = new Set(editor.nodes.map(n => n.id));
+    editor.selection = null;
+    editor.renderGraph();
+    editor.renderInspector();
+    editor.showToast(`Selected ${editor.multiSelection.size} node(s)`, false, true);
 };
 
 // View Menu

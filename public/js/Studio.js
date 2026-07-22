@@ -20,7 +20,7 @@ const tools = [
     { id: 'iso_studio', category: 'WORLD ARCHITECT', title: 'IsoPixel Studio', icon: 'fa-cubes', src: 'iso_editor.html', w: 1000, h: 700 },
     { id: 'platformer_studio', category: 'WORLD ARCHITECT', title: 'Platformer Studio', icon: 'fa-running', src: 'platformer_editor.html', w: 1200, h: 800 },
     { id: 'background', category: 'WORLD ARCHITECT', title: 'Backgrounds', icon: 'fa-image', src: 'background_editor.html', w: 900, h: 600 },
-    { id: 'campaign', category: 'WORLD ARCHITECT', title: 'Campaign Flow', icon: 'fa-flag', src: 'campaign_editor.html', w: 800, h: 500 },
+    { id: 'campaign', category: 'WORLD ARCHITECT', title: 'Campaign Flow', icon: 'fa-flag', src: 'campaign_editor.html', w: 1100, h: 750 },
 
     // ENTITIES
     { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', icon: 'fa-cubes', src: 'prefab_editor.html', w: 800, h: 600 },
@@ -195,11 +195,26 @@ async function studioInit() {
         list.innerHTML = '';
         const categories = ['WORLD ARCHITECT', 'ENTITIES', 'LOGIC & AI', 'ASSETS', 'SYSTEM'];
         const grouped = {};
-        
-        tools.forEach(t => {
+
+        // React (studio-dist) builds are surfaced via the "NEW BUILDS" dropdown
+        // above the sidebar instead of cluttering the main category lists.
+        const isReactTool = t => t.src.startsWith('studio-dist/');
+
+        tools.filter(t => !isReactTool(t)).forEach(t => {
             if(!grouped[t.category]) grouped[t.category] = [];
             grouped[t.category].push(t);
         });
+
+        const reactSelect = document.getElementById('react-tools-select');
+        if (reactSelect) {
+            reactSelect.innerHTML = '<option value="">NEW BUILDS ▾</option>';
+            tools.filter(isReactTool).forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.title.toUpperCase();
+                reactSelect.appendChild(opt);
+            });
+        }
         
         categories.forEach(cat => {
             if(grouped[cat]) {
@@ -851,6 +866,14 @@ function toggleConsole() {
     const tool = tools.find(t => t.id === 'console');
     if (tool) openWindow(tool);
 }
+
+window.openReactTool = function(toolId) {
+    if (!toolId) return;
+    const tool = tools.find(t => t.id === toolId);
+    if (tool) openWindow(tool);
+    const select = document.getElementById('react-tools-select');
+    if (select) select.value = '';
+};
 
 function openTool(src) {
     if (!src) return;
