@@ -92,6 +92,15 @@ dist/
 release/
 *.asar
 
+# AI/CLI tool directories (local only)
+.gemini/
+.antigravitycli/
+.claude/
+.opencode/
+
+# Markdown docs (local only)
+*.md
+
 # Project Specific & Temporary
 builds/
 saves/
