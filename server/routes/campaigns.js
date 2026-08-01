@@ -226,3 +226,7 @@ router.get('/campaigns', async (req, res) => {
 });
 
 module.exports = router;
+// Additive export for in-process reuse by headless callers (e.g.
+// projectvertex), which write directly under a known project path instead of
+// going through projectService's stateful "active project" indirection.
+module.exports.normalizeCampaignFileName = normalizeCampaignFileName;

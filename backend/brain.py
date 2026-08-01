@@ -9,13 +9,20 @@ class IrabBrain:
         self.llm = None
         self.loading_progress = 0
         self.status = "DORMANT"
-        self.n_gpu_layers = 32 
-        self.n_threads = 8     
+        self.n_gpu_layers = 0
+        self.n_threads = 8
         self.available_tools = []
-        
+
         # Optimized for 3B Model
         self.max_tokens = 600
-        self.context_window = 32768  # Qwen2.5-Coder-3B's trained context (n_ctx_train); larger values fail llama_context creation
+        # 8GB unified-memory machines run out of headroom fast with GPU
+        # offload + a large context: a 32768-ctx + n_gpu_layers=32
+        # configuration crashed intermittently (KERN_INVALID_ADDRESS,
+        # confirmed via crash report) even after pinning llama-cpp-python to
+        # a version without the ggml_compute_forward_add_non_quantized bug —
+        # symptomatic of Metal reclaiming/paging GPU-mapped memory under
+        # pressure. CPU-only + a smaller context is slower but stable here.
+        self.context_window = 4096
         self.temperature = 0.4 # Higher for more creative reasoning on 3B
         self.top_p = 0.95
         self.is_aborted = False
@@ -68,7 +75,7 @@ class IrabBrain:
         if not self.llm: return
         list(self.llm("GRRR", max_tokens=1))
 
-    def generate_stream(self, prompt, stop=None):
+    def generate_stream(self, prompt, stop=None, grammar=None):
         self.is_aborted = False
         
         # Use custom personality if set, otherwise use default
@@ -168,9 +175,10 @@ IRAB: "GRRR... Opening Platformer Studio!
             stream = self.llm(
                 full_prompt,
                 max_tokens=self.max_tokens,
-                temperature=self.temperature, 
+                temperature=self.temperature,
                 stop=stop,
-                stream=True
+                stream=True,
+                grammar=grammar
             )
             for output in stream:
                 if self.is_aborted:

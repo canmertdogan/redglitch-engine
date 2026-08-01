@@ -584,3 +584,11 @@ router.post('/project/:name/state', async (req, res) => {
 });
 
 module.exports = router;
+// Additive exports for in-process reuse by headless callers (e.g.
+// projectvertex) that need project scaffolding without going through the
+// HTTP API — mirrors the pattern already used in levels3d.js.
+module.exports.buildProjectConfig = buildProjectConfig;
+module.exports.createProject = createProject;
+module.exports.sanitizeProjectName = sanitizeProjectName;
+module.exports.resolveProjectPath = resolveProjectPath;
+module.exports.PROJECTS_ROOT = PROJECTS_ROOT;

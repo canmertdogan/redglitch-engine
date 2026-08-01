@@ -212,11 +212,18 @@ async def load_brain_task():
     # Start watcher/RAG in background
     loop = asyncio.get_event_loop()
     
-    # Initialize watcher with the correct loop
-    if watcher is None:
-        watcher = IrabWatcher(PROJECT_ROOT, manager=manager, loop=loop)
-    
-    loop.run_in_executor(None, watcher.start)
+    # Initialize watcher with the correct loop. Skippable via IRAB_DISABLE_WATCHER
+    # for headless callers (e.g. projectvertex) that don't need codebase RAG
+    # awareness — the watcher's synchronous per-file RAG reindexing runs in a
+    # thread but still contends heavily for CPU/GIL with model generation,
+    # which was observed to turn ~30s generations into 10+ minute hangs right
+    # after a large file-tree copy (e.g. scaffolding a new project).
+    if os.getenv("IRAB_DISABLE_WATCHER") == "1":
+        logger.info("IRAB_DISABLE_WATCHER=1: skipping file watcher/RAG indexing.")
+    else:
+        if watcher is None:
+            watcher = IrabWatcher(PROJECT_ROOT, manager=manager, loop=loop)
+        loop.run_in_executor(None, watcher.start)
     
     model_repo = "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF"
     model_filename = "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
@@ -302,7 +309,8 @@ async def load_brain_task():
         except Exception as e:
             logger.error(f"RAG ingestion failed (non-fatal): {e}")
 
-    asyncio.create_task(initial_rag_scan())
+    if os.getenv("IRAB_DISABLE_WATCHER") != "1":
+        asyncio.create_task(initial_rag_scan())
 @app.get("/api/ai/status")
 async def get_status():
     return {
@@ -317,19 +325,33 @@ async def chat_fallback(data: dict):
         message = data.get("message", "")
         if not message:
             return {"error": "Empty message"}
-        
+
         logger.info(f"Fallback chat request: {message[:50]}...")
-        
+
         # Determine engine context if provided
         context = data.get("context", {})
-        
+
+        # Optional per-call overrides (used by headless callers like projectvertex)
+        if isinstance(data.get("config"), dict):
+            brain.update_config(data["config"])
+
+        grammar = None
+        json_schema = data.get("json_schema")
+        if isinstance(json_schema, dict):
+            try:
+                from llama_cpp.llama_grammar import LlamaGrammar
+                grammar = LlamaGrammar.from_json_schema(json.dumps(json_schema))
+            except Exception as e:
+                logger.error(f"Grammar build failed, falling back to unconstrained: {e}")
+                grammar = None
+
         # Use brain to generate response (non-streaming)
         # We wrap it in a list to get the full response from the generator
         full_response = ""
-        for token in brain.generate_stream(message):
+        for token in brain.generate_stream(message, grammar=grammar):
             if token:
                 full_response += token
-        
+
         return {"response": full_response}
     except Exception as e:
         logger.error(f"Fallback chat error: {e}")
@@ -596,4 +618,4 @@ async def handle_prompt(message, websocket):
         await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info", access_log=False)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("IRAB_PORT", "8000")), log_level="info", access_log=False)

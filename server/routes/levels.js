@@ -366,3 +366,9 @@ router.get('/levels/by-engine/:engineType', async (req, res) => {
 });
 
 module.exports = router;
+// Additive exports for in-process reuse by headless callers (e.g.
+// projectvertex) — mirrors the pattern already used in levels3d.js.
+module.exports.normalizeLevelPayload = normalizeLevelPayload;
+module.exports.inferEngineTypeFromLevelData = inferEngineTypeFromLevelData;
+module.exports.isSafeLevelId = isSafeLevelId;
+module.exports.resolveProjectPath = resolveProjectPath;

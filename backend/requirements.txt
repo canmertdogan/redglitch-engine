@@ -1,7 +1,7 @@
 fastapi>=0.100.0
 uvicorn>=0.22.0
 websockets>=11.0.3
-llama-cpp-python>=0.2.20
+llama-cpp-python==0.3.2  # pinned: 0.3.16 SIGSEGVs on macOS/Apple Silicon in ggml_compute_forward_add_non_quantized on the 2nd real inference call (confirmed via crash report analysis) — 0.3.2 does not reproduce this
 watchdog>=3.0.0
 python-multipart>=0.0.6
 pydantic>=2.0.0
