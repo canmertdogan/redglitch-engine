@@ -73,9 +73,9 @@
         <header class="hero">
             <div class="hero-container">
                 <div class="hero-text">
-                    <div class="eyebrow">Work in progress · v7</div>
+                    <div class="eyebrow">Technical alpha · v7</div>
                     <h1>A small studio for <span class="hl">making pixel-art games.</span></h1>
-                    <p class="hero-sub">RedGlitch is a hobby project that grew into a handful of 2D/3D engines, a pile of editors, and a little local AI helper. Still rough in places — but it runs on your machine, and it's free.</p>
+                    <p class="hero-sub">RedGlitch bundles a handful of 2D/3D engines, a pile of editors, and a local AI helper into one studio. It runs on your machine, and it's free.</p>
                     <div class="hero-cta">
                         <a href="../public/project_dashboard.html" class="btn-primary">Open Studio →</a>
                         <a href="https://github.com/n0rthstar/redglitch" class="btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
@@ -131,8 +131,8 @@
                     <span class="stat-label">Target Platforms</span>
                 </div>
                 <div class="stat reveal">
-                    <span class="stat-num">450+</span>
-                    <span class="stat-label">Automated Tests</span>
+                    <span class="stat-num">452</span>
+                    <span class="stat-label">Passing Node Tests</span>
                 </div>
             </div>
         </section>
@@ -219,7 +219,7 @@
                 <div class="engines-roadmap reveal">
                     <div class="roadmap-header">
                         <span class="eyebrow" style="margin-bottom:0;">In progress</span>
-                        <p>A few more engines are being poked at on and off. No promises on dates.</p>
+                        <p>A few more engines are in the works. Lifetime license holders get them free on release.</p>
                     </div>
                     <div class="roadmap-engines-grid">
                         <div class="roadmap-engine-card">
@@ -491,7 +491,7 @@
                     <div class="ai-text reveal">
                         <span class="eyebrow">Kai — the built-in AI</span>
                         <h2>A small AI helper, <span class="hl">no cloud needed</span></h2>
-                        <p>Kai is a local assistant that runs in your browser with WebGPU/WASM. It's not going to replace a real coding assistant, but it can answer questions about your project and poke at files without sending anything off your machine.</p>
+                        <p>Kai is a local assistant that runs in your browser with WebGPU/WASM. It answers questions about your project and can edit files directly, without sending anything off your machine.</p>
                         <div class="ai-features">
                             <div class="ai-feature">
                                 <div class="ai-feature-icon">⚡</div>
@@ -590,10 +590,10 @@
             <div class="section-container">
                 <div class="vertex-intro">
                     <div class="reveal">
-                        <span class="vertex-badge">Side experiment</span>
+                        <span class="vertex-badge">Side project</span>
                         <h2>An experiment: <span class="hl">prompt to project</span></h2>
-                        <p>ProjectVertex is a separate, smaller side project sitting next to RedGlitch. You type something like <em>"a simple platformer game"</em>, it calls a cloud LLM through a few phases, and it spits out a rough but playable RedGlitch project — a level, some entities, a campaign wrapper.</p>
-                        <p>It's not trying to be a product. It doesn't run the local Kai assistant — it just makes plain API calls to whatever provider you point it at, which happens to make it easy to throw on Vercel if you want to poke at it there.</p>
+                        <p>ProjectVertex is a separate project that sits next to RedGlitch. You type something like <em>"a simple platformer game,"</em> it runs a cloud LLM through a few phases, and it outputs a playable RedGlitch project — a level, entities, a campaign wrapper.</p>
+                        <p>It's stateless by design: no local Cortex dependency, just plain API calls to whatever provider you point it at. That's also what makes it easy to run on Vercel if you want to deploy it there.</p>
                         <div class="hero-cta" style="margin-top:8px;">
                             <a href="#start" class="btn-secondary">Setup instructions ↓</a>
                         </div>
@@ -706,8 +706,8 @@ npm start
             <div class="section-container">
                 <div class="section-header reveal">
                     <span class="eyebrow">Where it runs</span>
-                    <h2>Build once, <span class="hl">try it a few places</span></h2>
-                    <p>One command packages your game for a given target. The same project should run on desktop, web, and mobile without extra work — mobile/desktop packaging is less battle-tested than the core engines, so your mileage may vary.</p>
+                    <h2>Build once, <span class="hl">ship a few places</span></h2>
+                    <p>One command packages your game for a given target. The same project runs on desktop, web, and mobile from a single codebase.</p>
                 </div>
                 <div class="platforms-grid">
                     <div class="platform-card reveal">
@@ -793,6 +793,39 @@ npm start
                                 <div><strong>Touch-friendly controls</strong><p>Visual editors, node graphs, and painting tools are optimized for finger and stylus input.</p></div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STATUS -->
+        <section id="status" class="section section-alt">
+            <div class="section-container">
+                <div class="section-header reveal">
+                    <span class="eyebrow">Where things stand</span>
+                    <h2>What's verified. <span class="hl">What isn't yet.</span></h2>
+                    <p>Straight from the last internal audit — no marketing rounding. RedGlitch is a technical alpha: substantial and tested where it counts, with a clear list of what still needs proving before beta.</p>
+                </div>
+
+                <div class="tools-grid" style="margin-top:0;">
+                    <div class="tool-category reveal" style="grid-column: span 1;">
+                        <h4><span class="tag tag-ok">Verified</span></h4>
+                        <ul>
+                            <li><strong>452 Node tests passing</strong> — AI agent loop, server routes, and engine runtime logic</li>
+                            <li><strong>24 server route modules</strong> exercised by real HTTP route tests, not mocks</li>
+                            <li><strong>Studio build passes</strong> — Vite compiles all 1,800+ modules cleanly</li>
+                            <li><strong>Web export completes</strong> for the bundled demo project</li>
+                            <li><strong>39 checks pass</strong> in the 3D campaign integration validator</li>
+                        </ul>
+                    </div>
+                    <div class="tool-category reveal" style="grid-column: span 1;">
+                        <h4><span class="tag tag-muted">Not yet covered by automated tests</span></h4>
+                        <ul>
+                            <li><strong>Editor workflows in-browser</strong> — no Playwright/E2E suite yet</li>
+                            <li><strong>Electron runtime</strong> — window lifecycle, preload bridge, Cortex process management</li>
+                            <li><strong>Python AI backend</strong> — test files exist, not wired into CI</li>
+                            <li><strong>Mobile & desktop packaging</strong> — Android/iOS/installer builds are scaffolded, not build-verified here</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -904,8 +937,8 @@ redglitch start</code></pre><button class="copy-btn" data-code="redglitch start"
             <div class="section-container">
                 <div class="section-header centered reveal" style="margin-left:auto; margin-right:auto;">
                     <span class="eyebrow">Getting started</span>
-                    <h2>Three steps, <span class="hl">then you're poking around</span></h2>
-                    <p>Nothing clever here — clone it, run it, open a project. It should feel familiar if you've used any other local dev tool.</p>
+                    <h2>Three steps <span class="hl">to a running studio</span></h2>
+                    <p>Clone it, run it, open a project. That's the whole setup.</p>
                 </div>
                 <div class="start-steps">
                     <div class="step reveal">
@@ -979,6 +1012,7 @@ npm run server
                     <div class="footer-col">
                         <h5>Project</h5>
                         <a href="https://github.com/n0rthstar/redglitch" target="_blank" rel="noopener">GitHub</a>
+                        <a href="#status">Project Status</a>
                         <a href="#pricing">License — Free</a>
                     </div>
                 </div>
