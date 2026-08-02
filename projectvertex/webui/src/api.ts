@@ -23,6 +23,7 @@ export interface ServerConfig {
     minGrid: number;
     maxGrid: number;
     maxGrid3d: number;
+    defaultLevels: number;
     availableProviders: string[];
     defaultProvider: string;
     defaultModel: string;
@@ -41,11 +42,28 @@ export interface Concept {
     pitch: string;
     engineType: string;
     engineTypeChosenByLlm: string;
+    difficulty?: 'easy' | 'medium' | 'hard' | string;
+    theme?: string;
+    musicMood?: string;
 }
 
 export interface Project {
     name: string;
     redglitchJson: Record<string, unknown>;
+}
+
+// Per-level brief from the level-plan phase (01.5) — threaded into the
+// world-level and entities phases so every map has its own identity.
+export interface LevelBrief {
+    levelId: string;
+    title: string;
+    theme: string;
+    difficulty: 'easy' | 'medium' | 'hard' | string;
+    focus: string;
+}
+
+export interface LevelPlan {
+    levels: LevelBrief[];
 }
 
 export interface Level {
@@ -66,6 +84,14 @@ export interface Level {
     skybox?: Record<string, unknown>;
     terrain?: { heightMap: number[]; cellSize: number; foliage?: Record<string, unknown>[]; waterLevel?: number; waterColorHex?: string };
     enemies?: Record<string, unknown>[];
+    // Cross-engine fields — present on real assembled levels even though some
+    // engines ignore them. Kept optional so mid-wizard (pre-merge) levels typecheck.
+    exit?: { x: number; y: number };
+    goal?: { x: number; y: number };
+    decorations?: Record<string, unknown>[];
+    collectibles?: { type: string; x: number; y: number }[];
+    entities?: Record<string, unknown>[];
+    music?: string;
 }
 
 export interface EntitiesResult {
@@ -98,16 +124,36 @@ export interface LogicGraph {
 
 export type PreviewEntity = { type: string; x: number; y: number } | { type: string; position: number[] };
 
+export interface CampaignLevel {
+    id: string;
+    data: Level;
+}
+
+export interface QualityIssue {
+    severity: 'error' | 'warning';
+    code: string;
+    message: string;
+}
+
+export interface LevelQualityReport {
+    levelId: string;
+    errors: QualityIssue[];
+    warnings: QualityIssue[];
+}
+
 export interface CampaignBuild {
     project: string;
     levelId: string;
-    level: Level & { entities: PreviewEntity[] };
+    level: Level;
+    levels?: CampaignLevel[];
     campaign: Record<string, unknown>;
     validation: { valid: boolean; errors: string[]; warnings: string[]; hasWarnings: boolean };
+    quality?: LevelQualityReport[];
+    musicConfig?: { menu: string; levels: Record<string, string> } | null;
     entityDefinitions?: {
-        enemies: Record<string, unknown>;
-        npcs: Record<string, unknown>;
-        items: Record<string, unknown>;
+        enemies: unknown[];
+        npcs: unknown[];
+        items: unknown[];
     };
 }
 
@@ -163,8 +209,13 @@ export async function runScaffoldPhase(concept: Concept): Promise<Project> {
     return project;
 }
 
-export async function runWorldLevelPhase(concept: Concept, width: number, height: number, params: PhaseParams): Promise<Level> {
-    const { level } = await post('/api/phases/world-level', { concept, width, height, params, clientKeys: getClientKeys() });
+export async function runLevelPlanPhase(concept: Concept, count: number, params: PhaseParams): Promise<LevelPlan> {
+    const { levelPlan } = await post('/api/phases/level-plan', { concept, count, params, clientKeys: getClientKeys() });
+    return levelPlan;
+}
+
+export async function runWorldLevelPhase(concept: Concept, width: number, height: number, params: PhaseParams, levelBrief?: LevelBrief): Promise<Level> {
+    const { level } = await post('/api/phases/world-level', { concept, width, height, params, levelBrief, clientKeys: getClientKeys() });
     return level;
 }
 
@@ -173,8 +224,8 @@ export async function runEntityDesignPhase(concept: Concept, params: PhaseParams
     return entityDesign;
 }
 
-export async function runEntitiesPhase(concept: Concept, entityDesign: EntityDesignResult, width: number, height: number, params: PhaseParams): Promise<EntitiesResult> {
-    const { entities } = await post('/api/phases/entities', { concept, entityDesign, width, height, params, clientKeys: getClientKeys() });
+export async function runEntitiesPhase(concept: Concept, entityDesign: EntityDesignResult, width: number, height: number, params: PhaseParams, levelBrief?: LevelBrief, level?: Level): Promise<EntitiesResult> {
+    const { entities } = await post('/api/phases/entities', { concept, entityDesign, width, height, params, levelBrief, level, clientKeys: getClientKeys() });
     return entities;
 }
 
@@ -183,15 +234,15 @@ export async function runLogicPhase(concept: Concept, entityDesign: EntityDesign
     return logic;
 }
 
-export function runCampaignPhase(concept: Concept, project: Project, level: Level, entities: EntitiesResult, entityDesign: EntityDesignResult): Promise<CampaignBuild> {
-    return post('/api/phases/campaign', { concept, project, level, entities, entityDesign });
+export function runCampaignPhase(concept: Concept, project: Project, levels: CampaignLevel[], entitiesByLevel: EntitiesResult[], entityDesign: EntityDesignResult): Promise<CampaignBuild> {
+    return post('/api/phases/campaign', { concept, project, levels, entitiesByLevel, entityDesign });
 }
 
-export async function downloadZip(project: Project, level: unknown, campaign: unknown, entityDesign?: EntityDesignResult, logic?: LogicGraph) {
+export async function downloadZip(project: Project, levels: CampaignLevel[], campaign: unknown, entityDesign?: EntityDesignResult, logic?: LogicGraph, musicConfig?: CampaignBuild['musicConfig']) {
     const res = await fetch('/api/download-zip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project, level, campaign, entityDesign, logic }),
+        body: JSON.stringify({ project, levels, campaign, entityDesign, logic, musicConfig }),
     });
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));

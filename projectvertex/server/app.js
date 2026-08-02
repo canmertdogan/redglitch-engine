@@ -6,6 +6,7 @@ const config = require('../config');
 const llmClient = require('../orchestrator/llmClient');
 const { ALL_ENGINE_TYPES } = require('../schemas/engineTypes');
 const { runConceptPhase } = require('../orchestrator/phases/01-concept');
+const { runLevelPlanPhase } = require('../orchestrator/phases/01.5-level-plan');
 const { runScaffoldPhase } = require('../orchestrator/phases/02-scaffold');
 const { runWorldLevelPhase } = require('../orchestrator/phases/03-world-level');
 const { runEntityDesignPhase } = require('../orchestrator/phases/04-entity-design');
@@ -46,11 +47,12 @@ function createApp() {
             minGrid: MIN_GRID,
             maxGrid: MAX_GRID_2D,
             maxGrid3d: MAX_GRID_3D,
+            defaultLevels: config.LEVEL_COUNT,
             availableProviders,
             defaultProvider,
             defaultModel: llmClient.resolveModel(defaultProvider),
             defaults: {
-                concept: { temperature: 0.6, maxTokens: 800, maxRetries: config.MAX_RETRIES.concept },
+                concept: { temperature: 0.6, maxTokens: 8000, maxRetries: config.MAX_RETRIES.concept },
                 worldLevel: { temperature: 0.4, maxTokens: 32000, maxRetries: config.MAX_RETRIES.worldLevel },
                 entityDesign: { temperature: 0.6, maxTokens: 4000, maxRetries: config.MAX_RETRIES.entities },
                 entities: { temperature: 0.5, maxTokens: 1500, maxRetries: config.MAX_RETRIES.entities },
@@ -67,6 +69,18 @@ function createApp() {
         try {
             const concept = await runConceptPhase(prompt, { ...(body.params || {}), engineOverride, clientKeys: body.clientKeys });
             res.json({ concept });
+        } catch (err) {
+            res.status(502).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/phases/level-plan', async (req, res) => {
+        const body = req.body || {};
+        if (!body.concept) return res.status(400).json({ error: 'concept is required' });
+        const count = Math.min(3, Math.max(1, Math.round(Number(body.count) || config.LEVEL_COUNT)));
+        try {
+            const levelPlan = await runLevelPlanPhase(body.concept, { count, ...(body.params || {}), clientKeys: body.clientKeys });
+            res.json({ levelPlan });
         } catch (err) {
             res.status(502).json({ error: err.message });
         }
@@ -90,7 +104,7 @@ function createApp() {
         const width = clamp(body.width, MIN_GRID, maxGrid, config.WORLD_WIDTH);
         const height = clamp(body.height, MIN_GRID, maxGrid, config.WORLD_HEIGHT);
         try {
-            const level = await runWorldLevelPhase(body.concept, { width, height, ...(body.params || {}), clientKeys: body.clientKeys });
+            const level = await runWorldLevelPhase(body.concept, { width, height, levelBrief: body.levelBrief, ...(body.params || {}), clientKeys: body.clientKeys });
             res.json({ level });
         } catch (err) {
             res.status(502).json({ error: err.message });
@@ -115,7 +129,15 @@ function createApp() {
         const width = clamp(body.width, MIN_GRID, maxGrid, config.WORLD_WIDTH);
         const height = clamp(body.height, MIN_GRID, maxGrid, config.WORLD_HEIGHT);
         try {
-            const entities = await runEntitiesPhase(body.concept, body.entityDesign || { entities: [] }, { width, height, ...(body.params || {}), clientKeys: body.clientKeys });
+            const entities = await runEntitiesPhase(body.concept, {
+                width,
+                height,
+                designedEntities: (body.entityDesign?.entities) || [],
+                levelBrief: body.levelBrief,
+                level: body.level || null,
+                ...(body.params || {}),
+                clientKeys: body.clientKeys,
+            });
             res.json({ entities });
         } catch (err) {
             res.status(502).json({ error: err.message });
@@ -138,13 +160,21 @@ function createApp() {
 
     app.post('/api/phases/campaign', async (req, res) => {
         const body = req.body || {};
-        if (!body.concept || !body.project || !body.level) {
-            return res.status(400).json({ error: 'concept, project and level are required' });
+        if (!body.concept || !body.project || (!body.level && !body.levels)) {
+            return res.status(400).json({ error: 'concept, project and level(s) are required' });
         }
         const entities = body.entities || { entities: [] };
         const entityDesign = body.entityDesign || { entities: [] };
         try {
-            const build = await runCampaignBuildPhase({ concept: body.concept, project: body.project, level: body.level, entities, entityDesign });
+            const build = await runCampaignBuildPhase({
+                concept: body.concept,
+                project: body.project,
+                level: body.level,
+                levels: body.levels,
+                entities,
+                entitiesByLevel: body.entitiesByLevel,
+                entityDesign,
+            });
             res.json(build);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -153,14 +183,14 @@ function createApp() {
 
     app.post('/api/download-zip', (req, res) => {
         const body = req.body || {};
-        if (!body.project || !body.level || !body.campaign) {
-            return res.status(400).json({ error: 'project, level and campaign are required' });
+        if (!body.project || (!body.level && !body.levels) || !body.campaign) {
+            return res.status(400).json({ error: 'project, level(s) and campaign are required' });
         }
         const name = (body.project.name || 'projectvertex-game').replace(/[^a-zA-Z0-9_-]/g, '');
         res.setHeader('Content-Type', 'application/zip');
         res.setHeader('Content-Disposition', `attachment; filename="${name}.zip"`);
         pipeZipToStream(
-            { redglitchJson: body.project.redglitchJson, level: body.level, campaign: body.campaign, entityDefinitions: body.entityDesign, logic: body.logic },
+            { redglitchJson: body.project.redglitchJson, level: body.level, levels: body.levels, campaign: body.campaign, entityDefinitions: body.entityDesign, logic: body.logic, musicConfig: body.musicConfig },
             res
         ).catch((err) => {
             console.error(`[server] zip stream failed: ${err.message}`);

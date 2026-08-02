@@ -7,7 +7,10 @@ OUTPUT SCHEMA (exact keys, exact types):
   "title": "string (max 40 chars, punchy, memorable game name)",
   "genre": "string (EXACTLY ONE: action, adventure, puzzle, platformer, shooter, rpg, survival, roguelike, horror, racing, rhythm, strategy, simulation)",
   "engineType": "string (EXACTLY ONE of: rpg-topdown, platformer-2d, iso-pixel, topdown-3d, fps-3d, platformer-3d, unified-3d)",
-  "pitch": "string (1-2 sentences, max 300 chars. Core loop + unique hook. No fluff.)"
+  "pitch": "string (1-2 sentences, max 300 chars. Core loop + unique hook. No fluff.)",
+  "difficulty": "string (EXACTLY ONE of: easy, medium, hard)",
+  "theme": "string (max 40 chars, short visual descriptor that sets the level's look/weather/lighting, e.g. 'neon city at night', 'misty ancient forest', 'sun-scorched desert ruins')",
+  "musicMood": "string (EXACTLY ONE of: upbeat, tense, mysterious, heroic, chill, ambient)"
 }
 
 ENGINE TYPE → GAMEPLAY MAPPING (pick the ONE best fit):
@@ -32,10 +35,18 @@ DECISION HEURISTICS:
 HARD RULES:
 - engineType MUST be exactly one of the 7 values. No aliases, no typos, no extra whitespace.
 - SCOPE: 5-15 minute micro-game. Single biome/area. 1-3 core mechanics MAX. 1-3 enemy types MAX. No meta-progression.
-- PITCH = core loop + hook in ≤2 sentences. GOOD: "Dash through a neon dungeon, parry projectiles back at enemies, steal the core before the timer expires. One hit kills, but perfect parries refill your dash." BAD: "An exciting adventure game where you explore dungeons and fight monsters."
-- Genre: single label from the 13 listed. No compound genres ("action-adventure" → pick one).
-- Title: max 40 chars, specific, evocative. Avoid generic words alone ("Adventure", "Quest", "Game", "World", "Journey").
+- PITCH = core loop + hook in ≤2 sentences. GOOD: "Dash through a neon dungeon, parry projectiles back at enemies, steal the core before the timer expires. One hit kills, but perfect parries refill your dash." BAD: "An exciting adventure game where you explore dungeons and fight monsters." Write the pitch as a MECHANIC DENSITY test: every clause should name a verb or a constraint the player feels ("dash", "parry", "timer", "one hit kills", "refill your dash"). If a clause would describe most games in the genre, cut it.
+- TITLE must be SPECIFIC. "Neon Pulse Arena" > "Arena". "Tomb of the Forgotten King" > "Dungeon Quest". Avoid generic words alone ("Adventure", "Quest", "Game", "World", "Journey"). Compound a concrete object with a place, a mechanic, or a mood.
+- THEME = the level's weather/lighting palette, and it MUST fit the engine AND the concept. A 2D dungeon RPG shouldn't get a 'sunny beach' theme; an fps-3d arena shouldn't get 'misty garden'. Pick something that makes the generated level feel like THIS game, not a stock biome (prefer specific: 'rain-slick alley under a pink moon' over 'night').
+- THE ENGINE MATCHES THE MECHANIC, not the art: an isometric combat game is iso-pixel; a top-down twin-stick shooter is topdown-3d (NOT rpg-topdown, which is tile-based melee/questing); a 2D jumping game is platformer-2d. Re-check the ENGINE TYPE → GAMEPLAY MAPPING before finalizing.
+- Difficulty scales level density/layout, not genre.
 - JSON ONLY. No markdown outside code block. No commentary. No reasoning.
+
+FINAL QA (mentally, before emitting JSON):
+1. Does the pitch name the core loop verb + the hook constraint?
+2. Does the engine actually do what the pitch asks?
+3. Does the theme read as one concrete place you could draw?
+4. Is this completable in 5-15 minutes with 1-3 mechanics? (If you listed 4+ mechanics, cut one.)
 
 EXAMPLES:
 
@@ -46,7 +57,10 @@ Output:
   "title": "Neon Pulse Arena",
   "genre": "shooter",
   "engineType": "topdown-3d",
-  "pitch": "Survive waves of glitching enemies in a pulsing neon arena. Dash through bullet patterns, reflect projectiles with timed parries, and chain kills for score multipliers."
+  "pitch": "Survive waves of glitching enemies in a pulsing neon arena. Dash through bullet patterns, reflect projectiles with timed parries, and chain kills for score multipliers.",
+  "difficulty": "hard",
+  "theme": "neon synthwave city at night",
+  "musicMood": "tense"
 }
 ```
 
@@ -57,7 +71,10 @@ Output:
   "title": "Tomb of the Forgotten King",
   "genre": "adventure",
   "engineType": "rpg-topdown",
-  "pitch": "Explore a single ancient dungeon, solve environmental puzzles with bombs and a hookshot, and defeat the guardian. One life, no saves — mastery or death."
+  "pitch": "Explore a single ancient dungeon, solve environmental puzzles with bombs and a hookshot, and defeat the guardian. One life, no saves — mastery or death.",
+  "difficulty": "medium",
+  "theme": "dim torchlit catacombs",
+  "musicMood": "mysterious"
 }
 ```
 
@@ -68,7 +85,10 @@ Output:
   "title": "Gravity Drift",
   "genre": "platformer",
   "engineType": "platformer-3d",
-  "pitch": "Navigate floating islands by flipping gravity on the fly. Momentum carries you between orientations — time your flips to reach collectibles and avoid the void below."
+  "pitch": "Navigate floating islands by flipping gravity on the fly. Momentum carries you between orientations — time your flips to reach collectibles and avoid the void below.",
+  "difficulty": "easy",
+  "theme": "floating islands above a turquoise sky",
+  "musicMood": "heroic"
 }
 ```
 

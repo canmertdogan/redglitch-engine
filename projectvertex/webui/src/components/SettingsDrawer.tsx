@@ -6,6 +6,7 @@ export interface PipelineSettings {
     engineOverride: string;
     width: number;
     height: number;
+    levelCount: number;
     includeEntities: boolean;
     includeLogic: boolean;
     concept: PhaseParams;
@@ -173,6 +174,15 @@ export default function SettingsDrawer({ open, onClose, cfg, settings, onChange 
                             <input type="number" min={minGrid} max={maxGrid} value={settings.height}
                                 onChange={(e) => set({ height: Number(e.target.value) })} />
                         </div>
+                        <div className="field">
+                            <label>Level Sayısı</label>
+                            <select value={settings.levelCount}
+                                onChange={(e) => set({ levelCount: Math.min(3, Math.max(1, Number(e.target.value))) })}>
+                                <option value={1}>1</option>
+                                <option value={2}>2</option>
+                                <option value={3}>3</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="section-label">Fazlar</div>
@@ -187,15 +197,7 @@ export default function SettingsDrawer({ open, onClose, cfg, settings, onChange 
                         </label>
                     </div>
                     <div className="toggle-row">
-                        <div className="toggle-label">Entity Design (yeni)</div>
-                        <label className="switch">
-                            <input type="checkbox" checked={settings.includeEntities}
-                                onChange={(e) => set({ includeEntities: e.target.checked })} />
-                            <span className="switch-track" />
-                        </label>
-                    </div>
-                    <div className="toggle-row">
-                        <div className="toggle-label">Varlık Yerleştirme (entities)</div>
+                        <div className="toggle-label">Varlıklar (entity design + yerleştirme)</div>
                         <label className="switch">
                             <input type="checkbox" checked={settings.includeEntities}
                                 onChange={(e) => set({ includeEntities: e.target.checked })} />
@@ -217,8 +219,10 @@ export default function SettingsDrawer({ open, onClose, cfg, settings, onChange 
                     <div className="section-label">Model Parametreleri</div>
                     <PhaseParamsFields label="Konsept" params={settings.concept} onChange={(p) => set({ concept: p })} />
                     <PhaseParamsFields label="Dünya/Level" params={settings.worldLevel} onChange={(p) => set({ worldLevel: p })} />
+                    <PhaseParamsFields label="Level Plan" params={settings.concept} onChange={(p) => set({ concept: p })} />
                     <PhaseParamsFields label="Entity Design" params={settings.entityDesign} onChange={(p) => set({ entityDesign: p })} />
                     <PhaseParamsFields label="Varlık Yerleştirme" params={settings.entities} onChange={(p) => set({ entities: p })} />
+                    <PhaseParamsFields label="Logic" params={settings.logic} onChange={(p) => set({ logic: p })} />
                 </div>
             </div>
         </>,

@@ -10,6 +10,26 @@
 //   OPENCODE_API_KEY / OPENROUTER_API_KEY / CEREBRAS_API_KEY
 const ZEN_BASE_URL = 'https://opencode.ai/zen/v1';
 
+// Hard cap on how long a single provider request may run before it is aborted
+// and reported as a clear 504 (retryable) error. Without this, a provider
+// that stalls leaves the phase route hanging indefinitely and the browser
+// eventually surfaces it as a bare "Failed to fetch" (connection dropped with
+// no response) instead of a message anyone can act on. Generous default:
+// world-level legitimately takes ~90s+ at its 32k-token budget, so this is a
+// safety net against infinite stalls, not a tight SLA. Callers can override
+// per call (world-level passes a larger window; small phases could pass less).
+const DEFAULT_TIMEOUT_MS = 240000;
+
+function timeoutSignal(timeoutMs) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return { signal: controller.signal, done: () => clearTimeout(timer) };
+}
+
+function timeoutError(provider, timeoutMs) {
+    return Object.assign(new Error(`${provider} request timed out after ${Math.round(timeoutMs / 1000)}s — the provider is not responding; retrying.`), { status: 504 });
+}
+
 // OpenCode Zen's protocol logic, inlined rather than required from
 // ../../server/routes/opencode-zen.js: that file lives outside
 // projectvertex/, and if this app is deployed to Vercel with the project
@@ -136,21 +156,31 @@ function getApiKey(provider, clientKeys = {}) {
 
 // Plain OpenAI-compatible chat/completions call — covers both OpenRouter
 // and Cerebras, which use the exact same request/response shape.
-async function chatCompletionsRequest(baseUrl, apiKey, model, messages, { maxTokens, temperature, extraBody }) {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-            model,
-            messages,
-            max_tokens: maxTokens,
-            temperature,
-            ...extraBody,
-        }),
-    });
+async function chatCompletionsRequest(baseUrl, apiKey, model, messages, { maxTokens, temperature, extraBody, timeoutMs = DEFAULT_TIMEOUT_MS }) {
+    const { signal, done } = timeoutSignal(timeoutMs);
+    let res;
+    try {
+        res = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`,
+            },
+            signal,
+            body: JSON.stringify({
+                model,
+                messages,
+                max_tokens: maxTokens,
+                temperature,
+                ...extraBody,
+            }),
+        });
+    } catch (err) {
+        if (err && err.name === 'AbortError') throw timeoutError(baseUrl, timeoutMs);
+        throw err;
+    } finally {
+        done();
+    }
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
         const message = payload.error && (payload.error.message || payload.error.code);
@@ -166,11 +196,21 @@ async function chatCompletionsRequest(baseUrl, apiKey, model, messages, { maxTok
 
 async function chatViaZen(apiKey, model, messages, opts) {
     const request = buildZenRequest(model, messages, opts);
-    const res = await fetch(request.url, {
-        method: 'POST',
-        headers: buildZenHeaders(request.protocol, apiKey),
-        body: JSON.stringify(request.body),
-    });
+    const { signal, done } = timeoutSignal(opts.timeoutMs || DEFAULT_TIMEOUT_MS);
+    let res;
+    try {
+        res = await fetch(request.url, {
+            method: 'POST',
+            headers: buildZenHeaders(request.protocol, apiKey),
+            signal,
+            body: JSON.stringify(request.body),
+        });
+    } catch (err) {
+        if (err && err.name === 'AbortError') throw timeoutError('OpenCode Zen', opts.timeoutMs || DEFAULT_TIMEOUT_MS);
+        throw err;
+    } finally {
+        done();
+    }
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
         const message = payload.error && (payload.error.message || payload.error.code);
@@ -200,7 +240,8 @@ async function chatViaZen(apiKey, model, messages, opts) {
 // Single non-streaming chat call. Builds a system+user message pair from
 // personalityText/message, matching the shape every provider here expects.
 // Optional clientKeys allows browser-provided API keys to override env vars.
-async function chat({ message, personalityText, maxTokens = 600, temperature = 0.4, reasoningEffort = 'low', clientKeys = {} }) {
+// timeoutMs caps a single provider request (see DEFAULT_TIMEOUT_MS above).
+async function chat({ message, personalityText, maxTokens = 600, temperature = 0.4, reasoningEffort = 'low', clientKeys = {}, timeoutMs = DEFAULT_TIMEOUT_MS }) {
     const provider = resolveProvider();
     const apiKey = getApiKey(provider, clientKeys);
     if (!apiKey) {
@@ -213,7 +254,7 @@ async function chat({ message, personalityText, maxTokens = 600, temperature = 0
     ];
 
     if (provider === 'opencode-zen') {
-        return chatViaZen(apiKey, model, messages, { maxTokens, temperature, topP: 0.9 });
+        return chatViaZen(apiKey, model, messages, { maxTokens, temperature, topP: 0.9, timeoutMs });
     }
     // OpenRouter proxies reasoning-capable models (e.g. free Nemotron
     // models) that emit a long internal chain-of-thought BEFORE the actual
@@ -228,7 +269,7 @@ async function chat({ message, personalityText, maxTokens = 600, temperature = 0
     // doesn't use this field but silently ignores unknown JSON keys, so
     // it's safe to always include.
     const extraBody = provider === 'openrouter' ? { reasoning: { effort: reasoningEffort } } : undefined;
-    return chatCompletionsRequest(PROVIDER_BASE_URL[provider], apiKey, model, messages, { maxTokens, temperature, extraBody });
+    return chatCompletionsRequest(PROVIDER_BASE_URL[provider], apiKey, model, messages, { maxTokens, temperature, extraBody, timeoutMs });
 }
 
 // Pulls the first ```json ... ``` fenced block out of a free-text
@@ -272,6 +313,7 @@ async function askForJson({
     reasoningEffort = 'low',
     validate = (obj) => obj,
     clientKeys = {},
+    timeoutMs = DEFAULT_TIMEOUT_MS,
 }) {
     let lastError = null;
     let prompt = userPrompt;
@@ -280,7 +322,7 @@ async function askForJson({
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         attemptsMade = attempt;
         try {
-            const raw = await chat({ message: prompt, personalityText: systemPrompt, maxTokens, temperature, reasoningEffort, clientKeys });
+            const raw = await chat({ message: prompt, personalityText: systemPrompt, maxTokens, temperature, reasoningEffort, clientKeys, timeoutMs });
             const parsed = extractJson(raw);
             return validate(parsed);
         } catch (err) {

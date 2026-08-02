@@ -43,21 +43,21 @@ HARD RULES:
 - 3-6 entities total. Mix: 1-3 enemies, 0-2 NPCs, 1-2 items. NEVER more than 2 items and NEVER more than 2 NPCs — count them before you finish.
 - id: snake_case, unique, descriptive. Used as key in game.enemyDefs / game.npcDefs / game.itemDefs.
 - category determines registry: enemy→enemyDefs, npc→npcDefs, item→itemDefs.
-- stats scale to concept: early game hp 20-50, dmg 5-15; boss hp 200-500, dmg 30-50.
-- ai.type: patrol (wanders, chases when near), chase (aggressive), static (turret), ranged (shoots from distance), boss (multi-phase), wander (random walk), guard (protects area).
-- animations: sprite keys must match engine atlas. Reuse same sprite for multiple states if variants don't exist. speed: 0.1-0.3 typical.
-- lootTable: 0-3 entries per enemy. itemId from ALLOWED ITEMS only. chance 0.1-1.0.
-- NPCs: stats.hp=1, damage=0, xp=0. ai.type=wander|static. Add "dialogue": "string" field.
-- Items: category="item". No stats/ai/animations/lootTable. Add "itemType": "consumable|equipment|material|key|quest". Add "properties": { healAmount: 50, damage: 15, etc }.
+- DESIGN STATS FROM THE CONCEPT, not from a template: read the pitch and scale numbers to its threat/loop. A fragile glass-cannon enemy differs from a tanky brute in speed AND damage AND xp, not just hp. Early-game fodder hp 20-50, dmg 5-15; boss hp 200-500, dmg 30-50. Slow enemies move slower (speed 40-80), skirmishers faster (120-220).
+- ai.type: patrol (wanders, chases when near), chase (aggressive), static (turret), ranged (shoots from distance), boss (multi-phase), wander (random walk), guard (protects area). Pick the behavior that matches the enemy's fantasy — a sentry uses 'guard', a flying scout uses 'chase' with high speed.
+- animations: sprite keys must match engine atlas. Reuse same sprite for multiple states if variants don't exist (safe keys: slime, goblin, bat, spider, skeleton, ghost, zombie, rat, snake, mushroom, robot, drone, soldier, villager, merchant, potion_red, key_bronze, gold_coin). speed: 0.1-0.3 typical.
+- lootTable: 0-3 entries per enemy. itemId from ALLOWED ITEMS only. chance 0.1-1.0. Loot should reinforce the loop (coins always, potions from bruisers, keys from bosses).
+- NPCs: stats.hp=1, damage=0, xp=0. ai.type=wander|static. REQUIRED: "dialogue": "string" — 1-2 sentences of in-character lines that teach the player something about the world or the goal.
+- Items: category="item". No stats/ai/animations/lootTable. Add "itemType": "consumable|equipment|material|key|quest". Add "properties": { healAmount: 50, damage: 15, etc }. Consumables and quest keys should matter to the concept's loop.
 
 ALLOWED ITEM IDs (use EXACTLY these in lootTable.itemId):
 health_potion, mana_potion, iron_sword, gold_coin, xp_gem, key_bronze, key_silver, key_gold, bomb, arrow, antidote, stamina_potion, fire_resist_potion, ice_resist_potion, lightning_resist_potion
 
 ENGINE-AWARE DESIGN:
 - rpg-topdown / iso-pixel: full stats, AI, animations, loot. NPCs have dialogue.
-- platformer-2d: simpler AI (patrol/chase only), no ranged. Enemies need "jumpHeight" in ai.
-- topdown-3d / fps-3d: same as rpg-topdown but 3D. Add "scale": number (1.0 default).
-- platformer-3d: 3D platformer enemies. Add "jumpHeight" in ai.
+- platformer-2d: simpler AI (patrol/chase only), no ranged. Enemies need "jumpHeight" in ai. Keep hp small (1-3 hits).
+- topdown-3d / fps-3d: same as rpg-topdown but 3D. Add "scale": number (1.0 default) — a towering brute at 1.8, a scurrying drone at 0.6.
+- platformer-3d: 3D platformer enemies. Add "jumpHeight" in ai. Prefer 'wander'/'chase' over turret behavior.
 
 CONCEPT-DRIVEN EXAMPLES:
 

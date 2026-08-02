@@ -25,7 +25,10 @@ module.exports = {
         logic: 2,
     },
 
-    RUNS_DIR: path.join(__dirname, 'runs'),
+    // Runs are written under runs/ by default; PV_RUNS_DIR overrides that so
+    // the audit script (scripts/validate-run.js) or a CI job can point at a
+    // different directory without touching code.
+    RUNS_DIR: process.env.PV_RUNS_DIR || path.join(__dirname, 'runs'),
     REPO_ROOT: path.join(__dirname, '..'),
 
     // MVP is restricted to these engine types; anything else gets normalized down.
@@ -44,4 +47,9 @@ module.exports = {
     // budget regardless of provider.
     WORLD_WIDTH: 10,
     WORLD_HEIGHT: 8,
+
+    // Default number of levels for multi-level games (phase 01.5 level-plan
+    // generates this many per-level briefs; each becomes a campaign node and
+    // a dunyalar/levelN.json in the exported project). Clamped to 1-3.
+    LEVEL_COUNT: 2,
 };

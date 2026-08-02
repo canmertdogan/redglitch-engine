@@ -43,6 +43,8 @@ function validatePlatformerLevel(level) {
     }
     if (!Array.isArray(level.collision)) {
         errors.push('collision must be an array of tile ids');
+    } else if (level.collision.length !== level.width * level.height) {
+        errors.push(`collision length (${level.collision.length}) must equal width*height (${level.width * level.height})`);
     }
     if (errors.length) {
         throw new Error(errors.join('; '));

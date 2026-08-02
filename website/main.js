@@ -1,26 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- Bootloader Sequence ---
-    const bootloader   = document.getElementById('bootloader');
-    const bootProgress = document.getElementById('boot-progress');
-    if (bootloader && bootProgress) {
-        const steps = [
-            'MOUNTING_VFS...',
-            'LOADING_ENGINE_CORES...',
-            'LINKING_KAI_NEURAL...',
-            'INITIALIZING_ISO_BUS...',
-            'SYSTEM_READY'
-        ];
-        let step = 0;
-        const interval = setInterval(() => {
-            bootProgress.textContent = steps[step];
-            step++;
-            if (step >= steps.length) {
-                clearInterval(interval);
-                setTimeout(() => bootloader.classList.add('loaded'), 400);
-            }
-        }, 280);
-    }
+    document.body.classList.add('ready');
 
     // --- Mobile Menu ---
     const menuToggle = document.getElementById('menuToggle');
@@ -41,102 +21,187 @@ document.addEventListener('DOMContentLoaded', () => {
             const code = btn.getAttribute('data-code') || btn.closest('.code-block')?.querySelector('code')?.textContent || '';
             navigator.clipboard.writeText(code).then(() => {
                 const orig = btn.textContent;
-                btn.textContent = 'Copied!';
-                setTimeout(() => { btn.textContent = orig; }, 2000);
+                btn.textContent = 'Copied';
+                setTimeout(() => { btn.textContent = orig; }, 1800);
             }).catch(() => {});
         });
     });
 
-    // --- Hero Isometric Canvas ---
-    const canvas = document.getElementById('heroCanvas');
+    // --- Reveal on scroll ---
+    const revealEls = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window && revealEls.length) {
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in-view');
+                    io.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        revealEls.forEach(el => io.observe(el));
+    } else {
+        revealEls.forEach(el => el.classList.add('in-view'));
+    }
+
+    // --- Metric counters ---
+    const counters = document.querySelectorAll('[data-count]');
+    if ('IntersectionObserver' in window && counters.length) {
+        const countIo = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const target = parseInt(el.getAttribute('data-count'), 10) || 0;
+                const suffix = el.getAttribute('data-suffix') || '';
+                const duration = 900;
+                const start = performance.now();
+                function tick(now) {
+                    const p = Math.min(1, (now - start) / duration);
+                    const eased = 1 - Math.pow(1 - p, 3);
+                    el.textContent = Math.round(eased * target) + suffix;
+                    if (p < 1) requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+                countIo.unobserve(el);
+            });
+        }, { threshold: 0.4 });
+        counters.forEach(el => countIo.observe(el));
+    }
+
+    // --- Hero network graph (ontology-style node graph) ---
+    const canvas = document.getElementById('heroGraph');
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    let width, height;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let width, height, dpr;
 
     function resize() {
+        dpr = window.devicePixelRatio || 1;
         width  = canvas.offsetWidth;
         height = canvas.offsetHeight;
-        canvas.width  = width  * window.devicePixelRatio;
-        canvas.height = height * window.devicePixelRatio;
-        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        canvas.width  = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    window.addEventListener('resize', resize);
-    resize();
 
-    const TILE = 30;
-    const COLS = 8;
-    const ROWS = 8;
+    const LABELS = ['ISO', 'RPG', 'PLAT', 'FPS3D', 'TOP3D', 'KAI', 'KAI', 'EDIT', 'EDIT', 'SAVE', 'NET', 'AUD'];
+    const NODE_COUNT = 22;
+    let nodes = [];
+    let mouseX = -9999, mouseY = -9999;
 
-    // Build tile grid with randomized heights
-    const grid = [];
-    for (let x = 0; x < COLS; x++) {
-        for (let y = 0; y < ROWS; y++) {
-            const isAccent = Math.random() > 0.82;
-            grid.push({
-                x, y,
-                baseZ: Math.random() * 0.6,
-                color: isAccent ? '#ff1e27' : '#14141e',
-                top:   isAccent ? '#ff3b42' : '#1e1e2a',
-                left:  isAccent ? '#cc141c' : '#101018',
-                right: isAccent ? '#aa0e14' : '#0c0c12',
+    function buildNodes() {
+        nodes = [];
+        for (let i = 0; i < NODE_COUNT; i++) {
+            const isHub = i < 6;
+            nodes.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                vx: (Math.random() - 0.5) * 0.18,
+                vy: (Math.random() - 0.5) * 0.18,
+                r: isHub ? 3.2 : 1.6,
+                hub: isHub,
+                label: isHub ? LABELS[i % LABELS.length] : null,
             });
         }
     }
-    grid.sort((a, b) => (a.x + a.y) - (b.x + b.y));
 
-    function drawTile(x, y, z) {
-        const tile = grid.find(t => t.x === x && t.y === y);
-        if (!tile) return;
+    function resizeAndRebuild() {
+        resize();
+        buildNodes();
+    }
+    window.addEventListener('resize', resizeAndRebuild);
+    resizeAndRebuild();
 
-        const isoX = (x - y) * TILE;
-        const isoY = (x + y) * (TILE / 2) - z * TILE;
-        const sx = width / 2 + isoX;
-        const sy = height / 2 + isoY - TILE;
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    });
+    canvas.addEventListener('mouseleave', () => { mouseX = -9999; mouseY = -9999; });
 
-        // Top face
-        ctx.fillStyle = tile.top;
-        ctx.beginPath();
-        ctx.moveTo(sx,        sy);
-        ctx.lineTo(sx + TILE, sy + TILE / 2);
-        ctx.lineTo(sx,        sy + TILE);
-        ctx.lineTo(sx - TILE, sy + TILE / 2);
-        ctx.closePath();
-        ctx.fill();
+    const LINK_DIST = 130;
+    const accent = '#ff3b3b';
+    const accent2 = '#3ba0ff';
 
-        // Left face
-        ctx.fillStyle = tile.left;
-        ctx.beginPath();
-        ctx.moveTo(sx - TILE, sy + TILE / 2);
-        ctx.lineTo(sx,        sy + TILE);
-        ctx.lineTo(sx,        sy + TILE * 1.6);
-        ctx.lineTo(sx - TILE, sy + TILE * 1.1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Right face
-        ctx.fillStyle = tile.right;
-        ctx.beginPath();
-        ctx.moveTo(sx + TILE, sy + TILE / 2);
-        ctx.lineTo(sx,        sy + TILE);
-        ctx.lineTo(sx,        sy + TILE * 1.6);
-        ctx.lineTo(sx + TILE, sy + TILE * 1.1);
-        ctx.closePath();
-        ctx.fill();
+    function step() {
+        for (const n of nodes) {
+            n.x += n.vx;
+            n.y += n.vy;
+            if (n.x < 0 || n.x > width) n.vx *= -1;
+            if (n.y < 0 || n.y > height) n.vy *= -1;
+            n.x = Math.max(0, Math.min(width, n.x));
+            n.y = Math.max(0, Math.min(height, n.y));
+        }
     }
 
-    let time = 0;
-    function animate() {
-        time += 0.025;
+    function draw() {
         ctx.clearRect(0, 0, width, height);
 
-        for (const tile of grid) {
-            const wave = Math.sin(time + tile.x * 0.6 + tile.y * 0.6) * 0.5;
-            drawTile(tile.x, tile.y, tile.baseZ + wave);
+        // links
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+                const a = nodes[i], b = nodes[j];
+                const dx = a.x - b.x, dy = a.y - b.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < LINK_DIST) {
+                    const alpha = (1 - dist / LINK_DIST) * (a.hub || b.hub ? 0.35 : 0.14);
+                    ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.stroke();
+                }
+            }
         }
 
-        requestAnimationFrame(animate);
+        // cursor links
+        if (mouseX > -100) {
+            for (const n of nodes) {
+                const dx = n.x - mouseX, dy = n.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < LINK_DIST * 1.3) {
+                    const alpha = 1 - dist / (LINK_DIST * 1.3);
+                    ctx.strokeStyle = `rgba(255,59,59,${alpha * 0.5})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(n.x, n.y);
+                    ctx.lineTo(mouseX, mouseY);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // nodes
+        for (const n of nodes) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+            ctx.fillStyle = n.hub ? accent : 'rgba(255,255,255,0.35)';
+            ctx.shadowColor = n.hub ? accent : 'transparent';
+            ctx.shadowBlur = n.hub ? 8 : 0;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            if (n.label) {
+                ctx.font = '9px "IBM Plex Mono", monospace';
+                ctx.fillStyle = 'rgba(154,160,173,0.85)';
+                ctx.fillText(n.label, n.x + 7, n.y + 3);
+            }
+        }
+
+        if (mouseX > -100 && mouseX < width) {
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = accent2;
+            ctx.fill();
+        }
     }
-    animate();
+
+    function loop() {
+        if (!reduceMotion) step();
+        draw();
+        requestAnimationFrame(loop);
+    }
+    loop();
 
 });

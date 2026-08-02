@@ -79,6 +79,10 @@ function validateEntityDesign(obj, concept) {
                 if (typeof ai[f] !== 'number') throw new Error(`entities[${i}].ai.${f} must be a number`);
             });
 
+            if (e.category === 'npc' && (typeof e.dialogue !== 'string' || !e.dialogue.trim())) {
+                throw new Error(`entities[${i}].dialogue (a non-empty string) is required for NPCs`);
+            }
+
             if (!e.animations || typeof e.animations !== 'object') {
                 throw new Error(`entities[${i}].animations required`);
             }

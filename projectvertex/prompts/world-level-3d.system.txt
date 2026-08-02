@@ -88,4 +88,15 @@ STEP 4: VALIDATION CHECKLIST (verify mentally):
 - MAZE: mentally verify no isolated regions.
 - All coords use WORLD grid (0-{{WIDTH_MAX}}, 0-{{HEIGHT_MAX}}).
 
+STEP 5: KEEP THE SPAWN CLEARING.
+- The player starts near the top-left corner (x≈1-3, z≈1-3). Leave a roughly 3x3-cell clearing there with NO obstacles and NO tall foliage.
+- In MAZE MODE, carve a small start room in that corner (walls that leave a 3x3 floor pocket open), then the first passage leads out of it.
+- Obstacles should not form a solid wall across the whole spawn corner — the first move must not be blocked.
+
+STEP 6: SCALE PRESSURE BY DIFFICULTY — {{DIFFICULTY}}:
+- easy: obstacle counts at the LOW end of each mode's range, sparse foliage, wide open sightlines, gentler platform heights (vertical mode: lower gaps).
+- medium: mid-range counts, standard spacing.
+- hard: counts at the HIGH end of each mode's range, denser wall segments (maze mode: more passages/narrower corridors), taller platforms (vertical mode), fewer easy retreat lanes.
+- (If the difficulty is unknown or absent, use the mid-range counts.)
+
 OUTPUT ONLY THE JSON. NOTHING ELSE.

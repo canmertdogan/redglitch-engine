@@ -38,8 +38,27 @@ function hasLogicGraph(logic) {
     return !!logic && Array.isArray(logic.nodes) && logic.nodes.length > 0;
 }
 
+// Sanitizes a level id for use as a zip path segment — level ids come from
+// the LLM (level-plan phase) and could theoretically carry `../`; keep them
+// confined to plain filesystem-safe names.
+function safeLevelId(id, index) {
+    return String(id || `level${index + 1}`).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+// Appends either a single level (dunyalar/level1.json — original shape) or a
+// full levels array (dunyalar/<id>.json each — multi-level shape).
+function appendLevels(archive, level, levels) {
+    if (Array.isArray(levels) && levels.length > 0) {
+        levels.forEach((l, i) => {
+            archive.append(JSON.stringify(l && l.data ? l.data : l, null, 2), { name: `dunyalar/${safeLevelId(l && l.id, i)}.json` });
+        });
+    } else if (level) {
+        archive.append(JSON.stringify(level, null, 2), { name: 'dunyalar/level1.json' });
+    }
+}
+
 // Returns a Promise<Buffer> — used by cli.js to write a local .zip file.
-function buildZipBuffer({ redglitchJson, level, campaign, entityDefinitions, logic }) {
+function buildZipBuffer({ redglitchJson, level, levels, campaign, entityDefinitions, logic, musicConfig }) {
     return new Promise((resolve, reject) => {
         const archive = archiver('zip', { zlib: { level: 9 } });
         const chunks = [];
@@ -48,8 +67,15 @@ function buildZipBuffer({ redglitchJson, level, campaign, entityDefinitions, log
         archive.on('error', reject);
 
         archive.append(JSON.stringify(redglitchJson, null, 2), { name: 'redglitch.json' });
-        archive.append(JSON.stringify(level, null, 2), { name: 'dunyalar/level1.json' });
+        appendLevels(archive, level, levels);
         archive.append(JSON.stringify(campaign, null, 2), { name: 'campaigns/main_campaign.json' });
+
+        // rpg-topdown loads dunyalar/definitions/music.json into
+        // window.MUSIC_CONFIG (main.js) — per-level track overrides. Other
+        // engines don't read this file; it's simply absent for them.
+        if (musicConfig) {
+            archive.append(JSON.stringify(musicConfig, null, 2), { name: 'dunyalar/definitions/music.json' });
+        }
 
         // Entity definitions (enemies, NPCs, items) - consumed by engine's ItemDefinitions/EnemyDefs/NPCDefs
         if (entityDefinitions) {
@@ -77,12 +103,16 @@ function buildZipBuffer({ redglitchJson, level, campaign, entityDefinitions, log
 // Streams directly into an HTTP response — used by the server's
 // /api/download-zip route, avoiding buffering the whole zip in memory
 // server-side for large levels.
-function pipeZipToStream({ redglitchJson, level, campaign, entityDefinitions, logic }, outputStream) {
+function pipeZipToStream({ redglitchJson, level, levels, campaign, entityDefinitions, logic, musicConfig }, outputStream) {
     const archive = archiver('zip', { zlib: { level: 9 } });
     archive.pipe(outputStream);
     archive.append(JSON.stringify(redglitchJson, null, 2), { name: 'redglitch.json' });
-    archive.append(JSON.stringify(level, null, 2), { name: 'dunyalar/level1.json' });
+    appendLevels(archive, level, levels);
     archive.append(JSON.stringify(campaign, null, 2), { name: 'campaigns/main_campaign.json' });
+
+    if (musicConfig) {
+        archive.append(JSON.stringify(musicConfig, null, 2), { name: 'dunyalar/definitions/music.json' });
+    }
 
     if (entityDefinitions) {
         if (entityDefinitions.enemies && Object.keys(entityDefinitions.enemies).length > 0) {

@@ -3,20 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RedGlitch — Multi-Engine Pixel Art Game Studio</title>
-    <meta name="description" content="RedGlitch is an open-source game development studio for building pixel art games — RPG, Platformer, Isometric, 3D TopDown, and FPS. Ships to Desktop, Web, Android, and iOS.">
+    <title>RedGlitch — a small multi-engine game dev studio</title>
+    <meta name="description" content="RedGlitch is a local game development studio with six engines, a pile of editors, and a small local AI helper. Free and open source. Also home to ProjectVertex, a side experiment that generates rough starter projects from a text prompt.">
+    <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;700;800;900&family=Space+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <!-- BOOTLOADER -->
-    <div id="bootloader">
-        <div class="boot-text">
-            <div>REDGLITCH_ENGINE_STUDIO</div>
-            <div id="boot-progress">INITIALIZING...</div>
+    <!-- STATUS BAR -->
+    <div class="statusbar">
+        <div class="statusbar-inner">
+            <span><span class="status-dot"></span>still in beta</span>
+            <span class="statusbar-sep">/</span>
+            <span>6 engines</span>
+            <span class="statusbar-sep">/</span>
+            <span>free & open source</span>
+            <span class="statusbar-sep">/</span>
+            <span>runs offline</span>
         </div>
     </div>
 
@@ -25,18 +31,18 @@
         <div class="nav-container">
             <a href="#" class="nav-brand">
                 <img src="favicon.ico" alt="RedGlitch" class="nav-logo">
-                <span>REDGLITCH</span>
+                <span><span class="brand-mark">RED</span>GLITCH</span>
             </a>
             <div class="nav-links" id="navLinks">
                 <a href="#engines">Engines</a>
                 <a href="#studio">Studio</a>
                 <a href="#ai">Kai AI</a>
-                <a href="#downloads">Downloads</a>
-                <a href="#pricing">Free</a>
+                <a href="#vertex">ProjectVertex</a>
                 <a href="#platforms">Platforms</a>
+                <a href="#downloads">Downloads</a>
                 <a href="#start">Get Started</a>
                 <a href="https://github.com/n0rthstar/redglitch" class="nav-github" target="_blank" rel="noopener">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
                     GitHub
                 </a>
             </div>
@@ -49,13 +55,13 @@
     <!-- MOBILE MENU -->
     <div id="mobileMenu" class="mobile-menu">
         <div class="mobile-menu-inner">
-            <button id="menuClose" class="mobile-close" aria-label="Close menu">✕</button>
+            <button id="menuClose" class="mobile-close" aria-label="Close menu">✕ CLOSE</button>
             <a href="#engines" class="mobile-link">Engines</a>
             <a href="#studio" class="mobile-link">Studio</a>
             <a href="#ai" class="mobile-link">Kai AI</a>
-            <a href="#downloads" class="mobile-link">Downloads</a>
-            <a href="#pricing" class="mobile-link">Free</a>
+            <a href="#vertex" class="mobile-link">ProjectVertex</a>
             <a href="#platforms" class="mobile-link">Platforms</a>
+            <a href="#downloads" class="mobile-link">Downloads</a>
             <a href="#start" class="mobile-link">Get Started</a>
             <a href="https://github.com/n0rthstar/redglitch" class="mobile-link" target="_blank" rel="noopener">GitHub ↗</a>
         </div>
@@ -67,25 +73,43 @@
         <header class="hero">
             <div class="hero-container">
                 <div class="hero-text">
-                    <div class="hero-badge">Open Source Core · v7</div>
-                    <h1>Forge the next <span class="hl glitch" data-text="retro masterpiece">retro masterpiece</span>.<br>Ship to <span class="hl">any platform.</span></h1>
-                    <p class="hero-sub">RedGlitch is a full game development studio — multiple specialized engines covering every genre (2D, 3D, isometric, FPS, survival, and more), 30+ integrated editors, and a local AI assistant — all running in your browser or as a desktop app.</p>
+                    <div class="eyebrow">Work in progress · v7</div>
+                    <h1>A small studio for <span class="hl">making pixel-art games.</span></h1>
+                    <p class="hero-sub">RedGlitch is a hobby project that grew into a handful of 2D/3D engines, a pile of editors, and a little local AI helper. Still rough in places — but it runs on your machine, and it's free.</p>
                     <div class="hero-cta">
-                        <a href="../public/project_dashboard.html" class="btn-primary">Open Studio</a>
+                        <a href="../public/project_dashboard.html" class="btn-primary">Open Studio →</a>
                         <a href="https://github.com/n0rthstar/redglitch" class="btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+                    </div>
+                    <div class="hero-meta">
+                        <span><span class="status-dot"></span>runs locally, no account needed</span>
+                        <span>·</span>
+                        <span>Node 16+</span>
+                        <span>·</span>
+                        <span>MIT License</span>
                     </div>
                 </div>
                 <div class="hero-visual">
-                    <div class="canvas-frame">
-                        <div class="canvas-frame-header">
-                            <div class="frame-dots">
-                                <span class="dot red"></span>
-                                <span class="dot yellow"></span>
-                                <span class="dot green"></span>
-                            </div>
-                            <span class="frame-title">IsoPixel Renderer</span>
+                    <div class="data-panel reveal">
+                        <div class="data-panel-header">
+                            <div class="panel-dots"><span></span><span></span><span></span></div>
+                            <span class="panel-title">just a canvas doodle</span>
+                            <span class="panel-live"><span class="status-dot"></span>fidgeting</span>
                         </div>
-                        <canvas id="heroCanvas"></canvas>
+                        <canvas id="heroGraph"></canvas>
+                        <div class="data-panel-footer">
+                            <div class="dp-metric">
+                                <div class="dp-metric-val" data-count="6">0</div>
+                                <div class="dp-metric-label">Engines</div>
+                            </div>
+                            <div class="dp-metric">
+                                <div class="dp-metric-val" data-count="50" data-suffix="+">0</div>
+                                <div class="dp-metric-label">Editors</div>
+                            </div>
+                            <div class="dp-metric">
+                                <div class="dp-metric-val" data-count="4">0</div>
+                                <div class="dp-metric-label">Platforms</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -94,24 +118,21 @@
         <!-- STATS -->
         <section class="stats">
             <div class="stats-container">
-                <div class="stat">
-                    <span class="stat-num">5+</span>
+                <div class="stat reveal">
+                    <span class="stat-num"><span class="accent">6</span></span>
                     <span class="stat-label">Game Engines</span>
                 </div>
-                <div class="stat-divider"></div>
-                <div class="stat">
-                    <span class="stat-num">30+</span>
+                <div class="stat reveal">
+                    <span class="stat-num">50+</span>
                     <span class="stat-label">Integrated Editors</span>
                 </div>
-                <div class="stat-divider"></div>
-                <div class="stat">
+                <div class="stat reveal">
                     <span class="stat-num">4</span>
                     <span class="stat-label">Target Platforms</span>
                 </div>
-                <div class="stat-divider"></div>
-                <div class="stat">
-                    <span class="stat-num">100%</span>
-                    <span class="stat-label">Local — No Cloud Required</span>
+                <div class="stat reveal">
+                    <span class="stat-num">450+</span>
+                    <span class="stat-label">Automated Tests</span>
                 </div>
             </div>
         </section>
@@ -119,16 +140,16 @@
         <!-- ENGINES -->
         <section id="engines" class="section">
             <div class="section-container">
-                <div class="section-header">
-                    <span class="section-label">Multi-Genre Engine Platform</span>
-                    <h2>Any genre. Any dimension. <span class="hl">One studio.</span></h2>
-                    <p>RedGlitch ships with five production-ready engines today — and is expanding to cover every major game genre. Pick your engine, and the tooling, physics, and editors follow automatically.</p>
+                <div class="section-header reveal">
+                    <span class="eyebrow">Pick a genre</span>
+                    <h2>A few engines. <span class="hl">Each doing its own thing.</span></h2>
+                    <p>RedGlitch bundles six engines covering the genres we personally wanted to build in. Pick one and its tools, physics, and editors come along with it.</p>
                 </div>
 
                 <div class="engines-grid">
-                    <div class="engine-card featured">
-                        <div class="engine-icon">◈</div>
-                        <h3>IsoPixel <span class="tag">2.5D</span></h3>
+                    <div class="engine-card featured reveal">
+                        <div class="engine-card-top"><div class="engine-icon">◈</div><span class="tag">2.5D</span></div>
+                        <h3>IsoPixel</h3>
                         <p>Isometric pixel art engine with depth-sorted rendering, a dynamic day/night cycle, particle systems (IsoFX), and procedural vegetation. Built for tactical RPGs and simulation games.</p>
                         <ul class="engine-features">
                             <li>Depth-sorted tile rendering</li>
@@ -137,9 +158,9 @@
                             <li>NPC behavior scripting</li>
                         </ul>
                     </div>
-                    <div class="engine-card">
-                        <div class="engine-icon">⬡</div>
-                        <h3>RPG Top-Down <span class="tag">2D</span></h3>
+                    <div class="engine-card reveal">
+                        <div class="engine-card-top"><div class="engine-icon">⬡</div><span class="tag">2D</span></div>
+                        <h3>RPG Top-Down</h3>
                         <p>Systems-heavy engine with branching dialogue trees, quest management, inventory, NPC schedules, and a dynamic logic scripting runtime. Great for story-driven RPGs.</p>
                         <ul class="engine-features">
                             <li>Branching dialogue trees</li>
@@ -148,9 +169,9 @@
                             <li>JSON/JS logic scripts</li>
                         </ul>
                     </div>
-                    <div class="engine-card">
-                        <div class="engine-icon">▶</div>
-                        <h3>Platformer 2D <span class="tag">2D</span></h3>
+                    <div class="engine-card reveal">
+                        <div class="engine-card-top"><div class="engine-icon">▶</div><span class="tag">2D</span></div>
+                        <h3>Platformer 2D</h3>
                         <p>Precision physics engine with AABB collision detection, smooth camera interpolation, and a frame-perfect character animator. Tight, responsive gameplay is the priority.</p>
                         <ul class="engine-features">
                             <li>AABB collision system</li>
@@ -159,9 +180,9 @@
                             <li>Visual platformer editor</li>
                         </ul>
                     </div>
-                    <div class="engine-card">
-                        <div class="engine-icon">⬛</div>
-                        <h3>TopDown 3D <span class="tag">3D</span></h3>
+                    <div class="engine-card reveal">
+                        <div class="engine-card-top"><div class="engine-icon">⬛</div><span class="tag">3D</span></div>
+                        <h3>TopDown 3D</h3>
                         <p>Top-down perspective with real 3D depth. Includes an ability system, fog of war, minimap, and full A* pathfinding. Bridges pixel aesthetics with 3D immersion.</p>
                         <ul class="engine-features">
                             <li>3D depth rendering</li>
@@ -170,9 +191,9 @@
                             <li>A* pathfinding</li>
                         </ul>
                     </div>
-                    <div class="engine-card">
-                        <div class="engine-icon">◎</div>
-                        <h3>FPS 3D <span class="tag">3D</span></h3>
+                    <div class="engine-card reveal">
+                        <div class="engine-card-top"><div class="engine-icon">◎</div><span class="tag">3D</span></div>
+                        <h3>FPS 3D</h3>
                         <p>First-person engine with custom 3D camera, enemy AI, decal systems, and adapter-based rendering. For retro-aesthetic first-person experiences.</p>
                         <ul class="engine-features">
                             <li>First-person 3D camera</li>
@@ -181,32 +202,43 @@
                             <li>FPS3D adapter</li>
                         </ul>
                     </div>
+                    <div class="engine-card reveal">
+                        <div class="engine-card-top"><div class="engine-icon">◆</div><span class="tag">3D</span></div>
+                        <h3>Unified 3D</h3>
+                        <p>Multi-mode 3D wrapper (Game3DCore / Unified3DGame) sitting on top of the FPS/TopDown systems — swap between FPS, platformer, and top-down modes inside a single runtime.</p>
+                        <ul class="engine-features">
+                            <li>Mode-switching core</li>
+                            <li>Shared camera & physics rig</li>
+                            <li>FPS / Platformer / TopDown modes</li>
+                            <li>Cross-mode entity contracts</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <!-- COMING SOON ENGINES -->
-                <div class="engines-roadmap">
+                <div class="engines-roadmap reveal">
                     <div class="roadmap-header">
-                        <span class="section-label">IN_DEVELOPMENT</span>
-                        <p>More engines are being built. All lifetime license holders get them free on release.</p>
+                        <span class="eyebrow" style="margin-bottom:0;">In progress</span>
+                        <p>A few more engines are being poked at on and off. No promises on dates.</p>
                     </div>
                     <div class="roadmap-engines-grid">
                         <div class="roadmap-engine-card">
-                            <div class="roadmap-tag">SOON</div>
+                            <span class="tag tag-muted">SOON</span>
                             <div class="roadmap-name">Platformer 3D</div>
                             <div class="roadmap-desc">3D platformer with physics-based movement, wall-running, and dynamic camera.</div>
                         </div>
                         <div class="roadmap-engine-card">
-                            <div class="roadmap-tag">SOON</div>
+                            <span class="tag tag-muted">SOON</span>
                             <div class="roadmap-name">Third-Person Shooter</div>
                             <div class="roadmap-desc">Over-the-shoulder camera, cover system, aiming, and full character animation rig.</div>
                         </div>
                         <div class="roadmap-engine-card">
-                            <div class="roadmap-tag">SOON</div>
+                            <span class="tag tag-muted">SOON</span>
                             <div class="roadmap-name">Survival / Open World</div>
                             <div class="roadmap-desc">Hunger/health systems, day-night survival loop, crafting, and procedural terrain.</div>
                         </div>
-                        <div class="roadmap-engine-card roadmap-engine-open">
-                            <div class="roadmap-tag">PLANNED</div>
+                        <div class="roadmap-engine-card">
+                            <span class="tag tag-muted">PLANNED</span>
                             <div class="roadmap-name">More Genres</div>
                             <div class="roadmap-desc">Strategy, MOBA, Racing, Visual Novel, Puzzle — RedGlitch is built to cover them all.</div>
                         </div>
@@ -218,28 +250,23 @@
         <!-- STUDIO TOOLS -->
         <section id="studio" class="section section-alt">
             <div class="section-container">
-                <div class="section-header">
-                    <span class="section-label">30+ Integrated Tools</span>
-                    <h2>Everything you need, <span class="hl">already built in</span></h2>
-                    <p>No switching between apps. Every tool your game needs is a tab away inside the RedGlitch Studio.</p>
+                <div class="section-header reveal">
+                    <span class="eyebrow">A bunch of editors</span>
+                    <h2>Most of what you need <span class="hl">is already in here</span></h2>
+                    <p>Over 50 small editors live inside the studio so you don't have to bounce between separate apps for maps, dialogue, sprites, and everything else.</p>
                 </div>
 
-                <div class="mockup-window">
-                    <!-- Title Bar -->
+                <div class="mockup-window reveal">
                     <div class="mockup-titlebar">
                         <div class="mockup-app-icon">
-                            <div class="mockup-app-icon-mark">🚀</div>
-                            <div class="mockup-app-icon-copy">
-                                <div class="mockup-brand-line">
-                                    <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
-                                </div>
+                            <span class="mockup-app-icon-mark">▣</span>
+                            <div>
+                                <div class="mockup-brand-line"><span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span></div>
                                 <div class="mockup-brand-tag">Studio Core</div>
                             </div>
                         </div>
                         <div class="mockup-app-caption">
-                            <div class="mockup-caption-chip">
-                                <span>✦</span> COMMAND CENTER
-                            </div>
+                            <div class="mockup-caption-chip"><span>✦</span> COMMAND CENTER</div>
                             <div class="mockup-caption-meta">Workspace Active</div>
                         </div>
                         <div class="mockup-win-controls">
@@ -249,141 +276,73 @@
                         </div>
                     </div>
 
-                    <!-- Telemetry Strip & Content Grid -->
                     <div class="mockup-dashboard-layout">
-                        <!-- ROW 1: TELEMETRY -->
                         <div class="mockup-telemetry-strip">
                             <div class="mockup-tele-card accent">
                                 <div class="mockup-tele-icon">⚙</div>
-                                <div class="mockup-tele-data">
-                                    <div class="mockup-tele-val">RETRO_RPG</div>
-                                    <div class="mockup-tele-label">Active Project</div>
-                                </div>
+                                <div><div class="mockup-tele-val">RETRO_RPG</div><div class="mockup-tele-label">Active Project</div></div>
                             </div>
                             <div class="mockup-tele-card">
                                 <div class="mockup-tele-icon">❑</div>
-                                <div class="mockup-tele-data">
-                                    <div class="mockup-tele-val">42 MB</div>
-                                    <div class="mockup-tele-label">Memory Usage</div>
-                                </div>
+                                <div><div class="mockup-tele-val">42 MB</div><div class="mockup-tele-label">Memory Usage</div></div>
                             </div>
                             <div class="mockup-tele-card">
-                                <div class="mockup-tele-icon">🧠</div>
-                                <div class="mockup-tele-data">
-                                    <div class="mockup-tele-val">128 MB</div>
-                                    <div class="mockup-tele-label">AI Memory</div>
-                                </div>
+                                <div class="mockup-tele-icon">◆</div>
+                                <div><div class="mockup-tele-val">128 MB</div><div class="mockup-tele-label">AI Memory</div></div>
                             </div>
                             <div class="mockup-tele-card">
                                 <div class="mockup-tele-icon">⚡</div>
-                                <div class="mockup-tele-data">
-                                    <div class="mockup-tele-val">4%</div>
-                                    <div class="mockup-tele-label">AI CPU</div>
-                                </div>
+                                <div><div class="mockup-tele-val">4%</div><div class="mockup-tele-label">AI CPU</div></div>
                             </div>
                             <div class="mockup-tele-card">
-                                <div class="mockup-tele-icon">🕒</div>
-                                <div class="mockup-tele-data">
-                                    <div class="mockup-tele-val">01:24</div>
-                                    <div class="mockup-tele-label">Uptime</div>
-                                </div>
+                                <div class="mockup-tele-icon">◷</div>
+                                <div><div class="mockup-tele-val">01:24</div><div class="mockup-tele-label">Uptime</div></div>
                             </div>
                         </div>
 
-                        <!-- ROW 2: WORKSPACE -->
                         <div class="mockup-workspace-grid">
-                            <!-- Activities -->
                             <div class="mockup-widget">
-                                <div class="mockup-w-header">
-                                    <span>🕒 LATEST ACTIVITIES</span>
-                                </div>
+                                <div class="mockup-w-header">LATEST ACTIVITIES</div>
                                 <div class="mockup-w-body">
-                                    <div class="mockup-activity-item">
-                                        <span class="mockup-activity-text">Compiled assets and sprites</span>
-                                        <span class="mockup-activity-time">Just now</span>
-                                    </div>
-                                    <div class="mockup-activity-item">
-                                        <span class="mockup-activity-text">EventBus WS Blob crash resolved</span>
-                                        <span class="mockup-activity-time">4m ago</span>
-                                    </div>
-                                    <div class="mockup-activity-item">
-                                        <span class="mockup-activity-text">Vegetation generated in IsoPixel</span>
-                                        <span class="mockup-activity-time">10m ago</span>
-                                    </div>
+                                    <div class="mockup-activity-item"><span>Compiled assets and sprites</span><span class="mockup-activity-time">Just now</span></div>
+                                    <div class="mockup-activity-item"><span>EventBus WS Blob crash resolved</span><span class="mockup-activity-time">4m ago</span></div>
+                                    <div class="mockup-activity-item"><span>Vegetation generated in IsoPixel</span><span class="mockup-activity-time">10m ago</span></div>
                                 </div>
                             </div>
-
-                            <!-- Scratchpad -->
                             <div class="mockup-widget">
-                                <div class="mockup-w-header">
-                                    <span>✎ DEV SCRATCHPAD</span>
-                                </div>
-                                <div class="mockup-w-body" style="background:#000; color:#888; font-size:11px;">
+                                <div class="mockup-w-header">DEV SCRATCHPAD</div>
+                                <div class="mockup-w-body mono" style="color:var(--text-muted);">
                                     // NPC AI schedule logic setup<br>
                                     // TODO: Implement chest loot tables<br>
-                                    // Fix player collider offset inside level 2...
+                                    // Fix player collider offset in level 2...
                                 </div>
                             </div>
-
-                            <!-- Asset Pulse -->
                             <div class="mockup-widget">
-                                <div class="mockup-w-header">
-                                    <span>⚙ ASSET PULSE</span>
-                                </div>
+                                <div class="mockup-w-header">ASSET PULSE</div>
                                 <div class="mockup-w-body">
-                                    <div class="mockup-asset-row">
-                                        <span class="mockup-asset-label">UI Theme</span>
-                                        <span class="mockup-asset-val" style="color:var(--crimson)">Cyberpunk</span>
-                                    </div>
-                                    <div class="mockup-asset-row">
-                                        <span class="mockup-asset-label">Levels</span>
-                                        <span class="mockup-asset-val">12</span>
-                                    </div>
-                                    <div class="mockup-asset-row">
-                                        <span class="mockup-asset-label">Sprites</span>
-                                        <span class="mockup-asset-val">84</span>
-                                    </div>
-                                    <div class="mockup-asset-row">
-                                        <span class="mockup-asset-label">Scripts</span>
-                                        <span class="mockup-asset-val">38</span>
-                                    </div>
+                                    <div class="mockup-asset-row"><span>UI Theme</span><span class="mockup-asset-val" style="color:var(--accent)">Cyberpunk</span></div>
+                                    <div class="mockup-asset-row"><span>Levels</span><span class="mockup-asset-val">12</span></div>
+                                    <div class="mockup-asset-row"><span>Sprites</span><span class="mockup-asset-val">84</span></div>
+                                    <div class="mockup-asset-row"><span>Scripts</span><span class="mockup-asset-val">38</span></div>
                                     <div class="mockup-action-btn">Browse Assets</div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- ROW 3: SYSTEM LOG -->
                         <div class="mockup-log-terminal">
-                            <div class="mockup-w-header">
-                                <span>⌨ SYSTEM LOG</span>
-                            </div>
+                            <div class="mockup-w-header">SYSTEM LOG</div>
                             <div class="mockup-log-feed">
-                                <div class="mockup-log-line">
-                                    <span class="mockup-log-ts">[15:30:10]</span>
-                                    <span class="mockup-log-tag INFO">[INFO]</span>
-                                    <span class="mockup-log-msg">RedGlitch core server initialized on port 3000</span>
-                                </div>
-                                <div class="mockup-log-line">
-                                    <span class="mockup-log-ts">[15:30:12]</span>
-                                    <span class="mockup-log-tag SUCCESS">[SUCCESS]</span>
-                                    <span class="mockup-log-msg">Asset indices loaded successfully in memory</span>
-                                </div>
-                                <div class="mockup-log-line">
-                                    <span class="mockup-log-ts">[15:31:05]</span>
-                                    <span class="mockup-log-tag INFO">[INFO]</span>
-                                    <span class="mockup-log-msg">EventBus websocket handler linked to localhost</span>
-                                </div>
+                                <div class="mockup-log-line"><span class="mockup-log-ts">[15:30:10]</span><span class="mockup-log-tag INFO">[INFO]</span><span>RedGlitch core server initialized on port 3000</span></div>
+                                <div class="mockup-log-line"><span class="mockup-log-ts">[15:30:12]</span><span class="mockup-log-tag SUCCESS">[SUCCESS]</span><span>Asset indices loaded successfully in memory</span></div>
+                                <div class="mockup-log-line"><span class="mockup-log-ts">[15:31:05]</span><span class="mockup-log-tag INFO">[INFO]</span><span>EventBus websocket handler linked to localhost</span></div>
                             </div>
-                            <div class="mockup-cmd-bar">
-                                <span class="mockup-cmd-prompt">redglitch@sys:~$</span>
-                                <span class="mockup-cmd-input">help_</span>
-                            </div>
+                            <div class="mockup-cmd-bar"><span class="mockup-cmd-prompt">redglitch@sys:~$</span><span class="mockup-cmd-input"></span></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="tools-grid">
-                    <div class="tool-category">
+                    <div class="tool-category reveal">
                         <h4>World Building</h4>
                         <ul>
                             <li><strong>Iso Editor</strong> — visual isometric world designer with real-time preview</li>
@@ -392,7 +351,7 @@
                             <li><strong>Background Editor</strong> — layered parallax background designer</li>
                         </ul>
                     </div>
-                    <div class="tool-category">
+                    <div class="tool-category reveal">
                         <h4>Game Logic</h4>
                         <ul>
                             <li><strong>Script Editor</strong> — Monaco-powered code editor with syntax highlighting</li>
@@ -401,7 +360,7 @@
                             <li><strong>Input Editor</strong> — keybinding and controller configuration</li>
                         </ul>
                     </div>
-                    <div class="tool-category">
+                    <div class="tool-category reveal">
                         <h4>Content & Narrative</h4>
                         <ul>
                             <li><strong>Dialogue Editor</strong> — branching conversation trees</li>
@@ -410,7 +369,7 @@
                             <li><strong>Cutscene Editor</strong> — interactive cutscene sequencer</li>
                         </ul>
                     </div>
-                    <div class="tool-category">
+                    <div class="tool-category reveal">
                         <h4>Characters & Entities</h4>
                         <ul>
                             <li><strong>Character Editor</strong> — stats, sprites, and progression</li>
@@ -419,7 +378,7 @@
                             <li><strong>Behavior Editor</strong> — reusable behavior scripts</li>
                         </ul>
                     </div>
-                    <div class="tool-category">
+                    <div class="tool-category reveal">
                         <h4>Visual & Effects</h4>
                         <ul>
                             <li><strong>Pixel Editor</strong> — in-engine sprite and tile painter</li>
@@ -428,10 +387,10 @@
                             <li><strong>Prefab Editor</strong> — reusable scene object library</li>
                         </ul>
                     </div>
-                    <div class="tool-category">
+                    <div class="tool-category reveal">
                         <h4>Data & Audio</h4>
                         <ul>
-                            <li><strong>Audio Tool</strong> — sound import, preview, and spatial config</li>
+                            <li><strong>Audio DAW</strong> — sound import, mixing, and spatial config</li>
                             <li><strong>Item Editor</strong> — item database and properties</li>
                             <li><strong>Skill Editor</strong> — skill trees and ability definitions</li>
                             <li><strong>Achievement Editor</strong> — achievement conditions and rewards</li>
@@ -439,22 +398,17 @@
                     </div>
                 </div>
 
-                <div class="mockup-window">
-                    <!-- Title Bar -->
+                <div class="mockup-window reveal" style="margin-top:56px;">
                     <div class="mockup-titlebar">
                         <div class="mockup-app-icon">
-                            <div class="mockup-app-icon-mark">⚡</div>
-                            <div class="mockup-app-icon-copy">
-                                <div class="mockup-brand-line">
-                                    <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
-                                </div>
+                            <span class="mockup-app-icon-mark">⌁</span>
+                            <div>
+                                <div class="mockup-brand-line"><span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span></div>
                                 <div class="mockup-brand-tag">Code Forge</div>
                             </div>
                         </div>
                         <div class="mockup-app-caption">
-                            <div class="mockup-caption-chip">
-                                <span>📂</span> AssetManager.js
-                            </div>
+                            <div class="mockup-caption-chip"><span>📂</span> AssetManager.js</div>
                             <div class="mockup-caption-meta">Monaco Editor</div>
                         </div>
                         <div class="mockup-win-controls">
@@ -464,62 +418,46 @@
                         </div>
                     </div>
 
-                    <!-- Menubar -->
-                    <div class="mockup-titlebar" style="background:#000; border-bottom:1px solid rgba(255,255,255,0.05); padding: 4px 12px;">
+                    <div class="mockup-titlebar" style="background:#000; padding:4px 12px;">
                         <div class="mockup-menubar">
                             <span class="mockup-menu-btn active">File</span>
                             <span class="mockup-menu-btn">Edit</span>
                             <span class="mockup-menu-btn">View</span>
                             <span class="mockup-menu-btn">Help</span>
                         </div>
-                        <div style="font-size:11px; color:var(--text-muted)">REDGLITCH.DEV</div>
+                        <div class="mono" style="font-size:11px; color:var(--text-muted); margin-left:auto;">REDGLITCH.DEV</div>
                     </div>
 
-                    <!-- Quick Toolbar -->
                     <div class="mockup-quick-toolbar">
                         <div class="mockup-toolbar-group">
-                            <span class="mockup-tool-btn"><i class="fas fa-save"></i></span>
-                            <span class="mockup-tool-btn"><i class="fas fa-sync-alt"></i></span>
+                            <span class="mockup-tool-btn">💾</span>
+                            <span class="mockup-tool-btn">⟳</span>
                         </div>
                         <div class="mockup-toolbar-group">
-                            <span class="mockup-tool-btn"><i class="fas fa-undo"></i></span>
-                            <span class="mockup-tool-btn"><i class="fas fa-redo"></i></span>
+                            <span class="mockup-tool-btn">↶</span>
+                            <span class="mockup-tool-btn">↷</span>
                         </div>
                         <div class="mockup-toolbar-group">
-                            <span class="mockup-tool-btn"><i class="fas fa-search"></i></span>
-                            <span class="mockup-tool-btn primary"><i class="fas fa-cog"></i></span>
+                            <span class="mockup-tool-btn">🔍</span>
+                            <span class="mockup-tool-btn primary">⚙</span>
                         </div>
                     </div>
 
-                    <!-- Main Split Layout (Sidebar + Editor) -->
                     <div class="mockup-split-layout">
-                        <!-- Sidebar Explorer -->
                         <div class="mockup-explorer-panel">
-                            <div class="mockup-explorer-header">
-                                <span>EXPLORER 📂</span>
-                            </div>
+                            <div class="mockup-explorer-header">EXPLORER</div>
                             <div class="mockup-file-tree">
-                                <div class="mockup-tree-node">
-                                    <span>🗎</span> EventBus.js
-                                </div>
-                                <div class="mockup-tree-node active">
-                                    <span>🗎</span> AssetManager.js
-                                </div>
-                                <div class="mockup-tree-node">
-                                    <span>🗎</span> NPCManager.js
-                                </div>
+                                <div class="mockup-tree-node"><span>▤</span> EventBus.js</div>
+                                <div class="mockup-tree-node active"><span>▤</span> AssetManager.js</div>
+                                <div class="mockup-tree-node"><span>▤</span> NPCManager.js</div>
                             </div>
                         </div>
 
-                        <!-- Editor Workspace -->
                         <div class="mockup-editor-workspace">
-                            <!-- Tabs -->
                             <div class="mockup-editor-tabs">
                                 <div class="mockup-editor-tab">EventBus.js</div>
                                 <div class="mockup-editor-tab active">AssetManager.js</div>
                             </div>
-
-                            <!-- Code Container -->
                             <div class="mockup-code-container">
                                 <div><span class="code-ln">1</span><span class="code-keyword">import</span> { <span class="code-ident">EventBus</span> } <span class="code-keyword">from</span> <span class="code-string">'./EventBus.js'</span>;</div>
                                 <div><span class="code-ln">2</span></div>
@@ -536,17 +474,9 @@
                                 <div><span class="code-ln">13</span>    }</div>
                                 <div><span class="code-ln">14</span>}</div>
                             </div>
-
-                            <!-- Status Bar -->
                             <div class="mockup-status-bar">
-                                <div class="mockup-status-item">
-                                    <span>READY</span>
-                                </div>
-                                <div class="mockup-status-item">
-                                    <span>LN 11, COL 24</span>
-                                    <span>Space: 4</span>
-                                    <span>JavaScript</span>
-                                </div>
+                                <div class="mockup-status-item"><span>READY</span></div>
+                                <div class="mockup-status-item"><span>LN 11, COL 24</span><span>Space: 4</span><span>JavaScript</span></div>
                             </div>
                         </div>
                     </div>
@@ -558,125 +488,88 @@
         <section id="ai" class="section">
             <div class="section-container">
                 <div class="ai-layout">
-                    <div class="ai-text">
-                        <span class="section-label">Kai — Built-in AI</span>
-                        <h2>Your AI pair programmer, <span class="hl">without the cloud</span></h2>
-                        <p>Kai is RedGlitch's local AI assistant. It runs entirely in your browser using WebGPU and WASM — no API keys, no internet connection required, no data leaving your machine.</p>
+                    <div class="ai-text reveal">
+                        <span class="eyebrow">Kai — the built-in AI</span>
+                        <h2>A small AI helper, <span class="hl">no cloud needed</span></h2>
+                        <p>Kai is a local assistant that runs in your browser with WebGPU/WASM. It's not going to replace a real coding assistant, but it can answer questions about your project and poke at files without sending anything off your machine.</p>
                         <div class="ai-features">
                             <div class="ai-feature">
                                 <div class="ai-feature-icon">⚡</div>
-                                <div>
-                                    <strong>Local inference</strong>
-                                    <p>Powered by Transformers.js running on WebGPU/WASM. Everything executes on your hardware.</p>
-                                </div>
+                                <div><strong>Local inference</strong><p>Powered by Transformers.js running on WebGPU/WASM. Everything executes on your hardware.</p></div>
                             </div>
                             <div class="ai-feature">
-                                <div class="ai-feature-icon">🔍</div>
-                                <div>
-                                    <strong>Project-aware RAG</strong>
-                                    <p>Kai indexes your project files, logic scripts, and engine documentation using a local vector store (Orama) for context-aware answers.</p>
-                                </div>
+                                <div class="ai-feature-icon">◎</div>
+                                <div><strong>Project-aware RAG</strong><p>Kai indexes your project files, logic scripts, and engine documentation using a local vector store (Orama) for context-aware answers.</p></div>
                             </div>
                             <div class="ai-feature">
-                                <div class="ai-feature-icon">🛠</div>
-                                <div>
-                                    <strong>Agentic capabilities</strong>
-                                    <p>Kai can create files, modify logic scripts, and perform tasks inside your project — not just suggest them.</p>
-                                </div>
+                                <div class="ai-feature-icon">⚙</div>
+                                <div><strong>Agentic capabilities</strong><p>Kai can create files, modify logic scripts, and perform tasks inside your project — not just suggest them. Tool calls are tiered by risk and gated by a permission layer.</p></div>
                             </div>
                             <div class="ai-feature">
-                                <div class="ai-feature-icon">🔒</div>
-                                <div>
-                                    <strong>100% private</strong>
-                                    <p>No cloud, no telemetry, no API subscriptions. Your project code never leaves your machine.</p>
-                                </div>
+                                <div class="ai-feature-icon">◆</div>
+                                <div><strong>100% private</strong><p>No cloud, no telemetry, no API subscriptions. Your project code never leaves your machine.</p></div>
                             </div>
                         </div>
                     </div>
-                    <div class="ai-visual">
-                        <div class="mockup-window">
-                            <!-- Title Bar -->
+                    <div class="ai-visual reveal">
+                        <div class="mockup-window" style="margin-bottom:0;">
                             <div class="mockup-titlebar">
                                 <div class="mockup-app-icon">
-                                    <div class="mockup-app-icon-mark">🚀</div>
-                                    <div class="mockup-app-icon-copy">
-                                        <div class="mockup-brand-line">
-                                            <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
-                                        </div>
+                                    <span class="mockup-app-icon-mark">▣</span>
+                                    <div>
+                                        <div class="mockup-brand-line"><span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span></div>
                                         <div class="mockup-brand-tag">Studio Core</div>
                                     </div>
                                 </div>
                                 <div class="mockup-app-caption">
-                                    <div class="mockup-caption-chip">
-                                        <span>🤖</span> AI Assistant
-                                    </div>
+                                    <div class="mockup-caption-chip"><span>◆</span> AI Assistant</div>
                                     <div class="mockup-caption-meta">Kai Active</div>
                                 </div>
-                                <div class="mockup-win-controls">
-                                    <span class="mockup-control-btn">─</span>
-                                    <span class="mockup-control-btn">◻</span>
-                                    <span class="mockup-control-btn">✕</span>
-                                </div>
+                                <div class="mockup-win-controls"><span class="mockup-control-btn">─</span><span class="mockup-control-btn">◻</span><span class="mockup-control-btn">✕</span></div>
                             </div>
 
-                            <!-- Menubar -->
-                            <div class="mockup-titlebar" style="background:#000; border-bottom:1px solid rgba(255,255,255,0.05); padding: 4px 12px;">
+                            <div class="mockup-titlebar" style="background:#000; padding:4px 12px;">
                                 <div class="mockup-menubar">
                                     <span class="mockup-menu-btn">File</span>
                                     <span class="mockup-menu-btn">Edit</span>
                                     <span class="mockup-menu-btn">View</span>
                                     <span class="mockup-menu-btn">Help</span>
                                 </div>
-                                <div style="font-size:11px; color:var(--text-muted)">KAI_INFERENCE_READY</div>
+                                <div class="mono" style="font-size:11px; color:var(--text-muted); margin-left:auto;">KAI_INFERENCE_READY</div>
                             </div>
 
-                            <!-- Workspace with Right Sidebar containing AI -->
                             <div class="mockup-split-layout with-right-sidebar">
-                                <!-- Left Mini Toolbar (Tools Sidebar) -->
                                 <div class="mockup-studio-sidebar">
-                                    <span class="mockup-studio-btn"><i class="fas fa-th"></i></span>
-                                    <span class="mockup-studio-btn"><i class="fas fa-cube"></i></span>
-                                    <span class="mockup-studio-btn active"><i class="fas fa-code"></i></span>
-                                    <span class="mockup-studio-btn"><i class="fas fa-cogs"></i></span>
+                                    <span class="mockup-studio-btn">▦</span>
+                                    <span class="mockup-studio-btn">◇</span>
+                                    <span class="mockup-studio-btn active">⌨</span>
+                                    <span class="mockup-studio-btn">⚙</span>
                                 </div>
 
-                                <!-- Center Editor Area -->
                                 <div class="mockup-editor-workspace">
-                                    <div class="mockup-editor-tabs">
-                                        <div class="mockup-editor-tab active">EventBus.js</div>
-                                    </div>
+                                    <div class="mockup-editor-tabs"><div class="mockup-editor-tab active">EventBus.js</div></div>
                                     <div class="mockup-code-container" style="min-height:200px;">
                                         <div><span class="code-ln">1</span><span class="code-keyword">import</span> { <span class="code-ident">EventBus</span> } <span class="code-keyword">from</span> <span class="code-string">'./EventBus.js'</span>;</div>
                                         <div><span class="code-ln">2</span></div>
                                         <div><span class="code-ln">3</span><span class="code-keyword">const</span> <span class="code-ident">rawText</span> = <span class="code-ident">event</span>.<span class="code-ident">data</span>;</div>
                                         <div><span class="code-ln">4</span><span class="code-keyword">const</span> <span class="code-ident">data</span> = <span class="code-ident">JSON</span>.<span class="code-ident">parse</span>(<span class="code-ident">rawText</span>);</div>
                                     </div>
-                                    <div class="mockup-status-bar">
-                                        <span>READY</span>
-                                        <span>LN 4, COL 30</span>
-                                    </div>
+                                    <div class="mockup-status-bar"><span>READY</span><span>LN 4, COL 30</span></div>
                                 </div>
 
-                                <!-- Right AI Sidebar -->
                                 <div class="mockup-right-sidebar">
                                     <div class="mockup-right-tab-bar">
                                         <div class="mockup-right-tab">DevOps</div>
-                                        <div class="mockup-right-tab active">🤖 Kai AI</div>
+                                        <div class="mockup-right-tab active">◆ Kai AI</div>
                                     </div>
                                     <div class="mockup-chat-body">
                                         <div class="chat-bubble user">
-                                            <div class="chat-bubble-header">
-                                                <span>User</span>
-                                                <span>15:32</span>
-                                            </div>
+                                            <div class="chat-bubble-header"><span>User</span><span>15:32</span></div>
                                             How do I fix the WebSocket Blob crash in EventBus?
                                         </div>
                                         <div class="chat-bubble ai">
-                                            <div class="chat-bubble-header">
-                                                <span>Kai AI</span>
-                                                <span>15:32</span>
-                                            </div>
-                                            In `EventBus.js`, check if the payload is a `Blob` and parse it:
+                                            <div class="chat-bubble-header"><span>Kai AI</span><span>15:32</span></div>
+                                            In <code>EventBus.js</code>, check if the payload is a Blob and parse it:
                                             <div class="diff-block">
                                                 <span class="diff-del">- const data = JSON.parse(event.data);</span>
                                                 <span class="diff-add">+ const rawText = event.data instanceof Blob ? await event.data.text() : event.data;</span>
@@ -692,35 +585,151 @@
             </div>
         </section>
 
-        <!-- PLATFORMS -->
-        <section id="platforms" class="section section-alt">
+        <!-- PROJECTVERTEX -->
+        <section id="vertex" class="section section-alt">
             <div class="section-container">
-                <div class="section-header">
-                    <span class="section-label">Multi-Platform</span>
-                    <h2>Build once, <span class="hl">ship everywhere</span></h2>
-                    <p>One command packages your game for any target. The same project runs on desktop, web, and mobile without changes.</p>
+                <div class="vertex-intro">
+                    <div class="reveal">
+                        <span class="vertex-badge">Side experiment</span>
+                        <h2>An experiment: <span class="hl">prompt to project</span></h2>
+                        <p>ProjectVertex is a separate, smaller side project sitting next to RedGlitch. You type something like <em>"a simple platformer game"</em>, it calls a cloud LLM through a few phases, and it spits out a rough but playable RedGlitch project — a level, some entities, a campaign wrapper.</p>
+                        <p>It's not trying to be a product. It doesn't run the local Kai assistant — it just makes plain API calls to whatever provider you point it at, which happens to make it easy to throw on Vercel if you want to poke at it there.</p>
+                        <div class="hero-cta" style="margin-top:8px;">
+                            <a href="#start" class="btn-secondary">Setup instructions ↓</a>
+                        </div>
+                    </div>
+                    <div class="vertex-facts reveal">
+                        <div class="vertex-fact"><span class="vertex-fact-label">Output</span><span class="vertex-fact-val">Downloadable .zip — RedGlitch project</span></div>
+                        <div class="vertex-fact"><span class="vertex-fact-label">Runtime</span><span class="vertex-fact-val">Stateless cloud API calls</span></div>
+                        <div class="vertex-fact"><span class="vertex-fact-label">Frontend</span><span class="vertex-fact-val">React 19 + Vite web UI</span></div>
+                        <div class="vertex-fact"><span class="vertex-fact-label">Server</span><span class="vertex-fact-val">Express, port 4100</span></div>
+                        <div class="vertex-fact"><span class="vertex-fact-label">Levels per run</span><span class="vertex-fact-val">1–3, auto campaign-linked</span></div>
+                        <div class="vertex-fact"><span class="vertex-fact-label">Deploy target</span><span class="vertex-fact-val">Vercel-ready (vercel.json included)</span></div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-bottom:24px;">
+                    <span class="eyebrow" style="color:var(--accent-2);">How it works</span>
+                    <h2 style="font-size:24px;">A handful of steps, <span style="color:var(--accent-2);">nothing fancy</span></h2>
+                    <p>Each run walks the same fixed sequence. If you ask for more than one level, it adds a quick planning step first so the levels aren't identical.</p>
+                </div>
+
+                <div class="pipeline-wrap reveal">
+                    <div class="pipeline">
+                        <div class="pipeline-step">
+                            <div class="pipeline-num">01</div>
+                            <div class="pipeline-name">Concept</div>
+                            <div class="pipeline-desc">Picks title, theme, engine type, and difficulty from the prompt.</div>
+                        </div>
+                        <div class="pipeline-step optional">
+                            <div class="pipeline-num">01.5</div>
+                            <div class="pipeline-name">Level Plan</div>
+                            <div class="pipeline-desc">Only runs for 2–3 level requests — briefs each level with a distinct theme.</div>
+                        </div>
+                        <div class="pipeline-step">
+                            <div class="pipeline-num">02</div>
+                            <div class="pipeline-name">Scaffold</div>
+                            <div class="pipeline-desc">Builds the project skeleton — redglitch.json and folder structure.</div>
+                        </div>
+                        <div class="pipeline-step">
+                            <div class="pipeline-num">03</div>
+                            <div class="pipeline-name">World Level</div>
+                            <div class="pipeline-desc">Generates the map for each planned level, one pass per level.</div>
+                        </div>
+                        <div class="pipeline-step">
+                            <div class="pipeline-num">04</div>
+                            <div class="pipeline-name">Entity Design</div>
+                            <div class="pipeline-desc">Designs the entity types available for placement (enemies, pickups, NPCs).</div>
+                        </div>
+                        <div class="pipeline-step">
+                            <div class="pipeline-num">05</div>
+                            <div class="pipeline-name">Entities</div>
+                            <div class="pipeline-desc">Places designed entities into each generated level.</div>
+                        </div>
+                        <div class="pipeline-step optional">
+                            <div class="pipeline-num">06</div>
+                            <div class="pipeline-name">Logic</div>
+                            <div class="pipeline-desc">Generates node/wire logic graphs — RPG top-down engine only.</div>
+                        </div>
+                        <div class="pipeline-step">
+                            <div class="pipeline-num">07</div>
+                            <div class="pipeline-name">Campaign + Build</div>
+                            <div class="pipeline-desc">Links levels into a campaign, validates it, and zips the final project.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin-bottom:24px;">
+                    <span class="eyebrow" style="color:var(--accent-2);">LLM providers</span>
+                    <h2 style="font-size:22px;">Bring your own <span style="color:var(--accent-2);">API key</span></h2>
+                    <p>Set at least one provider key as an environment variable. If <code class="inline-code">LLM_PROVIDER</code> isn't set, it just uses whichever key it finds first.</p>
+                </div>
+
+                <div class="vertex-providers reveal">
+                    <div class="vertex-provider">
+                        <div class="vertex-provider-name">OpenCode Zen</div>
+                        <div class="vertex-provider-env">OPENCODE_API_KEY</div>
+                        <div class="vertex-provider-desc">Default provider lookup target when no <code class="inline-code">LLM_PROVIDER</code> override is set.</div>
+                    </div>
+                    <div class="vertex-provider">
+                        <div class="vertex-provider-name">OpenRouter</div>
+                        <div class="vertex-provider-env">OPENROUTER_API_KEY</div>
+                        <div class="vertex-provider-desc">Model-agnostic routing layer — swap models without changing the pipeline.</div>
+                    </div>
+                    <div class="vertex-provider">
+                        <div class="vertex-provider-name">Cerebras Cloud</div>
+                        <div class="vertex-provider-env">CEREBRAS_API_KEY</div>
+                        <div class="vertex-provider-desc">Tends to run the phases a bit faster than the others.</div>
+                    </div>
+                </div>
+
+                <div class="vertex-cli">
+                    <div class="code-block">
+                        <pre><code>cd projectvertex
+npm start
+# builds webui + starts server
+# → http://localhost:4100</code></pre>
+                        <button class="copy-btn" data-code="cd projectvertex&#10;npm start">Copy</button>
+                    </div>
+                    <div class="code-block">
+                        <pre><code>npm run cli "a simple platformer game"
+# one-shot CLI run
+# → runs/&lt;id&gt;/output.zip</code></pre>
+                        <button class="copy-btn" data-code='npm run cli "a simple platformer game"'>Copy</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PLATFORMS -->
+        <section id="platforms" class="section">
+            <div class="section-container">
+                <div class="section-header reveal">
+                    <span class="eyebrow">Where it runs</span>
+                    <h2>Build once, <span class="hl">try it a few places</span></h2>
+                    <p>One command packages your game for a given target. The same project should run on desktop, web, and mobile without extra work — mobile/desktop packaging is less battle-tested than the core engines, so your mileage may vary.</p>
                 </div>
                 <div class="platforms-grid">
-                    <div class="platform-card">
-                        <div class="platform-icon">🖥</div>
+                    <div class="platform-card reveal">
+                        <div class="platform-icon">▣</div>
                         <h4>Desktop</h4>
-                        <p>Ships as a standalone Windows app via Electron. Embeds the game server internally — no separate install needed.</p>
+                        <p>Ships as a standalone app via Electron. Embeds the game server internally — no separate install needed.</p>
                         <code>npm run build:game "MyGame" electron</code>
                     </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🌐</div>
+                    <div class="platform-card reveal">
+                        <div class="platform-icon">◈</div>
                         <h4>Web</h4>
                         <p>Serves directly from an Express static server. The same HTML/JS game runs in any modern browser.</p>
                         <code>npm run build:game "MyGame" web</code>
                     </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">📱</div>
+                    <div class="platform-card reveal">
+                        <div class="platform-icon">▤</div>
                         <h4>Android</h4>
                         <p>Packaged via Capacitor. Sync assets and open Android Studio with a single command.</p>
                         <code>npm run build:game "MyGame" android</code>
                     </div>
-                    <div class="platform-card">
-                        <div class="platform-icon">🍎</div>
+                    <div class="platform-card reveal">
+                        <div class="platform-icon">◆</div>
                         <h4>iOS</h4>
                         <p>Also via Capacitor. Builds the iOS project and opens Xcode ready for deployment.</p>
                         <code>npx cap open ios</code>
@@ -730,30 +739,21 @@
         </section>
 
         <!-- MOBILE HIGHLIGHT -->
-        <section class="section">
+        <section class="section section-alt">
             <div class="section-container">
                 <div class="ai-layout">
-                    <div class="ai-visual">
+                    <div class="ai-visual reveal">
                         <div class="mockup-tablet-frame">
-                            <!-- Title Bar -->
                             <div class="mockup-titlebar">
                                 <div class="mockup-app-icon">
-                                    <div class="mockup-app-icon-mark">◈</div>
-                                    <div class="mockup-app-icon-copy">
-                                        <div class="mockup-brand-line">
-                                            <span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span>
-                                        </div>
+                                    <span class="mockup-app-icon-mark">◈</span>
+                                    <div>
+                                        <div class="mockup-brand-line"><span class="mockup-brand-red">RED</span><span class="mockup-brand-glitch">GLITCH</span></div>
                                         <div class="mockup-brand-tag">IsoPixel Studio</div>
                                     </div>
                                 </div>
-                                <div class="mockup-app-caption">
-                                    <div class="mockup-caption-chip">
-                                        <span>◈</span> IsoEditor - level_1.json
-                                    </div>
-                                </div>
-                                <div class="mockup-win-controls">
-                                    <span class="mockup-control-btn">✕</span>
-                                </div>
+                                <div class="mockup-app-caption"><div class="mockup-caption-chip"><span>◈</span> IsoEditor - level_1.json</div></div>
+                                <div class="mockup-win-controls"><span class="mockup-control-btn">✕</span></div>
                             </div>
                             <div class="tablet-screen">
                                 <div class="tablet-leftbar">
@@ -772,37 +772,25 @@
                                         <div class="mockup-right-tab active">Prefabs</div>
                                         <div class="mockup-right-tab">NPCs</div>
                                     </div>
-                                    <div class="tablet-palette-item">
-                                        <span>🌲</span> Pine Tree
-                                    </div>
-                                    <div class="tablet-palette-item">
-                                        <span>🌸</span> Vegetation
-                                    </div>
-                                    <div class="tablet-palette-item">
-                                        <span>🧱</span> Brick Wall
-                                    </div>
+                                    <div class="tablet-palette-item"><span>🌲</span> Pine Tree</div>
+                                    <div class="tablet-palette-item"><span>🌸</span> Vegetation</div>
+                                    <div class="tablet-palette-item"><span>🧱</span> Brick Wall</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="ai-text">
-                        <span class="section-label">Touch Optimized</span>
-                        <h2>IT ALSO WORKS ON YOUR <span class="hl">MOBILE DEVICE</span> OR YOUR <span class="hl">TABLET</span> TOO!</h2>
-                        <p>RedGlitch isn't just for desktop. Our studio and all engine runners are fully responsive and touch-optimized. Experience the full power of a game studio right in your pocket or on your tablet.</p>
+                    <div class="ai-text reveal">
+                        <span class="eyebrow">Touch optimized</span>
+                        <h2>It also works on your <span class="hl">mobile device</span> or your <span class="hl">tablet</span> too</h2>
+                        <p>RedGlitch isn't just for desktop. The studio and all engine runners are fully responsive and touch-optimized. Experience the full power of a game studio right in your pocket or on your tablet.</p>
                         <div class="ai-features">
                             <div class="ai-feature">
-                                <div class="ai-feature-icon">📱</div>
-                                <div>
-                                    <strong>Fully Responsive UI</strong>
-                                    <p>The entire Studio dashboard and all 30+ editors adapt perfectly to smaller screens.</p>
-                                </div>
+                                <div class="ai-feature-icon">▦</div>
+                                <div><strong>Fully responsive UI</strong><p>The entire Studio dashboard and all 50+ editors adapt perfectly to smaller screens.</p></div>
                             </div>
                             <div class="ai-feature">
-                                <div class="ai-feature-icon">👆</div>
-                                <div>
-                                    <strong>Touch-Friendly Controls</strong>
-                                    <p>Visual editors, node graphs, and painting tools are optimized for finger and stylus input.</p>
-                                </div>
+                                <div class="ai-feature-icon">☝</div>
+                                <div><strong>Touch-friendly controls</strong><p>Visual editors, node graphs, and painting tools are optimized for finger and stylus input.</p></div>
                             </div>
                         </div>
                     </div>
@@ -811,76 +799,48 @@
         </section>
 
         <!-- DOWNLOADS -->
-        <section id="downloads" class="section section-alt">
+        <section id="downloads" class="section">
             <div class="section-container">
-                <div class="section-header">
-                    <span class="section-label">Downloads</span>
+                <div class="section-header reveal">
+                    <span class="eyebrow">Downloads</span>
                     <h2>Install on <span class="hl">your machine</span></h2>
-                    <p>Grab the desktop app for your OS, or install via npm for a web-server workflow. All packages ship with the full studio and all five engines.</p>
+                    <p>Grab the desktop app for your OS, or install via npm for a web-server workflow. All packages ship with the full studio and all six engines.</p>
                 </div>
 
-                <!-- Desktop packages -->
                 <div class="dl-group-label">DESKTOP_PACKAGES</div>
                 <div class="dl-grid">
                     <a href="#" class="dl-card">
-                        <div class="dl-os-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.03 3.02 2.65 4.03 2.68 4.04l-.05.27zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                        </div>
-                        <div class="dl-info">
-                            <div class="dl-os">macOS</div>
-                            <div class="dl-detail">Universal · .dmg</div>
-                        </div>
+                        <div class="dl-os-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.03 3.02 2.65 4.03 2.68 4.04l-.05.27zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></div>
+                        <div class="dl-info"><div class="dl-os">macOS</div><div class="dl-detail">Universal · .dmg</div></div>
                         <div class="dl-arrow">↓</div>
                     </a>
                     <a href="#" class="dl-card">
-                        <div class="dl-os-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
-                        </div>
-                        <div class="dl-info">
-                            <div class="dl-os">Windows</div>
-                            <div class="dl-detail">x64 · .exe installer</div>
-                        </div>
+                        <div class="dl-os-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg></div>
+                        <div class="dl-info"><div class="dl-os">Windows</div><div class="dl-detail">x64 · .exe installer</div></div>
                         <div class="dl-arrow">↓</div>
                     </a>
                     <a href="#" class="dl-card">
-                        <div class="dl-os-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.144 4.486l2.55 4.416-2.55 4.416-2.55-4.416zm-5.658 2.772l4.416 2.55-4.416 2.55V7.258zm11.028 0v5.1l-4.416-2.55zm-11.028 7.2l4.416 2.55-4.416 2.55zm6.642 2.55l-2.55 4.416-2.55-4.416h5.1zm4.386-2.55v5.1l-4.416-2.55zm-9.372 5.1l2.55-4.416 2.55 4.416z"/></svg>
-                        </div>
-                        <div class="dl-info">
-                            <div class="dl-os">Linux</div>
-                            <div class="dl-detail">x64 · .AppImage / .deb</div>
-                        </div>
+                        <div class="dl-os-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.144 4.486l2.55 4.416-2.55 4.416-2.55-4.416zm-5.658 2.772l4.416 2.55-4.416 2.55V7.258zm11.028 0v5.1l-4.416-2.55zm-11.028 7.2l4.416 2.55-4.416 2.55zm6.642 2.55l-2.55 4.416-2.55-4.416h5.1zm4.386-2.55v5.1l-4.416-2.55zm-9.372 5.1l2.55-4.416 2.55 4.416z"/></svg></div>
+                        <div class="dl-info"><div class="dl-os">Linux</div><div class="dl-detail">x64 · .AppImage / .deb</div></div>
                         <div class="dl-arrow">↓</div>
                     </a>
                 </div>
 
-                <!-- Mobile packages -->
-                <div class="dl-group-label" style="margin-top: 44px;">MOBILE_PACKAGES</div>
+                <div class="dl-group-label" style="margin-top: 40px;">MOBILE_PACKAGES</div>
                 <div class="dl-grid">
                     <a href="#" class="dl-card">
-                        <div class="dl-os-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M17.523 15.3414C17.0609 15.3414 16.691 14.9664 16.691 14.5093C16.691 14.0522 17.0609 13.6772 17.523 13.6772C17.9851 13.6772 18.355 14.0522 18.355 14.5093C18.355 14.9664 17.9851 15.3414 17.523 15.3414ZM6.47702 15.3414C6.01492 15.3414 5.64502 14.9664 5.64502 14.5093C5.64502 14.0522 6.01492 13.6772 6.47702 13.6772C6.93912 13.6772 7.30902 14.0522 7.30902 14.5093C7.30902 14.9664 6.93912 15.3414 6.47702 15.3414ZM17.8852 10.5186L19.4627 7.75545C19.5592 7.58666 19.502 7.37198 19.3353 7.27503C19.1687 7.17808 18.9566 7.23555 18.8601 7.40434L17.2536 10.2198C15.8073 9.56068 13.9789 9.17188 12 9.17188C10.0211 9.17188 8.19273 9.56068 6.74643 10.2198L5.13988 7.40434C5.04341 7.23555 4.83125 7.17808 4.66465 7.27503C4.49805 7.37198 4.44078 7.58666 4.53725 7.75545L6.11478 10.5186C2.71694 12.3392 0.454224 15.759 0.0510254 19.7827H23.949C23.5458 15.759 21.2831 12.3392 17.8852 10.5186Z"/></svg>
-                        </div>
-                        <div class="dl-info">
-                            <div class="dl-os">Android</div>
-                            <div class="dl-detail">Engine Runner · .apk</div>
-                        </div>
+                        <div class="dl-os-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M17.523 15.3414C17.0609 15.3414 16.691 14.9664 16.691 14.5093C16.691 14.0522 17.0609 13.6772 17.523 13.6772C17.9851 13.6772 18.355 14.0522 18.355 14.5093C18.355 14.9664 17.9851 15.3414 17.523 15.3414ZM6.47702 15.3414C6.01492 15.3414 5.64502 14.9664 5.64502 14.5093C5.64502 14.0522 6.01492 13.6772 6.47702 13.6772C6.93912 13.6772 7.30902 14.0522 7.30902 14.5093C7.30902 14.9664 6.93912 15.3414 6.47702 15.3414ZM17.8852 10.5186L19.4627 7.75545C19.5592 7.58666 19.502 7.37198 19.3353 7.27503C19.1687 7.17808 18.9566 7.23555 18.8601 7.40434L17.2536 10.2198C15.8073 9.56068 13.9789 9.17188 12 9.17188C10.0211 9.17188 8.19273 9.56068 6.74643 10.2198L5.13988 7.40434C5.04341 7.23555 4.83125 7.17808 4.66465 7.27503C4.49805 7.37198 4.44078 7.58666 4.53725 7.75545L6.11478 10.5186C2.71694 12.3392 0.454224 15.759 0.0510254 19.7827H23.949C23.5458 15.759 21.2831 12.3392 17.8852 10.5186Z"/></svg></div>
+                        <div class="dl-info"><div class="dl-os">Android</div><div class="dl-detail">Engine Runner · .apk</div></div>
                         <div class="dl-arrow">↓</div>
                     </a>
                     <a href="#" class="dl-card">
-                        <div class="dl-os-icon">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.03 3.02 2.65 4.03 2.68 4.04l-.05.27zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                        </div>
-                        <div class="dl-info">
-                            <div class="dl-os">iOS</div>
-                            <div class="dl-detail">Engine Runner · .ipa</div>
-                        </div>
+                        <div class="dl-os-icon"><svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.14-2.2 1.28-2.18 3.81.03 3.02 2.65 4.03 2.68 4.04l-.05.27zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></div>
+                        <div class="dl-info"><div class="dl-os">iOS</div><div class="dl-detail">Engine Runner · .ipa</div></div>
                         <div class="dl-arrow">↓</div>
                     </a>
                 </div>
 
-                <!-- npm install -->
-                <div class="dl-group-label" style="margin-top: 44px;">NPM_PACKAGE</div>
+                <div class="dl-group-label" style="margin-top: 40px;">NPM_PACKAGE</div>
                 <div class="dl-npm-block">
                     <div class="dl-npm-desc">
                         <p>Run the RedGlitch studio as a local web server — open it in any browser at <code class="inline-code">localhost:3000</code>. Ideal for CI, headless builds, or Linux servers without a display.</p>
@@ -893,84 +853,62 @@
                     <div class="dl-npm-commands">
                         <div class="npm-cmd-block">
                             <div class="npm-cmd-label">INSTALL</div>
-                            <div class="code-block">
-                                <pre><code>npm install -g redglitch</code></pre>
-                                <button class="copy-btn" data-code="npm install -g redglitch">Copy</button>
-                            </div>
+                            <div class="code-block"><pre><code>npm install -g redglitch</code></pre><button class="copy-btn" data-code="npm install -g redglitch">Copy</button></div>
                         </div>
                         <div class="npm-cmd-block">
                             <div class="npm-cmd-label">OR — RUN WITHOUT INSTALLING</div>
-                            <div class="code-block">
-                                <pre><code>npx redglitch</code></pre>
-                                <button class="copy-btn" data-code="npx redglitch">Copy</button>
-                            </div>
+                            <div class="code-block"><pre><code>npx redglitch</code></pre><button class="copy-btn" data-code="npx redglitch">Copy</button></div>
                         </div>
                         <div class="npm-cmd-block">
                             <div class="npm-cmd-label">OPEN STUDIO</div>
-                            <div class="code-block">
-                                <pre><code># opens at http://localhost:3000
-redglitch start</code></pre>
-                                <button class="copy-btn" data-code="redglitch start">Copy</button>
-                            </div>
+                            <div class="code-block"><pre><code># opens at http://localhost:3000
+redglitch start</code></pre><button class="copy-btn" data-code="redglitch start">Copy</button></div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </section>
 
         <!-- PRICING / FREE -->
-        <section id="pricing" class="section">
+        <section id="pricing" class="section section-alt">
             <div class="section-container">
-                <div class="section-header">
-                    <span class="section-label">Free. Forever.</span>
-                    <h2>All of these, <span class="hl">for free.</span></h2>
-                    <p>RedGlitch Engine is completely free. All 5 engines, all 30+ editors, Kai AI — no watermarks, no subscriptions, no limits. Build anything you want.</p>
+                <div class="section-header centered reveal" style="margin-left:auto; margin-right:auto;">
+                    <span class="eyebrow">Free, no catch</span>
+                    <h2>All of it is <span class="hl">free.</span></h2>
+                    <p>Everything above — all six engines, the editors, Kai — is free and open source. No accounts, no watermarks, no upsell. Optional paid asset packs exist if you want more art, but nothing is gated behind them.</p>
                 </div>
                 <div class="free-features">
-                    <div class="free-feature">
+                    <div class="free-feature reveal">
                         <span class="free-feature-icon">⚡</span>
-                        <div>
-                            <strong>All 5 Engines</strong>
-                            <span>IsoPixel, RPG, Platformer, TopDown 3D, FPS 3D</span>
-                        </div>
+                        <div><strong>All 6 Engines</strong><span>IsoPixel, RPG, Platformer, TopDown 3D, FPS 3D, Unified 3D</span></div>
                     </div>
-                    <div class="free-feature">
-                        <span class="free-feature-icon">🎨</span>
-                        <div>
-                            <strong>30+ Editors</strong>
-                            <span>Sprite, map, tile, audio, quest, dialog, and more</span>
-                        </div>
+                    <div class="free-feature reveal">
+                        <span class="free-feature-icon">▦</span>
+                        <div><strong>50+ Editors</strong><span>Sprite, map, tile, audio, quest, dialog, and more</span></div>
                     </div>
-                    <div class="free-feature">
-                        <span class="free-feature-icon">🤖</span>
-                        <div>
-                            <strong>Kai AI</strong>
-                            <span>Local AI copilot — runs entirely in-browser</span>
-                        </div>
+                    <div class="free-feature reveal">
+                        <span class="free-feature-icon">◆</span>
+                        <div><strong>Kai AI</strong><span>Local AI copilot — runs entirely in-browser</span></div>
                     </div>
-                    <div class="free-feature">
-                        <span class="free-feature-icon">📦</span>
-                        <div>
-                            <strong>Asset Packs</strong>
-                            <span>Premium sprite kits and audio packs available separately</span>
-                        </div>
+                    <div class="free-feature reveal">
+                        <span class="free-feature-icon">▣</span>
+                        <div><strong>Asset Packs</strong><span>Premium sprite kits and audio packs available separately</span></div>
                     </div>
                 </div>
-                <a href="#start" class="free-cta">Download Free — No Signup</a>
+                <a href="#start" class="free-cta">Get it — no signup</a>
             </div>
         </section>
 
         <!-- GET STARTED -->
         <section id="start" class="section">
             <div class="section-container">
-                <div class="section-header">
-                    <span class="section-label">Primal Simplicity</span>
-                    <h2>Primitive instinct. <span class="hl">Modern power.</span></h2>
-                    <p>Even a caveman can build a world with RedGlitch. We've distilled the complexity of game development into an experience so natural, it feels like muscle memory. Get up and running in three steps.</p>
+                <div class="section-header centered reveal" style="margin-left:auto; margin-right:auto;">
+                    <span class="eyebrow">Getting started</span>
+                    <h2>Three steps, <span class="hl">then you're poking around</span></h2>
+                    <p>Nothing clever here — clone it, run it, open a project. It should feel familiar if you've used any other local dev tool.</p>
                 </div>
                 <div class="start-steps">
-                    <div class="step">
+                    <div class="step reveal">
                         <div class="step-num">1</div>
                         <div class="step-content">
                             <h4>Clone and install</h4>
@@ -982,7 +920,7 @@ npm install</code></pre>
                             </div>
                         </div>
                     </div>
-                    <div class="step">
+                    <div class="step reveal">
                         <div class="step-num">2</div>
                         <div class="step-content">
                             <h4>Launch the studio</h4>
@@ -997,11 +935,11 @@ npm run server
                             </div>
                         </div>
                     </div>
-                    <div class="step">
+                    <div class="step reveal">
                         <div class="step-num">3</div>
                         <div class="step-content">
                             <h4>Create or open a project</h4>
-                            <p>From the project dashboard, pick one of the included demo projects — <em>Default Project</em> (RPG), <em>Platformer Demo</em>, or <em>Iso Pixel Demo</em> — or create a new project and choose your engine type.</p>
+                            <p>From the project dashboard, pick one of the included demo projects — <em>Default Project</em> (RPG), <em>Platformer Demo</em>, or <em>Iso Pixel Demo</em> — or create a new project and choose your engine type. Prefer to generate one from a prompt instead? Try <a href="#vertex" style="color:var(--accent-2); text-decoration:underline;">ProjectVertex</a>.</p>
                         </div>
                     </div>
                 </div>
@@ -1016,18 +954,39 @@ npm run server
 
     <footer class="footer">
         <div class="footer-container">
-            <div class="footer-brand">
-                <img src="favicon.ico" alt="RedGlitch" class="footer-logo">
-                <span>RedGlitch Engine Studio</span>
+            <div class="footer-top">
+                <div>
+                    <div class="footer-brand">
+                        <img src="favicon.ico" alt="RedGlitch" class="footer-logo">
+                        <span>RedGlitch Engine Studio</span>
+                    </div>
+                    <p class="footer-tagline">A local, multi-engine game dev studio, built mostly for our own use. ProjectVertex is a separate side experiment sitting next to it.</p>
+                </div>
+                <div class="footer-cols">
+                    <div class="footer-col">
+                        <h5>Product</h5>
+                        <a href="#engines">Engines</a>
+                        <a href="#studio">Studio</a>
+                        <a href="#ai">Kai AI</a>
+                        <a href="#vertex">ProjectVertex</a>
+                    </div>
+                    <div class="footer-col">
+                        <h5>Get Started</h5>
+                        <a href="#downloads">Downloads</a>
+                        <a href="#platforms">Platforms</a>
+                        <a href="#start">Setup Guide</a>
+                    </div>
+                    <div class="footer-col">
+                        <h5>Project</h5>
+                        <a href="https://github.com/n0rthstar/redglitch" target="_blank" rel="noopener">GitHub</a>
+                        <a href="#pricing">License — Free</a>
+                    </div>
+                </div>
             </div>
-            <div class="footer-links">
-                <a href="https://github.com/n0rthstar/redglitch" target="_blank" rel="noopener">GitHub</a>
-                <a href="#engines">Engines</a>
-                <a href="#studio">Studio</a>
-                <a href="#ai">Kai AI</a>
-                <a href="#start">Get Started</a>
+            <div class="footer-bottom">
+                <p class="footer-copy">Built by the RedGlitch team.</p>
+                <p class="footer-copy">MIT Licensed</p>
             </div>
-            <p class="footer-copy">Built with ❤️ by the RedGlitch Team</p>
         </div>
     </footer>
 

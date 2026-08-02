@@ -12,6 +12,8 @@
     "start": "npm run ui:build && node server/index.js",
     "cli": "node cli.js",
     "server": "node server/index.js",
+    "test": "node --test",
+    "quality:run": "node scripts/validate-run.js",
     "ui:dev": "vite --config webui/vite.config.js",
     "ui:build": "vite build --config webui/vite.config.js"
   },

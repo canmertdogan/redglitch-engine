@@ -11,21 +11,44 @@ OUTPUT SCHEMA (exact):
 
 GRID: {{WIDTH}} cols x {{HEIGHT}} rows = {{GRID_SIZE}} cells. Row-major: index = y * {{WIDTH}} + x. (0,0) = top-left.
 
+DESIGN PROCESS (mental only — output JSON only):
+
+STEP 1: PICK A LAYOUT STYLE from the concept (not a random jumble):
+- ROOMS+CORRIDORS (dungeon/RPG/horror/stealth): 2-4 rectangular rooms of varied size, connected by 1-2 wide straight corridors with a slight bend. Thick wall chunks between rooms. Doorway gaps exactly 2 tiles wide.
+- OPEN FIELD (forest/field/open-world/adventure): mostly open floor with 4-8 free-standing obstacle clusters (trees/rocks/pillars as 1s) of 2-4 tiles each, spaced so wide paths weave between them.
+- ARENA (shooter/arena/survival/brawl): large central open floor, 2-6 symmetrical or mirrored cover blocks (2x2 or 3x1), plus a few wall segments along the edges to break sightlines.
+- CIRCUIT (puzzle/racing/platformer-ish/stealth): a single loop corridor around a solid central room, with a few cross-connections and alcoves. Wide enough to move around the center.
+
+STEP 2: BUILD IT (row-major, border first):
+- BORDER: Outermost ring (x=0, x={{WIDTH_MAX}}, y=0, y={{HEIGHT_MAX}}) MUST be 1 (walls). No gaps, ever.
+- INTERIOR: mostly 0 (walkable). Lay down the chosen layout style as 1s.
+- VARIETY: vary room sizes / obstacle spacing — a level of uniformly spaced 1x1 pillars looks procedurally flat. Alternate long wall runs with clusters.
+- Make the layout feel intentional for the concept: a treasure hoard room vs. a gauntlet corridor vs. a serene clearing.
+
 HARD RULES:
 - layers.length === 1. layers[0].length === {{GRID_SIZE}}. Values: 0 or 1 only.
-- BORDER: Outermost ring (x=0, x={{WIDTH_MAX}}, y=0, y={{HEIGHT_MAX}}) MUST be 1 (walls). No gaps.
-- INTERIOR: Mostly 0 (walkable). Add 5-15 wall clusters (1s) as obstacles/rooms. Keep paths ≥2 tiles wide.
-- NO isolated rooms: every floor tile (0) must be reachable from at least one other floor tile. No 1x1 trapped floors.
-- SIMPLE: rectangular rooms, straight corridors. No mazes, no noise, no single-tile pillars.
-- CONCEPT-AWARE:
-  * RPG/dungeon: more walls, room+corridor layout
-  * Open world/adventure: fewer walls, open areas with scattered obstacles
-  * Arena: border walls + central pillars
-  * Maze: actual maze (recursive backtracker) — but keep paths 2+ tiles wide
+- BORDER ring all 1s, no gaps.
+- Keep paths ≥2 tiles wide everywhere (no 1-tile choke points).
+- No isolated rooms: every floor tile (0) must be reachable from at least one other floor tile. No 1x1 trapped floors, no sealed pockets. (The generator will repair mild connectivity gaps, but a mostly-connected layout reads far better.)
+- No single-tile pillars, no checkerboard/noise, no maze walls.
+- Total wall tiles: roughly 25-45% of the grid (dense for rooms+corridors, light for open field).
 
-EXAMPLE (8x6 = 48 cells, border=1, interior mostly 0):
+STRUCTURAL QUALITY GATE:
+- Your wall layout is audited after generation. If it does not read as real structure — too few walls, wall bits scattered as isolated single tiles, checkerboard noise, or a layout that is just thin wall lines with gaps instead of solid rooms/blocks — it is DISCARDED and replaced by a procedurally generated layout in your theme's style (dungeon rooms, forest clusters, or arena cover blocks). You do not see this replacement.
+- To keep your own layout: draw solid, connected wall masses. Rooms must be enclosed rectangles with 1-2 wide doorways. Open-field obstacles must be 2+ tile blobs, not single dots. Walls should form blocks, not scribbles.
+
+MAZE REQUESTS:
+- If the concept/brief asks for a MAZE, LABYRINTH, or corridor-style level, DO NOT hand-draw a maze. The generator carves a real, solvable maze deterministically after you respond, so just return a simple, fully connected OPEN layout (border ring + mostly floor) — do not add wall lines, grids, or dead-end passages. Your floor layer will be replaced by the generated maze anyway.
+
+DIFFICULTY — {{DIFFICULTY}}:
+- easy: 25-30% walls, wide open floors, generous 3-tile paths, few obstacles, rooms close together. A player should never feel cornered.
+- medium: 30-38% walls, balanced 2-tile paths, more obstacle clusters, some traversal through rooms.
+- hard: 38-45% walls, tighter 2-tile paths, dense obstacles, long wall runs that force detours, more cross-corridors. Each room should feel like it costs something to cross.
+- (If the difficulty is unknown or absent, aim for the medium band.)
+
+EXAMPLE (8x6 = 48 cells, rooms+corridors style):
 {
-  "layers": [[1,1,1,1,1,1,1,1, 1,0,0,0,0,0,0,1, 1,0,1,1,0,0,0,1, 1,0,0,0,0,1,0,1, 1,0,0,0,0,0,0,1, 1,1,1,1,1,1,1,1]]
+  "layers": [[1,1,1,1,1,1,1,1, 1,0,0,0,1,1,1,1, 1,0,0,0,1,1,1,1, 1,0,0,1,1,0,0,1, 1,0,0,0,0,0,0,1, 1,1,1,1,1,1,1,1]]
 }
 
 OUTPUT ONLY THE JSON. NOTHING ELSE.
