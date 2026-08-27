@@ -92,6 +92,21 @@ export default class PlatformerMode extends ModeInterface {
 
     get modeId() { return 'platformer-3d'; }
 
+    // ── Shared engine-member delegation ────────────────────────────────────────
+    // The 3D strategy systems were written against the old engine "game" object and
+    // read shared members (renderer, raycast, scene, gameTime) that live on the
+    // Game3DCore (this.game). Expose them here so passing `this` (the mode) as the
+    // strategy context is complete (fixes dead 3D abilities + broken save/restore).
+    get renderer3d() { return this.game?.renderer3d ?? null; }
+    get renderer()   { return this.game?.renderer3d ?? null; }
+    get camera3d()   { return this.game?.camera3d ?? null; }
+    get raycast()    { return this.game?.raycast ?? null; }
+    get scene()      { return this.game?.scene ?? null; }
+    get gameTime()   { return this.game?.gameTime ?? 0; }
+
+    // Strategy reads `game.player` for the controllable character.
+    get player()     { return this.playerChar || this.charController || null; }
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async onInit(game) {
@@ -154,7 +169,7 @@ export default class PlatformerMode extends ModeInterface {
         this.thirdPersonCam.attach();
 
         // ── Strategy ──────────────────────────────────────────────────────
-        this.strategy = new Platformer3DStrategy(game);
+        this.strategy = new Platformer3DStrategy(this);
         this.strategy.initialize();
 
         // ── Platformer physics layer ──────────────────────────────────────

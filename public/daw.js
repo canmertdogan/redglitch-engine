@@ -1,4 +1,5 @@
 /**
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
  * ╔═══════════════════════════════════════════════════════════╗
  * ║  KETEBE AUDIO STUDIO (KAS) — AudioStudio Controller      ║
  * ║  Full rebuild of the Audio Director                       ║
@@ -728,7 +729,7 @@ class AudioStudio {
 
             item.innerHTML = `
                 <div class="kas-asset-icon">${icon}</div>
-                <span class="kas-asset-name">${asset.name}</span>
+                <span class="kas-asset-name">${_escapeHtml(asset.name)}</span>
                 ${asset.sizeMb ? `<span class="kas-asset-size">${asset.sizeMb}MB</span>` : ''}
             `;
 
@@ -896,7 +897,7 @@ class AudioStudio {
         }
         log.innerHTML = relevant.reverse().map(h => `
             <div class="kas-history-row">
-                <span class="kas-history-name">${h.name}</span>
+                <span class="kas-history-name">${_escapeHtml(h.name)}</span>
                 <span class="kas-history-clip">${h.clip || '—'}</span>
                 <span class="kas-history-time">${h.time}</span>
             </div>
@@ -1328,7 +1329,7 @@ class AudioStudio {
             item.className = 'kas-asset-item' + (this.selectedMusicTrack === asset.name ? ' active' : '');
             item.innerHTML = `
                 <div class="kas-asset-icon">🎵</div>
-                <span class="kas-asset-name">${asset.name}</span>
+                <span class="kas-asset-name">${_escapeHtml(asset.name)}</span>
             `;
             item.onclick = () => {
                 this.selectedMusicTrack = asset.name;
@@ -1351,7 +1352,7 @@ class AudioStudio {
 
         if (this.activeContextKey && this.selectedMusicTrack) {
             btn.disabled = false;
-            status.innerHTML = `Link <strong style="color:var(--kas-red)">${this.selectedMusicTrack}</strong> → <strong style="color:var(--text-primary)">${this.activeContextKey}</strong>?`;
+            status.innerHTML = `Link <strong style="color:var(--kas-red)">${_escapeHtml(this.selectedMusicTrack)}</strong> → <strong style="color:var(--text-primary)">${_escapeHtml(this.activeContextKey)}</strong>?`;
         } else if (this.activeContextKey) {
             btn.disabled = true;
             status.textContent = 'Now select a track from the library.';

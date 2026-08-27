@@ -9,11 +9,13 @@ if multiprocessing.get_start_method(allow_none=True) != 'spawn':
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import logging
 import asyncio
+import threading
+import queue
 import psutil
 import requests
 import re
@@ -38,7 +40,11 @@ watcher = None
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Booting up Cortex...")
-    asyncio.create_task(load_brain_task())
+    load_task = asyncio.create_task(load_brain_task())
+    load_task.add_done_callback(
+        lambda t: logger.error(f"load_brain_task failed: {t.exception()}")
+        if t.exception() else None
+    )
     asyncio.create_task(heartbeat_loop())
     yield
     # Shutdown
@@ -66,6 +72,11 @@ app.add_middleware(
 # Initialize Watcher (Watching project root)
 from config import PROJECT_ROOT
 
+@app.get("/health")
+async def health():
+    return {"status": "ok", "model_status": brain.status}
+
+
 @app.get("/api/ai/metrics")
 async def get_metrics():
     try:
@@ -84,6 +95,39 @@ async def get_metrics():
         }
     except Exception as e:
         return {"error": str(e)}
+
+@app.post("/api/ai/config")
+async def set_ai_config(request: Request):
+    """Persist cloud AI provider config (e.g. Cerebras key) sent by the studio UI.
+
+    The local IrabBrain runs on-device and ignores this, but the endpoint must
+    exist so the frontend's settings save doesn't 404. Stored under the
+    gitignored .redglitch/ directory.
+    """
+    try:
+        payload = await request.json()
+        config_dir = os.path.join(PROJECT_ROOT, ".redglitch")
+        os.makedirs(config_dir, exist_ok=True)
+        config_path = os.path.join(config_dir, "ai_config.json")
+        # Merge with any existing config rather than overwriting.
+        existing = {}
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r", encoding="utf-8") as fh:
+                    existing = json.load(fh)
+            except Exception:
+                existing = {}
+        # Never persist an empty/placeholder key; keep prior value if blank.
+        if payload.get("cerebrasKey"):
+            existing["cerebrasKey"] = payload["cerebrasKey"]
+        if payload.get("provider"):
+            existing["provider"] = payload["provider"]
+        with open(config_path, "w", encoding="utf-8") as fh:
+            json.dump(existing, fh, indent=2)
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Failed to save AI config: {e}")
+        return {"success": False, "error": str(e)}
 
 class ConnectionManager:
     def __init__(self):
@@ -196,7 +240,10 @@ async def reindex_rag():
         loop = asyncio.get_event_loop()
         # Run forced ingestion in a separate thread to avoid blocking the event loop
         future = loop.run_in_executor(None, lambda: rag.ingest_project(force=True))
-        future.add_done_callback(lambda f: f.exception())
+        future.add_done_callback(
+            lambda f: logger.error(f"RAG reindex failed: {f.exception()}")
+            if f.exception() else None
+        )
         return {"success": True, "message": "Background re-indexing started."}
     except Exception as e:
         return {"error": str(e)}
@@ -223,7 +270,11 @@ async def load_brain_task():
     else:
         if watcher is None:
             watcher = IrabWatcher(PROJECT_ROOT, manager=manager, loop=loop)
-        loop.run_in_executor(None, watcher.start)
+        watcher_future = loop.run_in_executor(None, watcher.start)
+        watcher_future.add_done_callback(
+            lambda f: logger.error(f"Watcher start failed: {f.exception()}")
+            if f.exception() else None
+        )
     
     model_repo = "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF"
     model_filename = "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
@@ -345,12 +396,21 @@ async def chat_fallback(data: dict):
                 logger.error(f"Grammar build failed, falling back to unconstrained: {e}")
                 grammar = None
 
-        # Use brain to generate response (non-streaming)
-        # We wrap it in a list to get the full response from the generator
-        full_response = ""
-        for token in brain.generate_stream(message, grammar=grammar):
-            if token:
-                full_response += token
+        # Use brain to generate response (non-streaming). Run the blocking
+        # generator in a worker thread so the event loop isn't frozen.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+
+        def _run_generation():
+            out = ""
+            for tok in brain.generate_stream(message, grammar=grammar):
+                if tok:
+                    out += tok
+            return out
+
+        full_response = await loop.run_in_executor(None, _run_generation)
 
         return {"response": full_response}
     except Exception as e:
@@ -547,16 +607,44 @@ async def handle_prompt(message, websocket):
         # Generation Loop - Use brain.generate_stream to get proper chat template wrapping
         # We pass context options to brain if needed
         brain.update_config({"max_tokens": max_tokens, "temperature": temperature})
-        
+
         # Define stop sequences
         stop_sequences = ["<|im_end|>", "<|im_start|>", "User:"]
         if is_ghost:
             stop_sequences.append("\n\n")
 
-        for token in brain.generate_stream(augmented_prompt, stop=stop_sequences):
-            if brain.is_aborted: break
-            if not token: continue
-            
+        # Run the (CPU-bound, blocking) LLM inference in a worker thread so the
+        # asyncio event loop stays responsive to other WebSocket clients / HTTP
+        # requests during generation. Tokens are bridged back via a queue.
+        token_queue: "queue.Queue" = queue.Queue()
+
+        def _generate():
+            try:
+                for _tok in brain.generate_stream(augmented_prompt, stop=stop_sequences):
+                    if brain.is_aborted:
+                        break
+                    token_queue.put(_tok)
+            except Exception as _gen_err:  # surface generation errors to the async side
+                token_queue.put(_gen_err)
+            finally:
+                token_queue.put(None)  # sentinel: stream finished
+
+        gen_thread = threading.Thread(target=_generate, daemon=True)
+        gen_thread.start()
+
+        loop = asyncio.get_running_loop()
+        while True:
+            item = await loop.run_in_executor(None, token_queue.get)
+            if item is None:
+                break
+            if isinstance(item, Exception):
+                logger.error(f"Generation error: {item}")
+                await manager.send_personal_message({"type": "TOKEN", "data": f"Error: {str(item)}"}, websocket)
+                break
+            token = item
+            if not token:
+                continue
+
             # --- KAP Protocol Detection ---
             if not in_tool_block:
                 potential_full = full_response + token
@@ -573,13 +661,13 @@ async def handle_prompt(message, websocket):
                     if not is_ghost and any(phrase in (full_response + token)[-100:] for phrase in PROMPT_LEAK_PHRASES):
                         full_response += token
                         continue
-                    
+
                     full_response += token
                     await manager.send_personal_message({"type": "TOKEN", "data": token}, websocket)
             else:
                 full_response += token
                 tool_buffer += token
-                if tool_buffer.count("```") >= 2: 
+                if tool_buffer.count("```") >= 2:
                     try:
                         start = tool_buffer.find('{')
                         end = tool_buffer.rfind('}')

@@ -1,4 +1,5 @@
 // npc_editor.js - Advanced Logic with Directional Support
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -309,7 +310,7 @@ function refreshList() {
         }
         
         const span = document.createElement('span');
-        span.innerHTML = `${n.name || n.id} <span style="font-size:0.8em; color:#666;">${n.id}</span>`;
+        span.innerHTML = `${_escapeHtml(n.name || n.id)} <span style="font-size:0.8em; color:#666;">${_escapeHtml(n.id)}</span>`;
         div.appendChild(span);
         
         div.onclick = () => {

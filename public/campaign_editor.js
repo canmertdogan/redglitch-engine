@@ -1,4 +1,5 @@
 // CAMPAIGN STUDIO v7.0 (FULLY INTEGRATED)
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -337,14 +338,14 @@ class CampaignEditor {
         if (node.type === 'group') {
             div.style.width = `${node.w || 300}px`;
             div.style.height = `${node.h || 300}px`;
-            div.innerHTML = `<div style="position:absolute; top:5px; left:5px; font-weight:bold; color:rgba(255,255,255,0.3); pointer-events:none;">${node.name}</div>`;
+            div.innerHTML = `<div style="position:absolute; top:5px; left:5px; font-weight:bold; color:rgba(255,255,255,0.3); pointer-events:none;">${_escapeHtml(node.name)}</div>`;
             const handle = document.createElement('div');
             handle.style.cssText = "position:absolute; bottom:0; right:0; width:15px; height:15px; cursor:se-resize; background:rgba(255,255,255,0.1);";
             handle.onmousedown = (e) => { e.stopPropagation(); this.startDragGroupResize(e, node.id); };
             div.appendChild(handle);
         }
         else if (node.type === 'comment') {
-            div.innerHTML = `<div class="node-body">${node.text || 'Write a note...'}</div>`;
+            div.innerHTML = `<div class="node-body">${_escapeHtml(node.text || 'Write a note...')}</div>`;
         }
         else {
             let icon = 'circle';

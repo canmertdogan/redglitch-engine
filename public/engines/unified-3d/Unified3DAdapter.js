@@ -179,7 +179,7 @@ export default class Unified3DAdapter extends EngineAdapter {
     }
 
     isAbilityReady(abilityId) {
-        return this.game?.mode?.strategy?.isAbilityReady?.(abilityId) ?? true;
+        return this.game?.mode?.strategy?.isAbilityReady?.(abilityId) ?? false;
     }
 
     getCooldownFraction(abilityId) {

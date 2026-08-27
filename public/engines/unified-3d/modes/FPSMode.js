@@ -13,7 +13,7 @@ import * as THREE from '/lib/three/three.module.js';
 import ModeInterface from '../ModeInterface.js';
 import { CameraMode } from '../../shared/Camera3DController.js';
 import { LayerMask }   from '../../shared/Raycast3D.js';
-import TerrainRuntime3D, { normalizeTerrainLevel } from '../TerrainRuntime3D.js?v=fps-swim3';
+import TerrainRuntime3D, { normalizeTerrainLevel } from '../TerrainRuntime3D.js';
 import VehicleSystem3D from '../VehicleSystem3D.js';
 import {
     serialize3DPlayerState,
@@ -22,14 +22,14 @@ import {
 
 // FPS-specific subsystems (still live in engines/fps-3d/)
 import FPS3DStrategy     from '../../3d/systems/FPS3DStrategy.js';
-import FPSCamera         from '../../3d/systems/FPSCamera.js?v=hopfix1';
-import FPSController, { MoveState } from '../../3d/systems/FPSController.js?v=fps-swim3';
+import FPSCamera         from '../../3d/systems/FPSCamera.js';
+import FPSController, { MoveState } from '../../3d/systems/FPSController.js';
 import WorldGeometry     from '../../3d/systems/WorldGeometry.js';
 import WeaponSystem, { WeaponState } from '../../3d/systems/WeaponSystem.js';
-import EnemyAI, { EnemyState, Difficulty } from '../../3d/systems/EnemyAI.js?v=enemyai-bodyfix2';
+import EnemyAI, { EnemyState, Difficulty } from '../../3d/systems/EnemyAI.js';
 import HUD_FPS           from '../../3d/systems/HUD_FPS.js';
 import DecalSystem       from '../../3d/systems/DecalSystem.js';
-import VFX_FPS           from '../../3d/systems/VFX_FPS.js?v=fps-soft-shadows1';
+import VFX_FPS           from '../../3d/systems/VFX_FPS.js';
 
 const FPS_SKY_TOP = '#2f5f78';
 const FPS_SKY_BOTTOM = '#8eaeb8';
@@ -84,6 +84,18 @@ export default class FPSMode extends ModeInterface {
 
     get modeId() { return 'fps-3d'; }
 
+    // ── Shared engine-member delegation ────────────────────────────────────────
+    // The 3D strategy systems were written against the old engine "game" object and
+    // read shared members (renderer, raycast, scene, gameTime) that live on the
+    // Game3DCore (this.game). Expose them here so passing `this` (the mode) as the
+    // strategy context is complete (fixes dead 3D abilities + broken save/restore).
+    get renderer3d() { return this.game?.renderer3d ?? null; }
+    get renderer()   { return this.game?.renderer3d ?? null; }
+    get camera3d()   { return this.game?.camera3d ?? null; }
+    get raycast()    { return this.game?.raycast ?? null; }
+    get scene()      { return this.game?.scene ?? null; }
+    get gameTime()   { return this.game?.gameTime ?? 0; }
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async onInit(game) {
@@ -103,7 +115,7 @@ export default class FPSMode extends ModeInterface {
         });
 
         // ── Strategy ──────────────────────────────────────────────────────
-        this.strategy = new FPS3DStrategy(game);
+        this.strategy = new FPS3DStrategy(this);
         this.strategy.initialize();
 
         this.terrainRuntime = new TerrainRuntime3D(game);
@@ -705,7 +717,7 @@ export default class FPSMode extends ModeInterface {
         const playerQuat = this.fpsCamera ? { x: 0, y: 0, z: 0, w: 1 } : null;
         return serialize3DPlayerState(
             playerPos
-                ? { position: { x: playerPos[0], y: playerPos[1], z: playerPos[2] }, quaternion: playerQuat }
+                ? { position: { x: playerPos.x, y: playerPos.y, z: playerPos.z }, quaternion: playerQuat }
                 : null,
             { hp: this._health, maxHp: 100 },
         );

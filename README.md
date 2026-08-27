@@ -2,6 +2,38 @@
 
 **An all-in-one, multi-engine game development studio with AI copilot, visual scripting, and a built-in sound system.**
 
+## Screenshots
+
+### Dashboard & Project Hub
+![Dashboard](portfolio-screenshots/dashboard.png)
+
+### 3D Map Editor & Terrain Sculpting
+![3D Map Editor](portfolio-screenshots/3d_map_editor.png)
+
+### Prefab Builder
+![Prefab Builder](portfolio-screenshots/prefab_builder.png)
+
+### NPC & Character Editors
+| NPC Studio | Player Profiles |
+| :---: | :---: |
+| ![NPC Editor](portfolio-screenshots/npc_editor.png) | ![Character Editor](portfolio-screenshots/character_editor.png) |
+
+### Logic, Dialogue & AI Editors
+| Visual Scripting / Node Logic | Dialogue Tree Studio |
+| :---: | :---: |
+| ![Node Logic](portfolio-screenshots/node_logic_editor.png) | ![Dialogue Editor](portfolio-screenshots/dialogue_editor.png) |
+
+### Art & FX Studios
+| Pixel Art Editor | Particle FX Emitter |
+| :---: | :---: |
+| ![Pixel Art Editor](portfolio-screenshots/pixel_art_editor.png) | ![FX Emitter](portfolio-screenshots/fx_editor.png) |
+
+### Audio Workstation & DAW
+![Audio Workstation](portfolio-screenshots/audio_studio.png)
+
+### Skill Editor
+![Skill Editor](portfolio-screenshots/skill_editor.png)
+
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-0.1.0--experimental--alpha-ff1e27?style=flat-square)
@@ -55,43 +87,6 @@ See [docs/PUBLIC_BETA_CHECKLIST.md](docs/PUBLIC_BETA_CHECKLIST.md) for the manua
 | DAW, mobile export, advanced campaign authoring | Experimental for beta |
 
 ---
-
-## Screenshots
-
-<details>
-<summary><b>Click to expand the studio screenshot gallery</b></summary>
-
-### 🖥️ Dashboard & Project Hub
-![Dashboard](portfolio-screenshots/dashboard.png)
-
-### 🗺️ 3D Map Editor & Terrain Sculpting
-![3D Map Editor](portfolio-screenshots/3d_map_editor.png)
-
-### 🧱 Prefab Builder
-![Prefab Builder](portfolio-screenshots/prefab_builder.png)
-
-### 🤖 NPC & Character Editors
-| NPC Studio | Player Profiles |
-| :---: | :---: |
-| ![NPC Editor](portfolio-screenshots/npc_editor.png) | ![Character Editor](portfolio-screenshots/character_editor.png) |
-
-### ⚡ Logic, Dialogue & AI Editors
-| Visual Scripting / Node Logic | Dialogue Tree Studio |
-| :---: | :---: |
-| ![Node Logic](portfolio-screenshots/node_logic_editor.png) | ![Dialogue Editor](portfolio-screenshots/dialogue_editor.png) |
-
-### 🎨 Art & FX Studios
-| Pixel Art Editor | Particle FX Emitter |
-| :---: | :---: |
-| ![Pixel Art Editor](portfolio-screenshots/pixel_art_editor.png) | ![FX Emitter](portfolio-screenshots/fx_editor.png) |
-
-### 🎵 Audio Workstation & DAW
-![Audio Workstation](portfolio-screenshots/audio_studio.png)
-
-### 🔮 Skill Editor
-![Skill Editor](portfolio-screenshots/skill_editor.png)
-
-</details>
 
 ---
 
@@ -350,7 +345,7 @@ Synth / Sampler / Drum Machine → Track (gain, pan, FX) → Master Bus (compres
 ```bash
 # Prerequisites: Node.js ≥18, npm ≥9
 
-git clone https://github.com/your-org/redglitch-engine.git
+git clone https://github.com/canmertdogan/redglitch-engine.git
 cd redglitch-engine
 npm install
 

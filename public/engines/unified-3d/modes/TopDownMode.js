@@ -59,6 +59,18 @@ export default class TopDownMode extends ModeInterface {
 
     get modeId() { return 'topdown-3d'; }
 
+    // ── Shared engine-member delegation ────────────────────────────────────────
+    // The 3D strategy systems were written against the old engine "game" object and
+    // read shared members (renderer, raycast, scene, gameTime) that live on the
+    // Game3DCore (this.game). Expose them here so passing `this` (the mode) as the
+    // strategy context is complete (fixes dead 3D abilities + broken save/restore).
+    get renderer3d() { return this.game?.renderer3d ?? null; }
+    get renderer()   { return this.game?.renderer3d ?? null; }
+    get camera3d()   { return this.game?.camera3d ?? null; }
+    get raycast()    { return this.game?.raycast ?? null; }
+    get scene()      { return this.game?.scene ?? null; }
+    get gameTime()   { return this.game?.gameTime ?? 0; }
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async onInit(game) {
@@ -132,7 +144,7 @@ export default class TopDownMode extends ModeInterface {
         );
 
         // ── Strategy ──────────────────────────────────────────────────────
-        this.strategy = new TopDown3DStrategy(game);
+        this.strategy = new TopDown3DStrategy(this);
         this.vehicles = new VehicleSystem3D(game);
 
         console.log('[TopDownMode] onInit() complete');
@@ -339,11 +351,12 @@ export default class TopDownMode extends ModeInterface {
     // ── Save / Load ───────────────────────────────────────────────────────────
 
     getPlayerData() {
-        const heroMesh = this.entities?.getHero?.()?.mesh ?? null;
+        const hero = this.entities?.getHero?.() ?? null;
+        const heroMesh = hero?.mesh ?? null;
         return {
             ...serialize3DPlayerState(heroMesh, {
-                hp:    this.game?.player?.hp    ?? 100,
-                maxHp: this.game?.player?.maxHp ?? 100,
+                hp:    hero?.hp    ?? 100,
+                maxHp: hero?.maxHp ?? 100,
             }),
             selectedUnits: [...this.selectedUnits],
         };
@@ -351,9 +364,10 @@ export default class TopDownMode extends ModeInterface {
 
     async setPlayerData(data) {
         const ps = deserialize3DPlayerState(data);
-        if (ps && this.game?.player) {
-            if (ps.hp    !== undefined) this.game.player.hp    = ps.hp;
-            if (ps.maxHp !== undefined) this.game.player.maxHp = ps.maxHp;
+        const hero = this.entities?.getHero?.();
+        if (ps && hero) {
+            if (ps.hp    !== undefined) hero.hp    = ps.hp;
+            if (ps.maxHp !== undefined) hero.maxHp = ps.maxHp;
         }
     }
 

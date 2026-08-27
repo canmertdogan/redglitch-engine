@@ -21,7 +21,7 @@ import { ShaderRegistry } from '/engines/shared/ShaderRegistry.js';
 import { ShaderEditorUI } from './ShaderEditorUI.js';
 import { MaterialPackManager } from '/engines/shared/MaterialPresets.js';
 import { Evaluator, Brush, ADDITION, SUBTRACTION, INTERSECTION } from 'three-bvh-csg';
-import PropertiesPanel from './panels/PropertiesPanel.js?v=cachebust12';
+import PropertiesPanel from './panels/PropertiesPanel.js';
 import AssetLoader3D from '/engines/shared/AssetLoader3D.js';
 
 export default class Editor3DCore {
@@ -130,7 +130,7 @@ export default class Editor3DCore {
             import('/engines/shared/SkyboxSystem.js'),
             import('/engines/shared/WeatherSystem3D.js'),
             import('/engines/shared/MaterialPreviewRenderer.js'),
-            import('/lib/three/addons/controls/TransformControls.js?v=cachebust'),
+            import('/lib/three/addons/controls/TransformControls.js'),
         ]);
 
         this.THREE         = THREE_MODULE;

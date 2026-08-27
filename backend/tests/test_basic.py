@@ -14,20 +14,24 @@ async def test_health_endpoint():
         response = await client.get("/health")
     assert response.status_code == 200
     data = response.json()
-    assert "status" in data
+    assert data["status"] == "ok"
 
 
 @pytest.mark.anyio
 async def test_chat_endpoint_missing_fields():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/chat", json={})
-    assert response.status_code == 422
+        response = await client.post("/api/ai/chat", json={})
+    assert response.status_code == 200
+    data = response.json()
+    assert "error" in data
 
 
 @pytest.mark.anyio
-async def test_ingest_endpoint_no_file():
+async def test_rag_reindex_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.post("/ingest", json={"path": "/nonexistent"})
-    assert response.status_code in (400, 404, 500)
+        response = await client.get("/api/ai/rag/reindex")
+    assert response.status_code == 200
+    data = response.json()
+    assert data.get("success") is True

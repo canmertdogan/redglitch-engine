@@ -97,9 +97,12 @@ release/
 .antigravitycli/
 .claude/
 .opencode/
+opencode-memory/
 
 # Markdown docs (local only)
 *.md
+!RELEASE-*.md
+!CHANGELOG.md
 
 # Project Specific & Temporary
 builds/
@@ -121,3 +124,10 @@ projects/*/
 Ekran*
 .redglitch/ai_config.json
 screenshots/
+
+# Vendored ML runtime binaries (already tracked; guard against re-adding noise)
+*.wasm
+
+# Generated reports / local screenshots
+engine-lockstep-report.json
+portfolio-screenshots/

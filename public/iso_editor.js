@@ -1,4 +1,5 @@
 // iso_editor.js - Dedicated IsoPixel Studio Logic
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -952,9 +953,9 @@ function updateLightsList() {
     }
     
     list.innerHTML = state.fx.lights.map(l => `
-        <div style="display:flex; align-items:center; gap:5px; padding:4px; background:#111; margin-bottom:2px; border-left:3px solid ${l.color};">
-            <span style="width:14px; height:14px; background:${l.color}; border-radius:50%;"></span>
-            <span style="flex:1; font-size:10px; color:#aaa;">${l.type} (${l.x},${l.y})</span>
+        <div style="display:flex; align-items:center; gap:5px; padding:4px; background:#111; margin-bottom:2px; border-left:3px solid ${_escapeHtml(l.color)};">
+            <span style="width:14px; height:14px; background:${_escapeHtml(l.color)}; border-radius:50%;"></span>
+            <span style="flex:1; font-size:10px; color:#aaa;">${_escapeHtml(l.type)} (${_escapeHtml(l.x)},${_escapeHtml(l.y)})</span>
             <button onclick="removeLight(${l.id})" style="background:none; border:none; color:#666; cursor:pointer; font-size:10px;">✕</button>
         </div>
     `).join('');
@@ -1120,7 +1121,7 @@ window.loadPrefabs = async () => {
             d.innerHTML = `
                 <div class="asset-thumb"><i class="fas fa-cube"></i></div>
                 <div class="asset-info">
-                    <div class="asset-name">${name}</div>
+                    <div class="asset-name">${_escapeHtml(name)}</div>
                     <div class="asset-meta">PREFAB</div>
                 </div>
             `;
@@ -1172,7 +1173,7 @@ window.loadNPCs = async () => {
                     <i class="fas fa-user-secret" style="color:var(--accent);"></i>
                 </div>
                 <div class="asset-info">
-                    <div class="asset-name">${name}</div>
+                    <div class="asset-name">${_escapeHtml(name)}</div>
                     <div class="asset-meta">NPC</div>
                 </div>
             `;

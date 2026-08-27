@@ -38,7 +38,10 @@ class ProjectHandler(FileSystemEventHandler):
                     "detail": f"I saw you changed {filename}!"
                 })
                 future = asyncio.run_coroutine_threadsafe(coro, self.loop)
-                future.add_done_callback(lambda f: f.exception())
+                future.add_done_callback(
+                    lambda f: logger.error(f"Watcher broadcast failed: {f.exception()}")
+                    if f.exception() else None
+                )
 
     def on_created(self, event):
         if not event.is_directory and not self.should_ignore(event.src_path):

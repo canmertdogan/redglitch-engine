@@ -1,4 +1,5 @@
 // PIXEL STUDIO PRO - STABLE LOGIC v3.4 (ANIMATION FIX)
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -148,7 +149,7 @@ function updateUI() {
             const d = document.createElement('div');
             d.className = `layer-item ${realIdx===app.currLayer?'active':''}`;
             d.onclick = () => { app.currLayer = realIdx; updateUI(); };
-            d.innerHTML = `<i class="fas ${l.visible?'fa-eye':'fa-eye-slash'}" onclick="window.toggleVis(event, ${realIdx})"></i> <span>${l.name}</span>`;
+            d.innerHTML = `<i class="fas ${l.visible?'fa-eye':'fa-eye-slash'}" onclick="window.toggleVis(event, ${realIdx})"></i> <span>${_escapeHtml(l.name)}</span>`;
             lList.appendChild(d);
         });
     }

@@ -56,7 +56,7 @@ const StudioApp: React.FC = () => {
 
     const tools: Tool[] = [
         { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', iconName: 'Rocket', src: '../dashboard.html', w: 900, h: 700, betaStatus: 'supported' },
-        { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', iconName: 'Activity', src: '../project_dashboard.html', w: 1000, h: 600, betaStatus: 'supported' },
+        { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', iconName: 'Activity', src: '../dashboard.html', w: 1000, h: 600, betaStatus: 'supported' },
         { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', iconName: 'Code', src: 'script_editor.html', w: 1000, h: 700 },
         { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', iconName: 'ImageIcon', src: 'pixel_editor.html', w: 900, h: 650 },
         { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', iconName: 'UserPlus', src: 'npc_editor.html', w: 700, h: 500 },
@@ -66,7 +66,7 @@ const StudioApp: React.FC = () => {
         { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', iconName: 'MessageSquare', src: 'dialogue_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
         { id: 'daw', category: 'ASSETS', title: 'Audio Studio', iconName: 'Music', src: 'daw_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
         { id: 'fxpro', category: 'ASSETS', title: 'FX Master', iconName: 'Zap', src: 'fx_editor.html', w: 900, h: 650 },
-        { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_lab.html', w: 1200, h: 800, betaStatus: 'optional' },
+        { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_editor.html', w: 1200, h: 800, betaStatus: 'optional' },
         { id: 'assets', category: 'ASSETS', title: 'File Manager', iconName: 'Folder', src: 'asset_manager.html', w: 900, h: 600 },
         { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700, betaStatus: 'experimental' },
         { id: 'ui_designer', category: 'INTERFACE', title: 'UI Designer', iconName: 'Monitor', src: 'ui_designer.html', w: 1200, h: 800, betaStatus: 'experimental' }

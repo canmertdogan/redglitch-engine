@@ -1,4 +1,5 @@
 // fx_editor.js - FX Master Pro Logic
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -201,7 +202,7 @@ async function refreshFxList() {
         const res = await fetch('/api/fx/list');
         const files = await res.json();
         const sel = document.getElementById('fx-list');
-        sel.innerHTML = files.map(f => `<option value="${f}">${f}</option>`).join('');
+        sel.innerHTML = files.map(f => `<option value="${_escapeHtml(f)}">${_escapeHtml(f)}</option>`).join('');
     } catch(e) {}
 }
 

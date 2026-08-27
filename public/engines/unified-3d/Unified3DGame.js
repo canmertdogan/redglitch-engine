@@ -14,12 +14,12 @@
  *   await game.loadProject('MyProject', 'level1');
  */
 
-import Game3DCore from './Game3DCore.js?v=fps-atmosphere2';
+import Game3DCore from './Game3DCore.js';
 
 // ── Mode registry ─────────────────────────────────────────────────────────────
 
 const MODE_REGISTRY = Object.freeze({
-    'fps-3d':        () => import('./modes/FPSMode.js?v=fps-swim3'),
+    'fps-3d':        () => import('./modes/FPSMode.js'),
     'topdown-3d':    () => import('./modes/TopDownMode.js'),
     'platformer-3d': () => import('./modes/PlatformerMode.js'),
 });

@@ -24,14 +24,14 @@
  */
 
 import * as THREE              from '/lib/three/three.module.js';
-import Engine3DAdapter         from '../shared/Engine3DAdapter.js?v=cachebust2';
-import Renderer3D              from '../shared/Renderer3D.js?v=fps-atmosphere2';
+import Engine3DAdapter         from '../shared/Engine3DAdapter.js';
+import Renderer3D              from '../shared/Renderer3D.js';
 import Camera3DController,
        { CameraMode }          from '../shared/Camera3DController.js';
 import Physics3DWorld          from '../shared/Physics3DWorld.js';
 import PaletteManager          from '../shared/PaletteManager.js';
 import AssetLoader3D           from '../shared/AssetLoader3D.js';
-import Input3D                 from '../shared/Input3D.js?v=cachebust6';
+import Input3D                 from '../shared/Input3D.js';
 import AudioSpatial3D          from '../shared/AudioSpatial3D.js';
 import Raycast3D,
        { LayerMask }           from '../shared/Raycast3D.js';

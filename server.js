@@ -371,9 +371,9 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Fallback for API
+// Fallback for unmatched API routes — return 404 JSON, not an HTML redirect.
 app.use('/api/*', (req, res) => {
-    res.redirect('/dashboard.html');
+    res.status(404).json({ error: 'Not found', path: req.originalUrl });
 });
 
 // Root redirect to dashboard

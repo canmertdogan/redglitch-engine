@@ -1,4 +1,5 @@
 // item_editor.js
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -303,7 +304,5 @@ async function loadFromServer() {
         }
     } catch (e) {
         console.warn("No item defs found on server.");
-    }
-}server.");
     }
 }

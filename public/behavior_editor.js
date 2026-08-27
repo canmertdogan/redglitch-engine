@@ -1,6 +1,7 @@
 /**
  * REDGLITCH BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
  * Visual Behavior Tree / FSM Editor for NPCs
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
  * Integrated with EventBus, SharedProjectState, and AssetManager
  */
 
@@ -841,7 +842,7 @@ Created for RedGlitch Game Engine
         // Remove variables that are no longer used
         Object.keys(this.variables).forEach(varName => {
             if (!detectedVars[varName]) {
-                if (confirm(`Variable "${varName}" is no longer used. Remove it?`)) {
+                if (confirm(`Variable "${_escapeHtml(varName)}" is no longer used. Remove it?`)) {
                     delete this.variables[varName];
                 }
             }
@@ -934,7 +935,7 @@ Created for RedGlitch Game Engine
     }
     
     deleteVariable(varName) {
-        if (confirm(`Delete variable "${varName}"?`)) {
+        if (confirm(`Delete variable "${_escapeHtml(varName)}"?`)) {
             delete this.variables[varName];
             this.renderVariablesList();
         }
@@ -1070,7 +1071,7 @@ Created for RedGlitch Game Engine
                 presetsHTML = '<div class="variable-presets" style="margin-top: 5px;">';
                 presetsHTML += '<label style="font-size: 9px; color: #666;">QUICK VALUES:</label><div style="display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px;">';
                 presets.forEach(preset => {
-                    presetsHTML += `<button onclick="editor.applyPreset('${varName}', '${preset.value}')" 
+                    presetsHTML += `<button onclick="editor.applyPreset('${_escapeHtml(varName)}', '${preset.value}')" 
                                          class="preset-btn" 
                                          style="font-size: 9px; padding: 2px 5px; background: #222; border: 1px solid #444; color: #888; cursor: pointer;"
                                          onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)'"
@@ -1087,14 +1088,14 @@ Created for RedGlitch Game Engine
                         <div class="variable-field" style="margin: 0;">
                             <label style="font-size: 9px;">MIN:</label>
                             <input type="number" value="${v.min !== null ? v.min : ''}" 
-                                   onchange="editor.updateVariableMin('${varName}', this.value)"
+                                   onchange="editor.updateVariableMin('${_escapeHtml(varName)}', this.value)"
                                    placeholder="No limit"
                                    style="font-size: 10px; padding: 2px;">
                         </div>
                         <div class="variable-field" style="margin: 0;">
                             <label style="font-size: 9px;">MAX:</label>
                             <input type="number" value="${v.max !== null ? v.max : ''}" 
-                                   onchange="editor.updateVariableMax('${varName}', this.value)"
+                                   onchange="editor.updateVariableMax('${_escapeHtml(varName)}', this.value)"
                                    placeholder="No limit"
                                    style="font-size: 10px; padding: 2px;">
                         </div>
@@ -1105,9 +1106,9 @@ Created for RedGlitch Game Engine
             html += `
                 <div class="variable-item">
                     <div class="variable-item-header">
-                        <div class="variable-name">${varName} ${exposedBadge} ${categoryBadge}</div>
+                        <div class="variable-name">${_escapeHtml(varName)} ${exposedBadge} ${categoryBadge}</div>
                         <div class="variable-actions">
-                            <button onclick="editor.deleteVariable('${varName}')" title="Delete">
+                            <button onclick="editor.deleteVariable('${_escapeHtml(varName)}')" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -1115,24 +1116,24 @@ Created for RedGlitch Game Engine
                     
                     <div class="variable-field">
                         <label>DESCRIPTION:</label>
-                        <input type="text" value="${v.description || ''}" 
-                               onchange="editor.updateVariableDescription('${varName}', this.value)"
+                        <input type="text" value="${_escapeHtml(v.description || '')}" 
+                               onchange="editor.updateVariableDescription('${_escapeHtml(varName)}', this.value)"
                                placeholder="What does this variable do?"
                                style="font-size: 11px;">
                     </div>
                     
                     <div class="variable-field">
                         <label>CATEGORY:</label>
-                        <select onchange="editor.updateVariableCategory('${varName}', this.value)">
+                        <select onchange="editor.updateVariableCategory('${_escapeHtml(varName)}', this.value)">
                             ${this.variableCategories.map(cat => 
-                                `<option value="${cat}" ${v.category === cat ? 'selected' : ''}>${cat}</option>`
+                                `                                 <option value="${_escapeHtml(cat)}" ${v.category === cat ? 'selected' : ''}>${_escapeHtml(cat)}</option>`
                             ).join('')}
                         </select>
                     </div>
                     
                     <div class="variable-field">
                         <label>TYPE:</label>
-                        <select onchange="editor.updateVariableType('${varName}', this.value)">
+                        <select onchange="editor.updateVariableType('${_escapeHtml(varName)}', this.value)">
                             <option value="string" ${v.type === 'string' ? 'selected' : ''}>String</option>
                             <option value="number" ${v.type === 'number' ? 'selected' : ''}>Number</option>
                             <option value="boolean" ${v.type === 'boolean' ? 'selected' : ''}>Boolean</option>
@@ -1144,23 +1145,23 @@ Created for RedGlitch Game Engine
                     
                     <div class="variable-field">
                         <label>INITIAL VALUE:</label>
-                        <input type="text" value="${v.initialValue}" 
-                               onchange="editor.updateVariableValue('${varName}', this.value)"
+                        <input type="text" value="${_escapeHtml(v.initialValue)}" 
+                               onchange="editor.updateVariableValue('${_escapeHtml(varName)}', this.value)"
                                placeholder="${v.type}">
                     </div>
                     
                     ${presetsHTML}
                     
                     <div class="variable-exposed">
-                        <input type="checkbox" id="exposed-${varName}" 
+                        <input type="checkbox" id="exposed-${_escapeHtml(varName)}" 
                                ${v.exposed ? 'checked' : ''}
-                               onchange="editor.toggleVariableExposed('${varName}'); editor.renderVariablesList();">
-                        <label for="exposed-${varName}">Exposed (per-NPC configurable)</label>
+                               onchange="editor.toggleVariableExposed('${_escapeHtml(varName)}'); editor.renderVariablesList();">
+                        <label for="exposed-${_escapeHtml(varName)}">Exposed (per-NPC configurable)</label>
                     </div>
                     
                     <div class="variable-usage">
                         Used by ${usageCount} node${usageCount !== 1 ? 's' : ''}
-                        ${usageCount > 0 ? `<button onclick="editor.jumpToVariableNode('${v.usedBy[0]}')" style="background: none; border: none; color: var(--accent); cursor: pointer; font-size: 10px;">[JUMP]</button>` : ''}
+                        ${usageCount > 0 ? `<button onclick="editor.jumpToVariableNode('${_escapeHtml(v.usedBy[0])}')" style="background: none; border: none; color: var(--accent); cursor: pointer; font-size: 10px;">[JUMP]</button>` : ''}
                     </div>
                 </div>
             `;
@@ -1310,7 +1311,7 @@ Created for RedGlitch Game Engine
             const isLast = index === this.navigationStack.length - 1;
             const classes = isLast ? 'breadcrumb-item active' : 'breadcrumb-item';
             
-            html += `<span class="${classes}" onclick="editor.navigateToLevel(${index})">${level.name}</span>`;
+            html += `<span class="${classes}" onclick="editor.navigateToLevel(${index})">${_escapeHtml(level.name)}</span>`;
             
             if (!isLast) {
                 html += '<span class="breadcrumb-separator">></span>';
@@ -1669,7 +1670,7 @@ Created for RedGlitch Game Engine
                     [CLOSE]
                 </button>
             </div>
-            <pre style="background: #0a0a0a; padding: 15px; border: 1px solid #333; overflow-x: auto; color: #2ecc71; font-family: 'VT323', monospace; font-size: 1rem;"><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+            <pre style="background: #0a0a0a; padding: 15px; border: 1px solid #333; overflow-x: auto; color: #2ecc71; font-family: 'VT323', monospace; font-size: 1rem;"><code>${_escapeHtml(code)}</code></pre>
         `;
         
         modal.className = 'modal';

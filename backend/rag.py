@@ -11,8 +11,6 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
-from sentence_transformers import SentenceTransformer
-
 logger = logging.getLogger("IRAB-RAG")
 
 
@@ -134,6 +132,7 @@ class RAGSystem:
 
         logger.info("Loading Embedding Model (CPU)...")
         try:
+            from sentence_transformers import SentenceTransformer
             self.embedder = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
             logger.info("RAG System initialized with CPU embedder.")
         except Exception as e:
@@ -263,21 +262,22 @@ class RAGSystem:
             if not content.strip():
                 return
 
-            self._store.delete_by_source(rel_path)
+            with self._store_lock:
+                self._store.delete_by_source(rel_path)
 
-            category = "manifesto" if is_manifesto else ("data" if file_path.endswith('.json') else ("docs" if file_path.endswith('.md') else "code"))
-            chunk_size, overlap = 2000, 200
-            batch_docs, batch_meta, batch_ids = [], [], []
+                category = "manifesto" if is_manifesto else ("data" if file_path.endswith('.json') else ("docs" if file_path.endswith('.md') else "code"))
+                chunk_size, overlap = 2000, 200
+                batch_docs, batch_meta, batch_ids = [], [], []
 
-            for i in range(0, len(content), chunk_size - overlap):
-                chunk = content[i:i + chunk_size]
-                batch_docs.append(chunk)
-                batch_meta.append({"source": rel_path, "offset": i, "category": category, "priority": 2 if category == "manifesto" else 1})
-                batch_ids.append(f"{rel_path}_chunk_{i}")
+                for i in range(0, len(content), chunk_size - overlap):
+                    chunk = content[i:i + chunk_size]
+                    batch_docs.append(chunk)
+                    batch_meta.append({"source": rel_path, "offset": i, "category": category, "priority": 2 if category == "manifesto" else 1})
+                    batch_ids.append(f"{rel_path}_chunk_{i}")
 
-            if batch_docs:
-                embeddings = self.embedder.encode(batch_docs, show_progress_bar=False, convert_to_numpy=True, batch_size=8).tolist()
-                self._store.upsert(batch_docs, embeddings, batch_meta, batch_ids)
+                if batch_docs:
+                    embeddings = self.embedder.encode(batch_docs, show_progress_bar=False, convert_to_numpy=True, batch_size=8).tolist()
+                    self._store.upsert(batch_docs, embeddings, batch_meta, batch_ids)
 
             logger.info(f"Updated index: {rel_path} [{category}]")
         except Exception as e:

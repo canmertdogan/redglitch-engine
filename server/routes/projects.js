@@ -373,23 +373,23 @@ router.post('/projects/create', async (req, res) => {
             templateMode: 'scaffold'
         });
         if (result.error) {
-            return res.status(result.error.status).send(result.error.body.error);
+            return res.status(result.error.status).json({ error: result.error.body.error });
         }
         console.log(`[Server] Created project "${result.name}"`);
         res.json({ success: true, name: result.name, path: result.path });
     } catch (err) {
         console.error('Create project error:', err);
-        res.status(500).send('Failed to create project');
+        res.status(500).json({ error: 'Failed to create project' });
     }
 });
 
 // DELETE /api/projects/:name - Delete a project (RESTful route)
 router.delete('/projects/:name', async (req, res) => {
     const { name } = req.params;
-    if (!name) return res.status(400).send('Project name required');
+    if (!name) return res.status(400).json({ error: 'Project name required' });
     
     const projectPath = resolveProjectPath(name);
-    if (!projectPath) return res.status(403).send('Access denied');
+    if (!projectPath) return res.status(403).json({ error: 'Access denied' });
 
     try {
         await fs.rm(projectPath, { recursive: true, force: true });
@@ -397,23 +397,23 @@ router.delete('/projects/:name', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error("Delete project error:", err);
-        res.status(500).send('Failed to delete project');
+        res.status(500).json({ error: 'Failed to delete project' });
     }
 });
 
 // POST /api/projects/reveal - Reveal project in file manager
 router.post('/projects/reveal', async (req, res) => {
     const { name } = req.body;
-    if (!name) return res.status(400).send('Project name required');
+    if (!name) return res.status(400).json({ error: 'Project name required' });
     
     const projectPath = resolveProjectPath(name);
-    if (!projectPath) return res.status(403).send('Access denied');
+    if (!projectPath) return res.status(403).json({ error: 'Access denied' });
 
     // Check if project exists
     try {
         await fs.access(projectPath);
     } catch (e) {
-        return res.status(404).send('Project not found');
+        return res.status(404).json({ error: 'Project not found' });
     }
 
     try {
@@ -422,7 +422,7 @@ router.post('/projects/reveal', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error("Reveal error:", err);
-        res.status(500).send('Failed to reveal folder');
+        res.status(500).json({ error: 'Failed to reveal folder' });
     }
 });
 
@@ -500,13 +500,14 @@ router.post('/projects/switch', async (req, res) => {
         }
         return res.json({ success: true, active: 'ROOT' });
     }
-    req.projectService.setActiveProject(name);
+    const safeName = sanitizeProjectName(name);
+    req.projectService.setActiveProject(safeName);
     console.log(`[Server] Active project now: ${req.projectService.getActiveProject()}`);
     const websocket = req.app?.locals?.websocket;
     if (websocket && typeof websocket.startFileWatcher === 'function') {
         websocket.startFileWatcher();
     }
-    res.json({ success: true, active: name });
+    res.json({ success: true, active: safeName });
 });
 
 // POST /api/projects/project-file

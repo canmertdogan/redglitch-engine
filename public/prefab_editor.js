@@ -1,4 +1,5 @@
 /**
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
  * REDGLITCH ENGINE — PREFAB BUILDER v5.0
  * Phases A–E: all plan items implemented.
  */
@@ -872,7 +873,7 @@ class PrefabEditor {
             div.className='lib-item'+(i===this.currentIdx?' active':'');
             div.style.display='flex'; div.style.alignItems='center'; div.style.gap='5px';
             const dirty=this.dirtySet.has(i);
-            div.innerHTML=`<i class="fas fa-cube" style="font-size:10px;flex-shrink:0"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name||'Unnamed'}</span>${dirty?'<span style="color:#cc4444;font-size:9px">●</span>':''}`;
+            div.innerHTML=`<i class="fas fa-cube" style="font-size:10px;flex-shrink:0"></i><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escapeHtml(p.name||'Unnamed')}</span>${dirty?'<span style="color:#cc4444;font-size:9px">●</span>':''}`;
             div.onclick=()=>this.selectPrefab(i);
             this.libEl.appendChild(div);
         });
@@ -967,7 +968,7 @@ class PrefabEditor {
             (p.tags||[]).forEach((tag,ti)=>{
                 const chip=document.createElement('span');
                 chip.style.cssText='background:var(--bg-item);border:1px solid var(--bmid);padding:2px 5px;font-size:9px;display:flex;align-items:center;gap:3px;color:var(--text-lbl);';
-                chip.innerHTML=`${tag}<i class="fas fa-times" style="cursor:pointer;opacity:0.5;font-size:8px" onclick="editor.currentPrefab().tags.splice(${ti},1);editor.setDirtyIdx(editor.currentIdx);editor.renderInspector()"></i>`;
+                chip.innerHTML=`${_escapeHtml(tag)}<i class="fas fa-times" style="cursor:pointer;opacity:0.5;font-size:8px" onclick="editor.currentPrefab().tags.splice(${ti},1);editor.setDirtyIdx(editor.currentIdx);editor.renderInspector()"></i>`;
                 chips.appendChild(chip);
             });
             const addrow=document.createElement('div'); addrow.style.cssText='display:flex;gap:3px;';

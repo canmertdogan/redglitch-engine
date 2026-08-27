@@ -15,7 +15,16 @@ function getInterfaceFileName(req) {
 
 async function getUiConfigPath(req) {
     const activeProject = projectService.getActiveProject();
-    return path.join(activeProject, 'interfaces', getInterfaceFileName(req));
+    const configPath = path.join(activeProject, 'interfaces', getInterfaceFileName(req));
+    // Containment: never allow the resolved path to escape the active project root.
+    const activeRoot = path.resolve(activeProject);
+    const resolved = path.resolve(configPath);
+    if (resolved !== activeRoot && !resolved.startsWith(activeRoot + path.sep)) {
+        const err = new Error('Resolved ui-config path escapes active project root');
+        err.status = 400;
+        throw err;
+    }
+    return configPath;
 }
 
 async function getLegacyUiConfigPath() {
