@@ -1,5 +1,5 @@
 /**
- * Unified3DGame.js — Single entry point for ALL RedGlitch 3D games.
+ * Unified3DGame.js — Single entry point for ALL Redglitch 3D games.
  *
  * Replaces FPSGame, TopDownGame3D, and Platformer3DGame with one class that:
  *   1. Instantiates Game3DCore (shared init, loop, save/load)

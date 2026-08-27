@@ -8,9 +8,9 @@ const _escapeHtml = window.escapeHtml || function (s) { return String(s == null 
 // ─── Integration globals ──────────────────────────────────────────────
 let eventBus, projectState, assetManager;
 function initIntegration() {
-    eventBus     = window.RedGlitchEventBus;
-    projectState = window.RedGlitchProjectState;
-    assetManager = window.RedGlitchAssetManager;
+    eventBus     = window.RedglitchEventBus;
+    projectState = window.RedglitchProjectState;
+    assetManager = window.RedglitchAssetManager;
     if (eventBus) {
         eventBus.on('asset:sprite:*', () => editor?.refreshSprites());
         console.log('[PrefabEditor v5] EventBus connected');

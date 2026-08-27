@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Main Studio Dashboard Logic
+ * Redglitch Engine - Main Studio Dashboard Logic
  * Handles project management, the creation wizard, and view switching.
  */
 

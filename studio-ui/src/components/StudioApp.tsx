@@ -106,7 +106,7 @@ const StudioApp: React.FC = () => {
                 const data = await res.json();
                 setSystemStats({ cpu: Math.round(data.cpu || 0), mem: data.mem || 0 });
             }
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const openWindow = (tool: Tool) => {

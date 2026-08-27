@@ -285,8 +285,8 @@ export class VisualScriptEngine {
     async executeNode(ctx, depth = 0) {
         if (depth > this.MAX_RECURSION_DEPTH) return;
         ctx.depth = depth;
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit('vsl:node_exec', { nodeId: ctx.node.id, entityId: ctx.entity?.id, timestamp: Date.now() });
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('vsl:node_exec', { nodeId: ctx.node.id, entityId: ctx.entity?.id, timestamp: Date.now() });
         }
         const handler = this.nodeRegistry[ctx.node.type];
         if (!handler) return;
@@ -331,8 +331,8 @@ export class VisualScriptEngine {
         } else {
             value = ctx.node.data[portName];
         }
-        if (window.RedGlitchEventBus && wire) {
-            window.RedGlitchEventBus.emit('vsl:value_update', { wireId: wire.id, value, timestamp: Date.now() });
+        if (window.RedglitchEventBus && wire) {
+            window.RedglitchEventBus.emit('vsl:value_update', { wireId: wire.id, value, timestamp: Date.now() });
         }
         return value;
     }

@@ -10,9 +10,9 @@ let eventBus, projectState, assetManager;
 
 function initializeAlgorithmIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Listen for script requests
@@ -403,8 +403,8 @@ export class AlgorithmStudio {
         }
 
         // PHASE 8: Real-Time Node Execution Visualization
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('vsl:node_exec', (event) => {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('vsl:node_exec', (event) => {
                 const { nodeId } = event.data || {};
                 if (nodeId) {
                     this.highlightNodeExecution(nodeId);

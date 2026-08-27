@@ -1,5 +1,5 @@
 /**
- * modes/platformer.js — Platformer 3D mode configuration for RedGlitch3DGame
+ * modes/platformer.js — Platformer 3D mode configuration for Redglitch3DGame
  *
  * Declares which subsystems to instantiate, camera mode, and HUD type
  * when the engine runs in Platformer mode.

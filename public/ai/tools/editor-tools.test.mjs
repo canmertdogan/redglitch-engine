@@ -6,12 +6,12 @@ function installBrowserGlobals() {
     const events = [];
     globalThis.window = {
         location: { href: '' },
-        RedGlitchEventBus: {
+        RedglitchEventBus: {
             emit(type, data) {
                 events.push({ type, data });
             },
         },
-        RedGlitchProjectState: {
+        RedglitchProjectState: {
             projectName: 'Studio Project',
             dirty: false,
             setDirty(value) {
@@ -45,25 +45,25 @@ test('openEditor uses the real achievements editor filename', async () => {
     assert.equal(window.location.href, 'achievements_editor.html');
 });
 
-test('getCurrentProject reads the RedGlitch project state global', () => {
+test('getCurrentProject reads the Redglitch project state global', () => {
     installBrowserGlobals();
     const tools = new EditorTools({ requestPermission: async () => true });
 
     assert.equal(tools.getCurrentProject(), 'Studio Project');
 });
 
-test('createAsset emits through RedGlitchEventBus and marks project dirty', async () => {
+test('createAsset emits through RedglitchEventBus and marks project dirty', async () => {
     const events = installBrowserGlobals();
     const tools = new EditorTools({ requestPermission: async () => true });
 
     const result = await tools.createAsset('item', { id: 'potion' });
 
     assert.equal(result.success, true);
-    assert.equal(window.RedGlitchProjectState.dirty, true);
+    assert.equal(window.RedglitchProjectState.dirty, true);
     assert.deepEqual(events, [{ type: 'asset:create:item', data: { id: 'potion' } }]);
 });
 
-test('saveEditor falls back to the RedGlitchEventBus save event', async () => {
+test('saveEditor falls back to the RedglitchEventBus save event', async () => {
     const events = installBrowserGlobals();
     const tools = new EditorTools({ requestPermission: async () => true });
 

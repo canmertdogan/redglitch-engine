@@ -335,8 +335,8 @@ export default class Editor3DCore {
             console.log(`[Editor3DCore] Level saved: ${this._project}/${this._levelId}`);
             
             // Notify Hub
-            if (window.RedGlitchEventBus) {
-                window.RedGlitchEventBus.emit('EDITOR_ASSET_SAVED', {
+            if (window.RedglitchEventBus) {
+                window.RedglitchEventBus.emit('EDITOR_ASSET_SAVED', {
                     project: this._project,
                     type: 'level3d',
                     name: this._levelId

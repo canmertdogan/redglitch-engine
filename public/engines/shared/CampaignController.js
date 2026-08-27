@@ -143,11 +143,11 @@ class CampaignController {
         this._activeProjectNameResolved = false;
 
         // Phase 2: Live Memory Bridge Integration
-        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('system:memory:request', (event) => {
+        if (typeof window !== 'undefined' && window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('system:memory:request', (event) => {
                 const namespace = event.data?.namespace || 'global';
                 if (namespace === 'campaign' || namespace === 'global') {
-                    window.RedGlitchEventBus.broadcastMemoryDiff('campaign', {
+                    window.RedglitchEventBus.broadcastMemoryDiff('campaign', {
                         campaignId: this.campaignId,
                         currentNodeId: this.currentNodeId,
                         globalFlags: this.globalFlags,
@@ -156,7 +156,7 @@ class CampaignController {
                 }
             });
             
-            window.RedGlitchEventBus.on('system:memory:patch', (event) => {
+            window.RedglitchEventBus.on('system:memory:patch', (event) => {
                 const { namespace, patch } = event.data || {};
                 if (namespace === 'campaign' && patch) {
                     if (patch.variables) Object.assign(this.variables, patch.variables);
@@ -166,7 +166,7 @@ class CampaignController {
             });
 
             // Phase 4: Global Database Live-Patching
-            window.RedGlitchEventBus.on('system:database:patch', (event) => {
+            window.RedglitchEventBus.on('system:database:patch', (event) => {
                 const { collection, data } = event.data || {};
                 console.log(`[CampaignController] Live-patching database: ${collection}`);
                 if (this.currentAdapter && typeof this.currentAdapter.handleDatabasePatch === 'function') {
@@ -177,7 +177,7 @@ class CampaignController {
             });
             
             // Phase 12: Data-Driven Trigger Dispatcher
-            window.RedGlitchEventBus.on('system:trigger:fire', async (event) => {
+            window.RedglitchEventBus.on('system:trigger:fire', async (event) => {
                 const triggerId = event.data?.triggerId;
                 const payload = event.data?.payload || {};
                 console.log(`[CampaignController] Firing IDE Manual Trigger: ${triggerId}`, payload);

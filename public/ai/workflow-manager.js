@@ -2,7 +2,7 @@ import { parseToolCalls } from './tool-call-parser.mjs';
 import { ERROR_CODE } from './automation-contract.mjs';
 
 /**
- * RedGlitch AI - Workflow Manager (Phase 8)
+ * Redglitch AI - Workflow Manager (Phase 8)
  * Handles tool call parsing, sequencing, and transactional execution.
  */
 
@@ -123,7 +123,7 @@ export class WorkflowManager {
 
                 const response = await fetch(request.endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
                     body: JSON.stringify(request.body)
                 });
                 if (!response.ok) throw new Error(`Rollback request failed (${response.status})`);

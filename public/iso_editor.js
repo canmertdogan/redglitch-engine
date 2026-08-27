@@ -9,14 +9,14 @@ async function initializeIsoIntegration() {
     if (typeof window !== 'undefined') {
         // Wait for EventBus to be ready with polling and timeout
         let retries = 20;
-        while (!window.RedGlitchEventBus && retries > 0) {
+        while (!window.RedglitchEventBus && retries > 0) {
             await new Promise(r => setTimeout(r, 100));
             retries--;
         }
 
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Initialize StudioBridge for IRAB
@@ -1297,15 +1297,15 @@ window.onload = async () => {
         if (ctrl && e.key === 's') {
             e.preventDefault();
             if (typeof saveToServer === 'function') saveToServer();
-            if (window.parent && window.parent.RedGlitchEventBus) {
-                window.parent.RedGlitchEventBus.emit('system:project:save_request');
+            if (window.parent && window.parent.RedglitchEventBus) {
+                window.parent.RedglitchEventBus.emit('system:project:save_request');
             }
             return;
         }
         if (ctrl && e.key.toLowerCase() === 'k') {
             e.preventDefault();
-            if (window.parent && window.parent.RedGlitchEventBus) {
-                window.parent.RedGlitchEventBus.emit('ai:toggle_chat');
+            if (window.parent && window.parent.RedglitchEventBus) {
+                window.parent.RedglitchEventBus.emit('ai:toggle_chat');
             }
             return;
         }
@@ -1318,8 +1318,8 @@ window.onload = async () => {
     window.addEventListener('keyup', e => keys[e.code] = false);
 
     // Listen for global save
-    if (window.parent && window.parent.RedGlitchEventBus) {
-        window.parent.RedGlitchEventBus.on('system:global_save', () => {
+    if (window.parent && window.parent.RedglitchEventBus) {
+        window.parent.RedglitchEventBus.on('system:global_save', () => {
             if (typeof saveToServer === 'function') {
                 saveToServer();
             }
@@ -2322,8 +2322,8 @@ function applyInstanceOverrides() {
     console.log('[IsoEditor] Overrides updated for', state.selectedInstance.instanceId, newOverrides);
     
     // Broadcast live update to engine
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:entity:patch', {
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:entity:patch', {
             entityId: state.selectedInstance.instanceId,
             components: [
                 { type: 'Overrides', ...newOverrides }

@@ -89,7 +89,7 @@ const ItemEditor: React.FC = () => {
             if (res.ok) {
                 setTemplates(await res.json());
             }
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const getDefaultItem = (): Item => ({

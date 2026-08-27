@@ -878,13 +878,13 @@ class KAE {
                 this.loadMap(e.detail);
             });
         }
-        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('audio:map_updated', (event) => {
+        if (typeof window !== 'undefined' && window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('audio:map_updated', (event) => {
                 this.loadMap(event.data);
             });
             
             // Phase 3: Asset Hot-Swapping Infrastructure
-            window.RedGlitchEventBus.on('asset:modified', (event) => {
+            window.RedglitchEventBus.on('asset:modified', (event) => {
                 const asset = event.data?.asset;
                 if (asset && asset.type === 'audio') {
                     if (this.buffers.has(asset.path)) {
@@ -898,7 +898,7 @@ class KAE {
             });
 
             // Also listen to raw file changes in case AssetManager hasn't indexed it yet
-            window.RedGlitchEventBus.on('file:changed', (event) => {
+            window.RedglitchEventBus.on('file:changed', (event) => {
                 const path = event.data?.path || '';
                 if (path.includes('audio/') || path.includes('muzikler/')) {
                     // Try to match partial or full path
@@ -914,8 +914,8 @@ class KAE {
     }
 
     _emit(event, data) {
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit(event, data);
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit(event, data);
         }
         // Also dispatch DOM custom event for editor panels
         window.dispatchEvent(new CustomEvent(event, { detail: data }));

@@ -1,6 +1,6 @@
 /**
  * AdvancedGenerator.js
- * Next-gen procedural level generator for RedGlitch Platformer Engine.
+ * Next-gen procedural level generator for Redglitch Platformer Engine.
  * Features: Biomes, Segment Composition, and Layered Visuals.
  */
 

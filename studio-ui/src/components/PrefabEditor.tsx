@@ -1044,7 +1044,7 @@ const PrefabEditor: React.FC = () => {
                                                 setShowFileBrowser(false);
                                                 pushHistory([...prefabs, p]);
                                             }
-                                        } catch(e) {}
+                                        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
                                     }}
                                     style={{ height: '32px', justifyContent: 'flex-start', paddingLeft: '8px' }}
                                 >

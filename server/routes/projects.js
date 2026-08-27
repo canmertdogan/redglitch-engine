@@ -304,7 +304,7 @@ router.post('/projects', async (req, res) => {
             name: sanitizeProjectName(name), // Use sanitized name
             author: metadata.author || "Anonymous",
             version: "0.1.0",
-            description: metadata.description || "A new RedGlitch Engine project.",
+            description: metadata.description || "A new Redglitch Engine project.",
             template: templateId,
             created: new Date().toISOString(),
             engineVersion: "0.2.0"

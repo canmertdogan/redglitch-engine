@@ -1,6 +1,6 @@
 /**
  * public/ai/redglitch-ai.js
- * Main orchestrator for RedGlitch AI Micro Edition.
+ * Main orchestrator for Redglitch AI Micro Edition.
  */
 
 import { AI_CONFIG } from './config.js';
@@ -18,7 +18,7 @@ import { stripToolBlocks } from './tool-call-parser.mjs';
 import { runAgentLoop } from './agent-loop.mjs';
 import { getAIMode } from './ai-mode.mjs';
 
-export class RedGlitchAI {
+export class RedglitchAI {
     constructor() {
         this.config = { ...AI_CONFIG };
         this.loadSavedSettings();
@@ -49,7 +49,7 @@ export class RedGlitchAI {
             const parsed = JSON.parse(raw);
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (e) {
-            console.warn('[RedGlitchAI] Invalid kai_settings JSON, using defaults.');
+            console.warn('[RedglitchAI] Invalid kai_settings JSON, using defaults.');
             return {};
         }
     }
@@ -63,7 +63,7 @@ export class RedGlitchAI {
         if (s.historyLimit !== undefined) this.config.limits.maxHistoryMessages = s.historyLimit;
         if (s.ragEnabled !== undefined) this.config.features.enableRAG = s.ragEnabled;
         if (Object.keys(s).length > 0) {
-            console.log('[RedGlitchAI] Saved settings loaded into kernel.');
+            console.log('[RedglitchAI] Saved settings loaded into kernel.');
         }
     }
 
@@ -76,7 +76,7 @@ export class RedGlitchAI {
         this.enabled = true;
         if (this.isInitialized) return;
         
-        console.log('[RedGlitchAI] Initializing Kernel...');
+        console.log('[RedglitchAI] Initializing Kernel...');
         
         // Determine Provider
         const savedSettings = this._getKaiSettings();
@@ -84,16 +84,16 @@ export class RedGlitchAI {
 
         // 1. If Native, we don't need to load local weights (300MB save!)
         if (provider === 'native' || provider === 'opencode-zen' || provider === 'cerebras') {
-            console.log(`[RedGlitchAI] ${provider} provider detected. Skipping local model load.`);
+            console.log(`[RedglitchAI] ${provider} provider detected. Skipping local model load.`);
         } else if (this.config.features.enableWebGPU) {
             // Only load WebGPU if specifically requested or native is unavailable
             await this.inferenceEngine.initialize().catch(e => {
-                console.warn('[RedGlitchAI] WebGPU initialization failed. Provider will remain unavailable:', e);
+                console.warn('[RedglitchAI] WebGPU initialization failed. Provider will remain unavailable:', e);
             });
         }
         
         if (this.config.features.enableRAG) {
-            this.ragEngine.initialize().catch(e => console.error('[RedGlitchAI] RAG Init Failed:', e));
+            this.ragEngine.initialize().catch(e => console.error('[RedglitchAI] RAG Init Failed:', e));
         }
 
         this.isInitialized = true;
@@ -162,7 +162,7 @@ export class RedGlitchAI {
         }
         
         if (provider === 'native' && irabBridge && irabBridge.isConnected) {
-            console.log('[RedGlitchAI] Routing to Native Cortex...');
+            console.log('[RedglitchAI] Routing to Native Cortex...');
             const inferNative = (prompt, context) => new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => reject(Object.assign(new Error('Native Cortex timed out.'), { code: 'PROVIDER_TIMEOUT' })), 60000);
                 irabBridge.send({
@@ -188,7 +188,7 @@ export class RedGlitchAI {
 
         // 2. SECONDARY: Local WebGPU (Micro Edition)
         if (provider === 'local' && this.inferenceEngine.isModelReady && !options.forceNative) {
-            console.log('[RedGlitchAI] Using Local Inference...');
+            console.log('[RedglitchAI] Using Local Inference...');
             return await this._localChat(message, options, automationContext);
         }
 
@@ -200,12 +200,12 @@ export class RedGlitchAI {
     async _buildAutomationContext(message, editorContext = {}) {
         const [projectContext, ragContext] = await Promise.all([
             this.projectContextRetriever.retrieve(message).catch((error) => {
-                console.warn('[RedGlitchAI] Project context retrieval failed:', error);
+                console.warn('[RedglitchAI] Project context retrieval failed:', error);
                 return '';
             }),
             this.config.features.enableRAG && this.ragEngine.isLoaded
                 ? this.ragEngine.retrieveContext(message, this.config.limits.maxRAGChunks).catch((error) => {
-                    console.warn('[RedGlitchAI] Documentation RAG retrieval failed:', error);
+                    console.warn('[RedglitchAI] Documentation RAG retrieval failed:', error);
                     return '';
                 })
                 : Promise.resolve('')
@@ -247,7 +247,7 @@ export class RedGlitchAI {
         const context = automationContext || await this._buildAutomationContext(message, options.context || {});
         const ragContext = [context.projectContext, context.ragContext].filter(Boolean).join('\n\n');
         const toolsPrompt = context.tools;
-        let system = 'You are Kai, the expert AI assistant built into RedGlitch Studio. Be concise, technically rigorous, and help the user build games.';
+        let system = 'You are Kai, the expert AI assistant built into Redglitch Studio. Be concise, technically rigorous, and help the user build games.';
         if (ragContext) system += `\n\nRELEVANT PROJECT CONTEXT:\n${ragContext}`;
         if (toolsPrompt) {
             system += `\n\nAUTOMATION CONTRACT:\n${context.automationProtocol}\nEmit each call as a JSON object in a tool fence. Multiple objects or a JSON array are accepted. Arguments must match the schema.\n\nAVAILABLE STUDIO TOOLS:\n${toolsPrompt}`;
@@ -297,7 +297,7 @@ export class RedGlitchAI {
         const context = automationContext || await this._buildAutomationContext(message, options.context || {});
         const ragContext = [context.projectContext, context.ragContext].filter(Boolean).join('\n\n');
         const toolsPrompt = context.tools;
-        let system = 'You are Kai, the expert AI assistant built into RedGlitch Studio. Be concise, technically rigorous, and help the user build games.';
+        let system = 'You are Kai, the expert AI assistant built into Redglitch Studio. Be concise, technically rigorous, and help the user build games.';
         if (ragContext) system += `\n\nRELEVANT PROJECT CONTEXT:\n${ragContext}`;
         if (toolsPrompt) {
             system += `\n\nAUTOMATION CONTRACT:\n${context.automationProtocol}\nEmit each call as a JSON object in a tool fence. Multiple objects or a JSON array are accepted. Arguments must match the schema.\n\nAVAILABLE STUDIO TOOLS:\n${toolsPrompt}`;
@@ -350,7 +350,7 @@ export class RedGlitchAI {
             this.contextManager.addHistory('assistant', result.text);
             return result;
         } catch (error) {
-            console.error('[RedGlitchAI] Local Chat Failed:', error);
+            console.error('[RedglitchAI] Local Chat Failed:', error);
             error.code = error.code || 'PROVIDER_FAILED';
             throw error;
         }
@@ -363,7 +363,7 @@ export class RedGlitchAI {
         if (!this.config.features.enableGhostText) return null;
 
         const prompt = `<|im_start|>system
-You are a Ghost Text autocomplete provider for RedGlitch Code Forge.
+You are a Ghost Text autocomplete provider for Redglitch Code Forge.
 Generate a SHORT (1-5 lines) code completion based on the prefix and suffix.
 Respond ONLY with the code to be inserted. Do not use markdown blocks.
 File: ${filePath}<|im_end|>
@@ -417,7 +417,7 @@ ${suffix}<|im_end|>
     }
 
     async fallbackToServer(message) {
-        console.log('[RedGlitchAI] Falling back to server API...');
+        console.log('[RedglitchAI] Falling back to server API...');
         try {
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
@@ -476,16 +476,16 @@ ${suffix}<|im_end|>
 }
 
 // Safe auto-instantiation
-if (typeof window !== 'undefined' && getAIMode() === true && !window.RedGlitchAIInstance) {
-    console.log("[RedGlitchAI] Creating global instance...");
-    window.RedGlitchAIInstance = new RedGlitchAI();
+if (typeof window !== 'undefined' && getAIMode() === true && !window.RedglitchAIInstance) {
+    console.log("[RedglitchAI] Creating global instance...");
+    window.RedglitchAIInstance = new RedglitchAI();
 }
 
 if (typeof window !== 'undefined') {
     window.addEventListener('storage', (event) => {
-        if (event.key !== 'kai_ai_enabled' || !window.RedGlitchAIInstance?.setEnabled) return;
-        window.RedGlitchAIInstance.setEnabled(event.newValue === 'true').catch((error) => {
-            console.error('[RedGlitchAI] Failed to apply AI mode change:', error);
+        if (event.key !== 'kai_ai_enabled' || !window.RedglitchAIInstance?.setEnabled) return;
+        window.RedglitchAIInstance.setEnabled(event.newValue === 'true').catch((error) => {
+            console.error('[RedglitchAI] Failed to apply AI mode change:', error);
         });
     });
 }

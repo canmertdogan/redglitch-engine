@@ -82,9 +82,9 @@ if (typeof window.IrabBridge === 'undefined') {
                 };
 
                 // Forward sync events from EventBus to WebSocket (attach once)
-                if (window.RedGlitchEventBus && !this._syncListenerAttached) {
+                if (window.RedglitchEventBus && !this._syncListenerAttached) {
                     this._syncListenerAttached = true;
-                    window.RedGlitchEventBus.on('ai:command:sync', (event) => {
+                    window.RedglitchEventBus.on('ai:command:sync', (event) => {
                         const msg = event.data || event;
                         this.send(msg);
                     });
@@ -141,8 +141,8 @@ if (typeof window.IrabBridge === 'undefined') {
                     if (this.onCommand) this.onCommand(msg.data);
                     
                     // Phase 10: Emit to Universal Tool Registry
-                    if (window.RedGlitchEventBus) {
-                        window.RedGlitchEventBus.emit('ai:command:request', {
+                    if (window.RedglitchEventBus) {
+                        window.RedglitchEventBus.emit('ai:command:request', {
                             id: 'native_' + Date.now(),
                             method: msg.data.action,
                             params: msg.data.params

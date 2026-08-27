@@ -8,9 +8,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Listen for skill updates (items may grant skills)

@@ -4,7 +4,7 @@
  */
 
 (function() {
-    const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+    const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
     
     if (!eventBus) {
         console.warn('[ErrorWatcher] EventBus not found, waiting...');
@@ -37,11 +37,11 @@
     });
 
     function broadcastError(data) {
-        const eb = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+        const eb = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
         if (eb) {
             eb.emit('system:error', data);
         }
-        console.error('[RedGlitch-ErrorWatcher]', data);
+        console.error('[Redglitch-ErrorWatcher]', data);
     }
 
     console.log('[ErrorWatcher] KAI Sentinel is active.');

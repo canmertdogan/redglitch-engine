@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Project Command Center Logic
+ * Redglitch Engine - Project Command Center Logic
  * Handles telemetry, latest activities, dev scratchpad, and system logs.
  */
 
@@ -355,8 +355,8 @@ const commandRegistry = {
                 return;
             }
             if (args[0] === 'state') {
-                if (window.RedGlitchProjectState) {
-                    const data = window.RedGlitchProjectState.export();
+                if (window.RedglitchProjectState) {
+                    const data = window.RedglitchProjectState.export();
                     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -560,8 +560,8 @@ function openTool(id) {
         if (tool) {
             window.parent.openWindow(tool);
             Log.info(`Opened tool: ${resolvedId}`);
-            if (window.RedGlitchProjectState) {
-                window.RedGlitchProjectState.logActivity('tool', tool.title, { id: tool.id });
+            if (window.RedglitchProjectState) {
+                window.RedglitchProjectState.logActivity('tool', tool.title, { id: tool.id });
             }
         } else {
             Log.error(`Tool not found: ${id}`);
@@ -573,8 +573,8 @@ function openTool(id) {
 
 function openFileInParent(path) {
     Log.info(`Request to open: ${path}`);
-    if (window.RedGlitchProjectState) {
-        window.RedGlitchProjectState.logActivity('file', path.split('/').pop(), { path: path });
+    if (window.RedglitchProjectState) {
+        window.RedglitchProjectState.logActivity('file', path.split('/').pop(), { path: path });
     }
 }
 
@@ -593,14 +593,14 @@ function setTheme(themeName, options = {}) {
     localStorage.setItem('redglitch_theme', themeName);
     const selector = document.getElementById('theme-selector');
     if (selector) selector.value = themeName;
-    if (window.RedGlitchEventBus && options.source !== 'parent') window.RedGlitchEventBus.emit('theme:changed', { theme: themeName });
+    if (window.RedglitchEventBus && options.source !== 'parent') window.RedglitchEventBus.emit('theme:changed', { theme: themeName });
     if (options.source !== 'parent' && window.parent && window.parent.applyTheme) window.parent.applyTheme(themeName);
 }
 
 // Boot Command Center
 window.addEventListener('DOMContentLoaded', () => {
     Log.info("Command Center initialized.");
-    Log.info("Connecting to RedGlitch Core...");
+    Log.info("Connecting to Redglitch Core...");
     Log.info("Terminal ready. Type 'help' for available commands.");
     
     const cmdInput = document.getElementById('cmd-input');
@@ -638,7 +638,7 @@ window.addEventListener('DOMContentLoaded', () => {
         scratchpad.addEventListener('input', () => localStorage.setItem('redglitch_scratchpad', scratchpad.value));
     }
 
-    if (window.RedGlitchEventBus) window.RedGlitchEventBus.on('activity:logged', () => renderActivities());
+    if (window.RedglitchEventBus) window.RedglitchEventBus.on('activity:logged', () => renderActivities());
     
     const savedTheme = localStorage.getItem('redglitch_theme') || 'modern-dark';
     setTheme(savedTheme, { source: 'parent' });

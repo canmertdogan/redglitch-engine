@@ -354,7 +354,7 @@ class PlatformerRenderer {
                     x: ent.x + ent.w/2, 
                     y: ent.y + ent.h/2, 
                     radius: ent.light.radius || 150, 
-                    color: ent.light.color || 'rgba(255, 30, 39, 0.2)', // RedGlitch hue
+                    color: ent.light.color || 'rgba(255, 30, 39, 0.2)', // Redglitch hue
                     intensity: ent.light.intensity || 0.6
                 });
             });
@@ -664,7 +664,7 @@ class PlatformerRenderer {
                 this.ctx.translate(Math.floor(ghost.x + gw/2), Math.floor(ghost.y + gh/2));
                 this.ctx.scale(ghost.facingRight ? 1 : -1, 1);
                 
-                // RedGlitch tint overlay for sprites
+                // Redglitch tint overlay for sprites
                 this.ctx.drawImage(img, -gw/2, -gh/2, gw, gh);
                 this.ctx.globalCompositeOperation = 'source-atop';
                 this.ctx.fillStyle = `rgba(255, 30, 39, ${ghost.alpha * 0.8})`;

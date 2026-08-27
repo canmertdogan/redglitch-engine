@@ -96,7 +96,7 @@ const DialogueEditor: React.FC = () => {
                             }
                         });
                     }
-                } catch (e) {}
+                } catch (err) { console.warn("[studio-ui] swallowed error", err); }
 
                 setCharacters(loadedChars);
             }

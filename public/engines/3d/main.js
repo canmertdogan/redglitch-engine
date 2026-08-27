@@ -1,7 +1,7 @@
 /**
- * main.js — RedGlitch3DGame
+ * main.js — Redglitch3DGame
  *
- * THE unified 3D engine for RedGlitch.
+ * THE unified 3D engine for Redglitch.
  * Merges fps-3d, topdown-3d, and platformer-3d into ONE class.
  *
  * Architecture:
@@ -13,7 +13,7 @@
  * Visual style: LOW-POLY + VOXEL, flat palette colors, cel-shading only.
  * No PBR, no HDR — pure MeshLambertMaterial.
  *
- * Entry point: window.RedGlitch3DGame
+ * Entry point: window.Redglitch3DGame
  * Backward compat: window.FPSGame, window.TopDownGame3D, window.Platformer3DGame
  */
 
@@ -60,9 +60,9 @@ const CAMERA_MODE_MAP = {
     'THIRD_PERSON': CameraMode.THIRD_PERSON,
 };
 
-// ── RedGlitch3DGame ───────────────────────────────────────────────────────────
+// ── Redglitch3DGame ───────────────────────────────────────────────────────────
 
-class RedGlitch3DGame extends Engine3DAdapter {
+class Redglitch3DGame extends Engine3DAdapter {
 
     constructor(container, options = {}) {
         super(container, options);
@@ -149,10 +149,10 @@ class RedGlitch3DGame extends Engine3DAdapter {
         const engineMode = mode || this._engineType3D || 'fps-3d';
         this._engineType3D = engineMode;
 
-        console.log(`[RedGlitch3D v${ENGINE_VERSION}] init(${engineMode})`);
+        console.log(`[Redglitch3D v${ENGINE_VERSION}] init(${engineMode})`);
 
         const container = this.container || document.getElementById('game-container');
-        if (!container) throw new Error('[RedGlitch3D] no container element');
+        if (!container) throw new Error('[Redglitch3D] no container element');
         this.container = container;
 
         // ── Renderer ───────────────────────────────────────────────────────
@@ -224,7 +224,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
         // ── Load initial mode ──────────────────────────────────────────────
         await this.switchMode(engineMode);
 
-        console.log(`[RedGlitch3D] init(${engineMode}) complete`);
+        console.log(`[Redglitch3D] init(${engineMode}) complete`);
         if (typeof this.onReady === 'function') this.onReady(this);
         return this;
     }
@@ -237,10 +237,10 @@ class RedGlitch3DGame extends Engine3DAdapter {
      */
     async switchMode(mode) {
         if (!MODE_LOADERS[mode]) {
-            throw new Error(`[RedGlitch3D] Unknown mode: ${mode}`);
+            throw new Error(`[Redglitch3D] Unknown mode: ${mode}`);
         }
 
-        console.log(`[RedGlitch3D] switchMode → ${mode}`);
+        console.log(`[Redglitch3D] switchMode → ${mode}`);
 
         // ── Dispose current mode systems ───────────────────────────────────
         await this._disposeModeSystems();
@@ -305,7 +305,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
                 this[def.key] = instance;
                 this._modeSystems.push({ key: def.key, instance });
             } catch (err) {
-                console.warn(`[RedGlitch3D] Failed to load system "${def.key}":`, err);
+                console.warn(`[Redglitch3D] Failed to load system "${def.key}":`, err);
             }
         }
 
@@ -314,7 +314,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
             this._modeConfig.onSystemsReady(this);
         }
 
-        console.log(`[RedGlitch3D] Mode "${mode}" ready — ${this._modeSystems.length} systems loaded`);
+        console.log(`[Redglitch3D] Mode "${mode}" ready — ${this._modeSystems.length} systems loaded`);
     }
 
     /**
@@ -327,7 +327,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
                 else if (typeof instance.destroy === 'function') instance.destroy();
                 else if (typeof instance.detach === 'function') instance.detach();
             } catch (e) {
-                console.warn(`[RedGlitch3D] Error disposing "${key}":`, e);
+                console.warn(`[Redglitch3D] Error disposing "${key}":`, e);
             }
             this[key] = null;
         }
@@ -342,7 +342,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
         this.isRunning = true;
         this._lastTS   = performance.now();
         requestAnimationFrame(ts => this._loop(ts));
-        console.log('[RedGlitch3D] Game loop started');
+        console.log('[Redglitch3D] Game loop started');
     }
 
     _stopLoop() {
@@ -412,7 +412,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
 
     async login(username) {
         this.username = username;
-        console.log(`[RedGlitch3D] login: ${username}`);
+        console.log(`[Redglitch3D] login: ${username}`);
         this._startLoop();
     }
 
@@ -442,7 +442,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
     // ── Engine3DAdapter hooks ─────────────────────────────────────────────────
 
     async onLevelLoaded(level) {
-        console.log(`[RedGlitch3D] onLevelLoaded: "${level.name}" (mode: ${this._engineType3D})`);
+        console.log(`[Redglitch3D] onLevelLoaded: "${level.name}" (mode: ${this._engineType3D})`);
         this._levelId       = level.id ?? level.name ?? null;
         this._currentLevel  = level;
         this._levelComplete = false;
@@ -556,7 +556,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
     }
 
     onLevelUnloaded() {
-        console.log('[RedGlitch3D] onLevelUnloaded');
+        console.log('[Redglitch3D] onLevelUnloaded');
         this.gameTime     = 0;
         this._accumulator = 0;
         this._currentLevel = null;
@@ -610,7 +610,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
 
     emit(event, data) {
         for (const cb of (this._listeners.get(event) ?? [])) {
-            try { cb(data); } catch (e) { console.warn(`[RedGlitch3D] emit(${event}) error:`, e); }
+            try { cb(data); } catch (e) { console.warn(`[Redglitch3D] emit(${event}) error:`, e); }
         }
     }
 
@@ -658,7 +658,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
     // ── Save / Load ───────────────────────────────────────────────────────────
 
     async saveGame(slot = this.saveSlot) {
-        if (!this.username) { console.warn('[RedGlitch3D] saveGame: no username'); return; }
+        if (!this.username) { console.warn('[Redglitch3D] saveGame: no username'); return; }
         const payload = this._buildSavePayload();
         const res = await fetch(`/api/save/${this.username}/${slot}`, {
             method:  'POST',
@@ -666,16 +666,16 @@ class RedGlitch3DGame extends Engine3DAdapter {
             body:    JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(`saveGame HTTP ${res.status}`);
-        console.log(`[RedGlitch3D] Game saved: slot ${slot}`);
+        console.log(`[Redglitch3D] Game saved: slot ${slot}`);
     }
 
     async loadGame(slot = this.saveSlot) {
-        if (!this.username) { console.warn('[RedGlitch3D] loadGame: no username'); return; }
+        if (!this.username) { console.warn('[Redglitch3D] loadGame: no username'); return; }
         const res = await fetch(`/api/save/${this.username}/${slot}`);
         if (!res.ok) throw new Error(`loadGame HTTP ${res.status}`);
         const data = await res.json();
         await this._applySavePayload(data);
-        console.log(`[RedGlitch3D] Game loaded: slot ${slot}`);
+        console.log(`[Redglitch3D] Game loaded: slot ${slot}`);
     }
 
     _buildSavePayload() {
@@ -765,12 +765,12 @@ class RedGlitch3DGame extends Engine3DAdapter {
     pause() {
         this.isPaused = true;
         if (this._modeConfig?.pointerLock) this.releasePointerLock();
-        console.log('[RedGlitch3D] Paused');
+        console.log('[Redglitch3D] Paused');
     }
 
     resume() {
         this.isPaused = false;
-        console.log('[RedGlitch3D] Resumed');
+        console.log('[Redglitch3D] Resumed');
     }
 
     toggle() { this.isPaused ? this.resume() : this.pause(); }
@@ -805,7 +805,7 @@ class RedGlitch3DGame extends Engine3DAdapter {
         this.renderer3d?.dispose();
         window.removeEventListener('resize', this._resizeBound);
 
-        console.log('[RedGlitch3D] Disposed');
+        console.log('[Redglitch3D] Disposed');
     }
 
     // ── TopDown legacy level normalization ─────────────────────────────────────
@@ -919,11 +919,11 @@ class RedGlitch3DGame extends Engine3DAdapter {
 
 // ── Expose globally ───────────────────────────────────────────────────────────
 
-window.RedGlitch3DGame = RedGlitch3DGame;
+window.Redglitch3DGame = Redglitch3DGame;
 
 // ── Backward compatibility — old code can still reference old class names ─────
-window.FPSGame          = RedGlitch3DGame;
-window.TopDownGame3D    = RedGlitch3DGame;
-window.Platformer3DGame = RedGlitch3DGame;
+window.FPSGame          = Redglitch3DGame;
+window.TopDownGame3D    = Redglitch3DGame;
+window.Platformer3DGame = Redglitch3DGame;
 
-export default RedGlitch3DGame;
+export default Redglitch3DGame;

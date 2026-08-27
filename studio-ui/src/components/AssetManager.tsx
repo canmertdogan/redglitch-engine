@@ -47,7 +47,7 @@ const AssetManager: React.FC = () => {
         try {
             const res = await fetch('/api/assets/rebuild', { method: 'POST' });
             if (res.ok) loadAssets();
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
         setIndexing(false);
     };
 

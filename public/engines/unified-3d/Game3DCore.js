@@ -1,5 +1,5 @@
 /**
- * Game3DCore.js — Centralised 3D game runtime for RedGlitch / Ketebe Engine.
+ * Game3DCore.js — Centralised 3D game runtime for Redglitch / Ketebe Engine.
  *
  * Extracts ALL duplicated init / loop / save / event code that was previously
  * copy-pasted across FPSGame, TopDownGame3D, and Platformer3DGame into one
@@ -381,13 +381,13 @@ export default class Game3DCore extends Engine3DAdapter {
         requestAnimationFrame(ts => this._loop(ts));
 
         // Phase 26: Performance Profiling
-        if (window.RedGlitchProfiler) window.RedGlitchProfiler.beginFrame();
+        if (window.RedglitchProfiler) window.RedglitchProfiler.beginFrame();
 
         const rawDt  = Math.min((timestamp - this._lastTS) / 1000, MAX_DELTA);
         this._lastTS = timestamp;
 
         if (this.isPaused) {
-            if (window.RedGlitchProfiler) window.RedGlitchProfiler.endFrame();
+            if (window.RedglitchProfiler) window.RedglitchProfiler.endFrame();
             return;
         }
 
@@ -407,11 +407,11 @@ export default class Game3DCore extends Engine3DAdapter {
         // ── Render ────────────────────────────────────────────────────
         this._coreRender(rawDt);
 
-        if (window.RedGlitchProfiler) {
-            window.RedGlitchProfiler.updateStats({
+        if (window.RedglitchProfiler) {
+            window.RedglitchProfiler.updateStats({
                 drawCalls: this.renderer3d?.webgl ? this.renderer3d.webgl.info.render.calls : 0
             });
-            window.RedGlitchProfiler.endFrame();
+            window.RedglitchProfiler.endFrame();
         }
     }
 

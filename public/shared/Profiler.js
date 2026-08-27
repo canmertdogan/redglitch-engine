@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Performance Profiler
+ * Redglitch Engine - Performance Profiler
  * Lightweight real-time monitoring for all engines.
  */
 class PerformanceProfiler {
@@ -21,8 +21,8 @@ class PerformanceProfiler {
         this._setupUI();
         
         // Listen for debug toggle
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('debug:toggle_profiler', () => this.toggle());
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('debug:toggle_profiler', () => this.toggle());
         }
         
         // Check URL params
@@ -94,11 +94,11 @@ class PerformanceProfiler {
     }
 
     _broadcast() {
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit('engine:performance_metrics', this.stats);
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('engine:performance_metrics', this.stats);
         }
     }
 }
 
 // Make globally available
-window.RedGlitchProfiler = new PerformanceProfiler();
+window.RedglitchProfiler = new PerformanceProfiler();

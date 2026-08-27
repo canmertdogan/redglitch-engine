@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Asset Manager
+ * Redglitch Engine - Asset Manager
  * Unified asset management and dependency tracking
  */
 class AssetManager {
@@ -10,8 +10,8 @@ class AssetManager {
         this.watchers = new Set();
         this.eventBus = null;
         
-        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
-            this.eventBus = window.RedGlitchEventBus;
+        if (typeof window !== 'undefined' && window.RedglitchEventBus) {
+            this.eventBus = window.RedglitchEventBus;
             this.setupEventListeners();
         }
         
@@ -708,7 +708,7 @@ class AssetManager {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.RedGlitchAssetManager = window.RedGlitchAssetManager || new AssetManager();
+    window.RedglitchAssetManager = window.RedglitchAssetManager || new AssetManager();
 }
 
 // Export for Node.js

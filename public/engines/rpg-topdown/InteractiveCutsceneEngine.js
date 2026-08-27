@@ -1,4 +1,4 @@
-// InteractiveCutsceneEngine.js - Unified Interactive Cutscene System for RedGlitch
+// InteractiveCutsceneEngine.js - Unified Interactive Cutscene System for Redglitch
 // Combines timeline-based animation with interactive dialogue and player choices
 
 window.InteractiveCutsceneEngine = class InteractiveCutsceneEngine {

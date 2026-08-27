@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Shared UI System
+ * Redglitch Engine - Shared UI System
  * Dynamically renders UI screens based on JSON definitions
  */
 window.UISystem = class UISystem {

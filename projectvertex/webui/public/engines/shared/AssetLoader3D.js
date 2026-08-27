@@ -226,7 +226,7 @@ class AssetLoader3D {
      * Import a .blend file and convert it to .glb on the server.
      * Requires Blender to be installed on the server.
      *
-     * @param {string} projectName  RedGlitch project name
+     * @param {string} projectName  Redglitch project name
      * @param {File}   file         .blend File from an <input type="file">
      * @returns {Promise<{ name:string, url:string, converted:boolean }>}
      */
@@ -308,7 +308,7 @@ class AssetLoader3D {
     /**
      * Import an OBJ file (with optional MTL) and persist to the project.
      *
-     * @param {string} projectName  RedGlitch project name
+     * @param {string} projectName  Redglitch project name
      * @param {File}   objFile      OBJ File from an <input type="file">
      * @param {File}   [mtlFile]    Optional MTL File from an <input type="file">
      * @param {object} [opts]
@@ -420,7 +420,7 @@ class AssetLoader3D {
      * palette colour snap), persist the result to `projects/{projectName}/assets3d/`
      * via POST `/api/assets3d/{projectName}`, and return asset metadata.
      *
-     * @param {string} projectName  RedGlitch project name (used for storage path)
+     * @param {string} projectName  Redglitch project name (used for storage path)
      * @param {File}   file         GLB/GLTF File from an <input type="file">
      * @param {object} [opts]
      * @param {boolean} [opts.remapColors=true]  Snap colours to project palette
@@ -479,7 +479,7 @@ class AssetLoader3D {
      * Import an FBX file, convert to GLB, and persist to the project.
      * Runs the FacetTool pipeline (flat-shade + palette color snap).
      *
-     * @param {string} projectName  RedGlitch project name
+     * @param {string} projectName  Redglitch project name
      * @param {File}   file         FBX File from an <input type="file">
      * @param {object} [opts]
      * @param {boolean} [opts.remapColors=true]  Snap colours to project palette

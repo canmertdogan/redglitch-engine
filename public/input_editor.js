@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 
 function initializeInputIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             console.log('[InputEditor] EventBus connected');

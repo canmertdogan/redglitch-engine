@@ -1,4 +1,4 @@
-// theme.js - Unified Theme System for RedGlitch Engine
+// theme.js - Unified Theme System for Redglitch Engine
 
 const THEMES = {
     'modern-dark': {

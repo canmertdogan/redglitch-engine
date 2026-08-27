@@ -1,6 +1,6 @@
 /**
  * public/ai/config.js
- * Central configuration for RedGlitch AI Micro Edition.
+ * Central configuration for Redglitch AI Micro Edition.
  */
 
 export const AI_CONFIG = {

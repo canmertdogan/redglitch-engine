@@ -1,6 +1,6 @@
 /**
  * MaterialSystem.js — Cinema 4D style channel-based material system.
- * Designed for RedGlitch Engine's stylized flat-shaded aesthetic.
+ * Designed for Redglitch Engine's stylized flat-shaded aesthetic.
  */
 
 const MATERIAL_SCHEMA_VERSION = "1.0";

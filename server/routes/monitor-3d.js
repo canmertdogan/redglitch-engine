@@ -11,7 +11,7 @@ const router = express.Router();
 const MONITOR_MODE = process.env.MONITOR_MODE || 'simulated';
 
 router.use((req, res, next) => {
-  res.setHeader('X-RedGlitch-Monitor-Mode', MONITOR_MODE);
+  res.setHeader('X-Redglitch-Monitor-Mode', MONITOR_MODE);
   next();
 });
 

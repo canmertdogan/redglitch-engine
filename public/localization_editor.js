@@ -8,9 +8,9 @@ let eventBus, projectState, assetManager;
 
 function initializeLocalizationIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Listen for dialogue updates to sync localization keys
@@ -150,7 +150,7 @@ class LocalizationEditor {
     
     async loadProject() {
         try {
-            // Try to load from RedGlitch project structure
+            // Try to load from Redglitch project structure
             const response = await fetch('/dunyalar/definitions/locales.json');
             if (response.ok) {
                 const loadedData = await response.json();
@@ -176,7 +176,7 @@ class LocalizationEditor {
     
     async saveProject() {
         try {
-            // Save to RedGlitch project structure
+            // Save to Redglitch project structure
             const response = await fetch('/api/ide/write', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

@@ -25,7 +25,7 @@ function installBrowserGlobals() {
         AssetSynth: {
             generate: async () => 'data:image/png;base64,abc',
         },
-        RedGlitchAIInstance: null,
+        RedglitchAIInstance: null,
         top: { location: { href: '' } },
         location: { pathname: '/dashboard.html', href: '' },
     };

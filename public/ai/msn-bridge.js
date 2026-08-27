@@ -90,8 +90,8 @@ window.IRAB = {
                         }
                         
                         // Broadcast via EventBus
-                        if (window.RedGlitchEventBus) {
-                            window.RedGlitchEventBus.emit('ai:command', msg.data);
+                        if (window.RedglitchEventBus) {
+                            window.RedglitchEventBus.emit('ai:command', msg.data);
                         }
                     }
                 } catch(e) {
@@ -455,8 +455,8 @@ window.IRAB = {
     takeScreenshot() { this.addMessage('system', "📸 Studio captured!"); },
     
     injectCode(code) {
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit('ai:inject-code', { code });
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('ai:inject-code', { code });
             this.showBalloon("GRRR... CODE INJECTED!");
             this.playSound('msg');
         } else {
@@ -528,7 +528,7 @@ window.IRAB = {
     },
     
     // --- QUICK ACTIONS ---
-    quickHelp() { if (window.irab) window.irab.prompt("How do I use RedGlitch Studio?"); },
+    quickHelp() { if (window.irab) window.irab.prompt("How do I use Redglitch Studio?"); },
     quickTutorial() { if (window.irab) window.irab.prompt("Give me a quick tutorial on engine basics."); },
     quickTips() { if (window.irab) window.irab.prompt("Give me a random pro tip."); },
     

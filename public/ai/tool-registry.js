@@ -5,13 +5,13 @@ import { editorForTool } from './editor-catalog.mjs';
 import { getAutomationFlags } from './automation-flags.mjs';
 
 /**
- * RedGlitch AI - Tool Registry (KAP)
+ * Redglitch AI - Tool Registry (KAP)
  * Registry of Command Bus actions that the AI can invoke across the Studio.
  */
 
 export class ToolRegistry {
     constructor(eventBus = null) {
-        this.eventBus = eventBus || window.RedGlitchEventBus;
+        this.eventBus = eventBus || window.RedglitchEventBus;
         this.permissionGate = new PermissionGate();
         this.tools = new Map();
         this.inFlight = new Map();

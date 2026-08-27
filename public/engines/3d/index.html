@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RedGlitch 3D — Runtime</title>
+    <title>Redglitch 3D — Runtime</title>
     <link href="/fonts/fonts.css" rel="stylesheet">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -107,7 +107,7 @@
     <div id="game-container"></div>
 
     <script type="module">
-        import RedGlitch3DGame from './main.js';
+        import Redglitch3DGame from './main.js';
 
         // ── URL params ────────────────────────────────────────────────────
         const params  = new URLSearchParams(window.location.search);
@@ -132,7 +132,7 @@
 
         // ── Init ──────────────────────────────────────────────────────────
         const container = document.getElementById('game-container');
-        const game = new RedGlitch3DGame(container, { mode });
+        const game = new Redglitch3DGame(container, { mode });
 
         setProgress(10, 'LOADING ENGINE...');
 
@@ -170,7 +170,7 @@
                 loadingOverlay.classList.add('hidden');
             }, 400);
         }).catch(err => {
-            console.error('[RedGlitch3D] Init failed:', err);
+            console.error('[Redglitch3D] Init failed:', err);
             setProgress(0, 'ERROR: ' + err.message);
         });
 

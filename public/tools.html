@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>RedGlitch Game Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Redglitch Game Studio</title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="pixel_scrollbars.css">
@@ -512,7 +513,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Author</label>
-                            <input type="text" id="new-proj-author" class="form-input" value="RedGlitch User">
+                            <input type="text" id="new-proj-author" class="form-input" value="Redglitch User">
                         </div>
                     </div>
 
@@ -601,10 +602,10 @@
     <script src="ai/error-watcher.js?v=1"></script>
     <script type="module">
         import { ThoughtVisualizer } from './ai/ui/thought-visualizer.js';
-        window.RedGlitchThoughtVisualizer = new ThoughtVisualizer(window.RedGlitchEventBus);
+        window.RedglitchThoughtVisualizer = new ThoughtVisualizer(window.RedglitchEventBus);
     </script>
     
-    <!-- KAI AI Assistant (RedGlitch AI Micro Edition) -->
+    <!-- KAI AI Assistant (Redglitch AI Micro Edition) -->
     <iframe id="kai-ai-panel" src="ai/ui/assistant-panel.html?v=10"
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                    border: none; pointer-events: none; z-index: 9998;">
@@ -815,9 +816,9 @@
 
     <script type="module">
         // Initialize AI Micro for ghost-text and Command Bus (ToolRegistry)
-        import { RedGlitchAI } from './ai/redglitch-ai.js?v=7';
-        if (window.RedGlitchAIInstance) {
-            window.RedGlitchAIInstance.initialize().catch(err => {
+        import { RedglitchAI } from './ai/redglitch-ai.js?v=7';
+        if (window.RedglitchAIInstance) {
+            window.RedglitchAIInstance.initialize().catch(err => {
                 console.error("❌ AI Brain failed to initialize:", err);
             });
         }

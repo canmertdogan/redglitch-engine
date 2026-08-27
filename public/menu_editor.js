@@ -7,9 +7,9 @@
 let eventBus, projectState, assetManager;
 function initUIStudioIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         if (eventBus) {
             eventBus.on('ui:request', (e) => console.log('[UIStudio] UI requested:', e.data));
             console.log('[UIStudio] EventBus connected');
@@ -1512,8 +1512,8 @@ class UIStudio {
             if (ctrl && e.key === 's') { 
                 e.preventDefault(); 
                 this.save(); 
-                if (window.parent && window.parent.RedGlitchEventBus) {
-                    window.parent.RedGlitchEventBus.emit('system:project:save_request');
+                if (window.parent && window.parent.RedglitchEventBus) {
+                    window.parent.RedglitchEventBus.emit('system:project:save_request');
                 }
                 return; 
             }
@@ -1807,8 +1807,8 @@ class UIStudio {
 window.studio = new UIStudio();
 
 // Listen for global save
-if (window.parent && window.parent.RedGlitchEventBus) {
-    window.parent.RedGlitchEventBus.on('system:global_save', () => {
+if (window.parent && window.parent.RedglitchEventBus) {
+    window.parent.RedglitchEventBus.on('system:global_save', () => {
         if (window.studio && window.studio.dirty) {
             window.studio.save();
         }

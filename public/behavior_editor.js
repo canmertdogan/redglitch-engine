@@ -20,9 +20,9 @@ function escapeHTML(str) {
 
 function initializeBehaviorIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Listen for NPC/enemy behavior requests
@@ -776,7 +776,7 @@ Tools:
 BRAIN ARCHITECT v1.0
 ====================
 
-Visual NPC behavior programming tool for RedGlitch Engine.
+Visual NPC behavior programming tool for Redglitch Engine.
 
 Features:
   • Node-based behavior design
@@ -785,7 +785,7 @@ Features:
   • Multi-select & alignment tools
   • Collapsible UI panels
 
-Created for RedGlitch Game Engine
+Created for Redglitch Game Engine
         `.trim());
     }
     

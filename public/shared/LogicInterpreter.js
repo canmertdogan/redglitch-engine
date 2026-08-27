@@ -452,8 +452,8 @@ window.LogicInterpreter = class LogicInterpreter {
     async executeNode(node, ctx) {
         if (ctx.depth > this.MAX_RECURSION_DEPTH) return;
         const currentCtx = { ...ctx, node, depth: ctx.depth + 1 };
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit('vsl:node_exec', { nodeId: node.id, entityId: ctx.entity?.id, timestamp: Date.now() });
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('vsl:node_exec', { nodeId: node.id, entityId: ctx.entity?.id, timestamp: Date.now() });
         }
         const handler = this.nodeRegistry[node.type];
         if (handler) {

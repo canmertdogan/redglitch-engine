@@ -39,7 +39,7 @@ const Dashboard: React.FC = () => {
                 const data = await res.json();
                 setStats({ cpu: Math.round(data.cpu), mem: data.mem });
             }
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const launchProject = async (name: string) => {
@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
                 body: JSON.stringify({ name }) 
             });
             window.location.href = '../tools.html';
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const renderProjectGrid = () => (

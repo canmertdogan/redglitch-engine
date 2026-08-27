@@ -1,13 +1,13 @@
 /**
  * public/ai/redglitch-ai-assistant.js
- * Compatibility layer for the Kai UI to interface with the RedGlitchAI engine.
+ * Compatibility layer for the Kai UI to interface with the RedglitchAI engine.
  */
 
-// We assume RedGlitchAIInstance is available globally via redglitch-ai.js
+// We assume RedglitchAIInstance is available globally via redglitch-ai.js
 
 class IRABAssistantSimple {
     constructor() {
-        this.ai = window.RedGlitchAIInstance || (window.parent && window.parent.RedGlitchAIInstance) || null;
+        this.ai = window.RedglitchAIInstance || (window.parent && window.parent.RedglitchAIInstance) || null;
         
         // Ensure personality is loaded
         if (typeof window.IRABPersonality !== 'undefined') {
@@ -31,7 +31,7 @@ class IRABAssistantSimple {
     }
 
     setProgressCallback(callback) {
-        // Hook into RedGlitchAI's event bus for progress updates if available
+        // Hook into RedglitchAI's event bus for progress updates if available
         if (this.ai && this.ai.inferenceEngine && this.ai.inferenceEngine.isModelReady) {
             callback({ percent: 100, status: 'ready' });
         }
@@ -39,18 +39,18 @@ class IRABAssistantSimple {
 
     async waitForCore(timeout = 5000) {
         if (this.ai) return this.ai;
-        if (window.RedGlitchAIInstance) {
-            this.ai = window.RedGlitchAIInstance;
+        if (window.RedglitchAIInstance) {
+            this.ai = window.RedglitchAIInstance;
             return this.ai;
         }
-        if (window.parent && window.parent.RedGlitchAIInstance) {
-            this.ai = window.parent.RedGlitchAIInstance;
+        if (window.parent && window.parent.RedglitchAIInstance) {
+            this.ai = window.parent.RedglitchAIInstance;
             return this.ai;
         }
 
         console.log('Kai: Waiting for AI Core...');
         const start = Date.now();
-        while (!window.RedGlitchAIInstance) {
+        while (!window.RedglitchAIInstance) {
             if (Date.now() - start > timeout) {
                 console.error("Kai: Core wait timeout.");
                 throw new Error("AI Core Connection Failed");
@@ -58,7 +58,7 @@ class IRABAssistantSimple {
             await new Promise(r => setTimeout(r, 100));
         }
         
-        this.ai = window.RedGlitchAIInstance;
+        this.ai = window.RedglitchAIInstance;
         return this.ai;
     }
 
@@ -222,8 +222,8 @@ class IRABAssistantSimple {
             
             // Get conversation context if possible (from project state)
             const context = {};
-            if (window.RedGlitchProjectState) {
-                context.project = window.RedGlitchProjectState.projectName;
+            if (window.RedglitchProjectState) {
+                context.project = window.RedglitchProjectState.projectName;
                 context.activeEditor = localStorage.getItem('redglitch_last_editor');
             }
 

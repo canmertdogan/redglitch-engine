@@ -5,7 +5,7 @@ import { Preferences } from '@capacitor/preferences';
 console.log("Android Adapter Loaded");
 
 const ROOT_DIR = Directory.Documents;
-const BASE_FOLDER = 'RedGlitchEngine';
+const BASE_FOLDER = 'RedglitchEngine';
 
 // --- HELPER FUNCTIONS ---
 

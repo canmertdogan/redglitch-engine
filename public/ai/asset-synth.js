@@ -1,5 +1,5 @@
 /**
- * RedGlitch AI - Asset Synthesizer
+ * Redglitch AI - Asset Synthesizer
  * Procedural Pixel Art Generator for KAI
  */
 

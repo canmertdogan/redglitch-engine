@@ -1,4 +1,4 @@
-// character_editor.js - Enhanced RedGlitch Hero Studio
+// character_editor.js - Enhanced Redglitch Hero Studio
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -8,9 +8,9 @@ let characterId = null; // Current character being edited
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Listen for external character load requests

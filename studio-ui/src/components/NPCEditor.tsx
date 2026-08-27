@@ -127,14 +127,14 @@ const NPCEditor: React.FC = () => {
         try {
             const res = await fetch('/api/templates/npc');
             if (res.ok) setTemplates(await res.json());
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const loadBrains = async () => {
         try {
             const res = await fetch('/api/brains/list');
             if (res.ok) setAvailableBrains(await res.json());
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const getDefaultNPC = (): NPC => ({

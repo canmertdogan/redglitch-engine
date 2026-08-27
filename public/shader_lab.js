@@ -43,7 +43,7 @@ async function detectProjectType() {
         const metaRes = await fetch(`/api/projects`);
         if (metaRes.ok) {
             const projects = await metaRes.json();
-            let activeProjName = window.RedGlitchProjectState?.projectName || '';
+            let activeProjName = window.RedglitchProjectState?.projectName || '';
             // Fallback: try the current project endpoint
             if (!activeProjName) {
                 try {
@@ -989,7 +989,7 @@ viewport.addEventListener('wheel', (e) => {
 
 // ======================== EVENTBUS INTEGRATION ========================
 function initEventBus() {
-    const eb = window.RedGlitchEventBus;
+    const eb = window.RedglitchEventBus;
     if (!eb) return;
     eb.on('ai:context_query', () => {
         eb.emit('ai:context_response', {
@@ -1002,9 +1002,9 @@ function initEventBus() {
 }
 
 function broadcastUpdate(name, action) {
-    const eb = window.RedGlitchEventBus;
+    const eb = window.RedglitchEventBus;
     if (eb) eb.emit(`asset:shader:${action}`, { shaderId: name, timestamp: Date.now() });
-    const ps = window.RedGlitchProjectState;
+    const ps = window.RedglitchProjectState;
     if (ps) ps.set(`assets.shaders.${name}`, { name, lastModified: Date.now() });
 }
 

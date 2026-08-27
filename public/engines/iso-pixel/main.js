@@ -147,7 +147,7 @@ class IsoGame {
         }
         
         // Unsubscribe from EventBus
-        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+        const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
         if (eventBus && this.eventBusIds) {
             this.eventBusIds.forEach(id => eventBus.off('*', id));
         }
@@ -162,7 +162,7 @@ class IsoGame {
     }
 
     _setupEngineListeners() {
-        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+        const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
         this.eventBusIds = [];
         if (eventBus) {
             const id1 = eventBus.on('engine:snapshot:request', (event) => {
@@ -194,7 +194,7 @@ class IsoGame {
             this.frameCount = 0;
             this.lastFpsCheck = now;
 
-            const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+            const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
             if (eventBus) {
                 eventBus.emit('system:metrics', {
                     fps,
@@ -449,7 +449,7 @@ class IsoGame {
             }
         };
         
-        // Load Caterpillar/Worm sprites (matching 2D engine's "RedGlitch Canavarı")
+        // Load Caterpillar/Worm sprites (matching 2D engine's "Redglitch Canavarı")
         if (window.createPixelImage) {
             this.playerHead = window.createPixelImage('caterpillar_head');
             this.playerBody = window.createPixelImage('caterpillar_body');

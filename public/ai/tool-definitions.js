@@ -58,7 +58,7 @@ export function registerDefaultTools(registry) {
             execute: async (args) => {
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
                     body: JSON.stringify({ file: args.path, content: args.content })
                 });
                 if (!res.ok) throw new Error(`Failed to create ${args.path}`);
@@ -100,7 +100,7 @@ export function registerDefaultTools(registry) {
 
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
                     body: JSON.stringify({ file: args.path, content: contentToWrite })
                 });
                 if (!res.ok) throw new Error(`Failed to edit ${args.path}`);
@@ -140,7 +140,7 @@ export function registerDefaultTools(registry) {
 
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
                     body: JSON.stringify({ file: args.path, content: args.content })
                 });
                 if (!res.ok) throw new Error(`Failed to write to ${args.path}`);
@@ -177,7 +177,7 @@ export function registerDefaultTools(registry) {
 
                 const res = await fetch('/api/ide/delete', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
                     body: JSON.stringify({ file: args.path })
                 });
                 if (!res.ok) throw new Error(`Failed to delete ${args.path}`);
@@ -252,7 +252,7 @@ export function registerDefaultTools(registry) {
                 
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-RedGlitch-Automation': 'kai' },
+                    headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
                     body: JSON.stringify({ file: path, content: args.content })
                 });
                 if (!res.ok) throw new Error(`Failed to update Manifesto at ${path}`);
@@ -455,8 +455,8 @@ export function registerDefaultTools(registry) {
                 required: ['steps']
             },
             execute: async (args) => {
-                if (!window.RedGlitchAIInstance || !window.RedGlitchAIInstance.workflowManager) {
-                    throw new Error("Workflow Manager not initialized in RedGlitchAIInstance");
+                if (!window.RedglitchAIInstance || !window.RedglitchAIInstance.workflowManager) {
+                    throw new Error("Workflow Manager not initialized in RedglitchAIInstance");
                 }
                 // Safety net: if steps have NO navigateTo and look like a plain studio-open
                 // attempt (just generic stubs), redirect to correct studio instead.
@@ -471,11 +471,11 @@ export function registerDefaultTools(registry) {
                     if (/iso|isometric|isopixel/.test(allArgs)) target = 'iso_studio';
                     else if (/platformer|platform/.test(allArgs)) target = 'platformer_studio';
                     else if (/topdown|top.down|rpg|world/.test(allArgs)) target = 'editor';
-                    if (target && window.RedGlitchAIInstance && window.RedGlitchAIInstance.toolRegistry) {
-                        return await window.RedGlitchAIInstance.toolRegistry.execute('navigateTo', { target });
+                    if (target && window.RedglitchAIInstance && window.RedglitchAIInstance.toolRegistry) {
+                        return await window.RedglitchAIInstance.toolRegistry.execute('navigateTo', { target });
                     }
                 }
-                return await window.RedGlitchAIInstance.workflowManager.executeWorkflow(args.steps);
+                return await window.RedglitchAIInstance.workflowManager.executeWorkflow(args.steps);
             }
         });
 
@@ -560,7 +560,7 @@ export function registerDefaultTools(registry) {
                 required: ['name', 'x', 'y']
             },
             execute: async (args) => {
-                const eventBus = window.RedGlitchEventBus || window.parent.RedGlitchEventBus;
+                const eventBus = window.RedglitchEventBus || window.parent.RedglitchEventBus;
                 if (!eventBus) throw new Error('EventBus not found.');
                 
                 eventBus.emit('iso:spawn_asset', {

@@ -164,7 +164,7 @@ async function collectRegisteredTools() {
   global.window = {
     location: { pathname: '/audit-tool-contracts' },
     top: { location: { href: '' } },
-    RedGlitchAIInstance: null,
+    RedglitchAIInstance: null,
   };
   global.document = {
     createElement: () => ({}),

@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Central Event Bus
+ * Redglitch Engine - Central Event Bus
  * Provides unified communication across all editors and tools
  */
 class EventBus {
@@ -396,7 +396,7 @@ class EventBus {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.RedGlitchEventBus = window.RedGlitchEventBus || new EventBus();
+    window.RedglitchEventBus = window.RedglitchEventBus || new EventBus();
 }
 
 // Export for Node.js

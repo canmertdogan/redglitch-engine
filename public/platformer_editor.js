@@ -642,7 +642,7 @@ window.editor = new PlatformerEditor();
 
 // --- AI Integration: StudioBridge + Tool Dispatch ---
 (function initPlatformerAI() {
-    const eventBus = window.RedGlitchEventBus;
+    const eventBus = window.RedglitchEventBus;
     if (!eventBus || !window.StudioBridge) {
         window.addEventListener('studio-bridge-ready', initPlatformerAI, { once: true });
         return;

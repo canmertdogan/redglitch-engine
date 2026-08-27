@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Blackhole Cinematic Background
+ * Redglitch Engine - Blackhole Cinematic Background
  * A high-performance WebGL/Three.js shader background
  */
 class BlackholeBackground {

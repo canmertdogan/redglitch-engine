@@ -13,8 +13,8 @@ window.AchievementSystem = class AchievementSystem {
         this.createUI();
 
         // Hot Reload Listener
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('achievements:updated', (event) => {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('achievements:updated', (event) => {
                 console.log("[AchievementSystem] Definitions Updated!");
                 this.definitions = event.data;
             });

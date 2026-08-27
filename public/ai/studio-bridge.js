@@ -1,5 +1,5 @@
 /**
- * RedGlitch AI - Studio Bridge (KAP)
+ * Redglitch AI - Studio Bridge (KAP)
  * Helper for Studio tools to register their capabilities with the AI ToolRegistry.
  * 
  * Usage:
@@ -23,7 +23,7 @@ export class StudioBridge {
             return window.__redglitchStudioBridges.get(namespace);
         }
         this.namespace = namespace;
-        this.eventBus = eventBus || window.RedGlitchEventBus;
+        this.eventBus = eventBus || window.RedglitchEventBus;
         this.tools = new Map();
         this.completedRequests = new Set();
         this.listeners = [];

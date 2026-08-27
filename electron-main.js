@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, Menu, shell, nativeImage, dialog } = requir
 const path = require('path');
 const { spawn } = require('child_process');
 
-const APP_NAME = 'RedGlitch Game Studio';
+const APP_NAME = 'Redglitch Game Studio';
 
 // Set the app name before Electron initializes the app menu or lock state.
 app.name = APP_NAME;
@@ -164,7 +164,7 @@ if (process.platform === 'darwin') {
     app.setAboutPanelOptions({
         applicationName: APP_NAME,
         applicationVersion: '1.0.0',
-        copyright: 'Copyright © 2026 RedGlitch',
+        copyright: 'Copyright © 2026 Redglitch',
         version: '1.0.0'
     });
 }

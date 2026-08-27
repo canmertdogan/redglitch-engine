@@ -1,4 +1,4 @@
-// ide.js - RedGlitch Code Studio Logic
+// ide.js - Redglitch Code Studio Logic
 
 let editor = null;
 let openTabs = new Map(); // path -> { model, state }
@@ -130,15 +130,15 @@ setInterval(updateStats, 2000);
 
 // --- MEMORY BRIDGE LOGIC ---
 window.requestMemoryDump = function() {
-    if (window.RedGlitchEventBus) {
+    if (window.RedglitchEventBus) {
         document.getElementById('live-memory-display').innerText = "Requesting dump from engine...";
-        window.RedGlitchEventBus.requestMemoryDump('campaign');
+        window.RedglitchEventBus.requestMemoryDump('campaign');
     }
 };
 
 // Listen for memory diffs
-if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
-    window.RedGlitchEventBus.on('system:memory:diff', (event) => {
+if (typeof window !== 'undefined' && window.RedglitchEventBus) {
+    window.RedglitchEventBus.on('system:memory:diff', (event) => {
         const { namespace, diff } = event.data;
         if (namespace === 'campaign' && document.getElementById('live-memory-display')) {
             document.getElementById('live-memory-display').innerText = JSON.stringify(diff, null, 2);
@@ -151,13 +151,13 @@ require.config({ paths: { 'vs': 'lib/monaco/vs' }});
 
 window.editorInit = function() {
     require(['vs/editor/editor.main'], async function() {
-        // Load RedGlitch Type Definitions
+        // Load Redglitch Type Definitions
         try {
             const dtsRes = await fetch('lib/monaco/redglitch.d.ts');
             if (dtsRes.ok) {
                 const dtsContent = await dtsRes.text();
                 monaco.languages.typescript.javascriptDefaults.addExtraLib(dtsContent, 'redglitch.d.ts');
-                console.log("RedGlitch intelligence loaded.");
+                console.log("Redglitch intelligence loaded.");
             }
         } catch (e) { console.error("Failed to load type definitions", e); }
 
@@ -190,10 +190,10 @@ window.editorInit = function() {
         // --- AI INTEGRATION: Ghost-Text Autocomplete ---
         try {
             if (localStorage.getItem('kai_ai_enabled') === 'true') {
-            const { RedGlitchAI } = await import('/ai/redglitch-ai.js');
+            const { RedglitchAI } = await import('/ai/redglitch-ai.js');
             const { EventBus } = await import('/ai/shim.js');
-            const ai = new RedGlitchAI();
-            window.RedGlitchAIInstance = ai;
+            const ai = new RedglitchAI();
+            window.RedglitchAIInstance = ai;
 
             monaco.languages.registerInlineCompletionsProvider('javascript', {
                 provideInlineCompletions: async (model, position, context, token) => {
@@ -237,15 +237,15 @@ window.editorInit = function() {
                 },
                 freeInlineCompletions: () => {}
             });
-            console.log("RedGlitch AI Ghost-Text enabled.");
+            console.log("Redglitch AI Ghost-Text enabled.");
             }
         } catch (e) {
             console.error("Failed to initialize AI Ghost-Text:", e);
         }
 
         // --- AI INTEGRATION: Code Injection ---
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('ai:inject-code', (data) => {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('ai:inject-code', (data) => {
                 if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
                 if (!editor) return;
                 const model = editor.getModel();

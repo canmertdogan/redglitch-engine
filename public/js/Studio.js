@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Game Studio IDE Core
+ * Redglitch Engine - Game Studio IDE Core
  * Orchestrates window management, tools, projects, and system status.
  */
 
@@ -330,7 +330,7 @@ function hookConsole() {
         updateDiagnosticsUI();
         const msg = args.map(a => String(a)).join(' ');
         capture(msg, 'error');
-        if (window.RedGlitchEventBus) window.RedGlitchEventBus.emit('editor:error', { message: msg });
+        if (window.RedglitchEventBus) window.RedglitchEventBus.emit('editor:error', { message: msg });
         originalError.apply(console, args);
     };
     
@@ -457,8 +457,8 @@ function openWindow(tool) {
         if (btn) btn.classList.add('opened');
     }
     
-    if (window.RedGlitchProjectState) {
-        window.RedGlitchProjectState.logActivity('tool', tool.title, { id: tool.id });
+    if (window.RedglitchProjectState) {
+        window.RedglitchProjectState.logActivity('tool', tool.title, { id: tool.id });
     }
     
     if (tool.id === 'console') {
@@ -750,14 +750,14 @@ async function saveGlobalProject(options = {}) {
     let warned = 0;
     
     // Save Central Project State
-    if (window.RedGlitchProjectState && window.RedGlitchProjectState.isDirty) {
-        await window.RedGlitchProjectState.saveProject();
+    if (window.RedglitchProjectState && window.RedglitchProjectState.isDirty) {
+        await window.RedglitchProjectState.saveProject();
         saved++;
     }
 
     // Broadcast global save event
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:global_save', { timestamp: Date.now() });
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:global_save', { timestamp: Date.now() });
     }
 
     const frames = getOpenEditorFrames();
@@ -894,9 +894,9 @@ function toggleFullscreen() {
 
 // Phase 20: Final QA & Stress Testing
 function qaStressTest() {
-    if (window.RedGlitchEventBus) {
+    if (window.RedglitchEventBus) {
         console.log('[Studio] Firing qa_stress_test...');
-        window.RedGlitchEventBus.emit('debug:spawn_stress_test', { amount: 500 });
+        window.RedglitchEventBus.emit('debug:spawn_stress_test', { amount: 500 });
         
         // Show brief UI feedback
         const msgEl = document.getElementById('sb-message');
@@ -1037,7 +1037,7 @@ window.createNewFile = async function() {
     const name = prompt("New file name:");
     if (!name) return;
     try {
-        const res = await fetch('/api/ide/write', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ file: name, content: "// RedGlitch Script\n" }) });
+        const res = await fetch('/api/ide/write', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ file: name, content: "// Redglitch Script\n" }) });
         if (res.ok) window.loadTree();
     } catch (e) { alert("Failed to create file"); }
 };
@@ -1171,8 +1171,8 @@ window.addEventListener('keydown', (e) => {
 });
 
 // Listen for cross-frame save requests
-if (window.RedGlitchEventBus) {
-    window.RedGlitchEventBus.on('system:project:save_request', () => {
+if (window.RedglitchEventBus) {
+    window.RedglitchEventBus.on('system:project:save_request', () => {
         saveGlobalProject();
     });
 }
@@ -1227,14 +1227,14 @@ window.cleanBuilds = cleanBuilds;
 let currentCampaignSnapshot = null;
 
 function refreshCampaignState() {
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:memory:request', { namespace: 'campaign' });
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:memory:request', { namespace: 'campaign' });
         showStatusMessage("REQUESTING CAMPAIGN STATE...");
     }
 }
 
 function takeCampaignSnapshot() {
-    if (!window.RedGlitchEventBus) return;
+    if (!window.RedglitchEventBus) return;
     
     // We request state, and wait for the response to save it.
     // A more robust way is if we already have the cached state from the last update.
@@ -1249,8 +1249,8 @@ function restoreCampaignSnapshot() {
         return;
     }
     if (confirm("Restore campaign state to the last snapshot?")) {
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit('system:memory:patch', {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('system:memory:patch', {
                 namespace: 'campaign',
                 patch: {
                     variables: currentCampaignSnapshot.variables,
@@ -1322,8 +1322,8 @@ function updateLiveStateUI(data) {
 }
 
 window.patchCampaignVariable = function(key, val) {
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:memory:patch', {
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:memory:patch', {
             namespace: 'campaign',
             patch: {
                 variables: { [key]: parseFloat(val) || 0 }
@@ -1333,8 +1333,8 @@ window.patchCampaignVariable = function(key, val) {
 };
 
 window.patchCampaignFlag = function(key, val) {
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:memory:patch', {
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:memory:patch', {
             namespace: 'campaign',
             patch: {
                 globalFlags: { [key]: !!val }
@@ -1351,8 +1351,8 @@ window.restoreCampaignSnapshot = restoreCampaignSnapshot;
 if (typeof window !== 'undefined') {
     // Wait for EventBus to be ready
     setTimeout(() => {
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('system:memory:update', (e) => {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('system:memory:update', (e) => {
                 const data = e.data || {};
                 if (data.namespace === 'campaign' && data.patch) {
                     updateLiveStateUI(data.patch);
@@ -1360,7 +1360,7 @@ if (typeof window !== 'undefined') {
             });
             
             // PHASE 11: Multi-Engine Level Streaming Sync
-            window.RedGlitchEventBus.on('system:engine:switch', (e) => {
+            window.RedglitchEventBus.on('system:engine:switch', (e) => {
                 console.log('[Studio] Engine switched, refreshing campaign state...');
                 const varList = document.getElementById('live-variables-list');
                 const flagList = document.getElementById('live-flags-list');
@@ -1400,8 +1400,8 @@ window.dispatchManualTrigger = function() {
 };
 
 window.fireQuickTrigger = function(triggerId, payload = {}) {
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:trigger:fire', {
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:trigger:fire', {
             triggerId: triggerId,
             payload: payload
         });
@@ -1413,16 +1413,16 @@ window.fireQuickTrigger = function(triggerId, payload = {}) {
 
 // --- PHASE 13 & 14: LIVE ENGINE INSPECTION ---
 window.requestEngineInspect = function() {
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:engine:inspect', {});
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:engine:inspect', {});
         showStatusMessage("REQUESTED ENGINE METRICS");
     }
 };
 
 if (typeof window !== 'undefined') {
     setTimeout(() => {
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('system:engine:inspect:response', (e) => {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('system:engine:inspect:response', (e) => {
                 const metrics = e.data?.metrics;
                 if (metrics) {
                     const metricsList = document.getElementById('engine-metrics-list');
@@ -1443,7 +1443,7 @@ if (typeof window !== 'undefined') {
             });
             
             // Also listen to periodic metrics
-            window.RedGlitchEventBus.on('system:engine:metrics', (e) => {
+            window.RedglitchEventBus.on('system:engine:metrics', (e) => {
                 const metrics = e.data?.metrics;
                 if (metrics) {
                     const fpsEl = document.getElementById('sb-engine-fps');
@@ -1462,8 +1462,8 @@ if (typeof window !== 'undefined') {
 }
 // --- PHASE 15 & 16: GHOST MODE AND TIME DILATION ---
 window.toggleGhostMode = function(enabled) {
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:camera:mode', { mode: enabled ? 'ghost' : 'normal' });
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:camera:mode', { mode: enabled ? 'ghost' : 'normal' });
         showStatusMessage(`GHOST MODE: ${enabled ? 'ON' : 'OFF'}`);
     }
 };
@@ -1473,27 +1473,27 @@ window.setTimeScale = function(value) {
     const label = document.getElementById('time-scale-val');
     if (label) label.textContent = `${scale.toFixed(1)}x`;
     
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:engine:timeScale', { scale });
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:engine:timeScale', { scale });
     }
 };
 
 window.stepFrame = function() {
-    if (window.RedGlitchEventBus) {
-        window.RedGlitchEventBus.emit('system:engine:stepFrame', {});
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:engine:stepFrame', {});
         showStatusMessage("STEPPED 1 FRAME");
     }
 };
 
 // PHASE 8: Unified Drag-and-Drop Broker
 function initDragAndDropBroker() {
-    if (!window.RedGlitchEventBus) return;
+    if (!window.RedglitchEventBus) return;
     
     const ghost = document.getElementById('global-drag-ghost');
     let currentDragPayload = null;
     let isDragging = false;
     
-    window.RedGlitchEventBus.on('drag:start', (e) => {
+    window.RedglitchEventBus.on('drag:start', (e) => {
         if (!e.data || !e.data.payload) return;
         isDragging = true;
         currentDragPayload = e.data.payload;
@@ -1511,14 +1511,14 @@ function initDragAndDropBroker() {
         }
     });
     
-    window.RedGlitchEventBus.on('drag:move', (e) => {
+    window.RedglitchEventBus.on('drag:move', (e) => {
         if (!isDragging) return;
         if (e.data.clientX && e.data.clientY) {
             updateGhostPosition(e.data.clientX, e.data.clientY, e.source);
         }
     });
     
-    window.RedGlitchEventBus.on('drag:end', (e) => {
+    window.RedglitchEventBus.on('drag:end', (e) => {
         if (!isDragging) return;
         
         if (ghost) {
@@ -1558,7 +1558,7 @@ function initDragAndDropBroker() {
         
         if (droppedOnIframe) {
             const rect = droppedOnIframe.getBoundingClientRect();
-            window.RedGlitchEventBus.emit('drag:drop', {
+            window.RedglitchEventBus.emit('drag:drop', {
                 payload: currentDragPayload,
                 targetId: droppedOnIframe.id.replace('frame-', ''), 
                 localX: absX - rect.left,
@@ -1577,13 +1577,13 @@ function initDragAndDropBroker() {
                 ghost.style.top = e.clientY + 'px';
             }
             // Emit to sync coordinates if parent handles the move
-            window.RedGlitchEventBus.emit('drag:move', { clientX: e.clientX, clientY: e.clientY });
+            window.RedglitchEventBus.emit('drag:move', { clientX: e.clientX, clientY: e.clientY });
         }
     });
     
     document.addEventListener('mouseup', (e) => {
         if (isDragging) {
-            window.RedGlitchEventBus.emit('drag:end', { clientX: e.clientX, clientY: e.clientY });
+            window.RedglitchEventBus.emit('drag:end', { clientX: e.clientX, clientY: e.clientY });
         }
     });
 

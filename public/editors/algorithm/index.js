@@ -2,7 +2,7 @@ import { AlgorithmStudio } from './AlgorithmStudio.js';
 import { StudioBridge } from '../../ai/studio-bridge.js';
 
 window.studio = new AlgorithmStudio();
-const algorithmBridge = new StudioBridge('logic', window.RedGlitchEventBus);
+const algorithmBridge = new StudioBridge('logic', window.RedglitchEventBus);
 algorithmBridge.register({
     name: 'generate',
     description: 'Apply a validated node and wire patch to the current algorithm graph.',

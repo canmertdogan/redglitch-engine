@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 
 function initializePixelIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Listen for sprite requests from other editors
@@ -469,8 +469,8 @@ window.saveProject = async function() {
         });
         
         if (res.ok) {
-            if (window.RedGlitchEventBus) {
-                window.RedGlitchEventBus.emit('file:changed', { path: `assets/sprites/${name}.png` });
+            if (window.RedglitchEventBus) {
+                window.RedglitchEventBus.emit('file:changed', { path: `assets/sprites/${name}.png` });
             }
             alert("SAVED!");
         } else {

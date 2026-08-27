@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Shared Project State Management
+ * Redglitch Engine - Shared Project State Management
  * Provides centralized state management across all editors
  */
 class SharedProjectState {
@@ -16,8 +16,8 @@ class SharedProjectState {
         this.timestamps = {}; // Phase 5: Timestamp diffing cache
         
         // Subscribe to EventBus if available
-        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
-            this.eventBus = window.RedGlitchEventBus;
+        if (typeof window !== 'undefined' && window.RedglitchEventBus) {
+            this.eventBus = window.RedglitchEventBus;
             this.setupEventListeners();
         }
         
@@ -662,7 +662,7 @@ class SharedProjectState {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.RedGlitchProjectState = window.RedGlitchProjectState || new SharedProjectState();
+    window.RedglitchProjectState = window.RedglitchProjectState || new SharedProjectState();
 }
 
 // Export for Node.js

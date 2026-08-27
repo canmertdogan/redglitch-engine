@@ -8,7 +8,7 @@ const safeFs = require('../utils/safeFs');
 const { canAutomateMutation } = require('../utils/automationPolicy');
 
 function rejectProtectedAutomation(req, res, filePath) {
-    if (req.get('X-RedGlitch-Automation') !== 'kai') return false;
+    if (req.get('X-Redglitch-Automation') !== 'kai') return false;
     let policyPath = String(filePath);
     if (policyPath.startsWith('engine/')) policyPath = `public/${policyPath.slice('engine/'.length)}`;
     if (projectService.isRootProject() && policyPath.startsWith('projects/ROOT/')) {

@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Launcher UI Logic
+ * Redglitch Engine - Launcher UI Logic
  * Manages login, main menu, and initial transitions
  */
 (function() {
@@ -55,8 +55,8 @@
         }
 
         // Play intro sound if available
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit('ui:login', { username });
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('ui:login', { username });
         }
     };
 

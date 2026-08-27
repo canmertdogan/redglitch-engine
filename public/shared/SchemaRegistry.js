@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Unified Schema Registry
+ * Redglitch Engine - Unified Schema Registry
  * Phase 1 of the Data-Driven IDE Revamp.
  * Standardizes all game data structures (entities, prefabs, algorithms, campaign states)
  * so the IDE and Runtime speak the exact same language.
@@ -91,7 +91,7 @@ class SchemaRegistry {
     }
 
     /**
-     * Registers the core schemas for the RedGlitch Engine.
+     * Registers the core schemas for the Redglitch Engine.
      */
     registerDefaultSchemas() {
         // Entity Component Schema Definition
@@ -134,7 +134,7 @@ class SchemaRegistry {
 
 // Create global instance
 if (typeof window !== 'undefined') {
-    window.RedGlitchSchemaRegistry = window.RedGlitchSchemaRegistry || new SchemaRegistry();
+    window.RedglitchSchemaRegistry = window.RedglitchSchemaRegistry || new SchemaRegistry();
 }
 
 // Export for Node.js

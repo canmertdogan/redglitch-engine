@@ -175,12 +175,13 @@ const isElectron = process.versions.hasOwnProperty('electron');
 let userDataPath = isElectron ? path.join(require('electron').app.getPath('userData'), 'SaveData') : path.join(__dirname, 'saves');
 if (!fs.existsSync(userDataPath)) fs.mkdirSync(userDataPath, { recursive: true });
 app.use(express.static(path.join(__dirname, 'public')));
+const safeName = (s) => String(s).replace(/[^a-zA-Z0-9_-]/g, '');
 app.get('/api/save/:u/:s', (req, res) => {
-    const f = path.join(userDataPath, \`\${req.params.u}_\${req.params.s}.json\`);
+    const f = path.join(userDataPath, safeName(req.params.u) + '_' + safeName(req.params.s) + '.json');
     res.json(fs.existsSync(f) ? JSON.parse(fs.readFileSync(f)) : {});
 });
 app.post('/api/save/:u/:s', (req, res) => {
-    fs.writeFileSync(path.join(userDataPath, \`\${req.params.u}_\${req.params.s}.json\`), JSON.stringify(req.body));
+    fs.writeFileSync(path.join(userDataPath, safeName(req.params.u) + '_' + safeName(req.params.s) + '.json'), JSON.stringify(req.body));
     res.json({ success: true });
 });
 app.listen(PORT, () => console.log(\`Game running on \${PORT}\`));
@@ -201,7 +202,9 @@ app.on('window-all-closed', () => app.quit());
     fs.writeFileSync(path.join(DIST_DIR, 'main.js'), electronMain);
 
     // 6. Package.json
-    const pkg = { name: "redglitch-release", version: "1.0.0", main: "main.js", dependencies: { "express": "^4.18.2", "cors": "^2.8.5" } };
+    let repoVersion = "1.0.0";
+    try { repoVersion = require('./package.json').version; } catch (_) {}
+    const pkg = { name: "redglitch-release", version: repoVersion, main: "main.js", dependencies: { "express": "^4.18.2", "cors": "^2.8.5" } };
     fs.writeFileSync(path.join(DIST_DIR, 'package.json'), JSON.stringify(pkg, null, 2));
 
     console.log('\x1b[32m[DONE] Build complete.\x1b[0m');

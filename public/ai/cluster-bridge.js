@@ -1,7 +1,7 @@
 /**
- * RedGlitch AI Cluster Bridge
+ * Redglitch AI Cluster Bridge
  * 
- * This module acts as the interface between the RedGlitch AI Orchestrator 
+ * This module acts as the interface between the Redglitch AI Orchestrator 
  * and a high-performance AI Cluster using a WASM-powered binary bridge.
  */
 

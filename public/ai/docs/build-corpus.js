@@ -26,7 +26,7 @@ const CONFIG = {
  * Main Build Function
  */
 async function buildCorpus() {
-    console.log('📚 Building RedGlitch AI Knowledge Corpus...');
+    console.log('📚 Building Redglitch AI Knowledge Corpus...');
     const chunks = [];
 
     for (const source of CONFIG.sources) {

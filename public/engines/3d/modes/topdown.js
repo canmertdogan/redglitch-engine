@@ -1,5 +1,5 @@
 /**
- * modes/topdown.js — Top-Down 3D mode configuration for RedGlitch3DGame
+ * modes/topdown.js — Top-Down 3D mode configuration for Redglitch3DGame
  *
  * Declares which subsystems to instantiate, camera mode, and HUD type
  * when the engine runs in Top-Down mode.

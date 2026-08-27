@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Unified Input System
+ * Redglitch Engine - Unified Input System
  * Handles Keyboard, Mouse, Touch, and Gamepad input across all engines.
  */
 class InputSystem {
@@ -142,4 +142,4 @@ class InputSystem {
 }
 
 // Make globally available
-window.RedGlitchInput = new InputSystem();
+window.RedglitchInput = new InputSystem();

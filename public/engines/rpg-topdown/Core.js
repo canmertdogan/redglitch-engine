@@ -1,7 +1,7 @@
 window.Core = class Core {
     constructor() {
         this.canvas = document.getElementById('gameCanvas'); this.ctx = this.canvas.getContext('2d');
-        this.input = window.RedGlitchInput || new window.InputHandler(this.canvas); 
+        this.input = window.RedglitchInput || new window.InputHandler(this.canvas); 
         this.mapSystem = new window.MapSystem(this.ctx);
         this.dialogueSystem = new window.DialogueSystem(); this.achievementSystem = new window.AchievementSystem(); this.saveSystem = new window.SaveSystem();
         this.questSystem = new window.QuestSystem(this);
@@ -90,10 +90,10 @@ window.Core = class Core {
     }
 
     setupHotReloading() {
-        if (!window.RedGlitchEventBus) return;
+        if (!window.RedglitchEventBus) return;
 
         // Listen for asset updates
-        window.RedGlitchEventBus.on('file:changed', async (event) => {
+        window.RedglitchEventBus.on('file:changed', async (event) => {
             const filePath = event.data.path;
             console.log('[Core:HotReload] File changed:', filePath);
 
@@ -114,7 +114,7 @@ window.Core = class Core {
         });
 
         // Listen for FX updates
-        window.RedGlitchEventBus.on('fx:updated', async (event) => {
+        window.RedglitchEventBus.on('fx:updated', async (event) => {
             console.log('[Core:HotReload] FX updated:', event.data.id);
             if (this.fxSystem && this.fxSystem.reloadEffect) {
                 this.fxSystem.reloadEffect(event.data.id, event.data.config);
@@ -125,7 +125,7 @@ window.Core = class Core {
         if (window.VFX) window.VFX.setSystem(this.fx, '2d');
         
         // Phase 26: Performance Profiler
-        this.profiler = window.RedGlitchProfiler;
+        this.profiler = window.RedglitchProfiler;
     }
 
     login(username) {
@@ -463,7 +463,7 @@ window.Core = class Core {
         this.prevCamera.x = this.camera.x;
         this.prevCamera.y = this.camera.y;
 
-        const input = window.RedGlitchInput || this.input;
+        const input = window.RedglitchInput || this.input;
         if (this.dialogueSystem && this.dialogueSystem.active) { 
             if (input.actions.action && !this.dialogueSystem.justStarted) { 
                 if (this.dialogueSystem.choicesContainer.innerHTML === '') {
@@ -919,7 +919,7 @@ window.Core = class Core {
         } else if (this.ghostMode) {
             // Keep ghost camera moving
             const ghostDt = 1/60;
-            const input = window.RedGlitchInput || this.input;
+            const input = window.RedglitchInput || this.input;
             const ghostSpeed = 500 * ghostDt;
             if (input.keys && (input.keys['KeyW'] || input.keys['ArrowUp'])) this.camera.y -= ghostSpeed;
             if (input.keys && (input.keys['KeyS'] || input.keys['ArrowDown'])) this.camera.y += ghostSpeed;

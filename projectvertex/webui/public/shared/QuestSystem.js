@@ -1,4 +1,4 @@
-// questSystem.js - RedGlitch Quest Runtime
+// questSystem.js - Redglitch Quest Runtime
 
 window.QuestSystem = class QuestSystem {
     constructor(game) {

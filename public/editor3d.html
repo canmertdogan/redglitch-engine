@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="RedGlitch Engine — Unified 3D Editor for FPS, Top-Down and Platformer level design">
+    <meta name="description" content="Redglitch Engine — Unified 3D Editor for FPS, Top-Down and Platformer level design">
     <script type="importmap">
         {
             "imports": {
@@ -13,7 +13,7 @@
             }
         }
     </script>
-    <title>Unified 3D Editor — RedGlitch Engine</title>
+    <title>Unified 3D Editor — Redglitch Engine</title>
     <link href="fonts/fonts.css" rel="stylesheet">
     <link rel="stylesheet" href="daw/v6-premium.css">
     <link rel="stylesheet" href="lib/fontawesome/css/all.min.css">
@@ -1783,7 +1783,7 @@
             </div>
             <div id="tb-brand-text">
                 <div id="tb-brand-title">3D STUDIO</div>
-                <div id="tb-brand-sub">RedGlitch Engine</div>
+                <div id="tb-brand-sub">Redglitch Engine</div>
             </div>
             <div id="tb-project-chip" title="Active project">
                 <i class="fas fa-folder"></i>
@@ -2278,8 +2278,8 @@
         }
         
         // ── Phase 9: Handle Drag and Drop Drops ───────────────────────────
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('drag:drop', (e) => {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('drag:drop', (e) => {
                 if (e.data.targetId !== 'studio_3d') return;
                 
                 const payload = e.data.payload;
@@ -2337,7 +2337,7 @@
             });
             
             // --- Phase 10: Global AI Context Bounds ---
-            window.RedGlitchEventBus.on('ai:context_query', () => {
+            window.RedglitchEventBus.on('ai:context_query', () => {
                 let contextStr = '3D Studio is idle.';
                 if (editor._levelData) {
                     const levelName = editor._levelId || 'untitled';
@@ -2345,7 +2345,7 @@
                     const numGeoms = editor._levelData.geometry ? editor._levelData.geometry.length : 0;
                     contextStr = `Editing 3D level: ${levelName} (${numEntities} entities, ${numGeoms} geometry objects). Active tool: ${editor._activeTool}. Selected items: ${editor._selected.length}.`;
                 }
-                window.RedGlitchEventBus.emit('ai:context_response', {
+                window.RedglitchEventBus.emit('ai:context_response', {
                     source: '3D Studio',
                     details: contextStr
                 });
@@ -2423,8 +2423,8 @@
             if (e.key === 's') { 
                 e.preventDefault(); 
                 editor.saveLevel(); 
-                if (window.parent && window.parent.RedGlitchEventBus) {
-                    window.parent.RedGlitchEventBus.emit('system:project:save_request');
+                if (window.parent && window.parent.RedglitchEventBus) {
+                    window.parent.RedglitchEventBus.emit('system:project:save_request');
                 }
             }
             if (e.key === 'z') { e.preventDefault(); editor.undo(); }
@@ -2435,8 +2435,8 @@
     });
 
     // Listen for global save
-    if (window.parent && window.parent.RedGlitchEventBus) {
-        window.parent.RedGlitchEventBus.on('system:global_save', () => {
+    if (window.parent && window.parent.RedglitchEventBus) {
+        window.parent.RedglitchEventBus.on('system:global_save', () => {
             if (editor && typeof editor.saveLevel === 'function') {
                 editor.saveLevel();
             }

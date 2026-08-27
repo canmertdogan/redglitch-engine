@@ -29,10 +29,10 @@ class EngineAdapter {
      * Setup the Live Memory Bridge to receive component patches
      */
     setupLiveBridge() {
-        if (typeof window !== 'undefined' && window.RedGlitchEventBus) {
+        if (typeof window !== 'undefined' && window.RedglitchEventBus) {
             // Remove existing listener if any to avoid duplicates
             if (this._entityPatchListener) {
-                window.RedGlitchEventBus.off('system:entity:patch', this._entityPatchListener);
+                window.RedglitchEventBus.off('system:entity:patch', this._entityPatchListener);
             }
             
             this._entityPatchListener = (event) => {
@@ -48,11 +48,11 @@ class EngineAdapter {
                 }
             };
             
-            window.RedGlitchEventBus.on('system:entity:patch', this._entityPatchListener);
+            window.RedglitchEventBus.on('system:entity:patch', this._entityPatchListener);
 
             // Phase 6: Dynamic Script Injection
             if (this._scriptUpdateListener) {
-                window.RedGlitchEventBus.off('system:script:update', this._scriptUpdateListener);
+                window.RedglitchEventBus.off('system:script:update', this._scriptUpdateListener);
             }
             this._scriptUpdateListener = async (event) => {
                 const { scriptId } = event.data || {};
@@ -62,11 +62,11 @@ class EngineAdapter {
                     }
                 }
             };
-            window.RedGlitchEventBus.on('system:script:update', this._scriptUpdateListener);
+            window.RedglitchEventBus.on('system:script:update', this._scriptUpdateListener);
 
             // Phase 18: Hot-Reload Dependency Resolution (Prefab Updates)
             if (this._prefabUpdateListener) {
-                window.RedGlitchEventBus.off('system:prefab:update', this._prefabUpdateListener);
+                window.RedglitchEventBus.off('system:prefab:update', this._prefabUpdateListener);
             }
             this._prefabUpdateListener = async (event) => {
                 const { prefabId } = event.data || {};
@@ -100,11 +100,11 @@ class EngineAdapter {
                     }
                 }
             };
-            window.RedGlitchEventBus.on('system:prefab:update', this._prefabUpdateListener);
+            window.RedglitchEventBus.on('system:prefab:update', this._prefabUpdateListener);
 
             // Phase 1: Sprite Hot-Reloading via AssetManager
             if (this._assetModifiedListener) {
-                window.RedGlitchEventBus.off('asset:modified', this._assetModifiedListener);
+                window.RedglitchEventBus.off('asset:modified', this._assetModifiedListener);
             }
             this._assetModifiedListener = async (event) => {
                 const { asset } = event.data || {};
@@ -144,11 +144,11 @@ class EngineAdapter {
                     }
                 }
             };
-            window.RedGlitchEventBus.on('asset:modified', this._assetModifiedListener);
+            window.RedglitchEventBus.on('asset:modified', this._assetModifiedListener);
 
             // Phase 13 & 14: Live Engine Inspection & Metrics
             if (this._engineInspectListener) {
-                window.RedGlitchEventBus.off('system:engine:inspect', this._engineInspectListener);
+                window.RedglitchEventBus.off('system:engine:inspect', this._engineInspectListener);
             }
             this._engineInspectListener = () => {
                 if (!this.engine) return;
@@ -164,9 +164,9 @@ class EngineAdapter {
                     timestamp: Date.now()
                 };
                 
-                window.RedGlitchEventBus.emit('system:engine:inspect:response', { metrics });
+                window.RedglitchEventBus.emit('system:engine:inspect:response', { metrics });
             };
-            window.RedGlitchEventBus.on('system:engine:inspect', this._engineInspectListener);
+            window.RedglitchEventBus.on('system:engine:inspect', this._engineInspectListener);
 
             if (this._metricsInterval) clearInterval(this._metricsInterval);
             this._metricsInterval = setInterval(() => {
@@ -178,13 +178,13 @@ class EngineAdapter {
                         entityCount: this.engine.entities ? this.engine.entities.length : 0,
                         memoryMB: window.performance && window.performance.memory ? Math.round(window.performance.memory.usedJSHeapSize / (1024 * 1024)) : 0
                     };
-                    window.RedGlitchEventBus.emit('system:engine:metrics', { metrics });
+                    window.RedglitchEventBus.emit('system:engine:metrics', { metrics });
                 }
             }, 1000);
             
             // Phase 15: Ghost Mode Observer Camera
             if (this._cameraModeListener) {
-                window.RedGlitchEventBus.off('system:camera:mode', this._cameraModeListener);
+                window.RedglitchEventBus.off('system:camera:mode', this._cameraModeListener);
             }
             this._cameraModeListener = (event) => {
                 const { mode } = event.data || {};
@@ -193,11 +193,11 @@ class EngineAdapter {
                     console.log(`[EngineAdapter] Ghost mode set to: ${this.engine.ghostMode}`);
                 }
             };
-            window.RedGlitchEventBus.on('system:camera:mode', this._cameraModeListener);
+            window.RedglitchEventBus.on('system:camera:mode', this._cameraModeListener);
 
             // Phase 16: Time Dilation & Frame Stepping
             if (this._timeScaleListener) {
-                window.RedGlitchEventBus.off('system:engine:timeScale', this._timeScaleListener);
+                window.RedglitchEventBus.off('system:engine:timeScale', this._timeScaleListener);
             }
             this._timeScaleListener = (event) => {
                 const { scale } = event.data || {};
@@ -206,10 +206,10 @@ class EngineAdapter {
                     console.log(`[EngineAdapter] Time scale set to: ${scale}`);
                 }
             };
-            window.RedGlitchEventBus.on('system:engine:timeScale', this._timeScaleListener);
+            window.RedglitchEventBus.on('system:engine:timeScale', this._timeScaleListener);
 
             if (this._stepFrameListener) {
-                window.RedGlitchEventBus.off('system:engine:stepFrame', this._stepFrameListener);
+                window.RedglitchEventBus.off('system:engine:stepFrame', this._stepFrameListener);
             }
             this._stepFrameListener = () => {
                 if (this.engine && typeof this.engine.stepFrame === 'function') {
@@ -219,11 +219,11 @@ class EngineAdapter {
                     this.engine.update(16); // Assuming 60fps frame delta
                 }
             };
-            window.RedGlitchEventBus.on('system:engine:stepFrame', this._stepFrameListener);
+            window.RedglitchEventBus.on('system:engine:stepFrame', this._stepFrameListener);
 
             // Phase 20: QA Stress Test
             if (this._stressTestListener) {
-                window.RedGlitchEventBus.off('debug:spawn_stress_test', this._stressTestListener);
+                window.RedglitchEventBus.off('debug:spawn_stress_test', this._stressTestListener);
             }
             this._stressTestListener = (event) => {
                 const { amount = 500 } = event.data || {};
@@ -244,7 +244,7 @@ class EngineAdapter {
                     console.warn(`[EngineAdapter] Spawned ${amount} stress test entities!`);
                 }
             };
-            window.RedGlitchEventBus.on('debug:spawn_stress_test', this._stressTestListener);
+            window.RedglitchEventBus.on('debug:spawn_stress_test', this._stressTestListener);
         }
     }
 
@@ -361,20 +361,20 @@ class EngineAdapter {
         }
 
         // Phase 19: Unregister all EventBus listeners to prevent severe memory leaks
-        if (window.RedGlitchEventBus) {
-            if (this._entityPatchListener) window.RedGlitchEventBus.off('system:entity:patch', this._entityPatchListener);
-            if (this._scriptUpdateListener) window.RedGlitchEventBus.off('system:script:update', this._scriptUpdateListener);
-            if (this._prefabUpdateListener) window.RedGlitchEventBus.off('system:prefab:update', this._prefabUpdateListener);
-            if (this._engineInspectListener) window.RedGlitchEventBus.off('system:engine:inspect', this._engineInspectListener);
-            if (this._cameraModeListener) window.RedGlitchEventBus.off('system:camera:mode', this._cameraModeListener);
-            if (this._timeScaleListener) window.RedGlitchEventBus.off('system:engine:timeScale', this._timeScaleListener);
-            if (this._stepFrameListener) window.RedGlitchEventBus.off('system:engine:stepFrame', this._stepFrameListener);
-            if (this._stressTestListener) window.RedGlitchEventBus.off('debug:spawn_stress_test', this._stressTestListener);
+        if (window.RedglitchEventBus) {
+            if (this._entityPatchListener) window.RedglitchEventBus.off('system:entity:patch', this._entityPatchListener);
+            if (this._scriptUpdateListener) window.RedglitchEventBus.off('system:script:update', this._scriptUpdateListener);
+            if (this._prefabUpdateListener) window.RedglitchEventBus.off('system:prefab:update', this._prefabUpdateListener);
+            if (this._engineInspectListener) window.RedglitchEventBus.off('system:engine:inspect', this._engineInspectListener);
+            if (this._cameraModeListener) window.RedglitchEventBus.off('system:camera:mode', this._cameraModeListener);
+            if (this._timeScaleListener) window.RedglitchEventBus.off('system:engine:timeScale', this._timeScaleListener);
+            if (this._stepFrameListener) window.RedglitchEventBus.off('system:engine:stepFrame', this._stepFrameListener);
+            if (this._stressTestListener) window.RedglitchEventBus.off('debug:spawn_stress_test', this._stressTestListener);
         }
 
         // Purge AssetManager cache if available to prevent bloat across engine switches
-        if (window.RedGlitchAssetManager && typeof window.RedGlitchAssetManager.purgeCache === 'function') {
-            window.RedGlitchAssetManager.purgeCache();
+        if (window.RedglitchAssetManager && typeof window.RedglitchAssetManager.purgeCache === 'function') {
+            window.RedglitchAssetManager.purgeCache();
         }
 
         if (this.engine) {
@@ -448,9 +448,9 @@ class EngineAdapter {
     handleDatabasePatch(collection, data) {
         // Implementation can be overridden by specific engine adapters if needed.
         // Default behavior: attempt to locate the collection in the global namespace and patch it.
-        if (typeof window !== 'undefined' && window.RedGlitchDB) {
-            if (!window.RedGlitchDB[collection]) window.RedGlitchDB[collection] = {};
-            Object.assign(window.RedGlitchDB[collection], data);
+        if (typeof window !== 'undefined' && window.RedglitchDB) {
+            if (!window.RedglitchDB[collection]) window.RedglitchDB[collection] = {};
+            Object.assign(window.RedglitchDB[collection], data);
             console.log(`[EngineAdapter] Patched global DB collection: ${collection}`);
         } else if (this.engine && this.engine.db && this.engine.db[collection]) {
             Object.assign(this.engine.db[collection], data);

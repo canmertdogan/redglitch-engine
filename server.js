@@ -392,7 +392,7 @@ app.locals.websocket = websocket;
 
 // Start server
 server.listen(config.PORT, () => {
-    console.log(`🚀 RedGlitch Engine Server running on http://localhost:${config.PORT}`);
+    console.log(`🚀 Redglitch Engine Server running on http://localhost:${config.PORT}`);
     console.log(`📁 Root directory: ${config.ROOT_DIR}`);
 });
 

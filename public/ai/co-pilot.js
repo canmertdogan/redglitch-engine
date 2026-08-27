@@ -1,5 +1,5 @@
 /**
- * RedGlitch AI - Co-Pilot (Phase 10)
+ * Redglitch AI - Co-Pilot (Phase 10)
  * Proactive, context-aware assistance.
  * Monitors EventBus for user patterns and suggests actions.
  */
@@ -153,8 +153,8 @@ export class CoPilot {
         if (!this.enabled) return;
         this.eventBus.emit('ai:suggestion', { text, actions });
         // Also use TTS if available
-        if (window.RedGlitchThoughtVisualizer) {
-            window.RedGlitchThoughtVisualizer.speak(text);
+        if (window.RedglitchThoughtVisualizer) {
+            window.RedglitchThoughtVisualizer.speak(text);
         }
     }
 

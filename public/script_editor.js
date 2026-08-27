@@ -1,4 +1,4 @@
-// script_editor.js - RedGlitch Code Forge Logic
+// script_editor.js - Redglitch Code Forge Logic
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -6,9 +6,9 @@ let eventBus, projectState, assetManager, studioBridge;
 
 function initializeScriptIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Initialize StudioBridge for IRAB
@@ -312,30 +312,30 @@ window.onload = async () => {
         // Add custom save command
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             saveActiveFile();
-            if (window.parent && window.parent.RedGlitchEventBus) {
-                window.parent.RedGlitchEventBus.emit('system:project:save_request');
+            if (window.parent && window.parent.RedglitchEventBus) {
+                window.parent.RedglitchEventBus.emit('system:project:save_request');
             }
         });
 
         // Add AI Chat toggle command
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
-            if (window.parent && window.parent.RedGlitchEventBus) {
-                window.parent.RedGlitchEventBus.emit('ai:toggle_chat');
+            if (window.parent && window.parent.RedglitchEventBus) {
+                window.parent.RedglitchEventBus.emit('ai:toggle_chat');
             }
         });
 
         // Cursor Position Update
         editor.onDidChangeCursorPosition(e => {
             document.getElementById('cursor-pos').innerText = `LN ${e.position.lineNumber}, COL ${e.position.column}`;
-            if (window.parent && window.parent.RedGlitchEventBus) {
-                window.parent.RedGlitchEventBus.emit('editor:cursor:moved', { line: e.position.lineNumber, col: e.position.column });
+            if (window.parent && window.parent.RedglitchEventBus) {
+                window.parent.RedglitchEventBus.emit('editor:cursor:moved', { line: e.position.lineNumber, col: e.position.column });
             }
         });
         
         // Auto-Save Hook (Debounced)
         editor.onDidChangeModelContent(() => {
-            if (window.parent && window.parent.RedGlitchEventBus && activeTabPath) {
-                window.parent.RedGlitchEventBus.emit('editor:file:changed', { path: activeTabPath });
+            if (window.parent && window.parent.RedglitchEventBus && activeTabPath) {
+                window.parent.RedglitchEventBus.emit('editor:file:changed', { path: activeTabPath });
             }
             if (SettingsManager.current.autoSave) {
                 if (autoSaveTimer) clearTimeout(autoSaveTimer);
@@ -358,8 +358,8 @@ window.onload = async () => {
         // --- AI Ghost Text Provider ---
         monaco.languages.registerInlineCompletionsProvider('javascript', {
             provideInlineCompletions: async (model, position, context, token) => {
-                // Only trigger if RedGlitchAI is ready
-                if (!window.RedGlitchAI || !window.RedGlitchAI.isInitialized) return { items: [] };
+                // Only trigger if RedglitchAI is ready
+                if (!window.RedglitchAI || !window.RedglitchAI.isInitialized) return { items: [] };
                 
                 // Debounce simple typing for 500ms
                 if (context.triggerKind === monaco.languages.InlineCompletionTriggerKind.Automatic) {
@@ -380,7 +380,7 @@ window.onload = async () => {
                 });
 
                 try {
-                    const suggestion = await window.RedGlitchAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
+                    const suggestion = await window.RedglitchAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
                     if (suggestion && !token.isCancellationRequested) {
                         return {
                             items: [{
@@ -545,8 +545,8 @@ function setActiveTab(path) {
         const ext = path.split('.').pop().toUpperCase();
         document.getElementById('lang-status').innerText = ext || 'TXT';
 
-        if (window.parent && window.parent.RedGlitchEventBus) {
-            window.parent.RedGlitchEventBus.emit('editor:file:opened', { path: path });
+        if (window.parent && window.parent.RedglitchEventBus) {
+            window.parent.RedglitchEventBus.emit('editor:file:opened', { path: path });
         }
     }
 
@@ -773,14 +773,14 @@ window.showSettings = showSettings;
 window.closeSettings = closeSettings;
 
 // Listen for global save
-if (window.parent && window.parent.RedGlitchEventBus) {
-    window.parent.RedGlitchEventBus.on('system:global_save', () => {
+if (window.parent && window.parent.RedglitchEventBus) {
+    window.parent.RedglitchEventBus.on('system:global_save', () => {
         if (typeof saveAllFiles === 'function') {
             saveAllFiles(true);
         }
     });
 
-    window.parent.RedGlitchEventBus.on('ai:command:request', (payload) => {
+    window.parent.RedglitchEventBus.on('ai:command:request', (payload) => {
         if (payload.method === 'insert' && editor) {
             const content = payload.params.content;
             const position = editor.getPosition();

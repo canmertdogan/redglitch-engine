@@ -73,7 +73,7 @@ function installBrowserGlobals() {
 function buildRegistry() {
     installBrowserGlobals();
     const eventBus = new FakeEventBus();
-    window.RedGlitchEventBus = eventBus;
+    window.RedglitchEventBus = eventBus;
     const registerDefaults = ToolRegistry.prototype._registerDefaults;
     ToolRegistry.prototype._registerDefaults = async function noopRegisterDefaults() {};
     const registry = new ToolRegistry(eventBus);

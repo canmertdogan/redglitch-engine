@@ -105,8 +105,8 @@ class WorldEditor {
         function initializeWorldIntegration() {
             initDOM();
             if (typeof window !== 'undefined') {
-                eventBus = window.RedGlitchEventBus;
-                projectState = window.RedGlitchProjectState;
+                eventBus = window.RedglitchEventBus;
+                projectState = window.RedglitchProjectState;
                 
                 if (eventBus) {
                     // Initialize StudioBridge for IRAB
@@ -368,8 +368,8 @@ class WorldEditor {
                     e.preventDefault();
                     console.log("Ctrl+S detected. Triggering save...");
                     saveToServer(false); // Quick save
-                    if (window.parent && window.parent.RedGlitchEventBus) {
-                        window.parent.RedGlitchEventBus.emit('system:project:save_request');
+                    if (window.parent && window.parent.RedglitchEventBus) {
+                        window.parent.RedglitchEventBus.emit('system:project:save_request');
                     }
                 }
                 
@@ -2134,8 +2134,8 @@ window.openTileMapper = window.editorInstance.openTileMapper;
 window.drawPreview = window.editorInstance.drawPreview;
 
 // Listen for global save
-if (window.parent && window.parent.RedGlitchEventBus) {
-    window.parent.RedGlitchEventBus.on('system:global_save', () => {
+if (window.parent && window.parent.RedglitchEventBus) {
+    window.parent.RedglitchEventBus.on('system:global_save', () => {
         if (typeof saveToServer === 'function') {
             saveToServer(false);
         }

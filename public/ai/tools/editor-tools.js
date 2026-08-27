@@ -1,5 +1,5 @@
 /**
- * RedGlitch AI - Editor Tools
+ * Redglitch AI - Editor Tools
  * Safe automation layer for interacting with studio editors
  * All write operations go through PermissionGate
  */
@@ -51,7 +51,7 @@ export class EditorTools {
      */
     getCurrentProject() {
         const projectState =
-            window.RedGlitchProjectState ||
+            window.RedglitchProjectState ||
             (typeof SharedProjectState !== 'undefined' ? SharedProjectState : null);
         if (projectState?.currentProject) return projectState.currentProject;
         if (projectState?.projectName) return projectState.projectName;
@@ -138,12 +138,12 @@ export class EditorTools {
             return { success: false, reason: 'Permission denied' };
         }
 
-        const eventBus = window.RedGlitchEventBus || (typeof EventBus !== 'undefined' ? EventBus : null);
+        const eventBus = window.RedglitchEventBus || (typeof EventBus !== 'undefined' ? EventBus : null);
         if (eventBus?.emit) eventBus.emit(`asset:create:${assetType}`, data);
 
         // Also set dirty flag
         const projectState =
-            window.RedGlitchProjectState ||
+            window.RedglitchProjectState ||
             (typeof SharedProjectState !== 'undefined' ? SharedProjectState : null);
         if (projectState?.setDirty) projectState.setDirty(true);
 
@@ -176,7 +176,7 @@ export class EditorTools {
         }
 
         // Or emit save event
-        const eventBus = window.RedGlitchEventBus || (typeof EventBus !== 'undefined' ? EventBus : null);
+        const eventBus = window.RedglitchEventBus || (typeof EventBus !== 'undefined' ? EventBus : null);
         if (eventBus?.emit) {
             eventBus.emit('editor:save');
             return { success: true };

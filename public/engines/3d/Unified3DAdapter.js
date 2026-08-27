@@ -1,6 +1,6 @@
 /**
  * Unified3DAdapter.js
- * Campaign adapter for the merged RedGlitch3DGame engine.
+ * Campaign adapter for the merged Redglitch3DGame engine.
  * Handles all 3D modes (fps-3d, topdown-3d, platformer-3d) through a single
  * adapter with hot-swap mode switching via game.switchMode().
  *
@@ -13,7 +13,7 @@ export default class Unified3DAdapter extends EngineAdapter {
 
     constructor(engineType = 'fps-3d') {
         super(engineType);
-        this.game              = null;  // RedGlitch3DGame instance
+        this.game              = null;  // Redglitch3DGame instance
         this.username          = null;
         this.currentProject    = null;
         this._requestedType    = engineType;
@@ -35,9 +35,9 @@ export default class Unified3DAdapter extends EngineAdapter {
                 return div;
             })();
 
-        const { default: RedGlitch3DGame } = await import('/engines/3d/main.js');
+        const { default: Redglitch3DGame } = await import('/engines/3d/main.js');
 
-        this.game = new RedGlitch3DGame(container, { mode: this._requestedType });
+        this.game = new Redglitch3DGame(container, { mode: this._requestedType });
         await this.game.init(this._requestedType);
 
         if (this.currentProject) {

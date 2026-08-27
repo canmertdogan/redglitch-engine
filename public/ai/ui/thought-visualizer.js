@@ -1,11 +1,11 @@
 /**
- * RedGlitch AI - Thought Visualizer (Phase 9)
+ * Redglitch AI - Thought Visualizer (Phase 9)
  * Provides visual feedback, ghost previews, and voice feedback for AI actions.
  */
 
 export class ThoughtVisualizer {
     constructor(eventBus = null) {
-        this.eventBus = eventBus || window.RedGlitchEventBus;
+        this.eventBus = eventBus || window.RedglitchEventBus;
         this.voiceEnabled = false; // TTS disabled as requested
         this.setupListeners();
     }

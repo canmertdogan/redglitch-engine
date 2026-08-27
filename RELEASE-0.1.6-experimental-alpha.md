@@ -60,7 +60,17 @@ and the Python backend test suite (3 passed).
   and presentation-only `portfolio-screenshots/` untracked. `opencode-memory/` kept local-only.
 - **README** clone URL placeholder corrected to the real repository.
 
-### Known limitations (not fixed this pass)
+#### Phase 4 — polish (also in this release)
+- **Editor HTML `viewport` meta** added to all 21 standalone editor pages for correct mobile/embed rendering.
+- **Generated game server hardened** (`build-game.js`): the shipped `/api/save/:u/:s` now sanitizes
+  `u`/`s` (no path traversal out of `userDataPath`); generated `package.json` reads the version from the repo.
+- **Python backend env-config**: `main.py` now honors `IRAB_HOST`, `IRAB_PORT`,
+  `IRAB_MODEL_REPO/FILENAME/DIR/PATH` (override model/host without code edits).
+- **Branding unification**: `RedGlitch` → `Redglitch` across ~185 source files (the canonical
+  lowercase-g spelling from `package.json`/`appId`).
+- **Studio UI**: 9 empty `catch` blocks now log a warning instead of silently swallowing errors.
+
+## Known limitations (not fixed this pass)
 - `/projects` is statically served (contained by `express.static` to `PROJECTS_ROOT`); editors
   require it to load project assets in this local-first app.
 - 3D ability *firing* is not covered by any automated/browser test — the strategy-binding fix

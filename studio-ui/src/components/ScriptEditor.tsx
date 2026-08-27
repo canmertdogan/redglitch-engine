@@ -187,7 +187,7 @@ const ScriptEditor: React.FC = () => {
         try {
             const res = await fetch('/api/ide/tree');
             if (res.ok) setFileTree(await res.json());
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const openFile = async (path: string) => {
@@ -256,7 +256,7 @@ const ScriptEditor: React.FC = () => {
         try {
             const res = await fetch(`/api/ide/search?query=${encodeURIComponent(searchQuery)}`);
             if (res.ok) setSearchResults(await res.json());
-        } catch (e) {}
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const appendTerminal = (line: string) => {

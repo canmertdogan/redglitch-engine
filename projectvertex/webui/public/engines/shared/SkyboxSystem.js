@@ -1,5 +1,5 @@
 /**
- * SkyboxSystem.js — Shared skybox and environment system for RedGlitch 3D.
+ * SkyboxSystem.js — Shared skybox and environment system for Redglitch 3D.
  *
  * Supports:
  *   - Solid color backgrounds

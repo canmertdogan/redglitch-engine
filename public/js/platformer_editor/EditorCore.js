@@ -41,8 +41,8 @@ class EditorCore {
         await this.renderer.loadTileset('WORLD_PIXEL_ART');
         
         // 2c. Initialize Shared State for Undo/Redo
-        if (window.RedGlitchProjectState) {
-            window.RedGlitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)), { skipUndo: true });
+        if (window.RedglitchProjectState) {
+            window.RedglitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)), { skipUndo: true });
         }
 
         // 2d. Initialize Parallax
@@ -332,16 +332,16 @@ class EditorCore {
     }
 
     pushState() {
-        if (window.RedGlitchProjectState) {
+        if (window.RedglitchProjectState) {
             // Sync current map to shared state for undo point
-            window.RedGlitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
+            window.RedglitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
         }
     }
 
     undo() {
-        if (window.RedGlitchProjectState) {
-            if (window.RedGlitchProjectState.undo()) {
-                const undoneMap = window.RedGlitchProjectState.get('platformer.currentMap');
+        if (window.RedglitchProjectState) {
+            if (window.RedglitchProjectState.undo()) {
+                const undoneMap = window.RedglitchProjectState.get('platformer.currentMap');
                 if (undoneMap) {
                     this.map = JSON.parse(JSON.stringify(undoneMap));
                     this.renderer.invalidateCache();
@@ -351,9 +351,9 @@ class EditorCore {
     }
 
     redo() {
-        if (window.RedGlitchProjectState) {
-            if (window.RedGlitchProjectState.redo()) {
-                const redoneMap = window.RedGlitchProjectState.get('platformer.currentMap');
+        if (window.RedglitchProjectState) {
+            if (window.RedglitchProjectState.redo()) {
+                const redoneMap = window.RedglitchProjectState.get('platformer.currentMap');
                 if (redoneMap) {
                     this.map = JSON.parse(JSON.stringify(redoneMap));
                     this.renderer.invalidateCache();

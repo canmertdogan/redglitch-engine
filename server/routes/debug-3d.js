@@ -1,5 +1,5 @@
 /**
- * Advanced Debug API for RedGlitch 3D Engines
+ * Advanced Debug API for Redglitch 3D Engines
  * Provides deep diagnostics, performance monitoring, and real-time debugging
  */
 

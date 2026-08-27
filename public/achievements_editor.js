@@ -213,8 +213,8 @@ class AchievementEditor {
             });
 
             if (res.ok) {
-                if (window.RedGlitchEventBus) {
-                    window.RedGlitchEventBus.emit('achievements:updated', this.data);
+                if (window.RedglitchEventBus) {
+                    window.RedglitchEventBus.emit('achievements:updated', this.data);
                 }
                 alert("DATABASE UPDATED.");
             } else alert("SAVE FAILED.");

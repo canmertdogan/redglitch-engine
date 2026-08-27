@@ -1,4 +1,4 @@
-// interactive_cutscene_editor.js - Interactive Cutscene Editor for RedGlitch Studio
+// interactive_cutscene_editor.js - Interactive Cutscene Editor for Redglitch Studio
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -7,9 +7,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration system
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState || new SharedProjectState();
-        assetManager = window.RedGlitchAssetManager || new AssetManager();
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState || new SharedProjectState();
+        assetManager = window.RedglitchAssetManager || new AssetManager();
         
         if (eventBus) {
             // Listen for external cutscene requests
@@ -2111,7 +2111,7 @@ class InteractiveCutsceneEditor {
     }
     
     showAbout() {
-        alert('INTERACTIVE CUTSCENE STUDIO v1.0\nBuilt with RedGlitch Engine\n\nPowered by REDGLITCH Technology');
+        alert('INTERACTIVE CUTSCENE STUDIO v1.0\nBuilt with Redglitch Engine\n\nPowered by REDGLITCH Technology');
     }
     
     // New editing tools

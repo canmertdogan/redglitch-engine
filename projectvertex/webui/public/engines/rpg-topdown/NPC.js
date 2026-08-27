@@ -1,6 +1,6 @@
 /**
  * NPC Class - Enhanced with Brain System Support
- * RedGlitch Engine - RPG Top-Down
+ * Redglitch Engine - RPG Top-Down
  */
 
 window.NPC = class NPC {

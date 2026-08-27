@@ -8,9 +8,9 @@ let eventBus, projectState, assetManager;
 // Initialize integration
 function initializeIntegration() {
     if (typeof window !== 'undefined') {
-        eventBus = window.RedGlitchEventBus;
-        projectState = window.RedGlitchProjectState;
-        assetManager = window.RedGlitchAssetManager;
+        eventBus = window.RedglitchEventBus;
+        projectState = window.RedglitchProjectState;
+        assetManager = window.RedglitchAssetManager;
         
         if (eventBus) {
             // Listen for skill updates (enemies may have skills)
@@ -1011,9 +1011,9 @@ window.openPixelEditor = function(inputId) {
     }
     
     // Method 3: Direct API call (if available)
-    if (!opened && window.RedGlitchAssetManager) {
+    if (!opened && window.RedglitchAssetManager) {
         try {
-            window.RedGlitchAssetManager.openSpriteEditor(key);
+            window.RedglitchAssetManager.openSpriteEditor(key);
             opened = true;
         } catch(e) {}
     }

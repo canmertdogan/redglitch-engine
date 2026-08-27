@@ -276,10 +276,10 @@ async def load_brain_task():
             if f.exception() else None
         )
     
-    model_repo = "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF"
-    model_filename = "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
-    model_dir = os.path.join(PROJECT_ROOT, "backend", "models")
-    model_path = os.path.join(model_dir, model_filename)
+    model_repo = os.getenv("IRAB_MODEL_REPO", "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF")
+    model_filename = os.getenv("IRAB_MODEL_FILENAME", "qwen2.5-coder-3b-instruct-q4_k_m.gguf")
+    model_dir = os.getenv("IRAB_MODEL_DIR", os.path.join(PROJECT_ROOT, "backend", "models"))
+    model_path = os.getenv("IRAB_MODEL_PATH", os.path.join(model_dir, model_filename))
 
     if not os.path.exists(model_path):
         logger.info(f"Model missing. Starting download from {model_repo}...")
@@ -706,4 +706,4 @@ async def handle_prompt(message, websocket):
         await manager.send_personal_message({"type": "SET_STATE", "data": "IDLE"}, websocket)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("IRAB_PORT", "8000")), log_level="info", access_log=False)
+    uvicorn.run(app, host=os.getenv("IRAB_HOST", "0.0.0.0"), port=int(os.getenv("IRAB_PORT", "8000")), log_level="info", access_log=False)

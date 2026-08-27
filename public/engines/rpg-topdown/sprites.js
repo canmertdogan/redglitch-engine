@@ -207,8 +207,8 @@ window.createPixelImage = function(spriteKey) {
     // Phase 28: Use AssetManager for project-aware path resolution
     if (spriteKey.includes('/') || spriteKey.endsWith('.png')) {
         const img = new Image();
-        if (window.RedGlitchAssetManager) {
-            img.src = window.RedGlitchAssetManager.resolveAssetPath(spriteKey);
+        if (window.RedglitchAssetManager) {
+            img.src = window.RedglitchAssetManager.resolveAssetPath(spriteKey);
         } else {
             // Fallback for standalone or if AssetManager not initialized
             img.src = spriteKey.startsWith('http') ? spriteKey : (spriteKey.startsWith('sprite-art') ? spriteKey : `sprite-art/Pixel_Mart/${spriteKey}`);

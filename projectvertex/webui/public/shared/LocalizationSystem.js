@@ -1,5 +1,5 @@
 /**
- * RedGlitch Engine - Unified Localization (i18n) System
+ * Redglitch Engine - Unified Localization (i18n) System
  * Provides multi-language support across all engine types.
  */
 class LocalizationSystem {
@@ -45,8 +45,8 @@ class LocalizationSystem {
         this.apply();
 
         // Broadcast change for engines that need to re-render text
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.emit('ui:language_changed', { lang: this.currentLang });
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('ui:language_changed', { lang: this.currentLang });
         }
     }
 

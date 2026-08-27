@@ -1,25 +1,25 @@
 /**
  * ai/shim.js
- * ES Module shim for global RedGlitch classes.
+ * ES Module shim for global Redglitch classes.
  * Bridges standard script tags to the AI's module system.
  */
 
 // Use getters to ensure we always get the latest global instance
 export const EventBus = {
     get instance() {
-        return window.RedGlitchEventBus || null;
+        return window.RedglitchEventBus || null;
     },
     // For compatibility with code expecting a direct object
-    on: (...args) => window.RedGlitchEventBus?.on(...args),
-    emit: (...args) => window.RedGlitchEventBus?.emit(...args),
-    off: (...args) => window.RedGlitchEventBus?.off(...args),
-    getSource: (...args) => window.RedGlitchEventBus?.getSource(...args),
-    once: (...args) => window.RedGlitchEventBus?.once(...args)
+    on: (...args) => window.RedglitchEventBus?.on(...args),
+    emit: (...args) => window.RedglitchEventBus?.emit(...args),
+    off: (...args) => window.RedglitchEventBus?.off(...args),
+    getSource: (...args) => window.RedglitchEventBus?.getSource(...args),
+    once: (...args) => window.RedglitchEventBus?.once(...args)
 };
 
 export const SharedProjectState = {
     get instance() {
-        return window.RedGlitchProjectState || null;
+        return window.RedglitchProjectState || null;
     }
 };
 

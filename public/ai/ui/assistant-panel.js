@@ -190,7 +190,7 @@ class KaiChatUIController {
             this.setupEventListeners();
             
             // Hook into EventBus for Debug tab & Error Watcher
-            const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+            const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
             if (eventBus) {
                 eventBus.on('ai:toggle_chat', () => this.toggleChat());
                 
@@ -651,7 +651,7 @@ class KaiChatUIController {
     }
 
     queryContext() {
-        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+        const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
         if (!eventBus) {
             this.addMessage('error', '>> EVENT_BUS NOT FOUND. CANNOT QUERY CONTEXT.');
             return;
@@ -736,7 +736,7 @@ class KaiChatUIController {
                     applyBtn.style.cssText = 'background:transparent;border:1px solid var(--kai-accent);color:var(--kai-accent);cursor:pointer;font-size:11px;font-family:inherit;padding:1px 6px;float:right;margin-bottom:4px; font-weight: bold;';
                     applyBtn.onclick = (e) => {
                         e.stopPropagation();
-                        const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+                        const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
                         if (eventBus) {
                             eventBus.emit('ai:command:request', {
                                 method: 'insert',
@@ -932,7 +932,7 @@ class KaiChatUIController {
                 btn.style.padding = '2px 8px';
                 btn.textContent = `📂 OPEN ${path.split('/').pop()}`;
                 btn.onclick = () => {
-                    const eventBus = window.RedGlitchEventBus || (window.parent && window.parent.RedGlitchEventBus);
+                    const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
                     if (eventBus) {
                         eventBus.emit('ai:command:request', {
                             method: path.includes('world') ? 'iso_studio.open' : 'open',
@@ -1066,7 +1066,7 @@ Please analyze why this is happening and suggest a fix. If it's in a script I ca
         this.addMessage('system', '>> INITIATING FULL CODEBASE SCAN...');
         this.playSound('typing');
         try {
-            const ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance;
+            const ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
             if (!ai?.rebuildContextIndex) throw new Error('AI context index is unavailable.');
             await ai.rebuildContextIndex();
             this.addMessage('system', '>> RAG_INDEXER: ENGINE DOCS REBUILT. ACTIVE PROJECT CONTEXT REFRESHES ON EVERY QUERY.');
@@ -1079,7 +1079,7 @@ Please analyze why this is happening and suggest a fix. If it's in a script I ca
         if (confirm(">> WARNING: WIPE NEURAL BUFFER? (CANNOT BE UNDONE)")) {
             const messages = document.getElementById('ai-chat-messages');
             if (messages) messages.innerHTML = '';
-            if (window.RedGlitchAIInstance) window.RedGlitchAIInstance.clearHistory();
+            if (window.RedglitchAIInstance) window.RedglitchAIInstance.clearHistory();
             this.addMessage('system', '>> MEMORY_WIPE_COMPLETE.');
             this.playSound('nudge');
         }
@@ -1177,8 +1177,8 @@ class KaiSettingsController {
         localStorage.setItem('kai_settings', JSON.stringify(this.settings));
         
         // Push to global AI_CONFIG if available
-        if (window.RedGlitchAIInstance && window.RedGlitchAIInstance.config) {
-            const cfg = window.RedGlitchAIInstance.config;
+        if (window.RedglitchAIInstance && window.RedglitchAIInstance.config) {
+            const cfg = window.RedglitchAIInstance.config;
             cfg.models.llm.temperature = parseFloat(this.settings.temp);
             cfg.models.llm.topP = parseFloat(this.settings.topP);
             cfg.models.llm.maxNewTokens = parseInt(this.settings.maxTokens);
@@ -1351,7 +1351,7 @@ window.setKaiMode = async (enabled) => {
     document.getElementById('kai-mode-choice')?.classList.remove('show');
     applyKaiModeUI(mode);
 
-    let ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance;
+    let ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
     if (mode) {
         // Ensure the native Cortex bridge is running
         const parentWin = window.parent || window;
@@ -1359,11 +1359,11 @@ window.setKaiMode = async (enabled) => {
             parentWin.ensureIrabBridge();
         }
 
-        const { RedGlitchAI } = await import('../redglitch-ai.js');
-        ai = window.RedGlitchAIInstance || window.parent?.RedGlitchAIInstance || ai;
+        const { RedglitchAI } = await import('../redglitch-ai.js');
+        ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance || ai;
         if (!ai) {
-            ai = new RedGlitchAI();
-            window.RedGlitchAIInstance = ai;
+            ai = new RedglitchAI();
+            window.RedglitchAIInstance = ai;
         }
         window.AIChatUI.assistant = new IRABAssistantSimple();
         await window.AIChatUI.initialize();
@@ -1378,8 +1378,8 @@ window.setKaiMode = async (enabled) => {
             parentWin.destroyIrabBridge();
         }
         // Kill any local AI instance
-        if (window.RedGlitchAIInstance) {
-            window.RedGlitchAIInstance = null;
+        if (window.RedglitchAIInstance) {
+            window.RedglitchAIInstance = null;
         }
     }
     window.dispatchEvent(new CustomEvent('kai:mode-change', { detail: { enabled: mode } }));

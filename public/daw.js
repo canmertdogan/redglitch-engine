@@ -124,8 +124,8 @@ class AudioStudio {
         console.log('%c[KAS] Boot complete.', 'color:#48bb78;font-weight:bold;');
 
         // Subscribe to EventBus for live trigger feedback
-        if (window.RedGlitchEventBus) {
-            window.RedGlitchEventBus.on('audio:trigger', (e) => {
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.on('audio:trigger', (e) => {
                 this._logTrigger(e.data?.name, e.data?.clip);
             });
         }
@@ -246,7 +246,7 @@ class AudioStudio {
                 this.isDirty = false;
                 this._syncStatus('SYNCED', 'green');
                 if (window.KAE) window.KAE.loadMap(this.audioMap);
-                if (window.RedGlitchEventBus) window.RedGlitchEventBus.emit('audio:map_updated', this.audioMap);
+                if (window.RedglitchEventBus) window.RedglitchEventBus.emit('audio:map_updated', this.audioMap);
                 if (!opts.silent) this._updateStatusBar();
             } else {
                 this._syncStatus('SYNC FAILED', 'red');
@@ -1571,8 +1571,8 @@ class AudioStudio {
                     if (res.ok) {
                         this._addClipToEvent(this.activeEventId, assetName);
                         this._syncStatus(`EXPORTED: ${assetName} to ${this.activeEventId}`, 'green');
-                        if (window.RedGlitchEventBus) {
-                            window.RedGlitchEventBus.emit('file:changed', { path: `assets/audio/${assetName}` });
+                        if (window.RedglitchEventBus) {
+                            window.RedglitchEventBus.emit('file:changed', { path: `assets/audio/${assetName}` });
                         }
                     } else {
                         alert("Failed to export to server");
