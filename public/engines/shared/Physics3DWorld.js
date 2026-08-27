@@ -135,12 +135,8 @@ class Physics3DWorld {
             steps++;
         }
 
-        // Sync Three.js transforms
-        for (const pb of this._bodies) {
-            if (pb.type !== BodyType.STATIC) {
-                pb._sync();
-            }
-        }
+        this._syncBodies();
+        this._dispatchSeparations();
     }
 
     // Backward-compatible API expected by current engines.
@@ -151,12 +147,32 @@ class Physics3DWorld {
     step(delta) {
         if (!this.world) return;
         this.world.step(delta);
-        // Sync Three.js transforms
+        this._syncBodies();
+        this._dispatchSeparations();
+    }
+
+    /** Copy cannon-es transforms → Three.js meshes. */
+    _syncBodies() {
         for (const pb of this._bodies) {
-            if (pb.type !== BodyType.STATIC) {
-                pb._sync();
-            }
+            if (pb.type !== BodyType.STATIC) pb._sync();
         }
+    }
+
+    /**
+     * Build the set of body IDs currently in contact, then notify every body so
+     * it can fire onCollisionExit for pairs that just separated.  cannon-es does
+     * not emit a native "separate" event, so exit detection relies on the contact
+     * list produced by the most recent step.
+     */
+    _dispatchSeparations() {
+        const ids = new Set();
+        const contacts = this.world.contacts ??
+            (this.world.narrowphase && this.world.narrowphase.contactEquations) ?? [];
+        for (const c of contacts) {
+            if (c.bi) ids.add(c.bi.id);
+            if (c.bj) ids.add(c.bj.id);
+        }
+        for (const pb of this._bodies) pb._checkSeparations(ids);
     }
 
     setGravity(x = 0, y = -20, z = 0) {

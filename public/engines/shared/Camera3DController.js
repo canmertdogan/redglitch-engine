@@ -464,7 +464,7 @@ class Camera3DController {
     _avoidCollision(pivot, desired) {
         if (this._collisionLayers.length === 0) return desired;
 
-        const dir = _vec3().subVectors(desired, pivot);
+        const dir = new THREE.Vector3().subVectors(desired, pivot);
         const dist = dir.length();
         if (dist < 0.001) return desired;
 
@@ -476,7 +476,7 @@ class Camera3DController {
 
         // Pull camera to just in front of the hit surface
         const safe = hits[0].distance - 0.2;
-        return _vec3().copy(pivot).addScaledVector(dir, Math.max(0, safe));
+        return pivot.clone().addScaledVector(dir, Math.max(0, safe));
     }
 
     // ── Lerp helpers ─────────────────────────────────────────────────────────
@@ -544,7 +544,8 @@ function _vec3() { return _reusable.set(0, 0, 0); }
  * Returns value in [-1, 1].
  */
 function _noise(t) {
-    return Math.sin(t * 127.1) * 43758.5453 % 1 * 2 - 1;
+    const f = ((Math.sin(t * 127.1) * 43758.5453) % 1 + 1) % 1;
+    return f * 2 - 1;
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────

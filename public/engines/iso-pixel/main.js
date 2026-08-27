@@ -640,7 +640,7 @@ class IsoGame {
         
         // Sprint with Shift key (consumes stamina)
         const sprinting = (this.keys['ShiftLeft'] || this.keys['ShiftRight']) && inputLen > 0;
-        let moveSpeed = this.MOVE_SPEED;
+        let moveSpeed = this.MOVE_SPEED * (this.combat && this.combat.getSpeedMultiplier ? this.combat.getSpeedMultiplier() : 1);
         if (sprinting && p.stamina > 0) {
             moveSpeed *= 1.8;
             p.stamina -= 20 / this.TICK_RATE; // 20 stamina per second

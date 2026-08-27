@@ -122,7 +122,15 @@ class PlatformerCombatSystem {
 
     hitEntity(hb, target) {
         hb.hitEntities.add(target);
-        
+
+        // Derive hit direction once, shared by knockback + spark FX.
+        // Prefer the projectile's velocity; fall back to the attacker's facing.
+        const rect = hb.getRect();
+        let dir = 0;
+        if (typeof rect.vx === 'number' && rect.vx !== 0) dir = Math.sign(rect.vx);
+        else if (typeof hb.owner.facingRight === 'boolean') dir = hb.owner.facingRight ? 1 : -1;
+        if (dir === 0) dir = 1;
+
         // Apply Damage
         if (target.onHit) {
             target.onHit(hb.damage, hb.owner);
@@ -133,7 +141,6 @@ class PlatformerCombatSystem {
 
         // Apply Knockback
         if (!target.isDead && typeof target.vx !== 'undefined') {
-            const dir = hb.owner.facingRight ? 1 : -1;
             target.vx = dir * 6;
             target.vy = -4;
         }
@@ -143,9 +150,8 @@ class PlatformerCombatSystem {
 
         // FX
         if (this.game.fx) {
-            const rect = hb.getRect();
             // Spawn spark at contact point
-            const sparkX = hb.owner.facingRight ? (rect.x) : (rect.x + rect.w);
+            const sparkX = dir > 0 ? (rect.x) : (rect.x + rect.w);
             this.game.fx.spawnParticles(sparkX, target.y + target.h/2, 'spark', 5);
             
             // Damage Number

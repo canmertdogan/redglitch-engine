@@ -21,6 +21,7 @@ class PhysicsSystem {
 
         entity.wallContact = null;
         entity.onLadder = false;
+        entity.onGround = false; // Reset before platform/tile resolution so riding state persists
         const config = window.PlatformerConfig || {};
 
         // 1. Moving Platform Carrier Logic
@@ -55,7 +56,6 @@ class PhysicsSystem {
 
         // 5. Y Movement & Collision
         entity.y += entity.vy * scale;
-        entity.onGround = false; 
         this.checkCollisions(entity, map, 'y');
         
         // 6. Map Bounds & Void Protection

@@ -58,7 +58,7 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
             const item = equipment[slot];
             if (item) {
                 serialized[slot] = {
-                    id: item.id,
+                    id: item.id !== undefined ? item.id : slot,
                     name: item.name,
                     stats: item.stats || {},
                     properties: item.properties || {}

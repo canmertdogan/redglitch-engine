@@ -401,9 +401,12 @@ export default class AbilitySystem3D {
             this._emit('onHit', { casterId, targetId, damage: dmg, damageType: def.damageType, hitPos });
         }
 
-        // Healing (negative damage field)
+        // Healing (negative damage field) — only friendly targets
         if (def.damage < 0) {
-            this._entities?.heal(targetId, Math.abs(def.damage));
+            const caster = this._entities?.getEntity(casterId);
+            if (!caster || caster.team === target.team) {
+                this._entities?.heal(targetId, Math.abs(def.damage));
+            }
         }
 
         // Apply buffs (on friendly targets — same team)
@@ -464,12 +467,24 @@ export default class AbilitySystem3D {
     _applyStatMod(entityId, buffDef, sign) {
         const entity = this._entities?.getEntity(entityId);
         if (!entity) return;
+
+        // STUN toggles AI state directly (not a numeric stat on entity.stats).
+        if (buffDef.id === BuffType.STUN) {
+            if (entity.ai) entity.ai.state = sign > 0 ? 'stunned' : 'idle';
+            return;
+        }
+
+        // SHIELD adds/removes a shield pool (not a numeric stat on entity.stats).
+        if (buffDef.id === BuffType.SHIELD) {
+            entity.shieldHp = Math.max(0, (entity.shieldHp ?? 0) + sign * (buffDef.amount ?? 0));
+            return;
+        }
+
         const stat = BUFF_STAT_MAP[buffDef.id] ?? buffDef.stat;
         if (!stat || !(stat in entity.stats)) return;
         if (buffDef.id !== BuffType.REGEN && buffDef.id !== BuffType.POISON) {
             entity.stats[stat] = (entity.stats[stat] ?? 0) + sign * (buffDef.amount ?? 0);
         }
-        if (buffDef.id === BuffType.STUN) entity.ai.state = sign > 0 ? 'stunned' : 'idle';
     }
 
     _removeStatMod(entityId, buffDef) {

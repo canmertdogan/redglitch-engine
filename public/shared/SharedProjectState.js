@@ -195,6 +195,23 @@ class SharedProjectState {
     }
 
     /**
+     * Delete a value from the project state at the given dotted path.
+     * Prunes the nested key (and notifies listeners). Used by editors when
+     * removing an enemy/npc/prefab/etc. so the runtime no longer sees stale data.
+     */
+    delete(path, options = {}) {
+        const oldValue = this.get(path);
+        this.deleteNested(this.state, path);
+        this.deleteNested(this.timestamps, path);
+        this.isDirty = true;
+        this.notifyChange(path, undefined, oldValue);
+        if (this.eventBus && !options.silent) {
+            this.eventBus.emit('state:deleted', { path, project: this.projectName });
+        }
+        return this;
+    }
+
+    /**
      * Watch for changes to a specific path
      */
     watch(path, callback, options = {}) {
@@ -468,7 +485,7 @@ class SharedProjectState {
             }
             
             // Phase 18: Hot-Reload Dependency Resolution (Prefab updates)
-            if (asset && asset.type === 'json' && asset.path.includes('dunyalar/definitions/')) {
+            if (asset && (asset.type === 'json' || asset.type === 'data') && asset.path && asset.path.includes('dunyalar/definitions/')) {
                 const prefabId = asset.name.replace('.json', '');
                 console.log(`[SharedProjectState] Prefab updated: ${prefabId}, broadcasting system:prefab:update`);
                 this.eventBus.emit('system:prefab:update', {
@@ -586,6 +603,24 @@ class SharedProjectState {
         }
         
         return current;
+    }
+
+    /**
+     * Helper: Remove a nested object property identified by a dotted path.
+     */
+    deleteNested(obj, path) {
+        const keys = path.split('.');
+        const lastKey = keys.pop();
+        let current = obj;
+        for (const key of keys) {
+            if (current == null || !(key in current) || typeof current[key] !== 'object') {
+                return;
+            }
+            current = current[key];
+        }
+        if (current != null && lastKey in current) {
+            delete current[lastKey];
+        }
     }
 
     /**

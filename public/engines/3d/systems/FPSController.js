@@ -562,7 +562,9 @@ export default class FPSController {
     serialize() {
         const p = this._body?.body.position ?? { x: 0, y: 0, z: 0 };
         return {
-            pos:       { x: p.x, y: p.y, z: p.z },
+            // Store FEET position: body center is feet + CAPSULE_RADIUS, and
+            // setPosition() re-adds CAPSULE_RADIUS when restoring.
+            pos:       { x: p.x, y: p.y - CAPSULE_RADIUS, z: p.z },
             vel:       { x: this._velX, y: this._velY, z: this._velZ },
             moveState: this.moveState,
         };

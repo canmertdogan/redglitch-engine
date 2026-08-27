@@ -12,6 +12,7 @@ class EventBus {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.sourceId = this.generateSourceId();
+        this._recentSignatures = new Map(); // dedup key -> timestamp (for postMessage + WS double delivery)
         
         this.init();
     }
@@ -245,7 +246,24 @@ class EventBus {
             // Ignore our own events
             return;
         }
-        
+
+        // Dedupe: the same event can arrive twice — once via postMessage (direct iframe)
+        // and once via the WebSocket relay. Both share source/type/timestamp/data, so
+        // drop the second copy within a short window.
+        const sig = `${eventData.source}|${eventData.type}|${eventData.timestamp}|${JSON.stringify(eventData.data)}`;
+        const now = Date.now();
+        const last = this._recentSignatures.get(sig) || 0;
+        if (now - last < 200) {
+            return;
+        }
+        this._recentSignatures.set(sig, now);
+        // Prune stale entries to bound memory
+        if (this._recentSignatures.size > 500) {
+            for (const [k, t] of this._recentSignatures) {
+                if (now - t > 2000) this._recentSignatures.delete(k);
+            }
+        }
+
         this.addToHistory(eventData);
         this.handleLocalEvent(eventData);
     }
@@ -257,27 +275,24 @@ class EventBus {
         const { type } = eventData;
         
         // Find matching listeners (including wildcards)
-        const matchingListeners = [];
-        
         for (const [pattern, listeners] of this.listeners.entries()) {
-            if (this.matchesPattern(type, pattern)) {
-                matchingListeners.push(...listeners);
+            if (!this.matchesPattern(type, pattern)) continue;
+
+            // Iterate a copy: a 'once' listener may be removed during dispatch
+            for (const listener of [...listeners]) {
+                try {
+                    listener.callback(eventData);
+
+                    // Remove if 'once' listener — using the matched pattern key,
+                    // not the emitted type (wildcard listeners live under the pattern)
+                    if (listener.once) {
+                        this.off(pattern, listener.id);
+                    }
+                } catch (err) {
+                    console.error(`[EventBus] Error in listener for ${type}:`, err);
+                }
             }
         }
-        
-        // Execute listeners
-        matchingListeners.forEach(listener => {
-            try {
-                listener.callback(eventData);
-                
-                // Remove if 'once' listener
-                if (listener.once) {
-                    this.off(type, listener.id);
-                }
-            } catch (err) {
-                console.error(`[EventBus] Error in listener for ${type}:`, err);
-            }
-        });
     }
 
     /**

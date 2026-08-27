@@ -25,7 +25,10 @@ class IsoCombatSystem {
         }
         
         this.projectileIndex = 0;
-        
+
+        // Active temporary buffs: { kind:'speed'|'damage'|'shield', value, until }
+        this.activeBuffs = [];
+
         // Create Arabic letter sprites (same as topdown engine)
         this.irabSprites = ['أ','ب','ت','ج','د','ر','س','ص','ط','ع','ف','ق','ك','ل','م','ن','هـ','و','ي']
             .map(text => this._createTextSprite(text));
@@ -124,7 +127,8 @@ class IsoCombatSystem {
         const speed = 8;
         proj.vx = dirX * speed;
         proj.vy = dirY * speed;
-        proj.damage = abilityDef.damage || 10;
+        // Player projectiles inherit the player's damage-boost multiplier.
+        proj.damage = (abilityDef.damage || 10) * (isEnemy ? 1 : this.getDamageMultiplier());
         proj.color = abilityDef.color || '#ff6b6b';
         proj.lifetime = 0;
         proj.maxLifetime = abilityDef.lifetime || 3.0;
@@ -139,6 +143,8 @@ class IsoCombatSystem {
      * Update all active projectiles
      */
     update(dt) {
+        this.updateBuffs();
+
         for (let proj of this.projectiles) {
             if (!proj.active) continue;
             
@@ -176,7 +182,14 @@ class IsoCombatSystem {
                 const dx = proj.x - this.game.player.x;
                 const dy = proj.y - this.game.player.y;
                 if (Math.sqrt(dx * dx + dy * dy) < 0.5) {
-                    this.game.player.hp = Math.max(0, this.game.player.hp - proj.damage);
+                    let dmg = proj.damage;
+                    const shield = this.game.player.shield || 0;
+                    if (shield > 0) {
+                        const absorbed = Math.min(shield, dmg);
+                        this.game.player.shield = Math.max(0, shield - absorbed);
+                        dmg -= absorbed;
+                    }
+                    this.game.player.hp = Math.max(0, this.game.player.hp - dmg);
                     proj.active = false;
                 }
             } else if (!proj.isEnemy && this.game.entities) {
@@ -285,12 +298,36 @@ class IsoCombatSystem {
                 this.game.player.hp = Math.min(this.game.player.maxHp, this.game.player.hp + heal);
                 console.log('[IsoCombatSystem] Healed for', heal, 'HP');
                 break;
-            case 'buff':
-                console.log('[IsoCombatSystem] Buff:', abilityDef.name);
+            case 'buff': {
+                const until = performance.now() + (abilityDef.duration || 5) * 1000;
+                if (abilityDef.speedMultiplier) {
+                    this.activeBuffs.push({ kind: 'speed', value: abilityDef.speedMultiplier, until });
+                }
+                if (abilityDef.damageMultiplier) {
+                    this.activeBuffs.push({ kind: 'damage', value: abilityDef.damageMultiplier, until });
+                }
+                if (abilityDef.shieldAmount) {
+                    this.game.player.shield = (this.game.player.shield || 0) + abilityDef.shieldAmount;
+                    this.game.player.shieldMax = Math.max(this.game.player.shieldMax || 0, abilityDef.shieldAmount);
+                    this.activeBuffs.push({ kind: 'shield', value: abilityDef.shieldAmount, until });
+                }
+                console.log('[IsoCombatSystem] Buff applied:', abilityDef.name);
                 break;
-            case 'utility':
-                console.log('[IsoCombatSystem] Utility:', abilityDef.name);
+            }
+            case 'utility': {
+                if (abilityId === 'teleport') {
+                    const dir = this.getDirectionToMouse();
+                    const tile = abilityDef.maxDistance || 10;
+                    const ts = this.game.TILE_SIZE || 32;
+                    const dist = tile * ts;
+                    if (isFinite(dist) && isFinite(dir.x) && isFinite(dir.y)) {
+                        this.game.player.x += dir.x * dist;
+                        this.game.player.y += dir.y * dist;
+                    }
+                }
+                console.log('[IsoCombatSystem] Utility used:', abilityDef.name);
                 break;
+            }
             default:
                 return false;
         }
@@ -305,6 +342,37 @@ class IsoCombatSystem {
         
         console.log('[IsoCombatSystem] Used ability:', abilityId);
         return true;
+    }
+
+    /** Effective speed multiplier from active speed buffs (1 if none). */
+    getSpeedMultiplier() {
+        let m = 1;
+        const now = performance.now();
+        for (const b of this.activeBuffs) {
+            if (b.kind === 'speed' && b.until > now) m *= b.value;
+        }
+        return m;
+    }
+
+    /** Effective damage multiplier for player projectiles (1 if none). */
+    getDamageMultiplier() {
+        let m = 1;
+        const now = performance.now();
+        for (const b of this.activeBuffs) {
+            if (b.kind === 'damage' && b.until > now) m *= b.value;
+        }
+        return m;
+    }
+
+    /** Expire timed buffs; clear shield when its buff lapses. */
+    updateBuffs() {
+        const now = performance.now();
+        for (let i = this.activeBuffs.length - 1; i >= 0; i--) {
+            if (this.activeBuffs[i].until <= now) {
+                if (this.activeBuffs[i].kind === 'shield') this.game.player.shield = 0;
+                this.activeBuffs.splice(i, 1);
+            }
+        }
     }
 
     getActiveCount() {

@@ -297,7 +297,7 @@ window.Core = class Core {
         await this.questSystem.init();
         this.achievementSystem.unlock('START_GAME');
         if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; if (!skipInitialLevelLoad) await this.loadLevel(this.currentLevel); } 
-        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.stamina = data.player.stamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true, options); }
+        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.maxMana = data.player.maxMana !== undefined ? data.player.maxMana : this.player.maxMana; this.player.stamina = data.player.stamina; this.player.maxStamina = data.player.maxStamina !== undefined ? data.player.maxStamina : this.player.maxStamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.player.direction = data.player.direction !== undefined ? data.player.direction : this.player.direction; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true, options); }
         requestAnimationFrame(this.gameLoop.bind(this)); for(let i=0; i<300; i++) this.player.history.push({ x: this.player.x, y: this.player.y, dir: this.player.direction });
     }
     async loadDefinitions() {
@@ -724,7 +724,15 @@ window.Core = class Core {
         const sw = this.player.width * this.player.scale, sh = this.player.height * this.player.scale;
         const pxS = this.player.x - this.camera.x + sw / 2, pyS = this.player.y - this.camera.y + sh / 2;
         const dx = this.aimCursor.x - pxS, dy = this.aimCursor.y - pyS, dist = Math.sqrt(dx * dx + dy * dy);
-        let dirX = dx / dist, dirY = dy / dist;
+        let dirX, dirY;
+        if (dist < 1e-6) {
+            // Cursor exactly on the player — default to facing direction
+            dirX = this.player.direction >= 0 ? 1 : -1;
+            dirY = 0;
+        } else {
+            dirX = dx / dist;
+            dirY = dy / dist;
+        }
         if (this.mapSystem.type === 'isometric') { const wx = dirY + dirX / 2; const wy = dirY - dirX / 2; const wl = Math.sqrt(wx*wx + wy*wy); dirX = wx/wl; dirY = wy/wl; }
         if (skill.type === 'projectile') { const spr = (slotIdx === -1) ? this.irabSprites[Math.floor(Math.random() * this.irabSprites.length)] : window.createPixelImage(skill.sprite); const scale = (slotIdx === -1) ? 1.5 : 2;
             const fb = this.spawnFireball(this.player.x + sw/2 - (spr.width * scale)/2, this.player.y + sh/2 - (spr.height * scale)/2, dirX, dirY, spr);

@@ -64,6 +64,9 @@ window.InventorySystem = class InventorySystem {
             return false;
         }
 
+        const maxStack = itemData.maxStack || 99;
+        const newQuantity = Math.min(quantity, maxStack);
+
         const newItem = {
             id: itemData.id,
             name: itemData.name,
@@ -72,8 +75,8 @@ window.InventorySystem = class InventorySystem {
             description: itemData.description || '',
             rarity: itemData.rarity || 'common',
             stackable: itemData.stackable || false,
-            maxStack: itemData.maxStack || 99,
-            quantity: quantity,
+            maxStack: maxStack,
+            quantity: newQuantity,
             properties: itemData.properties || {},
             metadata: {
                 acquiredAt: Date.now(),
@@ -82,6 +85,11 @@ window.InventorySystem = class InventorySystem {
         };
 
         this.items.push(newItem);
+
+        // If there's still overflow beyond one stack, try to place the remainder
+        if (quantity > maxStack && this.items.length < this.maxSlots) {
+            return this.addItem(itemData, quantity - maxStack);
+        }
         return true;
     }
 
