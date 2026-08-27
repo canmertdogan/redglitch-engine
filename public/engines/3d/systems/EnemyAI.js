@@ -485,7 +485,9 @@ export default class EnemyAI {
             const target     = to.clone().add(new THREE.Vector3(0, 1.0, 0));
             const toTarget   = target.clone().sub(origin);
             const losDist    = toTarget.length();
-            const hit = this._raycast.raycastWorld(origin, toTarget, { maxDist: losDist, layerMask: 0b0101 }); // TERRAIN | PROP
+            // TERRAIN (1<<1 = 2) | PROP (1<<5 = 32) = 34. NOTE: 0b0101 was
+            // DEFAULT|ENTITY, which never intersected terrain/props, so LOS always passed.
+            const hit = this._raycast.raycastWorld(origin, toTarget, { maxDist: losDist, layerMask: 0b100010 });
             if (hit && hit.distance < losDist - 0.5) return false;
         }
         return true;
@@ -546,6 +548,9 @@ export default class EnemyAI {
         bv.x = dir.x * speed;
         bv.z = dir.z * speed;
         // Preserve Y velocity (gravity)
+        // Wake the body: dynamic enemies may have fallen asleep and a directly
+        // assigned velocity won't move a sleeping cannon-es body.
+        agent.body.body.wakeUp();
     }
 
     _strafe(agent, dt) {
@@ -557,6 +562,7 @@ export default class EnemyAI {
         const sz = Math.sin(facing + Math.PI / 2) * side;
         agent.body.body.velocity.x = sx * agent.moveSpeed * 0.6;
         agent.body.body.velocity.z = sz * agent.moveSpeed * 0.6;
+        agent.body.body.wakeUp();
     }
 
     _updateFacing(agent, dt) {
@@ -618,6 +624,27 @@ export default class EnemyAI {
         // Death
         if (agent.hp <= 0) {
             this._killEnemy(agent, hitPos);
+        }
+    }
+
+    /**
+     * Area-of-effect damage: every live enemy within `radius` of `center`
+     * takes `damage` (same alert/flee/death handling as damageEnemy).
+     * @param {THREE.Vector3} center
+     * @param {number} radius
+     * @param {number} damage
+     * @param {THREE.Vector3} [hitPos]
+     */
+    splashDamageEnemy(center, radius, damage, hitPos) {
+        if (!center) return;
+        const r2 = radius * radius;
+        for (const agent of this._enemies.values()) {
+            if (agent.state === EnemyState.DEAD) continue;
+            const dx = agent.mesh.position.x - center.x;
+            const dz = agent.mesh.position.z - center.z;
+            if (dx * dx + dz * dz <= r2) {
+                this.damageEnemy(agent.id, damage, hitPos ?? center);
+            }
         }
     }
 

@@ -438,13 +438,28 @@ export default class WeaponSystem {
         // Impact VFX placeholder (Phase 18 VFXSystem can extend this)
         this._spawnImpactDecal(hit.point, hit.face?.normal ?? new THREE.Vector3(0, 1, 0));
 
-        // Notify game logic
-        this.onHit?.(def.id, def.damage, {
+        // Notify game logic. Pass the resolved TARGET entity id (the enemy that
+        // was hit), not the weapon id — the receiver treats the first argument as
+        // an entity id. Hitting terrain/props passes null (no-op).
+        const targetId = this._resolveEnemyId(hit.object);
+        this.onHit?.(targetId, def.damage, {
             point:    hit.point,
             normal:   hit.face?.normal,
             object:   hit.object,
             distance: hit.distance,
         });
+    }
+
+    /** Walk up a hit object chain to find an enemy id (mesh name `enemy_<id>`
+     *  or body.userData.enemyId). Returns null for terrain/props. */
+    _resolveEnemyId(hitObject) {
+        let cur = hitObject;
+        while (cur) {
+            if (cur.userData?.enemyId) return cur.userData.enemyId;
+            if (cur.name && cur.name.startsWith('enemy_')) return cur.name.slice('enemy_'.length);
+            cur = cur.parent;
+        }
+        return null;
     }
 
     // ── Projectile ────────────────────────────────────────────────────────────

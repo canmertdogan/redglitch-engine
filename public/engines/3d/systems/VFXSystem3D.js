@@ -415,9 +415,10 @@ export default class VFXSystem3D {
         if (this._pool.length < MAX_POOL_SIZE) {
             this._pool.push(p);
         } else if (p.mesh) {
-            // Pool is full — dispose the mesh
+            // Pool is full — dispose the mesh. NOTE: the geometry comes from the
+            // shared _geoCache (getSharedGeo) and is referenced by every other live
+            // particle of the same shape+size, so it must NOT be disposed here.
             this._group.remove(p.mesh);
-            p.mesh.geometry?.dispose();
             p.mesh.material?.dispose();
             p.mesh = null;
         }

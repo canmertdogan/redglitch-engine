@@ -413,16 +413,23 @@ export default class EnemyPlatformer3D {
             }
         }
 
-        // Phase 3: fire spread (3 projectiles)
-        if (en.bossPhase === 3 && en.fireCooldown <= 0) {
-            const base = new THREE.Vector3(dx, 0, dz).normalize();
-            const spread = Math.PI / 8;
-            [-spread, 0, spread].forEach(angle => {
-                const rotated = base.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-                rotated.y = (playerPos.y - en.pos.y) / Math.max(1, dist);
-                this._fireProjectile(en.pos.clone().add(new THREE.Vector3(0, 1, 0)), rotated.normalize(), en.damage);
-            });
-            en.fireCooldown = 1 / fireRate;
+        // Phase 3: fire spread (3 projectiles) on its own cadence. Uses a
+        // separate cooldown because the phase-2 aimed shot resets fireCooldown
+        // on the same frame, which previously made this block unreachable.
+        if (en.bossPhase === 3) {
+            if (en.spreadCooldown === undefined) en.spreadCooldown = 0;
+            if (en.spreadCooldown > 0) {
+                en.spreadCooldown -= dt;
+            } else {
+                const base = new THREE.Vector3(dx, 0, dz).normalize();
+                const spread = Math.PI / 8;
+                [-spread, 0, spread].forEach(angle => {
+                    const rotated = base.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+                    rotated.y = (playerPos.y - en.pos.y) / Math.max(1, dist);
+                    this._fireProjectile(en.pos.clone().add(new THREE.Vector3(0, 1, 0)), rotated.normalize(), en.damage);
+                });
+                en.spreadCooldown = 1 / fireRate;
+            }
         }
     }
 

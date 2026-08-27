@@ -250,8 +250,8 @@ export default class FPSMode extends ModeInterface {
 
         // Weapon hit → enemy damage + decals
         this.weaponSystem.onHit = (id, damage, hitInfo) => {
-            const isEnemy = !!this.enemyAI?.getEnemyState?.(id);
-            this.enemyAI?.damageEnemy(id, damage, hitInfo?.point ?? null);
+            const isEnemy = !!id && !!this.enemyAI?.getEnemyState?.(id);
+            if (id) this.enemyAI?.damageEnemy(id, damage, hitInfo?.point ?? null);
             this.hud?.showHitMarker(false);
             if (hitInfo?.point && hitInfo?.normal) {
                 if (isEnemy) {
@@ -276,9 +276,18 @@ export default class FPSMode extends ModeInterface {
         this.weaponSystem.onBulletTracer = (from, to) => {
             this.vfx?.bulletTracer(from, to);
         };
-        this.weaponSystem.onExplosion = (projectile) => {
-            const pos = projectile?.position ?? projectile;
-            if (pos) this.vfx?.explosion(pos, projectile?.splashRadius ?? 1.5);
+        this.weaponSystem.onExplosion = (weaponId, payload) => {
+            const splash = payload ?? {};
+            const pos = splash.point ?? (splash.position ?? null);
+            const radius = splash.splashRadius ?? 1.5;
+            const dmg = splash.splashDamage ?? 0;
+            // Explosion damage: the payload carries splashRadius/splashDamage; the
+            // receiver previously ignored both, so every projectile explosion
+            // dealt 0 damage and produced no VFX.
+            if (pos && this.enemyAI?.splashDamageEnemy) {
+                this.enemyAI.splashDamageEnemy(pos, radius, dmg, splash.normal ?? pos);
+            }
+            if (pos) this.vfx?.explosion(pos, radius);
         };
     }
 
