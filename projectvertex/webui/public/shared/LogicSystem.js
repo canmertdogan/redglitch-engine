@@ -1,0 +1,281 @@
+/**
+ * RedGlitch Engine - Shared Logic System
+ * Manages entity logic, visual scripts, and algorithm runtimes
+ */
+window.LogicSystem = class LogicSystem {
+    constructor(game) {
+        this.game = game;
+        this.scripts = new Map(); // scriptName → module
+        this.runtimes = new Map(); // entityId → LogicRuntime instance
+        this.algorithmRuntimes = new Map(); // entityId → AlgorithmRuntime instance
+        this.algorithms = new Map(); // algorithmName → algorithm data
+        this.loadedScripts = new Set(); // Track what's already loaded
+        
+        // V2.0: JSON-based Interpreters
+        this.interpreter = new window.LogicInterpreter(game);
+        this.behaviorRunners = new Map(); // entityId -> BehaviorTreeRunner
+        
+        console.log('[LogicSystem] Initialized with VSL Interpreter');
+    }
+    
+    async loadScript(scriptName) {
+        if (this.loadedScripts.has(scriptName)) {
+            return this.scripts.get(scriptName);
+        }
+        
+        try {
+            const url = `/api/logic/js/${scriptName}`;
+            console.log(`[LogicSystem] Loading script: ${scriptName}`);
+            
+            // Dynamic import of the generated logic script
+            const module = await import(url);
+            this.scripts.set(scriptName, module);
+            this.loadedScripts.add(scriptName);
+            
+            console.log(`[LogicSystem] Loaded script: ${scriptName}`);
+            return module;
+        } catch (error) {
+            console.error(`[LogicSystem] Failed to load script ${scriptName}:`, error);
+            return null;
+        }
+    }
+    
+    async loadAlgorithm(algorithmName) {
+        if (this.algorithms.has(algorithmName)) {
+            return this.algorithms.get(algorithmName);
+        }
+        
+        try {
+            // Prefer AST version if it exists
+            const astUrl = `/api/logic/ast/${algorithmName}`;
+            const astRes = await fetch(astUrl);
+            if (astRes.ok) {
+                const ast = await astRes.json();
+                this.algorithms.set(algorithmName, ast);
+                console.log(`[LogicSystem] Loaded algorithm AST: ${algorithmName}`);
+                return ast;
+            }
+
+            // Fallback to legacy algorithm JSON
+            const url = `/api/logic/${algorithmName}`;
+            console.log(`[LogicSystem] Loading legacy algorithm: ${algorithmName}`);
+            
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            
+            const data = await res.json();
+            this.algorithms.set(algorithmName, data);
+            
+            console.log(`[LogicSystem] Loaded legacy algorithm: ${algorithmName}`);
+            return data;
+        } catch (error) {
+            console.error(`[LogicSystem] Failed to load algorithm ${algorithmName}:`, error);
+            return null;
+        }
+    }
+
+    async loadBrainAST(brainName) {
+        try {
+            const res = await fetch(`/api/brains/ast/${brainName}`);
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (e) {}
+        return null;
+    }
+    
+    async attachToEntity(entity, scriptName, events = ['start', 'update']) {
+        if (!entity || !scriptName) return;
+        
+        // Detect if this is an Algorithm Studio script (.algorithm) or regular .js
+        const isAlgorithm = scriptName.endsWith('.algorithm') || scriptName.includes('.algorithm');
+        
+        if (isAlgorithm) {
+            // Load algorithm data
+            const algorithmData = await this.loadAlgorithm(scriptName);
+            if (!algorithmData) {
+                console.warn(`[LogicSystem] Cannot attach non-existent algorithm: ${scriptName}`);
+                return;
+            }
+            
+            // Store on entity
+            entity.algorithmScript = scriptName;
+            entity.algorithmEvents = events;
+            
+            // If it's an AST, we'll use the LogicInterpreter in trigger()
+            if (algorithmData.events) {
+                console.log(`[LogicSystem] Attached VSL AST "${scriptName}" to entity ${entity.id || entity.name}`);
+            } else {
+                // Legacy AlgorithmRuntime
+                const AlgorithmRuntime = window.AlgorithmRuntime;
+                if (!AlgorithmRuntime) {
+                    console.error('[LogicSystem] AlgorithmRuntime class not loaded!');
+                    return;
+                }
+                
+                const runtime = new AlgorithmRuntime(algorithmData, this.game, entity);
+                this.algorithmRuntimes.set(entity.id, runtime);
+                entity.algorithmRuntime = runtime;
+                console.log(`[LogicSystem] Attached legacy algorithm "${scriptName}" to entity ${entity.id || entity.name}`);
+            }
+            
+            // Auto-call onStart if event includes 'start'
+            if (events.includes('start')) {
+                await this.trigger(entity, 'start');
+            }
+        } else {
+            // Check if it's a Brain script (Behavior)
+            const brainAST = await this.loadBrainAST(scriptName);
+            if (brainAST) {
+                const runner = new window.BehaviorTreeRunner(this.game, entity);
+                this.behaviorRunners.set(entity.id, runner);
+                entity.behaviorAST = scriptName;
+                
+                console.log(`[LogicSystem] Attached Behavior AST "${scriptName}" to entity ${entity.id}`);
+                runner.start(brainAST); // Behavior trees start immediately and run continuously
+                return;
+            }
+
+            // Load script if not already loaded (existing logic)
+            const module = await this.loadScript(scriptName);
+            if (!module) {
+                console.warn(`[LogicSystem] Cannot attach non-existent script: ${scriptName}`);
+                return;
+            }
+            
+            // Create runtime instance for this entity
+            const runtime = new window.LogicRuntime(this.game, entity);
+            this.runtimes.set(entity.id, runtime);
+            
+            // Store on entity
+            entity.logicScript = scriptName;
+            entity.logicRuntime = runtime;
+            entity.logicEvents = events;
+            entity.logicState = {}; // Persistent state for this entity's logic
+            
+            console.log(`[LogicSystem] Attached legacy logic "${scriptName}" to entity ${entity.id || entity.name}`);
+            
+            // Auto-call onStart if event includes 'start'
+            if (events.includes('start')) {
+                await this.trigger(entity, 'start');
+            }
+        }
+    }
+    
+    async trigger(entity, eventName, data = {}) {
+        if (!entity) return;
+        
+        // V2.0: Check for Visual Script AST
+        if (entity.algorithmScript) {
+            const scriptName = entity.algorithmScript;
+            const ast = this.algorithms.get(scriptName);
+            
+            if (ast && ast.events) {
+                // Execute using new LogicInterpreter
+                await this.interpreter.runEvent(ast, entity, `evt_${eventName}`, data);
+                return;
+            }
+        }
+
+        // Check if entity has algorithm runtime (Legacy)
+        if (entity.algorithmRuntime) {
+            const runtime = entity.algorithmRuntime;
+            try {
+                await runtime.execute(eventName, data);
+            } catch (error) {
+                console.error(`[LogicSystem] Error executing algorithm ${eventName}:`, error);
+            }
+            return;
+        }
+        
+        // Fall back to regular script logic
+        if (!entity.logicScript) return;
+        
+        const module = this.scripts.get(entity.logicScript);
+        const runtime = this.runtimes.get(entity.id);
+        
+        if (!module || !runtime) {
+            console.warn(`[LogicSystem] Cannot trigger ${eventName} - missing module or runtime for entity ${entity.id}`);
+            return;
+        }
+        
+        try {
+            // Call appropriate event handler
+            switch (eventName) {
+                case 'start':
+                    if (module.onStart) await module.onStart(runtime);
+                    break;
+                case 'update':
+                    if (module.onUpdate) await module.onUpdate(runtime, data.dt || 0);
+                    break;
+                case 'interact':
+                    if (module.onInteract) await module.onInteract(runtime, data.player);
+                    break;
+                case 'collide':
+                    if (module.onCollide) await module.onCollide(runtime, data.other);
+                    break;
+                default:
+                    console.warn(`[LogicSystem] Unknown event: ${eventName}`);
+            }
+        } catch (error) {
+            console.error(`[LogicSystem] Error executing ${eventName} for ${entity.logicScript}:`, error);
+        }
+    }
+    
+    // Call update on all entities with logic every frame
+    async updateAll(dt) {
+        for (const [entityId, runtime] of this.runtimes) {
+            const entity = runtime.owner;
+            if (entity && entity.logicScript && entity.logicEvents?.includes('update')) {
+                await this.trigger(entity, 'update', { dt });
+            }
+        }
+    }
+    
+    detach(entity) {
+        if (!entity) return;
+        
+        this.runtimes.delete(entity.id);
+        delete entity.logicScript;
+        delete entity.logicRuntime;
+        delete entity.logicEvents;
+        delete entity.logicState;
+        
+        console.log(`[LogicSystem] Detached logic from entity ${entity.id || entity.name}`);
+    }
+    
+    // Hot-reload support
+    async reload(scriptName) {
+        this.loadedScripts.delete(scriptName);
+        this.scripts.delete(scriptName);
+        
+        // Reload all entities using this script
+        for (const [entityId, runtime] of this.runtimes) {
+            if (runtime.owner.logicScript === scriptName) {
+                await this.loadScript(scriptName);
+                console.log(`[LogicSystem] Reloaded script ${scriptName} for entity ${entityId}`);
+            }
+        }
+    }
+
+    async reloadAlgorithm(algorithmName) {
+        // Phase 6: Hot-Reload Visual Scripts
+        this.algorithms.delete(algorithmName);
+        console.log(`[LogicSystem] Re-fetching algorithm AST: ${algorithmName}`);
+        
+        // Load the new AST/JSON
+        await this.loadAlgorithm(algorithmName);
+        
+        // Notify or re-attach if necessary
+        // For VSL Interpreter, just updating this.algorithms is enough since trigger() fetches it every time.
+        // But for legacy AlgorithmRuntime, we need to rebuild the runtime.
+        for (const [entityId, runtime] of this.algorithmRuntimes) {
+            if (runtime.owner && runtime.owner.algorithmScript === algorithmName) {
+                const entity = runtime.owner;
+                this.algorithmRuntimes.delete(entityId);
+                await this.attachToEntity(entity, algorithmName, entity.algorithmEvents || ['start', 'update']);
+                console.log(`[LogicSystem] Hot-reloaded algorithm ${algorithmName} for entity ${entityId}`);
+            }
+        }
+    }
+};
