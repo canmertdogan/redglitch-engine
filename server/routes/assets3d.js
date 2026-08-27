@@ -10,6 +10,7 @@ const express = require('express');
 const router  = express.Router();
 const path    = require('path');
 const fs      = require('fs').promises;
+const fss     = require('fs');
 const config  = require('../config');
 const { spawn } = require('child_process');
 
@@ -34,6 +35,21 @@ function safeAssetPath(projectName, assetName) {
     const resolved = path.resolve(dir, assetName);
     if (!resolved.startsWith(dir + path.sep) && resolved !== dir) {
         return null;
+    }
+    // Reject symlink escapes: a symlink placed inside the project could resolve
+    // (via res.sendFile) to a path outside the assets dir. Verify the real path
+    // of the existing file (or its parent) stays under dir.
+    try {
+        const realDir = fss.realpathSync(dir);
+        const stat = fss.statSync(resolved);
+        const realTarget = stat.isDirectory()
+            ? fss.realpathSync(resolved)
+            : fss.realpathSync(path.dirname(resolved));
+        if (realTarget !== realDir && !realTarget.startsWith(realDir + path.sep)) {
+            return null;
+        }
+    } catch {
+        // File may not exist yet; rely on the string-level check above.
     }
     return resolved;
 }
@@ -150,7 +166,11 @@ router.post('/:project', async (req, res) => {
     // ── .blend → .glb conversion ──
     if (ext === '.blend') {
         const baseName = path.basename(file.name, '.blend');
-        const blendPath = path.join(dir, file.name);
+        // Reject attacker-controlled names that could escape the project dir.
+        if (!isSafeName(baseName)) {
+            return res.status(400).json({ error: 'Invalid file name' });
+        }
+        const blendPath = path.join(dir, baseName + '.blend');
         const glbPath = path.join(dir, baseName + '.glb');
 
         try {
@@ -201,7 +221,11 @@ router.post('/:project', async (req, res) => {
 
     // ── .obj (with optional .mtl) ──
     if (ext === '.obj') {
-        const objPath = path.join(dir, file.name);
+        const objBase = path.basename(file.name);
+        if (!isSafeName(objBase)) {
+            return res.status(400).json({ error: 'Invalid file name' });
+        }
+        const objPath = path.join(dir, objBase);
 
         try {
             await file.mv(objPath);
@@ -212,8 +236,11 @@ router.post('/:project', async (req, res) => {
                 const mtlFile = req.files.mtl[0];
                 const mtlExt = path.extname(mtlFile.name).toLowerCase();
                 if (mtlExt === '.mtl') {
-                    mtlName = mtlFile.name;
-                    await mtlFile.mv(path.join(dir, mtlName));
+                    const mtlBase = path.basename(mtlFile.name);
+                    if (isSafeName(mtlBase)) {
+                        mtlName = mtlBase;
+                        await mtlFile.mv(path.join(dir, mtlBase));
+                    }
                 }
             }
 
