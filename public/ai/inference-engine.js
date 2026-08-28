@@ -27,6 +27,18 @@ export class InferenceEngine {
         this.worker.onerror = (e) => {
             console.error('[InferenceEngine] Worker Error:', e);
             EventBus.emit('ai:error', { message: 'Inference worker crashed', code: 'WORKER_ERROR' });
+            // A crashed worker can never answer in-flight requests — fail them
+            // instead of leaving their promises pending forever, and clear the
+            // generation flag so future attempts aren't permanently blocked.
+            for (const cb of this.callbacks.values()) {
+                if (cb.reject) {
+                    try { cb.reject(new Error('Inference worker crashed')); } catch (_) { /* already settled */ }
+                } else if (cb.resolve) {
+                    try { cb.resolve(undefined); } catch (_) { /* already settled */ }
+                }
+            }
+            this.callbacks.clear();
+            this.isGenerating = false;
         };
     }
 

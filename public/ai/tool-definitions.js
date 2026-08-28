@@ -85,6 +85,12 @@ export function registerDefaultTools(registry) {
                 required: ['path']
             },
             execute: async (args) => {
+                // Guard: editing with neither new_content nor patch would silently
+                // truncate the file to empty. Require at least one.
+                if (args.new_content === undefined && args.patch === undefined) {
+                    throw new Error('fs.edit_file requires either new_content or patch');
+                }
+
                 // SHADOW BACKUP: Read existing content before writing
                 let previousContent = null;
                 let exists = false;
@@ -96,7 +102,7 @@ export function registerDefaultTools(registry) {
                     }
                 } catch (e) {}
 
-                const contentToWrite = args.new_content || args.patch || ''; // simplistic handling for now
+                const contentToWrite = args.new_content !== undefined ? args.new_content : (args.patch || '');
 
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
@@ -204,7 +210,7 @@ export function registerDefaultTools(registry) {
                 required: ['query']
             },
             execute: async (args) => {
-                const res = await fetch(`/api/ide/search?q=${encodeURIComponent(args.query)}&include=${encodeURIComponent(args.include || '')}`);
+                const res = await fetch(`/api/ide/search?query=${encodeURIComponent(args.query)}&include=${encodeURIComponent(args.include || '')}`);
                 if (!res.ok) throw new Error('Search failed');
                 return await res.json();
             }
@@ -401,10 +407,11 @@ export function registerDefaultTools(registry) {
             execute: async (args) => {
                 if (!window.AssetSynth) {
                     // Lazy load synthesizer
-                    await new Promise((resolve) => {
+                    await new Promise((resolve, reject) => {
                         const s = document.createElement('script');
                         s.src = '/ai/asset-synth.js';
                         s.onload = resolve;
+                        s.onerror = () => reject(new Error('Failed to load asset synthesizer (/ai/asset-synth.js)'));
                         document.head.appendChild(s);
                     });
                 }

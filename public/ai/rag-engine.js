@@ -40,6 +40,17 @@ export class RAGEngine {
         this.worker.onmessage = (e) => this.handleWorkerMessage(e.data);
         this.worker.onerror = (e) => {
             console.error('[RAGEngine] Embedding worker crashed:', e.message || e);
+            // A dead worker can never answer in-flight embedding queries — fail them
+            // instead of hanging, and mark the engine unloaded so the next query
+            // re-initializes a fresh worker rather than reusing the corpse.
+            for (const cb of this.callbacks.values()) {
+                try { cb.reject(new Error('Embedding worker crashed')); } catch (_) { /* already settled */ }
+            }
+            this.callbacks.clear();
+            this.worker = null;
+            this.isLoaded = false;
+            this.initializationPromise = null;
+            EventBus.emit('ai:rag:error', { message: 'Embedding worker crashed' });
         };
 
         // Load and index corpus
