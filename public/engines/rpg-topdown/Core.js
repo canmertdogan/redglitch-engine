@@ -1000,51 +1000,55 @@ window.Core = class Core {
     }
     gameLoop(ts) { 
         if (!this.isRunning) return; 
-        
-        // Phase 26: Begin profiling
-        if (this.profiler) this.profiler.beginFrame();
+        try {
+            // Phase 26: Begin profiling
+            if (this.profiler) this.profiler.beginFrame();
 
-        let dt = (ts - this.lastTime) / 1000;
-        this.lastTime = ts;
-        
-        // Phase 16: Time Scale
-        if (this.timeScale !== undefined) {
-            dt *= this.timeScale;
-        }
-
-        // Safety cap to prevent "Spiral of Death" on lag spikes (e.g. tab switching)
-        if (dt > 0.25) dt = 0.25;
-
-        if (dt > 0) {
-            this.accumulator += dt;
+            let dt = (ts - this.lastTime) / 1000;
+            this.lastTime = ts;
             
-            while (this.accumulator >= this.fixedTimeStep) {
-                this.update(this.fixedTimeStep);
-                this.accumulator -= this.fixedTimeStep;
+            // Phase 16: Time Scale
+            if (this.timeScale !== undefined) {
+                dt *= this.timeScale;
             }
-        } else if (this.ghostMode) {
-            // Keep ghost camera moving
-            const ghostDt = 1/60;
-            const input = window.RedglitchInput || this.input;
-            const ghostSpeed = 500 * ghostDt;
-            if (input.keys && (input.keys['KeyW'] || input.keys['ArrowUp'])) this.camera.y -= ghostSpeed;
-            if (input.keys && (input.keys['KeyS'] || input.keys['ArrowDown'])) this.camera.y += ghostSpeed;
-            if (input.keys && (input.keys['KeyA'] || input.keys['ArrowLeft'])) this.camera.x -= ghostSpeed;
-            if (input.keys && (input.keys['KeyD'] || input.keys['ArrowRight'])) this.camera.x += ghostSpeed;
-        }
 
-        const alpha = (dt > 0) ? (this.accumulator / this.fixedTimeStep) : 1.0;
-        this.draw(alpha);
-        
-        // Phase 26: End profiling
-        if (this.profiler) {
-            this.profiler.updateStats({
-                entities: this.entities.length + this.npcs.length + this.enemies.length
-            });
-            this.profiler.endFrame();
-        }
+            // Safety cap to prevent "Spiral of Death" on lag spikes (e.g. tab switching)
+            if (dt > 0.25) dt = 0.25;
 
-        requestAnimationFrame(this.gameLoop.bind(this)); 
+            if (dt > 0) {
+                this.accumulator += dt;
+                
+                while (this.accumulator >= this.fixedTimeStep) {
+                    this.update(this.fixedTimeStep);
+                    this.accumulator -= this.fixedTimeStep;
+                }
+            } else if (this.ghostMode) {
+                // Keep ghost camera moving
+                const ghostDt = 1/60;
+                const input = window.RedglitchInput || this.input;
+                const ghostSpeed = 500 * ghostDt;
+                if (input.keys && (input.keys['KeyW'] || input.keys['ArrowUp'])) this.camera.y -= ghostSpeed;
+                if (input.keys && (input.keys['KeyS'] || input.keys['ArrowDown'])) this.camera.y += ghostSpeed;
+                if (input.keys && (input.keys['KeyA'] || input.keys['ArrowLeft'])) this.camera.x -= ghostSpeed;
+                if (input.keys && (input.keys['KeyD'] || input.keys['ArrowRight'])) this.camera.x += ghostSpeed;
+            }
+
+            const alpha = (dt > 0) ? (this.accumulator / this.fixedTimeStep) : 1.0;
+            this.draw(alpha);
+            
+            // Phase 26: End profiling
+            if (this.profiler) {
+                this.profiler.updateStats({
+                    entities: this.entities.length + this.npcs.length + this.enemies.length
+                });
+                this.profiler.endFrame();
+            }
+        } catch (err) {
+            // A single bad frame must never permanently stop the loop.
+            console.error('[Core] gameLoop error (continuing):', err);
+        } finally {
+            requestAnimationFrame(this.gameLoop.bind(this));
+        }
     }
 
     stepFrame() {

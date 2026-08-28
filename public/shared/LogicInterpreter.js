@@ -3,6 +3,12 @@
  * Full 80+ node type runtime for Algorithm Studio ASTs.
  * Executes the compiled AST format from AlgorithmStudio.compileToAST().
  */
+
+// Guard against runaway loops (flow_while / flow_for with a constant-true
+// condition or a huge count) hard-freezing the tab — the body only ever yields
+// microtasks, so an unbounded loop never returns to the event loop.
+const MAX_LOOP_ITER = 100000;
+
 window.LogicInterpreter = class LogicInterpreter {
     constructor(game) {
         this.game = game;
@@ -103,7 +109,7 @@ window.LogicInterpreter = class LogicInterpreter {
             },
             'flow_for': async (ctx) => {
                 // Legacy flow_for — maps 'loop' (body) and 'out' (done) ports
-                const count = await this.resolveValue(ctx, 'count') || 0;
+                const count = Math.min(await this.resolveValue(ctx, 'count') || 0, MAX_LOOP_ITER);
                 // Reuse one memory object across iterations so var_set writes persist
                 // within the loop (each iteration previously got a fresh copy and
                 // discarded them). Loop-local state stays isolated from the outer ctx.
@@ -116,7 +122,7 @@ window.LogicInterpreter = class LogicInterpreter {
                 if (ctx.node.next) await this.executeChain(ctx.node.next, ctx);
             },
             'flow_for_loop': async (ctx) => {
-                const count = await this.resolveValue(ctx, 'count') || 0;
+                const count = Math.min(await this.resolveValue(ctx, 'count') || 0, MAX_LOOP_ITER);
                 const loopMem = { ...ctx.memory };
                 for (let i = 0; i < count; i++) {
                     loopMem.index = i;
@@ -126,8 +132,12 @@ window.LogicInterpreter = class LogicInterpreter {
                 if (ctx.node.next) await this.executeChain(ctx.node.next, ctx);
             },
             'flow_while': async (ctx) => {
-                while (await this.resolveValue(ctx, 'condition')) {
+                let _iter = 0;
+                while (_iter++ < MAX_LOOP_ITER && (await this.resolveValue(ctx, 'condition'))) {
                     await this.executeChain(ctx.node.body, ctx);
+                }
+                if (_iter >= MAX_LOOP_ITER) {
+                    console.warn('[VSL] flow_while exceeded max iterations; breaking to avoid a hang');
                 }
                 if (ctx.node.next) await this.executeChain(ctx.node.next, ctx);
             },
@@ -399,20 +409,53 @@ window.LogicInterpreter = class LogicInterpreter {
             'dialogue_choice': async (ctx) => {
                 const options = (await this.resolveValue(ctx, 'options') || 'Yes,No').split(',').map(s => s.trim());
                 api(ctx).showDialogue('Choose:', null, options);
-                if (this.game.dialogueSystem) {
-                    return new Promise(resolve => {
-                        this.game.dialogueSystem.onChoice = (idx) => resolve(parseInt(idx) || 0);
-                    });
-                }
-                return 0;
+                const ds = this.game.dialogueSystem;
+                if (!ds) return 0;
+                return new Promise(resolve => {
+                    let done = false;
+                    const finalize = (val) => {
+                        if (done) return;
+                        done = true;
+                        clearTimeout(timer);
+                        // Restore any previously registered handler instead of
+                        // clobbering it (concurrent choice nodes must not overwrite
+                        // each other's resolver).
+                        ds.onChoice = prev || null;
+                        resolve(val);
+                    };
+                    // Chain onto an existing onChoice so we don't lose it.
+                    const prev = ds.onChoice;
+                    ds.onChoice = (idx) => {
+                        if (prev) { try { prev(idx); } catch (_) {} }
+                        finalize(parseInt(idx) || 0);
+                    };
+                    // Safety timeout so a dismissed/never-shown dialogue can't hang.
+                    const timer = setTimeout(() => finalize(-1), 30000);
+                    // Resolve if the dialogue closes without a choice.
+                    let wasActive = ds.active;
+                    const watchClose = () => {
+                        if (done) return;
+                        const nowActive = ds.active;
+                        if (wasActive && !nowActive) return finalize(-1);
+                        wasActive = nowActive;
+                        setTimeout(watchClose, 100);
+                    };
+                    watchClose();
+                });
             },
             'dialogue_wait': async (ctx) => {
-                if (this.game.dialogueSystem?.active) {
+                const ds = this.game.dialogueSystem;
+                if (ds?.active) {
                     await new Promise(resolve => {
+                        let done = false;
+                        const finish = () => { if (done) return; done = true; clearTimeout(timer); resolve(); };
                         const check = () => {
-                            if (!this.game.dialogueSystem?.active) resolve();
-                            else setTimeout(check, 100);
+                            if (done) return;
+                            if (!ds.active) return finish();
+                            setTimeout(check, 100);
                         };
+                        // Safety timeout so a dialogue that never closes can't hang.
+                        const timer = setTimeout(finish, 60000);
                         check();
                     });
                 }
@@ -464,7 +507,10 @@ window.LogicInterpreter = class LogicInterpreter {
     async executeNode(node, ctx) {
         if (ctx.depth > this.MAX_RECURSION_DEPTH) return;
         const currentCtx = { ...ctx, node, depth: ctx.depth + 1 };
-        if (window.RedglitchEventBus) {
+        // Per-node telemetry is synchronous + broadcast to iframes/CoPilot on every
+        // node of every entity every frame; only emit when explicitly tracing, to
+        // avoid making complex graphs unresponsive in the editor/running game.
+        if (window.RedglitchEventBus && window.RedglitchVSLTrace) {
             window.RedglitchEventBus.emit('vsl:node_exec', { nodeId: node.id, entityId: ctx.entity?.id, timestamp: Date.now() });
         }
         const handler = this.nodeRegistry[node.type];

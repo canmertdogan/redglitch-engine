@@ -567,17 +567,17 @@ export function registerDefaultTools(registry) {
                 required: ['name', 'x', 'y']
             },
             execute: async (args) => {
-                const eventBus = window.RedglitchEventBus || window.parent.RedglitchEventBus;
-                if (!eventBus) throw new Error('EventBus not found.');
-                
-                eventBus.emit('iso:spawn_asset', {
-                    type: 'prefab',
-                    name: args.name,
+                if (!registry || typeof registry.execute !== 'function') {
+                    throw new Error('Tool registry unavailable for iso.spawn_prefab');
+                }
+                // Delegate to the real, working IsoPixel tool (public/iso_editor.js:283).
+                // The previous implementation emitted an `iso:spawn_asset` event that had
+                // no listener anywhere, so it returned a false success while doing nothing.
+                return await registry.execute('pixel.placePrefab', {
                     x: args.x,
-                    y: args.y
+                    y: args.y,
+                    prefabID: args.name
                 });
-                
-                return { success: true, message: `Spawned ${args.name} at (${args.x}, ${args.y})` };
             }
         });
 

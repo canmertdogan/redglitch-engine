@@ -676,42 +676,48 @@ class PlatformerGame {
         this.combat.draw(this.renderer);
     }
 
-    loop(now) {
-        if(!this.isRunning) return;
-        const nowTime = typeof now === 'number' ? now : performance.now();
-        if (!this._lastTime) this._lastTime = nowTime;
-        let dt = (nowTime - this._lastTime) / 1000;
-        // Clamp dt to avoid big jumps (e.g., when tab was hidden)
-        const minDt = (window.PlatformerConfig && window.PlatformerConfig.MIN_DT) || (1/120);
-        const maxDt = (window.PlatformerConfig && window.PlatformerConfig.MAX_DT) || 0.1;
-        dt = Math.max(minDt, Math.min(dt, maxDt));
-        this._lastTime = nowTime;
+     loop(now) {
+         if(!this.isRunning) return;
+         try {
+             const nowTime = typeof now === 'number' ? now : performance.now();
+             if (!this._lastTime) this._lastTime = nowTime;
+             let dt = (nowTime - this._lastTime) / 1000;
+             // Clamp dt to avoid big jumps (e.g., when tab was hidden)
+             const minDt = (window.PlatformerConfig && window.PlatformerConfig.MIN_DT) || (1/120);
+             const maxDt = (window.PlatformerConfig && window.PlatformerConfig.MAX_DT) || 0.1;
+             dt = Math.max(minDt, Math.min(dt, maxDt));
+             this._lastTime = nowTime;
 
-        // Phase 16: Time Scale
-        if (this.timeScale !== undefined) {
-            dt *= this.timeScale;
-        }
+             // Phase 16: Time Scale
+             if (this.timeScale !== undefined) {
+                 dt *= this.timeScale;
+             }
 
-        if (this.freezeFrames && this.freezeFrames > 0) {
-            this.freezeFrames--;
-        } else {
-            if (dt > 0) {
-                this.update(dt);
-            } else if (this.ghostMode) {
-                // Keep camera moving if paused and in ghost mode
-                if (this.map && this.map.width) {
-                    const ghostSpeed = 500 * (1/60);
-                    if (this.keys['KeyW'] || this.keys['ArrowUp']) this.renderer.camera.y -= ghostSpeed;
-                    if (this.keys['KeyS'] || this.keys['ArrowDown']) this.renderer.camera.y += ghostSpeed;
-                    if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.renderer.camera.x -= ghostSpeed;
-                    if (this.keys['KeyD'] || this.keys['ArrowRight']) this.renderer.camera.x += ghostSpeed;
-                }
-            }
-        }
-        
-        this.draw();
-        requestAnimationFrame((t) => this.loop(t));
-    }
+             if (this.freezeFrames && this.freezeFrames > 0) {
+                 this.freezeFrames--;
+             } else {
+                 if (dt > 0) {
+                     this.update(dt);
+                 } else if (this.ghostMode) {
+                     // Keep camera moving if paused and in ghost mode
+                     if (this.map && this.map.width) {
+                         const ghostSpeed = 500 * (1/60);
+                         if (this.keys['KeyW'] || this.keys['ArrowUp']) this.renderer.camera.y -= ghostSpeed;
+                         if (this.keys['KeyS'] || this.keys['ArrowDown']) this.renderer.camera.y += ghostSpeed;
+                         if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.renderer.camera.x -= ghostSpeed;
+                         if (this.keys['KeyD'] || this.keys['ArrowRight']) this.renderer.camera.x += ghostSpeed;
+                     }
+                 }
+             }
+             
+             this.draw();
+         } catch (err) {
+             // A single bad frame must never permanently stop the loop.
+             console.error('[platformer] loop error (continuing):', err);
+         } finally {
+             requestAnimationFrame((t) => this.loop(t));
+         }
+     }
 
     stepFrame() {
         // Phase 16: Manual step

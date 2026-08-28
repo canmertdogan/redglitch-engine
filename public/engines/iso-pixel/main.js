@@ -1189,49 +1189,53 @@ class IsoGame {
         ctx.restore();
     }
 
-    loop(time) {
-        if(!this.running) return;
-        
-        if (!this.lastTime) this.lastTime = time;
-        let dt = time - this.lastTime;
-        this.lastTime = time;
-        
-        // Phase 16: Apply time scale
-        if (this.timeScale !== undefined) {
-            dt *= this.timeScale;
-        }
+     loop(time) {
+         if(!this.running) return;
+         try {
+             if (!this.lastTime) this.lastTime = time;
+             let dt = time - this.lastTime;
+             this.lastTime = time;
+             
+             // Phase 16: Apply time scale
+             if (this.timeScale !== undefined) {
+                 dt *= this.timeScale;
+             }
 
-        // Only run logic if time has advanced (not paused)
-        if (dt > 0) {
-            // === FIXED TIMESTEP PHYSICS ===
-            // Accumulate time and run physics at fixed rate
-            this.accumulator += dt;
-            
-            // Cap accumulator to prevent spiral of death on slow frames
-            if (this.accumulator > this.maxAccumulator) {
-                this.accumulator = this.maxAccumulator;
-            }
-            
-            // Run physics updates at fixed rate
-            while (this.accumulator >= this.TICK_MS) {
-                this.fixedUpdate();
-                this.accumulator -= this.TICK_MS;
-            }
-            
-            // === VARIABLE TIMESTEP RENDERING ===
-            // Camera and interpolation at frame rate
-            this.frameCount++;
-            this.update(dt);
-        } else if (this.ghostMode) {
-            // If paused but in ghost mode, still allow camera updates
-            this.update(16); // Mock dt for camera movement
-        }
-        
-        // Always draw
-        this.draw();
-        
-        requestAnimationFrame(t => this.loop(t));
-    }
+             // Only run logic if time has advanced (not paused)
+             if (dt > 0) {
+                 // === FIXED TIMESTEP PHYSICS ===
+                 // Accumulate time and run physics at fixed rate
+                 this.accumulator += dt;
+                 
+                 // Cap accumulator to prevent spiral of death on slow frames
+                 if (this.accumulator > this.maxAccumulator) {
+                     this.accumulator = this.maxAccumulator;
+                 }
+                 
+                 // Run physics updates at fixed rate
+                 while (this.accumulator >= this.TICK_MS) {
+                     this.fixedUpdate();
+                     this.accumulator -= this.TICK_MS;
+                 }
+                 
+                 // === VARIABLE TIMESTEP RENDERING ===
+                 // Camera and interpolation at frame rate
+                 this.frameCount++;
+                 this.update(dt);
+             } else if (this.ghostMode) {
+                 // If paused but in ghost mode, still allow camera updates
+                 this.update(16); // Mock dt for camera movement
+             }
+             
+             // Always draw
+             this.draw();
+         } catch (err) {
+             // A single bad frame must never permanently stop the loop.
+             console.error('[iso] loop error (continuing):', err);
+         } finally {
+             requestAnimationFrame(t => this.loop(t));
+         }
+     }
 
     stepFrame() {
         // Phase 16: Step exactly one logical frame

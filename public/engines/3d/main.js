@@ -359,8 +359,12 @@ class Redglitch3DGame extends Engine3DAdapter {
         if (this.isPaused) return;
 
         this.gameTime += rawDt;
-        this._update(rawDt);
-        this._render();
+        try {
+            this._update(rawDt);
+            this._render();
+        } catch (err) {
+            console.error('[3d] loop error (continuing):', err);
+        }
     }
 
     _update(dt) {
@@ -371,15 +375,25 @@ class Redglitch3DGame extends Engine3DAdapter {
         for (const key of this._updateOrder) {
             const sys = this[key];
             if (sys && typeof sys.update === 'function') {
-                sys.update(dt);
+                try {
+                    sys.update(dt);
+                } catch (err) {
+                    console.error('[3d] system "' + key + '" update error (skipping):', err);
+                }
             }
         }
 
         // 3. Physics fixed-step
         this._accumulator += dt;
         while (this._accumulator >= FIXED_STEP) {
-            this.physics?.step(FIXED_STEP);
-            this._accumulator -= FIXED_STEP;
+            try {
+                this.physics?.step(FIXED_STEP);
+            } catch (err) {
+                // Don't poison every subsequent frame; consume the step regardless.
+                console.error('[3d] physics step error (skipping step):', err);
+            } finally {
+                this._accumulator -= FIXED_STEP;
+            }
         }
 
         // 4. Skybox follows camera

@@ -34,7 +34,29 @@ async function safeWriteFullPath(rootDir, fullPath, data, options) {
   }
   const full = path.resolve(fullPath);
   await fsPromises.mkdir(path.dirname(full), { recursive: true });
-  return fsPromises.writeFile(full, data, options);
+
+  // Keep a backup of the previous content (if any) so a crash/partial write
+  // can't destroy the only good copy.
+  try {
+    const stat = await fsPromises.stat(full);
+    if (stat.isFile()) {
+      await fsPromises.copyFile(full, full + '.bak');
+    }
+  } catch (e) {
+    // No existing file to back up — fine.
+  }
+
+  // Atomic write: write to a temp sibling, then rename over the target so a
+  // mid-write crash never leaves a half-written/truncated file behind.
+  const tmpPath = full + '.tmp.' + process.pid + '.' + Date.now() + '.tmp';
+  try {
+    await fsPromises.writeFile(tmpPath, data, options);
+    await fsPromises.rename(tmpPath, full);
+  } catch (e) {
+    try { await fsPromises.unlink(tmpPath); } catch (_) {}
+    throw e;
+  }
+  return undefined;
 }
 
 module.exports = {

@@ -8,7 +8,9 @@ const safeFs = require('../utils/safeFs');
 const { canAutomateMutation } = require('../utils/automationPolicy');
 
 function rejectProtectedAutomation(req, res, filePath) {
-    if (req.get('X-Redglitch-Automation') !== 'kai') return false;
+    // Enforce protection on EVERY write/delete, regardless of the
+    // X-Redglitch-Automation header. The header is non-authoritative metadata;
+    // an AI call that omits it must not bypass the protected-path guard.
     let policyPath = String(filePath);
     if (policyPath.startsWith('engine/')) policyPath = `public/${policyPath.slice('engine/'.length)}`;
     if (projectService.isRootProject() && policyPath.startsWith('projects/ROOT/')) {
@@ -16,7 +18,7 @@ function rejectProtectedAutomation(req, res, filePath) {
     }
     const policy = canAutomateMutation(policyPath);
     if (policy.allowed) return false;
-    res.status(403).json({ error: 'Automation cannot modify protected files', code: policy.code, path: policy.path });
+    res.status(403).json({ error: 'Cannot modify protected files', code: policy.code, path: policy.path });
     return true;
 }
 

@@ -222,102 +222,22 @@ const serveMergedSprites = async (req, res, next) => {
 app.get('/engines/rpg-topdown/sprites.js', serveMergedSprites);
 app.get('/base_game/sprites.js', serveMergedSprites);
 
-app.use('/engines', (req, res, next) => {
-    // Engine core files live in public/ — always serve those first.
-    // Project-local engine overrides are a fallback, not the primary source.
-    const rootFilePath    = path.join(__dirname, 'public', 'engines', req.path);
-    const projectDir      = projectService.getActiveProject();
-    const projectFilePath = path.join(projectDir, 'engines', req.path);
+// Path-traversal-safe overlay handlers. A request path like
+// /dunyalar/../../etc/passwd must never escape the intended directory.
+const { makeOverlayHandler } = require('./utils/overlayHandler');
+const overlayHandler = makeOverlayHandler(projectService);
 
-    res.sendFile(rootFilePath, err => {
-        if (!err) return; // served from public/
-        res.sendFile(projectFilePath, err2 => {
-            if (err2 && !res.headersSent) next();
-        });
-    });
-});
+app.use('/engines', overlayHandler('engines', 'engines', true));
 
 // Dynamic Asset Serving for Projects
-app.use('/dunyalar', (req, res, next) => {
-    const projectDir = projectService.getActiveProject();
-    const projectFilePath = path.join(projectDir, 'dunyalar', req.path);
-    const rootFilePath = path.join(__dirname, 'public', 'dunyalar', req.path);
-    
-    // Try project file first
-    res.sendFile(projectFilePath, err => {
-        if (!err) return;
-        // If not in project, try root public
-        res.sendFile(rootFilePath, err2 => {
-            if (err2 && !res.headersSent) next();
-        });
-    });
-});
-
-app.use('/muzikler', (req, res, next) => {
-    const projectDir = projectService.getActiveProject();
-    const projectFilePath = path.join(projectDir, 'muzikler', req.path);
-    const rootFilePath = path.join(__dirname, 'public', 'muzikler', req.path);
-    
-    res.sendFile(projectFilePath, err => {
-        if (!err) return;
-        res.sendFile(rootFilePath, err2 => {
-            if (err2 && !res.headersSent) next();
-        });
-    });
-});
-
-app.use('/assets', (req, res, next) => {
-    const projectDir = projectService.getActiveProject();
-    const projectFilePath = path.join(projectDir, 'assets', req.path);
-    const rootFilePath = path.join(__dirname, 'public', 'assets', req.path);
-    
-    res.sendFile(projectFilePath, err => {
-        if (!err) return;
-        res.sendFile(rootFilePath, err2 => {
-            if (err2 && !res.headersSent) next();
-        });
-    });
-});
-
-app.use('/data', (req, res, next) => {
-    const projectDir = projectService.getActiveProject();
-    const projectFilePath = path.join(projectDir, 'data', req.path);
-    const rootFilePath = path.join(__dirname, 'public', 'data', req.path);
-    
-    res.sendFile(projectFilePath, err => {
-        if (!err) return;
-        res.sendFile(rootFilePath, err2 => {
-            if (err2 && !res.headersSent) next();
-        });
-    });
-});
-
-app.use('/sprite-art', (req, res, next) => {
-    const projectDir = projectService.getActiveProject();
-    const projectFilePath = path.join(projectDir, 'sprite-art', req.path);
-    const rootFilePath = path.join(__dirname, 'public', 'sprite-art', req.path);
-    
-    res.sendFile(projectFilePath, err => {
-        if (!err) return;
-        res.sendFile(rootFilePath, err2 => {
-            if (err2 && !res.headersSent) next();
-        });
-    });
-});
+app.use('/dunyalar', overlayHandler('dunyalar', 'dunyalar', false));
+app.use('/muzikler', overlayHandler('muzikler', 'muzikler', false));
+app.use('/assets', overlayHandler('assets', 'assets', false));
+app.use('/data', overlayHandler('data', 'data', false));
+app.use('/sprite-art', overlayHandler('sprite-art', 'sprite-art', false));
 
 // Dynamic Interface File Serving (for .redui files)
-app.use('/interfaces', (req, res, next) => {
-    const projectDir = projectService.getActiveProject();
-    const projectFilePath = path.join(projectDir, 'interfaces', req.path);
-    const rootFilePath = path.join(__dirname, 'public', 'interfaces', req.path);
-    
-    res.sendFile(projectFilePath, err => {
-        if (!err) return;
-        res.sendFile(rootFilePath, err2 => {
-            if (err2 && !res.headersSent) next();
-        });
-    });
-});
+app.use('/interfaces', overlayHandler('interfaces', 'interfaces', false));
 
 // Redirect legacy 3D editors to unified editor
 app.get('/fps_editor.html', (req, res) => res.redirect('/editor3d.html?mode=fps-3d&project=' + (req.query.project || '')));

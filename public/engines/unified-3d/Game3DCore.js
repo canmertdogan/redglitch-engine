@@ -396,16 +396,31 @@ export default class Game3DCore extends Engine3DAdapter {
         // ── Fixed-step physics accumulation ────────────────────────────
         this._accumulator += rawDt;
         while (this._accumulator >= FIXED_STEP) {
-            this.physics?.step(FIXED_STEP);
-            if (this.mode) this.mode.fixedUpdate(FIXED_STEP);
-            this._accumulator -= FIXED_STEP;
+            try {
+                this.physics?.step(FIXED_STEP);
+                if (this.mode) this.mode.fixedUpdate(FIXED_STEP);
+            } catch (err) {
+                // A throwing subsystem must not poison every subsequent frame;
+                // still consume the step so we don't re-run it forever (error storm).
+                console.error('[Game3DCore] fixedUpdate error (skipping step):', err);
+            } finally {
+                this._accumulator -= FIXED_STEP;
+            }
         }
 
         // ── Variable-step update ──────────────────────────────────────
-        this._coreUpdate(rawDt);
+        try {
+            this._coreUpdate(rawDt);
+        } catch (err) {
+            console.error('[Game3DCore] coreUpdate error (continuing):', err);
+        }
 
         // ── Render ────────────────────────────────────────────────────
-        this._coreRender(rawDt);
+        try {
+            this._coreRender(rawDt);
+        } catch (err) {
+            console.error('[Game3DCore] coreRender error (continuing):', err);
+        }
 
         if (window.RedglitchProfiler) {
             window.RedglitchProfiler.updateStats({
