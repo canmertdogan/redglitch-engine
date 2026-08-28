@@ -34,8 +34,10 @@ window.LogicInterpreter = class LogicInterpreter {
             'math_sub': async (ctx) => (await this.resolveValue(ctx, 'a') || 0) - (await this.resolveValue(ctx, 'b') || 0),
             'math_mul': async (ctx) => (await this.resolveValue(ctx, 'a') || 0) * (await this.resolveValue(ctx, 'b') || 0),
             'math_div': async (ctx) => {
-                const b = await this.resolveValue(ctx, 'b') || 1;
-                return b !== 0 ? ((await this.resolveValue(ctx, 'a') || 0) / b) : 0;
+                const b = await this.resolveValue(ctx, 'b');
+                const divisor = (b === undefined || b === null) ? 1 : b;
+                if (divisor === 0) return 0;
+                return (await this.resolveValue(ctx, 'a') || 0) / divisor;
             },
             'math_rand': async (ctx) => {
                 const min = await this.resolveValue(ctx, 'min') || 0;
@@ -102,16 +104,23 @@ window.LogicInterpreter = class LogicInterpreter {
             'flow_for': async (ctx) => {
                 // Legacy flow_for — maps 'loop' (body) and 'out' (done) ports
                 const count = await this.resolveValue(ctx, 'count') || 0;
+                // Reuse one memory object across iterations so var_set writes persist
+                // within the loop (each iteration previously got a fresh copy and
+                // discarded them). Loop-local state stays isolated from the outer ctx.
+                const loopMem = { ...ctx.memory };
                 for (let i = 0; i < count; i++) {
-                    const local = { ...ctx, memory: { ...ctx.memory, index: i } };
+                    loopMem.index = i;
+                    const local = { ...ctx, memory: loopMem };
                     await this.executeChain(ctx.node.body || ctx.node.loop, local);
                 }
                 if (ctx.node.next) await this.executeChain(ctx.node.next, ctx);
             },
             'flow_for_loop': async (ctx) => {
                 const count = await this.resolveValue(ctx, 'count') || 0;
+                const loopMem = { ...ctx.memory };
                 for (let i = 0; i < count; i++) {
-                    const local = { ...ctx, memory: { ...ctx.memory, index: i } };
+                    loopMem.index = i;
+                    const local = { ...ctx, memory: loopMem };
                     await this.executeChain(ctx.node.body, local);
                 }
                 if (ctx.node.next) await this.executeChain(ctx.node.next, ctx);
@@ -124,8 +133,11 @@ window.LogicInterpreter = class LogicInterpreter {
             },
             'flow_foreach': async (ctx) => {
                 const arr = await this.resolveValue(ctx, 'array') || [];
+                const loopMem = { ...ctx.memory };
                 for (let i = 0; i < arr.length; i++) {
-                    const local = { ...ctx, memory: { ...ctx.memory, item: arr[i], index: i } };
+                    loopMem.index = i;
+                    loopMem.item = arr[i];
+                    const local = { ...ctx, memory: loopMem };
                     await this.executeChain(ctx.node.body, local);
                 }
                 if (ctx.node.next) await this.executeChain(ctx.node.next, ctx);
@@ -458,7 +470,7 @@ window.LogicInterpreter = class LogicInterpreter {
         const handler = this.nodeRegistry[node.type];
         if (handler) {
             await handler(currentCtx);
-            if (node.next && !['flow_branch', 'flow_switch', 'flow_for_loop', 'flow_while', 'flow_foreach', 'flow_sequence'].includes(node.type)) {
+            if (node.next && !['flow_branch', 'flow_for', 'flow_for_loop', 'flow_while', 'flow_foreach'].includes(node.type)) {
                 await this.executeChain(node.next, currentCtx);
             }
         } else {
@@ -468,13 +480,15 @@ window.LogicInterpreter = class LogicInterpreter {
 
     async resolveValue(ctx, portName) {
         const data = ctx.node.data || {};
+        // A wired input (node ref / literal) takes precedence over a literal default
+        // stored in data, so connections are never silently ignored.
+        if (ctx.node._inputs && ctx.node._inputs[portName]) {
+            return this.evalInputRef(ctx, ctx.node._inputs[portName]);
+        }
         let val = data[portName];
         if (typeof val === 'string' && val.startsWith('$')) {
             const varName = val.substring(1);
             return ctx.memory[varName] !== undefined ? ctx.memory[varName] : (this.game.logicFlags ? this.game.logicFlags[varName] : 0);
-        }
-        if (val === undefined && ctx.node._inputs && ctx.node._inputs[portName]) {
-            return this.evalInputRef(ctx, ctx.node._inputs[portName]);
         }
         return val;
     }

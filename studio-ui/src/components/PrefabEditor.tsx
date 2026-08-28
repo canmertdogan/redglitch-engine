@@ -478,11 +478,19 @@ const PrefabEditor: React.FC = () => {
         };
     };
 
+    // Live snapshot of interaction state read by the (once-bound) viewport
+    // listeners, so they aren't torn down/re-added on every drag frame.
+    const prefabLiveRef = useRef<any>({});
+    useEffect(() => {
+        prefabLiveRef.current = { gizmoMode, prefabs, currentIndex, selectedCompIdx, snapToGrid, gridSize, screenToWorld, renderPreview, pushHistory };
+    });
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
         const onWheel = (e: WheelEvent) => {
+            const { renderPreview } = prefabLiveRef.current;
             e.preventDefault();
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
             zoomRef.current = Math.max(0.2, Math.min(20, zoomRef.current * delta));
@@ -490,6 +498,7 @@ const PrefabEditor: React.FC = () => {
         };
 
         const onMouseDown = (e: MouseEvent) => {
+            const { gizmoMode, prefabs, currentIndex, selectedCompIdx, screenToWorld } = prefabLiveRef.current;
             if (e.button === 1 || (e.button === 0 && e.altKey)) {
                 isDragging.current = true;
                 lastMouse.current = { x: e.clientX, y: e.clientY };
@@ -526,6 +535,7 @@ const PrefabEditor: React.FC = () => {
         };
 
         const onMouseMove = (e: MouseEvent) => {
+            const { snapToGrid, gridSize, prefabs, currentIndex, screenToWorld } = prefabLiveRef.current;
             if (isDragging.current) {
                 offsetRef.current.x += e.clientX - lastMouse.current.x;
                 offsetRef.current.y += e.clientY - lastMouse.current.y;
@@ -560,6 +570,7 @@ const PrefabEditor: React.FC = () => {
         };
 
         const onMouseUp = () => { 
+            const { pushHistory, prefabs } = prefabLiveRef.current;
             isDragging.current = false; 
             if (isDraggingGizmo.current) {
                 isDraggingGizmo.current = false;
@@ -580,7 +591,7 @@ const PrefabEditor: React.FC = () => {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
         };
-    }, [prefabs, currentIndex, selectedCompIdx, gizmoMode, snapToGrid, gridSize]);
+    }, []);  // bind once; live values read via prefabLiveRef
 
     const renderPreview = () => {
         const canvas = canvasRef.current;

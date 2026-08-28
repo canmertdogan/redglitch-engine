@@ -34,6 +34,10 @@ const DialogueEditor: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isDirty, setIsDirty] = useState(false);
     const toastRef = useRef<ToastHandle>(null);
+    // Always-current snapshot of conversations so subscriptions/closures never
+    // read a stale list captured at mount time.
+    const conversationsRef = useRef<Conversation[]>([]);
+    useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
 
     useEffect(() => {
         if (isReady) {
@@ -41,7 +45,7 @@ const DialogueEditor: React.FC = () => {
 
             const unsubLoad = subscribe('dialogue:load', (event: any) => {
                 if (event.data.dialogueId) {
-                    const idx = conversations.findIndex(c => c.id === event.data.dialogueId);
+                    const idx = conversationsRef.current.findIndex(c => c.id === event.data.dialogueId);
                     if (idx >= 0) setCurrentIndex(idx);
                 }
             });

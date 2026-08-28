@@ -448,8 +448,18 @@ const AlgorithmEditor: React.FC = () => {
 
     // ─── Global mouse handlers (drag / pan / marquee / wire) ──────────────
 
+    // Live snapshot of interaction state, read by the (once-bound) global mouse
+    // listeners so they aren't torn down and re-added on every drag frame.
+    const mouseLiveRef = useRef<{
+        panning: any; dragState: any; wireDrag: any; marquee: any; zoom: number;
+        snapGrid: boolean; graph: any; clientToGraph: (x: number, y: number) => any;
+        commit: (g: any) => void; tryCommitWire: (t: any) => void;
+    }>({ panning: null, dragState: null, wireDrag: null, marquee: null, zoom: 1, snapGrid: false, graph: { nodes: [] }, clientToGraph: (x: number, y: number) => ({ x, y }), commit: () => {}, tryCommitWire: () => {} });
+    mouseLiveRef.current = { panning, dragState, wireDrag, marquee, zoom, snapGrid, graph, clientToGraph, commit, tryCommitWire };
+
     useEffect(() => {
         const onMouseMove = (e: MouseEvent) => {
+            const { panning, dragState, wireDrag, marquee, zoom, clientToGraph } = mouseLiveRef.current;
             const g = clientToGraph(e.clientX, e.clientY);
             setMousePos(g);
 
@@ -483,6 +493,7 @@ const AlgorithmEditor: React.FC = () => {
         };
 
         const onMouseUp = (e: MouseEvent) => {
+            const { panning, dragState, wireDrag, marquee, snapGrid, graph, commit, tryCommitWire } = mouseLiveRef.current;
             if (panning) setPanning(null);
 
             if (dragState) {
@@ -549,7 +560,7 @@ const AlgorithmEditor: React.FC = () => {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
         };
-    }, [panning, dragState, wireDrag, marquee, zoom, snapGrid, graph, clientToGraph, commit, tryCommitWire]);
+        }, []);  // bind once; live values read via mouseLiveRef
 
     const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
         if (e.button === 1 || spaceHeld) {
@@ -579,8 +590,15 @@ const AlgorithmEditor: React.FC = () => {
 
     // ─── Keyboard shortcuts ─────────────────────────────────────────────────
 
-    useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent) => {
+    // Bind the global key listeners exactly once; the live handlers are read
+    // through a ref so rapidly-changing deps (undo/redo/graph state) don't cause
+    // the window listeners to be torn down and re-added on every render.
+    const keyboardRef = useRef<{ onKeyDown: (e: KeyboardEvent) => void; onKeyUp: (e: KeyboardEvent) => void }>({
+        onKeyDown: () => {},
+        onKeyUp: () => {}
+    });
+    keyboardRef.current = {
+        onKeyDown: (e: KeyboardEvent) => {
             const tag = (e.target as HTMLElement)?.tagName;
             const typing = tag === 'INPUT' || tag === 'TEXTAREA';
             if (e.code === 'Space' && !typing) { setSpaceHeld(true); }
@@ -592,15 +610,19 @@ const AlgorithmEditor: React.FC = () => {
             else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteClipboard(); }
             else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void saveScript(); }
             else if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); }
-        };
-        const onKeyUp = (e: KeyboardEvent) => { if (e.code === 'Space') setSpaceHeld(false); };
+        },
+        onKeyUp: (e: KeyboardEvent) => { if (e.code === 'Space') setSpaceHeld(false); }
+    };
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => keyboardRef.current.onKeyDown(e);
+        const onKeyUp = (e: KeyboardEvent) => keyboardRef.current.onKeyUp(e);
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp);
         return () => {
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
         };
-    }, [undo, redo, copySelection, pasteClipboard, saveScript, deleteSelected]);
+    }, []);
 
     // ─── Derived / search ───────────────────────────────────────────────────
 
