@@ -8,6 +8,7 @@ import { ModelManager } from './model-manager.js';
 import { InferenceEngine } from './inference-engine.js';
 import { TokenizerUtils } from './tokenizer-utils.js';
 import { RAGEngine } from './rag-engine.js';
+import { OpenRouterAdapter } from './openrouter-adapter.js';
 import { ContextManager } from './context-manager.js';
 import { ToolRegistry } from './tool-registry.js';
 import { WorkflowManager } from './workflow-manager.js';
@@ -83,7 +84,7 @@ export class RedglitchAI {
         const provider = savedSettings.provider || 'native';
 
         // 1. If Native, we don't need to load local weights (300MB save!)
-        if (provider === 'native' || provider === 'opencode-zen' || provider === 'cerebras') {
+        if (provider === 'native' || provider === 'opencode-zen' || provider === 'cerebras' || provider === 'openrouter') {
             console.log(`[RedglitchAI] ${provider} provider detected. Skipping local model load.`);
         } else if (this.config.features.enableWebGPU) {
             // Only load WebGPU if specifically requested or native is unavailable
@@ -160,7 +161,12 @@ export class RedglitchAI {
         if (provider === 'cerebras') {
             return this._chatWithCerebras(message, options, automationContext);
         }
+
+        if (provider === 'openrouter') {
+            return this._chatWithOpenRouter(message, options, automationContext);
+        }
         
+
         if (provider === 'native' && irabBridge && irabBridge.isConnected) {
             console.log('[RedglitchAI] Routing to Native Cortex...');
             const inferNative = (prompt, context) => new Promise((resolve, reject) => {
@@ -204,7 +210,12 @@ export class RedglitchAI {
                 return '';
             }),
             this.config.features.enableRAG && this.ragEngine.isLoaded
-                ? this.ragEngine.retrieveContext(message, this.config.limits.maxRAGChunks).catch((error) => {
+                ? this.ragEngine.retrieveContext(message, {
+                    limit: this.config.limits.maxRAGChunks,
+                    llm: this._ragLLM(),
+                    useHyDE: true,
+                    useMultiQuery: true,
+                }).catch((error) => {
                     console.warn('[RedglitchAI] Documentation RAG retrieval failed:', error);
                     return '';
                 })
@@ -323,6 +334,60 @@ export class RedglitchAI {
         this.contextManager.addHistory('user', message);
         this.contextManager.addHistory('assistant', result.text);
         return result;
+    }
+
+    async _chatWithOpenRouter(message, options = {}, automationContext = null) {
+        const adapter = new OpenRouterAdapter();
+        const settings = this._getKaiSettings();
+        const context = automationContext || await this._buildAutomationContext(message, options.context || {});
+        const ragContext = [context.projectContext, context.ragContext].filter(Boolean).join('\n\n');
+        const toolsPrompt = context.tools;
+        let system = 'You are Kai, the expert AI assistant built into Redglitch Studio. Be concise, technically rigorous, and help the user build games.';
+        if (ragContext) system += `\n\nRELEVANT PROJECT CONTEXT:\n${ragContext}`;
+        if (toolsPrompt) {
+            system += `\n\nAUTOMATION CONTRACT:\n${context.automationProtocol}\nEmit each call as a JSON object in a tool fence. Multiple objects or a JSON array are accepted. Arguments must match the schema.\n\nAVAILABLE STUDIO TOOLS:\n${toolsPrompt}`;
+        }
+
+        const historyLimit = Math.max(0, Number(settings.historyLimit) || 6) * 2;
+        const messages = [
+            { role: 'system', content: system },
+            ...this.contextManager.history.slice(-historyLimit),
+            { role: 'user', content: message },
+        ];
+        const infer = async () => adapter.chat(messages, {
+            maxTokens: settings.maxTokens,
+            temperature: settings.temp,
+            topP: settings.topP,
+        });
+        const initial = await infer();
+        const result = await this._runAgentLoop(initial, async (turn) => {
+            messages.push({ role: 'assistant', content: turn.assistantText });
+            messages.push({ role: 'user', content: turn.feedback });
+            return infer();
+        });
+        this.contextManager.addHistory('user', message);
+        this.contextManager.addHistory('assistant', result.text);
+        return result;
+    }
+
+    /**
+     * Returns a lightweight LLM call used ONLY for RAG query expansion (multi-query
+     * + HyDE). Cloud providers (OpenRouter / Cerebras) are used; local 3B is skipped
+     * to avoid the latency of a full generation per query variant.
+     */
+    _ragLLM() {
+        const provider = this._getKaiSettings().provider || 'native';
+        if (provider === 'openrouter') {
+            const adapter = new OpenRouterAdapter();
+            return (messages) => adapter.chat(messages, { maxTokens: 256, temperature: 0.3, topP: 0.9 });
+        }
+        if (provider === 'cerebras') {
+            const CerebrasAdapterClass = window.CerebrasAdapter;
+            if (!CerebrasAdapterClass) return null;
+            const adapter = new CerebrasAdapterClass();
+            return (messages) => adapter.chat(messages, { maxTokens: 256, temperature: 0.3, topP: 0.9 });
+        }
+        return null;
     }
 
     async _localChat(message, options, automationContext = null) {

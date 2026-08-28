@@ -433,7 +433,7 @@ class KaiChatUIController {
     }
 
     updateChatMeta() {
-        const modelLabels = { native: 'NATIVE_CORTEX', local: 'WEBGPU_LOCAL', cerebras: 'CEREBRAS_CLOUD', 'opencode-zen': 'OPENCODE_ZEN' };
+        const modelLabels = { native: 'NATIVE_CORTEX', local: 'WEBGPU_LOCAL', cerebras: 'CEREBRAS_CLOUD', 'opencode-zen': 'OPENCODE_ZEN', openrouter: 'OPENROUTER_CLOUD' };
         const settings = (window.AISettings && window.AISettings.settings) || {};
         const provider = settings.provider || 'native';
 
@@ -1110,7 +1110,13 @@ class KaiSettingsController {
             openCodeZenKey: '',
             openCodeZenModel: 'kimi-k2.5',
             cerebrasKey: '',
-            cerebrasModel: 'llama3.1-8b'
+            cerebrasModel: 'llama3.1-8b',
+            openrouterKey: '',
+            openrouterModel: 'openai/gpt-4o-mini',
+            embeddingsProvider: 'local',
+            embeddingsBaseUrl: 'https://api.openai.com/v1',
+            embeddingsApiKey: '',
+            embeddingsModel: 'text-embedding-3-small'
         };
         const saved = localStorage.getItem('kai_settings');
         if (saved) {
@@ -1154,6 +1160,12 @@ class KaiSettingsController {
         setVal('setting-opencode-zen-model', s.openCodeZenModel);
         setVal('setting-cerebras-key', s.cerebrasKey);
         setVal('setting-cerebras-model', s.cerebrasModel);
+        setVal('setting-openrouter-key', s.openrouterKey);
+        setVal('setting-openrouter-model', s.openrouterModel);
+        setVal('setting-embeddings-provider', s.embeddingsProvider);
+        setVal('setting-embeddings-base-url', s.embeddingsBaseUrl);
+        setVal('setting-embeddings-api-key', s.embeddingsApiKey);
+        setVal('setting-embeddings-model', s.embeddingsModel);
         this.loadOpenCodeZenModels();
     }
 
@@ -1170,6 +1182,23 @@ class KaiSettingsController {
             list.dataset.loaded = 'true';
         } catch (error) {
             console.warn('Kai: OpenCode Zen model catalog unavailable.', error);
+        }
+    }
+
+    async loadOpenRouterModels() {
+        const list = document.getElementById('openrouter-models');
+        if (!list) return;
+        try {
+            const { OpenRouterAdapter } = await import('../openrouter-adapter.js');
+            const adapter = new OpenRouterAdapter();
+            const models = await adapter.listModels();
+            list.innerHTML = models
+                .map(m => `<option value="${String(m.id).replace(/["&<>]/g, '')}"></option>`)
+                .join('');
+            window.KAI?.showBalloon?.('OpenRouter model list loaded.');
+        } catch (error) {
+            console.warn('Kai: OpenRouter model catalog unavailable.', error);
+            window.KAI?.showBalloon?.('OpenRouter: check API key to load models.');
         }
     }
 
@@ -1236,7 +1265,13 @@ class KaiSettingsController {
             openCodeZenKey: getVal('setting-opencode-zen-key') || '',
             openCodeZenModel: getVal('setting-opencode-zen-model') || 'kimi-k2.5',
             cerebrasKey: getVal('setting-cerebras-key') || '',
-            cerebrasModel: getVal('setting-cerebras-model') || 'llama3.1-8b'
+            cerebrasModel: getVal('setting-cerebras-model') || 'llama3.1-8b',
+            openrouterKey: getVal('setting-openrouter-key') || '',
+            openrouterModel: getVal('setting-openrouter-model') || 'openai/gpt-4o-mini',
+            embeddingsProvider: getVal('setting-embeddings-provider') || 'local',
+            embeddingsBaseUrl: getVal('setting-embeddings-base-url') || 'https://api.openai.com/v1',
+            embeddingsApiKey: getVal('setting-embeddings-api-key') || '',
+            embeddingsModel: getVal('setting-embeddings-model') || 'text-embedding-3-small'
         };
 
         this.saveSettings();

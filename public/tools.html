@@ -644,7 +644,7 @@
                 const AIChatUI = iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI;
                 if (AIChatUI) AIChatUI.updateChatMeta();
                 if (window.KAI.showBalloon) {
-                    const labels = { native: 'Native Cortex', local: 'WebGPU (local)', cerebras: 'Cerebras Cloud', 'opencode-zen': 'OpenCode Zen' };
+                    const labels = { native: 'Native Cortex', local: 'WebGPU (local)', cerebras: 'Cerebras Cloud', 'opencode-zen': 'OpenCode Zen', openrouter: 'OpenRouter Cloud' };
                     window.KAI.showBalloon(`Model switched to ${labels[provider] || provider}.`);
                 }
             },

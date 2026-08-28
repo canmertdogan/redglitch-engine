@@ -1044,6 +1044,7 @@
                             <option value="local">WEB_GPU (TRANSFORMERS.JS)</option>
                             <option value="cerebras">CLOUD_ORCHESTRATOR</option>
                             <option value="opencode-zen">OPENCODE_ZEN (CLOUD)</option>
+                            <option value="openrouter">OPENROUTER (CLOUD)</option>
                         </select>
                     </div>
                 </div>
@@ -1068,6 +1069,43 @@
                     <div class="setting-control-row">
                         <label>Model:</label>
                         <input type="text" id="setting-cerebras-model" value="llama3.1-8b" placeholder="llama3.1-8b" style="width: 65%;">
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">OPENROUTER (CLOUD)</span>
+                    <div class="setting-control-row">
+                        <label>API Key:</label>
+                        <input type="password" id="setting-openrouter-key" placeholder="sk-or-..." autocomplete="off" style="width: 65%;">
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Model ID:</label>
+                        <input type="text" id="setting-openrouter-model" list="openrouter-models" value="openai/gpt-4o-mini" placeholder="openai/gpt-4o-mini" style="width: 65%;">
+                        <datalist id="openrouter-models"></datalist>
+                    </div>
+                    <div class="setting-control-row">
+                        <button class="xp-button" style="width: 100%; font-size: 12px;" onclick="AISettings.loadOpenRouterModels()">REFRESH MODEL LIST</button>
+                    </div>
+                </div>
+                <div class="xp-setting-group">
+                    <span class="xp-setting-label">EMBEDDINGS (RAG)</span>
+                    <div class="setting-control-row">
+                        <label>Provider:</label>
+                        <select id="setting-embeddings-provider" style="width: 65%;">
+                            <option value="local">LOCAL (TRANSFORMERS.JS)</option>
+                            <option value="openai">OPENAI-COMPATIBLE ENDPOINT</option>
+                        </select>
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Base URL:</label>
+                        <input type="text" id="setting-embeddings-base-url" placeholder="https://api.openai.com/v1" style="width: 65%;">
+                    </div>
+                    <div class="setting-control-row">
+                        <label>API Key:</label>
+                        <input type="password" id="setting-embeddings-api-key" placeholder="sk-..." autocomplete="off" style="width: 65%;">
+                    </div>
+                    <div class="setting-control-row">
+                        <label>Model:</label>
+                        <input type="text" id="setting-embeddings-model" placeholder="text-embedding-3-small" style="width: 65%;">
                     </div>
                 </div>
                 <div class="xp-setting-group">
