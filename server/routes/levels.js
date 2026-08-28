@@ -183,7 +183,7 @@ router.post('/delete-level', async (req, res) => {
         if (!projectPath) {
             return res.status(400).json({ error: 'Invalid project name' });
         }
-        const levelPath = path.join(projectPath, 'dunyalar', 'platformer', `${levelId}.json`);
+        const levelPath = path.join(projectPath, 'dunyalar', `${levelId}.json`);
         
         await fs.unlink(levelPath);
         

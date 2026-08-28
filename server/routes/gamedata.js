@@ -59,8 +59,10 @@ function createDefinitionRoutes(typeName, fileName) {
                     mergedData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
                     projectData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
                     mergedData = Array.from(itemMap.values());
-                } else {
-                    // If it's an object, just merge
+                } else if (projectData && typeof projectData === 'object' && !Array.isArray(mergedData)) {
+                    // Only merge object-on-object. If the engine core produced an
+                    // array but the project file is an object, keep the array form
+                    // rather than spreading the array into an object (corrupts shape).
                     mergedData = { ...mergedData, ...projectData };
                 }
             } catch (err) {

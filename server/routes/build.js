@@ -42,6 +42,7 @@ router.get('/stream', (req, res) => {
 
     const buildScript = path.join(ROOT_DIR, 'build-game.js');
     if (!fs.existsSync(buildScript)) {
+        isBuilding = false;
         send('error', { text: 'build-game.js not found' });
         send('done', { success: false });
         return res.end();
@@ -103,6 +104,7 @@ router.post('/', (req, res) => {
 
     const buildScript = path.join(ROOT_DIR, 'build-game.js');
     if (!fs.existsSync(buildScript)) {
+        isBuilding = false;
         return res.status(500).json({ success: false, error: 'build-game.js not found' });
     }
 
