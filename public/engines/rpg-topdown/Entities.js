@@ -138,7 +138,7 @@ window.Enemy = class Enemy {
 }
 
 window.Fireball = class Fireball {
-    constructor() { this.active = false; this.x = 0; this.y = 0; this.dx = 0; this.dy = 0; this.sprite = null; this.width = 0; this.height = 0; this.life = 0; this.speed = 400; this.scale = 2; this.isEnemy = false; this.isText = false; }
+    constructor() { this.active = false; this.x = 0; this.y = 0; this.dx = 0; this.dy = 0; this.sprite = null; this.width = 0; this.height = 0; this.life = 0; this.speed = 400; this.scale = 2; this.isEnemy = false; this.isText = false; this.damage = 25; }
     reset(x, y, dx, dy, sprite) {
         this.active = true;
         this.x = x; this.y = y; this.dx = dx; this.dy = dy; this.sprite = sprite; 

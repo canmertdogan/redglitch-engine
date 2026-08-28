@@ -9,6 +9,7 @@ window.SaveSystem = class SaveSystem {
         const data = {
             timestamp: Date.now(),
             level: gameState.level,
+            currentLevelId: gameState.currentLevelId,
             campaignNode: gameState.campaignNode,
             flags: gameState.flags || {},
             player: {
@@ -17,7 +18,9 @@ window.SaveSystem = class SaveSystem {
                 hp: gameState.player.hp,
                 maxHp: gameState.player.maxHp,
                 mana: gameState.player.mana,
+                maxMana: gameState.player.maxMana,
                 stamina: gameState.player.stamina,
+                maxStamina: gameState.player.maxStamina,
                 direction: gameState.player.direction
             },
             inventory: gameState.inventory || [],

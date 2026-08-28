@@ -46,6 +46,7 @@ window.Core = class Core {
         this.player = {
             x: 0, y: 0, width: 16, height: 16, scale: 3, speed: 250, direction: 1, hp: 100, maxHp: 100, mana: 50, maxMana: 50, stamina: 100, maxStamina: 100,
             state: 'idle', frame: 0, timer: 0, animSpeed: 0.15, shootCooldown: 0, vy: 0, onGround: false, jumpForce: -600, gravity: 1500, manaDepleted: false,
+            skillCooldowns: [0, 0, 0, 0], basicCooldown: 0, speedBoost: 1, speedBoostUntil: 0, shield: 0,
             history: [], segmentCount: 8, segmentSpacing: 4, glowColor: '#e74c3c'
         };
         this.playerHead = window.createPixelImage('caterpillar_head'); this.playerBody = window.createPixelImage('caterpillar_body'); this.targetSprite = window.createPixelImage('target');
@@ -82,18 +83,19 @@ window.Core = class Core {
         this.lastTime = performance.now();
         this.accumulator = 0;
         this.fixedTimeStep = 1 / 60;
-        this.loadProfileData(); this.setupDeathEvents(); this.resize(); window.addEventListener('resize', () => this.resize());
+        this.loadProfileData(); this.setupDeathEvents(); this.resize(); this._onResize = () => this.resize(); window.addEventListener('resize', this._onResize);
         
         const fsBtn = document.getElementById('fullscreen-btn'); if (fsBtn) fsBtn.addEventListener('click', () => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else if (document.exitFullscreen) document.exitFullscreen(); });
         const isoBtn = document.getElementById('debug-iso-btn'); if (isoBtn) isoBtn.addEventListener('click', () => { this.mapSystem.type = (this.mapSystem.type === 'isometric') ? 'topdown' : 'isometric'; });
-        const saveBtn = document.getElementById('btn-save'); if (saveBtn) saveBtn.addEventListener('click', async () => { if (this.isRunning && this.playerName) { const gameState = { level: this.currentLevel, player: this.player, inventory: this.inventory, activeSkills: this.activeSkills }; if (await this.saveSystem.save(this.playerName, 1, gameState)) alert("GAME SAVED!"); else alert("SAVE FAILED!"); } });
+        const saveBtn = document.getElementById('btn-save'); if (saveBtn) saveBtn.addEventListener('click', async () => { if (this.isRunning && this.playerName) { const gameState = { level: this.currentLevel, currentLevelId: this.currentLevelId, player: this.player, inventory: this.inventory, activeSkills: this.activeSkills }; if (await this.saveSystem.save(this.playerName, 1, gameState)) alert("GAME SAVED!"); else alert("SAVE FAILED!"); } });
     }
 
     setupHotReloading() {
         if (!window.RedglitchEventBus) return;
+        const bus = window.RedglitchEventBus;
 
         // Listen for asset updates
-        window.RedglitchEventBus.on('file:changed', async (event) => {
+        this._onFileChanged = async (event) => {
             const filePath = event.data.path;
             console.log('[Core:HotReload] File changed:', filePath);
 
@@ -111,15 +113,18 @@ window.Core = class Core {
                     }
                 });
             }
-        });
+        };
 
         // Listen for FX updates
-        window.RedglitchEventBus.on('fx:updated', async (event) => {
+        this._onFxUpdated = async (event) => {
             console.log('[Core:HotReload] FX updated:', event.data.id);
             if (this.fxSystem && this.fxSystem.reloadEffect) {
                 this.fxSystem.reloadEffect(event.data.id, event.data.config);
             }
-        });
+        };
+
+        bus.on('file:changed', this._onFileChanged);
+        bus.on('fx:updated', this._onFxUpdated);
 
         // Phase 27: VFX Bridge registration
         if (window.VFX) window.VFX.setSystem(this.fx, '2d');
@@ -297,7 +302,7 @@ window.Core = class Core {
         await this.questSystem.init();
         this.achievementSystem.unlock('START_GAME');
         if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; if (!skipInitialLevelLoad) await this.loadLevel(this.currentLevel); } 
-        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.maxMana = data.player.maxMana !== undefined ? data.player.maxMana : this.player.maxMana; this.player.stamina = data.player.stamina; this.player.maxStamina = data.player.maxStamina !== undefined ? data.player.maxStamina : this.player.maxStamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.player.direction = data.player.direction !== undefined ? data.player.direction : this.player.direction; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true, options); }
+        else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.currentLevelId = data.currentLevelId || this.currentLevelId; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.maxMana = data.player.maxMana !== undefined ? data.player.maxMana : this.player.maxMana; this.player.stamina = data.player.stamina; this.player.maxStamina = data.player.maxStamina !== undefined ? data.player.maxStamina : this.player.maxStamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.player.direction = data.player.direction !== undefined ? data.player.direction : this.player.direction; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true, options); }
         requestAnimationFrame(this.gameLoop.bind(this)); for(let i=0; i<300; i++) this.player.history.push({ x: this.player.x, y: this.player.y, dir: this.player.direction });
     }
     async loadDefinitions() {
@@ -329,11 +334,13 @@ window.Core = class Core {
         // Remove Resize Listener
         if (this._onResize) {
             window.removeEventListener('resize', this._onResize);
-        } else {
-            // Since we didn't store the bound function in constructor (legacy code),
-            // we can't easily remove it. We rely on the fact that arrow functions
-            // in addEventListener might be hard to remove.
-            // Future improvement: Store bound handlers in constructor.
+            this._onResize = null;
+        }
+
+        // Remove hot-reload listeners (stored in setupHotReloading)
+        if (window.RedglitchEventBus) {
+            if (this._onFileChanged) window.RedglitchEventBus.off('file:changed', this._onFileChanged);
+            if (this._onFxUpdated)   window.RedglitchEventBus.off('fx:updated', this._onFxUpdated);
         }
 
         // Cleanup any systems that need it
@@ -498,7 +505,10 @@ window.Core = class Core {
         const axis = input.getAxis();
         const isMoving = (axis.x !== 0 || axis.y !== 0);
         if (isMoving) { const lastPos = this.player.history[0]; const distMoved = lastPos ? Math.sqrt((this.player.x - lastPos.x) ** 2 + (this.player.y - lastPos.y) ** 2) : 999; if (distMoved > 2) { this.player.history.unshift({ x: this.player.x, y: this.player.y, dir: this.player.direction }); if (this.player.history.length > 300) this.player.history.pop(); } }        if (!this.mapSystem || !this.mapSystem.width || !this.player) return;
-        if (this.player.shootCooldown > 0) this.player.shootCooldown -= deltaTime;
+        if (this.player.basicCooldown > 0) this.player.basicCooldown -= deltaTime;
+        for (let i = 0; i < 4; i++) {
+            if (this.player.skillCooldowns[i] > 0) this.player.skillCooldowns[i] -= deltaTime;
+        }
         const pxS = this.player.x - this.camera.x + sw / 2, pyS = this.player.y - this.camera.y + sh / 2;
         const dx = input.mouse.x - pxS, dy = input.mouse.y - pyS, dist = Math.sqrt(dx * dx + dy * dy);
         this.aimCursor = { x: input.mouse.x, y: input.mouse.y };
@@ -522,7 +532,7 @@ window.Core = class Core {
         }
 
         if (input.actions.skill1) this.useSkill(0); if (input.actions.skill2) this.useSkill(1); if (input.actions.skill3) this.useSkill(2); if (input.actions.skill4) this.useSkill(3);
-        if (input.mouse.isDown && this.player.shootCooldown <= 0 && dist > 0 && this.player.mana >= 2) this.useSkill(-1); 
+        if (input.mouse.isDown && this.player.basicCooldown <= 0 && dist > 0 && this.player.mana >= 2) this.useSkill(-1); 
         if (!isMoving) { if (Math.random() > 0.8) this.spawnParticle(this.player.x + 24, this.player.y + 24, (Math.random()-0.5)*20, -Math.random()*40, '#f39c12', 0.6, 2); if (Math.random() > 0.85) this.spawnParticle(this.player.x + 10 + Math.random()*28, this.player.y + Math.random()*20, 0, -30 - Math.random()*20, null, 0.8, 20, this.fireFrames); } 
         if (this.player.mana <= 0.05 && !this.player.manaDepleted) { this.player.mana = 0; this.player.manaDepleted = true; this.triggerUltimate(); }
         if (this.player.mana < this.player.maxMana) { this.player.mana += 2 * deltaTime; if (this.player.mana >= 10) this.player.manaDepleted = false; }
@@ -563,25 +573,35 @@ window.Core = class Core {
             let removed = false; 
             
             if (fb.isEnemy) { 
-                // Check against Player
-                if (Math.sqrt((fb.x - this.player.x - 24) ** 2 + (fb.y - this.player.y - 24) ** 2) < 25) { 
-                    this.player.hp -= 10; fb.life = 0; 
+                // Check against Player (use fireball + player centres, not top-left)
+                const fcx = fb.x + (fb.width * fb.scale) / 2, fcy = fb.y + (fb.height * fb.scale) / 2;
+                const pcx = this.player.x + 24, pcy = this.player.y + 24;
+                if (Math.sqrt((fcx - pcx) ** 2 + (fcy - pcy) ** 2) < 25) { 
+                    let dmg = fb.damage ?? 10;
+                    if (this.player.shield > 0) {
+                        const absorbed = Math.min(this.player.shield, dmg);
+                        this.player.shield -= absorbed; dmg -= absorbed;
+                    }
+                    this.player.hp -= dmg; fb.life = 0; 
                     if(this.fx) {
                         this.fx.shake(5, 20);
-                        this.fx.popText(this.player.x + 24, this.player.y, "10", "#e74c3c");
+                        this.fx.popText(this.player.x + 24, this.player.y, String(Math.round(dmg)), "#e74c3c");
                     }
                     this.createExplosion(this.player.x + 24, this.player.y + 24, '#8e44ad', 5); fb.active = false; removed = true; 
                 } 
-            } else { 
+            } else {
                 // Spatial Hash Query for Enemies
                 this.collisionCandidates.length = 0;
                 const candidates = this.spatialHash.retrieve(fb, this.collisionCandidates);
                 for (const entity of candidates) {
                     if (entity === this.player) continue; 
                     if (entity.hp !== undefined && entity.maxHp !== undefined) {
-                        if (Math.sqrt((fb.x - entity.x - 24) ** 2 + (fb.y - entity.y - 24) ** 2) < 30) { 
-                            entity.hp -= 25; fb.life = 0; 
-                            if(this.fx) this.fx.popText(entity.x + 24, entity.y, "25", "#ff0000");
+                        const fcx = fb.x + (fb.width * fb.scale) / 2, fcy = fb.y + (fb.height * fb.scale) / 2;
+                        const ecx = entity.x + 24, ecy = entity.y + 24;
+                        if (Math.sqrt((fcx - ecx) ** 2 + (fcy - ecy) ** 2) < 30) { 
+                            const dmg = fb.damage ?? 25;
+                            entity.hp -= dmg; fb.life = 0; 
+                            if(this.fx) this.fx.popText(entity.x + 24, entity.y, String(dmg), "#ff0000");
                             this.createExplosion(fb.x, fb.y, '#ff0000', 5); 
                             if (entity.hp <= 0) { 
                                 this.createExplosion(entity.x + 24, entity.y + 24, '#e74c3c', 15); 
@@ -601,7 +621,9 @@ window.Core = class Core {
         
         if (this.player.hp <= 0) { this.player.hp = 0; this.updateHUD(); this.die(); return; }
         const sprinting = input.actions.shift && isMoving; let speed = this.player.speed;
-        if (sprinting && this.player.stamina > 0) { this.player.stamina -= 20 * deltaTime; speed *= 1.8; this.player.animSpeed = 0.08; } 
+        if (sprinting && this.player.stamina > 0) { this.player.stamina -= 20 * deltaTime; speed *= 1.8; this.player.animSpeed = 0.08; }
+        // Temporary speed buff (from a buff/utility skill)
+        if (this.player.speedBoost && this.player.speedBoostUntil > performance.now()) speed *= this.player.speedBoost;
         else { this.player.animSpeed = 0.15; if (this.player.stamina < this.player.maxStamina) this.player.stamina += 10 * deltaTime; }
         let nearNPC = false; this.npcs.forEach(npc => { 
             const dx = (this.player.x + 24) - (npc.x + 24);
@@ -717,28 +739,104 @@ window.Core = class Core {
             });
         }
     }
-    useItem(idx) { const item = this.inventory[idx]; if (!item) return; if (item.type === 'heal') this.player.hp = Math.min(this.player.maxHp, this.player.hp + item.value); if (item.type === 'mana') this.player.mana = Math.min(this.player.maxMana, this.player.mana + item.value); if (item.type === 'stamina') this.player.stamina = Math.min(this.player.maxStamina, this.player.stamina + item.value); this.createExplosion(this.player.x + 24, this.player.y + 24, '#fff', 10); this.inventory.splice(idx, 1); this.updateInventoryHUD(); }
+    useItem(idx) {
+        let item = this.inventory[idx];
+        if (!item) return;
+        // Normalise: inventory entries pushed without a type/value (e.g. via the
+        // scripting runtime) get resolved from the item definitions.
+        if (!item.type || item.value === undefined) {
+            const def = this.itemDefs && this.itemDefs.find(i => i.id === item.id);
+            if (def) item = { ...def, ...item };
+        }
+        const p = this.player;
+        let used = false;
+        if (item.type === 'heal') { p.hp = Math.min(p.maxHp, p.hp + (item.value || 0)); used = true; }
+        else if (item.type === 'mana') { p.mana = Math.min(p.maxMana, p.mana + (item.value || 0)); used = true; }
+        else if (item.type === 'stamina') { p.stamina = Math.min(p.maxStamina, p.stamina + (item.value || 0)); used = true; }
+        else if (item.type === 'consumable') { p.hp = Math.min(p.maxHp, p.hp + (item.value || 0)); used = true; } // food items restore HP
+        if (used) { this.createExplosion(p.x + 24, p.y + 24, '#fff', 10); this.inventory.splice(idx, 1); this.updateInventoryHUD(); }
+    }
     useSkill(slotIdx) {
-        if (this.player.shootCooldown > 0) return; let skill = this.activeSkills[slotIdx]; if (slotIdx === -1) skill = { type: 'projectile', mana: 2, cooldown: 0.15, name: 'Arabic Fire' }; if (!skill || this.player.mana < skill.mana) return;
-        this.player.mana -= skill.mana; this.player.shootCooldown = skill.cooldown || 0.5;
-        const sw = this.player.width * this.player.scale, sh = this.player.height * this.player.scale;
-        const pxS = this.player.x - this.camera.x + sw / 2, pyS = this.player.y - this.camera.y + sh / 2;
+        const p = this.player;
+        if (!p) return;
+        // Per-slot cooldown: the basic attack (slotIdx -1) and each skill slot
+        // track their own timer so casting one no longer blocks the others.
+        const basic = (slotIdx === -1);
+        const cd = basic ? p.basicCooldown : (p.skillCooldowns[slotIdx] || 0);
+        if (cd > 0) return;
+
+        let skill = this.activeSkills[slotIdx];
+        if (basic) skill = { type: 'projectile', mana: 2, cooldown: 0.15, name: 'Arabic Fire', damage: 25 };
+        if (!skill || p.mana < skill.mana) return;
+
+        const sw = p.width * p.scale, sh = p.height * p.scale;
+        const pxS = p.x - this.camera.x + sw / 2, pyS = p.y - this.camera.y + sh / 2;
         const dx = this.aimCursor.x - pxS, dy = this.aimCursor.y - pyS, dist = Math.sqrt(dx * dx + dy * dy);
         let dirX, dirY;
         if (dist < 1e-6) {
             // Cursor exactly on the player — default to facing direction
-            dirX = this.player.direction >= 0 ? 1 : -1;
+            dirX = p.direction >= 0 ? 1 : -1;
             dirY = 0;
         } else {
             dirX = dx / dist;
             dirY = dy / dist;
         }
         if (this.mapSystem.type === 'isometric') { const wx = dirY + dirX / 2; const wy = dirY - dirX / 2; const wl = Math.sqrt(wx*wx + wy*wy); dirX = wx/wl; dirY = wy/wl; }
-        if (skill.type === 'projectile') { const spr = (slotIdx === -1) ? this.irabSprites[Math.floor(Math.random() * this.irabSprites.length)] : window.createPixelImage(skill.sprite); const scale = (slotIdx === -1) ? 1.5 : 2;
-            const fb = this.spawnFireball(this.player.x + sw/2 - (spr.width * scale)/2, this.player.y + sh/2 - (spr.height * scale)/2, dirX, dirY, spr);
-            if(fb) fb.scale = scale;
+
+        // Compute the effect; only consume mana/cooldown if something actually
+        // happens. Unknown skill types are ignored without penalty.
+        let applied = false;
+        if (skill.type === 'projectile') {
+            const spr = basic ? this.irabSprites[Math.floor(Math.random() * this.irabSprites.length)] : window.createPixelImage(skill.sprite);
+            const scale = basic ? 1.5 : 2;
+            const fb = this.spawnFireball(p.x + sw/2 - (spr.width * scale)/2, p.y + sh/2 - (spr.height * scale)/2, dirX, dirY, spr);
+            if (fb) { fb.scale = scale; fb.damage = skill.damage ?? 25; }
+            applied = true;
+        } else if (skill.type === 'heal') {
+            const heal = skill.healAmount ?? 20;
+            p.hp = Math.min(p.maxHp, p.hp + heal);
+            for (let i = 0; i < 15; i++) this.spawnParticle(p.x + sw/2, p.y + sh/2, (Math.random()-0.5)*100, -Math.random()*100, '#2ecc71', 0.8, 4);
+            applied = true;
+        } else if (skill.type === 'stamina_boost' || skill.type === 'stamina') {
+            p.stamina = Math.min(p.maxStamina, p.stamina + (skill.value ?? 50));
+            applied = true;
+        } else if (skill.type === 'mana_boost' || skill.type === 'mana') {
+            p.mana = Math.min(p.maxMana, p.mana + (skill.value ?? 50));
+            applied = true;
+        } else if (skill.type === 'buff' || skill.type === 'utility') {
+            applied = this._applySkillEffect(skill);
         }
-        if (skill.type === 'heal') { this.player.hp = Math.min(this.player.maxHp, this.player.hp + 20); for(let i=0; i<15; i++) this.spawnParticle(this.player.x + sw/2, this.player.y + sh/2, (Math.random()-0.5)*100, -Math.random()*100, '#2ecc71', 0.8, 4); }
+
+        if (!applied) return;
+
+        p.mana -= skill.mana;
+        const cdVal = skill.cooldown || 0.5;
+        if (basic) p.basicCooldown = cdVal;
+        else p.skillCooldowns[slotIdx] = cdVal;
+    }
+
+    /** Apply a buff/utility skill. Returns true if a known effect was applied. */
+    _applySkillEffect(skill) {
+        const p = this.player;
+        if (skill.effect === 'speed' || skill.speedMultiplier) {
+            p.speedBoost = skill.speedMultiplier || 1.5;
+            p.speedBoostUntil = performance.now() + (skill.duration || 5) * 1000;
+            return true;
+        }
+        if (skill.effect === 'shield' || skill.shieldAmount) {
+            p.shield = (p.shield || 0) + (skill.shieldAmount || 50);
+            return true;
+        }
+        if (skill.effect === 'teleport') {
+            const range = (skill.maxDistance || 4) * 48;
+            const len = Math.hypot(this.aimCursor.x - (p.x + p.width*p.scale/2), this.aimCursor.y - (p.y + p.height*p.scale/2)) || 1;
+            const t = Math.min(range, len);
+            const ux = (this.aimCursor.x - (p.x + p.width*p.scale/2)) / len;
+            const uy = (this.aimCursor.y - (p.y + p.height*p.scale/2)) / len;
+            p.x += ux * t; p.y += uy * t;
+            return true;
+        }
+        return false;
     }
     assignSkills() { for (let i = 0; i < 4; i++) { if (this.skillDefs && this.skillDefs[i]) { this.activeSkills[i] = this.skillDefs[i]; } else { this.activeSkills[i] = null; } } this.updateSkillHUD(); }
     updateSkillHUD() {
