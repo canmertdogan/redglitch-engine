@@ -401,11 +401,8 @@ window.FXSystem = class FXSystem {
     render(rendererOrCamX = 0, cameraY = 0) {
         this.ctx.save();
 
-        if (this.shakeTime > 0) {
-            const dx = (Math.random() - 0.5) * this.shakeIntensity;
-            const dy = (Math.random() - 0.5) * this.shakeIntensity;
-            this.ctx.translate(dx, dy);
-        }
+        // Screen shake is applied once by the caller via the (already shaken) viewX/viewY
+        // coordinates passed in, so we must not re-apply it here.
 
         // Render Particles
         this.pool.forEach(p => p.draw(this.ctx, rendererOrCamX, cameraY));

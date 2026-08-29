@@ -90,7 +90,6 @@ function getAllowedRootFiles(engineType) {
         'campaign_browser.html', 'campaign_browser.js',
         'campaign_launcher.html', 'campaign_runtime.html',
         'index.html', 'pixel_scrollbars.css', 'transitions.css', 'theme.js',
-        'irab-enhanced.js', 'assistant.js', 'InteractiveCutsceneAPI.js'
     ];
     if (engineType === 'iso-pixel') manifest.push('iso_play.html');
     return manifest;

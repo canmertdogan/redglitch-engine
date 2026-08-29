@@ -249,10 +249,13 @@ class PlatformerGame {
             }
         } else {
             map.layers = map.layers.map((layer) => {
-                if (!Array.isArray(layer)) return new Array(total).fill(0);
-                if (layer.length === total) return layer;
+                // Support both plain tile arrays and { name, data } objects
+                // (e.g. AdvancedGenerator output) without dropping the tiles.
+                const src = (layer && typeof layer === 'object' && Array.isArray(layer.data)) ? layer.data : layer;
+                if (!Array.isArray(src)) return new Array(total).fill(0);
+                if (src.length === total) return src;
                 const normalized = new Array(total).fill(0);
-                for (let i = 0; i < Math.min(total, layer.length); i++) normalized[i] = Number(layer[i] || 0);
+                for (let i = 0; i < Math.min(total, src.length); i++) normalized[i] = Number(src[i] || 0);
                 return normalized;
             });
         }
@@ -282,7 +285,12 @@ class PlatformerGame {
             map.spawn = { x: 2, y: Math.max(1, height - 4) };
         }
         if (!map.goal || typeof map.goal !== 'object') {
-            map.goal = { x: Math.max(2, width - 5), y: Math.max(1, height - 4) };
+            // Fall back to an `exit` field if the editor used that instead of `goal`
+            if (map.exit && typeof map.exit === 'object') {
+                map.goal = { x: Number(map.exit.x) || (width - 5), y: Number(map.exit.y) || (height - 4) };
+            } else {
+                map.goal = { x: Math.max(2, width - 5), y: Math.max(1, height - 4) };
+            }
         }
 
         map.collectibles = Array.isArray(map.collectibles) ? map.collectibles : [];
@@ -402,6 +410,18 @@ class PlatformerGame {
         } else if (e.type === 'enemy_shooter') {
             const enemy = new PlatformerShooterEnemy(ex, ey, e.sprite || 'goblin');
             enemy.id = e.id || enemy.id;
+            this.entities.push(enemy);
+        } else if (e.type === 'slime' || e.type === 'skeleton' || e.type === 'knight') {
+            const enemy = new PlatformerEnemy(ex, ey, e.sprite || e.type);
+            if (e.behavior) enemy.behavior = e.behavior;
+            enemy.id = e.id || enemy.id;
+            enemy.hp = e.hp || enemy.hp;
+            enemy.speed = e.speed || enemy.speed;
+            this.entities.push(enemy);
+        } else if (e.type === 'bat') {
+            const enemy = new PlatformerFlyingEnemy(ex, ey, e.sprite || 'bat');
+            enemy.id = e.id || enemy.id;
+            if (e.behavior) enemy.behavior = e.behavior;
             this.entities.push(enemy);
         } else if (e.type === 'pushable') {
             const push = new PlatformerPushableBlock(ex, ey, e.w || this.tileSize, e.h || this.tileSize);

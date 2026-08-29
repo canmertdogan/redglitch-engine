@@ -439,23 +439,24 @@
         setLoadingProgress(10, 'CREATING ENGINE...');
         const game = new Unified3DGame(gameContainer, { engineType });
 
-        game.core && (game.core.onReady = () => {
-            setLoadingProgress(80, 'ENGINE READY');
-        });
-
         // ── Init ──────────────────────────────────────────────────────────
         setLoadingProgress(20, 'INITIALISING SYSTEMS...');
 
         game.init(engineType).then(async () => {
             setLoadingProgress(50, 'SYSTEMS ONLINE');
+            // game.core exists now — wire the ready callback (and nudge progress).
+            if (game.core) game.core.onReady = () => setLoadingProgress(80, 'ENGINE READY');
+            setLoadingProgress(80, 'ENGINE READY');
             showModeHUD(engineType);
 
             // Wire game-over callback for platformer
-            if (game.mode?.onGameOver === undefined || game.mode?.onGameOver === null) {
-                game.mode.onGameOver = () => {
-                    gameoverOverlay.classList.remove('hidden');
-                };
-            }
+            // setMode() already assigns a (generic-HUD) handler, so wrap it instead of
+            // gating on undefined — otherwise the launcher overlay is never shown.
+            const existingGameOver = game.mode?.onGameOver;
+            game.mode.onGameOver = (...args) => {
+                if (typeof existingGameOver === 'function') existingGameOver(...args);
+                gameoverOverlay.classList.remove('hidden');
+            };
 
             // Wire core onLevelReady
             game.core.onLevelReady = (level) => {

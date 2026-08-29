@@ -101,7 +101,12 @@ window.AlgorithmRuntime = class AlgorithmRuntime {
             await this.executeNode(node, context);
             
             // Find and execute next node(s) in chain
-            const nextNodes = this.getNextNodes(node, 'out');
+            let nextPort = 'out';
+            if (node.type === 'flow_branch' || node.type === 'flow_if') {
+                const condition = this.resolveValue(node, 'condition');
+                nextPort = condition ? 'true' : 'false';
+            }
+            const nextNodes = this.getNextNodes(node, nextPort);
             for (const nextNode of nextNodes) {
                 await this.executeNodeChain(nextNode, context);
             }
@@ -283,7 +288,7 @@ window.AlgorithmRuntime = class AlgorithmRuntime {
             case 'dialogue_show': {
                 const text = this.resolveValue(node, 'text');
                 const speaker = this.resolveValue(node, 'speaker') || '';
-                await runtime.showDialogue(speaker, text);
+                await runtime.showDialogue(text, speaker);
                 break;
             }
             
@@ -432,7 +437,7 @@ window.AlgorithmRuntime = class AlgorithmRuntime {
             }
             
             case 'env_time': {
-                return this.game.time || 0;
+                return this.game.gameTime || 0;
             }
             
             default:

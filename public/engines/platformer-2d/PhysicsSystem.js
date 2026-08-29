@@ -24,6 +24,11 @@ class PhysicsSystem {
         entity.onGround = false; // Reset before platform/tile resolution so riding state persists
         const config = window.PlatformerConfig || {};
 
+        // Pre-move position (movement this frame is velocity * scale), used by the
+        // one-way / slope "were we above/beside the tile?" guards below.
+        entity._prevX = entity.x - entity.vx * scale;
+        entity._prevY = entity.y - entity.vy * scale;
+
         // 1. Moving Platform Carrier Logic
         this.handlePlatforms(entity, platforms);
 
@@ -32,11 +37,12 @@ class PhysicsSystem {
             entity.vy += this.gravity * scale;
             if (entity.vy > this.terminalVelocity) entity.vy = this.terminalVelocity;
             
-            // Variable jump height: cut velocity if jump key is released while moving up
+            // Variable jump height: cut velocity ONCE when the jump key is released while rising
             if (entity.vy < 0 && entity.keys) {
                 const jumpHeld = entity.keys['ArrowUp'] || entity.keys['Space'] || entity.keys['KeyW'];
-                if (!jumpHeld) {
+                if (!jumpHeld && !entity.jumpCut) {
                     entity.vy *= 0.5; // Cut velocity by half
+                    entity.jumpCut = true;
                 }
             }
         }
@@ -44,6 +50,7 @@ class PhysicsSystem {
         // 3. Apply Friction (Horizontal) - approximate per-tick multiplicative friction using pow
         if (entity.onGround) {
             entity.vx *= Math.pow(this.friction, scale);
+            entity.jumpCut = false; // reset variable-jump latch on landing
         } else {
             entity.vx *= Math.pow((config.AIR_RESISTANCE || 0.95), scale);
         }
@@ -131,6 +138,12 @@ class PhysicsSystem {
         if (!map || !map.collision) return;
         const tileSize = this.tileSize || (window.PlatformerConfig && window.PlatformerConfig.TILE_SIZE) || 32;
 
+        // Pre-move position used by the one-way / slope guards. In the real game this
+        // is set by apply() (velocity * scale); fall back to unscaled velocity when
+        // checkCollisions is invoked directly (e.g. unit tests).
+        const prevX = entity._prevX !== undefined ? entity._prevX : entity.x - entity.vx;
+        const prevY = entity._prevY !== undefined ? entity._prevY : entity.y - entity.vy;
+
         const left = Math.floor(entity.x / tileSize);
         const right = Math.floor((entity.x + entity.w - 0.01) / tileSize);
         const top = Math.floor(entity.y / tileSize);
@@ -151,7 +164,7 @@ class PhysicsSystem {
                     const tileTop = ty * tileSize;
                     const isDropping = entity.keys && (entity.keys['ArrowDown'] || entity.keys['KeyS']);
                     
-                    if (entity.y + entity.h - entity.vy <= tileTop + 1 && !isDropping) {
+                    if (prevY + entity.h <= tileTop + 1 && !isDropping) {
                          this.resolvePlatform(entity, tileTop);
                     }
                 }
@@ -159,7 +172,7 @@ class PhysicsSystem {
                 // One-Way Down (5) - Solid from bottom
                 else if (tileType === 5 && axis === 'y' && entity.vy <= 0) {
                     const tileBottom = (ty + 1) * tileSize;
-                    if (entity.y - entity.vy >= tileBottom - 1) {
+                    if (prevY >= tileBottom - 1) {
                         entity.y = tileBottom;
                         entity.vy = 0;
                     }
@@ -168,7 +181,7 @@ class PhysicsSystem {
                 // One-Way Left (6) - Solid from right
                 else if (tileType === 6 && axis === 'x' && entity.vx <= 0) {
                     const tileRight = (tx + 1) * tileSize;
-                    if (entity.x - entity.vx >= tileRight - 1) {
+                    if (prevX >= tileRight - 1) {
                         entity.x = tileRight;
                         entity.vx = 0;
                     }
@@ -177,7 +190,7 @@ class PhysicsSystem {
                 // One-Way Right (7) - Solid from left
                 else if (tileType === 7 && axis === 'x' && entity.vx >= 0) {
                     const tileLeft = tx * tileSize;
-                    if (entity.x + entity.w - entity.vx <= tileLeft + 1) {
+                    if (prevX + entity.w <= tileLeft + 1) {
                         entity.x = tileLeft - entity.w;
                         entity.vx = 0;
                     }
@@ -249,7 +262,7 @@ class PhysicsSystem {
 
         if (highestSlopeY !== Infinity && entity.y + entity.h > highestSlopeY) {
             // Only snap if we were above it or close to it
-            if (entity.y + entity.h - entity.vy <= highestSlopeY + 10) {
+            if (prevY + entity.h <= highestSlopeY + 10) {
                 entity.y = highestSlopeY - entity.h;
                 entity.vy = 0;
                 entity.onGround = true;

@@ -142,6 +142,7 @@ export default class Game3DCore extends Engine3DAdapter {
             this.mode.dispose();
         }
         this.mode = modeModule;
+        this._modeClass = modeModule.constructor;
         this._engineType3D = modeModule.modeId;
         await this.mode.onInit(this);
         this.mode.onGameOver = () => {
@@ -282,6 +283,7 @@ export default class Game3DCore extends Engine3DAdapter {
         console.log(`[Game3DCore] onLevelLoaded: "${level.name}" (mode: ${this._engineType3D})`);
         this._levelId       = level.id ?? level.name ?? null;
         this._currentLevel  = level;
+        this._lastLevelData = level;
         this._levelComplete = false;
 
         // Sync physics gravity from level config
@@ -350,7 +352,7 @@ export default class Game3DCore extends Engine3DAdapter {
     _handleHUDAction(cmd) {
         if (cmd === 'retryLevel') this._retryLevel();
         if (cmd === 'quitToMenu') this._quitToMenu();
-        if (cmd === 'togglePause') this.togglePause();
+        if (cmd === 'togglePause') this.toggle();
     }
 
     _usesGenericHUD() {
@@ -372,8 +374,20 @@ export default class Game3DCore extends Engine3DAdapter {
             this.gameHUD.state._showGameOver = false;
             this.gameHUD.showScreen('main_hud');
         }
-        this.mode?.dispose?.();
-        await this.initCore();
+        // Recreate the active mode from its class (initCore would rebuild every
+        // shared system on the same container and spawn a duplicate canvas).
+        if (this.mode) {
+            this.mode.dispose?.();
+            this.mode = null;
+        }
+        if (this._modeClass) {
+            await this.setMode(new this._modeClass());
+        }
+        // Reload the last loaded level and restart the loop.
+        if (this._lastLevelData) {
+            await this.loadLevel3D(this._lastLevelData);
+        }
+        this._startLoop();
     }
 
     _loop(timestamp) {

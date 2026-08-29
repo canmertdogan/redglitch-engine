@@ -204,8 +204,8 @@ class IsoCombatSystem {
                             proj.active = false;
                             
                             // Visual feedback
-                            if (this.game.spawnParticle) {
-                                this.game.spawnParticle(ent.x, ent.y, 0, 0, '#ff0000', 0.5, 4);
+                            if (this.game.fx && this.game.fx.play) {
+                                this.game.fx.play('hit', ent.x, ent.y, 0);
                             }
                             
                             break; // One hit per projectile
@@ -318,8 +318,7 @@ class IsoCombatSystem {
                 if (abilityId === 'teleport') {
                     const dir = this.getDirectionToMouse();
                     const tile = abilityDef.maxDistance || 10;
-                    const ts = this.game.TILE_SIZE || 32;
-                    const dist = tile * ts;
+                    const dist = tile; // player coordinates are in tile units
                     if (isFinite(dist) && isFinite(dir.x) && isFinite(dir.y)) {
                         this.game.player.x += dir.x * dist;
                         this.game.player.y += dir.y * dist;

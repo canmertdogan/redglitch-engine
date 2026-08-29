@@ -114,6 +114,7 @@ createDefinitionRoutes('npcs', 'npcs.json');
 createDefinitionRoutes('items', 'items.json');
 createDefinitionRoutes('enemies', 'enemies.json');
 createDefinitionRoutes('skills', 'skills.json');
+createDefinitionRoutes('variables', 'variables.json');
 
 // --- FX SYSTEM API ---
 router.get('/fx/list', async (req, res) => {

@@ -560,7 +560,7 @@ export default class PlatformerMode extends ModeInterface {
     _setPlayerPosition(x, y, z) {
         this.charController?.teleport?.(x, y, z);
         if (this.playerChar?.mesh) {
-            this.playerChar.mesh.position.set(0, 0, 0);
+            this.playerChar.mesh.position.set(x, y, z);
         }
     }
 
@@ -722,11 +722,6 @@ export default class PlatformerMode extends ModeInterface {
             const body = game.physics.createBody(bodyConfig);
 
             if (body?.body) {
-                if (isCustomShape) {
-                    body.body.collisionResponse = false;
-                    body.body.collisionFilterGroup = 0;
-                    body.body.collisionFilterMask = 0;
-                }
                 // Set rotation on the CANNON.js body
                 if (Array.isArray(def.rotation) && def.rotation.length === 4) {
                     body.body.quaternion.set(

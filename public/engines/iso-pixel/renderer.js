@@ -47,7 +47,7 @@ class IsoRenderer {
         this.renderList.sort((a, b) => a.depth - b.depth);
 
         this.ctx.save();
-        this.ctx.translate(this.canvas.width / 2 - this.camera.x, this.canvas.height / 4 - this.camera.y);
+        this.ctx.translate(this.canvas.width / 2 + this.camera.x, this.canvas.height / 4 + this.camera.y);
         this.ctx.scale(this.camera.zoom, this.camera.zoom);
 
         this.renderList.forEach(item => {

@@ -366,9 +366,11 @@ class IsoStrategy {
         // Reuse render queue array (avoid allocation)
         this.renderQueue.length = 0;
 
-        // Depth weight: z must dominate lateral position so elevated tiles always
-        // draw on top of lower tiles, regardless of chunk boundaries.
-        const zWeight = (map.width + map.height + 2);
+        // Depth weight: lateral position (x + y) is the primary iso depth axis.
+        // z (elevation) is only a small tiebreaker so elevated tiles order correctly
+        // within the same column WITHOUT overpowering the lateral sort (which made
+        // tall tiles behind the player render on top of it).
+        const zWeight = 0.01;
 
         // 1. Add all visible tiles to the queue individually (correct z-ordering).
         //    Per-tile rendering instead of chunk bitmaps fixes cross-chunk z glitches.
@@ -457,10 +459,20 @@ class IsoStrategy {
                 if (item.type === 'd') {
                     this.drawObject(ctx, item.data, pos.x, pos.y, dims, config, state, sprites);
                 } else if (item.type === 'e') {
-                    if (item.data.isWorm && item.data.history) {
-                        this.drawWorm(ctx, item.data, dims, sprites);
-                    } else if (sprites && sprites[item.data.animState]) {
-                        this.drawCharacter(ctx, item.data, pos.x, pos.y, dims, sprites);
+                    if (item.data.isPlayer) {
+                        if (item.data.isWorm && item.data.history) {
+                            this.drawWorm(ctx, item.data, dims, sprites);
+                        } else if (sprites && sprites[item.data.animState]) {
+                            this.drawCharacter(ctx, item.data, pos.x, pos.y, dims, sprites);
+                        } else {
+                            ctx.fillStyle = item.data.color || '#ff0000';
+                            const pH = dims.h * 1.5;
+                            ctx.fillRect(pos.x - 8, pos.y - pH, 16, pH);
+                        }
+                    } else if (typeof item.data.draw === 'function') {
+                        // NPCs/enemies render themselves via their own draw() (handles
+                        // projection internally), interleaved in the depth-sorted queue.
+                        item.data.draw(ctx, this, config, tileset, sprites);
                     } else {
                         ctx.fillStyle = item.data.color || '#ff0000';
                         const pH = dims.h * 1.5;

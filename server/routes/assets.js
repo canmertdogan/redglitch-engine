@@ -95,6 +95,89 @@ router.post('/upload', async (req, res) => {
     }
 });
 
+// POST /api/assets/import - Import an asset from a base64 data URL (used by asset_manager.html)
+router.post('/import', async (req, res) => {
+    const { name, data, type } = req.body;
+    if (!name || !data) return res.status(400).json({ error: 'Missing name or data' });
+
+    try {
+        const activeProject = projectService.getActiveProject();
+        const assetPath = path.join('assets', name);
+        const fullPath = resolveUnderRoot(activeProject, assetPath);
+
+        if (!fullPath) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        await fs.mkdir(path.dirname(fullPath), { recursive: true });
+
+        // Strip any data URL prefix (data:<mime>;base64,...) to get raw base64
+        const base64Data = String(data).replace(/^data:[^;]*;base64,/, '');
+        await safeFs.safeWriteFullPath(activeProject, fullPath, base64Data, 'base64');
+
+        // Refresh the registry so the new file is discoverable
+        try { await assetRegistry.rebuild(); } catch (e) { /* non-fatal */ }
+
+        console.log(`[AssetManager] Imported: ${assetPath}`);
+        res.json({
+            success: true,
+            asset: {
+                id: assetPath,
+                name,
+                path: assetPath,
+                type: type || 'other'
+            }
+        });
+    } catch (error) {
+        console.error('[AssetManager:Import] Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/assets/export - Export the asset registry as a downloadable JSON manifest blob
+router.post('/export', async (req, res) => {
+    try {
+        const data = await assetRegistry.getRegistry();
+        const manifest = {
+            exportedAt: new Date().toISOString(),
+            assets: Array.isArray(data) ? data : (data.assets || [])
+        };
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', 'attachment; filename="assets-export.json"');
+        res.send(JSON.stringify(manifest, null, 2));
+    } catch (error) {
+        console.error('[AssetManager:Export] Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/background/upload - Save a generated background (base64 data URL) to the project
+router.post('/background/upload', async (req, res) => {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'No image provided' });
+
+    try {
+        const activeProject = projectService.getActiveProject();
+        const assetPath = path.join('assets', 'background.gif');
+        const fullPath = resolveUnderRoot(activeProject, assetPath);
+
+        if (!fullPath) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        await fs.mkdir(path.dirname(fullPath), { recursive: true });
+
+        const base64Data = String(image).replace(/^data:[^;]*;base64,/, '');
+        await safeFs.safeWriteFullPath(activeProject, fullPath, base64Data, 'base64');
+
+        console.log(`[AssetManager] Background saved: ${assetPath}`);
+        res.json({ success: true, path: assetPath });
+    } catch (error) {
+        console.error('[AssetManager:Background] Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.post('/save-spritesheet', async (req, res) => {
     try {
         const dataUrl = req.body.image;

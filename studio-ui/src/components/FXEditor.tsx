@@ -93,7 +93,7 @@ const FXEditor: React.FC = () => {
                 const names = await res.json();
                 if (names.length > 0) {
                     const loaded = await Promise.all(names.map(async (n: string) => {
-                        const r = await fetch(`/api/data/fx/${n}.json`);
+                        const r = await fetch(`/api/fx/${n}`);
                         return r.ok ? await r.json() : null;
                     }));
                     setEffects(loaded.filter(l => l !== null));

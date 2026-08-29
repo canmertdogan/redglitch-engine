@@ -1,5 +1,0 @@
-runs/
-node_modules/
-webui/dist/
-.env
-.vercel

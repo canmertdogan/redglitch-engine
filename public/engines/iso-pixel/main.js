@@ -1040,40 +1040,32 @@ class IsoGame {
             zoom: 1,
             activeLayer: 0, 
             showGrid: false,  // Disable grid in gameplay for performance
-            entities: [{
-                ...this.player,
-                x: this.player.renderX,
-                y: this.player.renderY,
-                z: this.player.renderZ
-            }]
+            entities: [
+                Object.assign({}, this.player, {
+                    x: this.player.renderX,
+                    y: this.player.renderY,
+                    z: this.player.renderZ,
+                    isPlayer: true
+                }),
+                ...(this.entities || []).map(e => Object.assign({}, e, {
+                    x: e.renderX ?? e.x,
+                    y: e.renderY ?? e.y,
+                    z: e.renderZ ?? e.z
+                }))
+            ]
         };
         
         this.strategy.render(ctx, this.levelMetadata, mockState, this.config, this.tileset, this.sprites);
         
-        // 1.5 Render Entities (NPCs/Enemies)
-        if (this.entities) {
-            ctx.save();
-            ctx.translate(targetCanvas.width / 2 + mockState.camX, targetCanvas.height / 4 + mockState.camY);
-            
-            // Sort entities by depth (painter's algorithm)
-            // Depth = (x + y) roughly in iso
-            this.entities.sort((a, b) => (a.renderX + a.renderY) - (b.renderX + b.renderY));
-            
-            for (const ent of this.entities) {
-                ent.draw(ctx, this.strategy, this.config, this.tileset, this.sprites);
-            }
-            ctx.restore();
-        }
-        
+
         // 1.6 Render Exit Decorations
         this._renderExits(ctx, mockState);
 
         // 2. FX World layer (particles in world space)
+        // NOTE: IsoFXSystem's projectFn already returns absolute screen coordinates,
+        // so renderWorld must NOT be wrapped in another camera translate.
         if (this.fx) {
-            ctx.save();
-            ctx.translate(targetCanvas.width / 2 + mockState.camX, targetCanvas.height / 4 + mockState.camY);
             this.fx.renderWorld(ctx);
-            ctx.restore();
         }
         
         // 2.5. Combat System (projectiles in world space)
@@ -1269,27 +1261,27 @@ class IsoGame {
     
     /** Configure bloom effect */
     setBloom(options) {
-        if (this.shaders) this.shaders.setBloom(options);
+        if (this.shaders) this.shaders.setBloom(options ? options.enabled !== false : false, options);
     }
-    
+
     /** Configure color grading */
     setColorGrade(options) {
-        if (this.shaders) this.shaders.setColorGrade(options);
+        if (this.shaders) this.shaders.setColorGrade(options ? options.enabled !== false : false, options);
     }
-    
+
     /** Configure vignette effect */
     setVignette(options) {
-        if (this.shaders) this.shaders.setVignette(options);
+        if (this.shaders) this.shaders.setVignette(options ? options.enabled !== false : false, options);
     }
-    
+
     /** Configure chromatic aberration */
     setChromaticAberration(options) {
-        if (this.shaders) this.shaders.setChromaticAberration(options);
+        if (this.shaders) this.shaders.setChromaticAberration(options ? options.enabled !== false : false, options && options.intensity);
     }
-    
+
     /** Configure film grain */
     setFilmGrain(options) {
-        if (this.shaders) this.shaders.setFilmGrain(options);
+        if (this.shaders) this.shaders.setFilmGrain(options ? options.enabled !== false : false, options && options.intensity);
     }
     
     /** Get shader capabilities */

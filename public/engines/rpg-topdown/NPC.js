@@ -33,6 +33,9 @@ window.NPC = class NPC {
         }
         
         this.def = def;
+        if (!this.def.behavior) {
+            this.def.behavior = { type: 'wander', range: 100, idleTime: 3.0 };
+        }
         this.name = def.name;
         this.range = def.interaction.range;
         this.speed = def.stats.speed;

@@ -723,7 +723,12 @@ export default class FPSMode extends ModeInterface {
 
     getPlayerData() {
         const playerPos = this.strategy?.getPlayerPosition() ?? null;
-        const playerQuat = this.fpsCamera ? { x: 0, y: 0, z: 0, w: 1 } : null;
+        let playerQuat = null;
+        if (this.fpsCamera) {
+            const yaw = this.fpsCamera._yaw ?? 0;
+            const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+            playerQuat = { x: q.x, y: q.y, z: q.z, w: q.w };
+        }
         return serialize3DPlayerState(
             playerPos
                 ? { position: { x: playerPos.x, y: playerPos.y, z: playerPos.z }, quaternion: playerQuat }

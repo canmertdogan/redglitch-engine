@@ -174,14 +174,6 @@ if (typeof window.IrabBridge === 'undefined') {
                 return false;
             }
 
-            // --- Phase 2: Active Focus ---
-            if (window.IrabStudioAPI && window.IrabStudioAPI.getActiveCode) {
-                const focusedCode = window.IrabStudioAPI.getActiveCode();
-                if (focusedCode) {
-                    context.focused_code = focusedCode;
-                }
-            }
-
             this.send({
                 type: "PROMPT",
                 data: text,

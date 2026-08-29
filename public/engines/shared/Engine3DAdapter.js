@@ -241,6 +241,31 @@ export default class Engine3DAdapter extends Engine3DBase {
         level.geometry  = level.geometry.map(_normalizeTransform);
         level.entities  = level.entities.map(_normalizeTransform);
 
+        // Normalize editor entity vocabulary into what the runtime modes expect.
+        // The editor emits generic types ('enemy', 'npc', 'collectible'); the
+        // runtime expects specific ones:
+        //  - platformer-3d requires enemy types starting with 'enemy_'
+        //  - CollectibleSystem3D switches on 'coin'/'star'/...
+        //  - FPS mode's EnemyAI consumes a separate `enemies` array.
+        const derivedEnemies = [];
+        for (const e of level.entities) {
+            if (!e || typeof e !== 'object') continue;
+            if (e.type === 'enemy') {
+                e.type = 'enemy_walker';
+                derivedEnemies.push({
+                    id: e.id,
+                    position: Array.isArray(e.position) ? e.position : [0, 0, 0],
+                    properties: e.properties || {},
+                    type: 'enemy_walker',
+                });
+            } else if (e.type === 'collectible') {
+                e.type = 'coin';
+            }
+        }
+        if (derivedEnemies.length) {
+            level.enemies = (Array.isArray(level.enemies) ? level.enemies : []).concat(derivedEnemies);
+        }
+
         const valid3D = ['unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'];
         if (!valid3D.includes(level.engineType)) {
             console.warn(`[Engine3DAdapter] Unknown engineType "${level.engineType}", proceeding anyway`);
@@ -367,7 +392,7 @@ export default class Engine3DAdapter extends Engine3DBase {
 
             let mat;
             if (def.textureId && atlas) {
-                atlas.applyBlockUVs(geo, data.textureId);
+                atlas.applyBlockUVs(geo, def.textureId);
                 mat = atlas.getMaterial(THREE);
             } else {
                 const color = _resolveColor(def, paletteManager);

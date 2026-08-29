@@ -176,8 +176,21 @@ window.onload = async () => {
             try {
                 const parsed = JSON.parse(saved);
                 charData = { ...charData, ...parsed };
+                loaded = true;
             } catch (e) { console.error("Load failed", e); }
         }
+    }
+
+    // Fallback: load persisted hero from the project file
+    if (!loaded) {
+        try {
+            const res = await fetch('/api/ide/read?file=' + encodeURIComponent('data/characters/hero.json'));
+            if (res.ok) {
+                const parsed = JSON.parse(await res.text());
+                charData = { ...charData, ...parsed };
+                loaded = true;
+            }
+        } catch (e) { console.warn('[character_editor] project load failed:', e.message); }
     }
 
     // 2. Load Images
@@ -364,12 +377,26 @@ function renderLoop(timestamp) {
 }
 
 // --- IO ---
+function persistToProject() {
+    return fetch('/api/ide/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            file: 'data/characters/hero.json',
+            content: JSON.stringify(charData, null, 2)
+        })
+    }).then(r => { if (!r.ok) throw new Error('project save failed'); });
+}
+
 window.saveToBrowser = function() {
     updateDataFromUI();
     localStorage.setItem('redglitch_character', JSON.stringify(charData));
     
     // Also save to shared state
     saveCharacterToState();
+
+    // Persist to the project so the hero survives across sessions
+    persistToProject().catch(e => console.warn('[character_editor] project save failed:', e.message));
     
     alert("SYSTEM UPDATED: HERO CONFIG SAVED.");
 };

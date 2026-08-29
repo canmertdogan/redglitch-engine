@@ -19,11 +19,9 @@ class PlatformerFlyingEnemy extends PlatformerEnemy {
     update(dt, map) {
         if (this.isDead) return;
 
-        if (this.behavior === 'patrol') {
+            if (this.behavior === 'patrol') {
             // Horizontal patrol
             this.vx = this.direction * this.speed;
-            const scale = Math.max(0, Math.min(dt * 60, 4));
-            this.x += this.vx * scale;
             
             // Bobbing motion (absolute)
             this.y = this.targetY + Math.sin(Date.now() * this.bobSpeed) * this.bobAmount;
@@ -48,8 +46,6 @@ class PlatformerFlyingEnemy extends PlatformerEnemy {
                 const scale = Math.max(0, Math.min(dt * 60, 4));
                 this.vx = (dx / dist) * this.speed;
                 this.vy = (dy / dist) * this.speed;
-                this.x += this.vx * scale;
-                this.y += this.vy * scale;
                 this.targetY = this.y; // Update patrol base
             } else {
                 this.behavior = 'patrol';

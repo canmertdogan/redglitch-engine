@@ -150,6 +150,25 @@ export default class FPSEditorPanel {
 
     onSerialize(data) {
         data.voxelGrid = this._voxelGrid;
+
+        // The runtime (Engine3DAdapter._populateGeometry) consumes `geometry` box
+        // meshes, not the editor-only `voxelGrid` dict. Convert each voxel cell into
+        // a box geometry entry so the FPS-built static world actually renders.
+        const boxes = [];
+        for (const key of Object.keys(this._voxelGrid || {})) {
+            const [x, y, z] = key.split(',').map(Number);
+            const block = this._voxelGrid[key];
+            const isTall = (block === 'wall' || block === 'pillar');
+            boxes.push({
+                id: `vox_${x}_${y}_${z}`,
+                type: 'box',
+                position: [x, y, z],
+                width: 1,
+                height: isTall ? 2 : 1,
+                depth: 1,
+            });
+        }
+        data.geometry = (Array.isArray(data.geometry) ? data.geometry : []).concat(boxes);
     }
 
     onModeChanged(mode) {

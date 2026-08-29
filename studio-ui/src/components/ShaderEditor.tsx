@@ -1656,8 +1656,8 @@ const ShaderEditor: React.FC = () => {
                 const names = await res.json();
                 if (names.length > 0) {
                     const loaded = await Promise.all(names.map(async (n: string) => {
-                        const r = await fetch(`/api/data/shaders/${n}.json`);
-                        return r.ok ? await r.json() : null;
+                        const r = await fetch(`/api/shaders/${n}`);
+                        return r.ok ? await r.text() : null;
                     }));
                     setShaders(loaded.filter(l => l !== null));
                 } else {

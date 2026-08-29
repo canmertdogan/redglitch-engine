@@ -301,7 +301,7 @@ window.Core = class Core {
         await this.dialogueSystem.init();
         await this.questSystem.init();
         this.achievementSystem.unlock('START_GAME');
-        if (isNewGame) { this.player.hp = 100; this.player.mana = 50; this.player.stamina = 100; this.currentLevel = 1; if (!skipInitialLevelLoad) await this.loadLevel(this.currentLevel); } 
+        if (isNewGame) { this.player.hp = 100; this.player.maxHp = 100; this.player.mana = 50; this.player.maxMana = 50; this.player.stamina = 100; this.player.maxStamina = 100; this.currentLevel = 1; if (!skipInitialLevelLoad) await this.loadLevel(this.currentLevel); } 
         else { const data = await this.saveSystem.load(playerName, 1); if (data) { this.currentLevel = data.level; this.currentLevelId = data.currentLevelId || this.currentLevelId; this.player.hp = data.player.hp; this.player.maxHp = data.player.maxHp; this.player.mana = data.player.mana; this.player.maxMana = data.player.maxMana !== undefined ? data.player.maxMana : this.player.maxMana; this.player.stamina = data.player.stamina; this.player.maxStamina = data.player.maxStamina !== undefined ? data.player.maxStamina : this.player.maxStamina; this.inventory = data.inventory || []; this.activeSkills = data.activeSkills || [null,null,null,null]; await this.loadLevel(this.currentLevel); this.player.x = data.player.x; this.player.y = data.player.y; this.player.direction = data.player.direction !== undefined ? data.player.direction : this.player.direction; this.updateInventoryHUD(); this.updateSkillHUD(); } else await this.start(playerName, true, options); }
         requestAnimationFrame(this.gameLoop.bind(this)); for(let i=0; i<300; i++) this.player.history.push({ x: this.player.x, y: this.player.y, dir: this.player.direction });
     }
@@ -809,7 +809,7 @@ window.Core = class Core {
 
         if (!applied) return;
 
-        p.mana -= skill.mana;
+        p.mana -= (skill.mana || 0);
         const cdVal = skill.cooldown || 0.5;
         if (basic) p.basicCooldown = cdVal;
         else p.skillCooldowns[slotIdx] = cdVal;
@@ -960,8 +960,6 @@ window.Core = class Core {
         if (this.aimCursor) { const cs = 40; this.ctx.drawImage(this.targetSprite, this.aimCursor.x - cs/2, this.aimCursor.y - cs/2, cs, cs); }
         
         if (this.fx) {
-            this.fx.renderWeather(viewX, viewY);
-            
             // Lighting
             const lights = this.renderLights;
             lights.length = 0;
@@ -1008,8 +1006,9 @@ window.Core = class Core {
             this.lastTime = ts;
             
             // Phase 16: Time Scale
-            if (this.timeScale !== undefined) {
-                dt *= this.timeScale;
+            const timeScale = this.timeScale !== undefined ? this.timeScale : window.engineTimeScale;
+            if (timeScale !== undefined) {
+                dt *= timeScale;
             }
 
             // Safety cap to prevent "Spiral of Death" on lag spikes (e.g. tab switching)

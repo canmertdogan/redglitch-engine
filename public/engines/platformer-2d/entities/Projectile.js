@@ -22,15 +22,27 @@ class PlatformerProjectile extends PlatformerEntity {
         if (this.lifetime <= 0) this.isDead = true;
 
         const scale = Math.max(0, Math.min(dt * 60, 4));
-        this.x += this.vx * scale;
-        this.y += this.vy * scale;
-
-        // Simple tile collision for projectiles
         const ts = window.game?.tileSize || window.PlatformerConfig?.TILE_SIZE || 32;
-        const tx = Math.floor((this.x + this.w/2) / ts);
-        const ty = Math.floor((this.y + this.h/2) / ts);
-        if (window.game?.physics.getTile(map, tx, ty) === 1) {
-            this.onHitWall();
+        const physics = window.game?.physics;
+        const dx = this.vx * scale;
+        const dy = this.vy * scale;
+
+        // Sub-step sweep so fast projectiles can't tunnel through walls
+        const dist = Math.hypot(dx, dy);
+        const steps = Math.max(1, Math.ceil(dist / (ts * 0.5)));
+        const sx = dx / steps;
+        const sy = dy / steps;
+        for (let i = 0; i < steps; i++) {
+            this.x += sx;
+            this.y += sy;
+            if (physics) {
+                const tx = Math.floor((this.x + this.w / 2) / ts);
+                const ty = Math.floor((this.y + this.h / 2) / ts);
+                if (physics.getTile(map, tx, ty) === 1) {
+                    this.onHitWall();
+                    return;
+                }
+            }
         }
     }
 

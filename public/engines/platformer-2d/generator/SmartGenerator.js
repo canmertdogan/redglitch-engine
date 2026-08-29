@@ -215,7 +215,7 @@ class SmartGenerator {
         cy -= 6;
         this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 4, ctx.layers);
         
-        while (cx > spawn.x) {
+        while (cx > spawn.x + 12) {
             cx -= (8 + Math.floor(ctx.diffFactor * 2));
             this.placePlatform(ctx.collision, ctx.width, cx, cy+1, 6, ctx.layers);
             if (Math.random() > 0.5) ctx.entities.push({ x: cx + 2, y: cy - 1, type: 'enemy' });

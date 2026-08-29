@@ -1050,8 +1050,8 @@ window.IsoFXSystem = class IsoFXSystem {
             if (!light.active) return;
             
             const pos = projectFn(light.x, light.y, light.z, dims);
-            const screenX = pos.x + this.width/2 + camX;
-            const screenY = pos.y + this.height/4 + camY;
+            const screenX = pos.x;
+            const screenY = pos.y;
             const rgb = light.getRGB();
             
             // Cut light hole in darkness
@@ -1069,8 +1069,8 @@ window.IsoFXSystem = class IsoFXSystem {
             if (!light.active) return;
             
             const pos = projectFn(light.x, light.y, light.z, dims);
-            const screenX = pos.x + this.width/2 + camX;
-            const screenY = pos.y + this.height/4 + camY;
+            const screenX = pos.x;
+            const screenY = pos.y;
             
             // Convert world size to screen size (approximate)
             const screenW = light.width * (dims.w || 32);
@@ -1088,8 +1088,8 @@ window.IsoFXSystem = class IsoFXSystem {
         // Draw legacy lights (for backwards compatibility)
         this.lights.forEach(light => {
             const pos = projectFn(light.x, light.y, light.z, dims);
-            const screenX = pos.x + this.width/2 + camX;
-            const screenY = pos.y + this.height/4 + camY;
+            const screenX = pos.x;
+            const screenY = pos.y;
             const r = light.radius * (1 + (light.flicker || 0));
             
             // Simple smooth falloff for legacy lights
@@ -1125,8 +1125,8 @@ window.IsoFXSystem = class IsoFXSystem {
             if (!light.active) return;
             
             const pos = projectFn(light.x, light.y, light.z, dims);
-            const screenX = pos.x + this.width/2 + camX;
-            const screenY = pos.y + this.height/4 + camY;
+            const screenX = pos.x;
+            const screenY = pos.y;
             const rgb = light.getRGB();
             const r = light._currentRadius * 0.7;
             
@@ -1157,8 +1157,8 @@ window.IsoFXSystem = class IsoFXSystem {
         this.lights.forEach(light => {
             if (!light.color) return;
             const pos = projectFn(light.x, light.y, light.z, dims);
-            const screenX = pos.x + this.width/2 + camX;
-            const screenY = pos.y + this.height/4 + camY;
+            const screenX = pos.x;
+            const screenY = pos.y;
             const r = light.radius * (1 + (light.flicker || 0));
             
             const grad = this.ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, r * 0.7);
@@ -1233,8 +1233,8 @@ window.IsoFXSystem = class IsoFXSystem {
         
         this.lights.forEach(light => {
             const pos = projectFn(light.x, light.y, light.z, dims);
-            const screenX = pos.x + this.width/2 + camX;
-            const screenY = pos.y + this.height/4 + camY;
+            const screenX = pos.x;
+            const screenY = pos.y;
             const r = light.radius * (1 + light.flicker);
             
             const grad = lCtx.createRadialGradient(screenX, screenY, r * 0.1, screenX, screenY, r);
@@ -1276,8 +1276,8 @@ window.IsoFXSystem = class IsoFXSystem {
         this.lights.forEach(light => {
             if (!light.color) return;
             const pos = projectFn(light.x, light.y, light.z, dims);
-            const screenX = pos.x + this.width/2 + camX;
-            const screenY = pos.y + this.height/4 + camY;
+            const screenX = pos.x;
+            const screenY = pos.y;
             const r = light.radius * (1 + light.flicker);
             
             const grad = this.ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, r * 0.7);

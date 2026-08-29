@@ -381,6 +381,25 @@ window.LogicRuntime = class LogicRuntime {
         }
     }
 
+    playMusic(name, volume = 0.5) {
+        if (this.game.audio) {
+            this.game.audio.playMusic(name, volume);
+        }
+    }
+
+    drawDebugLine(x1, y1, x2, y2, color = '#ff0000') {
+        const ctx = this.game && this.game.ctx;
+        if (!ctx) return;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
     // ============================================
     // DIALOGUE & UI
     // ============================================
