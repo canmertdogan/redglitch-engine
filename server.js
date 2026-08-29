@@ -223,7 +223,7 @@ app.get('/base_game/sprites.js', serveMergedSprites);
 
 // Path-traversal-safe overlay handlers. A request path like
 // /dunyalar/../../etc/passwd must never escape the intended directory.
-const { makeOverlayHandler } = require('./utils/overlayHandler');
+const { makeOverlayHandler } = require('./server/utils/overlayHandler');
 const overlayHandler = makeOverlayHandler(projectService);
 
 app.use('/engines', overlayHandler('engines', 'engines', true));
