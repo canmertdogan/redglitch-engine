@@ -2148,7 +2148,7 @@ export default class Editor3DCore {
             }
         }
         const playerSpawn = data.entities.find(ent =>
-            ent.type === 'player-spawn' || ent.type === 'player_spawn' || ent.properties?.studio === 'player'
+            ent.type === 'player-spawn' || ent.type === 'player_spawn' || ent.type === 'spawn' || ent.properties?.studio === 'player'
         );
         if (playerSpawn?.position) {
             data.playerSpawn = {

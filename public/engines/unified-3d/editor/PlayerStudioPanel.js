@@ -126,7 +126,7 @@ export default class PlayerStudioPanel {
 
     onSerialize(data) {
         const spawn = (data.entities || []).find(ent =>
-            ent.type === 'player-spawn' || ent.type === 'player_spawn' || ent.properties?.studio === 'player'
+            ent.type === 'player-spawn' || ent.type === 'player_spawn' || ent.type === 'spawn' || ent.properties?.studio === 'player'
         );
         if (!spawn?.position) return;
         data.playerSpawn = { x: spawn.position[0], y: spawn.position[1], z: spawn.position[2] };

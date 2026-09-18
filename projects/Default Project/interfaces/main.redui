@@ -31,493 +31,428 @@
     "main_hud": {
       "elements": [
         {
-          "id": "hud_core_panel",
+          "id": "hud_vitals_panel",
           "type": "panel",
           "rect": {
             "x": 12,
             "y": 12,
-            "w": 250,
-            "h": 86
+            "w": 236,
+            "h": 96
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(5,7,13,0.78)",
+            "backgroundColor": "rgba(20,24,38,0.82)",
             "borderWidth": 2,
-            "borderColor": "#ff3147",
-                        "boxShadow": "inset 0 0 0 2px rgba(255,255,255,0.04), 4px 4px 0 rgba(0,0,0,0.65), 0 0 18px rgba(255,49,71,0.22)",
-            "zIndex": 10
+            "borderColor": "#000",
+            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,.10), inset -2px -2px 0 rgba(0,0,0,.45), 3px 3px 0 rgba(0,0,0,.6)",
+            "zIndex": 95
           }
         },
         {
           "id": "hud_player_name",
           "type": "label",
-          "text": "REDGLITCH // LV {player.level}",
+          "text": "LV {player.level}",
           "rect": {
             "x": 22,
             "y": 18,
-            "w": 170,
-            "h": 18
+            "w": 216,
+            "h": 14
           },
           "anchor": "top-left",
           "style": {
             "color": "#ffd36a",
-            "fontSize": 16,
-            "fontWeight": "700",
-            "letterSpacing": 0,
+            "fontSize": 12,
+            "fontWeight": "400",
+            "letterSpacing": 1,
             "textShadow": "2px 2px 0 #000",
-            "zIndex": 12
+            "zIndex": 96
           }
         },
         {
           "id": "hud_hp_bar",
           "type": "bar",
-          "text": "HP {player.hp}/{player.maxHp}",
+          "text": "HP",
           "rect": {
             "x": 22,
-            "y": 40,
-            "w": 228,
-            "h": 16
+            "y": 36,
+            "w": 216,
+            "h": 18
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#07090f",
+            "backgroundColor": "#0b0d14",
             "borderWidth": 2,
-            "borderColor": "#5a1f2b",
-                        "fontSize": 12,
-            "color": "#ffffff",
-            "boxShadow": "inset 0 0 0 1px #000",
-            "zIndex": 12
+            "borderColor": "#000",
+            "fontSize": 11,
+            "fontWeight": "700",
+            "color": "#fff",
+            "zIndex": 96
           },
           "props": {
             "variable": "player.hp",
             "maxVariable": "player.maxHp",
-            "fillColor": "#ff3147",
+            "fillColor": "#e23b4e",
+            "ticks": 10,
             "flashOnDamage": true
           }
         },
         {
           "id": "hud_mp_bar",
           "type": "bar",
-          "text": "MP {player.mana}/{player.maxMana}",
+          "text": "MP",
           "rect": {
             "x": 22,
-            "y": 60,
-            "w": 156,
+            "y": 58,
+            "w": 105,
             "h": 12
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#07090f",
+            "backgroundColor": "#0b0d14",
             "borderWidth": 2,
-            "borderColor": "#1b5261",
-                        "fontSize": 10,
-            "color": "#ffffff",
-            "zIndex": 12
+            "borderColor": "#000",
+            "fontSize": 10,
+            "fontWeight": "700",
+            "color": "#fff",
+            "zIndex": 96
           },
           "props": {
             "variable": "player.mana",
             "maxVariable": "player.maxMana",
-            "fillColor": "#49e3ff"
+            "fillColor": "#3aa6e0",
+            "ticks": 8
           }
         },
         {
           "id": "hud_st_bar",
           "type": "bar",
-          "text": "ST {player.stamina}/{player.maxStamina}",
+          "text": "ST",
           "rect": {
-            "x": 22,
-            "y": 76,
-            "w": 156,
+            "x": 133,
+            "y": 58,
+            "w": 105,
             "h": 12
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#07090f",
+            "backgroundColor": "#0b0d14",
             "borderWidth": 2,
-            "borderColor": "#245331",
-                        "fontSize": 10,
-            "color": "#ffffff",
-            "zIndex": 12
+            "borderColor": "#000",
+            "fontSize": 10,
+            "fontWeight": "700",
+            "color": "#fff",
+            "zIndex": 96
           },
           "props": {
             "variable": "player.stamina",
             "maxVariable": "player.maxStamina",
-            "fillColor": "#62ff9a"
+            "fillColor": "#54c46a",
+            "ticks": 8
           }
         },
         {
-          "id": "hud_xp_chip",
-          "type": "label",
-          "text": "XP {player.xp}",
-          "rect": {
-            "x": 188,
-            "y": 60,
-            "w": 62,
-            "h": 28
-          },
-          "anchor": "top-left",
-          "style": {
-            "backgroundColor": "rgba(184,108,255,0.18)",
-            "borderWidth": 2,
-            "borderColor": "#b86cff",
-                        "color": "#d9c1ff",
-            "fontSize": 14,
-            "textAlign": "center",
-            "fontWeight": "700",
-            "boxShadow": "2px 2px 0 #000",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "hud_signal_panel",
+          "id": "hud_comms_panel",
           "type": "panel",
           "rect": {
             "x": 12,
             "y": 12,
-            "w": 174,
-            "h": 74
+            "w": 176,
+            "h": 64
           },
           "anchor": "top-right",
           "style": {
-            "backgroundColor": "rgba(5,7,13,0.74)",
+            "backgroundColor": "rgba(20,24,38,0.82)",
             "borderWidth": 2,
-            "borderColor": "#ffd36a",
-                        "boxShadow": "4px 4px 0 rgba(0,0,0,0.65), 0 0 18px rgba(255,211,106,0.2)",
-            "zIndex": 10
+            "borderColor": "#000",
+            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,.10), inset -2px -2px 0 rgba(0,0,0,.45), 3px 3px 0 rgba(0,0,0,.6)",
+            "zIndex": 95
           }
         },
         {
           "id": "hud_time",
           "type": "label",
-          "text": "TIME {gameTimeFormatted}",
+          "text": "{gameTimeFormatted}",
           "rect": {
-            "x": 22,
-            "y": 20,
-            "w": 154,
-            "h": 18
+            "x": 148,
+            "y": 18,
+            "w": 150,
+            "h": 14
           },
           "anchor": "top-right",
           "style": {
             "color": "#ffd36a",
-            "fontSize": 16,
+            "fontSize": 13,
             "textAlign": "right",
-            "fontWeight": "700",
+            "fontWeight": "400",
+            "letterSpacing": 1,
             "textShadow": "2px 2px 0 #000",
-            "zIndex": 12
+            "zIndex": 96
           }
         },
         {
           "id": "hud_coins",
           "type": "label",
-          "text": "CR {player.coins}",
+          "text": "{player.coins} CR",
           "rect": {
-            "x": 22,
+            "x": 148,
             "y": 42,
-            "w": 154,
-            "h": 16
+            "w": 150,
+            "h": 12
           },
           "anchor": "top-right",
           "style": {
-            "color": "#62ff9a",
-            "fontSize": 14,
-            "textAlign": "right",
-            "textShadow": "2px 2px 0 #000",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "hud_zone",
-          "type": "label",
-          "text": "ZONE // ACTIVE",
-          "rect": {
-            "x": 22,
-            "y": 60,
-            "w": 154,
-            "h": 14
-          },
-          "anchor": "top-right",
-          "style": {
-            "color": "#49e3ff",
+            "color": "#54c46a",
             "fontSize": 12,
             "textAlign": "right",
+            "fontWeight": "400",
+            "letterSpacing": 1,
             "textShadow": "2px 2px 0 #000",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "hud_hotbar_back",
-          "type": "panel",
-          "rect": {
-            "x": 0,
-            "y": 14,
-            "w": 640,
-            "h": 58
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "backgroundColor": "rgba(5,7,13,0.72)",
-            "borderWidth": 2,
-            "borderColor": "#3d4b68",
-                        "boxShadow": "4px 4px 0 rgba(0,0,0,0.68), inset 0 0 0 2px rgba(255,255,255,0.04)",
-            "zIndex": 10
-          }
-        },
-        {
-          "id": "slot_1",
-          "type": "slot",
-          "text": "1",
-          "rect": {
-            "x": -164,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 18,
-            "color": "#ffd36a",
-            "borderColor": "#ffd36a",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "slot_2",
-          "type": "slot",
-          "text": "2",
-          "rect": {
-            "x": -116,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 18,
-            "color": "#ffd36a",
-            "borderColor": "#ffd36a",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "slot_3",
-          "type": "slot",
-          "text": "3",
-          "rect": {
-            "x": -68,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 18,
-            "color": "#ffd36a",
-            "borderColor": "#ffd36a",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "slot_4",
-          "type": "slot",
-          "text": "4",
-          "rect": {
-            "x": -20,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 18,
-            "color": "#ffd36a",
-            "borderColor": "#ffd36a",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "skill_1",
-          "type": "slot",
-          "text": "Q",
-          "rect": {
-            "x": 42,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 18,
-            "color": "#49e3ff",
-            "borderColor": "#49e3ff",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "skill_2",
-          "type": "slot",
-          "text": "E",
-          "rect": {
-            "x": 90,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 18,
-            "color": "#49e3ff",
-            "borderColor": "#49e3ff",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "skill_3",
-          "type": "slot",
-          "text": "R",
-          "rect": {
-            "x": 138,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 18,
-            "color": "#49e3ff",
-            "borderColor": "#49e3ff",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "power_1",
-          "type": "slot",
-          "text": "ULT",
-          "rect": {
-            "x": 196,
-            "y": 24,
-            "w": 36,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 12,
-            "color": "#b86cff",
-            "borderColor": "#b86cff",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "power_2",
-          "type": "slot",
-          "text": "SPC",
-          "rect": {
-            "x": 244,
-            "y": 24,
-            "w": 36,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 12,
-            "color": "#b86cff",
-            "borderColor": "#b86cff",
-            "zIndex": 12
-          }
-        },
-        {
-          "id": "power_3",
-          "type": "slot",
-          "text": "BOOST",
-          "rect": {
-            "x": 292,
-            "y": 24,
-            "w": 42,
-            "h": 42
-          },
-          "anchor": "bottom-center",
-          "style": {
-            "fontSize": 12,
-            "color": "#b86cff",
-            "borderColor": "#b86cff",
-            "zIndex": 12
+            "zIndex": 96
           }
         },
         {
           "id": "hud_pause_btn",
           "type": "button",
-          "text": "❚❚",
+          "text": "||",
           "rect": {
-            "x": 8,
-            "y": 8,
-            "w": 36,
-            "h": 36
+            "x": 112,
+            "y": 18,
+            "w": 30,
+            "h": 28
           },
           "anchor": "top-right",
           "style": {
-            "backgroundColor": "rgba(5,7,13,0.8)",
+            "backgroundColor": "rgba(20,24,38,0.9)",
             "borderWidth": 2,
-            "borderColor": "#ffd36a",
+            "borderColor": "#000",
             "color": "#ffd36a",
-            "fontSize": 16,
+            "fontSize": 12,
             "textAlign": "center",
-            "zIndex": 20
+            "zIndex": 97
           },
           "props": {},
           "script": "togglePause"
+        },
+        {
+          "id": "hud_invbar_panel",
+          "type": "panel",
+          "rect": {
+            "x": 0,
+            "y": -6,
+            "w": 384,
+            "h": 48
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "backgroundColor": "rgba(12,14,22,0.9)",
+            "borderWidth": 2,
+            "borderColor": "#000",
+            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,.08), inset -2px -2px 0 rgba(0,0,0,.5), 3px 3px 0 rgba(0,0,0,.6)",
+            "zIndex": 95
+          }
+        },
+        {
+          "id": "inv_1",
+          "type": "slot",
+          "text": "1",
+          "rect": {
+            "x": -147,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {}
+        },
+        {
+          "id": "inv_2",
+          "type": "slot",
+          "text": "2",
+          "rect": {
+            "x": -105,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {
+            "selected": true
+          }
+        },
+        {
+          "id": "inv_3",
+          "type": "slot",
+          "text": "3",
+          "rect": {
+            "x": -63,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {}
+        },
+        {
+          "id": "inv_4",
+          "type": "slot",
+          "text": "4",
+          "rect": {
+            "x": -21,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {}
+        },
+        {
+          "id": "inv_5",
+          "type": "slot",
+          "text": "5",
+          "rect": {
+            "x": 21,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {}
+        },
+        {
+          "id": "inv_6",
+          "type": "slot",
+          "text": "6",
+          "rect": {
+            "x": 63,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {}
+        },
+        {
+          "id": "inv_7",
+          "type": "slot",
+          "text": "7",
+          "rect": {
+            "x": 105,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {}
+        },
+        {
+          "id": "inv_8",
+          "type": "slot",
+          "text": "8",
+          "rect": {
+            "x": 147,
+            "y": -11,
+            "w": 38,
+            "h": 38
+          },
+          "anchor": "bottom-center",
+          "style": {
+            "color": "#fff",
+            "borderColor": "#000",
+            "zIndex": 96
+          },
+          "props": {}
         },
         {
           "id": "hud_objective_panel",
           "type": "panel",
           "rect": {
             "x": 12,
-            "y": 104,
-            "w": 250,
-            "h": 42
+            "y": 116,
+            "w": 236,
+            "h": 36
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(5,7,13,0.62)",
+            "backgroundColor": "rgba(20,24,38,0.82)",
             "borderWidth": 2,
-            "borderColor": "#3d4b68",
-                        "boxShadow": "3px 3px 0 rgba(0,0,0,0.6)",
-            "zIndex": 10
+            "borderColor": "#000",
+            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,.10), inset -2px -2px 0 rgba(0,0,0,.45), 3px 3px 0 rgba(0,0,0,.6)",
+            "zIndex": 95
           }
         },
         {
           "id": "hud_objective_label",
           "type": "label",
-          "text": "OBJ // FIND THE EXIT",
+          "text": "FIND THE EXIT",
           "rect": {
             "x": 22,
-            "y": 114,
-            "w": 230,
-            "h": 18
+            "y": 122,
+            "w": 220,
+            "h": 13
           },
           "anchor": "top-left",
           "style": {
             "color": "#f4f7ff",
-            "fontSize": 14,
-            "fontWeight": "700",
+            "fontSize": 11,
+            "fontWeight": "400",
+            "letterSpacing": 1,
             "textShadow": "2px 2px 0 #000",
-            "zIndex": 12
+            "zIndex": 96
           }
         },
         {
           "id": "hud_objective_sub",
           "type": "label",
-          "text": "ENEMIES DETECTED",
+          "text": "! ENEMIES DETECTED",
           "rect": {
             "x": 22,
-            "y": 132,
-            "w": 230,
-            "h": 12
+            "y": 138,
+            "w": 220,
+            "h": 11
           },
           "anchor": "top-left",
           "style": {
-            "color": "#ff3147",
+            "color": "#e23b4e",
             "fontSize": 10,
+            "fontWeight": "400",
+            "letterSpacing": 1,
             "textShadow": "2px 2px 0 #000",
-            "zIndex": 12
+            "zIndex": 96
           }
         }
       ]
@@ -553,7 +488,7 @@
             "backgroundColor": "rgba(10,15,26,0.96)",
             "borderWidth": 3,
             "borderColor": "#ffd36a",
-                        "boxShadow": "6px 6px 0 #000, 0 0 28px rgba(255,211,106,0.22)",
+            "boxShadow": "6px 6px 0 #000, 0 0 28px rgba(255,211,106,0.22)",
             "zIndex": 91
           }
         },
@@ -637,7 +572,8 @@
           },
           "script": "QUIT"
         }
-      ]
+      ],
+      "background": true
     },
     "inventory": {
       "elements": [
@@ -655,7 +591,7 @@
             "backgroundColor": "rgba(10,15,26,0.96)",
             "borderWidth": 3,
             "borderColor": "#49e3ff",
-                        "boxShadow": "6px 6px 0 #000, 0 0 30px rgba(73,227,255,0.2)",
+            "boxShadow": "6px 6px 0 #000, 0 0 30px rgba(73,227,255,0.2)",
             "zIndex": 70
           }
         },
@@ -692,7 +628,7 @@
             "backgroundColor": "rgba(0,0,0,0.24)",
             "borderWidth": 2,
             "borderColor": "#263852",
-                        "zIndex": 71
+            "zIndex": 71
           }
         },
         {
@@ -709,7 +645,7 @@
             "backgroundColor": "rgba(0,0,0,0.32)",
             "borderWidth": 2,
             "borderColor": "#3d4b68",
-                        "zIndex": 71
+            "zIndex": 71
           }
         },
         {
@@ -801,7 +737,8 @@
           },
           "script": "CLOSE_MENU"
         }
-      ]
+      ],
+      "background": true
     },
     "dialogue_box": {
       "elements": [
@@ -819,7 +756,7 @@
             "backgroundColor": "rgba(5,7,13,0.92)",
             "borderWidth": 3,
             "borderColor": "#ffd36a",
-                        "boxShadow": "5px 5px 0 #000, 0 0 24px rgba(255,211,106,0.18)",
+            "boxShadow": "5px 5px 0 #000, 0 0 24px rgba(255,211,106,0.18)",
             "zIndex": 60
           }
         },
@@ -837,7 +774,7 @@
           "style": {
             "backgroundColor": "#ffd36a",
             "borderWidth": 0,
-                        "color": "#05070d",
+            "color": "#05070d",
             "fontSize": 18,
             "textAlign": "center",
             "fontWeight": "700",
@@ -881,7 +818,8 @@
             "zIndex": 61
           }
         }
-      ]
+      ],
+      "background": true
     },
     "gameover": {
       "elements": [
@@ -1018,7 +956,7 @@
             "backgroundColor": "rgba(10,15,26,0.94)",
             "borderWidth": 3,
             "borderColor": "#ffd36a",
-                        "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(255,211,106,0.2)",
+            "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(255,211,106,0.2)",
             "zIndex": 1
           }
         },
@@ -1036,7 +974,7 @@
             "backgroundColor": "rgba(10,15,26,0.94)",
             "borderWidth": 3,
             "borderColor": "#49e3ff",
-                        "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(73,227,255,0.2)",
+            "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(73,227,255,0.2)",
             "zIndex": 1
           }
         },
@@ -1054,7 +992,7 @@
             "backgroundColor": "rgba(10,15,26,0.94)",
             "borderWidth": 3,
             "borderColor": "#ff3147",
-                        "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(255,49,71,0.2)",
+            "boxShadow": "5px 5px 0 #000, 0 0 18px rgba(255,49,71,0.2)",
             "zIndex": 1
           }
         },
@@ -1129,7 +1067,7 @@
             "backgroundColor": "#07090f",
             "borderWidth": 2,
             "borderColor": "#5a1f2b",
-                        "fontSize": 12,
+            "fontSize": 12,
             "color": "#fff",
             "zIndex": 1
           },
@@ -1154,7 +1092,7 @@
             "backgroundColor": "#07090f",
             "borderWidth": 2,
             "borderColor": "#1b5261",
-                        "fontSize": 12,
+            "fontSize": 12,
             "color": "#fff",
             "zIndex": 1
           },
@@ -1179,7 +1117,7 @@
             "backgroundColor": "#07090f",
             "borderWidth": 2,
             "borderColor": "#245331",
-                        "fontSize": 12,
+            "fontSize": 12,
             "color": "#fff",
             "zIndex": 1
           },

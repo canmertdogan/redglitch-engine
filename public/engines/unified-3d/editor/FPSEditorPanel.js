@@ -181,7 +181,7 @@ export default class FPSEditorPanel {
         const blockType = document.getElementById('fps-block-type')?.value || this._activeBlock;
         
         let blockVal = blockType;
-        if (tool === 'spawn') blockVal = 'spawn';
+        if (tool === 'spawn') blockVal = 'player-spawn';
         else if (tool === 'weapon') blockVal = 'weapon';
         else if (tool === 'enemy') blockVal = 'enemy';
         else if (tool === 'navmesh') blockVal = 'navmesh';
