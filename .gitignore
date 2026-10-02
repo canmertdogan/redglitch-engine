@@ -130,15 +130,3 @@ screenshots/
 
 # Generated reports / local screenshots
 engine-lockstep-report.json
-portfolio-screenshots/*
-!portfolio-screenshots/dashboard.png
-!portfolio-screenshots/3d_map_editor.png
-!portfolio-screenshots/prefab_builder.png
-!portfolio-screenshots/npc_editor.png
-!portfolio-screenshots/character_editor.png
-!portfolio-screenshots/node_logic_editor.png
-!portfolio-screenshots/dialogue_editor.png
-!portfolio-screenshots/pixel_art_editor.png
-!portfolio-screenshots/fx_editor.png
-!portfolio-screenshots/audio_studio.png
-!portfolio-screenshots/skill_editor.png
