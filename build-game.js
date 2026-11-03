@@ -168,7 +168,7 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.use(cors());
+app.use(cors({ origin: ['http://localhost:3000', 'null'] }));
 app.use(express.json({ limit: '50mb' }));
 const isElectron = process.versions.hasOwnProperty('electron');
 let userDataPath = isElectron ? path.join(require('electron').app.getPath('userData'), 'SaveData') : path.join(__dirname, 'saves');
@@ -177,11 +177,26 @@ app.use(express.static(path.join(__dirname, 'public')));
 const safeName = (s) => String(s).replace(/[^a-zA-Z0-9_-]/g, '');
 app.get('/api/save/:u/:s', (req, res) => {
     const f = path.join(userDataPath, safeName(req.params.u) + '_' + safeName(req.params.s) + '.json');
-    res.json(fs.existsSync(f) ? JSON.parse(fs.readFileSync(f)) : {});
+    try {
+        const raw = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null;
+        let data = {};
+        if (raw) {
+            try { data = JSON.parse(raw); } catch (e) { data = {}; }
+        }
+        res.json(data);
+    } catch (e) {
+        console.error('[BuildServer] Failed to read save:', e);
+        res.status(500).json({ error: 'Failed to read save' });
+    }
 });
 app.post('/api/save/:u/:s', (req, res) => {
-    fs.writeFileSync(path.join(userDataPath, safeName(req.params.u) + '_' + safeName(req.params.s) + '.json'), JSON.stringify(req.body));
-    res.json({ success: true });
+    try {
+        fs.writeFileSync(path.join(userDataPath, safeName(req.params.u) + '_' + safeName(req.params.s) + '.json'), JSON.stringify(req.body));
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[BuildServer] Failed to write save:', e);
+        res.status(500).json({ error: 'Failed to write save' });
+    }
 });
 app.listen(PORT, () => console.log(\`Game running on \${PORT}\`));
     `;
