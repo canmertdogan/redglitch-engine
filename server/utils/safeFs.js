@@ -1,6 +1,7 @@
 const fs = require('fs');
 const fsPromises = fs.promises;
 const path = require('path');
+const crypto = require('crypto');
 
 function getRealPathSync(p) {
     let current = p;
@@ -37,23 +38,27 @@ async function safeWriteFullPath(rootDir, fullPath, data, options) {
 
   // Keep a backup of the previous content (if any) so a crash/partial write
   // can't destroy the only good copy.
+  // Drop the preliminary stat() to eliminate the TOCTOU window between
+  // "does it exist?" and "copy it": copyFile itself will fail with ENOENT
+  // if there is nothing to back up, which we silently ignore.
   try {
-    const stat = await fsPromises.stat(full);
-    if (stat.isFile()) {
-      await fsPromises.copyFile(full, full + '.bak');
-    }
+    await fsPromises.copyFile(full, full + '.bak');
   } catch (e) {
-    // No existing file to back up — fine.
+    if (e.code !== 'ENOENT') {
+      console.error('[safeFs] Backup failed:', e.message);
+    }
   }
 
   // Atomic write: write to a temp sibling, then rename over the target so a
   // mid-write crash never leaves a half-written/truncated file behind.
-  const tmpPath = full + '.tmp.' + process.pid + '.' + Date.now() + '.tmp';
+  const tmpPath = full + '.tmp.' + crypto.randomUUID() + '.tmp';
   try {
     await fsPromises.writeFile(tmpPath, data, options);
     await fsPromises.rename(tmpPath, full);
   } catch (e) {
-    try { await fsPromises.unlink(tmpPath); } catch (_) {}
+    try { await fsPromises.unlink(tmpPath); } catch (cleanupErr) {
+      console.error('[safeFs] Failed to cleanup temp file:', cleanupErr.message);
+    }
     throw e;
   }
   return undefined;

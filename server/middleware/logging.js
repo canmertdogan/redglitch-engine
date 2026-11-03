@@ -8,7 +8,6 @@ function securityHeaders(req, res, next) {
 
 function requestLogger(req, res, next) {
     if (config.LOG_REQUESTS) {
-        // Skip noisy heartbeat/stat endpoints
         const noisyEndpoints = [
             '/api/system/stats',
             '/api/projects/current',
@@ -24,4 +23,27 @@ function requestLogger(req, res, next) {
     next();
 }
 
-module.exports = { securityHeaders, requestLogger };
+function stateMutationGuard(req, res, next) {
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+        return next();
+    }
+
+    const origin = req.headers.origin || req.headers.referer || '';
+    const allowedOrigins = ['http://localhost:3000', 'null', 'http://127.0.0.1:3000'];
+    const hasAllowedOrigin = allowedOrigins.some((allowed) => {
+        if (!allowed) return false;
+        if (allowed === 'null') return origin === 'null' || !origin;
+        return origin === allowed || origin.startsWith(allowed + '/');
+    });
+
+    if (!hasAllowedOrigin) {
+        return res.status(403).json({
+            error: 'Forbidden',
+            details: 'State mutation is not allowed from this origin.'
+        });
+    }
+
+    next();
+}
+
+module.exports = { securityHeaders, requestLogger, stateMutationGuard };

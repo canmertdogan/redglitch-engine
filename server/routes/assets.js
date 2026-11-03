@@ -20,7 +20,6 @@ router.get('/', async (req, res) => {
 
 // POST /api/assets/rebuild - Force a refresh of the registry
 router.post('/rebuild', async (req, res) => {
-    console.log('[AssetRegistry] Rebuild request received');
     try {
         const data = await assetRegistry.rebuild();
         res.json({ success: true, count: data.assets.length });
@@ -67,7 +66,15 @@ router.get('/list', async (req, res) => {
 // POST /api/assets/upload - Upload an asset (Binary/Base64 support)
 router.post('/upload', async (req, res) => {
     const { path: assetPath, content, isBase64 } = req.body;
-    if (!assetPath) return res.status(400).json({ error: 'No path provided' });
+    if (typeof assetPath !== 'string' || !assetPath.trim()) {
+        return res.status(400).json({ error: 'No path provided' });
+    }
+    if (typeof content !== 'string') {
+        return res.status(400).json({ error: 'Invalid content' });
+    }
+    if (typeof isBase64 !== 'boolean') {
+        return res.status(400).json({ error: 'Invalid isBase64 flag' });
+    }
 
     try {
         const activeProject = projectService.getActiveProject();
@@ -98,7 +105,9 @@ router.post('/upload', async (req, res) => {
 // POST /api/assets/import - Import an asset from a base64 data URL (used by asset_manager.html)
 router.post('/import', async (req, res) => {
     const { name, data, type } = req.body;
-    if (!name || !data) return res.status(400).json({ error: 'Missing name or data' });
+    if (typeof name !== 'string' || typeof data !== 'string') {
+        return res.status(400).json({ error: 'Missing name or data' });
+    }
 
     try {
         const activeProject = projectService.getActiveProject();
@@ -116,9 +125,8 @@ router.post('/import', async (req, res) => {
         await safeFs.safeWriteFullPath(activeProject, fullPath, base64Data, 'base64');
 
         // Refresh the registry so the new file is discoverable
-        try { await assetRegistry.rebuild(); } catch (e) { /* non-fatal */ }
+        try { await assetRegistry.rebuild(); } catch (e) { console.error('[AssetManager:Import] Registry rebuild failed:', e.message); }
 
-        console.log(`[AssetManager] Imported: ${assetPath}`);
         res.json({
             success: true,
             asset: {
@@ -154,7 +162,9 @@ router.post('/export', async (req, res) => {
 // POST /api/background/upload - Save a generated background (base64 data URL) to the project
 router.post('/background/upload', async (req, res) => {
     const { image } = req.body;
-    if (!image) return res.status(400).json({ error: 'No image provided' });
+    if (typeof image !== 'string') {
+        return res.status(400).json({ error: 'No image provided' });
+    }
 
     try {
         const activeProject = projectService.getActiveProject();
@@ -170,7 +180,6 @@ router.post('/background/upload', async (req, res) => {
         const base64Data = String(image).replace(/^data:[^;]*;base64,/, '');
         await safeFs.safeWriteFullPath(activeProject, fullPath, base64Data, 'base64');
 
-        console.log(`[AssetManager] Background saved: ${assetPath}`);
         res.json({ success: true, path: assetPath });
     } catch (error) {
         console.error('[AssetManager:Background] Error:', error);
@@ -181,7 +190,7 @@ router.post('/background/upload', async (req, res) => {
 router.post('/save-spritesheet', async (req, res) => {
     try {
         const dataUrl = req.body.image;
-        if (!dataUrl) {
+        if (typeof dataUrl !== 'string') {
             return res.status(400).send('No image data provided.');
         }
 
@@ -191,8 +200,6 @@ router.post('/save-spritesheet', async (req, res) => {
         
         await safeFs.safeWriteFullPath(activeProject, spritesheetPath, base64Data, 'base64');
         
-        console.log('[SERVER] Spritesheet saved to:', spritesheetPath);
-
         // Now, generate the atlas
         const atlas = {};
         const tSize = 16;
@@ -207,8 +214,6 @@ router.post('/save-spritesheet', async (req, res) => {
 
         const atlasPath = path.join(activeProject, 'assets', 'platformer_atlas.json');
         await safeFs.safeWriteFullPath(activeProject, atlasPath, JSON.stringify(atlas, null, 2), 'utf8');
-
-        console.log('[SERVER] Atlas saved to:', atlasPath);
 
         res.json({ success: true, message: 'Spritesheet and atlas saved.' });
     } catch (error) {

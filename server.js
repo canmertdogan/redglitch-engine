@@ -21,7 +21,7 @@ const projectService = require('./server/services/projectService');
 const safeFs = require('./server/utils/safeFs');
 
 // Import middleware
-const { securityHeaders, requestLogger } = require('./server/middleware/logging');
+const { securityHeaders, requestLogger, stateMutationGuard } = require('./server/middleware/logging');
 
 // Import routes
 const savesRouter = require('./server/routes/saves');
@@ -88,11 +88,42 @@ const sendOfflineMetrics = (res) => res.status(200).json({
 
 app.use(['/api/history', '/api/ai'], (req, res) => {
     const url = IRAB_BACKEND + req.originalUrl;
+    
+    // Strip hop-by-hop headers before forwarding to the backend.
+    const hopByHop = new Set([
+        'connection',
+        'keep-alive',
+        'proxy-authenticate',
+        'proxy-authorization',
+        'te',
+        'trailers',
+        'transfer-encoding',
+        'upgrade'
+    ]);
+    const outgoingHeaders = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+        if (!hopByHop.has(key.toLowerCase())) {
+            outgoingHeaders[key] = value;
+        }
+    }
+    
     const connector = http.request(url, {
         method: req.method,
-        headers: req.headers
+        headers: outgoingHeaders
     }, (proxyRes) => {
         res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        
+        // Timeout the response if the backend stalls mid-stream.
+        res.setTimeout(10000, () => {
+            if (!res.headersSent) {
+                if (isAIMetricsRequest(req)) return sendOfflineMetrics(res);
+                res.status(502).json({ error: "IRAB Backend Proxy Timeout" });
+            } else {
+                res.destroy();
+            }
+            connector.destroy();
+        });
+        
         proxyRes.on('error', (err) => {
             if (!res.headersSent) {
                 if (isAIMetricsRequest(req)) return sendOfflineMetrics(res);
@@ -144,6 +175,9 @@ express.static.mime.define({
 
 // Request logging
 app.use(requestLogger);
+
+// State mutation guard for write-capable API routes
+app.use(stateMutationGuard);
 
 // Favicon
 app.get('/favicon.ico', (req, res) => {
@@ -309,8 +343,9 @@ websocket.startFileWatcher();
 app.locals.websocket = websocket;
 
 // Start server
-server.listen(config.PORT, () => {
-    console.log(`🚀 Redglitch Engine Server running on http://localhost:${config.PORT}`);
+server.listen(config.PORT, config.HOST, () => {
+    const shown = config.HOST === '0.0.0.0' ? 'localhost (all interfaces)' : config.HOST;
+    console.log(`🚀 Redglitch Engine Server running on http://${shown}:${config.PORT}`);
     console.log(`📁 Root directory: ${config.ROOT_DIR}`);
 });
 

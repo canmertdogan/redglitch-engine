@@ -14,6 +14,14 @@ router.get('/status', async (req, res) => {
 router.post('/add', async (req, res) => {
     try {
         const { file } = req.body;
+        if (typeof file !== 'string' || !file.trim()) {
+            return res.status(400).json({ error: 'Invalid file path' });
+        }
+        // Reject absolute paths and traversal attempts; git add only accepts
+        // paths relative to the repository root.
+        if (path.isAbsolute(file) || file.includes('..')) {
+            return res.status(400).json({ error: 'File path must be relative' });
+        }
         const result = await gitService.add(file);
         res.json(result);
     } catch (err) {
@@ -24,7 +32,9 @@ router.post('/add', async (req, res) => {
 router.post('/commit', async (req, res) => {
     try {
         const { message } = req.body;
-        if (!message) return res.status(400).json({ error: 'Commit message required' });
+        if (typeof message !== 'string' || !message.trim()) {
+            return res.status(400).json({ error: 'Commit message required' });
+        }
         const result = await gitService.commit(message);
         res.json(result);
     } catch (err) {

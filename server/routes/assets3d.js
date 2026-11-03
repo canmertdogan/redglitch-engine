@@ -184,14 +184,28 @@ router.post('/:project', async (req, res) => {
                     '--background',
                     '--python', converterScript,
                     '--', blendPath, glbPath
-                ], { timeout: 120000 });
+                ]);
+
+                const timeoutMs = 120000;
+                const killTimer = setTimeout(() => {
+                    if (!proc.killed) {
+                        proc.kill('SIGTERM');
+                        setTimeout(() => {
+                            if (!proc.killed && !proc.exitCode) proc.kill('SIGKILL');
+                        }, 5000);
+                    }
+                }, timeoutMs);
 
                 let stderr = '';
                 proc.stderr.on('data', (d) => { stderr += d.toString(); });
                 proc.on('close', (code) => {
+                    clearTimeout(killTimer);
                     code === 0 ? resolve() : reject(new Error(`Blender exited code ${code}: ${stderr}`));
                 });
-                proc.on('error', (err) => reject(new Error(`Failed to spawn Blender: ${err.message}`)));
+                proc.on('error', (err) => {
+                    clearTimeout(killTimer);
+                    reject(new Error(`Failed to spawn Blender: ${err.message}`));
+                });
             });
 
             await fs.unlink(blendPath).catch(() => {});

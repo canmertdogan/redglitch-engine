@@ -7,11 +7,11 @@ const { spawn } = require('child_process');
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const BUILDS_DIR = path.join(ROOT_DIR, 'builds');
 
-let isBuilding = false;
+let buildPromise = null;
 const VALID_TARGETS = new Set(['electron', 'web', 'ios', 'android', 'windows', 'macos']);
 
 // GET /api/build/stream?target=win&project=... — SSE live log stream
-router.get('/stream', (req, res) => {
+router.get('/stream', async (req, res) => {
     const target = req.query.target || 'electron';
     const projectName = req.query.project || 'Default Project';
 
@@ -25,11 +25,10 @@ router.get('/stream', (req, res) => {
         return res.status(400).end('Invalid project name');
     }
     
-    if (isBuilding) {
+    if (buildPromise) {
         res.setHeader('Content-Type', 'text/plain');
         return res.status(409).end('A build is already in progress');
     }
-    isBuilding = true;
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -42,7 +41,6 @@ router.get('/stream', (req, res) => {
 
     const buildScript = path.join(ROOT_DIR, 'build-game.js');
     if (!fs.existsSync(buildScript)) {
-        isBuilding = false;
         send('error', { text: 'build-game.js not found' });
         send('done', { success: false });
         return res.end();
@@ -50,53 +48,63 @@ router.get('/stream', (req, res) => {
 
     send('log', { text: `[WIZARD] Starting build: ${projectName} → ${target.toUpperCase()}\n` });
 
-    const child = spawn(process.execPath, [buildScript, projectName, target], {
-        cwd: ROOT_DIR,
-        env: process.env
-    });
+    buildPromise = (async () => {
+        return new Promise((resolve, reject) => {
+            const child = spawn(process.execPath, [buildScript, projectName, target], {
+                cwd: ROOT_DIR,
+                env: process.env
+            });
 
-    child.stdout.on('data', (d) => send('log', { text: d.toString() }));
-    child.stderr.on('data', (d) => send('log', { text: d.toString() }));
+            child.stdout.on('data', (d) => send('log', { text: d.toString() }));
+            child.stderr.on('data', (d) => send('log', { text: d.toString() }));
 
-    child.on('exit', (code) => {
-        const releaseDir = path.join(ROOT_DIR, 'dist', 'game', 'release');
-        const outputPath = fs.existsSync(releaseDir) ? releaseDir : path.join(ROOT_DIR, 'dist', 'game');
-        // Small delay to let any remaining stdout/stderr data flush through
-        setTimeout(() => {
-            isBuilding = false;
-            if (!res.writableEnded) {
-                send('done', { success: code === 0, path: outputPath, code });
-                res.end();
-            }
-        }, 300);
-    });
+            child.on('exit', (code) => {
+                const releaseDir = path.join(ROOT_DIR, 'dist', 'game', 'release');
+                const outputPath = fs.existsSync(releaseDir) ? releaseDir : path.join(ROOT_DIR, 'dist', 'game');
+                setTimeout(() => {
+                    buildPromise = null;
+                    if (!res.writableEnded) {
+                        send('done', { success: code === 0, path: outputPath, code });
+                        res.end();
+                    }
+                    resolve();
+                }, 300);
+            });
 
-    child.on('error', (err) => {
-        isBuilding = false;
-        if (!res.writableEnded) {
-            send('error', { text: err.message });
-            send('done', { success: false });
-            res.end();
-        }
-    });
+            child.on('error', (err) => {
+                buildPromise = null;
+                if (!res.writableEnded) {
+                    send('error', { text: err.message });
+                    send('done', { success: false });
+                    res.end();
+                }
+                reject(err);
+            });
 
-    req.on('close', () => {
-        if (!child.killed) child.kill();
-    });
+            req.on('close', () => {
+                if (!child.killed) child.kill();
+            });
+        });
+    })();
+
+    try {
+        await buildPromise;
+    } catch (err) {
+        // Error already sent to client in child.on('error')
+    }
 });
 
 // POST /api/build — run build-game.js for the active project
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     const { target = 'electron' } = req.body;
 
     if (!VALID_TARGETS.has(target)) {
         return res.status(400).json({ success: false, error: 'Invalid target' });
     }
 
-    if (isBuilding) {
+    if (buildPromise) {
         return res.status(409).json({ success: false, error: 'A build is already in progress' });
     }
-    isBuilding = true;
 
     const projectService = req.projectService;
     const activeProject = projectService ? projectService.getActiveProject() : null;
@@ -104,34 +112,44 @@ router.post('/', (req, res) => {
 
     const buildScript = path.join(ROOT_DIR, 'build-game.js');
     if (!fs.existsSync(buildScript)) {
-        isBuilding = false;
         return res.status(500).json({ success: false, error: 'build-game.js not found' });
     }
 
     const outputPath = path.join(ROOT_DIR, 'dist', 'game');
     const logs = [];
 
-    const child = spawn(process.execPath, [buildScript, projectName, target], {
-        cwd: ROOT_DIR,
-        env: process.env
-    });
+    buildPromise = (async () => {
+        return new Promise((resolve, reject) => {
+            const child = spawn(process.execPath, [buildScript, projectName, target], {
+                cwd: ROOT_DIR,
+                env: process.env
+            });
 
-    child.stdout.on('data', (d) => logs.push(d.toString()));
-    child.stderr.on('data', (d) => logs.push(d.toString()));
+            child.stdout.on('data', (d) => logs.push(d.toString()));
+            child.stderr.on('data', (d) => logs.push(d.toString()));
 
-    child.on('close', (code) => {
-        isBuilding = false;
-        if (code === 0) {
-            res.json({ success: true, path: outputPath, log: logs.join('') });
-        } else {
-            res.status(500).json({ success: false, error: `Build exited with code ${code}`, log: logs.join('') });
-        }
-    });
+            child.on('close', (code) => {
+                buildPromise = null;
+                if (code === 0) {
+                    resolve({ success: true, path: outputPath, log: logs.join('') });
+                } else {
+                    reject(new Error(`Build exited with code ${code}`));
+                }
+            });
 
-    child.on('error', (err) => {
-        isBuilding = false;
-        res.status(500).json({ success: false, error: err.message });
-    });
+            child.on('error', (err) => {
+                buildPromise = null;
+                reject(err);
+            });
+        });
+    })();
+
+    try {
+        const result = await buildPromise;
+        res.json({ ...result, success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message, log: logs.join('') });
+    }
 });
 
 // POST /api/build/clean — wipe the builds folder

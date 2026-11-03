@@ -47,12 +47,14 @@ function setupWebSocket(server, options = {}) {
                 }
                 const data = JSON.parse(msgStr);
                 
-                // Broadcast to all other connected clients
-                connectedClients.forEach(client => {
+                // Broadcast to all other connected clients.
+                // Snapshot the Set first: a send() can trigger close/error on another
+                // client, which mutates connectedClients during iteration.
+                for (const client of Array.from(connectedClients)) {
                     if (client !== ws && client.readyState === WebSocket.OPEN) {
                         client.send(msgStr);
                     }
-                });
+                }
                 
                 // console.log('[WebSocket] Broadcasted event:', data.type);
             } catch (err) {
@@ -71,14 +73,15 @@ function setupWebSocket(server, options = {}) {
         });
     });
 
-    // Utility function to broadcast to all WebSocket clients
+    // Utility function to broadcast to all WebSocket clients.
+    // Snapshot the Set first to avoid mutation-during-iteration races.
     function broadcastToClients(data) {
         const message = JSON.stringify(data);
-        connectedClients.forEach(client => {
+        for (const client of Array.from(connectedClients)) {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(message);
             }
-        });
+        }
     }
 
     // File watching for hot reload
@@ -152,11 +155,25 @@ function setupWebSocket(server, options = {}) {
         }
     }
 
+    // Graceful shutdown: close WebSocket server and file watcher.
+    function close() {
+        stopFileWatcher();
+        // Close all client connections first to avoid send-during-close races.
+        for (const client of Array.from(connectedClients)) {
+            try {
+                if (client.readyState === WebSocket.OPEN) client.close();
+            } catch (_) { /* ignore */ }
+        }
+        connectedClients.clear();
+        wss.close();
+    }
+
     return {
         wss,
         broadcastToClients,
         startFileWatcher,
         stopFileWatcher,
+        close,
         getConnectedClients: () => connectedClients
     };
 }

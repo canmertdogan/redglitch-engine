@@ -72,6 +72,18 @@ function resolveProjectPath(name) {
     return projectPath;
 }
 
+function resolveTemplatePath(templateId) {
+    const sanitized = (templateId || '').replace(/[^a-zA-Z0-9-_]/g, '').trim();
+    if (!sanitized) return null;
+
+    const root = path.resolve(TEMPLATES_ROOT);
+    const templatePath = path.resolve(root, sanitized);
+    if (!templatePath.startsWith(root + path.sep) && templatePath !== root) {
+        return null;
+    }
+    return templatePath;
+}
+
 function openInFileManager(targetPath) {
     return new Promise((resolve, reject) => {
         let command;
@@ -197,11 +209,13 @@ async function createProject({
     }
 
     const resolvedTemplateId = templateId || 'base-rpg';
-    const templatePath = path.join(TEMPLATES_ROOT, resolvedTemplateId);
+    const templatePath = resolveTemplatePath(resolvedTemplateId);
+    if (!templatePath) {
+        return { error: { status: 400, body: { error: 'Invalid template ID' } } };
+    }
     const templateExists = await pathExists(templatePath);
 
     if (templateMode === 'template' && resolvedTemplateId !== 'empty' && templateExists) {
-        console.log(`Creating project "${safeName}" from template "${resolvedTemplateId}"...`);
         try {
             await copyTemplateProject(templatePath, projectPath);
         } catch (copyErr) {
@@ -216,7 +230,6 @@ async function createProject({
         return { success: true, name: safeName, path: projectPath };
     }
 
-    console.log(`Creating project "${safeName}" from main game data...`);
     await fs.mkdir(projectPath, { recursive: true });
     await writeProjectConfig(projectPath, projectConfig);
     await copyGameFromPublic(projectPath);
@@ -295,6 +308,10 @@ router.post('/projects', async (req, res) => {
     // but respect 'empty' or specific template IDs.
     let templateId = template || 'base-rpg';
     if (template === 'default') templateId = 'base-rpg';
+    const resolvedTemplateId = resolveTemplatePath(templateId);
+    if (!resolvedTemplateId) {
+        return res.status(400).json({ error: 'Invalid template ID' });
+    }
 
     try {
         const metadata = req.body.metadata || {};
@@ -341,7 +358,6 @@ router.post('/projects', async (req, res) => {
                     await copyDirIfExists(srcD, dunyalarDest);
                 }
                 await ensureProjectDataDirs(projectPath);
-                console.log(`[Server] Copied engine files to template project "${sanitizeProjectName(name)}"`);
             }
         });
 
@@ -362,6 +378,10 @@ router.post('/projects/create', async (req, res) => {
     // Default to base-rpg if template is 'default' or 'blank'
     let templateId = template || 'base-rpg';
     if (template === 'blank' || template === 'default') templateId = 'base-rpg';
+    const resolvedTemplateId = resolveTemplatePath(templateId);
+    if (!resolvedTemplateId) {
+        return res.status(400).json({ error: 'Invalid template ID' });
+    }
 
     try {
         // 2. Build configuration
@@ -375,7 +395,6 @@ router.post('/projects/create', async (req, res) => {
         if (result.error) {
             return res.status(result.error.status).json({ error: result.error.body.error });
         }
-        console.log(`[Server] Created project "${result.name}"`);
         res.json({ success: true, name: result.name, path: result.path });
     } catch (err) {
         console.error('Create project error:', err);
@@ -393,7 +412,6 @@ router.delete('/projects/:name', async (req, res) => {
 
     try {
         await fs.rm(projectPath, { recursive: true, force: true });
-        console.log(`[Server] Deleted project: ${name}`);
         res.json({ success: true });
     } catch (err) {
         console.error("Delete project error:", err);
@@ -418,7 +436,6 @@ router.post('/projects/reveal', async (req, res) => {
 
     try {
         await openInFileManager(projectPath);
-        console.log(`[Server] Revealed project: ${name}`);
         res.json({ success: true });
     } catch (err) {
         console.error("Reveal error:", err);
@@ -490,10 +507,8 @@ router.get('/projects/current', (req, res) => {
 // POST /api/projects/switch - Switch active project
 router.post('/projects/switch', async (req, res) => {
     const { name } = req.body;
-    console.log(`[Server] Switch request to: ${name}`);
     if (!name) {
         req.projectService.setActiveProject(null);
-        console.log(`[Server] Active project reset to ROOT`);
         const websocket = req.app?.locals?.websocket;
         if (websocket && typeof websocket.startFileWatcher === 'function') {
             websocket.startFileWatcher();
@@ -502,7 +517,6 @@ router.post('/projects/switch', async (req, res) => {
     }
     const safeName = sanitizeProjectName(name);
     req.projectService.setActiveProject(safeName);
-    console.log(`[Server] Active project now: ${req.projectService.getActiveProject()}`);
     const websocket = req.app?.locals?.websocket;
     if (websocket && typeof websocket.startFileWatcher === 'function') {
         websocket.startFileWatcher();

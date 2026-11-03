@@ -30,7 +30,14 @@ router.get('/list', async (req, res) => {
 // Save shader
 router.post('/save', async (req, res) => {
     const { name, content } = req.body;
+    if (typeof name !== 'string' || typeof content !== 'string') {
+        return res.status(400).json({ error: 'Invalid shader name or content' });
+    }
     if (!isSafeName(name)) return res.status(400).json({ error: 'Invalid shader name' });
+    // Guard against unbounded payloads that exhaust server memory.
+    if (content.length > 1_000_000) {
+        return res.status(413).json({ error: 'Shader content exceeds 1 MB limit' });
+    }
     try {
         const activeProject = projectService.getActiveProject();
         const dir = path.join(activeProject, 'data', 'shaders');

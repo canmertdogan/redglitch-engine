@@ -88,7 +88,6 @@ router.post('/cutscenes/:id', async (req, res) => {
         await ensureDir(targetDir);
         const filePath = path.join(targetDir, `${req.params.id}.json`);
         await safeFs.safeWriteFullPath(targetDir, filePath, JSON.stringify(req.body, null, 2), 'utf8');
-        console.log(`Cutscene ${req.params.id} saved.`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error saving cutscene:', err);
@@ -105,7 +104,6 @@ router.delete('/cutscenes/:id', async (req, res) => {
         
         const filePath = path.join(targetDir, `${req.params.id}.json`);
         await fs.unlink(filePath);
-        console.log(`Cutscene ${req.params.id} deleted.`);
         res.json({ success: true });
     } catch (err) {
         console.error('Error deleting cutscene:', err);
@@ -130,7 +128,6 @@ router.get('/dialogues', async (req, res) => {
 router.post('/dialogues', async (req, res) => {
     try {
         await saveDefinition('dialogues.json', req.body);
-        console.log(`Dialogues saved.`);
         res.json({ success: true });
     } catch (err) {
         console.error("Dialogue save error:", err);

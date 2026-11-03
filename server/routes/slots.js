@@ -87,19 +87,9 @@ router.post('/:id', async (req, res) => {
 
         const slotFile = path.join(slotsDir, `slot_${slotId}.json`);
         
-        // Create backup of existing slot
-        try {
-            const existingData = await fs.readFile(slotFile, 'utf8');
-            const backupFile = path.join(slotsDir, `slot_${slotId}.backup.json`);
-            await safeFs.safeWriteFullPath(slotsDir, backupFile, existingData, 'utf8');
-        } catch (err) {
-            // No existing file, that's ok
-        }
-
-        // Write new slot data
+        // Write new slot data atomically
         await safeFs.safeWriteFullPath(slotsDir, slotFile, JSON.stringify(slotData, null, 2), 'utf8');
         
-        console.log(`[Slots] Saved slot ${slotId}`);
         res.json({ success: true, slotId: slotId });
     } catch (error) {
         console.error('Error saving slot:', error);
@@ -120,7 +110,6 @@ router.delete('/:id', async (req, res) => {
         
         try {
             await fs.unlink(slotFile);
-            console.log(`[Slots] Deleted slot ${slotId}`);
             res.json({ success: true, slotId: slotId });
         } catch (err) {
             // Slot doesn't exist, that's ok

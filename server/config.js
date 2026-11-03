@@ -2,7 +2,11 @@ const path = require('path');
 
 module.exports = {
     PORT: process.env.PORT || 3000,
-    HOST: '0.0.0.0',
+    // Bind loopback by default: the API has no authentication (arbitrary file
+    // write via /api/ide/write, /api/git/commit, /api/build, ...), so exposing it
+    // on 0.0.0.0 hands those endpoints to every host on the LAN.
+    // Set REDGLITCH_HOST=0.0.0.0 to opt in when testing from a phone/tablet.
+    HOST: process.env.REDGLITCH_HOST || '127.0.0.1',
     
     // Directories
     ROOT_DIR: path.join(__dirname, '..'),

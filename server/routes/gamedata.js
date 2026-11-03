@@ -44,7 +44,7 @@ function createDefinitionRoutes(typeName, fileName) {
                     const engineRaw = await fs.readFile(engineFilePath, 'utf8');
                     mergedData = JSON.parse(engineRaw);
                 } catch (e) {
-                    // Engine core file missing or invalid, continue
+                    if (e.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading engine core:`, e.message);
                 }
             }
 
@@ -67,6 +67,7 @@ function createDefinitionRoutes(typeName, fileName) {
                 }
             } catch (err) {
                 // If project file is missing, we just use engine data or empty array
+                if (err.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading project definitions:`, err.message);
                 if (isRoot) {
                     // In root mode, if we failed to read project file (which is the engine file), we should try public
                     try {
@@ -74,7 +75,7 @@ function createDefinitionRoutes(typeName, fileName) {
                         const engineRaw = await fs.readFile(engineFilePath, 'utf8');
                         mergedData = JSON.parse(engineRaw);
                     } catch(e) {
-                        if (e.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading engine fallback:`, e);
+                        if (e.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading engine fallback:`, e.message);
                     }
                 }
             }
@@ -89,6 +90,9 @@ function createDefinitionRoutes(typeName, fileName) {
     // POST
     const saveHandler = async (req, res) => {
         try {
+            if (req.body == null || typeof req.body !== 'object') {
+                return res.status(400).json({ error: 'Invalid request body' });
+            }
             const targetDir = path.join(projectService.getDunyalarPath(), 'definitions');
             const filePath = path.join(targetDir, fileName);
             const activeProject = projectService.getActiveProject();
@@ -138,7 +142,9 @@ router.get('/fx/:name', async (req, res) => {
 
 router.post('/fx/save', async (req, res) => {
     const { name, config } = req.body;
-    if (!name || !config) return res.status(400).json({ error: 'Missing name or config' });
+    if (typeof name !== 'string' || typeof config !== 'object' || config === null) {
+        return res.status(400).json({ error: 'Missing name or config' });
+    }
     if (!isSafeName(name)) return res.status(400).json({ error: 'Invalid FX name' });
     const dir = path.join(projectService.getActiveProject(), 'data', 'fx');
     await ensureDir(dir);
@@ -151,6 +157,9 @@ router.post('/fx/save', async (req, res) => {
 // GET /api/templates/:category - Scan definitions for individual files to use as templates
 router.get('/templates/:category', async (req, res) => {
     const { category } = req.params; // e.g., 'npc', 'enemy', 'item'
+    if (typeof category !== 'string' || !category.trim()) {
+        return res.status(400).json({ error: 'Invalid category' });
+    }
     
     try {
         const isRoot = projectService.isRootProject();

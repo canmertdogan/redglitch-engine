@@ -36,7 +36,7 @@ const testResults = {
     summary: { passed: 0, failed: 0, total: 0 }
 };
 
-let isRunning = false;
+let testPromise = null;
 
 // Helper: Record test result
 function recordTest(category, testName, passed, message = '', details = {}) {
@@ -159,10 +159,9 @@ router.post('/platformer-3d', (req, res) => {
 
 // ===== RUN ALL TESTS =====
 router.post('/run-all', (req, res) => {
-    if (isRunning) {
+    if (testPromise) {
         return res.status(409).json({ error: 'A 3D test run is already in progress' });
     }
-    isRunning = true;
 
     // Fresh results for this run so concurrent callers don't corrupt each other.
     testResults.timestamp = new Date().toISOString();
@@ -186,22 +185,28 @@ router.post('/run-all', (req, res) => {
         });
     }
 
-    (async () => {
+    const runPromise = (async () => {
         try {
             const categories = ['shared-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'];
             for (const category of categories) {
                 await runCategoryTests(category);
             }
-            res.json({
+            return {
                 timestamp: testResults.timestamp,
                 summary: testResults.summary,
                 tests: testResults.tests,
                 allTestsCompleted: true
-            });
+            };
         } finally {
-            isRunning = false;
+            testPromise = null;
         }
     })();
+
+    testPromise = runPromise;
+    runPromise.then(
+        (result) => res.json(result),
+        (err) => res.status(500).json({ error: err.message, category: 'run-all' })
+    );
 });
 
 // ===== GET TEST RESULTS =====
