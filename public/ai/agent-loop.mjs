@@ -25,7 +25,20 @@ export async function runAgentLoop({
             };
         }
         allToolCalls.push(...toolCalls);
-        const workflowResult = await executeWorkflow(toolCalls, `${workflowId}_${turn}`);
+        let workflowResult;
+        try {
+            workflowResult = await executeWorkflow(toolCalls, `${workflowId}_${turn}`);
+        } catch (error) {
+            return {
+                ...current,
+                text: `${stripToolBlocks(current.text)}\n\nAutomation stopped: workflow failed: ${error.message}`.trim(),
+                toolCalls: allToolCalls,
+                workflowResults,
+                workflowResult: null,
+                steps: turn + 1,
+                error: { code: 'WORKFLOW_ERROR', message: error.message }
+            };
+        }
         workflowResults.push(workflowResult);
         if (!workflowResult.success) {
             return {
@@ -38,7 +51,21 @@ export async function runAgentLoop({
             };
         }
         const feedback = `TOOL_RESULTS (authoritative):\n${JSON.stringify(sanitize({ calls: toolCalls, ...workflowResult }))}\n\nAVAILABLE_TOOLS_NOW:\n${getToolPrompt()}\n\nContinue the task. Navigation alone is not completion. Use another tool call if work remains; otherwise give the user a concise completion summary.`;
-        current = await inferNext({ feedback, assistantText: current.text, workflowResult, toolCalls, turn });
+        let nextResponse;
+        try {
+            nextResponse = await inferNext({ feedback, assistantText: current.text, workflowResult, toolCalls, turn });
+        } catch (error) {
+            return {
+                ...current,
+                text: `${stripToolBlocks(current.text)}\n\nAutomation stopped: inference failed: ${error.message}`.trim(),
+                toolCalls: allToolCalls,
+                workflowResults,
+                workflowResult,
+                steps: turn + 1,
+                error: { code: 'INFERENCE_ERROR', message: error.message }
+            };
+        }
+        current = nextResponse;
     }
     return {
         ...current,

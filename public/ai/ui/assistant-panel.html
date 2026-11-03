@@ -892,8 +892,9 @@
             <p>Would you like to continue with AI features, including Kai automation, engine Copilot, project-aware assistance, RAG context, code completion, and proactive diagnostics?</p>
             <p>AI mode can inspect your active project and propose changes. Project mutations still require preview and explicit approval. Manual mode keeps all AI inference, Copilot activity, RAG workers, and AI tool execution disabled.</p>
             <div class="kai-mode-actions">
-                <button class="xp-button" onclick="window.chooseKaiMode(true)">CONTINUE WITH AI</button>
-                <button class="xp-button secondary" onclick="window.chooseKaiMode(false)">CONTINUE MANUALLY</button>
+                <button class="xp-button" onclick="window.chooseKaiMode('full')">FULL AI</button>
+                <button class="xp-button" onclick="window.chooseKaiMode('easy')">EASY AI</button>
+                <button class="xp-button secondary" onclick="window.chooseKaiMode('off')">CONTINUE MANUALLY</button>
             </div>
         </div>
     </div>

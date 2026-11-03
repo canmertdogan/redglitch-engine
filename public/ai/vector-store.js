@@ -61,18 +61,25 @@ export class VectorStore {
 
     async initialize() {
         if (this.isInitialized) return;
-        console.log('[VectorStore] Initializing Orama...');
-        try {
-            const { create, insert, search } = await import('https://esm.sh/@orama/orama@3.1.18');
-            this._insert = insert;
-            this._search = search;
-            this._create = create;
-            this.isInitialized = true;
-            console.log('[VectorStore] Orama ready.');
-        } catch (e) {
-            console.error('[VectorStore] Failed to initialize Orama:', e);
-            throw e;
+        // Vendored browser build first (public/lib/orama, @orama/orama 3.1.18) so
+        // retrieval works offline; the CDN stays only as a fallback.
+        const sources = ['/lib/orama/index.js', 'https://esm.sh/@orama/orama@3.1.18'];
+        let lastError = null;
+        for (const source of sources) {
+            try {
+                const { create, insert, search } = await import(source);
+                this._insert = insert;
+                this._search = search;
+                this._create = create;
+                this.isInitialized = true;
+                return;
+            } catch (e) {
+                lastError = e;
+                console.warn(`[VectorStore] Orama source unavailable: ${source}`, e);
+            }
         }
+        console.error('[VectorStore] Failed to initialize Orama:', lastError);
+        throw lastError;
     }
 
     async _ensureSchema(chunks) {
@@ -96,7 +103,6 @@ export class VectorStore {
     async addChunks(chunks) {
         if (!this.isInitialized) await this.initialize();
         await this._ensureSchema(chunks);
-        console.log(`[VectorStore] Adding ${chunks.length} chunks (dim=${this.dim})...`);
         for (const chunk of chunks) {
             const doc = { ...chunk };
             if (!Array.isArray(doc.embeddings)) continue; // skip unembeddable

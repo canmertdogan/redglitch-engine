@@ -19,7 +19,6 @@ export class InferenceEngine {
     async initialize() {
         if (this.worker) return;
 
-        console.log('[InferenceEngine] Initializing Web Worker...');
         // We use the "final" worker which is already bundled and ready
         this.worker = new Worker('/ai/final/worker.js', { type: 'module' });
         
@@ -147,6 +146,8 @@ export class InferenceEngine {
     dispose() {
         if (this.worker) {
             this.worker.postMessage({ type: 'dispose' });
+            this.worker.terminate();
+            this.worker = null;
             this.isModelReady = false;
             EventBus.emit('ai:model:disposed');
         }

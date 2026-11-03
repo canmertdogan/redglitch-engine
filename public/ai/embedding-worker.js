@@ -51,6 +51,9 @@ self.onmessage = async (e) => {
                 id,
                 embeddings
             });
+        } else if (type === 'dispose') {
+            embedder = null;
+            postMessage({ type: 'disposed', id });
         }
 
     } catch (error) {

@@ -32,6 +32,7 @@ export class RAGEngine {
         this.epoch = 0;
         this.maxRAGChunks = AI_CONFIG.limits?.maxRAGChunks || 3;
         this.queryCache = new Map();
+        this.maxQueryCacheSize = 128;
         this.embeddingProvider = null;
         this.options = options;
         this.lastResults = [];
@@ -51,7 +52,6 @@ export class RAGEngine {
     }
 
     async _initialize(epoch) {
-        console.log('[RAGEngine] Initializing...');
         await this.vectorStore.initialize();
 
         // Local embedding worker (used when embeddingsProvider !== 'openai').
@@ -118,13 +118,11 @@ export class RAGEngine {
             // 1. Try persisted index (skips re-embedding entirely).
             const persisted = await this.vectorStore.loadPersisted();
             if (persisted && persisted.length) {
-                console.log(`[RAGEngine] Loaded ${persisted.length} persisted chunks from IndexedDB.`);
                 await this.vectorStore.addChunks(persisted);
                 return;
             }
 
             // 2. Otherwise fetch + embed.
-            console.log('[RAGEngine] Loading corpus...');
             const [corpusRes, embeddingsRes] = await Promise.all([
                 fetch('/ai/docs/corpus.json'),
                 fetch('/ai/docs/corpus-embeddings.json').catch(() => null),
@@ -133,7 +131,6 @@ export class RAGEngine {
             let precomputed = null;
             if (embeddingsRes && embeddingsRes.ok) {
                 precomputed = await embeddingsRes.json();
-                console.log(`[RAGEngine] Loaded ${precomputed.length} pre-computed embeddings.`);
             }
 
             let chunksToIndex = data.chunks;
@@ -145,23 +142,20 @@ export class RAGEngine {
             }
 
             const chunksToEmbed = chunksToIndex.filter(c => !c.embeddings);
+            let embedded = [];
             if (chunksToEmbed.length > 0) {
-                console.log(`[RAGEngine] Embedding ${chunksToEmbed.length} chunks...`);
-                const embedded = await this._embedChunks(chunksToEmbed);
+                embedded = await this._embedChunks(chunksToEmbed);
                 await this.vectorStore.addChunks(embedded);
             }
 
             const alreadyEmbedded = chunksToIndex.filter(c => c.embeddings);
             if (alreadyEmbedded.length > 0) {
-                console.log(`[RAGEngine] Indexing ${alreadyEmbedded.length} pre-computed chunks...`);
                 await this.vectorStore.addChunks(alreadyEmbedded);
             }
 
             // Persist so subsequent loads skip embedding.
-            const all = [...alreadyEmbedded, ...(chunksToEmbed.length ? await this._embedChunks(chunksToEmbed) : [])];
+            const all = [...alreadyEmbedded, ...embedded];
             await this.vectorStore.persist(all);
-
-            console.log('[RAGEngine] Corpus indexed.');
         } catch (e) {
             console.error('[RAGEngine] Failed to load corpus:', e);
         }
@@ -185,6 +179,10 @@ export class RAGEngine {
     async _queryEmbedding(text) {
         if (this.queryCache.has(text)) return this.queryCache.get(text);
         const emb = await this.embeddingProvider.embedOne(text);
+        if (this.queryCache.size >= this.maxQueryCacheSize) {
+            const firstKey = this.queryCache.keys().next().value;
+            this.queryCache.delete(firstKey);
+        }
         this.queryCache.set(text, emb);
         return emb;
     }

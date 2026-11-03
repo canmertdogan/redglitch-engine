@@ -76,6 +76,7 @@ export class WorkflowManager {
             console.error("[WorkflowManager] Workflow failed. Rolling back...", error);
             const rollbackResults = await this.rollback(executedActions);
             this.isExecuting = false;
+            this.cancelRequested = false;
             const failureResult = {
                 success: false,
                 error: error.message,
@@ -152,21 +153,5 @@ export class WorkflowManager {
         }
         return null;
     }
-
-    /**
-     * Pre-defined "Recipes" for common tasks.
-     */
-    getRecipes() {
-        return {
-            'createActor': [
-                { name: 'fs.write', description: 'Create logic script' },
-                { name: 'world.spawn', description: 'Place in world' }
-            ],
-            'optimizeProject': [
-                { name: 'fs.list', description: 'Scan files' },
-                { name: 'fs.read', description: 'Analyze code' },
-                { name: 'code.document', description: 'Add JSDoc' }
-            ]
-        };
-    }
 }
+

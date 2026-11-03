@@ -32,28 +32,5 @@ export class TokenizerUtils {
             return text.slice(-estimatedChars);
         }
     }
-
-    /**
-     * Build a context budget allocation.
-     * Returns how many tokens each component gets based on total window.
-     * @param {number} totalWindow - Total context window size
-     * @returns {{ system: number, rag: number, history: number, user: number, generation: number }}
-     */
-    static allocateBudget(totalWindow) {
-        // Example for 2048 tokens:
-        // System: 400
-        // RAG: 300
-        // History: 300
-        // User: 200
-        // Generation: 512
-        // Buffer: 336
-        
-        return {
-            system: Math.floor(totalWindow * 0.20),
-            rag: Math.floor(totalWindow * 0.15),
-            history: Math.floor(totalWindow * 0.15),
-            user: Math.floor(totalWindow * 0.10),
-            generation: Math.floor(totalWindow * 0.25)
-        };
-    }
 }
+

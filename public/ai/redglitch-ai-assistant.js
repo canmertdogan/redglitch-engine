@@ -23,9 +23,33 @@ class IRABAssistantSimple {
         }
 
         this.editorTools = {
-            openFile: async (path) => {
-                console.log('Kai: Opening file', path);
-                return { success: true };
+            openFile: async (filePath) => {
+                if (!filePath || typeof filePath !== 'string') {
+                    return { success: false, error: 'Invalid file path' };
+                }
+
+                const tryOpen = (scope) => {
+                    if (typeof scope.openFile === 'function') {
+                        return scope.openFile(filePath);
+                    }
+                    return null;
+                };
+
+                const result =
+                    tryOpen(window) ||
+                    tryOpen(window.parent || {}) ||
+                    tryOpen(window.opener || {});
+
+                if (result) {
+                    return result;
+                }
+
+                window.dispatchEvent(new CustomEvent('kai:openFile', {
+                    detail: { path: filePath },
+                    bubbles: true
+                }));
+
+                return { success: true, opened: true, method: 'event' };
             }
         };
     }
@@ -180,7 +204,7 @@ class IRABAssistantSimple {
      * Used only as a fallback if the AI Kernel/ToolRegistry is unavailable.
      */
     async _legacyDispatch(intent, params) {
-        throw new Error('Legacy automation dispatch is disabled; ToolRegistry is required.');
+        return { success: false, error: { code: 'LEGACY_DISPATCH_DISABLED', message: 'Legacy automation dispatch is disabled; ToolRegistry is required.' } };
     }
 
     _debug(msg, data) {

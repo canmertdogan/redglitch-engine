@@ -1,4 +1,26 @@
 import { EDITOR_TARGETS, editorFileForTarget, editorTargetIds, normalizeEditorTarget } from './tool-aliases.mjs';
+import { knownNamespaces } from './namespace-router.js';
+
+function applyPatch(original, patch) {
+    if (!original) return patch || '';
+    if (!patch) return original;
+
+    const trimmed = patch.trim();
+    if (!trimmed) return original;
+
+    if (trimmed.startsWith('---') || trimmed.startsWith('diff --git')) {
+        let result = original;
+        const lines = trimmed.split('\n');
+        for (const line of lines) {
+            if (line.startsWith('+') && !line.startsWith('+++')) {
+                result += line.slice(1) + '\n';
+            }
+        }
+        return result;
+    }
+
+    return original + '\n' + trimmed;
+}
 
 export function registerDefaultTools(registry) {
         // --- FILE SYSTEM (fs) ---
@@ -102,7 +124,14 @@ export function registerDefaultTools(registry) {
                     }
                 } catch (e) {}
 
-                const contentToWrite = args.new_content !== undefined ? args.new_content : (args.patch || '');
+                let contentToWrite;
+                if (args.new_content !== undefined) {
+                    contentToWrite = args.new_content;
+                } else if (typeof args.patch === 'string' && args.patch.trim()) {
+                    contentToWrite = applyPatch(previousContent || '', args.patch);
+                } else {
+                    throw new Error('fs.edit_file requires a non-empty patch when new_content is not provided');
+                }
 
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
@@ -312,19 +341,33 @@ export function registerDefaultTools(registry) {
                 required: ['type', 'data']
             },
             execute: async (args) => {
-                const endpoint = {
-                    'npcs': '/api/npcs-defs',
-                    'items': '/api/items-defs',
+                if (!args.type) throw new Error('data.update requires a type');
+
+                const defaultEndpoint = {
+                    'npcs': '/api/npcs',
+                    'items': '/api/items',
                     'quests': '/api/quests',
-                    'skills': '/api/skills-defs'
-                };
-                const res = await fetch(endpoint[args.type], {
+                    'skills': '/api/skills'
+                }[args.type];
+
+                const endpoint = defaultEndpoint || `/api/${args.type}`;
+                if (!endpoint) throw new Error(`Unknown data type: ${args.type}`);
+
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(args.data)
                 });
                 if (!res.ok) throw new Error(`Failed to update ${args.type}`);
-                return { success: true };
+
+                const body = await res.json().catch(() => ({}));
+                return {
+                    success: true,
+                    type: args.type,
+                    endpoint,
+                    updated: Array.isArray(args.data) ? args.data.length : 0,
+                    ...body
+                };
             }
         });
 

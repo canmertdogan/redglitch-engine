@@ -22,11 +22,23 @@ export class ContextManager {
         this.history = [];
     }
 
+    static sanitizeForPrompt(value) {
+        return String(value)
+            .replace(/[<>"`]/g, '')
+            .replace(/[\r\n\t]+/g, ' ')
+            .trim();
+    }
+
     buildPrompt(userMessage, ragContext = "", toolsPrompt = "", editorState = null) {
+        // Sanitize externally controlled inputs before interpolation
+        const safeUserMessage = ContextManager.sanitizeForPrompt(userMessage);
+        const safeToolsPrompt = ContextManager.sanitizeForPrompt(toolsPrompt);
+
         let systemPrompt = "You are Kai, a genius AI hacker assistant for Redglitch Studio. You are cool, nerdy, and extremely competent. You love retro tech, efficient code, and helping users build legendary games.\n\nIMPORTANT TOOL ROUTING:\n- For top-down RPG maps/levels → use navigateTo with target \"editor\"\n- For isometric/isopixel maps → use navigateTo with target \"iso_studio\"\n- For 2D platformer levels → use navigateTo with target \"platformer_studio\"\n- For code/scripting → use navigateTo with target \"script\"\nNever open the script editor for map creation requests.";
         
         if (editorState && editorState.activeFile) {
-            systemPrompt += `\n\nACTIVE EDITOR CONTEXT:\nThe user is currently viewing/editing the file: ${editorState.activeFile}`;
+            const safeFile = ContextManager.sanitizeForPrompt(editorState.activeFile);
+            systemPrompt += `\n\nACTIVE EDITOR CONTEXT:\nThe user is currently viewing/editing the file: ${safeFile}`;
             if (editorState.cursorLine) {
                 systemPrompt += ` at line ${editorState.cursorLine}`;
             }
@@ -34,7 +46,7 @@ export class ContextManager {
         }
         
         if (toolsPrompt) {
-            systemPrompt += `\n\nAVAILABLE TOOLS:\nYou have access to the following studio tools. To use a tool, output JSON objects or an array inside a tool fence:\n\`\`\`tool\n{"name": "namespace.method", "args": {...}}\n\`\`\`\nArguments must match the schemas. After tool results are returned, continue until the requested outcome is complete. Navigation alone is not completion. Never claim success before receiving a tool result.\n\nTools:\n${toolsPrompt}`;
+            systemPrompt += `\n\nAVAILABLE TOOLS:\nYou have access to the following studio tools. To use a tool, output JSON objects or an array inside a tool fence:\n\`\`\`tool\n{"name": "namespace.method", "args": {...}}\n\`\`\`\nArguments must match the schemas. After tool results are returned, continue until the requested outcome is complete. Navigation alone is not completion. Never claim success before receiving a tool result.\n\nTools:\n${safeToolsPrompt}`;
         }
 
         // Calculate dynamic budgets

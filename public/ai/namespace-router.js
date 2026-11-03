@@ -11,3 +11,10 @@ export const NAMESPACE_ALIAS = {
 export function resolveNamespaceAlias(namespace) {
     return NAMESPACE_ALIAS[namespace] || namespace;
 }
+
+export function knownNamespaces() {
+    return Array.from(new Set([
+        ...Object.keys(NAMESPACE_ALIAS),
+        ...Object.values(NAMESPACE_ALIAS)
+    ]));
+}

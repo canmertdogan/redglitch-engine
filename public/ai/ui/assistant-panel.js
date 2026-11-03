@@ -35,6 +35,13 @@ class KaiChatUIController {
         });
         
         this.soundsEnabled = localStorage.getItem('kai_sounds_enabled') !== 'false';
+
+        // Tracked timers and listeners for cleanup
+        this._hitZoneInterval = null;
+        this._sessionClockInterval = null;
+        this._listeners = [];      // EventBus listeners
+        this._windowListeners = []; // window event listeners (keydown)
+        this._documentListeners = []; // document event listeners
     }
     
     showLoadingProgress() {
@@ -192,25 +199,39 @@ class KaiChatUIController {
             // Hook into EventBus for Debug tab & Error Watcher
             const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
             if (eventBus) {
-                eventBus.on('ai:toggle_chat', () => this.toggleChat());
+                const onToggleChat = () => this.toggleChat();
+                this._listeners.push({ event: 'ai:toggle_chat', handler: onToggleChat });
+                eventBus.on('ai:toggle_chat', onToggleChat);
                 
                 // Live Debug Logs
-                eventBus.on('*', (eventData) => {
+                const onDebugLog = (eventData) => {
                     const stream = document.getElementById('debug-stream');
                     if (stream) {
                         const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
                         const line = document.createElement('div');
                         const event = eventData.type || 'unknown';
                         const data = eventData.data || {};
-                        line.innerHTML = `[${time}] <span style="color: #ffd700">${event}</span>: ${JSON.stringify(data).substring(0, 100)}...`;
+                        const timeSpan = document.createElement('span');
+                        timeSpan.textContent = `[${time}] `;
+                        const eventSpan = document.createElement('span');
+                        eventSpan.style.color = '#ffd700';
+                        eventSpan.textContent = event;
+                        const separator = document.createTextNode(': ');
+                        const dataText = document.createTextNode(JSON.stringify(data).substring(0, 100) + '...');
+                        line.appendChild(timeSpan);
+                        line.appendChild(eventSpan);
+                        line.appendChild(separator);
+                        line.appendChild(dataText);
                         stream.appendChild(line);
                         stream.scrollTop = stream.scrollHeight;
                         if (stream.children.length > 50) stream.removeChild(stream.firstChild);
                     }
-                });
+                };
+                this._listeners.push({ event: '*', handler: onDebugLog });
+                eventBus.on('*', onDebugLog);
 
                 // PROACTIVE ERROR WATCHER
-                eventBus.on('system:error', (event) => {
+                const onSystemError = (event) => {
                     if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
                     const error = event.data;
                     console.log('Kai: Proactive Help triggered for error:', error.message);
@@ -240,11 +261,13 @@ class KaiChatUIController {
                             }
                         ]
                     );
-                });
+                };
+                this._listeners.push({ event: 'system:error', handler: onSystemError });
+                eventBus.on('system:error', onSystemError);
 
                 // PROACTIVE PERFORMANCE SENTINEL
                 this.lastMetricWarning = 0;
-                eventBus.on('system:metrics', (event) => {
+                const onSystemMetrics = (event) => {
                     if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
                     const { fps, entities, memory } = event.data;
                     const now = Date.now();
@@ -263,7 +286,9 @@ class KaiChatUIController {
                             ]
                         );
                     }
-                });
+                };
+                this._listeners.push({ event: 'system:metrics', handler: onSystemMetrics });
+                eventBus.on('system:metrics', onSystemMetrics);
             }
 
             this.isInitialized = true;
@@ -274,6 +299,46 @@ class KaiChatUIController {
             this.isInitialized = true;
             throw error;
         }
+    }
+
+    /**
+     * Remove all intervals, window/document listeners, and EventBus subscriptions.
+     * Call when the panel is being torn down or AI is being disabled.
+     */
+    destroy() {
+        // Clear intervals
+        if (this._hitZoneInterval) {
+            clearInterval(this._hitZoneInterval);
+            this._hitZoneInterval = null;
+        }
+        if (this._sessionClockInterval) {
+            clearInterval(this._sessionClockInterval);
+            this._sessionClockInterval = null;
+        }
+
+        // Remove window listeners
+        for (const { event, handler } of this._windowListeners) {
+            window.removeEventListener(event, handler);
+        }
+        this._windowListeners = [];
+
+        // Remove document listeners
+        for (const { event, handler } of this._documentListeners) {
+            document.removeEventListener(event, handler);
+        }
+        this._documentListeners = [];
+
+        // Remove EventBus listeners
+        const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
+        if (eventBus) {
+            for (const { event, handler } of this._listeners) {
+                eventBus.off(event, handler);
+            }
+        }
+        this._listeners = [];
+
+        // Clear boredom timer
+        this.clearBoredomTimer();
     }
 
     addBootLog(message) {
@@ -312,7 +377,7 @@ class KaiChatUIController {
             clippy.addEventListener('click', () => this.openChat());
         }
 
-        document.addEventListener('keydown', (e) => {
+        const onKeydown = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 this.toggleChat();
@@ -327,7 +392,9 @@ class KaiChatUIController {
             if (e.key === 'Escape') {
                 this.closeOmniBox();
             }
-        });
+        };
+        this._windowListeners.push({ event: 'keydown', handler: onKeydown });
+        window.addEventListener('keydown', onKeydown);
 
         const omniInput = document.getElementById('omni-input');
         if (omniInput) {
@@ -341,43 +408,48 @@ class KaiChatUIController {
         }
 
         // Broadcast hit zones to parent for pointer-events passthrough
-        setInterval(() => {
-            const zones = [];
-            const elements = [
-                'ai-assistant-container', 
-                'ai-chat-panel', 
-                'xp-ai-loading', 
-                'xp-settings', 
-                'ai-speech-bubble',
-                'ai-permission-gate',
-                'kai-mode-toggle',
-                'kai-mode-choice'
-            ];
-            
-            elements.forEach(id => {
-                const el = document.getElementById(id);
-                if (el && (el.style.display !== 'none' && !el.classList.contains('hidden') || el.classList.contains('show'))) {
-                    // Check computed style for visibility
-                    const style = window.getComputedStyle(el);
-                    if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
-                        const rect = el.getBoundingClientRect();
-                        zones.push({
-                            top: rect.top,
-                            left: rect.left,
-                            bottom: rect.bottom,
-                            right: rect.right
-                        });
+        const hitZoneHandler = () => {
+            try {
+                const zones = [];
+                const elements = [
+                    'ai-assistant-container', 
+                    'ai-chat-panel',
+                    'xp-ai-loading',
+                    'xp-settings',
+                    'ai-speech-bubble',
+                    'ai-permission-gate',
+                    'kai-mode-toggle',
+                    'kai-mode-choice'
+                ];
+                
+                elements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && (el.style.display !== 'none' && !el.classList.contains('hidden') || el.classList.contains('show'))) {
+                        // Check computed style for visibility
+                        const style = window.getComputedStyle(el);
+                        if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+                            const rect = el.getBoundingClientRect();
+                            zones.push({
+                                top: rect.top,
+                                left: rect.left,
+                                bottom: rect.bottom,
+                                right: rect.right
+                            });
+                        }
                     }
-                }
-            });
+                });
 
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ type: 'kai:hitzones', zones }, '*');
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'kai:hitzones', zones }, '*');
+                }
+            } catch (e) {
+                console.warn('[AssistantPanel] Hit-zone broadcast error:', e);
             }
-        }, 100);
+        };
+        this._hitZoneInterval = setInterval(hitZoneHandler, 100);
 
         // Forward mouse events to parent to prevent "trapping" the mouse
-        window.addEventListener('mousemove', (e) => {
+        const onMouseMove = (e) => {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ 
                     type: 'kai:mousemove', 
@@ -385,9 +457,11 @@ class KaiChatUIController {
                     clientY: e.clientY 
                 }, '*');
             }
-        });
+        };
+        this._windowListeners.push({ event: 'mousemove', handler: onMouseMove });
+        window.addEventListener('mousemove', onMouseMove);
 
-        window.addEventListener('mousedown', (e) => {
+        const onMouseDown = (e) => {
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ 
                     type: 'kai:mousemove', // Trigger hit check on click too
@@ -395,7 +469,9 @@ class KaiChatUIController {
                     clientY: e.clientY 
                 }, '*');
             }
-        });
+        };
+        this._windowListeners.push({ event: 'mousedown', handler: onMouseDown });
+        window.addEventListener('mousedown', onMouseDown);
     }
 
     showSpeechBubble(text, actions = []) {
@@ -409,10 +485,18 @@ class KaiChatUIController {
         actionsEl.innerHTML = '';
         
         if (actions.length === 0) {
-            actionsEl.innerHTML = `
-                <button class="xp-button" onclick="AIChatUI.openChat()">ACCESS</button>
-                <button class="xp-button secondary" onclick="AIChatUI.dismiss()">DISMISS</button>
-            `;
+            const accessBtn = document.createElement('button');
+            accessBtn.className = 'xp-button';
+            accessBtn.textContent = 'ACCESS';
+            accessBtn.onclick = () => { if (window.AIChatUI) window.AIChatUI.openChat(); };
+            
+            const dismissBtn = document.createElement('button');
+            dismissBtn.className = 'xp-button secondary';
+            dismissBtn.textContent = 'DISMISS';
+            dismissBtn.onclick = () => { if (window.AIChatUI) window.AIChatUI.dismiss(); };
+            
+            actionsEl.appendChild(accessBtn);
+            actionsEl.appendChild(dismissBtn);
         } else {
             actions.forEach(action => {
                 const btn = document.createElement('button');
@@ -450,9 +534,9 @@ class KaiChatUIController {
     }
 
     startSessionClock() {
-        if (this._sessionStart) return; // already running
+        if (this._sessionClockInterval) return; // already running
         this._sessionStart = Date.now();
-        setInterval(() => {
+        this._sessionClockInterval = setInterval(() => {
             const el = document.getElementById('ai-chat-meta-session');
             if (!el) return;
             const sec = Math.floor((Date.now() - this._sessionStart) / 1000);
@@ -952,21 +1036,35 @@ class KaiChatUIController {
     }
 
     showActionConfirmation(action) {
-        const actionsHTML = `
-            <button class="xp-button" onclick="AIChatUI.executeAction(${JSON.stringify(action)})">
-                [EXECUTE]
-            </button>
-            <button class="xp-button secondary" onclick="AIChatUI.addMessage('system', '>> ABORTED.')">
-                [ABORT]
-            </button>
-        `;
-        
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'ai-message system';
+
+        const executeBtn = document.createElement('button');
+        executeBtn.className = 'xp-button';
+        executeBtn.textContent = '[EXECUTE]';
+        executeBtn.onclick = () => {
+            this.executeAction(action);
+            actionsDiv.remove();
+        };
+
+        const abortBtn = document.createElement('button');
+        abortBtn.className = 'xp-button secondary';
+        abortBtn.textContent = '[ABORT]';
+        abortBtn.onclick = () => {
+            this.addMessage('system', '>> ABORTED.');
+            actionsDiv.remove();
+        };
+
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-message-bubble';
+        bubble.appendChild(executeBtn);
+        bubble.appendChild(abortBtn);
+
+        actionsDiv.appendChild(bubble);
+
         const messagesContainer = document.getElementById('ai-chat-messages');
         if (!messagesContainer) return;
 
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'ai-message system';
-        actionsDiv.innerHTML = `<div class="ai-message-bubble">${actionsHTML}</div>`;
         messagesContainer.appendChild(actionsDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -1021,15 +1119,20 @@ class KaiChatUIController {
         this.addMessage('system', '>> EXECUTING...');
 
         try {
-            const result = await this.assistant.editorTools[action.type](
+            const response = await this.assistant.editorTools[action.type](
                 ...Object.values(action.params)
             );
 
-            if (result.success) {
-                this.addMessage('system', '>> ACTION COMPLETED SUCCESSFULLY.');
-            } else {
-                this.addMessage('error', `>> FAILED: ${result.reason}`);
+            if (response && typeof response.then === 'function') {
+                throw new Error('editor tool returned a Promise instead of a value');
             }
+
+            if (response?.success === false) {
+                this.addMessage('error', `>> FAILED: ${response.reason || response.error?.message || 'Unknown error'}`);
+                return;
+            }
+
+            this.addMessage('system', '>> ACTION COMPLETED SUCCESSFULLY.');
         } catch (error) {
             this.addMessage('error', `>> RUNTIME ERROR: ${error.message}`);
         }
@@ -1176,9 +1279,12 @@ class KaiSettingsController {
             const response = await fetch('/api/opencode-zen/models');
             if (!response.ok) return;
             const payload = await response.json();
-            list.innerHTML = (payload.data || [])
-                .map(model => `<option value="${String(model.id).replace(/["&<>]/g, '')}"></option>`)
-                .join('');
+            list.innerHTML = '';
+            (payload.data || []).forEach(model => {
+                const option = document.createElement('option');
+                option.value = String(model.id).replace(/["&<>]/g, '');
+                list.appendChild(option);
+            });
             list.dataset.loaded = 'true';
         } catch (error) {
             console.warn('Kai: OpenCode Zen model catalog unavailable.', error);
@@ -1192,9 +1298,12 @@ class KaiSettingsController {
             const { OpenRouterAdapter } = await import('../openrouter-adapter.js');
             const adapter = new OpenRouterAdapter();
             const models = await adapter.listModels();
-            list.innerHTML = models
-                .map(m => `<option value="${String(m.id).replace(/["&<>]/g, '')}"></option>`)
-                .join('');
+            list.innerHTML = '';
+            models.forEach(m => {
+                const option = document.createElement('option');
+                option.value = String(m.id).replace(/["&<>]/g, '');
+                list.appendChild(option);
+            });
             window.KAI?.showBalloon?.('OpenRouter model list loaded.');
         } catch (error) {
             console.warn('Kai: OpenRouter model catalog unavailable.', error);
@@ -1275,7 +1384,8 @@ class KaiSettingsController {
         };
 
         this.saveSettings();
-        window.setKaiMode?.(this.settings.aiEnabled);
+        // Persist AI on/off from settings checkbox (Easy/Full chosen via mode dialog/toggle)
+        window.setKaiMode?.(this.settings.aiEnabled ? 'full' : 'off');
         window.AIChatUI?.updateChatMeta();
 
         const irab = window.irab || (window.parent && window.parent.irab);
@@ -1329,16 +1439,21 @@ window.updateAIProgress = (data) => window.AIChatUI.updateLoadingProgress(data);
 function getStoredKaiMode() {
     if (window.KAIMode) return window.KAIMode.getAIMode();
     const value = localStorage.getItem('kai_ai_enabled');
-    return value === 'true' ? true : value === 'false' ? false : null;
+    return value === 'true' ? true : value === 'easy' ? 'easy' : value === 'false' ? false : null;
 }
 
-function applyKaiModeUI(enabled) {
+function isAIModeOn(mode) {
+    return mode === true || mode === 'easy';
+}
+
+function applyKaiModeUI(mode) {
+    const enabled = isAIModeOn(mode);
     const toggle = document.getElementById('kai-mode-toggle');
     const assistant = document.getElementById('ai-assistant-container');
     const chat = document.getElementById('ai-chat-panel');
     const omni = document.getElementById('xp-omni-box');
     if (toggle) {
-        toggle.textContent = enabled ? 'AI: ON' : 'AI: OFF';
+        toggle.textContent = mode === 'easy' ? 'AI: EASY' : (enabled ? 'AI: ON' : 'AI: OFF');
         toggle.classList.toggle('off', !enabled);
     }
     if (assistant) assistant.style.display = enabled ? '' : 'none';
@@ -1379,15 +1494,20 @@ function showKaiModeChoice() {
     document.getElementById('kai-mode-choice')?.classList.add('show');
 }
 
-window.setKaiMode = async (enabled) => {
-    const mode = Boolean(enabled);
+window.setKaiMode = async (mode) => {
+    // Accept 'full' (true), 'easy', or 'off' (false)
+    if (mode === 'full' || mode === true) mode = true;
+    else if (mode === 'easy') mode = 'easy';
+    else if (mode === 'off' || mode === false) mode = false;
+    else throw new Error(`Invalid AI mode: ${mode}`);
+
     if (window.KAIMode) window.KAIMode.storeAIMode(mode);
-    else localStorage.setItem('kai_ai_enabled', mode ? 'true' : 'false');
+    else localStorage.setItem('kai_ai_enabled', mode === true ? 'true' : mode === 'easy' ? 'easy' : 'false');
     document.getElementById('kai-mode-choice')?.classList.remove('show');
     applyKaiModeUI(mode);
 
     let ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
-    if (mode) {
+    if (isAIModeOn(mode)) {
         // Ensure the native Cortex bridge is running
         const parentWin = window.parent || window;
         if (parentWin.ensureIrabBridge) {
@@ -1417,19 +1537,21 @@ window.setKaiMode = async (enabled) => {
             window.RedglitchAIInstance = null;
         }
     }
-    window.dispatchEvent(new CustomEvent('kai:mode-change', { detail: { enabled: mode } }));
+    window.dispatchEvent(new CustomEvent('kai:mode-change', { detail: { mode, enabled: isAIModeOn(mode) } }));
     return mode;
 };
 
-window.chooseKaiMode = (enabled) => window.setKaiMode(enabled).catch((error) => {
+window.chooseKaiMode = (mode) => window.setKaiMode(mode).catch((error) => {
     console.error('Kai mode change failed:', error);
     window.AIChatUI?.addMessage('error', `>> AI MODE ERROR: ${error.message}`);
 });
 
 window.toggleKaiMode = () => {
-    const enabled = getStoredKaiMode() === true;
-    if (enabled) window.chooseKaiMode(false);
-    else window.chooseKaiMode(true);
+    const current = getStoredKaiMode();
+    // Cycle: off -> easy -> full -> off
+    if (current === false || current === null) window.chooseKaiMode('easy');
+    else if (current === 'easy') window.chooseKaiMode(true);
+    else window.chooseKaiMode(false);
 };
 
 async function bootstrapKaiMode() {
@@ -1438,8 +1560,8 @@ async function bootstrapKaiMode() {
         showKaiModeChoice();
         return;
     }
-    applyKaiModeUI(mode === true);
-    if (mode === true) await window.setKaiMode(true);
+    applyKaiModeUI(mode);
+    if (isAIModeOn(mode)) await window.setKaiMode(mode);
 }
 
 if (document.readyState === 'loading') {

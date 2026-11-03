@@ -18,18 +18,40 @@ export class ToolRegistry {
         this.completedRequests = new Map();
         this.flags = getAutomationFlags();
         this.NAMESPACE_ALIAS = NAMESPACE_ALIAS;
-        
+        this._ready = false;
+        this._listeners = [];
+        this._pendingTimeouts = new Set();
+
         console.log(`[ToolRegistry] Initialized in ${window.location.pathname}`);
         this._debug(`Registry startup. Origin: ${window.location.origin}`);
-        
-        // Setup listeners and defaults
-        this._setupListeners();
+
         this._registerDefaults();
-        
-        // Initial sync with Python Backend
+        this._setupListeners();
+        this._ready = true;
+
         if (this.eventBus) {
+            this.eventBus.emit('ai:tool:registry:ready');
             this._syncWithBackend();
         }
+    }
+
+    /**
+     * Remove all EventBus listeners registered by this instance.
+     * Call when the registry is no longer needed (e.g. AI disabled, page unload).
+     */
+    destroy() {
+        if (!this.eventBus) return;
+        for (const { event, handler } of this._listeners) {
+            this.eventBus.off(event, handler);
+        }
+        this._listeners = [];
+        for (const timeoutId of this._pendingTimeouts) {
+            clearTimeout(timeoutId);
+        }
+        this._pendingTimeouts.clear();
+        this.inFlight.clear();
+        this.completedRequests.clear();
+        this.tools.clear();
     }
 
     _debug(msg, data = null) {
@@ -62,21 +84,28 @@ export class ToolRegistry {
         }
 
         // --- Phase 3 & 4: Pending Action Recovery ---
-        this.eventBus.on('ai:tool:registered', (event) => {
+        const onToolRegistered = (event) => {
             if (!event || !event.data) return;
             const data = event.data;
             this._debug(`External tool registered: ${data.name}. Checking for pending actions...`);
             this._checkPendingAction(data.name);
-        });
+            if (this.eventBus && !this._ready) {
+                console.warn('[ToolRegistry] Pending action recovery before _setupListeners registered defaults');
+            }
+        };
+        this._listeners.push({ event: 'ai:tool:registered', handler: onToolRegistered });
+        this.eventBus.on('ai:tool:registered', onToolRegistered);
 
         // Re-sync tools when connection is established
-        this.eventBus.on('system:websocket:connected', () => {
+        const onWsConnected = () => {
             this._debug(`WebSocket connected. Syncing tools...`);
             this._syncWithBackend();
-        });
+        };
+        this._listeners.push({ event: 'system:websocket:connected', handler: onWsConnected });
+        this.eventBus.on('system:websocket:connected', onWsConnected);
 
         // The "Handshake": External tools can announce their presence
-        this.eventBus.on('studio:tool:announce', (event) => {
+        const onToolAnnounce = (event) => {
             if (!event || !event.data) return;
             // Ignore our own announcements
             if (event.source === this.eventBus.getSource()) return;
@@ -90,19 +119,23 @@ export class ToolRegistry {
             }
             this.register(toolDef, false); // Register without re-broadcasting
             this._checkPendingAction(toolDef.name);
-        });
+        };
+        this._listeners.push({ event: 'studio:tool:announce', handler: onToolAnnounce });
+        this.eventBus.on('studio:tool:announce', onToolAnnounce);
 
         // Discovery Request: When a new AI component joins, it asks for all tools
-        this.eventBus.on('ai:tool:discover', (event) => {
+        const onToolDiscover = (event) => {
             // Only respond if we are the primary registry or the discovery came from elsewhere
             this._debug(`Discovery requested. Broadcasting all tools.`);
             for (const tool of this.tools.values()) {
                 this.eventBus.emit('ai:tool:registered', { name: tool.name, definition: tool });
             }
-        });
+        };
+        this._listeners.push({ event: 'ai:tool:discover', handler: onToolDiscover });
+        this.eventBus.on('ai:tool:discover', onToolDiscover);
 
         // Remote request for tool execution (from IRAB/Assistant)
-        this.eventBus.on('ai:command:request', async (event) => {
+        const onCommandRequest = async (event) => {
             if (!event || !event.data) return;
             // Ignore our own requests
             if (event.source === this.eventBus.getSource()) return;
@@ -124,7 +157,9 @@ export class ToolRegistry {
                     }
                 });
             }
-        });
+        };
+        this._listeners.push({ event: 'ai:command:request', handler: onCommandRequest });
+        this.eventBus.on('ai:command:request', onCommandRequest);
     }
 
     /**
@@ -173,10 +208,14 @@ export class ToolRegistry {
             localStorage.removeItem('ai_pending_action');
             
             // Small delay to ensure the tool's environment (DOM/State) is ready
-            setTimeout(() => {
+            const pendingTimeout = setTimeout(() => {
+                this._pendingTimeouts.delete(pendingTimeout);
                 this._debug(`Executing recovered action: ${action.method}`);
-                this.execute(action.method, action.params, action.id);
+                this.execute(action.method, action.params, action.id).catch((error) => {
+                    this._debug(`Recovered action failed: ${action.method}`, error.message);
+                });
             }, 500);
+            this._pendingTimeouts.add(pendingTimeout);
         } catch (e) {
             this._debug(`Recovery error: ${e.message}`);
             localStorage.removeItem('ai_pending_action');
@@ -199,14 +238,14 @@ export class ToolRegistry {
             throw error;
         }
         this.tools.set(compliantTool.name, compliantTool);
-        
+
         this._debug(`Tool registered locally: ${compliantTool.name}`);
 
-        if (this.eventBus && broadcast) {
-            this.eventBus.emit('ai:tool:registered', { 
-                name: compliantTool.name, 
+        if (this.eventBus && this._ready) {
+            this.eventBus.emit('ai:tool:registered', {
+                name: compliantTool.name,
                 namespace: compliantTool.name.split('.')[0],
-                definition: compliantTool 
+                definition: compliantTool
             });
         }
         
@@ -332,7 +371,11 @@ export class ToolRegistry {
                 timestamp: Date.now()
             }));
 
-            await this.execute('navigateTo', { target });
+            try {
+                await this.execute('navigateTo', { target });
+            } finally {
+                window._ai_redirecting = false;
+            }
             
             const response = buildResponse({
                 success: false, 
@@ -467,16 +510,19 @@ export class ToolRegistry {
     async _waitForRemoteResult(requestId, timeoutMs = 15000) {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
+                this._pendingTimeouts.delete(timeout);
                 this.eventBus.off('studio:action:result', handler);
                 const error = new Error('Editor execution timed out');
                 error.code = ERROR_CODE.EDITOR_TIMEOUT;
                 reject(error);
             }, timeoutMs);
+            this._pendingTimeouts.add(timeout);
 
             const handler = (event) => {
                 const response = event.data;
                 if (response.id === requestId) {
                     clearTimeout(timeout);
+                    this._pendingTimeouts.delete(timeout);
                     this.eventBus.off('studio:action:result', handler);
                     if (response.success) resolve(response.result);
                     else {

@@ -46,17 +46,17 @@ export class CoPilot {
         this.suggest("GRRR... CHAOS MODE ENGAGED! I'm going to try and break your game now. Buckle up.");
         
         this.chaosInterval = setInterval(async () => {
-            const tools = this.ai.toolRegistry.listTools().filter(t => t.securityLevel !== 'high-risk');
-            if (tools.length === 0) return;
-
-            const tool = tools[Math.floor(Math.random() * tools.length)];
-            const args = this._generateRandomArgs(tool);
-            
-            console.log(`[Chaos] Executing random action: ${tool.name}`, args);
             try {
+                const tools = this.ai?.toolRegistry?.listTools().filter(t => t.securityLevel !== 'high-risk') || [];
+                if (tools.length === 0) return;
+
+                const tool = tools[Math.floor(Math.random() * tools.length)];
+                const args = this._generateRandomArgs(tool);
+                
+                console.log(`[Chaos] Executing random action: ${tool.name}`, args);
                 this.eventBus.emit('ai:chaos:probe', { tool: tool.name, args, dryRun: true });
             } catch (e) {
-                console.warn(`[Chaos] Dry-run probe failed: ${tool.name}`, e);
+                console.warn(`[Chaos] Interval error:`, e);
             }
         }, 2000); // Action every 2 seconds
     }
@@ -133,15 +133,19 @@ export class CoPilot {
 
     startIdleMonitor() {
         setInterval(() => {
-            if (!this.enabled) return;
-            const idleTime = (Date.now() - this.lastActionTime) / 1000 / 60; // minutes
-            
-            if (idleTime > 5) {
-                // Proactive tip when idle
-                this.eventBus.emit('ai:thought', { 
-                    text: "You've been quiet for a while. Need a random pro tip or a joke?" 
-                });
-                this.lastActionTime = Date.now(); // Reset to avoid spam
+            try {
+                if (!this.enabled) return;
+                const idleTime = (Date.now() - this.lastActionTime) / 1000 / 60; // minutes
+                
+                if (idleTime > 5) {
+                    // Proactive tip when idle
+                    this.eventBus.emit('ai:thought', { 
+                        text: "You've been quiet for a while. Need a random pro tip or a joke?" 
+                    });
+                    this.lastActionTime = Date.now(); // Reset to avoid spam
+                }
+            } catch (e) {
+                console.warn('[Co-Pilot] Idle monitor error:', e);
             }
         }, 60000);
     }
@@ -159,12 +163,21 @@ export class CoPilot {
     }
 
     loadPreferences() {
-        const saved = localStorage.getItem('redglitch_ai_prefs');
-        return saved ? JSON.parse(saved) : {
-            namingStyle: 'snake_case',
-            autoSave: true,
-            complexity: 'beginner'
-        };
+        try {
+            const saved = localStorage.getItem('redglitch_ai_prefs');
+            return saved ? JSON.parse(saved) : {
+                namingStyle: 'snake_case',
+                autoSave: true,
+                complexity: 'beginner'
+            };
+        } catch (e) {
+            console.warn('[CoPilot] Failed to parse redglitch_ai_prefs from localStorage:', e);
+            return {
+                namingStyle: 'snake_case',
+                autoSave: true,
+                complexity: 'beginner'
+            };
+        }
     }
 
     savePreference(key, value) {
