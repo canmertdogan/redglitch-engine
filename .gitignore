@@ -122,7 +122,7 @@ projects/*/
 /b.png
 /test.png
 Ekran*
-.redglitch/ai_config.json
+**/.redglitch/ai_config.json
 screenshots/
 
 # Vendored ML runtime binaries (already tracked; guard against re-adding noise)

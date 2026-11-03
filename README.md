@@ -343,7 +343,7 @@ Synth / Sampler / Drum Machine → Track (gain, pan, FX) → Master Bus (compres
 ## Quick Start
 
 ```bash
-# Prerequisites: Node.js ≥18, npm ≥9
+# Prerequisites: Node.js ^20.19 or >=22.12 (vite/electron engines field), npm >=9
 
 git clone https://github.com/canmertdogan/redglitch-engine.git
 cd redglitch-engine

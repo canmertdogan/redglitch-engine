@@ -40,10 +40,12 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:3000',
-      '/dunyalar': 'http://localhost:3000',
-      '/assets': 'http://localhost:3000',
-      '/muzikler': 'http://localhost:3000',
+      // 127.0.0.1, not localhost: the Express server binds IPv4 loopback only
+      // (see server/config.js HOST), and "localhost" can resolve to ::1 first.
+      '/api': 'http://127.0.0.1:3000',
+      '/dunyalar': 'http://127.0.0.1:3000',
+      '/assets': 'http://127.0.0.1:3000',
+      '/muzikler': 'http://127.0.0.1:3000',
     }
   }
 });
