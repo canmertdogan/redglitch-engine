@@ -33,6 +33,7 @@ export class ContextManager {
         // Sanitize externally controlled inputs before interpolation
         const safeUserMessage = ContextManager.sanitizeForPrompt(userMessage);
         const safeToolsPrompt = ContextManager.sanitizeForPrompt(toolsPrompt);
+        const safeRagContext = ContextManager.sanitizeForPrompt(ragContext);
 
         let systemPrompt = "You are Kai, a genius AI hacker assistant for Redglitch Studio. You are cool, nerdy, and extremely competent. You love retro tech, efficient code, and helping users build legendary games.\n\nIMPORTANT TOOL ROUTING:\n- For top-down RPG maps/levels → use navigateTo with target \"editor\"\n- For isometric/isopixel maps → use navigateTo with target \"iso_studio\"\n- For 2D platformer levels → use navigateTo with target \"platformer_studio\"\n- For code/scripting → use navigateTo with target \"script\"\nNever open the script editor for map creation requests.";
         
@@ -52,7 +53,7 @@ export class ContextManager {
         // Calculate dynamic budgets
         const maxTotalTokens = AI_CONFIG.limits.contextWindow || 4096;
         const systemTokens = TokenizerUtils.estimateTokens(systemPrompt);
-        const userTokens = TokenizerUtils.estimateTokens(userMessage);
+        const userTokens = TokenizerUtils.estimateTokens(safeUserMessage);
         
         // Leave room for generation
         const reservedGeneration = AI_CONFIG.models.llm.maxNewTokens || 1024;
@@ -68,18 +69,20 @@ export class ContextManager {
         let currentHistoryTokens = 0;
         for (let i = this.history.length - 1; i >= 0; i--) {
             const msg = this.history[i];
-            const msgTokens = TokenizerUtils.estimateTokens(msg.content);
+            const safeContent = ContextManager.sanitizeForPrompt(msg.content);
+            const safeRole = ContextManager.sanitizeForPrompt(msg.role);
+            const msgTokens = TokenizerUtils.estimateTokens(safeContent);
             if (currentHistoryTokens + msgTokens > maxHistoryTokens) {
                 // We've hit the history limit, donate the rest to RAG
                 maxRagTokens += (maxHistoryTokens - currentHistoryTokens);
                 break;
             }
-            historyPrompt = `<|im_start|>${msg.role}\n${msg.content}<|im_end|>\n` + historyPrompt;
+            historyPrompt = `<|im_start|>${safeRole}\n${safeContent}<|im_end|>\n` + historyPrompt;
             currentHistoryTokens += msgTokens;
         }
 
-        const budgetedRag = ragContext
-            ? TokenizerUtils.truncateToTokenBudget(ragContext, maxRagTokens, true) // true = fromStart
+        const budgetedRag = safeRagContext
+            ? TokenizerUtils.truncateToTokenBudget(safeRagContext, maxRagTokens, true) // true = fromStart
             : '';
 
         let prompt = `<|im_start|>system\n${systemPrompt}`;
@@ -94,7 +97,7 @@ export class ContextManager {
         prompt += historyPrompt;
 
         // Add User Message
-        prompt += `<|im_start|>user\n${userMessage}<|im_end|>\n<|im_start|>assistant\n`;
+        prompt += `<|im_start|>user\n${safeUserMessage}<|im_end|>\n<|im_start|>assistant\n`;
 
         return prompt;
     }

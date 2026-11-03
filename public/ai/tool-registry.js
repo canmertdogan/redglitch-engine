@@ -489,18 +489,22 @@ export class ToolRegistry {
         const ms = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 15000;
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
+                this._pendingTimeouts.delete(timeout);
                 const error = new Error(message);
                 error.code = code;
                 reject(error);
             }, ms);
+            this._pendingTimeouts.add(timeout);
 
             promise.then(
                 (value) => {
                     clearTimeout(timeout);
+                    this._pendingTimeouts.delete(timeout);
                     resolve(value);
                 },
                 (error) => {
                     clearTimeout(timeout);
+                    this._pendingTimeouts.delete(timeout);
                     reject(error);
                 }
             );
