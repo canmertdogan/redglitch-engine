@@ -84,7 +84,13 @@ window.DialogueSystem = class DialogueSystem {
             this.db = await response.json();
         } catch (e) {
             const saved = localStorage.getItem('redglitch_dialogue');
-            if (saved) this.db = JSON.parse(saved);
+            if (saved) {
+                try {
+                    this.db = JSON.parse(saved);
+                } catch (parseError) {
+                    console.warn('[DialogueSystem] Failed to parse dialogue data from localStorage:', parseError);
+                }
+            }
         }
     }
 

@@ -39,7 +39,6 @@ class AssetManager {
      * Rebuild the entire dependency graph by scanning all assets
      */
     rebuildDependencyGraph() {
-        console.log('[AssetManager] Rebuilding dependency graph...');
         for (const [id, asset] of this.assets.entries()) {
             if (asset.type === 'data' || asset.type === 'json') {
                 this.scanForDependencies(id);
@@ -271,7 +270,6 @@ class AssetManager {
             });
         }
         
-        console.log(`[AssetManager] Registered asset: ${id}`);
         return asset;
     }
 
@@ -497,7 +495,6 @@ class AssetManager {
             });
         }
 
-        console.log(`[AssetManager] Removed asset: ${id}`);
         return true;
     }
 
@@ -507,7 +504,6 @@ class AssetManager {
     clearCache(filter = null) {
         if (!filter) {
             this.cache.clear();
-            console.log('[AssetManager] Cache cleared');
             return;
         }
 
@@ -516,8 +512,6 @@ class AssetManager {
                 this.cache.delete(id);
             }
         }
-        
-        console.log('[AssetManager] Cache partially cleared');
     }
 
     /**
@@ -529,19 +523,14 @@ class AssetManager {
             if (response.ok) {
                 const data = await response.json();
                 
-                // Clear existing assets
                 this.assets.clear();
                 
-                // Register all assets
                 const assetList = (data && data.assets) ? data.assets : (Array.isArray(data) ? data : null);
                 
                 if (assetList && Array.isArray(assetList)) {
                     for (const assetData of assetList) {
                         this.registerAsset(assetData);
                     }
-                    console.log(`[AssetManager] Loaded ${assetList.length} assets from registry`);
-                } else {
-                    console.warn('[AssetManager] Received invalid or empty asset data from server:', data);
                 }
             }
         } catch (error) {
@@ -696,10 +685,8 @@ class AssetManager {
      * Useful when switching engines or reloading large levels.
      */
     purgeCache() {
-        console.log(`[AssetManager] Purging cache... freeing ${this.cache.size} assets`);
         this.cache.clear();
         
-        // Also fire an event so systems know references are broken
         if (this.eventBus) {
             this.eventBus.emit('asset:cache:purged', { timestamp: Date.now() });
         }

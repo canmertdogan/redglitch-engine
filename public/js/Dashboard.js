@@ -400,7 +400,13 @@ const LogManager = {
     hide: () => { document.getElementById('log-modal').classList.remove('active'); },
     renderAll: () => {
         const list = document.getElementById('log-list');
-        if (list) list.innerHTML = LogManager.logs.map(l => `<div class="log-entry ${l.type}"><span style="color:#666">[${l.time}]</span> ${l.msg}</div>`).join('');
+        if (list) {
+            list.innerHTML = LogManager.logs.map(l => {
+                const safeMsg = escapeHtml(l.msg);
+                const safeTime = escapeHtml(l.time);
+                return `<div class="log-entry ${l.type}"><span style="color:#666">[${safeTime}]</span> ${safeMsg}</div>`;
+            }).join('');
+        }
     }
 };
 

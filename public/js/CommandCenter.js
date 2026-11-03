@@ -95,7 +95,15 @@ window.closeCommandCenter = function() {
 
 // --- COMMAND INPUT & TERMINAL ---
 const Terminal = {
-    history: JSON.parse(localStorage.getItem('redglitch_cmd_history') || '[]'),
+    history: (() => {
+        try {
+            const stored = localStorage.getItem('redglitch_cmd_history');
+            return stored ? JSON.parse(stored) : [];
+        } catch (e) {
+            console.warn('[CommandCenter] Failed to parse command history from localStorage:', e);
+            return [];
+        }
+    })(),
     historyIndex: -1,
     currentInput: '',
     aliases: {

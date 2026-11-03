@@ -131,37 +131,27 @@ class SharedProjectState {
         const updateTime = options.timestamp || Date.now();
         const lastTime = this.getNested(this.timestamps, path, 0);
 
-        // Phase 5: Anti-Race Condition (Timestamp Diffing)
         if (updateTime < lastTime && !options.force) {
-            console.warn(`[SharedProjectState] Rejected stale update to ${path} (Delta: ${lastTime - updateTime}ms)`);
             return this;
         }
 
         const oldValue = this.get(path);
         
         let finalValue = value;
-        // Phase 5: Graceful Merge for objects instead of exact overwrite
         if (options.merge && typeof oldValue === 'object' && oldValue !== null && typeof value === 'object' && value !== null && !Array.isArray(oldValue)) {
             finalValue = { ...oldValue, ...value };
-            console.log(`[SharedProjectState] Merged object state for ${path}`);
         }
 
-        // Create undo point if value actually changed
         if (JSON.stringify(oldValue) !== JSON.stringify(finalValue) && !options.skipUndo) {
             this.createUndoPoint();
         }
         
-        // Set the value
         this.setNested(this.state, path, finalValue);
         this.setNested(this.timestamps, path, updateTime);
         
-        // Mark as dirty
         this.isDirty = true;
-        
-        // Notify listeners
         this.notifyChange(path, value, oldValue);
         
-        // Broadcast change event
         if (this.eventBus && !options.silent) {
             this.eventBus.emit('state:changed', {
                 path,
@@ -170,12 +160,10 @@ class SharedProjectState {
                 project: this.projectName
             });
             
-            // Phase 2: Live Memory Bridge Integration (IDE -> Runtime Sync)
             if (path.startsWith('variables.') || path.startsWith('globalFlags.')) {
                 const patchObj = {};
                 this.setNested(patchObj, path, value);
                 
-                // Extract the top level namespace
                 if (path.startsWith('variables.')) {
                     this.eventBus.patchMemory('campaign', { variables: patchObj.variables });
                 } else if (path.startsWith('globalFlags.')) {
@@ -280,12 +268,11 @@ class SharedProjectState {
                     });
                 }
                 
-                console.log(`[SharedProjectState] Loaded project: ${this.projectName}`);
-            } else {
-                console.warn(`[SharedProjectState] Failed to load project: ${this.projectName}`);
-                // Initialize with empty state
-                this.state = {};
-                this.metadata = {};
+                if (!response.ok) {
+                    // Initialize with empty state
+                    this.state = {};
+                    this.metadata = {};
+                }
             }
         } catch (error) {
             console.error('[SharedProjectState] Error loading project:', error);
@@ -325,8 +312,6 @@ class SharedProjectState {
                         timestamp: Date.now()
                     });
                 }
-                
-                console.log(`[SharedProjectState] Saved project: ${this.projectName}`);
             } else {
                 console.error('[SharedProjectState] Failed to save project');
             }
@@ -474,20 +459,15 @@ class SharedProjectState {
         if (event.type === 'asset:modified') {
             const asset = event.data?.asset;
             if (asset && asset.type === 'image') {
-                // Clear the global sprite cache for this asset
                 if (window.editorSpriteCache) {
-                    // Try to match by ID, Name, or Path
                     delete window.editorSpriteCache[asset.id];
                     delete window.editorSpriteCache[asset.name];
                     delete window.editorSpriteCache[asset.path];
-                    console.log(`[Hot-Swap] Cleared cache for modified image: ${asset.id}`);
                 }
             }
             
-            // Phase 18: Hot-Reload Dependency Resolution (Prefab updates)
             if (asset && (asset.type === 'json' || asset.type === 'data') && asset.path && asset.path.includes('dunyalar/definitions/')) {
                 const prefabId = asset.name.replace('.json', '');
-                console.log(`[SharedProjectState] Prefab updated: ${prefabId}, broadcasting system:prefab:update`);
                 this.eventBus.emit('system:prefab:update', {
                     prefabId: prefabId,
                     timestamp: Date.now()

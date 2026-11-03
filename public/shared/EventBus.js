@@ -50,7 +50,6 @@ class EventBus {
             this.websocket = new WebSocket(wsUrl);
             
             this.websocket.onopen = () => {
-                console.log('[EventBus] WebSocket connected');
                 this.isConnected = true;
                 this.reconnectAttempts = 0;
                 this.emit('system:websocket:connected');
@@ -60,14 +59,12 @@ class EventBus {
                 try {
                     let textData;
                     if (event.data instanceof Blob) {
-                        if (event.data.size > 5 * 1024 * 1024) { // 5MB limit
-                            console.warn('[EventBus] Discarding incoming Blob message: Exceeds 5MB limit.');
+                        if (event.data.size > 5 * 1024 * 1024) {
                             return;
                         }
                         textData = await event.data.text();
                     } else {
-                        if (typeof event.data === 'string' && event.data.length > 5 * 1024 * 1024) { // 5MB limit
-                            console.warn('[EventBus] Discarding incoming text message: Exceeds 5MB limit.');
+                        if (typeof event.data === 'string' && event.data.length > 5 * 1024 * 1024) {
                             return;
                         }
                         textData = event.data;
@@ -80,7 +77,6 @@ class EventBus {
             };
             
             this.websocket.onclose = () => {
-                console.log('[EventBus] WebSocket disconnected');
                 this.isConnected = false;
                 this.emit('system:websocket:disconnected');
                 this.attemptReconnect();
@@ -91,7 +87,6 @@ class EventBus {
                 this.emit('system:websocket:error', { error });
             };
         } catch (err) {
-            console.warn('[EventBus] WebSocket connection failed:', err);
             this.attemptReconnect();
         }
     }
@@ -100,7 +95,6 @@ class EventBus {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             console.error('[EventBus] Max reconnection attempts reached. Real-time sync is offline.');
             this.emit('system:websocket:failed');
-            // Show notification if running in an editor context
             if (typeof document !== 'undefined') {
                 this._showDisconnectNotification();
             }
@@ -110,7 +104,6 @@ class EventBus {
         this.reconnectAttempts++;
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
         
-        console.log(`[EventBus] Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
         setTimeout(() => {
             this.connectWebSocket();
         }, delay);

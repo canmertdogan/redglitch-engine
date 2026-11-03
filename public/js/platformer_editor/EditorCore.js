@@ -334,7 +334,11 @@ class EditorCore {
     pushState() {
         if (window.RedglitchProjectState) {
             // Sync current map to shared state for undo point
-            window.RedglitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
+            try {
+                window.RedglitchProjectState.set('platformer.currentMap', JSON.parse(JSON.stringify(this.map)));
+            } catch (e) {
+                console.error('[EditorCore] pushState failed:', e);
+            }
         }
     }
 
@@ -343,7 +347,12 @@ class EditorCore {
             if (window.RedglitchProjectState.undo()) {
                 const undoneMap = window.RedglitchProjectState.get('platformer.currentMap');
                 if (undoneMap) {
-                    this.map = JSON.parse(JSON.stringify(undoneMap));
+                    try {
+                        this.map = JSON.parse(JSON.stringify(undoneMap));
+                    } catch (e) {
+                        console.error('[EditorCore] Undo failed:', e);
+                        return;
+                    }
                     this.renderer.invalidateCache();
                 }
             }
@@ -355,7 +364,12 @@ class EditorCore {
             if (window.RedglitchProjectState.redo()) {
                 const redoneMap = window.RedglitchProjectState.get('platformer.currentMap');
                 if (redoneMap) {
-                    this.map = JSON.parse(JSON.stringify(redoneMap));
+                    try {
+                        this.map = JSON.parse(JSON.stringify(redoneMap));
+                    } catch (e) {
+                        console.error('[EditorCore] Redo failed:', e);
+                        return;
+                    }
                     this.renderer.invalidateCache();
                 }
             }

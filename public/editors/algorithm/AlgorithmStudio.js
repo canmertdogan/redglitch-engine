@@ -341,7 +341,13 @@ export class AlgorithmStudio {
                     
                     const match = content.match(/export\s+const\s+nodeConfig\s*=\s*(\{[\s\S]*?\});/);
                     if (match) {
-                        const configStr = match[1];
+                        let configStr = match[1];
+                        // Reject configs containing executable code patterns
+                        const dangerous = /\b(function|eval|new|require|import|process|window|document|fetch|XMLHttpRequest|setTimeout|setInterval|Worker|SharedArrayBuffer|Atomics|BigInt64Array|Float64Array|Intl|Reflect|Proxy|Symbol)\b/;
+                        if (dangerous.test(configStr)) {
+                            console.warn(`[AlgorithmStudio] Skipping unsafe custom node config: ${path}`);
+                            continue;
+                        }
                         const config = new Function(`return ${configStr}`)();
                         
                         const typeId = 'custom_' + path.split(/[/\\]/).pop().replace('.js', '');

@@ -8,7 +8,13 @@ window.AchievementSystem = class AchievementSystem {
         
         // Load Definitions from localStorage (Editor might have set them)
         const defs = localStorage.getItem('redglitch_achievements_data');
-        if (defs) this.definitions = JSON.parse(defs);
+        if (defs) {
+            try {
+                this.definitions = JSON.parse(defs);
+            } catch (e) {
+                console.warn('[AchievementSystem] Failed to parse achievement definitions from localStorage:', e);
+            }
+        }
         
         this.createUI();
 

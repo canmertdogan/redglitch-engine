@@ -109,15 +109,13 @@ class KAE {
                 this.loadMap(map);
             }
         } catch (e) {
-            console.warn('[KAE] Could not load audio map, using defaults.');
+            // Use defaults if audio map fails to load
         }
 
-        // Resume if suspended
         if (this.ctx.state === 'suspended') {
             await this.ctx.resume().catch(() => {});
         }
         this._ready = true;
-        console.log('%c[KAE] Audio Engine online.', 'color:#e53e3e;font-weight:bold;');
     }
 
     // ─────────────────────────────────────────────────────────
@@ -521,7 +519,6 @@ class KAE {
             this.buffers.set(url, audioBuf);
             return audioBuf;
         } catch (e) {
-            console.warn(`[KAE] Asset missing: ${url} — generating synthetic placeholder.`);
             const synthetic = this._generateSynthetic(this._guessType(url));
             this.buffers.set(url, synthetic);
             return synthetic;
@@ -703,7 +700,6 @@ class KAE {
         }
 
         this._emit('audio:state_changed', { state });
-        console.log(`[KAE] Game state: ${state}`);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -889,7 +885,6 @@ class KAE {
                 if (asset && asset.type === 'audio') {
                     if (this.buffers.has(asset.path)) {
                         this.buffers.delete(asset.path);
-                        console.log(`[Hot-Swap] Cleared audio cache for: ${asset.path}`);
                     }
                     if (this.buffers.has(asset.id)) {
                         this.buffers.delete(asset.id);
@@ -901,11 +896,9 @@ class KAE {
             window.RedglitchEventBus.on('file:changed', (event) => {
                 const path = event.data?.path || '';
                 if (path.includes('audio/') || path.includes('muzikler/')) {
-                    // Try to match partial or full path
                     for (const cachedPath of this.buffers.keys()) {
                         if (cachedPath.includes(path) || path.includes(cachedPath)) {
                             this.buffers.delete(cachedPath);
-                            console.log(`[Hot-Swap] Cleared audio cache via file:changed for: ${cachedPath}`);
                         }
                     }
                 }
