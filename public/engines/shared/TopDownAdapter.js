@@ -65,7 +65,6 @@ class TopDownAdapter extends EngineAdapter {
 
     async loadLevel(levelId, levelPath = null) {
         if (!this.isInitialized) throw new Error('Adapter not initialized');
-        console.log(`[TopDownAdapter] Loading level: ${levelId}, path: ${levelPath}`);
         
         // Use engine's native loadLevel which already handles project context via window.ActiveProject
         await this.engine.loadLevel(levelId);
@@ -170,7 +169,6 @@ class TopDownAdapter extends EngineAdapter {
             
             // Check for levelComplete flag (set by engine)
             if (this.engine.levelComplete === true) {
-                console.log('[TopDownAdapter] levelComplete flag detected');
                 this.exitTriggered = true;
                 this._stopExitMonitoring();
                 if (this.levelCompleteCallback) {
@@ -190,7 +188,6 @@ class TopDownAdapter extends EngineAdapter {
                     const cx = p.x + (p.width || 16) * (p.scale || 3) / 2;
                     const cy = p.y + (p.height || 16) * (p.scale || 3) / 2;
                     if (this.engine.mapSystem.isTriggerZone(cx, cy)) {
-                        console.log('[TopDownAdapter] Trigger zone detected');
                         this.exitTriggered = true;
                         this._stopExitMonitoring();
                         if (this.levelCompleteCallback) {

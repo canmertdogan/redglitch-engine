@@ -179,8 +179,6 @@ class Camera3DController {
             this._cinematicT     = 0;
             this._cinematicSpeed = config.speed ?? 0.05;
         }
-
-        console.log(`[Camera3DController] mode → ${mode}`);
     }
 
     get mode() { return this._mode; }

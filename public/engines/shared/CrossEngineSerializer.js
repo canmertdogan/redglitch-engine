@@ -237,8 +237,12 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
     static serializeFlags(flags) {
         if (!flags || typeof flags !== 'object') return {};
         
-        // Deep copy to avoid reference issues
-        return JSON.parse(JSON.stringify(flags));
+        try {
+            return JSON.parse(JSON.stringify(flags));
+        } catch (e) {
+            console.warn('[CrossEngineSerializer] Failed to deep-clone flags, falling back to shallow copy:', e);
+            return { ...flags };
+        }
     }
     
     /**
@@ -249,7 +253,12 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
     static deserializeFlags(flags) {
         if (!flags || typeof flags !== 'object') return {};
         
-        return JSON.parse(JSON.stringify(flags));
+        try {
+            return JSON.parse(JSON.stringify(flags));
+        } catch (e) {
+            console.warn('[CrossEngineSerializer] Failed to deep-clone flags on deserialize, falling back to shallow copy:', e);
+            return { ...flags };
+        }
     }
     
     /**
@@ -263,6 +272,7 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         const player = engine.player;
         
         return {
+            schemaVersion: '1.0',
             // Core stats (always persist)
             hp: player.hp,
             maxHp: player.maxHp,
@@ -300,6 +310,11 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         if (!engine || !engine.player || !playerData) return;
         
         const player = engine.player;
+        
+        // Legacy save detection
+        if (!playerData.schemaVersion) {
+            console.warn('[CrossEngineSerializer] Loading legacy player state without schemaVersion. Applying best-effort migration.');
+        }
         
         // Core stats
         if (playerData.hp !== undefined) player.hp = playerData.hp;

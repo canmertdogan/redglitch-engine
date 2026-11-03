@@ -65,9 +65,8 @@ export default class Engine3DAdapter extends Engine3DBase {
 
     constructor(container, options = {}) {
         // Engine3DBase expects (engineType3D, container)
-        // We need to pass engineType first - child class will set this._engineType3D
-        // Use a placeholder that will be overridden by child's getter
-        super('generic-3d', container);
+        const engineType = options.engineType || options.mode || 'generic-3d';
+        super(engineType, container);
 
         /** @type {object|null} Currently loaded raw level data */
         this._currentLevel = null;
@@ -110,7 +109,6 @@ export default class Engine3DAdapter extends Engine3DBase {
         if (this._3dInitialized) return;
         await super.initialize3D ? super.initialize3D() : null;
         this._3dInitialized = true;
-        console.log(`[Engine3DAdapter] initialize3D() complete for ${this.engineType3D}`);
     }
 
     /**
@@ -151,7 +149,6 @@ export default class Engine3DAdapter extends Engine3DBase {
             // Notify subclass
             await Promise.resolve(this.onLevelLoaded(level));
 
-            console.log(`[Engine3DAdapter] Level loaded: "${level.name}" (${level.engineType})`);
             return level;
         } catch (err) {
             console.error('[Engine3DAdapter] loadLevel3D failed:', err.message);
@@ -175,7 +172,6 @@ export default class Engine3DAdapter extends Engine3DBase {
         this._levelObjects.clear();
         this._currentLevel = null;
         this._levelId = null;
-        console.log('[Engine3DAdapter] Level unloaded');
     }
 
     /**
@@ -203,7 +199,6 @@ export default class Engine3DAdapter extends Engine3DBase {
             { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
         );
         if (!res.ok) throw new Error(`saveLevel: HTTP ${res.status}`);
-        console.log(`[Engine3DAdapter] Level saved: ${project}/${levelId}`);
     }
 
     // ── Schema validation ─────────────────────────────────────────────────────
@@ -289,7 +284,6 @@ export default class Engine3DAdapter extends Engine3DBase {
                                  this.scene.getObjectByName('__fpsAmbientLight') ||
                                  this.scene.getObjectByName('_rg3d_ambient');
                 if (existing) {
-                    console.log('[Engine3DAdapter] Ambient light already exists, skipping default ambient population.');
                     continue;
                 }
             }
@@ -299,7 +293,6 @@ export default class Engine3DAdapter extends Engine3DBase {
                                  this.scene.getObjectByName('__fpsSunLight') ||
                                  this.scene.getObjectByName('_rg3d_sun');
                 if (existing) {
-                    console.log('[Engine3DAdapter] Sun light already exists, skipping default sun population.');
                     continue;
                 }
             }

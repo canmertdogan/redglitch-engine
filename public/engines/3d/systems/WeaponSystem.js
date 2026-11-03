@@ -225,7 +225,6 @@ export default class WeaponSystem {
             for (const def of (Array.isArray(defs) ? defs : Object.values(defs))) {
                 this.defineWeapon(def);
             }
-            console.log(`[WeaponSystem] loaded ${this._defs.size} weapon defs from ${url}`);
         } catch (err) {
             console.warn('[WeaponSystem] loadWeaponDefs failed:', err.message);
         }
@@ -259,7 +258,6 @@ export default class WeaponSystem {
         // Notify ammo
         this._emitAmmoChanged();
         if (this.onEquip) this.onEquip(weaponId, def);
-        console.log(`[WeaponSystem] equipped: ${def.name}`);
     }
 
     /**
@@ -549,7 +547,6 @@ export default class WeaponSystem {
         ammo.reserve -= taken;
 
         this._emitAmmoChanged();
-        console.log(`[WeaponSystem] reloaded: ${ammo.mag}/${ammo.reserve}`);
     }
 
     // ── Melee ─────────────────────────────────────────────────────────────────
@@ -707,7 +704,6 @@ export default class WeaponSystem {
         const ammo  = this._ammo.get(weaponId);
         ammo.reserve = Math.min(ammo.reserve + amount, def.reserveMax);
         this._emitAmmoChanged();
-        console.log(`[WeaponSystem] ammo added: ${weaponId} +${amount} → ${ammo.reserve}`);
     }
 
     _checkPickups() {
@@ -800,7 +796,6 @@ export default class WeaponSystem {
         this._projectiles = [];
         this._pickups     = [];
         this._viewmodel   = null;
-        console.log('[WeaponSystem] disposed');
     }
 }
 

@@ -151,11 +151,6 @@ export default class WorldGeometry {
 
         this._buildTriggers(levelData?.triggers ?? []);
         this._buildPortals(levelData?.portals   ?? []);
-
-        console.log(
-            `[WorldGeometry] loaded — ${this._staticBodies.length} collision bodies,`,
-            `${this._triggers.length} triggers, ${this._portals.length} portal pairs`,
-        );
     }
 
     // ── Per-frame update ──────────────────────────────────────────────────────
@@ -190,7 +185,6 @@ export default class WorldGeometry {
     // ── GLTF loading ──────────────────────────────────────────────────────────
 
     async _loadVoxelGrid(voxelGrid, cellSize, palette = []) {
-        console.log(`[WorldGeometry] building voxel mesh (size=${cellSize})...`);
         const gen = new VoxelMeshGen(voxelGrid, cellSize, palette);
         const meshes = await gen.buildMeshes(this._atlas);
 
@@ -212,7 +206,6 @@ export default class WorldGeometry {
 
     _addVoxelTrimeshCollider(meshes) {
         if (!meshes.length) return;
-        console.log(`[WorldGeometry] adding voxel trimesh collider...`);
         
         for (const mesh of meshes) {
             this._addTrimeshBody(mesh);
@@ -270,7 +263,6 @@ export default class WorldGeometry {
     }
 
     async _loadGLTF(url, levelData) {
-        console.log(`[WorldGeometry] loading GLTF: ${url}`);
         const { scene: root } = await this._assets.loadGLTF(url, {
             flatShading: true,
             remapPalette: true,
@@ -398,8 +390,6 @@ export default class WorldGeometry {
             dir.position.set(5, 10, 5);
             this._scene.add(dir);
         }
-
-        console.log('[WorldGeometry] procedural room built');
     }
 
     _addBoxCollider(cx, cy, cz, sx, sy, sz, surface = 'concrete') {
@@ -609,7 +599,6 @@ export default class WorldGeometry {
             ).normalize();
 
             this._portals.push({ idA: id + '_A', posA, normalA, idB: id + '_B', posB, normalB, radius: 1.2 });
-            console.log(`[WorldGeometry] portal pair "${id}" registered`);
         }
     }
 
@@ -628,14 +617,12 @@ export default class WorldGeometry {
             if (pt.distanceTo(portal.posA) < portal.radius) {
                 this._teleportThrough(portal.posA, portal.normalA, portal.posB, portal.normalB);
                 this._lastPortalTime = gameTime;
-                console.log(`[WorldGeometry] portal travel: ${portal.idA} → ${portal.idB}`);
                 return;
             }
             // Check B → A
             if (pt.distanceTo(portal.posB) < portal.radius) {
                 this._teleportThrough(portal.posB, portal.normalB, portal.posA, portal.normalA);
                 this._lastPortalTime = gameTime;
-                console.log(`[WorldGeometry] portal travel: ${portal.idB} → ${portal.idA}`);
                 return;
             }
         }
@@ -812,8 +799,6 @@ export default class WorldGeometry {
         this._colMeshes     = [];
         this._triggerMeshes = [];
         this._portalMeshes  = [];
-
-        console.log('[WorldGeometry] disposed');
     }
 }
 

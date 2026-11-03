@@ -30,7 +30,7 @@ export default class Unified3DAdapter extends EngineAdapter {
             ?? (() => {
                 const div = document.createElement('div');
                 div.id = 'unified3d-container';
-                div.style.cssText = 'position:fixed;inset:0;z-index:10;';
+                div.style.cssText = EngineAdapter.FULLSCREEN_CONTAINER_STYLE;
                 document.body.appendChild(div);
                 return div;
             })();
@@ -61,8 +61,6 @@ export default class Unified3DAdapter extends EngineAdapter {
         
         // Phase 5: Setup Live Bridge
         this.setupLiveBridge();
-        
-        console.log(`[Unified3DAdapter] initialized (mode: ${this._requestedType})`);
     }
 
     /**
@@ -86,7 +84,6 @@ export default class Unified3DAdapter extends EngineAdapter {
         this._requestedType = newEngineType;
         this.engineType     = newEngineType;
         await this.game.switchMode(newEngineType);
-        console.log(`[Unified3DAdapter] switchMode → ${newEngineType}`);
     }
 
     async loadLevel(levelId, levelPath = null) {
@@ -110,7 +107,6 @@ export default class Unified3DAdapter extends EngineAdapter {
                 await this.game.loadProject(project, levelId);
             }
             this.isLoaded = true;
-            console.log(`[Unified3DAdapter] level "${levelId}" loaded`);
         } catch (error) {
             console.error(`[Unified3DAdapter] Failed to load level "${levelId}":`, error);
             this.isLoaded = false;
@@ -122,7 +118,6 @@ export default class Unified3DAdapter extends EngineAdapter {
         if (!this.isLoaded) return;
         this.stop();
         this.isLoaded = false;
-        console.log('[Unified3DAdapter] level unloaded');
     }
 
     getState() {
@@ -154,7 +149,7 @@ export default class Unified3DAdapter extends EngineAdapter {
     destroy() {
         this.stop();
         if (this.game && this._onLevelComplete) {
-            this.game.off('levelComplete', this._onLevelComplete);
+            this.game.off?.('levelComplete', this._onLevelComplete);
         }
         this.game?.dispose?.();
         this.game              = null;
@@ -163,7 +158,6 @@ export default class Unified3DAdapter extends EngineAdapter {
         this.currentProject    = null;
         this.isLoaded          = false;
         super.destroy();
-        console.log('[Unified3DAdapter] destroyed');
     }
 
     // ── Player data ──────────────────────────────────────────────────────────

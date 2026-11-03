@@ -55,11 +55,11 @@ export default class FPS3DStrategy {
     // ── EngineStrategy interface ──────────────────────────────────────────────
 
     initialize() {
-        console.log('[FPS3DStrategy] initialize()');
+        // Lifecycle hook — no-op in base strategy
     }
 
     start() {
-        console.log('[FPS3DStrategy] start()');
+        // Lifecycle hook — no-op in base strategy
     }
 
     /** @param {object} levelData — parsed level JSON */
@@ -68,16 +68,14 @@ export default class FPS3DStrategy {
         // Spawn player at level-defined start position, fall back to origin
         const spawn = levelData?.playerSpawn ?? { x: 0, y: 1.8, z: 0 };
         game.fpsCamera?.setPosition(spawn.x, spawn.y, spawn.z);
-        console.log(`[FPS3DStrategy] loadLevel: spawning at (${spawn.x}, ${spawn.y}, ${spawn.z})`);
     }
 
     unloadLevel() {
-        console.log('[FPS3DStrategy] unloadLevel()');
+        // Lifecycle hook — no-op in base strategy
     }
 
     destroy() {
         this._game = null;
-        console.log('[FPS3DStrategy] destroy()');
     }
 
     // ── State snapshots ───────────────────────────────────────────────────────
@@ -167,7 +165,6 @@ export default class FPS3DStrategy {
         const obj  = game?.scene?.getObjectByName(id);
         if (!obj) { console.warn(`[FPS3DStrategy] triggerDoor: "${id}" not found`); return; }
         obj.userData.open = !obj.userData.open;
-        console.log(`[FPS3DStrategy] triggerDoor "${id}" → ${obj.userData.open ? 'open' : 'closed'}`);
     }
 
     // ── Campaign ability interface ────────────────────────────────────────────

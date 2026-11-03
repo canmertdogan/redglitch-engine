@@ -67,7 +67,6 @@ class Engine3DBase extends EngineAdapter {
         this._paused  = false;
         this.clock.start();
         this._loop();
-        console.log(`[Engine3DBase:${this.engineType3D}] start3D()`);
     }
 
     /**
@@ -106,14 +105,12 @@ class Engine3DBase extends EngineAdapter {
         }
         this.clock  = null;
         this.camera = null;
-        console.log(`[Engine3DBase:${this.engineType3D}] destroy3D()`);
     }
 
     // ── EngineAdapter overrides ──────────────────────────────────────────────
 
     async initialize() {
         if (this.isInitialized) return;
-        console.log(`[Engine3DBase:${this.engineType3D}] initialize()`);
 
         // Create Three.js core objects shared by all 3D engines
         if (!this.scene) this.scene = new THREE.Scene();
@@ -138,19 +135,16 @@ class Engine3DBase extends EngineAdapter {
         this._stopLoop();
         this._running = false;
         this._paused  = false;
-        console.log(`[Engine3DBase:${this.engineType3D}] stop()`);
     }
 
     pause() {
         this._paused = true;
         this.clock.stop();
-        console.log(`[Engine3DBase:${this.engineType3D}] pause()`);
     }
 
     resume() {
         this._paused = false;
         this.clock.start();
-        console.log(`[Engine3DBase:${this.engineType3D}] resume()`);
     }
 
     destroy() {

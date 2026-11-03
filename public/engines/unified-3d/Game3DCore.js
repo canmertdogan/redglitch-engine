@@ -151,7 +151,6 @@ export default class Game3DCore extends Engine3DAdapter {
                 this.gameHUD.showScreen('gameover');
             }
         };
-        console.log(`[Game3DCore] Mode set → ${modeModule.modeId}`);
     }
 
     // ── Core initialisation ──────────────────────────────────────────────────
@@ -162,8 +161,6 @@ export default class Game3DCore extends Engine3DAdapter {
      * @returns {Promise<Game3DCore>}
      */
     async initCore() {
-        console.log(`[Game3DCore v${CORE_VERSION}] initCore()`);
-
         const container = this.container || document.getElementById('game-container');
         if (!container) throw new Error('[Game3DCore] no container element');
         this.container = container;
@@ -247,11 +244,9 @@ export default class Game3DCore extends Engine3DAdapter {
                     this.gameHUD.showScreen('main_hud');
                 }
             } catch (e) {
-                console.log('[Game3DCore] No HUD config found', e);
+                // Non-fatal HUD load failure
             }
         }
-
-        console.log('[Game3DCore] initCore() complete');
         return this;
     }
 
@@ -260,7 +255,6 @@ export default class Game3DCore extends Engine3DAdapter {
     /** Set player identity and start the game loop. */
     async login(username) {
         this.username = username;
-        console.log(`[Game3DCore] login: ${username}`);
         this._startLoop();
     }
 
@@ -280,7 +274,6 @@ export default class Game3DCore extends Engine3DAdapter {
     // ── Engine3DAdapter hooks ────────────────────────────────────────────────
 
     async onLevelLoaded(level) {
-        console.log(`[Game3DCore] onLevelLoaded: "${level.name}" (mode: ${this._engineType3D})`);
         this._levelId       = level.id ?? level.name ?? null;
         this._currentLevel  = level;
         this._lastLevelData = level;
@@ -323,7 +316,6 @@ export default class Game3DCore extends Engine3DAdapter {
     }
 
     onLevelUnloaded() {
-        console.log('[Game3DCore] onLevelUnloaded');
         this.gameTime      = 0;
         this._accumulator  = 0;
         this._currentLevel = null;
@@ -342,7 +334,6 @@ export default class Game3DCore extends Engine3DAdapter {
         this.isRunning = true;
         this._lastTS   = performance.now();
         requestAnimationFrame(ts => this._loop(ts));
-        console.log('[Game3DCore] Game loop started');
     }
 
     _stopLoop() {
@@ -544,7 +535,7 @@ export default class Game3DCore extends Engine3DAdapter {
     // ── Save / Load ───────────────────────────────────────────────────────────
 
     async saveGame(slot = this.saveSlot) {
-        if (!this.username) { console.warn('[Game3DCore] saveGame: no username'); return; }
+        if (!this.username) return;
         const payload = this._buildSavePayload();
         const res = await fetch(`/api/save/${encodeURIComponent(this.username)}/${slot}`, {
             method:  'POST',
@@ -552,16 +543,14 @@ export default class Game3DCore extends Engine3DAdapter {
             body:    JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(`saveGame HTTP ${res.status}`);
-        console.log(`[Game3DCore] Game saved: slot ${slot}`);
     }
 
     async loadGame(slot = this.saveSlot) {
-        if (!this.username) { console.warn('[Game3DCore] loadGame: no username'); return; }
+        if (!this.username) return;
         const res = await fetch(`/api/save/${encodeURIComponent(this.username)}/${slot}`);
         if (!res.ok) throw new Error(`loadGame HTTP ${res.status}`);
         const data = await res.json();
         await this._applySavePayload(data);
-        console.log(`[Game3DCore] Game loaded: slot ${slot}`);
     }
 
     _buildSavePayload() {
@@ -608,12 +597,10 @@ export default class Game3DCore extends Engine3DAdapter {
     pause() {
         this.isPaused = true;
         this.releasePointerLock();
-        console.log('[Game3DCore] Paused');
     }
 
     resume() {
         this.isPaused = false;
-        console.log('[Game3DCore] Resumed');
     }
 
     toggle() {
@@ -660,8 +647,6 @@ export default class Game3DCore extends Engine3DAdapter {
         if (this._boundOnResize) {
             window.removeEventListener('resize', this._boundOnResize);
         }
-
-        console.log('[Game3DCore] Disposed');
     }
 }
 

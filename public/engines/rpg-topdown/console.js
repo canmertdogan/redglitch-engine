@@ -4,7 +4,15 @@ class DebugConsole {
     constructor(game) {
         this.game = game;
         this.isOpen = false;
-        this.history = JSON.parse(localStorage.getItem('redglitch_console_history')) || [];
+        this.history = (() => {
+            try {
+                const stored = localStorage.getItem('redglitch_console_history');
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                console.warn('[DebugConsole] Failed to parse console history from localStorage:', e);
+                return [];
+            }
+        })();
         this.historyIdx = this.history.length;
         
         this.commands = {
@@ -181,7 +189,13 @@ class DebugConsole {
         if (type === 'exec') { color = '#ff0000'; prefix = 'EXE'; }
 
         line.style.color = color;
-        line.innerHTML = `<span style="color:#555">[${timestamp}] [${prefix}]</span> ${msg}`;
+        const ts = document.createElement('span');
+        ts.style.color = '#555';
+        ts.textContent = `[${timestamp}] [${prefix}]`;
+        const message = document.createElement('span');
+        message.textContent = String(msg);
+        line.appendChild(ts);
+        line.appendChild(message);
         
         this.output.appendChild(line);
         this.output.scrollTop = this.output.scrollHeight;
@@ -211,7 +225,7 @@ class DebugConsole {
         this.log("AVAILABLE COMMANDS:", "system");
         Object.keys(this.commands).sort().forEach(key => {
             const c = this.commands[key];
-            this.log(`<span style="color:#ff0000">${key.padEnd(10)}</span> - ${c.desc} <span style="color:#555">(${c.usage})</span>`);
+            this.log(`${key.padEnd(10)} - ${c.desc} (${c.usage})`);
         });
     }
 
@@ -264,9 +278,13 @@ class DebugConsole {
 
     evalJS(args) {
         const code = args.join(' ');
+        if (!window.__DEBUG_CONSOLE_ENABLED) {
+            this.log('Eval is disabled in non-debug mode.', 'err');
+            return;
+        }
         try {
             const result = eval(code);
-            console.log("Console Eval Result:", result);
+            console.log('Console Eval Result:', result);
             this.log(`Result: ${JSON.stringify(result)}`, 'success');
         } catch(e) {
             this.log(`Eval Error: ${e.message}`, 'err');

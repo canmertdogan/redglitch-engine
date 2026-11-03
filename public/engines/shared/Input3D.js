@@ -162,7 +162,6 @@ class Input3D {
         }
 
         this._actionMap = merge ? { ...DEFAULT_ACTION_MAP, ...map } : { ...map };
-        console.log('[Input3D] action map loaded:', Object.keys(this._actionMap).length, 'actions');
         return this._actionMap;
     }
 

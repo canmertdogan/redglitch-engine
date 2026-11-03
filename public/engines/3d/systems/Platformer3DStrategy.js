@@ -35,11 +35,11 @@ export default class Platformer3DStrategy {
     // ── EngineStrategy interface ──────────────────────────────────────────────
 
     initialize() {
-        console.log('[Platformer3DStrategy] initialize()');
+        // Lifecycle hook — no-op in base strategy
     }
 
     start() {
-        console.log('[Platformer3DStrategy] start()');
+        // Lifecycle hook — no-op in base strategy
     }
 
     /** @param {object} levelData — parsed level JSON */
@@ -47,16 +47,14 @@ export default class Platformer3DStrategy {
         const game  = this._game;
         const spawn = levelData?.playerSpawn ?? levelData?.checkpoints?.find?.(c => c.id === 'start') ?? { x: 0, y: 2, z: 0 };
         game._setPlayerPosition?.(spawn.x, spawn.y, spawn.z);
-        console.log(`[Platformer3DStrategy] loadLevel: spawn at (${spawn.x}, ${spawn.y}, ${spawn.z})`);
     }
 
     unloadLevel() {
-        console.log('[Platformer3DStrategy] unloadLevel()');
+        // Lifecycle hook — no-op in base strategy
     }
 
     destroy() {
         this._game = null;
-        console.log('[Platformer3DStrategy] destroy()');
     }
 
     // ── State snapshots ───────────────────────────────────────────────────────

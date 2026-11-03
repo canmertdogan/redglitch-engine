@@ -7,7 +7,6 @@ class IsoPixelAdapter extends EngineAdapter {
         super('iso-pixel');
         this.username = null;
         this.completionChecker = null;
-        this._debugCounter = 0;
     }
 
     async initialize() {
@@ -173,7 +172,6 @@ class IsoPixelAdapter extends EngineAdapter {
                     }
                 }
             }
-            this._debugCounter++;
         }, 100);
     }
 

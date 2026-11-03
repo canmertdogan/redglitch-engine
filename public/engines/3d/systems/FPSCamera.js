@@ -161,7 +161,6 @@ export default class FPSCamera {
         document.addEventListener('pointerlockchange',this._onLockChange, false);
         document.addEventListener('pointerlockerror', this._onLockError,  false);
         this._domEl.addEventListener('click',         this._onClick,      false);
-        console.log('[FPSCamera] attached');
     }
 
     /** Remove DOM listeners. Call on dispose(). */
@@ -170,7 +169,6 @@ export default class FPSCamera {
         document.removeEventListener('pointerlockchange',this._onLockChange, false);
         document.removeEventListener('pointerlockerror', this._onLockError,  false);
         this._domEl.removeEventListener('click',         this._onClick,      false);
-        console.log('[FPSCamera] detached');
     }
 
     // ── Pointer lock ──────────────────────────────────────────────────────────
@@ -437,10 +435,8 @@ export default class FPSCamera {
                     || document.pointerLockElement === document.body;
         this._isLocked = locked;
         if (locked) {
-            console.log('[FPSCamera] pointer locked');
             this.onLocked?.();
         } else {
-            console.log('[FPSCamera] pointer unlocked');
             // Clear any residual mouse deltas so there's no jump on re-lock
             this._mouseDX = 0;
             this._mouseDY = 0;

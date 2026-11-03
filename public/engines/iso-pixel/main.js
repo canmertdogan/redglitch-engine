@@ -367,7 +367,11 @@ class IsoGame {
                 // Normal mode: load map from sessionStorage or default file
                 const playtestData = sessionStorage.getItem('redglitch_playtest_data') || sessionStorage.getItem('redglitch_playtest_map');
                 if (playtestData) {
-                    levelData = JSON.parse(playtestData);
+                    try {
+                        levelData = JSON.parse(playtestData);
+                    } catch (err) {
+                        console.error('[IsoEngine] Invalid playtest map in sessionStorage:', err);
+                    }
                 } else {
                     // Try to fetch registry to find first available level
                     try {

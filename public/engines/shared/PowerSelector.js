@@ -10,7 +10,6 @@ class PowerSelector {
         this.selectedSlot = null; // Which slot is being changed
         
         this.createUI();
-        console.log('[PowerSelector] Initialized');
     }
 
     createUI() {
@@ -159,8 +158,6 @@ class PowerSelector {
         if (this.controller.currentAdapter) {
             this.controller.currentAdapter.pause();
         }
-        
-        console.log('[PowerSelector] Opened');
     }
 
     hide() {
@@ -172,8 +169,6 @@ class PowerSelector {
         if (this.controller.currentAdapter) {
             this.controller.currentAdapter.resume();
         }
-        
-        console.log('[PowerSelector] Closed');
     }
 
     loadAvailableAbilities() {
@@ -239,7 +234,6 @@ class PowerSelector {
         }
         
         this.selectedSlot = slotIndex;
-        console.log('[PowerSelector] Selected slot:', slotIndex);
     }
 
     createAbilityCard(ability) {
@@ -338,7 +332,6 @@ class PowerSelector {
         this.controller.equippedAbilities[this.selectedSlot] = abilityId;
         
         const ability = window.AbilityDefinitions.getAbility(abilityId);
-        console.log('[PowerSelector] Equipped', ability.name, 'to slot', this.selectedSlot);
         
         // Show notification
         if (window.showNotification) {
@@ -349,13 +342,10 @@ class PowerSelector {
         this.loadEquippedAbilities();
         
         // Save to campaign controller (will be saved with next auto-save)
-        console.log('[PowerSelector] Updated abilities:', this.controller.equippedAbilities);
     }
 
     unequipSlot(slotIndex) {
         this.controller.equippedAbilities[slotIndex] = null;
         this.loadEquippedAbilities();
-        
-        console.log('[PowerSelector] Unequipped slot', slotIndex);
     }
 }

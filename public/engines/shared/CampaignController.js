@@ -46,7 +46,6 @@ class CampaignController {
                 'engines/shared/GameHUD.js',
                 'shared/LocalizationSystem.js',
                 'shared/SoundManager.js',
-                'strategies/TopDownStrategy.js',
                 'engines/rpg-topdown/sprites.js',
                 'engines/rpg-topdown/input.js',
                 'engines/rpg-topdown/saveSystem.js',
@@ -79,7 +78,6 @@ class CampaignController {
                 'shared/LogicSystem.js',
                 'shared/LogicInterpreter.js',
                 'shared/BehaviorTreeRunner.js',
-                'strategies/IsoStrategy.js',
                 'engines/rpg-topdown/sprites.js',
                 'engines/iso-pixel/renderer.js',
                 'engines/iso-pixel/fxSystem.js',
@@ -96,8 +94,6 @@ class CampaignController {
                 'engines/shared/GameHUD.js',
                 'shared/LocalizationSystem.js',
                 'shared/SoundManager.js',
-                'strategies/TopDownStrategy.js',
-                'strategies/PlatformerStrategy.js',
                 'engines/rpg-topdown/sprites.js',
                 'engines/rpg-topdown/fxSystem.js',
                 'engines/platformer-2d/PlatformerConfig.js',
@@ -120,17 +116,27 @@ class CampaignController {
                 'engines/platformer-2d/main.js'
             ],
             'topdown-3d': [
-                'engines/unified-3d/Unified3DAdapter.js'
+                'engines/unified-3d/Unified3DAdapter.js',
+                'engines/unified-3d/Game3DCore.js',
+                'engines/unified-3d/modes/TopDownMode.js',
+                'engines/shared/GameHUD.js'
             ],
             'fps-3d': [
-                'engines/unified-3d/Unified3DAdapter.js'
+                'engines/unified-3d/Unified3DAdapter.js',
+                'engines/unified-3d/Game3DCore.js',
+                'engines/unified-3d/modes/FPSMode.js',
+                'engines/shared/GameHUD.js'
             ],
             'platformer-3d': [
-                'engines/unified-3d/Unified3DAdapter.js'
+                'engines/unified-3d/Unified3DAdapter.js',
+                'engines/unified-3d/Game3DCore.js',
+                'engines/unified-3d/modes/PlatformerMode.js',
+                'engines/shared/GameHUD.js'
             ],
             'unified-3d': [
                 'engines/shared/GameHUD.js',
-                'engines/unified-3d/Unified3DAdapter.js'
+                'engines/unified-3d/Unified3DAdapter.js',
+                'engines/unified-3d/Game3DCore.js'
             ]
         };
         this.loadedEngines = new Set();

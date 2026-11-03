@@ -149,8 +149,6 @@ class Redglitch3DGame extends Engine3DAdapter {
         const engineMode = mode || this._engineType3D || 'fps-3d';
         this._engineType3D = engineMode;
 
-        console.log(`[Redglitch3D v${ENGINE_VERSION}] init(${engineMode})`);
-
         const container = this.container || document.getElementById('game-container');
         if (!container) throw new Error('[Redglitch3D] no container element');
         this.container = container;
@@ -223,8 +221,6 @@ class Redglitch3DGame extends Engine3DAdapter {
 
         // ── Load initial mode ──────────────────────────────────────────────
         await this.switchMode(engineMode);
-
-        console.log(`[Redglitch3D] init(${engineMode}) complete`);
         if (typeof this.onReady === 'function') this.onReady(this);
         return this;
     }
@@ -239,8 +235,6 @@ class Redglitch3DGame extends Engine3DAdapter {
         if (!MODE_LOADERS[mode]) {
             throw new Error(`[Redglitch3D] Unknown mode: ${mode}`);
         }
-
-        console.log(`[Redglitch3D] switchMode → ${mode}`);
 
         // ── Dispose current mode systems ───────────────────────────────────
         await this._disposeModeSystems();
@@ -313,8 +307,6 @@ class Redglitch3DGame extends Engine3DAdapter {
         if (typeof this._modeConfig.onSystemsReady === 'function') {
             this._modeConfig.onSystemsReady(this);
         }
-
-        console.log(`[Redglitch3D] Mode "${mode}" ready — ${this._modeSystems.length} systems loaded`);
     }
 
     /**
@@ -342,7 +334,6 @@ class Redglitch3DGame extends Engine3DAdapter {
         this.isRunning = true;
         this._lastTS   = performance.now();
         requestAnimationFrame(ts => this._loop(ts));
-        console.log('[Redglitch3D] Game loop started');
     }
 
     _stopLoop() {
@@ -426,7 +417,6 @@ class Redglitch3DGame extends Engine3DAdapter {
 
     async login(username) {
         this.username = username;
-        console.log(`[Redglitch3D] login: ${username}`);
         this._startLoop();
     }
 
@@ -456,7 +446,6 @@ class Redglitch3DGame extends Engine3DAdapter {
     // ── Engine3DAdapter hooks ─────────────────────────────────────────────────
 
     async onLevelLoaded(level) {
-        console.log(`[Redglitch3D] onLevelLoaded: "${level.name}" (mode: ${this._engineType3D})`);
         this._levelId       = level.id ?? level.name ?? null;
         this._currentLevel  = level;
         this._levelComplete = false;
@@ -570,7 +559,6 @@ class Redglitch3DGame extends Engine3DAdapter {
     }
 
     onLevelUnloaded() {
-        console.log('[Redglitch3D] onLevelUnloaded');
         this.gameTime     = 0;
         this._accumulator = 0;
         this._currentLevel = null;
@@ -680,7 +668,6 @@ class Redglitch3DGame extends Engine3DAdapter {
             body:    JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(`saveGame HTTP ${res.status}`);
-        console.log(`[Redglitch3D] Game saved: slot ${slot}`);
     }
 
     async loadGame(slot = this.saveSlot) {
@@ -689,7 +676,6 @@ class Redglitch3DGame extends Engine3DAdapter {
         if (!res.ok) throw new Error(`loadGame HTTP ${res.status}`);
         const data = await res.json();
         await this._applySavePayload(data);
-        console.log(`[Redglitch3D] Game loaded: slot ${slot}`);
     }
 
     _buildSavePayload() {
@@ -779,12 +765,10 @@ class Redglitch3DGame extends Engine3DAdapter {
     pause() {
         this.isPaused = true;
         if (this._modeConfig?.pointerLock) this.releasePointerLock();
-        console.log('[Redglitch3D] Paused');
     }
 
     resume() {
         this.isPaused = false;
-        console.log('[Redglitch3D] Resumed');
     }
 
     toggle() { this.isPaused ? this.resume() : this.pause(); }
@@ -818,8 +802,6 @@ class Redglitch3DGame extends Engine3DAdapter {
         this.raycast?.dispose();
         this.renderer3d?.dispose();
         window.removeEventListener('resize', this._resizeBound);
-
-        console.log('[Redglitch3D] Disposed');
     }
 
     // ── TopDown legacy level normalization ─────────────────────────────────────

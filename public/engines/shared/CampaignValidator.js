@@ -166,7 +166,7 @@ class CampaignValidator {
      * @private
      */
     _validateEngineTypes(nodes) {
-        const validEngines = ['rpg-topdown', 'iso-pixel', 'platformer-2d'];
+        const validEngines = ['rpg-topdown', 'iso-pixel', 'platformer-2d', 'unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'];
         const levelNodes = nodes.filter(n => n.type === 'level');
 
         levelNodes.forEach(node => {

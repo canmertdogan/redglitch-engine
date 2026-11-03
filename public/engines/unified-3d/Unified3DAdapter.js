@@ -30,7 +30,7 @@ export default class Unified3DAdapter extends EngineAdapter {
             ?? (() => {
                 const div = document.createElement('div');
                 div.id = 'unified3d-container';
-                div.style.cssText = 'position:fixed;inset:0;z-index:10;';
+                div.style.cssText = EngineAdapter.FULLSCREEN_CONTAINER_STYLE;
                 document.body.appendChild(div);
                 return div;
             })();

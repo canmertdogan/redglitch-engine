@@ -1,18 +1,15 @@
 async function initRPGEngine() {
     // Check if another engine already claimed window.game
     if (window.game && !(window.game instanceof window.Core)) {
-        console.log("[RPG Core] Another engine is active. Skipping auto-init.");
         return;
     }
 
     // Check URL for engine override to be safe
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('engine') && urlParams.get('engine') !== 'rpg-topdown') {
-        console.log("[RPG Core] Engine override detected. Skipping auto-init.");
         return;
     }
 
-    console.log("[RPG Core] Initializing Top-Down Engine...");
     window.LOCALE.setLanguage(localStorage.getItem('redglitch_lang') || 'EN'); 
     
     try { 
@@ -22,12 +19,11 @@ async function initRPGEngine() {
     
     // Skip auto-initialization in campaign runtime mode
     if (window.CAMPAIGN_RUNTIME_MODE) {
-        console.log("[RPG Core] Campaign runtime mode detected, skipping auto-init");
         return;
     }
     
     if (!window.game) window.game = new window.Core(); 
-    if (!window.menuSystem) window.menuSystem = new window.MenuSystem(window.game); 
+    if (!window.menuSystem) window.menuSystem = new window.MenuSystem(window.game);
 
     // V2.0: Reflection System (Dev Mode Only)
     // In a real build, this JSON would be pre-generated.
@@ -37,7 +33,6 @@ async function initRPGEngine() {
         const schema = reflector.generateSchema();
         // Expose for Algorithm Studio to read
         window.GAME_API_SCHEMA = schema;
-        console.log(`[Reflection] Generated ${schema.length} API nodes.`);
     });
 }
 
@@ -69,7 +64,6 @@ window.attemptLogin = () => {
 // PHASE B: Listen for test commands from Algorithm Studio
 window.addEventListener('message', async (event) => {
     if (event.data.type === 'testAlgorithm') {
-        console.log('[AlgorithmTest] Received test command:', event.data);
         
         const { scriptName, eventName } = event.data;
         
@@ -104,7 +98,6 @@ window.addEventListener('message', async (event) => {
             // Trigger the event
             await game.logicSystem.trigger(window.testEntity, eventName);
             
-            console.log('[AlgorithmTest] Script executed successfully');
             if (window.opener) {
                 window.opener.postMessage({
                     type: 'algorithmLog',

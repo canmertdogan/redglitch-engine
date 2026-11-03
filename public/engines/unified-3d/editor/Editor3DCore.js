@@ -1242,7 +1242,14 @@ export default class Editor3DCore {
         if (this._undoStack.length === 0) return;
         const current = JSON.stringify(this._serializeLevelData());
         this._redoStack.push(current);
-        const prev = JSON.parse(this._undoStack.pop());
+        let prev;
+        try {
+            prev = JSON.parse(this._undoStack.pop());
+        } catch (e) {
+            console.error('[Editor3D] Undo failed:', e);
+            this._redoStack.pop();
+            return;
+        }
         this._levelData = prev;
         this._rebuildScene(prev);
     }
@@ -1251,7 +1258,14 @@ export default class Editor3DCore {
         if (this._redoStack.length === 0) return;
         const current = JSON.stringify(this._serializeLevelData());
         this._undoStack.push(current);
-        const next = JSON.parse(this._redoStack.pop());
+        let next;
+        try {
+            next = JSON.parse(this._redoStack.pop());
+        } catch (e) {
+            console.error('[Editor3D] Redo failed:', e);
+            this._undoStack.pop();
+            return;
+        }
         this._levelData = next;
         this._rebuildScene(next);
     }

@@ -3,6 +3,8 @@
  * Provides a uniform API for Campaign Controller to interact with different engine types
  */
 class EngineAdapter {
+    static FULLSCREEN_CONTAINER_STYLE = 'position:fixed;inset:0;z-index:10;';
+
     constructor(engineType) {
         if (new.target === EngineAdapter) {
             throw new TypeError("Cannot construct EngineAdapter instances directly");

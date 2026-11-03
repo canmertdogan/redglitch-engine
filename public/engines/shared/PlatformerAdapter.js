@@ -5,7 +5,6 @@
 class PlatformerAdapter extends EngineAdapter {
     constructor() {
         super('platformer-2d');
-        console.log('[PlatformerAdapter] Constructor called');
         this.username = null;
         this.completionChecker = null;
     }
@@ -15,9 +14,7 @@ class PlatformerAdapter extends EngineAdapter {
      * @returns {Promise<void>}
      */
     async initialize() {
-        console.log('[PlatformerAdapter] Initialize called');
         if (this.isInitialized) {
-            console.warn('PlatformerAdapter already initialized');
             return;
         }
 
@@ -35,7 +32,6 @@ class PlatformerAdapter extends EngineAdapter {
         this.setupLiveBridge();
         
         this.isInitialized = true;
-        console.log('PlatformerAdapter initialized');
     }
 
     /**
@@ -63,8 +59,6 @@ class PlatformerAdapter extends EngineAdapter {
             throw new Error('PlatformerAdapter not initialized');
         }
 
-        console.log(`PlatformerAdapter loading level: ${levelId}`);
-
         // Try to load level, checking multiple paths if levelPath isn't provided
         if (levelPath) {
             await this.engine.loadLevel(levelId, levelPath);
@@ -89,8 +83,6 @@ class PlatformerAdapter extends EngineAdapter {
         
         // Setup level completion callback
         this._setupLevelCompleteCallback();
-        
-        console.log(`PlatformerAdapter level ${levelId} loaded`);
     }
 
     /**
@@ -102,8 +94,6 @@ class PlatformerAdapter extends EngineAdapter {
      */
     useAbility(abilityId, dirX, dirY) {
         if (!this.engine || !this.engine.player) return false;
-        
-        console.log(`[PlatformerAdapter] useAbility: ${abilityId}`);
         
         // Platformer engine might not have a full ability system yet, 
         // but we can simulate basic actions like 'attack'
@@ -134,8 +124,6 @@ class PlatformerAdapter extends EngineAdapter {
      */
     _setupLevelCompleteCallback() {
         this.engine.onLevelComplete = (data) => {
-            console.log('[PlatformerAdapter] Level complete detected', data);
-            
             if (this.levelCompleteCallback) {
                 this.levelCompleteCallback(data);
             }
@@ -151,8 +139,6 @@ class PlatformerAdapter extends EngineAdapter {
             return;
         }
 
-        console.log('PlatformerAdapter unloading level');
-        
         // Stop the game loop
         this.stop();
         
@@ -209,8 +195,6 @@ class PlatformerAdapter extends EngineAdapter {
         if (!this.engine || !state) {
             return;
         }
-
-        console.log('PlatformerAdapter restoring state');
 
         // Restore player data
         if (state.player) {

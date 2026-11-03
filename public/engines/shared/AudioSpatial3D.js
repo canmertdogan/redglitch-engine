@@ -154,8 +154,6 @@ class AudioSpatial3D {
         this._masterGain.connect(this.ctx.destination);
 
         if (this.ctx.state === 'running') this._ready = true;
-
-        console.log('[AudioSpatial3D] init() — AudioContext state:', this.ctx.state);
         return this;
     }
 
@@ -173,7 +171,6 @@ class AudioSpatial3D {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const raw = await res.arrayBuffer();
             this._buffers.set(name, await this.ctx.decodeAudioData(raw));
-            console.log(`[AudioSpatial3D] loaded "${name}"`);
         } catch (err) {
             console.warn(`[AudioSpatial3D] failed to load "${name}" (${url}):`, err.message);
         }
@@ -256,8 +253,6 @@ class AudioSpatial3D {
         this._musicSource    = src;
         this._currentMusicUrl = url;
         src.onended = () => { if (this._musicSource === src) { this._musicSource = null; this._currentMusicUrl = null; } };
-
-        console.log('[AudioSpatial3D] music:', url);
     }
 
     stopMusic() {
@@ -438,7 +433,6 @@ class AudioSpatial3D {
         ['mousedown','touchstart','keydown'].forEach(ev =>
             window.removeEventListener(ev, this._resumeHandler)
         );
-        console.log('[AudioSpatial3D] disposed');
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

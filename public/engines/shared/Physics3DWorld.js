@@ -112,8 +112,6 @@ class Physics3DWorld {
 
         // Allow bodies to sleep when idle — reduces simulation cost
         this.world.allowSleep = true;
-
-        console.log('[Physics3DWorld] init() — gravity:', this._gravityVec, 'step:', this._fixedStep);
         return this;
     }
 
@@ -318,7 +316,6 @@ class Physics3DWorld {
         for (const pb of this._bodies) pb._destroy();
         this._bodies = [];
         this.world   = null;
-        console.log('[Physics3DWorld] disposed');
     }
 }
 
