@@ -284,30 +284,38 @@ async function saveEffect() {
 async function loadEffect() {
     const name = document.getElementById('fx-list').value;
     if (!name) return;
-    const res = await fetch(`/api/fx/${name}`);
-    const data = await res.json();
-    Object.assign(config, data);
-    
-    // Sync UI (Manual... tedious but necessary without framework)
-    document.getElementById('p-mode').value = config.mode;
-    document.getElementById('p-count').value = config.count;
-    document.getElementById('p-duration').value = config.duration;
-    document.getElementById('p-sprite').value = config.sprite;
-    document.getElementById('p-blend').value = config.blend;
-    document.getElementById('p-color-start').value = config.color.start;
-    document.getElementById('p-color-end').value = config.color.end;
-    document.getElementById('p-size-start').value = config.size.start;
-    document.getElementById('p-size-end').value = config.size.end;
-    
-    // Derived values
-    document.getElementById('p-speed').value = config.speed.max;
-    document.getElementById('p-spread').value = config.physics.spread;
-    document.getElementById('p-gravity').value = config.physics.gravity;
-    // drag inverse logic ... ignored for load simplicity or approximate
-    document.getElementById('p-life').value = config.life.max;
-    
-    updateUIState();
-    triggerBurst();
+    try {
+        const res = await fetch(`/api/fx/${name}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data || typeof data !== 'object') throw new Error('Invalid effect data');
+        Object.assign(config, data);
+
+        // Sync UI (Manual... tedious but necessary without framework)
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        setVal('p-mode', config.mode);
+        setVal('p-count', config.count);
+        setVal('p-duration', config.duration);
+        setVal('p-sprite', config.sprite);
+        setVal('p-blend', config.blend);
+        setVal('p-color-start', config.color?.start);
+        setVal('p-color-end', config.color?.end);
+        setVal('p-size-start', config.size?.start);
+        setVal('p-size-end', config.size?.end);
+
+        // Derived values
+        setVal('p-speed', config.speed?.max);
+        setVal('p-spread', config.physics?.spread);
+        setVal('p-gravity', config.physics?.gravity);
+        // drag inverse logic ... ignored for load simplicity or approximate
+        setVal('p-life', config.life?.max);
+
+        updateUIState();
+        triggerBurst();
+    } catch (e) {
+        console.error('[FxEditor] loadEffect failed:', e);
+        alert('Failed to load effect: ' + e.message);
+    }
 }
 
 init();

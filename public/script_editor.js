@@ -4,6 +4,16 @@
 // Integration system references
 let eventBus, projectState, assetManager, studioBridge;
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function initializeScriptIntegration() {
     if (typeof window !== 'undefined') {
         eventBus = window.RedglitchEventBus;
@@ -223,7 +233,16 @@ const SettingsManager = {
     
     init() {
         const stored = localStorage.getItem('codeForgeSettings');
-        this.current = stored ? { ...this.defaults, ...JSON.parse(stored) } : { ...this.defaults };
+        if (stored) {
+            try {
+                this.current = { ...this.defaults, ...JSON.parse(stored) };
+            } catch (e) {
+                console.warn('[ScriptEditor] Failed to parse codeForgeSettings from localStorage:', e);
+                this.current = { ...this.defaults };
+            }
+        } else {
+            this.current = { ...this.defaults };
+        }
         this.applyUI();
     },
 
@@ -449,7 +468,7 @@ function renderTree() {
             arrow = `<span style="width:12px; display:inline-block;"></span>`; // spacer
         }
 
-        div.innerHTML = `${arrow} <span class="icon">${icon}</span><span>${node.name}</span>`;
+        div.innerHTML = `${arrow} <span class="icon">${icon}</span><span>${escapeHtml(node.name)}</span>`;
 
         // Interactions
         if (node.type === 'dir') {
@@ -612,7 +631,7 @@ function renderTabs() {
         const name = t.path.split(/[/\\]/).pop();
         const safePath = t.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         div.innerHTML = `
-            <span>${name}</span>
+            <span>${_escapeHtml(name)}</span>
             <span class="tab-close" onclick="window.scriptEditor.closeTab('${safePath}', event)">×</span>
         `;
         container.appendChild(div);

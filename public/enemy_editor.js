@@ -444,8 +444,8 @@ window.showTemplateMenu = function() {
         item.className = 'template-item';
         item.innerHTML = `
             <div>
-                <div class="template-name">${template.name}</div>
-                <div class="template-desc">${template.desc}</div>
+                <div class="template-name">${_escapeHtml(template.name)}</div>
+                <div class="template-desc">${_escapeHtml(template.desc)}</div>
             </div>
             <i class="fas fa-chevron-right"></i>
         `;
@@ -1253,7 +1253,7 @@ function showValidationError(message) {
         z-index: 10000;
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     `;
-    notification.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+    notification.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${_escapeHtml(message)}`;
     document.body.appendChild(notification);
     
     setTimeout(() => notification.remove(), 3000);
@@ -1274,7 +1274,7 @@ function showSuccessNotification(message) {
         z-index: 10000;
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     `;
-    notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+    notification.innerHTML = `<i class="fas fa-check-circle"></i> ${_escapeHtml(message)}`;
     document.body.appendChild(notification);
     
     setTimeout(() => notification.remove(), 2000);

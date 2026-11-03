@@ -398,10 +398,10 @@ class CampaignEditor {
 
             div.innerHTML = `
                 <div class="node-header" style="color:${color}; border-bottom-color:${color}">
-                    <span><i class="fas fa-${icon}"></i> ${node.type.toUpperCase()}${engineBadge}${unwiredBadge}</span>
+                    <span><i class="fas fa-${icon}"></i> ${_escapeHtml(node.type.toUpperCase())}${engineBadge}${unwiredBadge}</span>
                 </div>
                 <div class="node-body">
-                    ${this.getNodeLabel(node)}
+                    ${_escapeHtml(this.getNodeLabel(node))}
                 </div>
             `;
 
@@ -844,7 +844,7 @@ class CampaignEditor {
         this.variables.forEach(v => {
             const div = document.createElement('div');
             div.style.cssText = "padding:5px; border-bottom:1px solid #333; display:flex; justify-content:space-between; color:#ccc;";
-            div.innerHTML = `<span>${v}</span> <i class="fas fa-trash" style="cursor:pointer; color:#e74c3c;"></i>`;
+            div.innerHTML = `<span>${_escapeHtml(v)}</span> <i class="fas fa-trash" style="cursor:pointer; color:#e74c3c;"></i>`;
             div.querySelector('i').onclick = () => {
                 this.variables = this.variables.filter(x => x !== v);
                 this.saveVariables();
@@ -1300,14 +1300,50 @@ class CampaignEditor {
 
     pushHistory() {
         const state = JSON.stringify(this.nodes);
+        if (typeof state !== 'string') return;
         if (this.historyIndex < this.history.length - 1) this.history = this.history.slice(0, this.historyIndex + 1);
         this.history.push(state);
         if (this.history.length > 50) this.history.shift();
         this.historyIndex = this.history.length - 1;
     }
-    undo() { if (this.historyIndex > 0) { this.historyIndex--; this.restoreState(this.history[this.historyIndex]); } }
-    redo() { if (this.historyIndex < this.history.length - 1) { this.historyIndex++; this.restoreState(this.history[this.historyIndex]); } }
-    restoreState(json) { this.nodes = JSON.parse(json); this.rebuildConnections(); this.selection = null; this.renderGraph(); this.renderInspector(); }
+    undo() { 
+        if (this.historyIndex > 0) { 
+            this.historyIndex--; 
+            try {
+                this.restoreState(this.history[this.historyIndex]); 
+            } catch (e) {
+                console.error('[CampaignEditor] Undo failed:', e);
+                this.historyIndex++;
+            }
+        } 
+    }
+    redo() { 
+        if (this.historyIndex < this.history.length - 1) { 
+            this.historyIndex++; 
+            try {
+                this.restoreState(this.history[this.historyIndex]); 
+            } catch (e) {
+                console.error('[CampaignEditor] Redo failed:', e);
+                this.historyIndex--;
+            }
+        } 
+    }
+    restoreState(json) { 
+        try {
+            this.nodes = JSON.parse(json); 
+        } catch (e) {
+            console.error('[CampaignEditor] Failed to restore state:', e);
+            this.rebuildConnections(); 
+            this.selection = null; 
+            this.renderGraph(); 
+            this.renderInspector();
+            return;
+        }
+        this.rebuildConnections(); 
+        this.selection = null; 
+        this.renderGraph(); 
+        this.renderInspector(); 
+    }
     copy() { if (this.selection) { const n = this.nodes.find(n => n.id === this.selection); if (n) this.clipboard = JSON.parse(JSON.stringify(n)); } }
     paste() {
         if (!this.clipboard) return;
@@ -1627,7 +1663,7 @@ window.toggleLevelWindow = () => {
         window.editor.availableLevels.forEach(level => {
             const item = document.createElement('div');
             item.className = 'selector-item';
-            item.innerHTML = `<i class="fas fa-dungeon"></i>${level}`;
+            item.innerHTML = `<i class="fas fa-dungeon"></i>${_escapeHtml(level)}`;
             item.onclick = () => {
                 if (window.editor.selection) {
                     const node = window.editor.nodes.find(n => n.id === window.editor.selection);
@@ -1661,7 +1697,7 @@ window.toggleCutsceneWindow = () => {
             const name = cs.name || cs.id || cs;
             const item = document.createElement('div');
             item.className = 'selector-item';
-            item.innerHTML = `<i class="fas fa-film"></i>${name}`;
+            item.innerHTML = `<i class="fas fa-film"></i>${_escapeHtml(name)}`;
             item.onclick = () => {
                 if (window.editor.selection) {
                     const node = window.editor.nodes.find(n => n.id === window.editor.selection);
@@ -1693,7 +1729,7 @@ window.toggleQuestWindow = () => {
         quests.forEach(q => {
             const item = document.createElement('div');
             item.className = 'selector-item';
-            item.innerHTML = `<i class="fas fa-scroll"></i>${q.name || q.id}`;
+            item.innerHTML = `<i class="fas fa-scroll"></i>${_escapeHtml(q.name || q.id)}`;
             item.onclick = () => {
                 if (window.editor.selection) {
                     const node = window.editor.nodes.find(n => n.id === window.editor.selection);
@@ -1726,7 +1762,7 @@ window.toggleEnemyWindow = () => {
             const item = document.createElement('div');
             const isSelected = window.editor.selectedEnemies.includes(e.id);
             item.className = `selector-item ${isSelected ? 'selected' : ''}`;
-            item.innerHTML = `<i class="fas fa-skull"></i>${e.name || e.id}`;
+            item.innerHTML = `<i class="fas fa-skull"></i>${_escapeHtml(e.name || e.id)}`;
             item.onclick = () => {
                 const idx = window.editor.selectedEnemies.indexOf(e.id);
                 if (idx >= 0) {
@@ -1821,14 +1857,14 @@ window.loadCampaignFile = async () => {
             
             card.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                    <div style="font-size: 1.2rem; color: var(--accent); font-weight: bold;">${displayName}</div>
+                    <div style="font-size: 1.2rem; color: var(--accent); font-weight: bold;">${_escapeHtml(displayName)}</div>
                     <div style="color: #666; font-size: 0.9rem;">${nodeCount} nodes</div>
                 </div>
-                <div style="color: #aaa; font-size: 0.95rem; margin-bottom: 5px;">${description}</div>
+                <div style="color: #aaa; font-size: 0.95rem; margin-bottom: 5px;">${_escapeHtml(description)}</div>
                 <div style="color: #666; font-size: 0.85rem;">
-                    <i class="fas fa-user"></i> ${author} | 
-                    <i class="fas fa-folder"></i> ${campaign.source} | 
-                    <i class="fas fa-file"></i> ${campaign.file}
+                    <i class="fas fa-user"></i> ${_escapeHtml(author)} | 
+                    <i class="fas fa-folder"></i> ${_escapeHtml(campaign.source)} | 
+                    <i class="fas fa-file"></i> ${_escapeHtml(campaign.file)}
                 </div>
             `;
             
@@ -2292,7 +2328,7 @@ function updateCampaignInfo() {
             infoDiv.style.cssText = 'color:#aaa; font-size:0.9rem; margin-left:15px;';
             statusBar.insertBefore(infoDiv, statusBar.firstChild);
         }
-        infoDiv.innerHTML = `<i class="fas fa-file"></i> ${window.editor.campaignMetadata.name || window.editor.campaignName}`;
+        infoDiv.innerHTML = `<i class="fas fa-file"></i> ${_escapeHtml(window.editor.campaignMetadata.name || window.editor.campaignName)}`;
     }
 }
 

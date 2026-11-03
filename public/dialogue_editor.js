@@ -104,7 +104,7 @@ function refreshCharList() {
     data.characters.forEach(c => {
         const div = document.createElement('div');
         div.className = 'list-item';
-        div.innerHTML = `<i class="fas fa-user"></i> ${c.name}`;
+        div.innerHTML = `<i class="fas fa-user"></i> ${_escapeHtml(c.name)}`;
         list.appendChild(div);
     });
 }
@@ -134,7 +134,7 @@ function refreshConvList() {
     data.conversations.forEach((conv, idx) => {
         const div = document.createElement('div');
         div.className = 'list-item' + (idx === currentConvIndex ? ' active' : '');
-        div.innerHTML = `<i class="fas fa-scroll"></i> ${conv.id}`;
+        div.innerHTML = `<i class="fas fa-scroll"></i> ${_escapeHtml(conv.id)}`;
         div.onclick = () => loadConversation(idx);
         list.appendChild(div);
     });
@@ -185,14 +185,14 @@ function renderNodes() {
         div.innerHTML = `
             <div class="line-header">
                 <select onchange="updateNode(${idx}, 'speaker', this.value)" style="border:none; padding:2px; font-weight:bold;">
-                    ${data.characters.map(c => `<option value="${c.id}" ${c.id===node.speaker?'selected':''}>${c.name.toUpperCase()}</option>`).join('')}
+                    ${data.characters.map(c => `<option value="${_escapeHtml(c.id)}" ${c.id===node.speaker?'selected':''}>${_escapeHtml(c.name.toUpperCase())}</option>`).join('')}
                 </select>
                 <button class="btn-mini danger" onclick="deleteNode(${idx})">DELETE LINE</button>
             </div>
             <div class="line-body">
-                <div class="line-portrait" style="color:${char.color || 'var(--accent)'}">${char.name[0]}</div>
+                <div class="line-portrait" style="color:${char.color || 'var(--accent)'}">${_escapeHtml(char.name[0])}</div>
                 <div class="line-main">
-                    <textarea placeholder="Line text..." onchange="updateNode(${idx}, 'text', this.value)">${node.text || ''}</textarea>
+                    <textarea placeholder="Line text..." onchange="updateNode(${idx}, 'text', this.value)">${_escapeHtml(node.text || '')}</textarea>
                     <div id="choices-${idx}" style="margin-top:10px;">
                         <div style="font-size:0.8rem; color:#555; margin-bottom:5px;">PLAYER RESPONSES</div>
                         ${choicesHtml}

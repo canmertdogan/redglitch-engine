@@ -461,11 +461,12 @@ class PrefabEditor {
 
     // ── History ───────────────────────────────────────────────────────
     pushHistory() {
-        const snap=JSON.stringify(this.prefabs);
-        this.history=this.history.slice(0,this.histIdx+1);
+        const snap = JSON.stringify(this.prefabs);
+        if (typeof snap !== 'string') return;
+        this.history = this.history.slice(0, this.histIdx + 1);
         this.history.push(snap);
-        if (this.history.length>50) this.history.shift();
-        this.histIdx=this.history.length-1;
+        if (this.history.length > 50) this.history.shift();
+        this.histIdx = this.history.length - 1;
         this._updateUndoRedoBtns();
     }
     _debouncedPushHistory() {
@@ -475,14 +476,26 @@ class PrefabEditor {
     undo() {
         if (this.histIdx<=0) return;
         this.histIdx--;
-        this.prefabs=JSON.parse(this.history[this.histIdx]);
+        try {
+            this.prefabs=JSON.parse(this.history[this.histIdx]);
+        } catch (e) {
+            console.error('[PrefabEditor] Undo failed:', e);
+            this.histIdx++;
+            return;
+        }
         this.currentIdx=Math.min(this.currentIdx,this.prefabs.length-1);
         this.setDirtyIdx(this.currentIdx); this.refresh(); this.setMsg('UNDO');
     }
     redo() {
         if (this.histIdx>=this.history.length-1) return;
         this.histIdx++;
-        this.prefabs=JSON.parse(this.history[this.histIdx]);
+        try {
+            this.prefabs=JSON.parse(this.history[this.histIdx]);
+        } catch (e) {
+            console.error('[PrefabEditor] Redo failed:', e);
+            this.histIdx--;
+            return;
+        }
         this.setDirtyIdx(this.currentIdx); this.refresh(); this.setMsg('REDO');
     }
     _updateUndoRedoBtns() {
@@ -692,7 +705,7 @@ class PrefabEditor {
                 jsons.forEach(f=>{
                     const name=f.name.replace('.json','');
                     const card=document.createElement('div'); card.className='modal-card';
-                    card.innerHTML=`<i class="fas fa-cube"></i><div class="mc-label">${name}</div>`;
+                    card.innerHTML=`<i class="fas fa-cube"></i><div class="mc-label">${_escapeHtml(name)}</div>`;
                     card.onclick=()=>{
                         if (this._refPickCb) { this._refPickCb(name); this._refPickCb=null; }
                         else { this.loadPrefabFromDisk(name); }

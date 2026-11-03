@@ -3,7 +3,15 @@ class Terminal {
     constructor() {
         this.input = document.getElementById('input');
         this.output = document.getElementById('output');
-        this.history = JSON.parse(localStorage.getItem('redglitch_terminal_history')) || [];
+        this.history = (() => {
+            try {
+                const stored = localStorage.getItem('redglitch_terminal_history');
+                return stored ? JSON.parse(stored) : [];
+            } catch (e) {
+                console.warn('[Terminal] Failed to parse history from localStorage:', e);
+                return [];
+            }
+        })();
         this.historyIdx = this.history.length;
 
         this.init();
@@ -70,12 +78,22 @@ class Terminal {
             try { msg = JSON.stringify(msg, null, 2); } catch(e) {}
         }
 
-        line.innerHTML = `
-            <span class="ts">[${timestamp}]</span>
-            <span class="src">[${source}]</span>
-            <span class="icon">${icon}</span>
-            <span class="msg">${msg}</span>
-        `;
+        const ts = document.createElement('span');
+        ts.className = 'ts';
+        ts.textContent = `[${timestamp}]`;
+        const src = document.createElement('span');
+        src.className = 'src';
+        src.textContent = `[${source}]`;
+        const iconEl = document.createElement('span');
+        iconEl.className = 'icon';
+        iconEl.innerHTML = icon;
+        const message = document.createElement('span');
+        message.className = 'msg';
+        message.textContent = String(msg);
+        line.appendChild(ts);
+        line.appendChild(src);
+        line.appendChild(iconEl);
+        line.appendChild(message);
         
         this.output.appendChild(line);
         this.output.scrollTop = this.output.scrollHeight;
@@ -137,6 +155,10 @@ class Terminal {
 
         // JavaScript Execution
         try {
+            if (!window.__DEBUG_CONSOLE_ENABLED) {
+                this.log('JS eval is disabled. Enable with window.__DEBUG_CONSOLE_ENABLED = true in DevTools.', 'warning', 'SYS');
+                return;
+            }
             // Attempt to access parent IDE context if available
             const context = window.parent || window;
             const result = eval.call(context, raw);

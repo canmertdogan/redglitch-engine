@@ -5,6 +5,7 @@
 
 // Integration system references
 let eventBus, projectState, assetManager;
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 
 function initializeLocalizationIntegration() {
     if (typeof window !== 'undefined') {
@@ -243,10 +244,10 @@ class LocalizationEditor {
             const completionRate = this.calculateLanguageCompletion(langCode);
             
             item.innerHTML = `
-                <div class="lang-flag">${langInfo?.flag || '🏳️'}</div>
+                <div class="lang-flag">${_escapeHtml(langInfo?.flag || '🏳️')}</div>
                 <div style="flex: 1;">
-                    <div>${langCode}</div>
-                    <div style="font-size: 0.8rem; color: #666;">${langInfo?.name || langCode}</div>
+                    <div>${_escapeHtml(langCode)}</div>
+                    <div style="font-size: 0.8rem; color: #666;">${_escapeHtml(langInfo?.name || langCode)}</div>
                 </div>
                 <div class="lang-stats">${completionRate}%</div>
             `;
@@ -277,8 +278,8 @@ class LocalizationEditor {
                 const langInfo = this.languages[langCode];
                 headerHtml += `
                     <th class="lang-header">
-                        ${langInfo?.flag || '🏳️'} ${langCode}
-                        <div style="font-size: 0.8rem; color: #666; text-transform: none;">${langInfo?.name || langCode}</div>
+                        ${_escapeHtml(langInfo?.flag || '🏳️')} ${_escapeHtml(langCode)}
+                        <div style="font-size: 0.8rem; color: #666; text-transform: none;">${_escapeHtml(langInfo?.name || langCode)}</div>
                     </th>
                 `;
             }

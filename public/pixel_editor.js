@@ -330,16 +330,26 @@ window.redo = function() {
 };
 
 function loadHistory(snap) {
-    if(!snap) return;
-    app.w = snap.w; app.h = snap.h; canvas.width = app.w; canvas.height = app.h;
-    app.frameCount = snap.frameCount; app.anims = JSON.parse(JSON.stringify(snap.anims)); app.currAnim = snap.currAnim;
-    app.layers = snap.layers.map(l => ({
-        name: l.name, visible: l.visible,
-        frames: l.frames.map(f => {
-            const c = document.createElement('canvas'); c.width = f.width; c.height = f.height;
-            c.getContext('2d').drawImage(f, 0, 0); return c;
-        })
-    }));
+    if(!snap || typeof snap !== 'object') return;
+    app.w = snap.w ?? app.w; app.h = snap.h ?? app.h;
+    canvas.width = app.w; canvas.height = app.h;
+    app.frameCount = snap.frameCount ?? app.frameCount;
+    try {
+        app.anims = JSON.parse(JSON.stringify(snap.anims ?? app.anims));
+    } catch (e) {
+        console.error('[PixelEditor] Failed to restore animation history:', e);
+        app.anims = {};
+    }
+    app.currAnim = snap.currAnim ?? app.currAnim;
+    if (Array.isArray(snap.layers)) {
+        app.layers = snap.layers.map(l => ({
+            name: l.name, visible: l.visible,
+            frames: (l.frames || []).map(f => {
+                const c = document.createElement('canvas'); c.width = f.width; c.height = f.height;
+                c.getContext('2d').drawImage(f, 0, 0); return c;
+            })
+        }));
+    }
     updateUI();
 }
 

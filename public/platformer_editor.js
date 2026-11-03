@@ -136,7 +136,7 @@ class PlatformerEditor {
                     const levelId = f.replace('.json', '');
                     const div = document.createElement('div');
                     div.style.cssText = 'padding: 5px; cursor: pointer; border-bottom: 1px solid #222; font-size: 0.9rem; color: #aaa;';
-                    div.innerHTML = `<i class="fas fa-file"></i> ${levelId}`;
+                    div.innerHTML = `<i class="fas fa-file"></i> ${_escapeHtml(levelId)}`;
                     div.onclick = () => this.loadLevelById(levelId);
                     div.onmouseover = () => { div.style.color = '#fff'; div.style.background = '#111'; };
                     div.onmouseout = () => { div.style.color = '#aaa'; div.style.background = 'transparent'; };
@@ -285,7 +285,7 @@ class PlatformerEditor {
                 prefabs.forEach(p => {
                     const div = document.createElement('div');
                     div.style.cssText = "padding:8px; border-bottom:1px solid #333; cursor:pointer; color:#ccc;";
-                    div.innerHTML = `<i class="fas fa-cube"></i> ${p.name.replace('.json','')}`;
+                    div.innerHTML = `<i class="fas fa-cube"></i> ${_escapeHtml(p.name.replace('.json',''))}`;
                     div.onclick = () => {
                          this.selectedPrefab = p.name;
                          this.loadPrefabData(p.name);
@@ -629,7 +629,19 @@ class PlatformerEditor {
     }
     setStatus(msg) { document.getElementById('status-text').textContent = msg; }
     pushHistory() { this.history.push(JSON.stringify({ layers: this.layers, collision: this.collision })); if (this.history.length > 50) this.history.shift(); this.historyIndex = this.history.length - 1; }
-    undo() { if (this.historyIndex > 0) { const state = JSON.parse(this.history[--this.historyIndex]); this.layers = state.layers; this.collision = state.collision; this.render(); } }
+    undo() { 
+        if (this.historyIndex > 0) { 
+            try {
+                const state = JSON.parse(this.history[--this.historyIndex]); 
+                this.layers = state.layers; 
+                this.collision = state.collision; 
+                this.render(); 
+            } catch (e) {
+                console.error('[PlatformerEditor] Undo failed:', e);
+                this.historyIndex++; 
+            }
+        } 
+    }
     updateCollisionUI() { document.querySelectorAll('.collision-type-btn').forEach(btn => btn.classList.toggle('active', btn.id === `collision-type-${this.selectedCollisionType}`)); }
     generateLevel() {
         this.pushHistory();

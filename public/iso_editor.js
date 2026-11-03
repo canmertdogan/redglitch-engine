@@ -1790,7 +1790,7 @@ window.refreshWorldsList = async () => {
             card.innerHTML = `
                 <div class="asset-thumb"><i class="fas fa-globe"></i></div>
                 <div class="asset-info">
-                    <div class="asset-name">${name}</div>
+                    <div class="asset-name">${_escapeHtml(name)}</div>
                     <div class="asset-meta">WORLD</div>
                 </div>
                 <div class="asset-actions">
@@ -1804,7 +1804,7 @@ window.refreshWorldsList = async () => {
         });
     } catch(e) { 
         console.error('[IsoEditor] Error refreshing worlds list:', e);
-        list.innerHTML = '<div style="color:#c0392b;">Error loading worlds: ' + e.message + '</div>'; 
+        list.innerHTML = '<div style="color:#c0392b;">Error loading worlds: ' + _escapeHtml(e.message) + '</div>'; 
     }
 };
 
@@ -1827,17 +1827,21 @@ window.loadWorld = async (filename) => {
         const res = await fetch(`/dunyalar/${filename}`);
         if(res.ok) {
             const data = await res.json();
+            if (!data || typeof data !== 'object') throw new Error('Invalid world data');
             map = data;
             document.getElementById('level-name').value = map.name || filename.replace('.json','');
-            
+
             // Restore arrays if needed
-            if(!map.z) map.z = [];
-            if(!map.shapes) map.shapes = [];
-            if(!map.lights) map.lights = [];
-            
+            if(!Array.isArray(map.z)) map.z = [];
+            if(!Array.isArray(map.shapes)) map.shapes = [];
+            if(!Array.isArray(map.lights)) map.lights = [];
+            if(!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
+            if (typeof map.width !== 'number' || map.width <= 0) map.width = 32;
+            if (typeof map.height !== 'number' || map.height <= 0) map.height = 32;
+
             while(map.layers.length > map.z.length) map.z.push(new Array(map.width*map.height).fill(0));
             while(map.layers.length > map.shapes.length) map.shapes.push(new Array(map.width*map.height).fill(0));
-            
+
             // Load FX config if present
             if (map.fx && state.fx) {
                 Object.assign(state.fx, map.fx);

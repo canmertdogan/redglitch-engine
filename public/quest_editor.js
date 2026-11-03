@@ -4,6 +4,16 @@
 // Integration system references
 let eventBus, projectState, assetManager;
 
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Initialize integration
 function initializeQuestIntegration() {
     if (typeof window !== 'undefined') {
@@ -259,7 +269,7 @@ class QuestEditor {
             const tag = document.createElement('div');
             tag.className = 'tag';
             const pQuest = this.quests.find(x => x.id === pid);
-            tag.innerHTML = `${pQuest ? pQuest.title : pid} <span onclick="editor.removePrereq(${idx})">×</span>`;
+            tag.innerHTML = `${escapeHtml(pQuest ? pQuest.title : pid)} <span onclick="editor.removePrereq(${idx})">×</span>`;
             container.appendChild(tag);
         });
     }
@@ -288,7 +298,7 @@ class QuestEditor {
             const tag = document.createElement('div');
             tag.className = 'tag';
             const item = this.items.find(x => x.id === iid);
-            tag.innerHTML = `${item ? item.name : iid} <span onclick="editor.removeItemReward(${idx})">×</span>`;
+            tag.innerHTML = `${escapeHtml(item ? item.name : iid)} <span onclick="editor.removeItemReward(${idx})">×</span>`;
             container.appendChild(tag);
         });
     }

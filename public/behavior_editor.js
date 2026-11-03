@@ -1553,14 +1553,32 @@ Created for Redglitch Game Engine
         this.nodes = [];
         this.wires = [];
         this.dom.nodeLayer.innerHTML = '';
-        
-        // Restore nodes
-        state.nodes.forEach(n => this.addNode(n.type, n.x, n.y, n.id, n.data));
-        
-        // Restore wires
-        this.wires = JSON.parse(JSON.stringify(state.wires));
+
+        if (!state || typeof state !== 'object') {
+            console.warn('[BehaviorEditor] No valid state to restore');
+            this.renderWires();
+            this.selection = null;
+            this.renderInspector();
+            return;
+        }
+
+        try {
+            // Restore nodes
+            if (Array.isArray(state.nodes)) {
+                state.nodes.forEach(n => {
+                    if (n && n.type) this.addNode(n.type, n.x, n.y, n.id, n.data);
+                });
+            }
+
+            // Restore wires
+            if (Array.isArray(state.wires)) {
+                this.wires = JSON.parse(JSON.stringify(state.wires));
+            }
+        } catch (e) {
+            console.error('[BehaviorEditor] Failed to restore undo state:', e);
+        }
         this.renderWires();
-        
+
         this.selection = null;
         this.renderInspector();
     }
@@ -1952,7 +1970,7 @@ Created for Redglitch Game Engine
             if (def.cat === 'express') icon = 'comment';
             if (def.cat === 'logic') icon = 'code-branch';
             
-            item.innerHTML = `<i class="fas fa-${icon}"></i> ${def.title}`;
+            item.innerHTML = `<i class="fas fa-${icon}"></i> ${_escapeHtml(def.title)}`;
             
             // Make draggable
             item.addEventListener('dragstart', (e) => {

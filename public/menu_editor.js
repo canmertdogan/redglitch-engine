@@ -339,7 +339,9 @@ class UIStudio {
     // UNDO / REDO
     // ═══════════════════════════════════════
     pushUndo() {
-        this.undoStack.push(JSON.stringify(this.data));
+        const snap = JSON.stringify(this.data);
+        if (typeof snap !== 'string') return;
+        this.undoStack.push(snap);
         if (this.undoStack.length > this.maxUndo) this.undoStack.shift();
         this.redoStack = [];
     }
@@ -347,7 +349,13 @@ class UIStudio {
     undo() {
         if (this.undoStack.length === 0) return;
         this.redoStack.push(JSON.stringify(this.data));
-        this.data = JSON.parse(this.undoStack.pop());
+        try {
+            this.data = JSON.parse(this.undoStack.pop());
+        } catch (e) {
+            console.error('[MenuEditor] Undo failed:', e);
+            this.redoStack.pop();
+            return;
+        }
         this.selection = [];
         this.updateScreenList();
         if (this.activeScreen && this.data.screens[this.activeScreen]) {
@@ -361,7 +369,13 @@ class UIStudio {
     redo() {
         if (this.redoStack.length === 0) return;
         this.undoStack.push(JSON.stringify(this.data));
-        this.data = JSON.parse(this.redoStack.pop());
+        try {
+            this.data = JSON.parse(this.redoStack.pop());
+        } catch (e) {
+            console.error('[MenuEditor] Redo failed:', e);
+            this.undoStack.pop();
+            return;
+        }
         this.selection = [];
         this.updateScreenList();
         if (this.activeScreen && this.data.screens[this.activeScreen]) {
@@ -525,7 +539,7 @@ class UIStudio {
             inner.className = 'preview-label';
             let text = data.text || 'LABEL';
             // Highlight data bindings
-            inner.innerHTML = text.replace(/\{(\w+)\}/g, '<span style="color:#3498db;text-decoration:underline;">{$1}</span>');
+            inner.innerHTML = _escapeHtml(text).replace(/\{(\w+)\}/g, '<span style="color:#3498db;text-decoration:underline;">{$1}</span>');
             this._applyPreviewStyle(inner, s);
         } else if (data.type === 'panel') {
             inner = document.createElement('div');
@@ -635,7 +649,7 @@ class UIStudio {
             if (this.selection.includes(el.id)) node.classList.add('selected');
 
             const icon = TYPE_ICONS[el.type] || 'fas fa-cube';
-            node.innerHTML = `<i class="${icon}"></i> ${el.id} <span class="tree-type">${el.type}</span>`;
+            node.innerHTML = `<i class="${_escapeHtml(icon)}"></i> ${_escapeHtml(el.id)} <span class="tree-type">${_escapeHtml(el.type)}</span>`;
 
             node.addEventListener('click', (e) => {
                 if (e.shiftKey) {
@@ -832,7 +846,7 @@ class UIStudio {
                     if (parsed.type === 'navigate' && parsed.value) {
                         const hint = document.createElement('div');
                         hint.style.cssText = 'padding:6px 10px; color:#3498db; font-size:0.8rem; display:flex; align-items:center; gap:6px;';
-                        hint.innerHTML = `<i class="fas fa-link"></i> This button navigates to <strong>${parsed.value}</strong>`;
+                        hint.innerHTML = `<i class="fas fa-link"></i> This button navigates to <strong>${_escapeHtml(parsed.value)}</strong>`;
                         valueContainer.appendChild(hint);
                     }
                 } else if (actionType === 'engine_action') {
@@ -1652,9 +1666,9 @@ class UIStudio {
             const row = document.createElement('div');
             row.className = 'search-item' + (idx === this._searchIndex ? ' selected' : '');
             row.innerHTML = `
-                <div class="search-item-icon"><i class="${item.icon}"></i></div>
-                <span class="search-item-name">${item.name}</span>
-                <span class="search-item-type">${item.type}</span>
+                <div class="search-item-icon"><i class="${_escapeHtml(item.icon)}"></i></div>
+                <span class="search-item-name">${_escapeHtml(item.name)}</span>
+                <span class="search-item-type">${_escapeHtml(item.type)}</span>
             `;
             row.onclick = () => { if (item.action) item.action(); this.closeQuickSearch(); };
             container.appendChild(row);
@@ -1710,7 +1724,7 @@ class UIStudio {
             card.style.height = cardH + 'px';
 
             card.innerHTML = `
-                <div class="smc-header"><i class="fas fa-desktop"></i> ${sid}</div>
+                <div class="smc-header"><i class="fas fa-desktop"></i> ${_escapeHtml(sid)}</div>
                 <div class="smc-body">
                     <div class="smc-stat"><i class="fas fa-layer-group"></i> ${elCount} elements</div>
                     <div class="smc-stat"><i class="fas fa-mouse-pointer"></i> ${btnCount} buttons</div>

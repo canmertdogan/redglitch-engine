@@ -113,10 +113,10 @@ class AchievementEditor {
             el.className = 'ach-item';
             el.dataset.id = item.id;
             el.innerHTML = `
-                <div class="ach-item-icon">${item.icon || '🏆'}</div>
+                <div class="ach-item-icon">${_escapeHtml(item.icon || '🏆')}</div>
                 <div style="flex:1; overflow:hidden;">
-                    <div style="font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.title || 'Untitled'}</div>
-                    <div style="font-size:0.7rem; color:#444">${item.id}</div>
+                    <div style="font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_escapeHtml(item.title || 'Untitled')}</div>
+                    <div style="font-size:0.7rem; color:#444">${_escapeHtml(item.id)}</div>
                 </div>
             `;
             el.onclick = () => this.select(item.id);
@@ -128,10 +128,10 @@ class AchievementEditor {
         const el = this.dom.list.querySelector(`.ach-item[data-id="${item.id}"]`);
         if (el) {
             el.innerHTML = `
-                <div class="ach-item-icon">${item.icon || '🏆'}</div>
+                <div class="ach-item-icon">${_escapeHtml(item.icon || '🏆')}</div>
                 <div style="flex:1; overflow:hidden;">
-                    <div style="font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.title || 'Untitled'}</div>
-                    <div style="font-size:0.7rem; color:#444">${item.id}</div>
+                    <div style="font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_escapeHtml(item.title || 'Untitled')}</div>
+                    <div style="font-size:0.7rem; color:#444">${_escapeHtml(item.id)}</div>
                 </div>
             `;
         }

@@ -535,7 +535,7 @@ class WorldEditor {
                             // Icon and name (clickable)
                             const nameContainer = document.createElement('div');
                             nameContainer.style.cssText = "flex-grow:1; cursor:pointer; color:#aaa; font-size:0.9rem; display:flex; align-items:center; gap:8px;";
-                            nameContainer.innerHTML = `<i class="fas fa-file-code" style="font-size:0.7rem; color:#555;"></i> <span>${f.replace('.json', '')}</span>`;
+                            nameContainer.innerHTML = `<i class="fas fa-file-code" style="font-size:0.7rem; color:#555;"></i> <span>${_escapeHtml(f.replace('.json', ''))}</span>`;
                             nameContainer.onclick = () => loadLevelFromServer(f);
                             nameContainer.onmouseover = () => nameContainer.style.color = '#fff';
                             nameContainer.onmouseout = () => nameContainer.style.color = '#aaa';
@@ -575,19 +575,23 @@ class WorldEditor {
                     console.log("Triggering manual asset scan...");
                     await fetch('/api/assets/scan', { method: 'POST' });
                 }
-        
+
                 // Cache-buster to ensure we get fresh results
                 let assetsRes = await fetch('/api/assets/list?t=' + Date.now());
+                if (!assetsRes.ok) throw new Error(`Asset list failed: ${assetsRes.status}`);
                 let assets = await assetsRes.json();
-                
+                if (!Array.isArray(assets)) assets = [];
+
                 console.log(`Loaded ${assets.length} total assets.`);
-        
+
                 // Auto-scan if no assets found
                 if (assets.length === 0 && !forceScan) {
                     console.log("No assets indexed. Triggering auto-scan...");
                     await fetch('/api/assets/scan', { method: 'POST' });
                     assetsRes = await fetch('/api/assets/list?t=' + Date.now());
+                    if (!assetsRes.ok) throw new Error(`Asset list failed after scan: ${assetsRes.status}`);
                     assets = await assetsRes.json();
+                    if (!Array.isArray(assets)) assets = [];
                 }
         
                 const prefabs = assets.filter(a => {
@@ -610,7 +614,9 @@ class WorldEditor {
                     prefabs.forEach(p => {
                         const div = document.createElement('div');
                         div.style.cssText = "padding:8px; border-bottom:1px solid #333; cursor:pointer; color:#ccc;";
-                        div.innerHTML = `🧩 ${p.name.replace('.json','')}`;
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = '🧩 ' + p.name.replace('.json','');
+                        div.appendChild(nameSpan);
                         div.onclick = () => selectPrefab(p.name);
                         list.appendChild(div);
                     });
@@ -1232,24 +1238,47 @@ class WorldEditor {
         
         // --- HISTORY ---
         window.pushHistory = function() {
-            editorState.history.push(JSON.stringify(map));
-            if(editorState.history.length > 20) editorState.history.shift();
+            if (!map || typeof map !== 'object') return;
+            const snap = JSON.stringify(map);
+            editorState.history = editorState.history.slice(0, editorState.historyIndex + 1);
+            editorState.history.push(snap);
+            if (editorState.history.length > 20) editorState.history.shift();
             editorState.historyIndex = editorState.history.length - 1;
         };
         window.undo = function() {
-            if(editorState.historyIndex > 0) {
+            if (editorState.historyIndex > 0) {
                 editorState.historyIndex--;
-                map = JSON.parse(editorState.history[editorState.historyIndex]);
-                editorState.activeLayer = Math.min(editorState.activeLayer, map.layers.length - 1);
+                try {
+                    const parsed = JSON.parse(editorState.history[editorState.historyIndex]);
+                    if (parsed && typeof parsed === 'object') {
+                        map = parsed;
+                        if (!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
+                    }
+                } catch (e) {
+                    console.error('[Editor] Undo failed:', e);
+                    editorState.historyIndex++;
+                    return;
+                }
+                editorState.activeLayer = Math.min(editorState.activeLayer, (map.layers || []).length - 1);
                 updateLayerList();
                 render();
             }
         };
         window.redo = function() {
-            if(editorState.historyIndex < editorState.history.length - 1) {
+            if (editorState.historyIndex < editorState.history.length - 1) {
                 editorState.historyIndex++;
-                map = JSON.parse(editorState.history[editorState.historyIndex]);
-                editorState.activeLayer = Math.min(editorState.activeLayer, map.layers.length - 1);
+                try {
+                    const parsed = JSON.parse(editorState.history[editorState.historyIndex]);
+                    if (parsed && typeof parsed === 'object') {
+                        map = parsed;
+                        if (!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
+                    }
+                } catch (e) {
+                    console.error('[Editor] Redo failed:', e);
+                    editorState.historyIndex--;
+                    return;
+                }
+                editorState.activeLayer = Math.min(editorState.activeLayer, (map.layers || []).length - 1);
                 updateLayerList();
                 render();
             }
@@ -1455,7 +1484,7 @@ class WorldEditor {
                         <i class="fas fa-eye${props.visible ? '' : '-slash'}"></i>
                     </div>
                     <div class="layer-name" onclick="selectLayer(${i})">
-                        ${props.name || ('Layer ' + i)}
+                        ${escapeHtml(props.name || ('Layer ' + i))}
                     </div>
                     <div class="layer-controls">
                         <div class="layer-btn" onclick="event.stopPropagation(); removeLayer()"><i class="fas fa-trash"></i></div>
@@ -1579,27 +1608,35 @@ class WorldEditor {
             }
         }
         
-        function loadMapData(data) { 
-            map = data; 
-            
-            // Ensure decorations array exists
+        function loadMapData(data) {
+            if (!data || typeof data !== 'object') {
+                console.error('[Editor] Invalid map data: expected object');
+                alert('Invalid map file format.');
+                return;
+            }
+            map = data;
+
+            // Ensure required fields have safe defaults
+            if (typeof map.width !== 'number' || isNaN(map.width) || map.width <= 0) map.width = 32;
+            if (typeof map.height !== 'number' || isNaN(map.height) || map.height <= 0) map.height = 32;
+            if (!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
             if (!map.decorations) map.decorations = [];
-            
+
             const filename = map.name || 'unnamed';
             document.getElementById('level-name').value = filename;
             document.getElementById('map-w').value = map.width;
             document.getElementById('map-h').value = map.height;
             if (document.getElementById('map-type')) document.getElementById('map-type').value = map.type || 'topdown';
             if (document.getElementById('fx-shader')) document.getElementById('fx-shader').value = map.shader || 'default';
-            
+
             // Track current filename
             editorState.currentFilename = filename;
             updateFilenameDisplay(filename);
-            
-            editorState.activeLayer = 0; 
-            resizeCanvasElement(); 
-            updateLayerList(); 
-            render(); 
+
+            editorState.activeLayer = 0;
+            resizeCanvasElement();
+            updateLayerList();
+            render();
         }
         
         function loadLevelFromFile(e) {
@@ -1725,7 +1762,7 @@ class WorldEditor {
                 box-shadow: 0 4px 15px rgba(0,0,0,0.3);
                 animation: slideIn 0.3s ease-out;
             `;
-            notification.innerHTML = `<i class="fas fa-${success ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
+            notification.innerHTML = `<i class="fas fa-${success ? 'check-circle' : 'exclamation-triangle'}"></i> ${escapeHtml(message)}`;
             
             // Add animation styles
             const style = document.createElement('style');
@@ -1910,7 +1947,7 @@ class WorldEditor {
             modal.style.left = '50%'; modal.style.top = '50%'; modal.style.transform = 'translate(-50%,-50%)';
             modal.style.minWidth = '360px';
         
-            const header = document.createElement('div'); header.className = 'window-header'; header.innerHTML = 'TILE MAPPER <i class="fas fa-times" style="cursor:pointer"></i>';
+            const header = document.createElement('div'); header.className = 'window-header'; header.textContent = 'TILE MAPPER '; const closeBtn = document.createElement('i'); closeBtn.className = 'fas fa-times'; closeBtn.style.cssText = 'cursor:pointer'; closeBtn.onclick = () => modal.style.display = 'none'; header.appendChild(closeBtn);
             header.querySelector('i').onclick = () => modal.style.display = 'none';
             modal.appendChild(header);
         
@@ -2005,7 +2042,7 @@ class WorldEditor {
                         files.forEach(f => {
                             const div = document.createElement('div');
                             div.style.cssText = "padding:8px; border-bottom:1px solid #222; cursor:pointer; color:#aaa; font-size:0.9rem; display:flex; align-items:center; gap:8px;";
-                            div.innerHTML = `<i class=\"fas fa-file-code\" style=\"font-size:0.7rem; color:#555;\"></i> <span>${f.replace('.json', '')}</span>`;
+                            div.innerHTML = `<i class="fas fa-file-code" style="font-size:0.7rem; color:#555;"></i> <span>${_escapeHtml(f.replace('.json', ''))}</span>`;
                             div.onmouseover = () => div.style.color = '#fff';
                             div.onmouseout = () => div.style.color = '#aaa';
                             div.onclick = () => loadLevelFromServer(f);
