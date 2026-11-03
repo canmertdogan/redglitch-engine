@@ -1523,8 +1523,12 @@
         function startAutoSave() {
             autoSaveInterval = setInterval(async () => {
                 if (campaignController) {
-                    await campaignController.autoSave();
-                    console.log('[Runtime] Auto-save completed');
+                    try {
+                        await campaignController.autoSave();
+                        console.log('[Runtime] Auto-save completed');
+                    } catch (error) {
+                        console.error('[Runtime] Auto-save failed:', error);
+                    }
                 }
             }, 120000); // Every 2 minutes
         }

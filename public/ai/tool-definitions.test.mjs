@@ -69,9 +69,9 @@ test('data.update posts to plural definition endpoints', async () => {
     await registry.tools.get('data.update').execute({ type: 'skills', data: [{ id: 'skill1' }] });
 
     assert.deepEqual(calls.map((call) => call.url), [
-        '/api/npcs-defs',
-        '/api/items-defs',
-        '/api/skills-defs',
+        '/api/npcs',
+        '/api/items',
+        '/api/skills',
     ]);
 });
 
