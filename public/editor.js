@@ -576,7 +576,7 @@ class WorldEditor {
             try {
                 if (forceScan) {
                     console.log("Triggering manual asset scan...");
-                    await fetch('/api/assets/scan', { method: 'POST' });
+                    await fetch('/api/assets/rebuild', { method: 'POST' });
                 }
 
                 // Cache-buster to ensure we get fresh results
@@ -590,7 +590,7 @@ class WorldEditor {
                 // Auto-scan if no assets found
                 if (assets.length === 0 && !forceScan) {
                     console.log("No assets indexed. Triggering auto-scan...");
-                    await fetch('/api/assets/scan', { method: 'POST' });
+                    await fetch('/api/assets/rebuild', { method: 'POST' });
                     assetsRes = await fetch('/api/assets/list?t=' + Date.now());
                     if (!assetsRes.ok) throw new Error(`Asset list failed after scan: ${assetsRes.status}`);
                     assets = await assetsRes.json();

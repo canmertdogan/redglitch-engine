@@ -12,6 +12,16 @@ const Background: React.FC<BackgroundProps> = ({ enabled }) => {
     useEffect(() => {
         if (!enabled || !containerRef.current) return;
 
+        // Pre-flight WebGL support check: creating THREE.WebGLRenderer on a
+        // WebGL-less machine makes three.js log console errors before it throws.
+        const canvasProbe = document.createElement('canvas');
+        const glProbe = canvasProbe.getContext('webgl2') || canvasProbe.getContext('webgl');
+        if (!glProbe) {
+            console.warn('[Dashboard] WebGL unavailable — using static backdrop.');
+            containerRef.current.style.background = 'radial-gradient(circle at 50% 40%, #1a1207 0%, #000 70%)';
+            return;
+        }
+
         let renderer: THREE.WebGLRenderer | null = null;
         try {
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
