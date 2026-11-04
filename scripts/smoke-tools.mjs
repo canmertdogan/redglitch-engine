@@ -71,7 +71,9 @@ function parseToolsFromStudioJs(source) {
     const src = body.match(/src:\s*'([^']+)'/)?.[1];
     const category = body.match(/category:\s*'([^']+)'/)?.[1] || '';
     const title = body.match(/title:\s*'([^']+)'/)?.[1] || id;
-    if (src) tools.push({ id, src, category, title, group: 'registered' });
+    const status = body.match(/status:\s*'([^']+)'/)?.[1] || 'stable';
+    // Hidden entries stay in the registry for future revival but are not part of the product surface.
+    if (src && status !== 'hidden') tools.push({ id, src, category, title, group: 'registered' });
   }
   return tools;
 }

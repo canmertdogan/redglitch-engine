@@ -5,8 +5,8 @@
 
 const tools = [
     // SYSTEM
-    { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', icon: 'fa-rocket', src: 'dashboard.html', w: 900, h: 700 },
-    { id: 'dashboard_v2', category: 'SYSTEM', title: 'Launcher (New)', icon: 'fa-rocket', src: 'studio-dist/dashboard.html', w: 900, h: 700 },
+    { id: 'dashboard_legacy', category: 'SYSTEM', title: 'Launcher', icon: 'fa-rocket', src: 'dashboard.html', w: 900, h: 700, status: 'hidden' },
+    { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', icon: 'fa-rocket', src: 'studio-dist/dashboard.html', w: 900, h: 700 },
     { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', icon: 'fa-tachometer-alt', src: 'project_dashboard.html', w: 1000, h: 600 },
     { id: 'menu', category: 'SYSTEM', title: 'Interface (UI)', icon: 'fa-window-restore', src: 'menu_editor.html', w: 1280, h: 760 },
     { id: 'ui_designer', category: 'SYSTEM', title: 'UI Designer', icon: 'fa-th-large', src: 'studio-dist/ui_designer.html', w: 1000, h: 700 },
@@ -23,42 +23,42 @@ const tools = [
     { id: 'campaign', category: 'WORLD ARCHITECT', title: 'Campaign Flow', icon: 'fa-flag', src: 'campaign_editor.html', w: 1100, h: 750 },
 
     // ENTITIES
-    { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', icon: 'fa-cubes', src: 'prefab_editor.html', w: 800, h: 600 },
-    { id: 'prefab_v2', category: 'ENTITIES', title: 'Prefab Builder (New)', icon: 'fa-cubes', src: 'studio-dist/prefab_editor.html', w: 800, h: 600 },
-    { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', icon: 'fa-user-friends', src: 'npc_editor.html', w: 700, h: 500 },
-    { id: 'npc_v2', category: 'ENTITIES', title: 'NPC Editor (New)', icon: 'fa-user-friends', src: 'studio-dist/npc_editor.html', w: 700, h: 500 },
-    { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', icon: 'fa-skull', src: 'enemy_editor.html', w: 700, h: 500 },
-    { id: 'enemy_v2', category: 'ENTITIES', title: 'Enemy Editor (New)', icon: 'fa-skull', src: 'studio-dist/enemy_editor.html', w: 700, h: 500 },
-    { id: 'item', category: 'ENTITIES', title: 'Item Database', icon: 'fa-scroll', src: 'item_editor.html', w: 700, h: 500 },
-    { id: 'item_v2', category: 'ENTITIES', title: 'Item Database (New)', icon: 'fa-scroll', src: 'studio-dist/item_editor.html', w: 700, h: 500 },
+    { id: 'prefab_legacy', category: 'ENTITIES', title: 'Prefab Builder', icon: 'fa-cubes', src: 'prefab_editor.html', w: 800, h: 600, status: 'hidden' },
+    { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', icon: 'fa-cubes', src: 'studio-dist/prefab_editor.html', w: 800, h: 600 },
+    { id: 'npc_legacy', category: 'ENTITIES', title: 'NPC Editor', icon: 'fa-user-friends', src: 'npc_editor.html', w: 700, h: 500, status: 'hidden' },
+    { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', icon: 'fa-user-friends', src: 'studio-dist/npc_editor.html', w: 700, h: 500 },
+    { id: 'enemy_legacy', category: 'ENTITIES', title: 'Enemy Editor', icon: 'fa-skull', src: 'enemy_editor.html', w: 700, h: 500, status: 'hidden' },
+    { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', icon: 'fa-skull', src: 'studio-dist/enemy_editor.html', w: 700, h: 500 },
+    { id: 'item_legacy', category: 'ENTITIES', title: 'Item Database', icon: 'fa-scroll', src: 'item_editor.html', w: 700, h: 500, status: 'hidden' },
+    { id: 'item', category: 'ENTITIES', title: 'Item Database', icon: 'fa-scroll', src: 'studio-dist/item_editor.html', w: 700, h: 500 },
     { id: 'character', category: 'ENTITIES', title: 'Player Profiles', icon: 'fa-user-ninja', src: 'character_editor.html', w: 700, h: 500 },
     { id: 'skill', category: 'ENTITIES', title: 'Skills', icon: 'fa-bolt', src: 'skill_editor.html', w: 700, h: 500 },
     { id: 'achievements', category: 'ENTITIES', title: 'Trophies', icon: 'fa-trophy', src: 'achievements_editor.html', w: 700, h: 500 },
 
     // LOGIC & AI
-    { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', icon: 'fa-code', src: 'script_editor.html', w: 1000, h: 700 },
-    { id: 'script_v2', category: 'LOGIC & AI', title: 'Script Editor (New)', icon: 'fa-code', src: 'studio-dist/script_editor.html', w: 1000, h: 700 },
-    { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', icon: 'fa-project-diagram', src: 'algorithm_editor.html', w: 1000, h: 700 },
-    { id: 'algorithm_v2', category: 'LOGIC & AI', title: 'Node Logic (New)', icon: 'fa-project-diagram', src: 'studio-dist/algorithm_editor.html', w: 1000, h: 700 },
+    { id: 'script_legacy', category: 'LOGIC & AI', title: 'Script Editor', icon: 'fa-code', src: 'script_editor.html', w: 1000, h: 700, status: 'hidden' },
+    { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', icon: 'fa-code', src: 'studio-dist/script_editor.html', w: 1000, h: 700 },
+    { id: 'algorithm_legacy', category: 'LOGIC & AI', title: 'Node Logic', icon: 'fa-project-diagram', src: 'algorithm_editor.html', w: 1000, h: 700, status: 'hidden' },
+    { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', icon: 'fa-project-diagram', src: 'studio-dist/algorithm_editor.html', w: 1000, h: 700 },
     { id: 'behavior', category: 'LOGIC & AI', title: 'AI Brains', icon: 'fa-brain', src: 'behavior_editor.html', w: 900, h: 600 },
-    { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'quest_editor.html', w: 900, h: 600 },
-    { id: 'quests_v2', category: 'LOGIC & AI', title: 'Quest Designer (New)', icon: 'fa-exclamation-circle', src: 'studio-dist/quest_editor.html', w: 900, h: 600 },
-    { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', icon: 'fa-comments', src: 'dialogue_editor.html', w: 800, h: 500 },
-    { id: 'dialogue_v2', category: 'LOGIC & AI', title: 'Dialogues (New)', icon: 'fa-comments', src: 'studio-dist/dialogue_editor.html', w: 800, h: 500 },
-    { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'interactive_cutscene_editor.html', w: 1200, h: 800 },
-    { id: 'interactive_cutscene_v2', category: 'LOGIC & AI', title: 'Cutscene Studio (New)', icon: 'fa-theater-masks', src: 'studio-dist/interactive_cutscene_editor.html', w: 1200, h: 800 },
+    { id: 'quests_legacy', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'quest_editor.html', w: 900, h: 600, status: 'hidden' },
+    { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'studio-dist/quest_editor.html', w: 900, h: 600 },
+    { id: 'dialogue_legacy', category: 'LOGIC & AI', title: 'Dialogues', icon: 'fa-comments', src: 'dialogue_editor.html', w: 800, h: 500, status: 'hidden' },
+    { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', icon: 'fa-comments', src: 'studio-dist/dialogue_editor.html', w: 800, h: 500 },
+    { id: 'interactive_cutscene_legacy', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'interactive_cutscene_editor.html', w: 1200, h: 800, status: 'hidden' },
+    { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'studio-dist/interactive_cutscene_editor.html', w: 1200, h: 800 },
 
     // ASSETS
-    { id: 'daw', category: 'ASSETS', title: 'Audio Studio', icon: 'fa-music', src: 'daw.html', w: 800, h: 500 },
-    { id: 'daw_v2', category: 'ASSETS', title: 'Audio Studio (New)', icon: 'fa-music', src: 'studio-dist/daw_editor.html', w: 800, h: 500 },
-    { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', icon: 'fa-paint-brush', src: 'pixel_editor.html', w: 900, h: 650 },
-    { id: 'pixel_v2', category: 'ASSETS', title: 'Pixel Art (New)', icon: 'fa-paint-brush', src: 'studio-dist/pixel_editor.html', w: 900, h: 650 },
-    { id: 'fxpro', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'fx_editor.html', w: 900, h: 650 },
-    { id: 'fxpro_v2', category: 'ASSETS', title: 'FX Master (New)', icon: 'fa-magic', src: 'studio-dist/fx_editor.html', w: 900, h: 650 },
-    { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'shader_lab.html', w: 1200, h: 800 },
-    { id: 'shader_v2', category: 'ASSETS', title: 'Shader Lab (New)', icon: 'fa-eye', src: 'studio-dist/shader_editor.html', w: 1200, h: 800 },
-    { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'asset_manager.html', w: 900, h: 600 },
-    { id: 'assets_v2', category: 'ASSETS', title: 'File Manager (New)', icon: 'fa-folder', src: 'studio-dist/asset_manager.html', w: 900, h: 600 }
+    { id: 'daw_legacy', category: 'ASSETS', title: 'Audio Studio', icon: 'fa-music', src: 'daw.html', w: 800, h: 500, status: 'hidden' },
+    { id: 'daw', category: 'ASSETS', title: 'Audio Studio', icon: 'fa-music', src: 'studio-dist/daw_editor.html', w: 800, h: 500 },
+    { id: 'pixel_legacy', category: 'ASSETS', title: 'Pixel Art', icon: 'fa-paint-brush', src: 'pixel_editor.html', w: 900, h: 650, status: 'hidden' },
+    { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', icon: 'fa-paint-brush', src: 'studio-dist/pixel_editor.html', w: 900, h: 650 },
+    { id: 'fxpro_legacy', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'fx_editor.html', w: 900, h: 650, status: 'hidden' },
+    { id: 'fxpro', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'studio-dist/fx_editor.html', w: 900, h: 650 },
+    { id: 'shader_legacy', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'shader_lab.html', w: 1200, h: 800, status: 'hidden' },
+    { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'studio-dist/shader_editor.html', w: 1200, h: 800 },
+    { id: 'assets_legacy', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'asset_manager.html', w: 900, h: 600, status: 'hidden' },
+    { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'studio-dist/asset_manager.html', w: 900, h: 600 }
 ];
 
 let zIndexCounter = 100;
@@ -200,7 +200,7 @@ async function studioInit() {
         // above the sidebar instead of cluttering the main category lists.
         const isReactTool = t => t.src.startsWith('studio-dist/');
 
-        tools.filter(t => !isReactTool(t)).forEach(t => {
+        tools.filter(t => !isReactTool(t) && t.status !== 'hidden').forEach(t => {
             if(!grouped[t.category]) grouped[t.category] = [];
             grouped[t.category].push(t);
         });
@@ -208,7 +208,7 @@ async function studioInit() {
         const reactSelect = document.getElementById('react-tools-select');
         if (reactSelect) {
             reactSelect.innerHTML = '<option value="">NEW BUILDS ▾</option>';
-            tools.filter(isReactTool).forEach(t => {
+            tools.filter(t => isReactTool(t) && t.status !== 'hidden').forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = t.id;
                 opt.textContent = t.title.toUpperCase();
