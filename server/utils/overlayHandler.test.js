@@ -7,7 +7,8 @@ const { makeOverlayHandler } = require('../utils/overlayHandler');
 
 // Mirror the module's notion of the public root so we can assert containment
 // against the same directory the handler uses.
-const PUBLIC_ROOT = path.resolve(__dirname, '..', 'public');
+// __dirname = <root>/server/utils — two levels up is the repository root.
+const PUBLIC_ROOT = path.resolve(__dirname, '..', '..', 'public');
 
 function makeRes() {
     const calls = { sendFile: [] };

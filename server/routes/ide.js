@@ -31,6 +31,15 @@ async function ensureDir(dirPath) {
     }
 }
 
+async function pathExists(p) {
+    try {
+        await fs.access(p);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 // POST /api/ide/read - Read file content
 router.get('/read', async (req, res) => {
     let filePath = req.query.file;
@@ -184,13 +193,27 @@ router.get('/list', async (req, res) => {
             }
         }
 
-        const fullPath = resolveUnderRoot(targetRootDir, dirPath);
-        
+        const FULL_PUBLIC = path.join(__dirname, '..', '..', 'public');
+        let fullPath = resolveUnderRoot(targetRootDir, dirPath);
         if (!fullPath) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        const entries = await fs.readdir(fullPath, { withFileTypes: true });
+        let entries;
+        try {
+            entries = await fs.readdir(fullPath, { withFileTypes: true });
+        } catch (err) {
+            // Project overlay miss — fall back to the engine-core public tree.
+            const publicPath = resolveUnderRoot(FULL_PUBLIC, dirPath);
+            if (publicPath && (await pathExists(publicPath))) {
+                fullPath = publicPath;
+                entries = await fs.readdir(fullPath, { withFileTypes: true });
+            } else if (err.code === 'ENOENT') {
+                return res.status(404).json({ error: 'Directory not found' });
+            } else {
+                throw err;
+            }
+        }
         const files = entries.map(e => ({
             name: e.name,
             isDirectory: e.isDirectory(),

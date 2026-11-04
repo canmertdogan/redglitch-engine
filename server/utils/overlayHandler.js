@@ -7,7 +7,8 @@ const path = require('path');
 // CONTAINMENT-check the fully-resolved path against the intended root before
 // calling sendFile.
 function makeOverlayHandler(projectService) {
-    const PUBLIC_ROOT = path.resolve(__dirname, '..', 'public');
+    // __dirname = <root>/server/utils — two levels up is the repository root.
+    const PUBLIC_ROOT = path.resolve(__dirname, '..', '..', 'public');
 
     return function overlay(rootSub, projectSub, rootFirst) {
         return (req, res, next) => {
@@ -41,9 +42,15 @@ function makeOverlayHandler(projectService) {
             });
 
             if (rootFirst) {
-                tryRoot(() => tryProject((e2) => { if (e2 && !res.headersSent) next(e2); }));
+                tryRoot(() => tryProject((e2) => {
+                    // Nothing anywhere: hand the request to the next middleware
+                    // (express.static will try public/) instead of 500-ing.
+                    if (e2 && !res.headersSent) next();
+                }));
             } else {
-                tryProject(() => tryRoot((e2) => { if (e2 && !res.headersSent) next(e2); }));
+                tryProject(() => tryRoot((e2) => {
+                    if (e2 && !res.headersSent) next();
+                }));
             }
         };
     };
