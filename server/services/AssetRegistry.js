@@ -80,7 +80,7 @@ class AssetRegistry {
         let type = defaultType;
         if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) type = 'image';
         else if (['.mp3', '.wav', '.ogg'].includes(ext)) type = 'audio';
-        else if (['.json', '.algorithm', '.3dmap'].includes(ext)) type = 'data';
+        else if (['.json', '.algorithm', '.3dmap', '.psd', '.ai', '.xcf'].includes(ext)) type = 'data';
 
         let assetPath = file.rel;
         if (isEngineCore) {
