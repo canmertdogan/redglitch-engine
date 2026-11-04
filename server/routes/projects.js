@@ -530,9 +530,13 @@ router.post('/project-file', async (req, res) => {
     if (!project || !relPath || typeof content !== 'string') {
         return res.status(400).json({ error: 'project, path, and content are required' });
     }
+    const relPathNormalized = path.normalize(relPath);
+    if (!relPathNormalized || relPathNormalized.startsWith('..') || path.isAbsolute(relPathNormalized) || relPathNormalized.includes('..')) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
     const fullPath = resolveProjectPath(project);
     if (!fullPath) return res.status(400).json({ error: 'Invalid project' });
-    const targetPath = path.join(fullPath, relPath);
+    const targetPath = path.join(fullPath, relPathNormalized);
     if (!targetPath.startsWith(fullPath + path.sep) && targetPath !== fullPath) return res.status(403).json({ error: 'Access denied' });
     try {
         await ensureDir(path.dirname(targetPath));
@@ -550,9 +554,13 @@ router.get('/project-file', async (req, res) => {
     if (!project || !relPath) {
         return res.status(400).json({ error: 'project and path are required' });
     }
+    const relPathNormalized = path.normalize(relPath);
+    if (!relPathNormalized || relPathNormalized.startsWith('..') || path.isAbsolute(relPathNormalized) || relPathNormalized.includes('..')) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
     const fullPath = resolveProjectPath(project);
     if (!fullPath) return res.status(400).json({ error: 'Invalid project' });
-    const targetPath = path.join(fullPath, relPath);
+    const targetPath = path.join(fullPath, relPathNormalized);
     if (!targetPath.startsWith(fullPath + path.sep) && targetPath !== fullPath) return res.status(403).json({ error: 'Access denied' });
     try {
         const content = await fs.readFile(targetPath, 'utf8');

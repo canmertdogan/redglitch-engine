@@ -244,7 +244,7 @@ async function saveToServer() {
         const convId = document.getElementById('conv-id').value;
         if(data.conversations[currentConvIndex]) data.conversations[currentConvIndex].id = convId;
 
-        await fetch('/api/dialogue', {
+        await fetch('/api/dialogues', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)

@@ -303,22 +303,22 @@ const ItemEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
                                         <label>Registry ID</label>
-                                        <input type="text" value={currentItem.id} onChange={(e) => updateCurrentNPC('id', e.target.value)} />
+                                        <input type="text" value={currentItem.id} onChange={(e) => updateCurrentItem('id', e.target.value)} />
                                     </div>
                                     <div>
                                         <label>Item Name</label>
-                                        <input type="text" value={currentItem.name} onChange={(e) => updateCurrentNPC('name', e.target.value)} />
+                                        <input type="text" value={currentItem.name} onChange={(e) => updateCurrentItem('name', e.target.value)} />
                                     </div>
                                 </div>
                                 <label>Description</label>
-                                <textarea rows={3} value={currentItem.desc} onChange={(e) => updateCurrentNPC('desc', e.target.value)} />
+                                <textarea rows={3} value={currentItem.desc} onChange={(e) => updateCurrentItem('desc', e.target.value)} />
                             </FormSection>
 
                             <FormSection title="Base Stats">
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div>
                                         <label>Category</label>
-                                        <select value={currentItem.type} onChange={(e) => updateCurrentNPC('type', e.target.value)}>
+                                        <select value={currentItem.type} onChange={(e) => updateCurrentItem('type', e.target.value)}>
                                             <option value="consumable">Consumable</option>
                                             <option value="equipment">Equipment</option>
                                             <option value="key">Key Item</option>
@@ -329,7 +329,7 @@ const ItemEditor: React.FC = () => {
                                     </div>
                                     <div>
                                         <label>Base Value (G)</label>
-                                        <input type="number" value={currentItem.value} onChange={(e) => updateCurrentNPC('value', parseInt(e.target.value))} />
+                                        <input type="number" value={currentItem.value} onChange={(e) => updateCurrentItem('value', parseInt(e.target.value))} />
                                     </div>
                                 </div>
                             </FormSection>
@@ -352,7 +352,7 @@ const ItemEditor: React.FC = () => {
                             <FormSection title="Rarity & Stacking">
                                 <div style={{ marginBottom: '15px' }}>
                                     <label>Rarity Level</label>
-                                    <select value={currentItem.rarity} onChange={(e) => updateCurrentNPC('rarity', e.target.value)}>
+                                    <select value={currentItem.rarity} onChange={(e) => updateCurrentItem('rarity', e.target.value)}>
                                         <option value="common">Common (White)</option>
                                         <option value="uncommon">Uncommon (Green)</option>
                                         <option value="rare">Rare (Blue)</option>
@@ -363,21 +363,21 @@ const ItemEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div>
                                         <label>Stackable</label>
-                                        <select value={String(currentItem.stackable)} onChange={(e) => updateCurrentNPC('stackable', e.target.value === 'true')}>
+                                        <select value={String(currentItem.stackable)} onChange={(e) => updateCurrentItem('stackable', e.target.value === 'true')}>
                                             <option value="true">Yes</option>
                                             <option value="false">No</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label>Max Stack</label>
-                                        <input type="number" value={currentItem.maxStack} onChange={(e) => updateCurrentNPC('maxStack', parseInt(e.target.value))} />
+                                        <input type="number" value={currentItem.maxStack} onChange={(e) => updateCurrentItem('maxStack', parseInt(e.target.value))} />
                                     </div>
                                 </div>
                             </FormSection>
 
                             <FormSection title="Visuals">
                                 <label>Sprite Key</label>
-                                <select value={currentItem.sprite} onChange={(e) => updateCurrentNPC('sprite', e.target.value)}>
+                                <select value={currentItem.sprite} onChange={(e) => updateCurrentItem('sprite', e.target.value)}>
                                     {sprites && Object.keys(sprites).map(key => (
                                         <option key={key} value={key}>{key.toUpperCase()}</option>
                                     ))}

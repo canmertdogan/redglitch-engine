@@ -38,5 +38,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     openDevTools: () => ipcRenderer.send('open-devtools'),
     cortexStart: () => ipcRenderer.invoke('cortex-start'),
-    cortexStop: () => ipcRenderer.invoke('cortex-stop')
+    cortexStop: () => ipcRenderer.invoke('cortex-stop'),
+    cortexStatus: () => ipcRenderer.invoke('cortex-status')
 });

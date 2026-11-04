@@ -373,7 +373,7 @@ export default class Editor3DCore {
             // Dynamic import GLTFLoader and FacetTool
             const [{ GLTFLoader }, { default: FacetTool }] = await Promise.all([
                 import('/lib/three/loaders/GLTFLoader.js'),
-                import('/engines/shared/editor/FacetTool.js')
+                import('/engines/shared/FacetTool.js')
             ]);
             
             const palette = this.renderer3d?.paletteManager?.palette || [0x555555, 0x888888, 0xcccccc];

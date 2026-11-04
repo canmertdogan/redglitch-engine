@@ -236,9 +236,10 @@ async def list_sessions():
 
 @app.get("/api/ai/rag/reindex")
 async def reindex_rag():
+    if not rag._ensure_embedder():
+        return {"success": False, "error": "Embedder unavailable; install sentence-transformers"}
     try:
         loop = asyncio.get_event_loop()
-        # Run forced ingestion in a separate thread to avoid blocking the event loop
         future = loop.run_in_executor(None, lambda: rag.ingest_project(force=True))
         future.add_done_callback(
             lambda f: logger.error(f"RAG reindex failed: {f.exception()}")

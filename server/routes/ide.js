@@ -66,7 +66,7 @@ router.get('/read', async (req, res) => {
             content = await fs.readFile(fullPath, 'utf8');
         } catch (err) {
             if (err.code === 'ENOENT' && filePath.startsWith('data/')) {
-                const rootFullPath = resolveUnderRoot(path.join(__dirname, '..', '..'), filePath);
+                const rootFullPath = resolveUnderRoot(path.join(__dirname, '..', '..', 'public'), filePath);
                 if (rootFullPath) {
                     content = await fs.readFile(rootFullPath, 'utf8');
                 } else {

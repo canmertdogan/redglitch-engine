@@ -378,13 +378,13 @@ const AudioStudio: React.FC = () => {
 
     const loadAssets = async () => {
         try {
-            const res = await fetch('/api/assets?type=audio');
+            const res = await fetch('/api/audio/assets');
             if (!res.ok) {
-                console.error('[AudioStudio] Failed to load /api/assets?type=audio');
+                console.error('[AudioStudio] Failed to load /api/audio/assets');
                 return;
             }
             const data = await res.json();
-            setAvailableAssets((data || []).map((a: any) => a.id || a.name || String(a)));
+            setAvailableAssets((data || []).map((a: any) => a.name || String(a)));
         } catch (e) {
             console.error('[AudioStudio] loadAssets failed', e);
         }

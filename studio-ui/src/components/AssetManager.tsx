@@ -3,7 +3,7 @@ import { useStudio } from '../hooks/useStudio';
 import { 
     Image as ImageIcon, Music, Database, FileCode, Folder, Search, 
     Upload, Download, Trash2, RefreshCw, Filter, List, Grid as GridIcon,
-    Info, HardDrive, CheckCircle2, AlertCircle
+    Info, HardDrive, CheckCircle2, AlertCircle, Zap
 } from 'lucide-react';
 import Sidebar from './shared/Sidebar';
 

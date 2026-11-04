@@ -10,6 +10,7 @@ export class VisualScriptEngine {
         this.activeScripts = new Map();
         this.nodeRegistry = this.buildNodeRegistry();
         this.MAX_RECURSION_DEPTH = 100;
+        this.MAX_LOOP_ITER = 10000;
     }
 
     buildNodeRegistry() {
@@ -36,7 +37,7 @@ export class VisualScriptEngine {
             },
             'flow_reroute': (ctx) => this.resolveInput(ctx, 'in'),
             'flow_for': async (ctx) => {
-                const count = this.resolveInput(ctx, 'count') || 10;
+                const count = Math.min(this.resolveInput(ctx, 'count') || 10, this.MAX_LOOP_ITER);
                 for (let i = 0; i < count; i++) {
                     ctx.memory._loopIndex = i;
                     await this.executeOutputs(ctx, 'loop');
@@ -44,7 +45,7 @@ export class VisualScriptEngine {
                 return this.executeOutputs(ctx, 'out');
             },
             'flow_for_loop': async (ctx) => {
-                const count = this.resolveInput(ctx, 'count') || 10;
+                const count = Math.min(this.resolveInput(ctx, 'count') || 10, this.MAX_LOOP_ITER);
                 for (let i = 0; i < count; i++) {
                     ctx.memory._loopIndex = i;
                     await this.executeOutputs(ctx, 'body');
@@ -52,14 +53,17 @@ export class VisualScriptEngine {
                 return this.executeOutputs(ctx, 'out');
             },
             'flow_while': async (ctx) => {
-                while (this.resolveInput(ctx, 'condition')) {
+                let iter = 0;
+                while (this.resolveInput(ctx, 'condition') && iter < this.MAX_LOOP_ITER) {
+                    iter++;
                     await this.executeOutputs(ctx, 'body');
                 }
                 return this.executeOutputs(ctx, 'out');
             },
             'flow_foreach': async (ctx) => {
                 const arr = this.resolveInput(ctx, 'array') || [];
-                for (let i = 0; i < arr.length; i++) {
+                const limit = Math.min(arr.length, this.MAX_LOOP_ITER);
+                for (let i = 0; i < limit; i++) {
                     ctx.memory._item = arr[i];
                     ctx.memory._loopIndex = i;
                     await this.executeOutputs(ctx, 'body');
@@ -268,7 +272,13 @@ export class VisualScriptEngine {
     async runGraph(graph, entity, triggerEvent) {
         const entryNodes = graph.nodes.filter(n => {
             const t = n.type;
-            return t === triggerEvent || t === `evt_${triggerEvent}` || triggerEvent === t.replace('evt_', '');
+            if (t === triggerEvent || t === `evt_${triggerEvent}` || triggerEvent === t.replace('evt_', '')) return true;
+            // Align evt_input_* style events
+            if (t === 'evt_input' && (triggerEvent === 'input' || triggerEvent.startsWith('input_') || triggerEvent.startsWith('key_'))) {
+                const key = triggerEvent.replace(/^input_/, '').replace(/^key_/, '');
+                return !key || !n.data?.key || String(n.data.key).toLowerCase() === String(key).toLowerCase();
+            }
+            return false;
         });
         if (entryNodes.length === 0) return;
         if (!entity.scriptMemory) {

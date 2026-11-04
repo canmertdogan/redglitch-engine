@@ -1680,7 +1680,8 @@ const ShaderEditor: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     path: `data/shaders/${shader.name}.json`,
-                    content: JSON.stringify(data, null, 2)
+                    content: JSON.stringify(data, null, 2),
+                    isBase64: false
                 })
             });
         } catch (e) {

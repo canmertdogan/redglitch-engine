@@ -258,14 +258,10 @@ class EditorCore {
 
             console.log(`[PlatformerStudio] Saving ${name}...`);
             try {
-                const response = await fetch('/api/levels/save', {
+                const response = await fetch(`/api/levels/${encodeURIComponent(name)}.json`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        data: this.map,
-                        type: 'platformer-2d'
-                    })
+                    body: JSON.stringify(this.map)
                 });
                 const result = await response.json();
                 if (result.success) alert('Level saved!');
@@ -279,8 +275,9 @@ class EditorCore {
         // Load
         document.getElementById('btn-load').addEventListener('click', async () => {
             try {
-                const response = await fetch('/api/levels/list?type=platformer-2d');
-                const levels = await response.json();
+                const response = await fetch('/api/levels');
+                const result = await response.json();
+                const levels = (result.levels || []).map(n => ({ name: n.replace('.json', '') }));
                 if (!levels || levels.length === 0) {
                     alert('No levels found.');
                     return;
@@ -290,7 +287,7 @@ class EditorCore {
                 const name = prompt(`Available Levels:\n${names}\n\nEnter level name:`);
                 if (!name) return;
 
-                const res = await fetch(`/api/levels/load?name=${name}&type=platformer-2d`);
+                const res = await fetch(`/api/levels/${encodeURIComponent(name)}.json`);
                 const data = await res.json();
                 if (data) {
                     this.map = data;

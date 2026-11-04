@@ -118,14 +118,20 @@ class AssetManager {
      * Import an asset from a file object (e.g. from an <input type="file">)
      */
     async importAsset(file, targetPath) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('path', targetPath);
+        const toBase64 = (f) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(f);
+        });
+        const data = await toBase64(file);
+        const type = file.type || 'other';
 
         try {
             const response = await fetch('/api/assets/import', {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: targetPath || file.name, data, type })
             });
 
             if (response.ok) {
@@ -142,6 +148,7 @@ class AssetManager {
             console.error('[AssetManager] Import failed:', error);
             throw error;
         }
+        return null;
     }
 
     /**

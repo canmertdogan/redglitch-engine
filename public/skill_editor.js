@@ -219,6 +219,4 @@ async function loadFromServer() {
     } catch (e) {
         console.warn("No skill defs found on server.");
     }
-}server.");
-    }
 }

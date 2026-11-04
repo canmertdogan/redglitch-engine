@@ -13,6 +13,7 @@ export class CoPilot {
         this.actionHistory = [];
         this.preferences = this.loadPreferences();
         this.chaosInterval = null;
+        this.idleInterval = null;
         
         this.setupListeners();
         this.startIdleMonitor();
@@ -132,7 +133,8 @@ export class CoPilot {
     }
 
     startIdleMonitor() {
-        setInterval(() => {
+        if (this.idleInterval) clearInterval(this.idleInterval);
+        this.idleInterval = setInterval(() => {
             try {
                 if (!this.enabled) return;
                 const idleTime = (Date.now() - this.lastActionTime) / 1000 / 60; // minutes
@@ -148,6 +150,13 @@ export class CoPilot {
                 console.warn('[Co-Pilot] Idle monitor error:', e);
             }
         }, 60000);
+    }
+
+    stopIdleMonitor() {
+        if (this.idleInterval) {
+            clearInterval(this.idleInterval);
+            this.idleInterval = null;
+        }
     }
 
     /**

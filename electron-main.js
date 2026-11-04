@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, Menu, shell, nativeImage, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, nativeImage } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const { version: APP_VERSION } = require('./package.json');
 
 const APP_NAME = 'Redglitch Game Studio';
 
@@ -225,9 +226,9 @@ app.commandLine.appendSwitch('max-decoded-image-size-mb', '250');
 if (process.platform === 'darwin') {
     app.setAboutPanelOptions({
         applicationName: APP_NAME,
-        applicationVersion: '1.0.0',
+        applicationVersion: APP_VERSION,
         copyright: 'Copyright © 2026 Redglitch',
-        version: '1.0.0'
+        version: APP_VERSION
     });
 }
 
@@ -345,8 +346,8 @@ ipcMain.on('show-item-in-folder', (event, filePath) => {
     const absolutePath = path.resolve(__dirname, filePath);
     const projectsDir = path.join(__dirname, 'projects');
     
-    // Only allow showing files within the application's root directory or user projects
-    if (absolutePath.startsWith(__dirname) || absolutePath.startsWith(projectsDir)) {
+    // Only allow showing files within the user projects directory.
+    if (absolutePath.startsWith(projectsDir + path.sep)) {
         shell.showItemInFolder(absolutePath);
     } else {
         console.warn('[ipc] Blocked showItemInFolder for outside path:', absolutePath);
@@ -448,12 +449,22 @@ function createWindow() {
     });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     if (!gotLock) return; // Already handled above
 
     // Load the Express server now that we own the lock
     ({ app: expressApp, server: httpServer } = require('./server'));
     ({ PORT } = require('./server/config'));
+
+    // Wait for the server to actually be listening before creating the window,
+    // so the first loadURL does not race the async server.listen() call.
+    if (httpServer && !httpServer.listening) {
+        await new Promise((resolve) => {
+            httpServer.once('listening', resolve);
+            // Safety timeout so a failed bind cannot hang startup forever.
+            setTimeout(resolve, 5000);
+        });
+    }
 
     // Setup AI Cortex IPC handlers. These return the real manager state so a UI
     // can distinguish "starting" from "latched off after a crash loop" — they

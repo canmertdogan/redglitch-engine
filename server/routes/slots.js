@@ -38,8 +38,8 @@ router.get('/', async (req, res) => {
 // Get specific slot
 router.get('/:id', async (req, res) => {
     try {
-        const slotId = parseInt(req.params.id);
-        if (slotId < 1 || slotId > 5) {
+        const slotId = Number(req.params.id);
+        if (!Number.isInteger(slotId) || slotId < 1 || slotId > 5) {
             return res.status(400).json({ error: 'Invalid slot ID' });
         }
 
@@ -70,8 +70,8 @@ router.get('/:id', async (req, res) => {
 // Create or update slot
 router.post('/:id', async (req, res) => {
     try {
-        const slotId = parseInt(req.params.id);
-        if (slotId < 1 || slotId > 5) {
+        const slotId = Number(req.params.id);
+        if (!Number.isInteger(slotId) || slotId < 1 || slotId > 5) {
             return res.status(400).json({ error: 'Invalid slot ID' });
         }
 
@@ -100,8 +100,8 @@ router.post('/:id', async (req, res) => {
 // Delete slot
 router.delete('/:id', async (req, res) => {
     try {
-        const slotId = parseInt(req.params.id);
-        if (slotId < 1 || slotId > 5) {
+        const slotId = Number(req.params.id);
+        if (!Number.isInteger(slotId) || slotId < 1 || slotId > 5) {
             return res.status(400).json({ error: 'Invalid slot ID' });
         }
 

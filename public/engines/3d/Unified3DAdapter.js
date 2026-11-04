@@ -121,7 +121,14 @@ export default class Unified3DAdapter extends EngineAdapter {
     }
 
     getState() {
-        return this.game?._getPlayerState?.() ?? {};
+        const base = this.game?._getPlayerState?.() ?? {};
+        return {
+            ...base,
+            mode: this.game?._engineType3D ?? this._requestedType,
+            collectedItems: this.game?._collectedItems ? [...this.game._collectedItems] : [],
+            lastCheckpoint: this.game?._lastCheckpoint ?? null,
+            gameTime: this.game?.gameTime ?? 0,
+        };
     }
 
     async setState(state) {
@@ -131,6 +138,13 @@ export default class Unified3DAdapter extends EngineAdapter {
         if (state.lives  !== undefined) this.game._lives  = state.lives;
         if (state.coins  !== undefined) this.game._coins  = state.coins;
         if (state.score  !== undefined) this.game._score  = state.score;
+        if (state.flags  !== undefined) this.game._flags  = state.flags;
+        if (Array.isArray(state.collectedItems)) this.game._collectedItems = new Set(state.collectedItems);
+        if (state.lastCheckpoint !== undefined) this.game._lastCheckpoint = state.lastCheckpoint;
+        if (state.position) this.game.strategy?.setSpawnPoint?.(state.position);
+        if (state.mode && state.mode !== this.game._engineType3D) {
+            await this.game.switchMode(state.mode);
+        }
     }
 
     start() {
@@ -174,7 +188,13 @@ export default class Unified3DAdapter extends EngineAdapter {
         if (playerData.lives  !== undefined) this.game._lives  = playerData.lives;
         if (playerData.coins  !== undefined) this.game._coins  = playerData.coins;
         if (playerData.score  !== undefined) this.game._score  = playerData.score;
+        if (playerData.flags  !== undefined) this.game._flags  = playerData.flags;
+        if (Array.isArray(playerData.collectedItems)) this.game._collectedItems = new Set(playerData.collectedItems);
+        if (playerData.lastCheckpoint !== undefined) this.game._lastCheckpoint = playerData.lastCheckpoint;
         if (playerData.position) this.game.strategy?.setSpawnPoint?.(playerData.position);
+        if (playerData.mode && playerData.mode !== this.game._engineType3D) {
+            this.game.switchMode(playerData.mode).catch(() => {});
+        }
     }
 
     // ── Ability system (forwarded) ───────────────────────────────────────────

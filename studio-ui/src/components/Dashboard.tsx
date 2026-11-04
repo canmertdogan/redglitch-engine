@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Rocket, Layout, ShoppingBag, GraduationCap, Users, Settings, Plus, FolderOpen, Trash2, Cpu, HardDrive, Clock } from 'lucide-react';
+import { Rocket, Layout, ShoppingBag, GraduationCap, Users, Settings, Plus, FolderOpen, Trash2, Cpu, HardDrive, Clock, ImageIcon, Swords, CheckCircle2 } from 'lucide-react';
 import Background from './Dashboard/Background';
 
 interface Project {

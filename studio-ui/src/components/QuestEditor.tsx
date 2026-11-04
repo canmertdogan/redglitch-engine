@@ -98,7 +98,7 @@ const QuestEditor: React.FC = () => {
         autoComplete: false,
         prerequisites: [],
         rewards: { xp: 50, gold: 10, items: [] },
-        objectives: [{ text: 'Talk to the giver', type: 'talk', target: '', count: 1 }]
+        objectives: [{ id: 'obj_' + Date.now().toString().slice(-4), text: 'Talk to the giver', type: 'talk', target: '', count: 1 }]
     });
 
     const updateQuest = (field: string, value: any) => {
@@ -143,7 +143,7 @@ const QuestEditor: React.FC = () => {
 
     const addStage = () => {
         const quest = quests[currentIndex];
-        updateQuest('objectives', [...quest.objectives, { text: '', type: 'kill', target: '', count: 1 }]);
+        updateQuest('objectives', [...quest.objectives, { id: 'obj_' + Date.now().toString().slice(-4), text: '', type: 'kill', target: '', count: 1 }]);
     };
 
     const removeStage = (idx: number) => {

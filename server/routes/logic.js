@@ -40,7 +40,8 @@ router.post('/save', async (req, res) => {
         // Save the visual workspace (JSON)
         if (json) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.json`), json, 'utf8');
         
-
+        // Save the executable JavaScript
+        if (js) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.js`), typeof js === 'string' ? js : JSON.stringify(js), 'utf8');
 
         // Save the AST (JSON)
         if (ast) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.ast.json`), typeof ast === 'string' ? ast : JSON.stringify(ast, null, 2), 'utf8');

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStudio } from '../hooks/useStudio';
 import { 
-    MagicWand as MagicIcon, Play, Square, Save, Plus, Trash2, 
-    Zap, Wind, Droplets, Flame, Settings, Sliders, Layers
+    Wand2 as MagicIcon, Play, Square, Save, Plus, Trash2, 
+    Zap
 } from 'lucide-react';
 import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
@@ -116,7 +116,8 @@ const FXEditor: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     path: `data/fx/${config.name}.json`,
-                    content: JSON.stringify(config, null, 2)
+                    content: JSON.stringify(config, null, 2),
+                    isBase64: false
                 })
             });
             if (eventBus) eventBus.emit('fx:updated', { id: config.id, config });

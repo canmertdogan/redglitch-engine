@@ -483,9 +483,16 @@ window.LogicInterpreter = class LogicInterpreter {
 
     async runEvent(ast, entity, eventName, customData = {}) {
         if (!ast || !ast.events) return;
-        const eventKey = Object.keys(ast.events).find(k =>
-            k === eventName || k === `evt_${eventName}` || k === eventName.replace('evt_', '')
-        );
+        const eventKey = Object.keys(ast.events).find(k => {
+            if (k === eventName || k === `evt_${eventName}` || k === eventName.replace('evt_', '')) return true;
+            // Align evt_input_* style events
+            if (k === 'evt_input' && (eventName === 'input' || eventName.startsWith('input_') || eventName.startsWith('key_'))) {
+                const key = eventName.replace(/^input_/, '').replace(/^key_/, '');
+                const nodeKey = ast.events[k]?.[0]?.data?.key;
+                return !key || !nodeKey || String(nodeKey).toLowerCase() === String(key).toLowerCase();
+            }
+            return false;
+        });
         if (!eventKey) return;
         if (!entity.logicMemory) entity.logicMemory = {};
         const astVars = ast.vars || [];

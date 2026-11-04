@@ -73,7 +73,7 @@ class IrabBrain:
 
     def warmup(self):
         if not self.llm: return
-        list(self.llm("GRRR", max_tokens=1))
+        list(self.llm("GRRR", max_tokens=1, stream=True))
 
     def generate_stream(self, prompt, stop=None, grammar=None):
         self.is_aborted = False

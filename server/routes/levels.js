@@ -212,15 +212,33 @@ router.get('/levels', async (req, res) => {
     }
 });
 
-// Save level (generic)
-router.post('/levels/:filename', async (req, res) => {
+// Get a single level by filename
+router.get('/levels/:filename', async (req, res) => {
     const { filename } = req.params;
-    const safeName = path.basename(filename); 
+    const safeName = path.basename(filename);
     if (!safeName.endsWith('.json')) {
         return res.status(400).json({ error: 'Filename must end with .json' });
     }
-    
-    // FIX: Match the logic in /api/files/levels so saved maps are visible
+    const activeProject = projectService.getActiveProject();
+    const isRoot = projectService.isRootProject();
+    const targetDir = isRoot
+        ? path.join(__dirname, '..', '..', 'public', 'dunyalar')
+        : path.join(activeProject, 'dunyalar');
+    const filePath = path.join(targetDir, safeName);
+    try {
+        const data = await fs.readFile(filePath, 'utf8');
+        res.json(JSON.parse(data));
+    } catch (err) {
+        res.status(404).json({ error: 'Level not found' });
+    }
+});
+// Save level (generic)
+router.post('/levels/:filename', async (req, res) => {
+    const { filename } = req.params;
+    const safeName = path.basename(filename);
+    if (!safeName.endsWith('.json')) {
+        return res.status(400).json({ error: 'Filename must end with .json' });
+    }
     const activeProject = projectService.getActiveProject();
     const isRoot = projectService.isRootProject();
     const targetDir = isRoot

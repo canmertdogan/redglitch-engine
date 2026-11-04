@@ -1,10 +1,10 @@
 /**
-const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
  * ╔═══════════════════════════════════════════════════════════╗
  * ║  KETEBE AUDIO STUDIO (KAS) — AudioStudio Controller      ║
  * ║  Full rebuild of the Audio Director                       ║
  * ╚═══════════════════════════════════════════════════════════╝
  */
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 
 // ─── CONSTANTS ──────────────────────────────────────────────
 
