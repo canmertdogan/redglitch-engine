@@ -75,7 +75,7 @@ window.onload = async () => {
     loadSkill(0);
 
     // Click to Edit Sprite
-    document.getElementById('sprite-preview').onclick = () => {
+    document.getElementById('preview-box').onclick = () => {
         const spriteKey = skills[currentIndex].sprite;
         if (window.parent && window.parent.editSpriteInStudio) {
             window.parent.editSpriteInStudio(spriteKey);

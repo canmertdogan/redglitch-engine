@@ -1,4 +1,7 @@
 // editor.js - Advanced Level Editor Logic
+const escapeHtml = window.escapeHtml || function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+const _escapeHtml = escapeHtml;
+
 class WorldEditor {
     constructor() {
         
@@ -1017,7 +1020,11 @@ class WorldEditor {
             render();
         }
         
-        canvas.addEventListener('mousedown', e => { 
+        // window.onload also calls initDOM(); DOM is ready because this script
+        // loads at the end of <body>, so we can wire canvas handlers synchronously.
+        initDOM();
+
+        canvas.addEventListener('mousedown', e => {
             pushHistory(); 
             editorState.isDrawing = true; 
             

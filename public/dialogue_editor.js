@@ -1,5 +1,6 @@
 // dialogue_editor.js - REDGLITCH DIALOGUE STUDIO v3.0
 // Integrated with EventBus, SharedProjectState, and AssetManager
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 
 // Integration system references
 let eventBus, projectState, assetManager;

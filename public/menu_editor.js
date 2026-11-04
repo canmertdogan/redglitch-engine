@@ -1,5 +1,6 @@
 // menu_editor.js — UI STUDIO 3.0
 // Complete WYSIWYG Game UI Editor Engine
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 
 // ═══════════════════════════════════════════
 // Integration bootstrap

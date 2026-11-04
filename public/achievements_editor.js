@@ -1,5 +1,6 @@
 // achievements_editor.js - ACHIEVEMENT STUDIO PRO v2.1
 // Logic Core (Compact Edition)
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 
 class AchievementEditor {
     constructor() {
