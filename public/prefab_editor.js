@@ -1,8 +1,8 @@
 /**
-const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
  * REDGLITCH ENGINE — PREFAB BUILDER v5.0
  * Phases A–E: all plan items implemented.
  */
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 'use strict';
 
 // ─── Integration globals ──────────────────────────────────────────────

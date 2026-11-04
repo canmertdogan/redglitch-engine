@@ -1,9 +1,9 @@
 /**
  * REDGLITCH BRAIN ARCHITECT v3.0 (Algorithm Studio Theme)
  * Visual Behavior Tree / FSM Editor for NPCs
-const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
  * Integrated with EventBus, SharedProjectState, and AssetManager
  */
+const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
 
 // Integration system references
 let eventBus, projectState, assetManager;
