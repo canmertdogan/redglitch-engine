@@ -29,12 +29,21 @@ function stateMutationGuard(req, res, next) {
     }
 
     const origin = req.headers.origin || req.headers.referer || '';
-    const allowedOrigins = ['http://localhost:3000', 'null', 'http://127.0.0.1:3000'];
-    const hasAllowedOrigin = allowedOrigins.some((allowed) => {
-        if (!allowed) return false;
-        if (allowed === 'null') return origin === 'null' || !origin;
-        return origin === allowed || origin.startsWith(allowed + '/');
-    });
+    // Allow loopback origins on any port (the server binds loopback; UI may
+    // be served from a different PORT). Everything else is rejected.
+    let hasAllowedOrigin = false;
+    if (!origin || origin === 'null') {
+        hasAllowedOrigin = true; // file:// / no-origin contexts (Electron)
+    } else {
+        try {
+            const url = new URL(origin);
+            hasAllowedOrigin =
+                (url.protocol === 'http:' || url.protocol === 'https:') &&
+                ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+        } catch {
+            hasAllowedOrigin = false;
+        }
+    }
 
     if (!hasAllowedOrigin) {
         return res.status(403).json({

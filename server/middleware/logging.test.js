@@ -1,0 +1,43 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { stateMutationGuard } = require('./logging');
+
+function runGuard(origin) {
+  const req = { method: 'POST', headers: origin === undefined ? {} : { origin } };
+  let status = 200;
+  let body = null;
+  let nextCalled = false;
+  const res = {
+    status(code) { status = code; return this; },
+    json(payload) { body = payload; return this; },
+  };
+  stateMutationGuard(req, res, () => { nextCalled = true; });
+  return { status, body, nextCalled };
+}
+
+test('GET requests pass through untouched', () => {
+  const req = { method: 'GET', headers: { origin: 'http://evil.example.com' } };
+  let nextCalled = false;
+  stateMutationGuard(req, {}, () => { nextCalled = true; });
+  assert.ok(nextCalled);
+});
+
+test('allows loopback origins on any port', () => {
+  for (const origin of ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3199', 'https://[::1]:8443', 'http://127.0.0.1:3001/path']) {
+    const { nextCalled } = runGuard(origin);
+    assert.ok(nextCalled, `expected loopback origin to pass: ${origin}`);
+  }
+});
+
+test('allows missing / null origin (file:// and Electron contexts)', () => {
+  assert.ok(runGuard(undefined).nextCalled);
+  assert.ok(runGuard('null').nextCalled);
+});
+
+test('rejects foreign origins with 403', () => {
+  for (const origin of ['http://evil.example.com', 'http://localhost.evil.com', 'https://127.0.0.1.evil.com:3000', 'file:///etc/passwd']) {
+    const { status, nextCalled } = runGuard(origin);
+    assert.equal(nextCalled, false, `expected rejection: ${origin}`);
+    assert.equal(status, 403);
+  }
+});
