@@ -16,6 +16,10 @@ import { app, BrowserWindow, session } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Headless CI containers lack a user namespace for the Chromium sandbox;
+// opt out only when explicitly requested (SMOKE_NO_SANDBOX=1).
+if (process.env.SMOKE_NO_SANDBOX === '1') app.commandLine.appendSwitch('no-sandbox');
+
 // NOTE: do NOT pass --disable-gpu here. With GPU disabled, Chromium's
 // software GL path hangs this page (shader_lab.html / WebGL editors) before
 // did-finish-load fires. If your CI machine has no GPU, install a headless

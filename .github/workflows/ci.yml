@@ -34,3 +34,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run studio:build
+
+  # Informational until stabilized: loads every user-visible Studio tool in
+  # headless Electron and fails only on hard failures (crash / ERR_FAILED /
+  # blank page). Never blocks merges (continue-on-error).
+  smoke:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      SMOKE_NO_SANDBOX: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libgbm1 libnss3 libasound2 libxss1
+      - run: npm ci
+      - run: xvfb-run -a node scripts/smoke-tools.mjs --ci
