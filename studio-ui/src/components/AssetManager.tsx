@@ -36,7 +36,12 @@ const AssetManager: React.FC = () => {
     const loadAssets = async () => {
         try {
             const res = await fetch('/api/assets');
-            if (res.ok) setAssets(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                // /api/assets returns { assets: [...], updated, project }
+                const list = Array.isArray(data) ? data : Array.isArray(data?.assets) ? data.assets : [];
+                setAssets(list);
+            }
         } catch (e) {
             console.error("Failed to load assets", e);
         }

@@ -12,9 +12,21 @@ const Background: React.FC<BackgroundProps> = ({ enabled }) => {
     useEffect(() => {
         if (!enabled || !containerRef.current) return;
 
+        let renderer: THREE.WebGLRenderer | null = null;
+        try {
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        } catch (err) {
+            // WebGL unavailable (blacklisted GPU, VM, remote desktop, headless):
+            // fall back to a static CSS backdrop instead of taking the page down.
+            console.warn('[Dashboard] WebGL unavailable, using static background:', err);
+            if (containerRef.current) {
+                containerRef.current.style.background = 'radial-gradient(circle at 50% 40%, #1a1207 0%, #000 70%)';
+            }
+            return;
+        }
+
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         containerRef.current.appendChild(renderer.domElement);
         rendererRef.current = renderer;

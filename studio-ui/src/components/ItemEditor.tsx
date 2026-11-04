@@ -229,7 +229,7 @@ const ItemEditor: React.FC = () => {
         ctx.fillStyle = rarityBorder[item.rarity] || '#888';
         ctx.font = 'bold 14px VT323';
         ctx.textAlign = 'right';
-        ctx.fillText(item.rarity.toUpperCase(), canvas.width - 10, 25);
+        ctx.fillText(String(item.rarity || 'COMMON').toUpperCase(), canvas.width - 10, 25);
         
         if (item.stackable) {
             ctx.textAlign = 'left';
@@ -290,7 +290,7 @@ const ItemEditor: React.FC = () => {
                             background: active ? 'rgba(46, 204, 113, 0.05)' : 'transparent',
                             borderLeft: active ? '3px solid var(--accent-item)' : '3px solid transparent'
                         }}>
-                            <div style={{ fontSize: '0.9rem' }}>{item.name.toUpperCase() || 'UNNAMED'}</div>
+                            <div style={{ fontSize: '0.9rem' }}>{item.name?.toUpperCase() || 'UNNAMED'}</div>
                             <div style={{ fontSize: '0.65rem', color: '#444' }}>{item.id}</div>
                         </div>
                     )}
@@ -379,7 +379,7 @@ const ItemEditor: React.FC = () => {
                                 <label>Sprite Key</label>
                                 <select value={currentItem.sprite} onChange={(e) => updateCurrentItem('sprite', e.target.value)}>
                                     {sprites && Object.keys(sprites).map(key => (
-                                        <option key={key} value={key}>{key.toUpperCase()}</option>
+                                        <option key={key} value={key}>{String(key).toUpperCase()}</option>
                                     ))}
                                 </select>
                             </FormSection>
@@ -435,7 +435,7 @@ const ItemEditor: React.FC = () => {
                                 }}
                                 style={{ padding: '15px', margin: '8px 0', background: '#111', border: '1px solid #333', cursor: 'pointer', borderRadius: '4px' }}
                                 >
-                                    <div style={{ fontWeight: 'bold', color: 'var(--accent-item)', fontSize: '1.1rem' }}>{t.name.toUpperCase()}</div>
+                                    <div style={{ fontWeight: 'bold', color: 'var(--accent-item)', fontSize: '1.1rem' }}>{t.name?.toUpperCase() ?? ''}</div>
                                     <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>{t.desc}</div>
                                 </div>
                             ))}

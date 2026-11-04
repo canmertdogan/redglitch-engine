@@ -25,6 +25,42 @@ interface Character {
     sprite: string;
 }
 
+// The engine stores conversations as { nodes: [...] } with
+// speaker/text/choices[{ text, nextScript }]. This editor works on a flat
+// `lines` model — normalize on load, denormalize on save, nothing else.
+const normConversation = (c: any): Conversation => {
+    const rawLines = Array.isArray(c?.lines) ? c.lines
+        : Array.isArray(c?.nodes) ? c.nodes
+        : [];
+    return {
+        ...c,
+        id: String(c?.id ?? `conv_${Date.now()}`),
+        title: c?.title ?? String(c?.id ?? 'Conversation'),
+        lines: rawLines.map((n: any) => ({
+            characterId: n.characterId ?? n.speaker ?? 'hero',
+            text: n.text ?? '',
+            nextId: n.nextId ?? undefined,
+            choices: (Array.isArray(n.choices) ? n.choices : []).map((ch: any) => ({
+                text: ch.text ?? '',
+                nextId: ch.nextId ?? ch.nextScript ?? '',
+            })),
+        })),
+    };
+};
+
+const denormConversation = (c: Conversation): any => {
+    const { lines, ...rest } = c as any;
+    return {
+        ...rest,
+        nodes: c.lines.map(l => ({
+            speaker: l.characterId,
+            text: l.text,
+            ...(l.nextId ? { nextId: l.nextId } : {}),
+            choices: (l.choices || []).map(ch => ({ text: ch.text, nextScript: ch.nextId ?? '' })),
+        })),
+    };
+};
+
 const DialogueEditor: React.FC = () => {
     const { isReady, emit, subscribe, projectState, sprites } = useStudio();
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -82,10 +118,11 @@ const DialogueEditor: React.FC = () => {
             const res = await fetch('/api/dialogues');
             if (res.ok) {
                 const data = await res.json();
-                setConversations(data.conversations?.length > 0 ? data.conversations : [getDefaultConversation()]);
+                const rawConvs = Array.isArray(data?.conversations) ? data.conversations : [];
+                setConversations(rawConvs.length > 0 ? rawConvs.map(normConversation) : [getDefaultConversation()]);
                 
                 // Merge NPC definitions into characters
-                let loadedChars = data.characters || [];
+                let loadedChars = Array.isArray(data?.characters) ? [...data.characters] : [];
                 if (!loadedChars.find((c: any) => c.id === 'hero')) {
                     loadedChars.unshift({ id: 'hero', name: 'Hero', color: '#3498db', sprite: 'player' });
                 }
@@ -135,7 +172,7 @@ const DialogueEditor: React.FC = () => {
 
     const saveToServer = async () => {
         try {
-            const payload = { characters, conversations };
+            const payload = { characters, conversations: conversations.map(denormConversation) };
             const res = await fetch('/api/dialogues', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -147,7 +184,7 @@ const DialogueEditor: React.FC = () => {
                 emit('dialogue:saved_all', { count: conversations.length });
                 if (projectState) {
                     const map: any = {};
-                    conversations.forEach(c => map[c.id] = c);
+                    conversations.forEach(c => { map[c.id] = denormConversation(c); });
                     projectState.set('dialogues', map);
                 }
             }

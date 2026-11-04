@@ -224,7 +224,7 @@ const QuestEditor: React.FC = () => {
                             background: active ? 'rgba(255, 0, 0, 0.05)' : 'transparent',
                             borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent'
                         }}>
-                            <div style={{ fontSize: '0.9rem' }}>{q.title.toUpperCase() || 'UNNAMED'}</div>
+                            <div style={{ fontSize: '0.9rem' }}>{q.title?.toUpperCase() || 'UNNAMED'}</div>
                             <div style={{ fontSize: '0.65rem', color: '#444' }}>{q.id} ({q.type})</div>
                         </div>
                     )}
@@ -389,8 +389,8 @@ const QuestEditor: React.FC = () => {
                                 backgroundSize: '100% 2px'
                             }} />
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                                <div style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.4rem', lineHeight: 1.1 }}>{currentQuest.title.toUpperCase()}</div>
-                                <div style={{ background: 'var(--accent)', color: '#000', fontSize: '0.6rem', padding: '2px 6px', fontWeight: 'bold' }}>{currentQuest.type.toUpperCase()}</div>
+                                <div style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.4rem', lineHeight: 1.1 }}>{currentQuest.title?.toUpperCase() ?? 'UNTITLED QUEST'}</div>
+                                <div style={{ background: 'var(--accent)', color: '#000', fontSize: '0.6rem', padding: '2px 6px', fontWeight: 'bold' }}>{(currentQuest.type ?? 'misc').toUpperCase()}</div>
                             </div>
                             <div style={{ color: '#888', fontSize: '0.9rem', fontStyle: 'italic', marginBottom: '20px' }}>"{currentQuest.description}"</div>
                             
