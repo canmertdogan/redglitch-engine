@@ -42,7 +42,10 @@ async function safeWriteFullPath(rootDir, fullPath, data, options) {
   // "does it exist?" and "copy it": copyFile itself will fail with ENOENT
   // if there is nothing to back up, which we silently ignore.
   try {
-    await fsPromises.copyFile(full, full + '.bak');
+    // FINDING-09: random .bak name + root check (prevents predictable symlink clobber / static leak)
+    const bakPath = full + '.' + crypto.randomUUID() + '.bak';
+    if (!isPathUnderRoot(rootDir, bakPath)) throw new Error('backup path outside root');
+    await fsPromises.copyFile(full, bakPath);
   } catch (e) {
     if (e.code !== 'ENOENT') {
       console.error('[safeFs] Backup failed:', e.message);
@@ -61,6 +64,17 @@ async function safeWriteFullPath(rootDir, fullPath, data, options) {
     }
     throw e;
   }
+  // Prune stale .bak/.tmp files older than 7 days in dir
+  try {
+    const dir = path.dirname(full);
+    const entries = await fsPromises.readdir(dir);
+    const cutoff = Date.now() - 7*24*60*60*1000;
+    for (const e of entries) {
+      if (e.endsWith('.bak') || e.includes('.tmp.')) {
+        try { const st = await fsPromises.stat(path.join(dir, e)); if (st.mtimeMs < cutoff) await fsPromises.unlink(path.join(dir, e)); } catch {}
+      }
+    }
+  } catch {}
   return undefined;
 }
 

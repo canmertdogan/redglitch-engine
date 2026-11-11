@@ -121,15 +121,28 @@ export default class NPCStudioPanel {
 
     _buildProperties() {
         const archetype = this._selectedArchetype();
+        const behavior = document.getElementById('npc-behavior')?.value || archetype.behavior;
+        const faction = document.getElementById('npc-faction')?.value || archetype.faction;
+        const health = this._readNumber('npc-health', archetype.health);
+        const speed = this._readNumber('npc-speed', archetype.speed);
+        const detectionRadius = this._readNumber('npc-detection', 10);
+        const team = faction === 'enemy' ? 1 : (faction === 'ally' ? 0 : 2);
         return {
             studio: 'npc',
             archetype: archetype.id,
             label: archetype.label,
-            behavior: document.getElementById('npc-behavior')?.value || archetype.behavior,
-            faction: document.getElementById('npc-faction')?.value || archetype.faction,
-            health: this._readNumber('npc-health', archetype.health),
-            speed: this._readNumber('npc-speed', archetype.speed),
-            detectionRadius: this._readNumber('npc-detection', 10),
+            behavior,
+            faction,
+            health,
+            speed,
+            detectionRadius,
+            team,
+            stats: {
+                hp: health,
+                maxHp: health,
+                speed,
+                visionRadius: detectionRadius,
+            }
         };
     }
 

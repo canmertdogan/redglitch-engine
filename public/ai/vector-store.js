@@ -33,23 +33,27 @@ function openDB() {
 async function idbGet(key) {
     if (!hasIndexedDB()) return null;
     const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction('store', 'readonly');
-        const req = tx.objectStore('store').get(key);
-        req.onsuccess = () => resolve(req.result ? req.result.value : null);
-        req.onerror = () => reject(req.error);
-    });
+    try {
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction('store', 'readonly');
+            const req = tx.objectStore('store').get(key);
+            req.onsuccess = () => resolve(req.result ? req.result.value : null);
+            req.onerror = () => reject(req.error);
+        });
+    } finally { try { db.close(); } catch {} }
 }
 
 async function idbPut(key, value) {
     if (!hasIndexedDB()) return;
     const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction('store', 'readwrite');
-        tx.objectStore('store').put({ key, value });
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-    });
+    try {
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction('store', 'readwrite');
+            tx.objectStore('store').put({ key, value });
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } finally { try { db.close(); } catch {} }
 }
 
 export class VectorStore {
@@ -113,6 +117,10 @@ export class VectorStore {
     async query(embedding, limit = 3, textQuery = null, filters = {}) {
         if (!this.isInitialized) await this.initialize();
         if (!this.db) return [];
+        if (Array.isArray(embedding) && this.dim && embedding.length !== this.dim) {
+            console.warn(`[VectorStore] query dim ${embedding.length} != store dim ${this.dim} — returning []`);
+            return [];
+        }
 
         const wide = Math.max(limit * 4, 12);
 
@@ -154,14 +162,27 @@ export class VectorStore {
     async persist(chunks) {
         const sample = chunks.find(c => Array.isArray(c.embeddings));
         const dim = sample ? sample.embeddings.length : this.dim;
+        // Quota guard: fail fast before structured clone OOM
+        try { if (navigator.storage && navigator.storage.estimate) { const est = await navigator.storage.estimate(); const need = JSON.stringify(chunks).length; if (est.quota && est.usage + need > est.quota) { console.warn('[VectorStore] quota exceeded, skipping persist'); return; } } } catch {}
         await idbPut('index', { version: RAG_CORPUS_VERSION, dim, chunks });
     }
 
     async loadPersisted() {
         const stored = await idbGet('index');
         if (!stored || stored.version !== RAG_CORPUS_VERSION) return null;
+        // Dim validation: if persisted dim differs from expected config dim by >2x, force re-embed
+        const expectedDim = AI_CONFIG.models?.embedding?.dimensions || 384;
+        if (stored.dim && expectedDim && stored.dim !== expectedDim) {
+            console.warn(`[VectorStore] dim mismatch persisted=${stored.dim} expected=${expectedDim} — ignoring persisted corpus`);
+            return null;
+        }
         if (stored.dim) this.dim = stored.dim;
         return stored.chunks || [];
+    }
+
+    dispose() {
+        this.db = null;
+        this.isInitialized = false;
     }
 
     get corpusVersion() {

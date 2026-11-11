@@ -160,6 +160,32 @@ test('serializeLevel3D — roundtrip', () => {
   assert.equal(d.engineType, 'topdown-3d');
 });
 
+test('serializeLevel3D — keeps playability fields through roundtrip', () => {
+  const level = {
+    version: '1.0', engineType: 'platformer-3d', name: 'Roundtrip',
+    geometry: [], entities: [], lights: [],
+    playerSpawn: { x: 1, y: 2, z: 3 },
+    checkpoints: [{ id: 'cp1', x: 4, y: 5, z: 6 }],
+    levelExit: { x: 7, y: 8, z: 9 },
+    triggers: [{ id: 't1', type: 'kill' }],
+    portals: [{ id: 'p1', to: 'level2' }],
+    terrain: { seed: 42 },
+    fog: { color: '#fff', near: 1, far: 100 },
+    bgm: 'theme_a',
+    lighting: { ambient: 0.4 },
+  };
+  const d = CES.deserializeLevel3D(CES.serializeLevel3D(level));
+  assert.deepEqual(d.playerSpawn, level.playerSpawn);
+  assert.deepEqual(d.checkpoints, level.checkpoints);
+  assert.deepEqual(d.levelExit, level.levelExit);
+  assert.deepEqual(d.triggers, level.triggers);
+  assert.deepEqual(d.portals, level.portals);
+  assert.deepEqual(d.terrain, level.terrain);
+  assert.deepEqual(d.fog, level.fog);
+  assert.equal(d.bgm, 'theme_a');
+  assert.deepEqual(d.lighting, level.lighting);
+});
+
 test('serializeEntity3D — null safety', () => {
   assert.equal(CES.serializeEntity3D(null), null);
 });

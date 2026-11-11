@@ -55,22 +55,28 @@ function safeAssetPath(projectName, assetName) {
 }
 
 function isSafeName(value) {
-    return typeof value === 'string' && /^[a-zA-Z0-9_\-. ]+$/.test(value);
+    if (typeof value !== 'string') return false;
+    const v = value.trim();
+    if (v === '.' || v === '..' || v.includes('..')) return false;
+    if (/^[. ]+$/.test(v)) return false;
+    return /^[a-zA-Z0-9_\-. ]+$/.test(v) && !v.startsWith('..');
 }
+function isSafeProjectName(v) { return typeof v === 'string' && /^[a-zA-Z0-9_-]+$/.test(v); }
 
 // ── GET /api/assets3d/:project — manifest ─────────────────────────────────────
 
 router.get('/:project', async (req, res) => {
     const { project } = req.params;
 
-    if (!isSafeName(project)) {
+    if (!isSafeProjectName(project)) {
         return res.status(400).json({ error: 'Invalid project name' });
     }
 
     const dir = assetsDir(project);
 
     try {
-        await fs.mkdir(dir, { recursive: true });
+        // FINDING-26: GET must not mkdir — return empty manifest if dir missing
+        try { await fs.access(dir); } catch { return res.json({ gltf: [], fbx: [], obj: [], mtl: [], vox: [], pal: [], blend: [], other: [] }); }
         const entries = await fs.readdir(dir);
 
         const manifest = { gltf: [], fbx: [], obj: [], mtl: [], vox: [], pal: [], blend: [], other: [] };
@@ -149,7 +155,7 @@ router.get('/:project/:assetName', async (req, res) => {
 router.post('/:project', async (req, res) => {
     const { project } = req.params;
 
-    if (!isSafeName(project)) {
+    if (!isSafeProjectName(project)) {
         return res.status(400).json({ error: 'Invalid project name' });
     }
 
@@ -161,7 +167,7 @@ router.post('/:project', async (req, res) => {
     const ext = path.extname(file.name).toLowerCase();
 
     const dir = assetsDir(project);
-    await fs.mkdir(dir, { recursive: true });
+    try { await fs.mkdir(dir, { recursive: true }); } catch (e) { return res.status(500).json({ error: 'Failed to create assets dir' }); }
 
     // ── .blend → .glb conversion ──
     if (ext === '.blend') {
@@ -170,11 +176,12 @@ router.post('/:project', async (req, res) => {
         if (!isSafeName(baseName)) {
             return res.status(400).json({ error: 'Invalid file name' });
         }
-        const blendPath = path.join(dir, baseName + '.blend');
-        const glbPath = path.join(dir, baseName + '.glb');
+        const blendPath = safeAssetPath(project, baseName + '.blend');
+        const glbPath = safeAssetPath(project, baseName + '.glb');
+        if (!blendPath || !glbPath) return res.status(400).json({ error: 'Path traversal detected' });
 
         try {
-            await file.mv(blendPath);
+            await fs.writeFile(blendPath, file.buffer);
 
             const converterScript = path.join(__dirname, '../../scripts/blender-convert.py');
             const blenderExecutable = process.env.BLENDER_PATH || 'blender';
@@ -239,10 +246,11 @@ router.post('/:project', async (req, res) => {
         if (!isSafeName(objBase)) {
             return res.status(400).json({ error: 'Invalid file name' });
         }
-        const objPath = path.join(dir, objBase);
+        const objPath = safeAssetPath(project, objBase);
+        if (!objPath) return res.status(400).json({ error: 'Path traversal detected' });
 
         try {
-            await file.mv(objPath);
+            await fs.writeFile(objPath, file.buffer);
 
             // Save companion MTL file if provided
             let mtlName = null;
@@ -252,8 +260,10 @@ router.post('/:project', async (req, res) => {
                 if (mtlExt === '.mtl') {
                     const mtlBase = path.basename(mtlFile.name);
                     if (isSafeName(mtlBase)) {
+                        const mtlPath = safeAssetPath(project, mtlBase);
+                        if (!mtlPath) return res.status(400).json({ error: 'Path traversal detected' });
                         mtlName = mtlBase;
-                        await mtlFile.mv(path.join(dir, mtlBase));
+                        await fs.writeFile(mtlPath, mtlFile.buffer);
                     }
                 }
             }

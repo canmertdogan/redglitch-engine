@@ -66,6 +66,18 @@ test('POST /api/levels3d/:project/:level — saves unified-3d level', async () =
   assert.equal(res.data.engineType, 'unified-3d');
 });
 
+test('POST /api/levels3d/:project/:level — saves studio submode level (normalizes to unified-3d)', async () => {
+  await cleanupTestProjects();
+  const projectName = await createTestProject('l3d_save_submode');
+  const app = createApp(levels3dRouter);
+  const res = await request(app, 'POST', `/api/levels3d/${projectName}/terrain_test`, {
+    engineType: 'terrain', name: 'Terrain Test',
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.data.ok, true);
+  assert.equal(res.data.engineType, 'unified-3d');
+});
+
 test('POST /api/levels3d/:project/:level — rejects invalid engine type', async () => {
   await cleanupTestProjects();
   const projectName = await createTestProject('l3d_invalid');

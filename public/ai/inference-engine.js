@@ -127,7 +127,17 @@ export class InferenceEngine {
 
         return new Promise((resolve, reject) => {
             const requestId = 'gen-' + Date.now();
-            this.callbacks.set(requestId, { resolve, reject, onToken });
+            const timeoutMs = 120000;
+            const timer = setTimeout(() => {
+                this.callbacks.delete(requestId);
+                this.isGenerating = false;
+                reject(new Error('Generation timed out after 120s'));
+            }, timeoutMs);
+            this.callbacks.set(requestId, {
+                resolve: (v) => { clearTimeout(timer); resolve(v); },
+                reject: (e) => { clearTimeout(timer); reject(e); },
+                onToken,
+            });
 
             this.worker.postMessage({
                 type: 'generate',
@@ -144,8 +154,13 @@ export class InferenceEngine {
     }
 
     dispose() {
+        for (const callback of this.callbacks.values()) {
+            try { callback.reject(new Error('Model disposed during generation')); } catch {}
+        }
+        this.callbacks.clear();
+        this.isGenerating = false;
         if (this.worker) {
-            this.worker.postMessage({ type: 'dispose' });
+            try { this.worker.postMessage({ type: 'dispose' }); } catch {}
             this.worker.terminate();
             this.worker = null;
             this.isModelReady = false;

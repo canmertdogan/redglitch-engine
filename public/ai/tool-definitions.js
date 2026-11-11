@@ -4,21 +4,24 @@ import { knownNamespaces } from './namespace-router.js';
 function applyPatch(original, patch) {
     if (!original) return patch || '';
     if (!patch) return original;
-
     const trimmed = patch.trim();
     if (!trimmed) return original;
-
-    if (trimmed.startsWith('---') || trimmed.startsWith('diff --git')) {
+    // FINDING-TOOL: unified diff with deletions/hunks would become append — reject instead of corrupting.
+    if (trimmed.startsWith('---') || trimmed.startsWith('diff --git') || /^@@\s-/m.test(trimmed)) {
+        throw new Error('Diff patches with deletions/hunks not supported by fs.edit_file. Use patch with + lines only or provide new_content.');
+    }
+    // Any line starting with '-' (deletion) is unsupported — must use new_content for deletions
+    if (trimmed.split('\n').some(l => l.startsWith('-') && !l.startsWith('---'))) {
+        throw new Error('Diff deletions not supported. Use new_content.');
+    }
+    if (trimmed.startsWith('+')) {
         let result = original;
         const lines = trimmed.split('\n');
         for (const line of lines) {
-            if (line.startsWith('+') && !line.startsWith('+++')) {
-                result += line.slice(1) + '\n';
-            }
+            if (line.startsWith('+') && !line.startsWith('+++')) result += line.slice(1) + '\n';
         }
         return result;
     }
-
     return original + '\n' + trimmed;
 }
 
@@ -78,6 +81,10 @@ export function registerDefaultTools(registry) {
                 required: ['path', 'content']
             },
             execute: async (args) => {
+                if (typeof args.path !== 'string' || args.path.startsWith('/') || args.path.includes('..')) throw new Error('Invalid path for fs tool (must be relative without ..)');
+                // FINDING-TOOL: probe existence to avoid overwrite-as-delete
+                let existed = false, previousContent = null;
+                try { const check = await fetch(`/api/ide/read?file=${encodeURIComponent(args.path)}`); if (check.ok) { previousContent = await check.text(); existed = true; } } catch {}
                 const res = await fetch('/api/ide/write', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
@@ -87,7 +94,7 @@ export function registerDefaultTools(registry) {
                 return {
                     success: true,
                     path: args.path,
-                    undoDescriptor: { type: 'delete-file', path: args.path }
+                    undoDescriptor: existed ? { type: 'restore-file', path: args.path, existed: true, previousContent } : { type: 'delete-file', path: args.path }
                 };
             }
         });
@@ -113,6 +120,7 @@ export function registerDefaultTools(registry) {
                     throw new Error('fs.edit_file requires either new_content or patch');
                 }
 
+                if (typeof args.path !== 'string' || args.path.startsWith('/') || args.path.includes('..')) throw new Error('Invalid path for fs tool (must be relative without ..)');
                 // SHADOW BACKUP: Read existing content before writing
                 let previousContent = null;
                 let exists = false;
@@ -162,6 +170,7 @@ export function registerDefaultTools(registry) {
                 required: ['path', 'content']
             },
             execute: async (args) => {
+                if (typeof args.path !== 'string' || args.path.startsWith('/') || args.path.includes('..')) throw new Error('Invalid path for fs tool (must be relative without ..)');
                 // SHADOW BACKUP: Read existing content before writing
                 let previousContent = null;
                 let exists = false;
@@ -201,6 +210,7 @@ export function registerDefaultTools(registry) {
                 required: ['path']
             },
             execute: async (args) => {
+                if (typeof args.path !== 'string' || args.path.startsWith('/') || args.path.includes('..')) throw new Error('Invalid path for fs tool (must be relative without ..)');
                 // SHADOW BACKUP: Read existing content before deleting
                 let previousContent = null;
                 try {
@@ -321,7 +331,9 @@ export function registerDefaultTools(registry) {
                     'quests': '/api/quests',
                     'skills': '/api/skills'
                 };
-                const res = await fetch(endpoint[args.type] || `/api/${args.type}`);
+                const ALLOWED_LIST = { 'npcs': '/api/npcs', 'items': '/api/items', 'quests': '/api/quests', 'skills': '/api/skills' };
+                if (!ALLOWED_LIST[args.type]) throw new Error(`Unknown data type: ${args.type}`);
+                const res = await fetch(ALLOWED_LIST[args.type]);
                 if (!res.ok) throw new Error(`Could not list ${args.type}`);
                 return await res.json();
             }
@@ -342,30 +354,31 @@ export function registerDefaultTools(registry) {
             },
             execute: async (args) => {
                 if (!args.type) throw new Error('data.update requires a type');
-
-                const defaultEndpoint = {
+                // FINDING-TOOL: strict allowlist (prevents type:'ide/write' endpoint fallback injection)
+                const ALLOWED_ENDPOINTS = {
                     'npcs': '/api/npcs',
                     'items': '/api/items',
                     'quests': '/api/quests',
                     'skills': '/api/skills'
-                }[args.type];
-
-                const endpoint = defaultEndpoint || `/api/${args.type}`;
+                };
+                const endpoint = ALLOWED_ENDPOINTS[args.type];
                 if (!endpoint) throw new Error(`Unknown data type: ${args.type}`);
-
+                // Backup previous definitions for rollback
+                let previousContent = null;
+                try { const prev = await fetch(endpoint); if (prev.ok) previousContent = await prev.text(); } catch {}
                 const res = await fetch(endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Redglitch-Automation': 'kai' },
                     body: JSON.stringify(args.data)
                 });
                 if (!res.ok) throw new Error(`Failed to update ${args.type}`);
-
                 const body = await res.json().catch(() => ({}));
                 return {
                     success: true,
                     type: args.type,
                     endpoint,
                     updated: Array.isArray(args.data) ? args.data.length : 0,
+                    undoDescriptor: previousContent !== null ? { type: 'restore-json', endpoint, previousContent } : undefined,
                     ...body
                 };
             }
@@ -459,14 +472,17 @@ export function registerDefaultTools(registry) {
                     });
                 }
 
-                const dataUrl = await window.AssetSynth.generate(args.prompt, args.size || 32);
+                const safeSize = Math.max(1, Math.min(256, Number(args.size) || 32));
+                const safeFilename = String(args.filename || '').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/,'') || 'asset.png';
+                if (!/\.(png|jpg|jpeg|gif|webp)$/i.test(safeFilename)) throw new Error('asset.generate filename must end with .png/.jpg/.gif/.webp');
+                const dataUrl = await window.AssetSynth.generate(args.prompt, safeSize);
                 
                 // Upload to server using the new base64 endpoint
                 const res = await fetch(`/api/assets/upload`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        path: `assets/${args.filename}`,
+                        path: `assets/${safeFilename}`,
                         content: dataUrl,
                         isBase64: true
                     })
@@ -474,8 +490,8 @@ export function registerDefaultTools(registry) {
 
                 if (!res.ok) throw new Error('Failed to save generated asset');
                 
-                registry.eventBus.emit('asset:created', { path: `assets/${args.filename}`, type: 'sprite' });
-                return { success: true, path: `assets/${args.filename}`, message: `GRRR... Asset synthesized: ${args.filename}` };
+                registry.eventBus?.emit('asset:created', { path: `assets/${safeFilename}`, type: 'sprite' });
+                return { success: true, path: `assets/${safeFilename}`, message: `Asset synthesized: ${safeFilename}`, undoDescriptor: { type: 'delete-file', path: `assets/${safeFilename}` } };
             }
         });
 
@@ -486,11 +502,14 @@ export function registerDefaultTools(registry) {
             name: 'workflow.run',
             description: 'Execute a sequence of tool calls as a single transactional workflow.',
             securityLevel: 'high-risk',
+            timeout: 300000,
             parameters: {
                 type: 'object',
                 properties: {
                     steps: { 
-                        type: 'array', 
+                        type: 'array',
+                        minItems: 1,
+                        maxItems: 20,
                         items: {
                             type: 'object',
                             properties: {
@@ -599,7 +618,7 @@ export function registerDefaultTools(registry) {
         registry.register({
             name: 'iso.spawn_prefab',
             description: 'Spawn a prefab or NPC into the current IsoPixel scene.',
-            securityLevel: 'safe',
+            securityLevel: 'low-risk',
             parameters: {
                 type: 'object',
                 properties: {

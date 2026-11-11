@@ -89,3 +89,82 @@ test('OpenRouterAdapter uses custom baseUrl and app meta', async () => {
     assert.equal(captured.opts.headers['HTTP-Referer'], 'https://my.app');
     assert.equal(captured.opts.headers['X-Title'], 'MyApp');
 });
+
+test('MultiProviderAdapter supports Groq, OpenAI, Gemini, Google AI Studio, DeepSeek and Ollama', async () => {
+    mockFetch(okJson({ choices: [{ message: { content: 'fast response' } }], model: 'llama-3.3-70b-versatile' }));
+    const { MultiProviderAdapter, PROVIDER_PRESETS } = await import('./openrouter-adapter.js');
+    assert.ok(PROVIDER_PRESETS.openrouter);
+    assert.ok(PROVIDER_PRESETS.openai);
+    assert.ok(PROVIDER_PRESETS.anthropic);
+    assert.ok(PROVIDER_PRESETS.gemini);
+    assert.ok(PROVIDER_PRESETS['google-ai-studio']);
+    assert.equal(PROVIDER_PRESETS['google-ai-studio'].name, 'Google AI Studio');
+    assert.equal(PROVIDER_PRESETS['google-ai-studio'].defaultModel, 'gemini-2.0-flash');
+    assert.ok(PROVIDER_PRESETS.groq);
+    assert.ok(PROVIDER_PRESETS.deepseek);
+    assert.ok(PROVIDER_PRESETS.mistral);
+    assert.ok(PROVIDER_PRESETS.ollama);
+
+    const groqAdapter = new MultiProviderAdapter({ provider: 'groq', apiKey: 'gsk-test' });
+    const groqRes = await groqAdapter.chat([{ role: 'user', content: 'test groq' }]);
+    assert.equal(groqRes.text, 'fast response');
+    assert.equal(groqRes.source, 'groq');
+    assert.match(captured.url, /api\.groq\.com\/openai\/v1\/chat\/completions/);
+
+    // Google AI Studio chat endpoint appends ?key= and uses gemini models
+    mockFetch(okJson({ choices: [{ message: { content: 'gemini reply' } }], model: 'gemini-2.5-flash' }));
+    const studioAdapter = new MultiProviderAdapter({
+        provider: 'google-ai-studio',
+        apiKey: 'AIzaSy1234567890',
+        model: 'gemini-2.5-flash'
+    });
+    const studioRes = await studioAdapter.chat([{ role: 'user', content: 'hello gemini' }]);
+    assert.equal(studioRes.text, 'gemini reply');
+    assert.equal(studioRes.source, 'google-ai-studio');
+    assert.match(captured.url, /generativelanguage\.googleapis\.com\/v1beta\/openai\/chat\/completions\?key=AIzaSy1234567890/);
+    assert.match(captured.opts.headers.Authorization, /Bearer AIzaSy1234567890/);
+
+    // Ollama does not require API key
+    mockFetch(okJson({ choices: [{ message: { content: 'local ollama response' } }], model: 'llama3.3' }));
+    const ollamaAdapter = new MultiProviderAdapter({ provider: 'ollama' });
+    const ollamaRes = await ollamaAdapter.chat([{ role: 'user', content: 'hello local' }]);
+    assert.equal(ollamaRes.text, 'local ollama response');
+    assert.equal(ollamaRes.source, 'ollama');
+    assert.match(captured.url, /127\.0\.0\.1:11434\/v1\/chat\/completions/);
+});
+
+test('MultiProviderAdapter supports Anthropic direct messages API and streaming', async () => {
+    mockFetch(okJson({
+        content: [{ type: 'text', text: 'Anthropic direct reply' }],
+        model: 'claude-3-7-sonnet-20250219'
+    }));
+    const { MultiProviderAdapter } = await import('./openrouter-adapter.js');
+    const adapter = new MultiProviderAdapter({ provider: 'anthropic', apiKey: 'sk-ant-test' });
+    const res = await adapter.chat([
+        { role: 'system', content: 'You are helpful' },
+        { role: 'user', content: 'Hi Claude' }
+    ]);
+    assert.equal(res.text, 'Anthropic direct reply');
+    assert.equal(res.source, 'anthropic');
+    assert.match(captured.url, /api\.anthropic\.com\/v1\/messages/);
+    assert.equal(captured.opts.headers['x-api-key'], 'sk-ant-test');
+    assert.equal(captured.opts.headers['anthropic-version'], '2023-06-01');
+
+    const body = JSON.parse(captured.opts.body);
+    assert.equal(body.system, 'You are helpful');
+    assert.equal(body.messages[0].role, 'user');
+    assert.equal(body.messages[0].content, 'Hi Claude');
+});
+
+test('MultiProviderAdapter testConnection measures latency and verifies connectivity', async () => {
+    mockFetch(okJson({ choices: [{ message: { content: 'OK' } }], model: 'gpt-4o' }));
+    const { MultiProviderAdapter } = await import('./openrouter-adapter.js');
+    const adapter = new MultiProviderAdapter({ provider: 'openai', apiKey: 'sk-test' });
+    const probe = await adapter.testConnection();
+    assert.equal(probe.ok, true);
+    assert.equal(probe.provider, 'openai');
+    assert.equal(probe.model, 'gpt-4o');
+    assert.equal(probe.responseSnippet, 'OK');
+    assert.equal(typeof probe.latencyMs, 'number');
+});
+

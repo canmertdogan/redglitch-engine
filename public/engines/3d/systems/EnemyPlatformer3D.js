@@ -154,7 +154,7 @@ export default class EnemyPlatformer3D {
         for (const ent of entities) {
             if (!ent.type?.startsWith('enemy_')) continue;
             const kind = ent.type.slice(7);  // 'walker' | 'flyer' | 'shooter' | 'boss'
-            await this._spawnEnemy(ent.id ?? `enemy_${this._nextId++}`, kind, ent);
+            await this._spawnEnemy(ent.id ?? `enemy_${this._nextId++}_${Math.random().toString(36).slice(2,6)}`, kind, ent);
         }
     }
 

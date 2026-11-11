@@ -85,6 +85,8 @@ router.get('/read', async (req, res) => {
                 throw err;
             }
         }
+        res.set('Content-Type', 'text/plain; charset=utf-8');
+        res.set('Content-Disposition', 'inline');
         res.send(content);
     } catch (err) {
         console.error(`[IDE:Read] Error: ${err.message}`);
@@ -194,7 +196,8 @@ router.get('/list', async (req, res) => {
         }
 
         const FULL_PUBLIC = path.join(__dirname, '..', '..', 'public');
-        let fullPath = resolveUnderRoot(targetRootDir, dirPath);
+        // FINDING-TOOL: empty dir means project root listing — resolveUnderRoot('') is null, so handle explicitly
+        let fullPath = dirPath === '' ? targetRootDir : resolveUnderRoot(targetRootDir, dirPath);
         if (!fullPath) {
             return res.status(403).json({ error: 'Access denied' });
         }
@@ -229,17 +232,27 @@ router.get('/list', async (req, res) => {
 
 // GET /api/ide/tree - Return nested file tree for the active project
 router.get('/tree', async (req, res) => {
+    const MAX_DEPTH = 5;
+    const MAX_ENTRIES = 5000;
     try {
         const activeProject = projectService.getActiveProject();
         const isRoot = projectService.isRootProject();
         const projectName = isRoot ? 'ROOT' : path.basename(activeProject);
+        const state = { count: 0, truncated: false };
 
-        async function buildTree(dir, relativePath = '', isEngine = false) {
+        async function buildTree(dir, relativePath = '', isEngine = false, depth = 0) {
+            if (state.count >= MAX_ENTRIES || depth > MAX_DEPTH) {
+                state.truncated = true;
+                return [];
+            }
             const entries = await fs.readdir(dir, { withFileTypes: true });
             const children = [];
 
             for (const entry of entries) {
-                if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+                if (state.count >= MAX_ENTRIES) { state.truncated = true; break; }
+                if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'builds') continue;
+                if (entry.isSymbolicLink()) continue;
+                state.count++;
 
                 const rel = path.join(relativePath, entry.name);
                 const full = path.join(dir, entry.name);
@@ -250,7 +263,7 @@ router.get('/tree', async (req, res) => {
                         name: entry.name,
                         path: displayPath,
                         type: 'dir',
-                        children: await buildTree(full, rel, isEngine)
+                        children: depth >= MAX_DEPTH ? [] : await buildTree(full, rel, isEngine, depth + 1)
                     });
                 } else {
                     children.push({
@@ -278,7 +291,7 @@ router.get('/tree', async (req, res) => {
         });
 
         // 2. Add Engine Tree (if not root)
-        if (!isRoot) {
+        if (!isRoot && state.count < MAX_ENTRIES) {
             const engineRoot = path.join(__dirname, '..', '..', 'public');
             const engineTree = await buildTree(engineRoot, '', true);
             tree.push({
@@ -289,7 +302,7 @@ router.get('/tree', async (req, res) => {
             });
         }
 
-        res.json(tree);
+        res.json(state.truncated ? { tree, truncated: true } : tree);
     } catch (err) {
         console.error('[IDE:Tree] Error:', err);
         res.status(500).json({ error: 'Failed to build tree' });
@@ -298,6 +311,7 @@ router.get('/tree', async (req, res) => {
 
 // GET /api/ide/search - Search project files for a query
 router.get('/search', async (req, res) => {
+    if (String(req.query.query || '').length > 200) return res.status(400).json({ error: 'Query too long' });
     const { query } = req.query;
     if (!query) return res.json([]);
 
@@ -307,20 +321,41 @@ router.get('/search', async (req, res) => {
         const projectName = isRoot ? 'ROOT' : path.basename(activeProject);
         
         const results = [];
-        async function search(dir, rel = '', isEngine = false) {
+        const MAX_FILES_SCANNED = 2000;
+        const MAX_DEPTH = 6;
+        const state = { scanned: 0, stopped: false };
+        async function search(dir, rel = '', isEngine = false, depth = 0) {
+            if (state.stopped || depth > MAX_DEPTH) return;
             const entries = await fs.readdir(dir, { withFileTypes: true });
             for (const e of entries) {
+                if (state.stopped) break;
+                if (state.scanned >= MAX_FILES_SCANNED) { state.stopped = true; break; }
                 if (e.name.startsWith('.') || e.name === 'node_modules' || e.name === 'dist' || e.name === 'builds') continue;
+                if (e.isSymbolicLink()) continue;
                 const full = path.join(dir, e.name);
                 const rPath = path.join(rel, e.name);
                 const displayPath = isEngine ? `engine/${rPath}` : `projects/${projectName}/${rPath}`;
                 
                 if (e.isDirectory()) {
-                    await search(full, rPath, isEngine);
+                    await search(full, rPath, isEngine, depth + 1);
                 } else {
-                    const content = await fs.readFile(full, 'utf8');
+                    // fs.search include glob (LOW fix): *.js, **/*.txt, path pattern
+                    const include = (req.query.include || '').trim();
+                    if (include) {
+                        const pattern = include.replace(/\./g, '\\.').replace(/\*\*/g, '__GLOB2__').replace(/\*/g, '[^/]*').replace(/__GLOB2__/g, '.*').replace(/\?/g, '.');
+                        const re = new RegExp('^' + pattern + '$', 'i');
+                        if (!re.test(rPath) && !re.test(e.name)) continue;
+                    }
+                    state.scanned++;
+                    let content;
+                    try {
+                        const st = await fs.stat(full);
+                        if (st.size > 1024 * 1024) continue; // 1MB cap
+                        content = await fs.readFile(full, 'utf8');
+                    } catch { continue; }
                     const lines = content.split('\n');
-                    lines.forEach((line, index) => {
+                    for (let index = 0; index < lines.length && results.length < 100; index++) {
+                        const line = lines[index];
                         if (line.toLowerCase().includes(query.toLowerCase())) {
                             results.push({
                                 file: displayPath,
@@ -329,9 +364,9 @@ router.get('/search', async (req, res) => {
                                 text: line.trim()
                             });
                         }
-                    });
+                    }
+                    if (results.length >= 100) state.stopped = true;
                 }
-                if (results.length > 100) break; // Limit results
             }
         }
 

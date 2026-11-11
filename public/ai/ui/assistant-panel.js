@@ -36,6 +36,53 @@ class KaiChatUIController {
         
         this.soundsEnabled = localStorage.getItem('kai_sounds_enabled') !== 'false';
 
+        // Agentic Planner & Workspace State
+        this.currentWorkspace = 'chat';
+        this.previousWorkspace = 'chat';
+        this.activePlannerRole = 'architect';
+        this.activePlan = null;
+        this.isExecutingPlan = false;
+        this.diffHistory = [];
+        this.activeDiffs = [];
+        this.isMaximized = false;
+        this.roles = {
+            architect: {
+                id: 'architect',
+                name: 'Lead Architect',
+                icon: '🏛️',
+                desc: 'System architecture, module orchestration & game loop decomposition.',
+                tools: ['project.getInfo', 'project.updateManifesto', 'fs.list', 'fs.search', 'workflow.run']
+            },
+            gameplay: {
+                id: 'gameplay',
+                name: 'Gameplay Engineer',
+                icon: '⚡',
+                desc: 'Combat formulas, player physics, items, abilities & algorithm graphs.',
+                tools: ['data.list', 'data.update', 'fs.read', 'fs.write', 'fs.edit_file', 'saveScript']
+            },
+            world: {
+                id: 'world',
+                name: 'World Builder',
+                icon: '🗺️',
+                desc: '2D/3D level environments, tilemaps, prefabs, terrain & lighting.',
+                tools: ['iso.spawn_prefab', 'navigateTo', 'fs.read', 'fs.write', 'asset.generate']
+            },
+            narrative: {
+                id: 'narrative',
+                name: 'Narrative Designer',
+                icon: '📜',
+                desc: 'NPCs, branching dialogues, questlines, cutscenes & lore items.',
+                tools: ['data.list', 'data.update', 'navigateTo', 'fs.read', 'fs.write']
+            },
+            qa: {
+                id: 'qa',
+                name: 'QA Sentinel',
+                icon: '🛡️',
+                desc: 'Data schema audits, regression testing, physics checks & stability.',
+                tools: ['fs.read', 'fs.search', 'data.list', 'git.status', 'git.stage', 'git.commit']
+            }
+        };
+
         // Tracked timers and listeners for cleanup
         this._hitZoneInterval = null;
         this._sessionClockInterval = null;
@@ -167,9 +214,10 @@ class KaiChatUIController {
 
             this.assistant = new IRABAssistantSimple();
             
-            // --- DEEP BOOT: Hook into Native Cortex (Local Cluster) ---
+            // --- Hook into Native Cortex only if native provider is explicitly selected ---
+            const activeProvider = this.settings?.provider || 'openrouter';
             const irab = window.irab || (window.parent && window.parent.irab);
-            if (irab) {
+            if (irab && activeProvider === 'native') {
                 console.log('Kai: Connected to Native Cortex Bridge.');
                 
                 // Hook Progress
@@ -289,10 +337,42 @@ class KaiChatUIController {
                 };
                 this._listeners.push({ event: 'system:metrics', handler: onSystemMetrics });
                 eventBus.on('system:metrics', onSystemMetrics);
+
+                // AGENTIC PLANNER TELEMETRY & MUTATION EVENTS
+                const onPlannerStepStart = (event) => {
+                    const { step, index, total } = event.data || {};
+                    if (step) {
+                        this.onPlanStepProgress({ step, index, total, status: 'running' });
+                    }
+                };
+                this._listeners.push({ event: 'ai:planner:step_start', handler: onPlannerStepStart });
+                eventBus.on('ai:planner:step_start', onPlannerStepStart);
+
+                const onPlannerStepFinish = (event) => {
+                    const { step, index, total } = event.data || {};
+                    if (step) {
+                        this.onPlanStepProgress({ step, index, total, status: step.status });
+                    }
+                };
+                this._listeners.push({ event: 'ai:planner:step_finish', handler: onPlannerStepFinish });
+                eventBus.on('ai:planner:step_finish', onPlannerStepFinish);
+
+                const onPlannerDiff = (event) => {
+                    const { diff } = event.data || {};
+                    if (diff) {
+                        this.activeDiffs.push(diff);
+                        if (this.currentWorkspace === 'diff') {
+                            this.renderDiffs();
+                        }
+                    }
+                };
+                this._listeners.push({ event: 'ai:planner:diff_generated', handler: onPlannerDiff });
+                eventBus.on('ai:planner:diff_generated', onPlannerDiff);
             }
 
             this.isInitialized = true;
             this.setAvatarState('idle');
+            this.updatePlannerRoleUI();
             console.log('Kai: Initialization Complete.');
         } catch (error) {
             console.error('Kai: Init Error:', error);
@@ -517,9 +597,21 @@ class KaiChatUIController {
     }
 
     updateChatMeta() {
-        const modelLabels = { native: 'NATIVE_CORTEX', local: 'WEBGPU_LOCAL', cerebras: 'CEREBRAS_CLOUD', 'opencode-zen': 'OPENCODE_ZEN', openrouter: 'OPENROUTER_CLOUD' };
+        const modelLabels = {
+            native: 'NATIVE_CORTEX',
+            openrouter: 'OPENROUTER_CLOUD',
+            'google-ai-studio': 'GOOGLE_AI_STUDIO',
+            openai: 'OPENAI_DIRECT',
+            anthropic: 'ANTHROPIC_CLAUDE',
+            gemini: 'GOOGLE_GEMINI',
+            groq: 'GROQ_LPU',
+            deepseek: 'DEEPSEEK_AI',
+            mistral: 'MISTRAL_AI',
+            ollama: 'OLLAMA_LOCAL',
+            custom: 'CUSTOM_ENDPOINT'
+        };
         const settings = (window.AISettings && window.AISettings.settings) || {};
-        const provider = settings.provider || 'native';
+        const provider = settings.provider || 'openrouter';
 
         const modelEl = document.getElementById('ai-chat-meta-model');
         if (modelEl) modelEl.textContent = modelLabels[provider] || provider.toUpperCase();
@@ -590,6 +682,476 @@ class KaiChatUIController {
     closeChat() {
         const panel = document.getElementById('ai-chat-panel');
         if (panel) panel.classList.remove('show');
+    }
+
+    switchWorkspace(viewName) {
+        if (!['chat', 'planner', 'diff', 'config'].includes(viewName)) return;
+        this.previousWorkspace = this.currentWorkspace;
+        this.currentWorkspace = viewName;
+
+        // Update Nav Tabs
+        document.querySelectorAll('.workspace-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.id === `tab-nav-${viewName}`);
+        });
+
+        // Update View Panes
+        document.querySelectorAll('.ai-view-pane').forEach(pane => {
+            pane.classList.toggle('active', pane.id === `view-${viewName}`);
+        });
+
+        this.playSound('online');
+
+        if (viewName === 'planner') {
+            this.updatePlannerRoleUI();
+            this.updateChatMeta();
+            const goalInput = document.getElementById('planner-goal-input');
+            if (goalInput && !goalInput.value) {
+                setTimeout(() => goalInput.focus(), 100);
+            }
+        } else if (viewName === 'diff') {
+            this.renderDiffs();
+        } else if (viewName === 'config') {
+            if (window.AISettings) window.AISettings.applyToUI();
+        } else if (viewName === 'chat') {
+            setTimeout(() => document.getElementById('ai-chat-input')?.focus(), 100);
+        }
+    }
+
+    toggleMaximize() {
+        const panel = document.getElementById('ai-chat-panel');
+        if (!panel) return;
+        this.isMaximized = !this.isMaximized;
+        panel.classList.toggle('maximized', this.isMaximized);
+        const maxBtn = panel.querySelector('.xp-control-btn.maximize');
+        if (maxBtn) maxBtn.textContent = this.isMaximized ? '[🗗]' : '[⛶]';
+    }
+
+    selectRole(roleId) {
+        if (!this.roles[roleId]) return;
+        this.activePlannerRole = roleId;
+        this.updatePlannerRoleUI();
+        this.playSound('typing');
+    }
+
+    updatePlannerRoleUI() {
+        const role = this.roles[this.activePlannerRole] || this.roles.architect;
+        
+        // Update role buttons
+        document.querySelectorAll('#planner-role-selector .role-chip').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.role === role.id);
+        });
+
+        // Update description banner
+        const descEl = document.getElementById('planner-role-desc');
+        if (descEl) {
+            descEl.innerHTML = `<span class="role-desc-title">${this.escapeHTML((role.name || '').toUpperCase())}:</span> ${this.escapeHTML(role.desc || '')}`;
+        }
+
+        // Update status bar indicator
+        const roleInd = document.getElementById('xp-role-indicator');
+        if (roleInd) {
+            roleInd.textContent = `ROLE: ${role.name.toUpperCase()}`;
+        }
+    }
+
+    setPlannerGoal(text) {
+        const input = document.getElementById('planner-goal-input');
+        if (input) {
+            input.value = text;
+            input.focus();
+        }
+
+        // Context-aware auto-role assignment based on goal keywords
+        const q = text.toLowerCase();
+        if (q.includes('boss') || q.includes('combat') || q.includes('item') || q.includes('loot') || q.includes('skill')) {
+            this.selectRole('gameplay');
+        } else if (q.includes('level') || q.includes('map') || q.includes('dungeon') || q.includes('terrain') || q.includes('prefab')) {
+            this.selectRole('world');
+        } else if (q.includes('quest') || q.includes('dialogue') || q.includes('npc') || q.includes('lore')) {
+            this.selectRole('narrative');
+        } else if (q.includes('audit') || q.includes('qa') || q.includes('test') || q.includes('stability')) {
+            this.selectRole('qa');
+        } else {
+            this.selectRole('architect');
+        }
+    }
+
+    async decomposePlannerGoal() {
+        const input = document.getElementById('planner-goal-input');
+        const goal = input ? input.value.trim() : '';
+
+        if (!goal) {
+            if (input) {
+                input.style.borderColor = '#ff2255';
+                setTimeout(() => input.style.borderColor = '', 1000);
+            }
+            this.showSpeechBubble("GRRR... Please enter an objective before decomposing!", [
+                { label: 'OKAY', secondary: true, callback: () => this.dismiss() }
+            ]);
+            this.playSound('error');
+            return;
+        }
+
+        const btnDecompose = document.getElementById('btn-decompose-plan');
+        const btnExecute = document.getElementById('btn-execute-plan');
+        const badge = document.getElementById('blueprint-status-badge');
+        const titleEl = document.getElementById('blueprint-goal-title');
+
+        if (btnDecompose) {
+            btnDecompose.disabled = true;
+            btnDecompose.textContent = 'DECOMPOSING...';
+        }
+        if (badge) {
+            badge.className = 'blueprint-status-badge running';
+            badge.textContent = 'ANALYZING...';
+        }
+        if (titleEl) {
+            titleEl.textContent = goal;
+        }
+
+        this.setAvatarState('working');
+        this.playSound('typing');
+
+        try {
+            if (!this.assistant) {
+                this.assistant = new IRABAssistantSimple();
+            }
+            const plan = await this.assistant.planGoal(goal, { role: this.activePlannerRole });
+            this.activePlan = plan;
+
+            this.renderBlueprintSteps(plan);
+
+            if (badge) {
+                badge.className = 'blueprint-status-badge ready';
+                badge.textContent = 'BLUEPRINT READY';
+            }
+            if (btnExecute) {
+                btnExecute.disabled = false;
+            }
+
+            // Update Progress Bar
+            const fill = document.getElementById('planner-progress-fill');
+            const percent = document.getElementById('planner-progress-percent');
+            const text = document.getElementById('planner-progress-text');
+            if (fill) fill.style.width = '0%';
+            if (percent) percent.textContent = '0%';
+            if (text) text.textContent = `0 / ${plan.steps.length} STEPS COMPLETED`;
+
+            this.setAvatarState('idle');
+            this.playSound('online');
+        } catch (err) {
+            console.error('[AssistantPanel] Decompose error:', err);
+            if (badge) {
+                badge.className = 'blueprint-status-badge failed';
+                badge.textContent = 'DECOMPOSE FAILED';
+            }
+            this.setAvatarState('error');
+            this.playSound('error');
+        } finally {
+            if (btnDecompose) {
+                btnDecompose.disabled = false;
+                btnDecompose.textContent = '⚡ DECOMPOSE OBJECTIVE';
+            }
+        }
+    }
+
+    renderBlueprintSteps(plan) {
+        const container = document.getElementById('planner-steps-list');
+        if (!container) return;
+
+        if (!plan || !plan.steps || plan.steps.length === 0) {
+            container.innerHTML = `
+                <div class="planner-empty-state">
+                    <div class="empty-icon">🎯</div>
+                    <div class="empty-text">ENTER AN OBJECTIVE ABOVE AND CLICK "DECOMPOSE OBJECTIVE" TO GENERATE AN AUTONOMOUS MULTI-STEP BLUEPRINT.</div>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        plan.steps.forEach((step, idx) => {
+            const card = document.createElement('div');
+            card.id = `step-card-${step.id || idx + 1}`;
+            card.className = `planner-step-card ${step.status || 'pending'}`;
+
+            const role = this.roles[step.role] || { name: step.role || 'ARCHITECT', icon: '⚡' };
+            const statusClass = step.status || 'pending';
+            const statusLabel = step.status ? step.status.toUpperCase() : 'PENDING';
+
+            card.innerHTML = `
+                <div class="step-card-header">
+                    <div class="step-card-left">
+                        <span class="step-num">#${String(idx + 1).padStart(2, '0')}</span>
+                        <span class="step-role-badge">${role.icon} ${role.name.toUpperCase()}</span>
+                        <span class="step-title">${this.escapeHTML(step.title || 'Step ' + (idx + 1))}</span>
+                    </div>
+                    <span class="step-status-tag ${statusClass}">${statusLabel}</span>
+                </div>
+                <div class="step-card-desc">${this.escapeHTML(step.description || '')}</div>
+                <div class="step-card-footer">
+                    <span class="step-tool-badge">tool: ${this.escapeHTML(step.tool || 'none')}</span>
+                    <button type="button" class="step-output-toggle" onclick="AIChatUI.toggleStepOutput(${step.id || idx + 1})">LOGS</button>
+                </div>
+                <div id="step-output-${step.id || idx + 1}" class="step-output-console" style="display: none;">${step.output ? this.escapeHTML(JSON.stringify(step.output, null, 2)) : '// Awaiting execution...'}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    toggleStepOutput(stepId) {
+        const out = document.getElementById(`step-output-${stepId}`);
+        if (out) {
+            out.style.display = out.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+
+    async executeActivePlan() {
+        if (!this.activePlan || this.isExecutingPlan) return;
+        this.isExecutingPlan = true;
+
+        const btnExecute = document.getElementById('btn-execute-plan');
+        const btnDecompose = document.getElementById('btn-decompose-plan');
+        const btnAbort = document.getElementById('btn-abort-plan');
+        const badge = document.getElementById('blueprint-status-badge');
+        const missionMeta = document.getElementById('ai-chat-meta-mission');
+
+        if (btnExecute) btnExecute.disabled = true;
+        if (btnDecompose) btnDecompose.style.display = 'none';
+        if (btnAbort) btnAbort.style.display = 'inline-flex';
+        if (badge) {
+            badge.className = 'blueprint-status-badge running';
+            badge.textContent = 'EXECUTING MISSION...';
+        }
+        if (missionMeta) missionMeta.textContent = 'MISSION: EXECUTING';
+
+        this.setAvatarState('working');
+        this.playSound('typing');
+
+        try {
+            const executionResult = await this.assistant.executePlan(this.activePlan, {
+                onStepProgress: (progress) => this.onPlanStepProgress(progress)
+            });
+
+            this.isExecutingPlan = false;
+            if (btnAbort) btnAbort.style.display = 'none';
+            if (btnDecompose) btnDecompose.style.display = 'inline-flex';
+            if (btnExecute) btnExecute.disabled = false;
+
+            if (executionResult && executionResult.success) {
+                if (badge) {
+                    badge.className = 'blueprint-status-badge completed';
+                    badge.textContent = 'MISSION ACCOMPLISHED ✓';
+                }
+                if (missionMeta) missionMeta.textContent = 'MISSION: SUCCESS ✓';
+                this.setAvatarState('success');
+                this.playSound('online');
+
+                // Archive in diff history
+                this.diffHistory.unshift(this.activePlan);
+                this.updateDiffHistorySelect();
+
+                if (this.activePlan.diffs && this.activePlan.diffs.length > 0) {
+                    this.activeDiffs = [...this.activePlan.diffs];
+                    this.renderDiffs();
+                    this.showSpeechBubble(`MISSION COMPLETE! Generated ${this.activePlan.diffs.length} mutations. Switch to DIFF INSPECTOR to review.`, [
+                        { label: 'VIEW DIFFS', callback: () => { this.switchWorkspace('diff'); this.dismiss(); } },
+                        { label: 'DISMISS', secondary: true, callback: () => this.dismiss() }
+                    ]);
+                }
+            } else {
+                if (badge) {
+                    badge.className = 'blueprint-status-badge failed';
+                    badge.textContent = this.activePlan.status === 'aborted' ? 'MISSION ABORTED' : 'MISSION FAILED ✗';
+                }
+                if (missionMeta) missionMeta.textContent = 'MISSION: HALTED';
+                this.setAvatarState('error');
+                this.playSound('error');
+            }
+        } catch (err) {
+            console.error('[AssistantPanel] Execution error:', err);
+            this.isExecutingPlan = false;
+            if (btnAbort) btnAbort.style.display = 'none';
+            if (btnDecompose) btnDecompose.style.display = 'inline-flex';
+            if (btnExecute) btnExecute.disabled = false;
+            if (badge) {
+                badge.className = 'blueprint-status-badge failed';
+                badge.textContent = 'EXECUTION ERROR';
+            }
+            this.setAvatarState('error');
+            this.playSound('error');
+        }
+    }
+
+    onPlanStepProgress(progress) {
+        const { step, index, total, status } = progress;
+        const card = document.getElementById(`step-card-${step.id || index + 1}`);
+        if (card) {
+            card.className = `planner-step-card ${status}`;
+            const tag = card.querySelector('.step-status-tag');
+            if (tag) {
+                tag.className = `step-status-tag ${status}`;
+                tag.textContent = status.toUpperCase();
+            }
+            if (step.durationMs) {
+                const badge = card.querySelector('.step-tool-badge');
+                if (badge && !badge.textContent.includes('ms')) {
+                    badge.textContent += ` (${step.durationMs}ms)`;
+                }
+            }
+            const consoleEl = document.getElementById(`step-output-${step.id || index + 1}`);
+            if (consoleEl && step.output) {
+                consoleEl.textContent = JSON.stringify(step.output, null, 2);
+            }
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Update Progress Bar
+        const completedCount = index + (status === 'completed' ? 1 : 0);
+        const pct = Math.round((completedCount / total) * 100);
+        const fill = document.getElementById('planner-progress-fill');
+        const percent = document.getElementById('planner-progress-percent');
+        const text = document.getElementById('planner-progress-text');
+
+        if (fill) fill.style.width = `${pct}%`;
+        if (percent) percent.textContent = `${pct}%`;
+        if (text) text.textContent = `${completedCount} / ${total} STEPS COMPLETED`;
+    }
+
+    abortActivePlan() {
+        if (this.assistant) {
+            this.assistant.abortPlan();
+        }
+        const badge = document.getElementById('blueprint-status-badge');
+        if (badge) {
+            badge.textContent = 'ABORTING MISSION...';
+        }
+        this.playSound('error');
+    }
+
+    resetPlanner() {
+        const input = document.getElementById('planner-goal-input');
+        if (input) input.value = '';
+
+        this.activePlan = null;
+        this.renderBlueprintSteps(null);
+
+        const badge = document.getElementById('blueprint-status-badge');
+        if (badge) {
+            badge.className = 'blueprint-status-badge';
+            badge.textContent = 'STANDBY';
+        }
+        const titleEl = document.getElementById('blueprint-goal-title');
+        if (titleEl) titleEl.textContent = 'AWAITING OBJECTIVE...';
+
+        const btnExecute = document.getElementById('btn-execute-plan');
+        if (btnExecute) btnExecute.disabled = true;
+
+        const fill = document.getElementById('planner-progress-fill');
+        const percent = document.getElementById('planner-progress-percent');
+        const text = document.getElementById('planner-progress-text');
+        if (fill) fill.style.width = '0%';
+        if (percent) percent.textContent = '0%';
+        if (text) text.textContent = '0 / 0 STEPS COMPLETED';
+    }
+
+    renderDiffs(diffs) {
+        const targetDiffs = diffs || this.activeDiffs || (this.activePlan ? this.activePlan.diffs : []);
+        const viewport = document.getElementById('diff-viewport');
+        const filesEl = document.getElementById('diff-summary-files');
+        const addsEl = document.getElementById('diff-summary-adds');
+        const delsEl = document.getElementById('diff-summary-dels');
+        const statusEl = document.getElementById('diff-summary-msg');
+
+        if (!viewport) return;
+
+        if (!targetDiffs || targetDiffs.length === 0) {
+            viewport.innerHTML = `
+                <div class="diff-empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-title">NO ACTIVE MUTATIONS</div>
+                    <div class="empty-text">Changes made by the Agentic Planner or AI tools will appear here in unified diff format with syntax highlighting and audit logs.</div>
+                </div>`;
+            if (filesEl) filesEl.textContent = 'FILES: 0';
+            if (addsEl) addsEl.textContent = '+0 ADDITIONS';
+            if (delsEl) delsEl.textContent = '-0 DELETIONS';
+            if (statusEl) statusEl.textContent = 'NO PENDING MUTATIONS';
+            return;
+        }
+
+        let totalAdd = 0;
+        let totalDel = 0;
+        viewport.innerHTML = '';
+
+        targetDiffs.forEach(diff => {
+            totalAdd += diff.additions || 0;
+            totalDel += diff.deletions || 0;
+
+            const block = document.createElement('div');
+            block.className = 'diff-file-block';
+
+            const header = document.createElement('div');
+            header.className = 'diff-file-header';
+            header.innerHTML = `<span>📁 ${this.escapeHTML(diff.filePath || 'mutated_asset')}</span><span>${this.escapeHTML(diff.summary || `+${diff.additions} / -${diff.deletions}`)}</span>`;
+            block.appendChild(header);
+
+            if (diff.diffLines && diff.diffLines.length > 0) {
+                diff.diffLines.forEach(dl => {
+                    const line = document.createElement('div');
+                    line.className = `diff-line ${dl.type}`;
+                    const marker = dl.type === 'add' ? '+' : dl.type === 'del' ? '-' : ' ';
+                    line.innerHTML = `
+                        <span class="diff-line-no">${dl.lineNo || ''}</span>
+                        <span class="diff-line-marker">${marker}</span>
+                        <span class="diff-line-content">${this.escapeHTML(dl.line || '')}</span>`;
+                    block.appendChild(line);
+                });
+            }
+
+            viewport.appendChild(block);
+        });
+
+        if (filesEl) filesEl.textContent = `FILES: ${targetDiffs.length}`;
+        if (addsEl) addsEl.textContent = `+${totalAdd} ADDITIONS`;
+        if (delsEl) delsEl.textContent = `-${totalDel} DELETIONS`;
+        if (statusEl) statusEl.textContent = `${targetDiffs.length} MUTATIONS AUDITED`;
+    }
+
+    onDiffHistorySelect(selectedIndex) {
+        if (selectedIndex === '' || selectedIndex === null) {
+            this.renderDiffs(this.activeDiffs);
+            return;
+        }
+        const plan = this.diffHistory[selectedIndex];
+        if (plan && plan.diffs) {
+            this.renderDiffs(plan.diffs);
+        }
+    }
+
+    updateDiffHistorySelect() {
+        const sel = document.getElementById('diff-history-select');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">-- Active Plan Mutations --</option>';
+        this.diffHistory.forEach((plan, idx) => {
+            const opt = document.createElement('option');
+            opt.value = String(idx);
+            opt.textContent = `[${plan.role.toUpperCase()}] ${plan.title.slice(0, 30)} (${plan.diffs?.length || 0} diffs)`;
+            sel.appendChild(opt);
+        });
+    }
+
+    clearDiffs() {
+        this.activeDiffs = [];
+        this.renderDiffs([]);
+    }
+
+    escapeHTML(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     toggleOmniBox() {
@@ -666,6 +1228,42 @@ class KaiChatUIController {
 
         this.addMessage('user', query);
         this.playSound('messageSent');
+
+        // Quick Slash Commands for Agentic Deck
+        if (query.startsWith('/plan')) {
+            const goal = query.replace(/^\/plan\s*/i, '').trim();
+            if (goal) {
+                this.addMessage('system', `>> DISPATCHING AGENTIC MISSION: "${goal}"`);
+                this.switchWorkspace('planner');
+                this.setPlannerGoal(goal);
+                this.decomposePlannerGoal();
+            } else {
+                this.switchWorkspace('planner');
+            }
+            return;
+        }
+
+        if (query.startsWith('/role')) {
+            const roleKey = query.replace(/^\/role\s*/i, '').trim().toLowerCase();
+            if (this.roles[roleKey]) {
+                this.selectRole(roleKey);
+                this.addMessage('system', `>> ACTIVE AGENT ROLE: ${this.roles[roleKey].name.toUpperCase()}`);
+            } else {
+                const available = Object.keys(this.roles).join(', ');
+                this.addMessage('system', `>> AVAILABLE ROLES: ${available}`);
+            }
+            return;
+        }
+
+        if (query === '/diff' || query === '/inspector') {
+            this.switchWorkspace('diff');
+            return;
+        }
+
+        if (query === '/config' || query === '/settings') {
+            this.switchWorkspace('config');
+            return;
+        }
 
         if (!this.assistant || !this.isInitialized) {
             this.playSound('error');
@@ -911,7 +1509,8 @@ class KaiChatUIController {
             const filePath = fileMatch[1];
             const relevance = parseInt(fileMatch[2]);
             if (relevance > 40) {
-                suggestedFiles.add(filePath);
+                const safePath = String(filePath || '').replace(/[^a-zA-Z0-9_./-]/g, '').replace(/\.\.\//g, '');
+                if (safePath && !safePath.includes('..') && suggestedFiles.size < 20) suggestedFiles.add(safePath);
             }
         }
 
@@ -1198,25 +1797,51 @@ class KaiSettingsController {
     loadSettings() {
         const defaults = {
             aiEnabled: localStorage.getItem('kai_ai_enabled') === 'true',
-            provider: 'native',
+            provider: 'openrouter',
             temp: 0.7,
             topP: 0.9,
-            maxTokens: 512,
+            maxTokens: 1024,
             contextWindow: 128000,
             quantization: 'q4f16',
-            ragEnabled: true,
+            ragEnabled: false,
             historyLimit: 6,
             crtEnabled: true,
             soundsEnabled: true,
             glowEnabled: true,
             fontSize: 'medium',
-            openCodeZenKey: '',
-            openCodeZenModel: 'kimi-k2.5',
-            cerebrasKey: '',
-            cerebrasModel: 'llama3.1-8b',
             openrouterKey: '',
-            openrouterModel: 'openai/gpt-4o-mini',
-            embeddingsProvider: 'local',
+            openrouterModel: 'anthropic/claude-3.7-sonnet',
+            openrouterBaseUrl: 'https://openrouter.ai/api/v1',
+            googleAiStudioKey: '',
+            googleAiStudioModel: 'gemini-2.0-flash',
+            googleAiStudioBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+            'google-ai-studioKey': '',
+            'google-ai-studioModel': 'gemini-2.0-flash',
+            'google-ai-studioBaseUrl': 'https://generativelanguage.googleapis.com/v1beta/openai',
+            openaiKey: '',
+            openaiModel: 'gpt-4o-mini',
+            openaiBaseUrl: 'https://api.openai.com/v1',
+            anthropicKey: '',
+            anthropicModel: 'claude-3-7-sonnet-20250219',
+            anthropicBaseUrl: 'https://api.anthropic.com/v1',
+            geminiKey: '',
+            geminiModel: 'gemini-2.0-flash',
+            geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+            groqKey: '',
+            groqModel: 'llama-3.3-70b-versatile',
+            groqBaseUrl: 'https://api.groq.com/openai/v1',
+            deepseekKey: '',
+            deepseekModel: 'deepseek-chat',
+            deepseekBaseUrl: 'https://api.deepseek.com/v1',
+            mistralKey: '',
+            mistralModel: 'codestral-latest',
+            mistralBaseUrl: 'https://api.mistral.ai/v1',
+            ollamaModel: 'llama3.3',
+            ollamaBaseUrl: 'http://127.0.0.1:11434/v1',
+            customKey: '',
+            customModel: 'default',
+            customBaseUrl: 'http://127.0.0.1:1234/v1',
+            embeddingsProvider: 'openai',
             embeddingsBaseUrl: 'https://api.openai.com/v1',
             embeddingsApiKey: '',
             embeddingsModel: 'text-embedding-3-small'
@@ -1238,7 +1863,7 @@ class KaiSettingsController {
             const el = document.getElementById(id);
             if (el) {
                 if (el.type === 'checkbox') el.checked = !!val;
-                else el.value = val;
+                else el.value = val !== undefined && val !== null ? val : '';
                 
                 // Update sibling value displays (for sliders)
                 const valDisp = document.getElementById('val-' + id.replace('setting-', ''));
@@ -1246,7 +1871,7 @@ class KaiSettingsController {
             }
         };
 
-        setVal('setting-provider', s.provider);
+        setVal('setting-provider', s.provider || 'openrouter');
         setVal('setting-ai-enabled', localStorage.getItem('kai_ai_enabled') === 'true');
         setVal('setting-temp', s.temp);
         setVal('setting-top-p', s.topP);
@@ -1259,55 +1884,228 @@ class KaiSettingsController {
         setVal('setting-sounds', s.soundsEnabled);
         setVal('setting-glow', s.glowEnabled);
         setVal('setting-font-size', s.fontSize);
-        setVal('setting-opencode-zen-key', s.openCodeZenKey);
-        setVal('setting-opencode-zen-model', s.openCodeZenModel);
-        setVal('setting-cerebras-key', s.cerebrasKey);
-        setVal('setting-cerebras-model', s.cerebrasModel);
-        setVal('setting-openrouter-key', s.openrouterKey);
-        setVal('setting-openrouter-model', s.openrouterModel);
         setVal('setting-embeddings-provider', s.embeddingsProvider);
         setVal('setting-embeddings-base-url', s.embeddingsBaseUrl);
         setVal('setting-embeddings-api-key', s.embeddingsApiKey);
         setVal('setting-embeddings-model', s.embeddingsModel);
-        this.loadOpenCodeZenModels();
+
+        this.onProviderChange(s.provider || 'openrouter', true);
     }
 
-    async loadOpenCodeZenModels() {
-        const list = document.getElementById('opencode-zen-models');
-        if (!list || list.dataset.loaded === 'true') return;
-        try {
-            const response = await fetch('/api/opencode-zen/models');
-            if (!response.ok) return;
-            const payload = await response.json();
-            list.innerHTML = '';
-            (payload.data || []).forEach(model => {
-                const option = document.createElement('option');
-                option.value = String(model.id).replace(/["&<>]/g, '');
-                list.appendChild(option);
-            });
-            list.dataset.loaded = 'true';
-        } catch (error) {
-            console.warn('Kai: OpenCode Zen model catalog unavailable.', error);
+    onProviderChange(providerId, isInitial = false) {
+        if (!isInitial && providerId !== 'native') {
+            const parentWin = window.parent || window;
+            if (parentWin.destroyIrabBridge) {
+                parentWin.destroyIrabBridge();
+            }
+        }
+
+        const presets = window.PROVIDER_PRESETS || {};
+        const preset = presets[providerId] || presets.openrouter || {
+            name: providerId,
+            tagline: 'Custom provider',
+            baseUrl: '',
+            defaultModel: '',
+            requiresKey: true,
+            models: []
+        };
+
+        const descEl = document.getElementById('provider-description');
+        if (descEl) descEl.textContent = preset.tagline || preset.name;
+
+        const titleEl = document.getElementById('provider-config-title');
+        if (titleEl) titleEl.textContent = `${(preset.name || providerId).toUpperCase()} CONFIGURATION`;
+
+        // Update API Key field
+        const keyProp = `${providerId}Key`;
+        const camelCaseProvider = providerId.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+        const camelKeyProp = `${camelCaseProvider}Key`;
+        const isGoogleFamily = providerId === 'google-ai-studio' || providerId === 'gemini';
+        const keyVal = this.settings[keyProp] ||
+                       this.settings[camelKeyProp] ||
+                       (isGoogleFamily ? (this.settings.googleAiStudioKey || this.settings['google-ai-studioKey'] || this.settings.geminiKey) : '') ||
+                       (providerId === 'openrouter' ? this.settings.openrouterKey : '') || '';
+        const keyInput = document.getElementById('setting-api-key');
+        if (keyInput) {
+            keyInput.value = keyVal;
+            keyInput.placeholder = preset.keyPlaceholder || 'Enter API key...';
+        }
+
+        const keyRow = document.getElementById('row-api-key');
+        if (keyRow) {
+            keyRow.style.display = providerId === 'native' ? 'none' : 'flex';
+        }
+
+        // Update Base URL field
+        const baseProp = `${providerId}BaseUrl`;
+        const camelBaseProp = `${camelCaseProvider}BaseUrl`;
+        const baseVal = this.settings[baseProp] ||
+                        this.settings[camelBaseProp] ||
+                        (isGoogleFamily ? (this.settings.googleAiStudioBaseUrl || this.settings['google-ai-studioBaseUrl'] || this.settings.geminiBaseUrl) : '') ||
+                        preset.baseUrl || '';
+        const baseInput = document.getElementById('setting-base-url');
+        if (baseInput) {
+            baseInput.value = baseVal;
+            baseInput.placeholder = preset.baseUrl || 'https://...';
+        }
+
+        const baseRow = document.getElementById('row-base-url');
+        if (baseRow) {
+            baseRow.style.display = providerId === 'native' ? 'none' : 'flex';
+        }
+
+        // Update Model ID field
+        const modelProp = `${providerId}Model`;
+        const camelModelProp = `${camelCaseProvider}Model`;
+        const modelVal = this.settings[modelProp] ||
+                         this.settings[camelModelProp] ||
+                         (isGoogleFamily ? (this.settings.googleAiStudioModel || this.settings['google-ai-studioModel'] || this.settings.geminiModel) : '') ||
+                         preset.defaultModel || '';
+        const modelInput = document.getElementById('setting-model-id');
+        if (modelInput) {
+            modelInput.value = modelVal;
+            modelInput.placeholder = preset.defaultModel || 'Enter model ID...';
+        }
+
+        // Populate presets select and datalist
+        const selectPreset = document.getElementById('setting-quick-model');
+        const datalist = document.getElementById('ai-models-datalist');
+        if (selectPreset) selectPreset.innerHTML = '<option value="">-- Quick Select Preset --</option>';
+        if (datalist) datalist.innerHTML = '';
+
+        (preset.models || []).forEach(m => {
+            if (selectPreset) {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.name}${m.tag ? ' [' + m.tag + ']' : ''}`;
+                selectPreset.appendChild(opt);
+            }
+            if (datalist) {
+                const dOpt = document.createElement('option');
+                dOpt.value = m.id;
+                datalist.appendChild(dOpt);
+            }
+        });
+
+        // Hide test status on provider change
+        const statusEl = document.getElementById('connection-test-status');
+        if (statusEl) statusEl.style.display = 'none';
+
+        if (!isInitial) {
+            this.settings.provider = providerId;
+            this.saveSettings();
+            window.AIChatUI?.updateChatMeta();
         }
     }
 
-    async loadOpenRouterModels() {
-        const list = document.getElementById('openrouter-models');
-        if (!list) return;
+    selectPresetModel(modelId) {
+        if (!modelId) return;
+        const input = document.getElementById('setting-model-id');
+        if (input) {
+            input.value = modelId;
+            const provider = document.getElementById('setting-provider')?.value || this.settings.provider;
+            this.settings[`${provider}Model`] = modelId;
+            this.saveSettings();
+        }
+    }
+
+    toggleKeyVisibility() {
+        const input = document.getElementById('setting-api-key');
+        const btn = document.getElementById('btn-toggle-key');
+        if (!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (btn) btn.textContent = 'HIDE';
+        } else {
+            input.type = 'password';
+            if (btn) btn.textContent = 'SHOW';
+        }
+    }
+
+    async refreshModelCatalog() {
+        const provider = document.getElementById('setting-provider')?.value || this.settings.provider || 'openrouter';
+        const apiKey = document.getElementById('setting-api-key')?.value || '';
+        const baseUrl = document.getElementById('setting-base-url')?.value || '';
+
+        const statusEl = document.getElementById('connection-test-status');
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#222';
+            statusEl.style.color = '#ffcc00';
+            statusEl.textContent = '>> Fetching model catalog...';
+        }
+
         try {
-            const { OpenRouterAdapter } = await import('../openrouter-adapter.js');
-            const adapter = new OpenRouterAdapter();
+            const { MultiProviderAdapter } = await import('../openrouter-adapter.js');
+            const adapter = new MultiProviderAdapter({ provider, apiKey, baseUrl });
             const models = await adapter.listModels();
-            list.innerHTML = '';
+
+            const datalist = document.getElementById('ai-models-datalist');
+            const selectPreset = document.getElementById('setting-quick-model');
+            if (datalist) datalist.innerHTML = '';
+            if (selectPreset) selectPreset.innerHTML = '<option value="">-- Quick Select Preset --</option>';
+
             models.forEach(m => {
-                const option = document.createElement('option');
-                option.value = String(m.id).replace(/["&<>]/g, '');
-                list.appendChild(option);
+                if (datalist) {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    datalist.appendChild(opt);
+                }
+                if (selectPreset) {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.name || m.id}${m.tag ? ' [' + m.tag + ']' : ''}`;
+                    selectPreset.appendChild(opt);
+                }
             });
-            window.KAI?.showBalloon?.('OpenRouter model list loaded.');
-        } catch (error) {
-            console.warn('Kai: OpenRouter model catalog unavailable.', error);
-            window.KAI?.showBalloon?.('OpenRouter: check API key to load models.');
+
+            if (statusEl) {
+                statusEl.style.background = '#0a3311';
+                statusEl.style.color = '#44ff44';
+                statusEl.textContent = `✓ Loaded ${models.length} models for ${provider.toUpperCase()}`;
+            }
+            window.KAI?.showBalloon?.(`Loaded ${models.length} models for ${provider}.`);
+        } catch (err) {
+            if (statusEl) {
+                statusEl.style.background = '#331111';
+                statusEl.style.color = '#ff4444';
+                statusEl.textContent = `✗ Failed to fetch models: ${err?.message || err}`;
+            }
+        }
+    }
+
+    async testCurrentConnection() {
+        const provider = document.getElementById('setting-provider')?.value || this.settings.provider || 'openrouter';
+        const apiKey = document.getElementById('setting-api-key')?.value || '';
+        const baseUrl = document.getElementById('setting-base-url')?.value || '';
+        const model = document.getElementById('setting-model-id')?.value || '';
+
+        const statusEl = document.getElementById('connection-test-status');
+        if (statusEl) {
+            statusEl.style.display = 'block';
+            statusEl.style.background = '#222';
+            statusEl.style.color = '#ffcc00';
+            statusEl.textContent = `>> Testing connection to ${provider.toUpperCase()} (${model || 'default'})...`;
+        }
+
+        try {
+            const { MultiProviderAdapter } = await import('../openrouter-adapter.js');
+            const adapter = new MultiProviderAdapter({ provider, apiKey, baseUrl, model });
+            const probe = await adapter.testConnection();
+
+            if (statusEl) {
+                statusEl.style.background = '#0a3311';
+                statusEl.style.color = '#44ff44';
+                statusEl.textContent = `✓ Success! Connected in ${probe.latencyMs}ms. Model: ${probe.model}`;
+            }
+            window.KAI?.showBalloon?.(`✓ ${provider} connected in ${probe.latencyMs}ms.`);
+        } catch (err) {
+            if (statusEl) {
+                statusEl.style.background = '#331111';
+                statusEl.style.color = '#ff4444';
+                statusEl.textContent = `✗ Connection failed: ${err?.message || err}`;
+            }
+            window.KAI?.showBalloon?.(`✗ ${provider} connection failed: ${err?.message || err}`);
         }
     }
 
@@ -1340,6 +2138,14 @@ class KaiSettingsController {
     }
 
     toggle() {
+        if (window.AIChatUI) {
+            if (window.AIChatUI.currentWorkspace === 'config') {
+                window.AIChatUI.switchWorkspace(window.AIChatUI.previousWorkspace || 'chat');
+            } else {
+                window.AIChatUI.switchWorkspace('config');
+            }
+            return;
+        }
         const panel = document.getElementById('xp-settings');
         if (panel) {
             const isShowing = panel.classList.toggle('show');
@@ -1357,9 +2163,15 @@ class KaiSettingsController {
             return el.type === 'checkbox' ? el.checked : el.value;
         };
 
+        const activeProvider = getVal('setting-provider') || this.settings.provider || 'openrouter';
+        const apiKey = getVal('setting-api-key') || '';
+        const baseUrl = getVal('setting-base-url') || '';
+        const modelId = getVal('setting-model-id') || '';
+
         this.settings = {
+            ...this.settings,
             aiEnabled: getVal('setting-ai-enabled'),
-            provider: getVal('setting-provider'),
+            provider: activeProvider,
             temp: parseFloat(getVal('setting-temp')),
             topP: parseFloat(getVal('setting-top-p')),
             maxTokens: parseInt(getVal('setting-max-tokens')),
@@ -1371,17 +2183,33 @@ class KaiSettingsController {
             soundsEnabled: getVal('setting-sounds'),
             glowEnabled: getVal('setting-glow'),
             fontSize: getVal('setting-font-size') || 'medium',
-            openCodeZenKey: getVal('setting-opencode-zen-key') || '',
-            openCodeZenModel: getVal('setting-opencode-zen-model') || 'kimi-k2.5',
-            cerebrasKey: getVal('setting-cerebras-key') || '',
-            cerebrasModel: getVal('setting-cerebras-model') || 'llama3.1-8b',
-            openrouterKey: getVal('setting-openrouter-key') || '',
-            openrouterModel: getVal('setting-openrouter-model') || 'openai/gpt-4o-mini',
             embeddingsProvider: getVal('setting-embeddings-provider') || 'local',
             embeddingsBaseUrl: getVal('setting-embeddings-base-url') || 'https://api.openai.com/v1',
             embeddingsApiKey: getVal('setting-embeddings-api-key') || '',
-            embeddingsModel: getVal('setting-embeddings-model') || 'text-embedding-3-small'
+            embeddingsModel: getVal('setting-embeddings-model') || 'text-embedding-3-small',
+            // Store provider-specific config
+            [`${activeProvider}Key`]: apiKey,
+            [`${activeProvider}BaseUrl`]: baseUrl,
+            [`${activeProvider}Model`]: modelId,
         };
+
+        if (activeProvider === 'openrouter') {
+            this.settings.openrouterKey = apiKey;
+            this.settings.openrouterModel = modelId;
+            this.settings.openrouterBaseUrl = baseUrl;
+        }
+
+        if (activeProvider === 'google-ai-studio' || activeProvider === 'gemini') {
+            this.settings.googleAiStudioKey = apiKey;
+            this.settings['google-ai-studioKey'] = apiKey;
+            this.settings.geminiKey = apiKey;
+            this.settings.googleAiStudioModel = modelId;
+            this.settings['google-ai-studioModel'] = modelId;
+            this.settings.geminiModel = modelId;
+            this.settings.googleAiStudioBaseUrl = baseUrl;
+            this.settings['google-ai-studioBaseUrl'] = baseUrl;
+            this.settings.geminiBaseUrl = baseUrl;
+        }
 
         this.saveSettings();
         // Persist AI on/off from settings checkbox (Easy/Full chosen via mode dialog/toggle)
@@ -1508,10 +2336,13 @@ window.setKaiMode = async (mode) => {
 
     let ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
     if (isAIModeOn(mode)) {
-        // Ensure the native Cortex bridge is running
+        // Local AI is not forced: only ensure native bridge if native provider is explicitly configured
         const parentWin = window.parent || window;
-        if (parentWin.ensureIrabBridge) {
+        const currentProvider = window.AISettings?.settings?.provider || 'openrouter';
+        if (currentProvider === 'native' && parentWin.ensureIrabBridge) {
             parentWin.ensureIrabBridge();
+        } else if (parentWin.destroyIrabBridge) {
+            parentWin.destroyIrabBridge();
         }
 
         const { RedglitchAI } = await import('../redglitch-ai.js');

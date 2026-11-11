@@ -40,11 +40,8 @@ watcher = None
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Booting up Cortex...")
-    load_task = asyncio.create_task(load_brain_task())
-    load_task.add_done_callback(
-        lambda t: logger.error(f"load_brain_task failed: {t.exception()}")
-        if t.exception() else None
-    )
+    # Do NOT eagerly load heavy brain/watcher on startup — keep DORMANT until requested
+    # to avoid freezing the host system.
     asyncio.create_task(heartbeat_loop())
     yield
     # Shutdown
@@ -118,10 +115,9 @@ async def set_ai_config(request: Request):
             except Exception:
                 existing = {}
         # Never persist an empty/placeholder key; keep prior value if blank.
-        if payload.get("cerebrasKey"):
-            existing["cerebrasKey"] = payload["cerebrasKey"]
-        if payload.get("provider"):
-            existing["provider"] = payload["provider"]
+        for key in ["openrouterKey", "openaiKey", "anthropicKey", "geminiKey", "googleAiStudioKey", "google-ai-studioKey", "groqKey", "deepseekKey", "mistralKey", "providerKey", "provider", "model"]:
+            if payload.get(key):
+                existing[key] = payload[key]
         with open(config_path, "w", encoding="utf-8") as fh:
             json.dump(existing, fh, indent=2)
         return {"success": True}
@@ -249,6 +245,30 @@ async def reindex_rag():
     except Exception as e:
         return {"error": str(e)}
 
+load_brain_lock = asyncio.Lock()
+
+async def ensure_brain_loaded():
+    if brain.status in ["READY", "LOADING"]:
+        while brain.status == "LOADING":
+            await asyncio.sleep(0.5)
+        return
+    async with load_brain_lock:
+        if brain.status in ["READY", "LOADING"]:
+            while brain.status == "LOADING":
+                await asyncio.sleep(0.5)
+            return
+        logger.info("On-demand model load triggered...")
+        await load_brain_task()
+
+@app.post("/api/ai/load")
+async def trigger_model_load():
+    if brain.status == "READY":
+        return {"status": "READY", "message": "Model is already loaded."}
+    if brain.status == "LOADING":
+        return {"status": "LOADING", "message": "Model is currently loading."}
+    asyncio.create_task(load_brain_task())
+    return {"status": "LOADING", "message": "Model load started on demand."}
+
 async def load_brain_task():
     global watcher
     
@@ -260,13 +280,8 @@ async def load_brain_task():
     # Start watcher/RAG in background
     loop = asyncio.get_event_loop()
     
-    # Initialize watcher with the correct loop. Skippable via IRAB_DISABLE_WATCHER
-    # for headless callers (e.g. projectvertex) that don't need codebase RAG
-    # awareness — the watcher's synchronous per-file RAG reindexing runs in a
-    # thread but still contends heavily for CPU/GIL with model generation,
-    # which was observed to turn ~30s generations into 10+ minute hangs right
-    # after a large file-tree copy (e.g. scaffolding a new project).
-    if os.getenv("IRAB_DISABLE_WATCHER") == "1":
+    # Initialize watcher with the correct loop. Default to disabled to avoid CPU hogging.
+    if os.getenv("IRAB_DISABLE_WATCHER", "1") == "1":
         logger.info("IRAB_DISABLE_WATCHER=1: skipping file watcher/RAG indexing.")
     else:
         if watcher is None:
@@ -396,6 +411,8 @@ async def chat_fallback(data: dict):
             except Exception as e:
                 logger.error(f"Grammar build failed, falling back to unconstrained: {e}")
                 grammar = None
+
+        await ensure_brain_loaded()
 
         # Use brain to generate response (non-streaming). Run the blocking
         # generator in a worker thread so the event loop isn't frozen.
@@ -604,6 +621,8 @@ async def handle_prompt(message, websocket):
         
         in_tool_block = False
         tool_buffer = ""
+
+        await ensure_brain_loaded()
 
         # Generation Loop - Use brain.generate_stream to get proper chat template wrapping
         # We pass context options to brain if needed

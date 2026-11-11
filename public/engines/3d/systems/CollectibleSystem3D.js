@@ -125,7 +125,7 @@ export default class CollectibleSystem3D {
      */
     spawn(type, x, y, z, opts = {}) {
         const def  = COLLECTIBLE_DEFS[type] ?? COLLECTIBLE_DEFS.coin;
-        const id   = opts.id ?? `c_${this._nextId++}`;
+        const id   = opts.id ?? `c_${this._nextId++}_${Math.random().toString(36).slice(2,6)}`;
 
         const mesh = this._makeMesh(type, def, opts.paletteIdx);
         mesh.position.set(x, y, z);
@@ -217,8 +217,10 @@ export default class CollectibleSystem3D {
      */
     spawnFromLevelData(entities) {
         for (const ent of entities) {
-            const [x, y, z] = ent.position ?? [0, 0, 0];
-            const p = ent.properties ?? {};
+            const x = Array.isArray(ent.position) ? ent.position[0] : (ent.position?.x ?? ent.x ?? ent.pos?.x ?? 0);
+            const y = Array.isArray(ent.position) ? ent.position[1] : (ent.position?.y ?? ent.y ?? ent.pos?.y ?? 0);
+            const z = Array.isArray(ent.position) ? ent.position[2] : (ent.position?.z ?? ent.z ?? ent.pos?.z ?? 0);
+            const p = ent.properties ?? ent.config ?? {};
 
             switch (ent.type) {
                 case 'coin':

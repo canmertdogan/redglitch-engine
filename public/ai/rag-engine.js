@@ -107,6 +107,7 @@ export class RAGEngine {
         this.epoch++;
         this.worker?.terminate();
         this.worker = null;
+        try { this.vectorStore?.dispose?.(); } catch {}
         for (const callback of this.callbacks.values()) callback.reject(new Error('AI features disabled.'));
         this.callbacks.clear();
         this.isLoaded = false;
@@ -166,7 +167,15 @@ export class RAGEngine {
     _embedViaWorker(texts) {
         return new Promise((resolve, reject) => {
             const requestId = 'embed-' + Date.now() + '-' + Math.random().toString(36).slice(2);
-            this.callbacks.set(requestId, { resolve, reject });
+            const timeoutMs = 60000;
+            const timer = setTimeout(() => {
+                this.callbacks.delete(requestId);
+                reject(new Error('Embedding timed out after 60s'));
+            }, timeoutMs);
+            this.callbacks.set(requestId, {
+                resolve: (v) => { clearTimeout(timer); resolve(v); },
+                reject: (e) => { clearTimeout(timer); reject(e); },
+            });
             this.worker.postMessage({ type: 'embed_batch', id: requestId, texts });
         });
     }

@@ -67,6 +67,12 @@ class PlatformerGame {
         window.addEventListener('keydown', e => this.handleKeyDown(e));
         window.addEventListener('keyup', e => this.handleKeyUp(e));
         window.addEventListener('resize', () => this.resize());
+        // Connect LogicSystem (compiled Algorithm Studio ASTs)
+        if (window.LogicSystem && window.LogicInterpreter) {
+            try { window.LogicSystem.ensure(this, { tick: true }); } catch (e) { console.warn('[Platformer] LogicSystem attach failed', e); }
+        } else {
+            console.warn('[Platformer] LogicSystem not loaded — algorithm scripts will not run');
+        }
         this.resize();
     }
 
@@ -551,6 +557,7 @@ class PlatformerGame {
         this.combat.update(dt);
         this._updateEntities(dt);
         this._handleInteractions();
+        if (this.logicSystem) { try { this.logicSystem.updateAll(dt); } catch (e) { console.error('LogicSystem Error:', e); } }
         this._checkCollectibles();
         this._checkCheckpoints();
         this._checkGoal();

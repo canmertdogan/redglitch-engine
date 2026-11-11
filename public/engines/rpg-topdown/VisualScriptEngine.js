@@ -5,12 +5,65 @@
  */
 
 export class VisualScriptEngine {
+    async loadGraph(name) {
+        const res = await fetch(`/api/logic/${name}`);
+        if (!res.ok) return null;
+        return await res.json();
+    }
+    async attachToEntity(entity, scriptName, events = ['start', 'tick']) {
+        const graph = await this.loadGraph(scriptName);
+        if (!graph) return false;
+        this.activeScripts.set(entity.id, { graph, entity, events });
+        entity.vslScript = scriptName;
+        if (events.includes('start')) await this.runGraph(graph, entity, 'start');
+        return true;
+    }
+    async trigger(entity, eventName) {
+        const sc = this.activeScripts.get(entity.id);
+        if (sc) await this.runGraph(sc.graph, sc.entity, eventName);
+    }
+
+    /**
+     * Per-frame update. Runs each attached script's `onUpdate` hook and, at a
+     * throttled rate, executes its `evt_tick` graph. Tick graphs are async
+     * (a `flow_wait` node can suspend one), so a script whose previous tick is
+     * still in flight is skipped rather than queued — that keeps long-running
+     * waits from piling up unbounded promises.
+     */
+    update(dt) {
+        const delta = Number.isFinite(dt) && dt > 0 ? Math.min(dt, 0.25) : 0;
+        for (const sc of this.activeScripts.values()) {
+            if (!sc) continue;
+            try { if (sc.onUpdate) sc.onUpdate(delta); } catch (e) { /* one bad script must not stop the others */ }
+        }
+        this._tickAccum += delta;
+        if (this._tickAccum < this.tickInterval) return;
+        this._tickAccum = 0;
+        if (this._tickInFlight) return;
+        this._tickInFlight = true;
+        const pending = [];
+        for (const sc of this.activeScripts.values()) {
+            if (!sc || !sc.graph || !sc.entity) continue;
+            if (sc.tickInFlight) continue;
+            if (Array.isArray(sc.events) && !sc.events.includes('tick')) continue;
+            sc.tickInFlight = true;
+            pending.push(
+                this.runGraph(sc.graph, sc.entity, 'tick')
+                    .catch(() => {})
+                    .finally(() => { sc.tickInFlight = false; })
+            );
+        }
+        Promise.allSettled(pending).finally(() => { this._tickInFlight = false; });
+    }
     constructor(gameContext) {
         this.game = gameContext;
         this.activeScripts = new Map();
         this.nodeRegistry = this.buildNodeRegistry();
         this.MAX_RECURSION_DEPTH = 100;
         this.MAX_LOOP_ITER = 10000;
+        this.tickInterval = 1 / 30;
+        this._tickAccum = 0;
+        this._tickInFlight = false;
     }
 
     buildNodeRegistry() {

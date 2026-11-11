@@ -389,7 +389,7 @@ async function saveGif() {
             const base64data = reader.result;
             
             try {
-                const res = await fetch('/api/background/upload', {
+                const res = await fetch('/api/assets/background/upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image: base64data })

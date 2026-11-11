@@ -277,6 +277,11 @@ export default class FPSCamera {
      * @param {number} dt  Delta time in seconds.
      */
     update(dt) {
+        // FINDING-CAMERA: a single NaN/negative delta used to poison yaw/pitch and
+        // every lerp downstream. Clamp before any math runs.
+        if (!Number.isFinite(dt) || dt < 0) dt = 0;
+        dt = Math.min(dt, 0.05);
+
         this._applyMouseLook(dt);
         this._updateBob(dt);
         this._updateRecoil(dt);
@@ -293,9 +298,13 @@ export default class FPSCamera {
 
     _applyMouseLook() {
         if (!this._isLocked) return;
-        this._yaw   -= this._mouseDX * this._sensitivity;
-        this._pitch -= this._mouseDY * this._sensitivity;
+        const dx = Number.isFinite(this._mouseDX) ? this._mouseDX : 0;
+        const dy = Number.isFinite(this._mouseDY) ? this._mouseDY : 0;
+        this._yaw   -= dx * this._sensitivity;
+        this._pitch -= dy * this._sensitivity;
         this._pitch  = THREE.MathUtils.clamp(this._pitch, this._pitchMin, this._pitchMax);
+        if (!Number.isFinite(this._yaw))   this._yaw = 0;
+        if (!Number.isFinite(this._pitch)) this._pitch = 0;
     }
 
     _updateBob(dt) {
@@ -409,15 +418,16 @@ export default class FPSCamera {
     /** @param {{ yaw:number, pitch:number, pos:{x,y,z} }} data */
     deserialize(data) {
         if (!data) return;
-        if (data.yaw   !== undefined) this._yaw   = data.yaw;
-        if (data.pitch !== undefined) this._pitch = data.pitch;
-        if (data.pos)                 this._pivotPos.set(data.pos.x, data.pos.y, data.pos.z);
+        if (data.yaw   !== undefined && Number.isFinite(data.yaw)) this._yaw   = data.yaw;
+        if (data.pitch !== undefined && Number.isFinite(data.pitch)) this._pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, data.pitch));
+        if (data.pos && [data.pos.x, data.pos.y, data.pos.z].every(Number.isFinite)) this._pivotPos.set(data.pos.x, data.pos.y, data.pos.z);
     }
 
     /** Resize: update camera aspect ratio. */
     onResize(w, h) {
         const cam = this._cam3d?.camera;
         if (!cam) return;
+        if (!Number.isFinite(w) || !Number.isFinite(h) || h <= 0 || w <= 0) return;
         cam.aspect = w / h;
         cam.updateProjectionMatrix();
     }

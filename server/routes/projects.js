@@ -6,6 +6,15 @@ const { spawn } = require('child_process');
 const safeFs = require('../utils/safeFs');
 
 const PROJECTS_ROOT = path.join(__dirname, '..', '..', 'projects');
+const createLocks = new Map(); // per-project mutex for atomic create (F-18)
+async function withCreateLock(name, fn) {
+  const prev = createLocks.get(name) || Promise.resolve();
+  let release;
+  const gate = new Promise(r => release = r);
+  createLocks.set(name, prev.then(() => gate));
+  await prev;
+  try { return await fn(); } finally { release(); if (createLocks.get(name) === prev.then(()=>gate)) createLocks.delete(name); }
+}
 const TEMPLATES_ROOT = path.join(__dirname, '..', '..', 'templates');
 
 const VALID_ENGINE_TYPES = new Set([
@@ -203,6 +212,7 @@ async function createProject({
         return { error: { status: 400, body: { error: 'Invalid project name' } } };
     }
 
+    return withCreateLock(safeName, async () => {
     const projectPath = path.join(PROJECTS_ROOT, safeName);
     if (await pathExists(projectPath)) {
         return { error: { status: 400, body: { error: 'Project already exists' } } };
@@ -230,11 +240,12 @@ async function createProject({
         return { success: true, name: safeName, path: projectPath };
     }
 
-    await fs.mkdir(projectPath, { recursive: true });
+    try { await fs.mkdir(projectPath); } catch (e) { if (e.code === 'EEXIST') return { error: { status: 400, body: { error: 'Project already exists' } } }; throw e; }
     await writeProjectConfig(projectPath, projectConfig);
     await copyGameFromPublic(projectPath);
     await ensureProjectDataDirs(projectPath);
     return { success: true, name: safeName, path: projectPath };
+    });
 }
 
 // Initialize roots
@@ -243,7 +254,7 @@ ensureDir(TEMPLATES_ROOT);
 // GET /api/templates - List all available templates
 router.get('/templates', async (req, res) => {
     try {
-        await ensureDir(TEMPLATES_ROOT);
+        await ensureDir(TEMPLATES_ROOT).catch(()=>{});
         const entries = await fs.readdir(TEMPLATES_ROOT, { withFileTypes: true });
         const templates = [];
         
@@ -286,7 +297,7 @@ router.get('/projects', async (req, res) => {
             try {
                 const configData = await fs.readFile(configPath, 'utf8');
                 const config = JSON.parse(configData);
-                meta = { ...meta, ...config };
+                const _c = { ...config }; for (const k of ['__proto__','constructor','prototype']) delete _c[k]; meta = { ...meta, ..._c };
             } catch(err) {
                 // No config or error reading it
             }
@@ -580,7 +591,8 @@ router.get('/project/:name/state', async (req, res) => {
     const statePath = path.join(projectPath, 'data', 'project_state.json');
     try {
         const data = await fs.readFile(statePath, 'utf8');
-        res.json(JSON.parse(data));
+        let parsed; try { parsed = JSON.parse(data); } catch { return res.status(500).json({ error: 'Project state corrupted' }); }
+        res.json(parsed);
     } catch (err) {
         // Return empty state if not found
         res.json({ state: {}, metadata: { created: Date.now(), version: 0 } });

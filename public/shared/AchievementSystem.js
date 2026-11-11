@@ -52,7 +52,14 @@ window.AchievementSystem = class AchievementSystem {
         } catch (e) {
             console.warn("Backend achievements load failed, using local if available");
             const prog = localStorage.getItem('redglitch_achievements_progress');
-            if (prog) this.unlocked = JSON.parse(prog);
+            if (prog) {
+                try {
+                    const parsed = JSON.parse(prog);
+                    if (Array.isArray(parsed)) this.unlocked = parsed;
+                } catch (parseErr) {
+                    console.warn('[AchievementSystem] Corrupt local progress, ignoring:', parseErr);
+                }
+            }
         }
     }
 

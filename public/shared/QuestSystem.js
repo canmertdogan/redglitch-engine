@@ -15,7 +15,7 @@ window.QuestSystem = class QuestSystem {
             const res = await fetch('/dunyalar/definitions/quests.json');
             if (res.ok) {
                 const quests = await res.json();
-                quests.forEach(q => this.definitions[q.id] = q);
+                quests.forEach(q => this.definitions[q.id] = this.normalizeQuest(q));
             }
         } catch (e) { console.warn("Quest definitions load failed", e); }
 
@@ -33,6 +33,21 @@ window.QuestSystem = class QuestSystem {
             completed: this.completed,
             failed: this.failed
         };
+    }
+
+    normalizeQuest(q) {
+        if (!q) return q;
+        // Accept editor format {objectives:[{count}]} as alias for runtime {stages:[{amount}]}
+        if (!q.stages && Array.isArray(q.objectives)) {
+            q.stages = q.objectives.map(o => ({
+                ...o,
+                amount: o.amount ?? o.count ?? 1,
+            }));
+        }
+        if (!q.stages && Array.isArray(q.steps)) {
+            q.stages = q.steps.map(o => ({ ...o, amount: o.amount ?? o.count ?? 1 }));
+        }
+        return q;
     }
 
     // --- CORE API ---

@@ -1631,7 +1631,7 @@ window.adjustZoom = (d) => { window.editor.transform.scale = Math.max(0.2, Math.
 window.resetZoom = () => { window.editor.transform.scale = 1; window.editor.transform.x = 0; window.editor.transform.y = 0; window.editor.updateTransform(); };
 window.autoArrange = () => window.editor.autoLayout();
 window.toggleMapMode = () => { const bg = document.getElementById('map-background'); bg.style.display = bg.style.display === 'none' ? 'block' : 'none'; };
-window.runCampaign = () => { window.editor.save().then(() => window.open('index.html', '_blank')); };
+window.runCampaign = () => { window.editor.save().then(() => window.open('index.html', '_blank')).catch(e => { console.error('[Campaign] Save before run failed:', e); alert('Kampanya kaydedilemedi: ' + (e.message || e)); }); };
 window.undo = () => window.editor.undo();
 window.redo = () => window.editor.redo();
 window.copyNode = () => window.editor.copy();

@@ -29,6 +29,12 @@ if (typeof window.IrabBridge === 'undefined') {
 
         async connect() {
             if (this._destroyed || this._connecting || this.isConnected) return;
+            // Never connect if native provider is not actively selected
+            if (!isNativeProviderActive()) {
+                this._connecting = false;
+                this.isConnected = false;
+                return;
+            }
             this._connecting = true;
 
             console.log("[IrabBridge] Connecting to Native Cortex...");
@@ -97,11 +103,13 @@ if (typeof window.IrabBridge === 'undefined') {
         }
 
         _scheduleReconnect(delay = this._retryDelay) {
-            if (this._destroyed) return;
+            if (this._destroyed || !isNativeProviderActive()) return;
             if (this._retryTimer) clearTimeout(this._retryTimer);
             this._retryTimer = setTimeout(() => {
                 this._retryTimer = null;
-                this.connect();
+                if (!this._destroyed && isNativeProviderActive()) {
+                    this.connect();
+                }
             }, delay);
             this._retryDelay = Math.min(this._retryDelay * 2, this._maxRetryDelay);
         }
@@ -193,10 +201,19 @@ if (typeof window.IrabBridge === 'undefined') {
 
     window.IrabBridge = IrabBridge;
 
-    // Only auto-connect the native Cortex bridge when AI mode is enabled
-    if (isKaiModeEnabled()) {
-        window.irab = new IrabBridge();
-    }
+    // Do NOT auto-connect Native Cortex on load. Local AI is strictly on-demand
+    // to prevent CPU/memory freezing on user machines.
+}
+
+function isNativeProviderActive() {
+    try {
+        const raw = localStorage.getItem('kai_settings');
+        if (raw) {
+            const s = JSON.parse(raw);
+            return s.provider === 'native';
+        }
+    } catch (_) {}
+    return false;
 }
 
 function isKaiModeEnabled() {
@@ -204,7 +221,12 @@ function isKaiModeEnabled() {
     return v === 'true';
 }
 
-window.ensureIrabBridge = function ensureIrabBridge() {
+window.ensureIrabBridge = function ensureIrabBridge(options = {}) {
+    // Local AI must not be forced. Only connect or start Cortex if explicitly
+    // configured as the active provider, or explicitly forced.
+    if (!isNativeProviderActive() && !options.force) {
+        return null;
+    }
     if (window.electronAPI && window.electronAPI.cortexStart) {
         window.electronAPI.cortexStart().catch(console.error);
     }

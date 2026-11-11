@@ -4,6 +4,16 @@
  */
 
 class AbilityDefinitions {
+    static async load() {
+        try {
+            const r = await fetch('/api/skills');
+            if (!r.ok) return false;
+            const list = await r.json();
+            const arr = Array.isArray(list) ? list : Object.values(list||{});
+            for (const ab of arr) { if (ab && (ab.id||ab.name)) this.abilities[ab.id||ab.name] = { ...this.abilities[ab.id||ab.name], ...ab }; }
+            return true;
+        } catch { return false; }
+    }
     static abilities = {
         // === PROJECTILE ABILITIES ===
         'fireball': {

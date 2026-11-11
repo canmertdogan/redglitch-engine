@@ -14,13 +14,15 @@ test('safeWriteFullPath writes data and keeps a .bak of previous content', async
     // First write: no prior file, so no .bak is expected.
     await safeWriteFullPath(root, target, 'v1');
     assert.strictEqual(fs.readFileSync(target, 'utf8'), 'v1');
-    assert.ok(!fs.existsSync(target + '.bak'), 'no .bak before first overwrite');
+    const dirEntries = () => fs.readdirSync(path.dirname(target));
+    assert.ok(!dirEntries().some(f => f.endsWith('.bak')), 'no .bak before first overwrite');
 
     // Overwrite — target updates, .bak keeps the prior version (v1).
     await safeWriteFullPath(root, target, 'v2');
     assert.strictEqual(fs.readFileSync(target, 'utf8'), 'v2');
-    assert.ok(fs.existsSync(target + '.bak'), '.bak exists after overwrite');
-    assert.strictEqual(fs.readFileSync(target + '.bak', 'utf8'), 'v1', 'bak holds previous content');
+    const bakFile = dirEntries().find(f => f.endsWith('.bak'));
+    assert.ok(bakFile, '.bak exists after overwrite');
+    assert.strictEqual(fs.readFileSync(path.join(path.dirname(target), bakFile), 'utf8'), 'v1', 'bak holds previous content');
 
     // A crash/interrupted write must not leave a half-written target or temp file.
     const tmpExists = fs.readdirSync(path.dirname(target)).some(f => f.startsWith(path.basename(target) + '.tmp.'));

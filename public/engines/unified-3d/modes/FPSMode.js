@@ -319,12 +319,85 @@ export default class FPSMode extends ModeInterface {
         if (this.fpsController) {
             this._configureTerrainGrounding();
             await this.fpsController.init(runtimeLevel.playerSpawn);
+
+            // Hydrate player controller presets from 3D Studio Player Studio if defined
+            if (runtimeLevel.player?.health) {
+                this._health = Number(runtimeLevel.player.health);
+                this._maxHealth = Number(runtimeLevel.player.health);
+            }
+            if (runtimeLevel.player?.speed) {
+                this.fpsController._walkSpeed = Number(runtimeLevel.player.speed);
+            }
+            if (runtimeLevel.player?.jump) {
+                this.fpsController._jumpSpeed = Number(runtimeLevel.player.jump);
+            }
         }
 
         // Load enemies and cover points
         if (this.enemyAI) {
             await this.enemyAI.loadFromLevel(runtimeLevel, this.game?.currentProject ?? '');
             this._initialEnemyCount = this._countLivingEnemies();
+        }
+
+        // Weapon and ammo pickup hydration
+        if (this.weaponSystem) {
+            const startWeapon = runtimeLevel.player?.weapon || runtimeLevel.player?.startingWeapon;
+            if (startWeapon && this.weaponSystem._defs?.has(startWeapon)) {
+                await this.weaponSystem.equip(startWeapon);
+            }
+
+            if (Array.isArray(runtimeLevel.entities)) {
+                for (const ent of runtimeLevel.entities) {
+                    const etype = (ent.type || '').toLowerCase();
+                    if (etype === 'pickup-ammo' || etype === 'ammo' || etype === 'weapon' || (etype === 'pickup' && ent.properties?.kind === 'ammo')) {
+                        const pos = ent.position || [0, 0, 0];
+                        const weaponId = ent.properties?.weaponId || ent.properties?.weapon || 'rifle';
+                        const amount = Number(ent.properties?.amount || 30);
+                        const THREE = this.game?.THREE || window.THREE;
+                        if (THREE) {
+                            const geo = new THREE.BoxGeometry(0.4, 0.25, 0.4);
+                            const mat = new THREE.MeshLambertMaterial({ color: 0xe67e22, flatShading: true });
+                            const mesh = new THREE.Mesh(geo, mat);
+                            mesh.position.set(pos[0] ?? 0, (pos[1] ?? 0) + 0.15, pos[2] ?? 0);
+                            this.weaponSystem.addPickup(mesh, weaponId, amount);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Hazards
+        this._hazards = [];
+        const hazardTypes = new Set(['hazard', 'spike', 'lava', 'saw']);
+        if (Array.isArray(runtimeLevel.entities)) {
+            for (const ent of runtimeLevel.entities) {
+                if (hazardTypes.has(ent.type)) {
+                    const pos = ent.position || [0, 0, 0];
+                    this._hazards.push({
+                        id: ent.id,
+                        x: pos[0] ?? 0,
+                        y: pos[1] ?? 0,
+                        z: pos[2] ?? 0,
+                        radius: Number(ent.properties?.radius || 1.5),
+                        damage: Number(ent.properties?.damage || 10),
+                    });
+                }
+            }
+        }
+        if (Array.isArray(runtimeLevel.geometry)) {
+            for (const geo of runtimeLevel.geometry) {
+                if (hazardTypes.has(geo.type)) {
+                    const pos = geo.position || [0, 0, 0];
+                    this._hazards.push({
+                        id: geo.id,
+                        x: pos[0] ?? 0,
+                        y: pos[1] ?? 0,
+                        z: pos[2] ?? 0,
+                        radius: Math.max(geo.width || 1, geo.depth || 1) * 0.5,
+                        damage: 10,
+                    });
+                }
+            }
         }
 
         this.vehicles?.load(runtimeLevel);
@@ -436,6 +509,28 @@ export default class FPSMode extends ModeInterface {
         // Player controller
         this.fpsController?.update(dt);
         this._recoverControllerFromTerrainVoid();
+
+        // Hazard damage check
+        if (this._hazards?.length && this.fpsController) {
+            this._hazardCooldown = (this._hazardCooldown || 0) - dt;
+            if (this._hazardCooldown <= 0) {
+                const pp = this.fpsController.getPosition?.();
+                if (pp) {
+                    for (const haz of this._hazards) {
+                        const dx = pp.x - haz.x;
+                        const dy = Math.abs(pp.y - haz.y);
+                        const dz = pp.z - haz.z;
+                        if ((dx * dx + dz * dz) < (haz.radius * haz.radius) && dy < 1.8) {
+                            this._health = Math.max(0, this._health - haz.damage);
+                            this.hud?.updateHealth(this._health / (this._maxHealth || 100));
+                            this.hud?.flashDamage(null, pp, this.fpsCamera?._yaw ?? 0);
+                            this._hazardCooldown = 0.8;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         // AI tick
         this.enemyAI?.update(dt);

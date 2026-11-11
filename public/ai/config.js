@@ -48,7 +48,7 @@ export const AI_CONFIG = {
 
     // Feature flags
     features: {
-        enableWebGPU: true,
+        enableWebGPU: false,
         enableToolUse: true,
         enableGhostText: true,
         enableProactiveHelp: true,

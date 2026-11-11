@@ -12,6 +12,14 @@ const VALID_TARGETS = new Set(['electron', 'web', 'ios', 'android', 'windows', '
 
 // GET /api/build/stream?target=win&project=... — SSE live log stream
 router.get('/stream', async (req, res) => {
+    // FINDING-01: SSE is a state-changing GET — enforce loopback Host + Origin like stateMutationGuard.
+    const rawHost = req.headers.host || '';
+    const host = rawHost.startsWith('[') ? rawHost.split(']')[0] + ']' : rawHost.split(':')[0];
+    if (host && !['localhost','127.0.0.1','[::1]'].includes(host)) return res.status(403).end('Forbidden');
+    const origin = req.headers.origin || req.headers.referer || '';
+    if (origin && origin !== 'null') {
+        try { const u = new URL(origin); if (!['localhost','127.0.0.1','[::1]'].includes(u.hostname)) return res.status(403).end('Forbidden'); } catch { return res.status(403).end('Forbidden'); }
+    }
     const target = req.query.target || 'electron';
     const projectName = req.query.project || 'Default Project';
 
@@ -55,23 +63,29 @@ router.get('/stream', async (req, res) => {
                 env: process.env
             });
 
+            // FINDING-11: cap build duration so a hung child cannot orphan forever.
+            const killTimer = setTimeout(() => {
+                if (!child.killed) {
+                    send('log', { text: '[WIZARD] Build timed out after 10 minutes; terminating.\n' });
+                    child.kill('SIGTERM');
+                }
+            }, 10 * 60 * 1000);
+
             child.stdout.on('data', (d) => send('log', { text: d.toString() }));
             child.stderr.on('data', (d) => send('log', { text: d.toString() }));
 
             child.on('exit', (code) => {
+                clearTimeout(killTimer);
                 const releaseDir = path.join(ROOT_DIR, 'dist', 'game', 'release');
                 const outputPath = fs.existsSync(releaseDir) ? releaseDir : path.join(ROOT_DIR, 'dist', 'game');
-                setTimeout(() => {
-                    buildPromise = null;
-                    if (!res.writableEnded) {
-                        send('done', { success: code === 0, path: outputPath, code });
-                        res.end();
-                    }
-                    resolve();
-                }, 300);
+                // FINDING-11: clear immediately so retry is not 409 for 300ms
+                buildPromise = null;
+                if (!res.writableEnded) { send('done', { success: code === 0, path: outputPath, code }); res.end(); }
+                resolve();
             });
 
             child.on('error', (err) => {
+                clearTimeout(killTimer);
                 buildPromise = null;
                 if (!res.writableEnded) {
                     send('error', { text: err.message });
@@ -81,12 +95,9 @@ router.get('/stream', async (req, res) => {
                 reject(err);
             });
 
-            req.on('close', () => {
-                if (!child.killed) child.kill();
-            });
+            req.on('close', () => { clearTimeout(killTimer); if (!child.killed) child.kill(); });
         });
     })();
-
     try {
         await buildPromise;
     } catch (err) {
@@ -125,8 +136,10 @@ router.post('/', async (req, res) => {
                 env: process.env
             });
 
-            child.stdout.on('data', (d) => logs.push(d.toString()));
-            child.stderr.on('data', (d) => logs.push(d.toString()));
+            const killTimer2 = setTimeout(() => { if (!child.killed) child.kill('SIGTERM'); }, 10*60*1000);
+            req.on('close', () => { if (!child.killed) child.kill(); clearTimeout(killTimer2); });
+            child.stdout.on('data', (d) => { if (logs.join('').length < 256*1024) logs.push(d.toString().slice(0, 16384)); });
+            child.stderr.on('data', (d) => { if (logs.join('').length < 256*1024) logs.push(d.toString().slice(0, 16384)); });
 
             child.on('close', (code) => {
                 buildPromise = null;
@@ -148,7 +161,7 @@ router.post('/', async (req, res) => {
         const result = await buildPromise;
         res.json({ ...result, success: true });
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message, log: logs.join('') });
+        res.status(500).json({ success: false, error: 'Build failed', log: logs.join('').slice(-8192) });
     }
 });
 
@@ -161,7 +174,7 @@ router.post('/clean', (req, res) => {
         fs.mkdirSync(BUILDS_DIR, { recursive: true });
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: 'Clean failed' });
     }
 });
 

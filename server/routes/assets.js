@@ -5,6 +5,8 @@ const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const assetRegistry = require('../services/AssetRegistry');
 const { resolveUnderRoot } = require('../utils/pathGuard');
+const { canAutomateMutation } = require('../utils/automationPolicy');
+const ALLOWED_EXTENSIONS = new Set(['.png','.jpg','.jpeg','.gif','.webp','.svg','.mp3','.ogg','.wav','.flac','.json','.glb','.gltf','.obj','.mtl','.vox','.pal','.blend','.frag','.vert','.atlas','.txt','.md','.html','.js','.css']);
 const safeFs = require('../utils/safeFs');
 
 // GET /api/assets - Get all assets from the centralized registry
@@ -76,6 +78,18 @@ router.post('/upload', async (req, res) => {
         return res.status(400).json({ error: 'Invalid isBase64 flag' });
     }
 
+    // FINDING-02: confine uploads to assets/ under project + block sensitive/automation-protected paths.
+    if (!assetPath.startsWith('assets/') && !assetPath.includes('/assets/')) {
+        // Force into assets/ namespace
+        assetPath = 'assets/' + assetPath.replace(/^\/+/, '');
+    }
+    const ext = require('path').extname(assetPath).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+        return res.status(400).json({ error: 'Unsupported file extension: ' + ext });
+    }
+    if (!canAutomateMutation(assetPath).allowed) {
+        return res.status(403).json({ error: 'Cannot modify protected files' });
+    }
     try {
         const activeProject = projectService.getActiveProject();
         const fullPath = resolveUnderRoot(activeProject, assetPath);
@@ -88,7 +102,7 @@ router.post('/upload', async (req, res) => {
         await fs.mkdir(path.dirname(fullPath), { recursive: true });
 
         if (isBase64) {
-            const base64Data = content.replace(/^data:image\/png;base64,/, "");
+            const base64Data = content.replace(/^data:[^;]*;base64,/, "");
             await safeFs.safeWriteFullPath(activeProject, fullPath, base64Data, 'base64');
         } else {
             await safeFs.safeWriteFullPath(activeProject, fullPath, content, 'utf8');
@@ -98,7 +112,7 @@ router.post('/upload', async (req, res) => {
         res.json({ success: true, path: assetPath });
     } catch (error) {
         console.error('[AssetManager:Upload] Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Upload failed' });
     }
 });
 
@@ -109,9 +123,12 @@ router.post('/import', async (req, res) => {
         return res.status(400).json({ error: 'Missing name or data' });
     }
 
+    // Sanitize name: basename only + keep subdir depth sane
+    const safeBase = path.basename(name);
+    if (!safeBase || safeBase.includes('..')) return res.status(400).json({ error: 'Invalid name' });
     try {
         const activeProject = projectService.getActiveProject();
-        const assetPath = path.join('assets', name);
+        const assetPath = path.join('assets', safeBase);
         const fullPath = resolveUnderRoot(activeProject, assetPath);
 
         if (!fullPath) {
@@ -138,7 +155,7 @@ router.post('/import', async (req, res) => {
         });
     } catch (error) {
         console.error('[AssetManager:Import] Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Upload failed' });
     }
 });
 
@@ -155,7 +172,7 @@ router.post('/export', async (req, res) => {
         res.send(JSON.stringify(manifest, null, 2));
     } catch (error) {
         console.error('[AssetManager:Export] Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Upload failed' });
     }
 });
 
@@ -183,7 +200,7 @@ router.post('/background/upload', async (req, res) => {
         res.json({ success: true, path: assetPath });
     } catch (error) {
         console.error('[AssetManager:Background] Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Upload failed' });
     }
 });
 
@@ -194,7 +211,7 @@ router.post('/save-spritesheet', async (req, res) => {
             return res.status(400).send('No image data provided.');
         }
 
-        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
+        const base64Data = dataUrl.replace(/^data:[^;]*;base64,/, "");
         const activeProject = projectService.getActiveProject();
         const spritesheetPath = path.join(activeProject, 'assets', 'platformer_spritesheet.png');
         

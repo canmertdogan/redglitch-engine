@@ -277,15 +277,21 @@ window.LogicRuntime = class LogicRuntime {
 
     spawnEntity(type, x, y, data = {}) {
         // Generic entity spawner
+        if (!Array.isArray(this.game.entities)) this.game.entities = [];
+        const baseId = data.id || `entity_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        const idExists = (candidate) => this.game.entities.some(e => e && e.id === candidate);
+        let id = baseId;
+        let suffix = 2;
+        while (idExists(id)) id = `${baseId}_${suffix++}`;
+
         const entity = {
-            id: `entity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            ...data,
+            id,
             type: type,
             x: x,
             y: y,
-            ...data
         };
         
-        if (!this.game.entities) this.game.entities = [];
         this.game.entities.push(entity);
         
         console.log(`[LogicRuntime] Spawned ${type} at (${x}, ${y})`);

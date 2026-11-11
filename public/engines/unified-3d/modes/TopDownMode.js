@@ -178,11 +178,54 @@ export default class TopDownMode extends ModeInterface {
             } else {
                 this.pathfinding.buildFlatFallback();
             }
+
+            // Register solid geometry objects from 3D studio as navmesh obstacles
+            if (Array.isArray(normalized.geometry)) {
+                for (const def of normalized.geometry) {
+                    const type = String(def.blockType || def.type || '').toLowerCase();
+                    if (type === 'plane') continue;
+                    const pos = def.position || [0, 0, 0];
+                    const px = Array.isArray(pos) ? pos[0] : (pos.x ?? 0);
+                    const pz = Array.isArray(pos) ? pos[2] : (pos.z ?? 0);
+                    const sx = Math.max(0.5, (def.width || def.w || 1) * (def.scale?.[0] ?? 1));
+                    const sz = Math.max(0.5, (def.depth || def.d || 1) * (def.scale?.[2] ?? 1));
+                    this.pathfinding.addObstacleBox({
+                        min: { x: px - sx / 2, z: pz - sz / 2 },
+                        max: { x: px + sx / 2, z: pz + sz / 2 }
+                    });
+                }
+            }
         }
 
         if (this.entities) {
             await this.entities.onLevelLoaded(normalized);
             this._initialHostileCount = this._countLivingHostiles();
+
+            // If level was authored in 3D Studio Player Studio with playerSpawn, ensure a controllable Hero exists
+            if (normalized.playerSpawn && typeof this.entities.getEntitiesByTeam === 'function') {
+                const hasHero = this.entities.getEntitiesByTeam(this._playerTeam).length > 0;
+                if (!hasHero) {
+                    const sp = normalized.playerSpawn;
+                    const sx = Array.isArray(sp) ? sp[0] : (sp.x ?? 0);
+                    const sy = Array.isArray(sp) ? sp[1] : (sp.y ?? 0);
+                    const sz = Array.isArray(sp) ? sp[2] : (sp.z ?? 0);
+                    await this.entities.spawnEntity({
+                        id: 'hero_player',
+                        position: [sx, sy, sz],
+                        properties: {
+                            name: 'Hero',
+                            team: this._playerTeam,
+                            health: normalized.player?.health ?? 150,
+                            speed: normalized.player?.speed ?? 5,
+                            stats: {
+                                hp: normalized.player?.health ?? 150,
+                                maxHp: normalized.player?.health ?? 150,
+                                speed: normalized.player?.speed ?? 5,
+                            }
+                        }
+                    });
+                }
+            }
         }
 
         if (this.fogOfWar) {
@@ -566,6 +609,13 @@ export default class TopDownMode extends ModeInterface {
     }
 
     _resolveLevelCenter(level) {
+        if (level?.playerSpawn) {
+            const px = Array.isArray(level.playerSpawn) ? level.playerSpawn[0] : (level.playerSpawn.x ?? 0);
+            const pz = Array.isArray(level.playerSpawn) ? level.playerSpawn[2] : (level.playerSpawn.z ?? 0);
+            if (Number.isFinite(px) && Number.isFinite(pz)) {
+                return { x: px, z: pz };
+            }
+        }
         const safeHalf = (v, fb) => { const n = Number(v); return Number.isFinite(n) ? (n * 0.5) : fb; };
         const terrain = level?.terrain;
         if (terrain?.mode === 'lowpoly') {

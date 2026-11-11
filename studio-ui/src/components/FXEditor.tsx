@@ -111,14 +111,12 @@ const FXEditor: React.FC = () => {
         if (!config) return;
         setIsSaving(true);
         try {
-            await fetch('/api/assets/upload', {
+            // Use dedicated FX route so file lands in <project>/data/fx/ (engine reads /api/fx/list there),
+            // not <project>/assets/data/fx/ (assets/upload forces assets/ prefix and engine never finds it).
+            await fetch('/api/fx/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    path: `data/fx/${config.name}.json`,
-                    content: JSON.stringify(config, null, 2),
-                    isBase64: false
-                })
+                body: JSON.stringify({ name: config.name, config })
             });
             if (eventBus) eventBus.emit('fx:updated', { id: config.id, config });
             alert("FX SAVED");

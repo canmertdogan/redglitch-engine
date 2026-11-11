@@ -547,6 +547,31 @@ export default class Pathfinding3D {
         if (this._debugEnabled) this._rebuildDebugMesh();
     }
 
+    /**
+     * Mark all navmesh triangles intersecting an AABB obstacle as BLOCKED.
+     * @param {{ min: {x:number, z:number}, max: {x:number, z:number} }} box
+     */
+    addObstacleBox(box) {
+        if (!this._ready || !box?.min || !box?.max) return;
+        const minX = Math.min(box.min.x, box.max.x);
+        const maxX = Math.max(box.min.x, box.max.x);
+        const minZ = Math.min(box.min.z, box.max.z);
+        const maxZ = Math.max(box.min.z, box.max.z);
+        for (const tri of this._navmesh.tris) {
+            const inBox = (
+                (tri.centroid.x >= minX && tri.centroid.x <= maxX && tri.centroid.z >= minZ && tri.centroid.z <= maxZ) ||
+                (tri.a.x >= minX && tri.a.x <= maxX && tri.a.z >= minZ && tri.a.z <= maxZ) ||
+                (tri.b.x >= minX && tri.b.x <= maxX && tri.b.z >= minZ && tri.b.z <= maxZ) ||
+                (tri.c.x >= minX && tri.c.x <= maxX && tri.c.z >= minZ && tri.c.z <= maxZ)
+            );
+            if (inBox) {
+                tri.area = AreaType.BLOCKED;
+                tri.cost = Infinity;
+            }
+        }
+        if (this._debugEnabled) this._rebuildDebugMesh();
+    }
+
     // ── Pathfinding API ───────────────────────────────────────────────────────
     /**
      * Find a smoothed path from `start` to `end` (THREE.Vector3-like).

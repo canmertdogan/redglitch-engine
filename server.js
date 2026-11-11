@@ -45,7 +45,6 @@ const shadersRouter = require('./server/routes/shaders');
 const test3dRouter = require('./server/routes/test-3d');
 const debug3dRouter = require('./server/routes/debug-3d');
 const uiConfigRouter = require('./server/routes/ui-config');
-const openCodeZenRouter = require('./server/routes/opencode-zen');
 
 let monitor3dRouter;
 try {
@@ -71,7 +70,7 @@ const setupWebSocket = require('./server/websocket');
 
 // Initialize Express app and HTTP server
 const app = express();
-app.use(cors({ origin: ['http://localhost:3000', 'null'] })); // Restrict CORS origins
+app.use(cors({ origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'] })); // Restrict CORS origins
 const server = http.createServer(app);
 
 // --- IRAB NATIVE PROXY ---
@@ -87,6 +86,13 @@ const sendOfflineMetrics = (res) => res.status(200).json({
 });
 
 app.use(['/api/history', '/api/ai'], (req, res) => {
+    // Guard proxy mutations (FINDING-04): enforce same Origin/Host as stateMutationGuard
+    if (['POST','PUT','PATCH','DELETE'].includes(req.method)) {
+        const { stateMutationGuard } = require('./server/middleware/logging');
+        let guarded = false;
+        stateMutationGuard(req, res, () => { guarded = true; });
+        if (!guarded) return; // stateMutationGuard already sent 403
+    }
     const url = IRAB_BACKEND + req.originalUrl;
     
     // Strip hop-by-hop headers before forwarding to the backend.
@@ -161,7 +167,7 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 // Multer for file uploads (used by assets3d route for .blend/.obj conversion)
-const upload = multer({ limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
+const upload = multer({ limits: { fileSize: 20 * 1024 * 1024 } }); // 20MB max (FINDING-06)
 app.use('/api/assets3d', upload.fields([
     { name: 'file', maxCount: 1 },
     { name: 'mtl',  maxCount: 1 },
@@ -273,7 +279,7 @@ app.use('/sprite-art', overlayHandler('sprite-art', 'sprite-art', false));
 app.use('/interfaces', overlayHandler('interfaces', 'interfaces', false));
 
 // Redirect legacy 3D editors to unified editor
-app.get('/fps_editor.html', (req, res) => res.redirect('/editor3d.html?mode=fps-3d&project=' + (req.query.project || '')));
+app.get('/fps_editor.html', (req, res) => res.redirect('/editor3d.html?mode=fps-3d&project=' + encodeURIComponent(req.query.project || '')));
 app.get('/topdown3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=topdown-3d&project=' + (req.query.project || '')));
 app.get('/platformer3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=platformer-3d&project=' + (req.query.project || '')));
 app.get('/shader_editor.html', (req, res) => res.redirect('/shader_lab.html'));
@@ -312,7 +318,6 @@ app.use('/api/test', test3dRouter);
 app.use('/api/debug', debug3dRouter);
 app.use('/api/monitor', monitor3dRouter);
 app.use('/api/ui-config', uiConfigRouter);
-app.use('/api/opencode-zen', openCodeZenRouter);
 
 // Express Error Handling Middleware
 app.use((err, req, res, next) => {

@@ -222,8 +222,63 @@ class ProjectManager {
     }
     
     async exportToWAV(duration = 60, callback = null) {
-        alert('Audio export feature coming soon! For now, use system audio recording.');
-        if (callback) callback(null);
+        // Functional offline render: OfflineAudioContext + simple oscillator notes from all tracks.
+        try {
+            const bpm = this.daw?.engine?.bpm || 120;
+            const beatsToSec = (beats) => (60.0 / bpm) * beats;
+            // Clamp duration to content (plus tail) but cap at 120s to avoid huge buffers
+            const endBeat = Math.max(4, ...this.daw.tracks.flatMap(tr => (tr.notes || []).map(n => n.startBeat + n.lengthBeats)));
+            duration = Math.min(duration || beatsToSec(endBeat), 120);
+            const sr = 44100;
+            const off = new OfflineAudioContext(1, Math.ceil(sr * duration), sr);
+            const master = off.createGain(); master.gain.value = 0.8; master.connect(off.destination);
+            let anyTs = false;
+            for (const tr of this.daw.tracks || []) {
+                if (tr.muted) continue;
+                for (const note of (tr.notes || [])) {
+                    const start = beatsToSec(note.startBeat);
+                    const dur = Math.max(0.05, beatsToSec(note.lengthBeats));
+                    if (start >= duration) continue;
+                    const osc = off.createOscillator();
+                    const g = off.createGain();
+                    const vol = ((note.velocity ?? 100) / 127) * (tr.volume ?? 0.8) * 0.3;
+                    osc.frequency.value = 440 * Math.pow(2, ((note.pitch ?? 60) - 69) / 12);
+                    osc.type = (tr.type === 'drum' ? 'square' : 'triangle');
+                    osc.connect(g); g.connect(master);
+                    osc.start(start); osc.stop(start + Math.min(dur, duration - start));
+                    g.gain.setValueAtTime(vol, start); g.gain.exponentialRampToValueAtTime(0.001, start + Math.min(dur, duration - start));
+                    anyTs = true;
+                }
+            }
+            if (!anyTs) { if (callback) callback(null); console.warn('[ProjectManager] No notes to export'); return; }
+            const rendered = await off.startRendering();
+            const blob = this._bufferToWavBlob(rendered);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = (this.projectName || 'project') + '.wav';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            if (callback) callback(blob);
+        } catch (e) {
+            console.error('[ProjectManager] exportToWAV failed', e);
+            if (callback) callback(null, e);
+        }
+    }
+    _bufferToWavBlob(buffer) {
+        const numCh = buffer.numberOfChannels, sr = buffer.sampleRate;
+        const interleaved = new Float32Array(buffer.length * numCh);
+        for (let ch = 0; ch < numCh; ch++) { const d = buffer.getChannelData(ch); for (let i = 0; i < buffer.length; i++) interleaved[i*numCh+ch] = d[i]; }
+        const bytesPerSample = 2, block = numCh * bytesPerSample;
+        const ab = new ArrayBuffer(44 + interleaved.length * bytesPerSample);
+        const v = new DataView(ab);
+        const ws = (o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+        ws(0,'RIFF'); v.setUint32(4, 36 + interleaved.length*bytesPerSample, true); ws(8,'WAVEfmt ');
+        v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,numCh,true); v.setUint32(24,sr,true);
+        v.setUint32(28,sr*block,true); v.setUint16(32,block,true); v.setUint16(34,16,true); ws(36,'data');
+        v.setUint32(40, interleaved.length*bytesPerSample, true);
+        let off = 44;
+        for (let i=0;i<interleaved.length;i++){ const s = Math.max(-1,Math.min(1,interleaved[i])); v.setInt16(off, s<0? s*32768 : s*32767, true); off+=2; }
+        return new Blob([ab], {type:'audio/wav'});
     }
     
     setProjectName(name) {

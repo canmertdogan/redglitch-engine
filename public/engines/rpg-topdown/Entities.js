@@ -21,7 +21,9 @@ window.Enemy = class Enemy {
         // --- DEFINITION & STATS ---
         let def = game.enemyDefs[id]; 
         if (!def || !def.stats) { const oldDef = def || { hp: 50, speed: 100, ai: 'patrol', range: 250, sprite: 'monster' }; def = { id: id, name: oldDef.name || id, stats: { hp: oldDef.hp || 50, speed: oldDef.speed || 100, xp: 20, damage: 10 }, ai: { type: oldDef.ai || 'patrol', range: oldDef.range || 250, attackRange: 150, patrolRadius: 100, cooldown: 1.5 }, animations: { idle: { sprite: oldDef.sprite || 'monster', speed: 0.15 }, run: { sprite: oldDef.sprite || 'monster', speed: 0.15 }, attack: { sprite: oldDef.sprite || 'monster', speed: 0.15 }, hit: { sprite: oldDef.sprite || 'monster', speed: 0.15 }, death: { sprite: oldDef.sprite || 'monster', speed: 0.15 } } }; } 
-        this.def = def; this.hp = def.stats.hp; this.maxHp = def.stats.hp; this.speed = def.stats.speed; this.ai = def.ai;
+        this.takeDamage = (dmg, type) => { const resist = this.resistances?.[type] || 0; const eff = Math.max(0, dmg * (1 - resist)); this.hp -= eff; if (this.hp <= 0) this.die(); return eff; };
+        if (def.ai && def.ai.script && game.logicSystem) { try { game.logicSystem.attachToEntity(this, def.ai.script); } catch {} }
+        this.def = def; this.resistances = def.resistances || {}; this.loot = def.loot || {}; this.category = def.category || null; this.hp = def.stats.hp; this.maxHp = def.stats.hp; this.speed = def.stats.speed; this.ai = def.ai;
         
         // --- SPRITES ---
         this.sprites = {}; 
@@ -109,6 +111,69 @@ window.Enemy = class Enemy {
 
     move(dx, dy, speed, dt) {
         this.game.moveEntity(this, dx, dy, speed, dt);
+    }
+
+    /**
+     * Enemy death: remove from the active list, award XP, and resolve loot.
+     * Idempotent so double damage in the same frame (e.g. two projectiles)
+     * cannot award loot twice.
+     */
+    die() {
+        if (this.dead) return;
+        this.dead = true;
+        const game = this.game;
+        if (!game) return;
+        try {
+            game.createExplosion(this.x + (this.width * this.scale) / 2, this.y + (this.height * this.scale) / 2, '#e74c3c', 15);
+        } catch (_) { /* rendering is optional */ }
+        const idx = Array.isArray(game.enemies) ? game.enemies.indexOf(this) : -1;
+        if (idx > -1) game.enemies.splice(idx, 1);
+        const xp = this.def && this.def.stats && Number(this.def.stats.xp);
+        if (Number.isFinite(xp) && xp > 0 && game.player) {
+            game.player.xp = (game.player.xp || 0) + xp;
+        }
+        this._dropLoot(game);
+        if (game.updateHUD) { try { game.updateHUD(); } catch (_) {} }
+    }
+
+    /**
+     * Loot supports both shapes the editors produce:
+     *  - legacy array: ['apple', 'gold_coin']
+     *  - prefab component: { table, chance, goldMin, goldMax, items? }
+     * Gold is credited to `player.coins`, items are resolved against
+     * `game.itemDefs` and pushed onto `game.inventory`.
+     */
+    _dropLoot(game) {
+        const loot = this.loot;
+        if (!loot) return;
+        const addItem = (id) => {
+            if (!id) return;
+            const defs = Array.isArray(game.itemDefs) ? game.itemDefs : [];
+            const def = defs.find(i => i && i.id === id);
+            if (!def) return;
+            if (!Array.isArray(game.inventory)) game.inventory = [];
+            game.inventory.push({ ...def });
+            if (game.updateInventoryHUD) { try { game.updateInventoryHUD(); } catch (_) {} }
+            if (game.fx && game.fx.popText) { try { game.fx.popText(this.x + 24, this.y, `+${def.name || id}`, '#f1c40f'); } catch (_) {} }
+        };
+
+        if (Array.isArray(loot)) { loot.forEach(addItem); return; }
+
+        const chance = Number.isFinite(loot.chance) ? loot.chance : 1;
+        if (Math.random() > chance) return;
+
+        const items = Array.isArray(loot.items) ? loot.items : (loot.item ? [loot.item] : []);
+        items.forEach(entry => addItem(typeof entry === 'string' ? entry : entry && entry.id));
+
+        const min = Number.isFinite(loot.goldMin) ? loot.goldMin : 0;
+        const max = Number.isFinite(loot.goldMax) ? loot.goldMax : 0;
+        if (max > 0) {
+            const gold = Math.max(min, Math.floor(min + Math.random() * (max - min + 1)));
+            if (gold > 0 && game.player) {
+                game.player.coins = (game.player.coins || 0) + gold;
+                if (game.fx && game.fx.popText) { try { game.fx.popText(this.x + 24, this.y - 10, `+${gold}g`, '#f1c40f'); } catch (_) {} }
+            }
+        }
     }
 
     update(deltaTime) {

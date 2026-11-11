@@ -29,9 +29,10 @@ test('allows loopback origins on any port', () => {
   }
 });
 
-test('allows missing / null origin (file:// and Electron contexts)', () => {
+test('allows missing origin (Electron debug) but rejects null origin (file:// untrusted)', () => {
   assert.ok(runGuard(undefined).nextCalled);
-  assert.ok(runGuard('null').nextCalled);
+  assert.equal(runGuard('null').nextCalled, false);
+  assert.equal(runGuard('null').status, 403);
 });
 
 test('rejects foreign origins with 403', () => {

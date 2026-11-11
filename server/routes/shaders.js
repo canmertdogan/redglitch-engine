@@ -59,6 +59,7 @@ router.get('/:name', async (req, res) => {
         const activeProject = projectService.getActiveProject();
         const fileName = name.endsWith('.frag') ? name : `${name}.frag`;
         const content = await fs.readFile(path.join(activeProject, 'data', 'shaders', fileName), 'utf8');
+        res.set('Content-Type', 'text/plain; charset=utf-8');
         res.send(content);
     } catch (err) {
         res.status(404).send('// Shader not found');

@@ -5,6 +5,8 @@ const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const safeFs = require('../utils/safeFs');
 
+function stripProtoKeys(o){ if(o && typeof o==='object'){ for(const k of Object.keys(o)) if(k==='__proto__'||k==='constructor'||k==='prototype') delete o[k]; } return o; }
+function safeParseJSON(raw, label) { try { return JSON.parse(raw); } catch { const e=new Error('Invalid JSON in '+label); e.code='INVALID_JSON'; throw e; } }
 function isSafeName(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
@@ -42,7 +44,7 @@ function createDefinitionRoutes(typeName, fileName) {
                 try {
                     const engineFilePath = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions', fileName);
                     const engineRaw = await fs.readFile(engineFilePath, 'utf8');
-                    mergedData = JSON.parse(engineRaw);
+                    mergedData = safeParseJSON(engineRaw, 'engine def');
                 } catch (e) {
                     if (e.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading engine core:`, e.message);
                 }
@@ -51,10 +53,11 @@ function createDefinitionRoutes(typeName, fileName) {
             // 2. Load project definitions and merge
             try {
                 const projectRaw = await fs.readFile(projectFilePath, 'utf8');
-                const projectData = JSON.parse(projectRaw);
+                const projectData = safeParseJSON(projectRaw, 'project def');
                 
                 if (Array.isArray(projectData)) {
                     // Merge arrays by ID (project items override engine items)
+                    if (!Array.isArray(mergedData)) mergedData = [];
                     const itemMap = new Map();
                     mergedData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
                     projectData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
@@ -63,7 +66,7 @@ function createDefinitionRoutes(typeName, fileName) {
                     // Only merge object-on-object. If the engine core produced an
                     // array but the project file is an object, keep the array form
                     // rather than spreading the array into an object (corrupts shape).
-                    mergedData = { ...mergedData, ...projectData };
+                    mergedData = { ...mergedData, ...stripProtoKeys(projectData) };
                 }
             } catch (err) {
                 // If project file is missing, we just use engine data or empty array
@@ -73,7 +76,7 @@ function createDefinitionRoutes(typeName, fileName) {
                     try {
                         const engineFilePath = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions', fileName);
                         const engineRaw = await fs.readFile(engineFilePath, 'utf8');
-                        mergedData = JSON.parse(engineRaw);
+                        mergedData = safeParseJSON(engineRaw, 'engine def');
                     } catch(e) {
                         if (e.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading engine fallback:`, e.message);
                     }
@@ -136,7 +139,7 @@ router.get('/fx/:name', async (req, res) => {
     const filePath = path.join(projectService.getActiveProject(), 'data', 'fx', `${req.params.name}.json`);
     try {
         const data = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(data));
+        res.json(safeParseJSON(data, 'fx'));
     } catch (e) { res.status(404).json({ error: 'FX not found' }); }
 });
 
@@ -147,7 +150,7 @@ router.post('/fx/save', async (req, res) => {
     }
     if (!isSafeName(name)) return res.status(400).json({ error: 'Invalid FX name' });
     const dir = path.join(projectService.getActiveProject(), 'data', 'fx');
-    await ensureDir(dir);
+    try { await ensureDir(dir); } catch (e) { return res.status(500).json({ error: 'Save failed' }); }
     try {
         await safeFs.safeWriteFullPath(dir, path.join(dir, `${name}.json`), JSON.stringify(config, null, 2), 'utf8');
         res.json({ success: true });
@@ -155,9 +158,10 @@ router.post('/fx/save', async (req, res) => {
 });
 
 // GET /api/templates/:category - Scan definitions for individual files to use as templates
+const ALLOWED_TEMPLATE_CATEGORIES = new Set(['npc','enemy','item','skill','quest','variable','variables','npcs','enemies','items','skills','quests','fx','ui']);
 router.get('/templates/:category', async (req, res) => {
     const { category } = req.params; // e.g., 'npc', 'enemy', 'item'
-    if (typeof category !== 'string' || !category.trim()) {
+    if (typeof category !== 'string' || !category.trim() || !ALLOWED_TEMPLATE_CATEGORIES.has(category)) {
         return res.status(400).json({ error: 'Invalid category' });
     }
     
@@ -176,7 +180,7 @@ router.get('/templates/:category', async (req, res) => {
                         !['npcs.json', 'enemies.json', 'items.json', 'quests.json', 'skills.json', 'achievements.json', 'locales.json', 'variables.json', 'ui.json', 'music.json', 'campaign.json'].includes(file)) {
                         
                         try {
-                            const content = JSON.parse(await fs.readFile(path.join(dir, file), 'utf8'));
+                            const content = safeParseJSON(await fs.readFile(path.join(dir, file), 'utf8'), 'template');
                             // Basic heuristic to filter by category if needed, or just return all
                             // For now, return all individual JSONs as templates
                             templates.set(file.replace('.json', ''), {

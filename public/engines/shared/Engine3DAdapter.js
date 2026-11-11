@@ -25,6 +25,20 @@ import { createDefaultSkyboxConfig, normalizeSkyboxConfig } from './SkyboxSystem
 // ── Level Schema Version ──────────────────────────────────────────────────────
 const LEVEL_SCHEMA_VERSION = '1.0';
 
+// Level files authored by the 2D editors store the engine under `type`
+// (e.g. "platformer-2d") and may omit `engineType`. Accept both so a level is
+// not silently loaded by the wrong 3D adapter.
+const KNOWN_ENGINE_TYPES = new Set([
+    'rpg-topdown', 'iso-pixel', 'platformer-2d',
+    'fps-3d', 'topdown-3d', 'platformer-3d', 'unified-3d',
+]);
+function resolveEngineType(raw, fallback) {
+    if (raw && typeof raw.engineType === 'string' && KNOWN_ENGINE_TYPES.has(raw.engineType)) return raw.engineType;
+    if (raw && typeof raw.type === 'string' && KNOWN_ENGINE_TYPES.has(raw.type)) return raw.type;
+    if (raw && typeof raw.engineType === 'string' && raw.engineType) return raw.engineType;
+    return fallback;
+}
+
 /**
  * 3D Level JSON schema:
  * {
@@ -144,6 +158,13 @@ export default class Engine3DAdapter extends Engine3DBase {
             
             this._applyPhysicsConfig(level.physics);
 
+            // Post-Processing integration from 3D Studio level data
+            if (this.renderer3d && Array.isArray(level.postprocessing) && level.postprocessing.length > 0) {
+                if (typeof this.renderer3d.rebuildPostProcessing === 'function') {
+                    this.renderer3d.rebuildPostProcessing(level.postprocessing);
+                }
+            }
+
             this._currentLevel = level;
 
             // Notify subclass
@@ -206,7 +227,7 @@ export default class Engine3DAdapter extends Engine3DBase {
     _validateLevel(raw) {
         if (!raw || typeof raw !== 'object') throw new Error('Level data must be an object');
 
-        const engineType = raw.engineType || this.engineType3D || 'topdown-3d';
+        const engineType = resolveEngineType(raw, this.engineType3D || 'topdown-3d');
         const paletteManager = this._getPaletteManager();
 
         const rawLights = (Array.isArray(raw.lights) && raw.lights.length > 0)
@@ -245,14 +266,16 @@ export default class Engine3DAdapter extends Engine3DBase {
         const derivedEnemies = [];
         for (const e of level.entities) {
             if (!e || typeof e !== 'object') continue;
-            if (e.type === 'enemy') {
-                e.type = 'enemy_walker';
+            if (e.type === 'enemy' || e.type.startsWith('enemy_') || e.type === 'turret' || e.properties?.enemyType) {
+                const enemyType = e.type === 'enemy' ? 'enemy_walker' : e.type;
                 derivedEnemies.push({
                     id: e.id,
-                    position: Array.isArray(e.position) ? e.position : [0, 0, 0],
+                    position: Array.isArray(e.position) ? e.position : [e.position?.x ?? 0, e.position?.y ?? 0, e.position?.z ?? 0],
+                    rotation: e.rotation,
                     properties: e.properties || {},
-                    type: 'enemy_walker',
+                    type: enemyType,
                 });
+                if (e.type === 'enemy') e.type = 'enemy_walker';
             } else if (e.type === 'collectible') {
                 e.type = 'coin';
             }
@@ -369,11 +392,21 @@ export default class Engine3DAdapter extends Engine3DBase {
             }
 
             let geo;
-            if (def.type === 'trimesh' && def.positions) {
+            if ((def.type === 'trimesh' || def.type === 'prop') && def.positions) {
                 geo = new THREE.BufferGeometry();
                 geo.setAttribute('position', new THREE.Float32BufferAttribute(def.positions, 3));
                 if (def.normals) geo.setAttribute('normal', new THREE.Float32BufferAttribute(def.normals, 3));
                 if (def.colors) geo.setAttribute('color', new THREE.Float32BufferAttribute(def.colors, 3));
+                if (def.uvs) geo.setAttribute('uv', new THREE.Float32BufferAttribute(def.uvs, 2));
+                if (def.indices) geo.setIndex(new THREE.BufferAttribute(new (def.indices.length > 65535 ? Uint32Array : Uint16Array)(def.indices), 1));
+                if (!def.normals) geo.computeVertexNormals();
+            } else if (def.shape_type === 'custom_csg' && def.custom_vertices) {
+                geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(def.custom_vertices, 3));
+                if (def.custom_normals) geo.setAttribute('normal', new THREE.Float32BufferAttribute(def.custom_normals, 3));
+                if (def.custom_uvs) geo.setAttribute('uv', new THREE.Float32BufferAttribute(def.custom_uvs, 2));
+                if (def.custom_indices) geo.setIndex(new THREE.Uint16BufferAttribute(def.custom_indices, 1));
+                geo.computeVertexNormals();
             } else {
                 // ── Geometry Factory (Phase 64/65) ──────────────────────────────
                 const type = (def.blockType || def.type || 'box').toLowerCase();
@@ -384,12 +417,22 @@ export default class Engine3DAdapter extends Engine3DBase {
             }
 
             let mat;
-            if (def.textureId && atlas) {
+            const levelMaterials = this._currentLevel?.materials || [];
+            const matDef = def.material_id ? levelMaterials.find(m => m.id === def.material_id) : null;
+
+            if (matDef) {
+                mat = _buildMaterialFromDef(matDef, def.colorHex, def.material_overrides, THREE);
+            } else if (def.textureId && atlas) {
                 atlas.applyBlockUVs(geo, def.textureId);
                 mat = atlas.getMaterial(THREE);
             } else {
                 const color = _resolveColor(def, paletteManager);
                 mat = hexMaterial(color);
+            }
+
+            if (geo.getAttribute('color')) {
+                mat = mat.clone();
+                mat.vertexColors = true;
             }
 
             // Phase 38: Support emissive overrides (for glow blocks)
@@ -502,10 +545,17 @@ export default class Engine3DAdapter extends Engine3DBase {
 
         // Phase 62 / Lightning Bug Fix: Sync lights from skybox payload
         if (this.THREE && this.scene) {
-            const sun = this.scene.getObjectByName('__sunLight') || this.scene.getObjectByName('__sun__');
-            if (sun && sky.sunColor) {
-                sun.color.set(sky.sunColor);
-                if (typeof sky.sunIntensity === 'number') sun.intensity = sky.sunIntensity;
+            let sun = this.scene.getObjectByName('__sunLight') || this.scene.getObjectByName('__sun__');
+            const sunColor = sky.sunColor || sky.sun?.color || '#ffffff';
+            const sunIntensity = typeof sky.sunIntensity === 'number' ? sky.sunIntensity : (sky.sun?.intensity ?? 1.2);
+            if (!sun && sunIntensity > 0) {
+                sun = new this.THREE.DirectionalLight(sunColor, sunIntensity);
+                sun.name = '__sunLight';
+                this.scene.add(sun);
+            }
+            if (sun && sunColor) {
+                sun.color.set(sunColor);
+                sun.intensity = sunIntensity;
                 sun.castShadow = true;
                 if (sun.shadow) {
                     sun.shadow.mapSize.set(1024, 1024);
@@ -514,8 +564,8 @@ export default class Engine3DAdapter extends Engine3DBase {
                     sun.shadow.normalBias = 0.02;
                 }
                 
-                const az = (sky.sunAzimuth ?? 45) * Math.PI / 180;
-                const el = (sky.sunElevation ?? 45) * Math.PI / 180;
+                const az = ((sky.sunAzimuth ?? sky.sun?.azimuth) ?? 45) * Math.PI / 180;
+                const el = ((sky.sunElevation ?? sky.sun?.elevation) ?? 45) * Math.PI / 180;
                 const r = 100;
                 sun.position.set(
                     r * Math.cos(el) * Math.sin(az),
@@ -525,10 +575,17 @@ export default class Engine3DAdapter extends Engine3DBase {
                 sun.target.position.set(0, 0, 0);
             }
             
-            const amb = this.scene.getObjectByName('__ambLight') || this.scene.getObjectByName('__ambient__');
-            if (amb && sky.ambientColor) {
-                amb.color.set(sky.ambientColor);
-                if (typeof sky.ambientIntensity === 'number') amb.intensity = sky.ambientIntensity * 0.6;
+            let amb = this.scene.getObjectByName('__ambLight') || this.scene.getObjectByName('__ambient__');
+            const ambColor = sky.ambientColor || '#ffffff';
+            const ambIntensity = typeof sky.ambientIntensity === 'number' ? sky.ambientIntensity : 0.3;
+            if (!amb && ambIntensity > 0) {
+                amb = new this.THREE.AmbientLight(ambColor, ambIntensity * 0.6);
+                amb.name = '__ambLight';
+                this.scene.add(amb);
+            }
+            if (amb && ambColor) {
+                amb.color.set(ambColor);
+                amb.intensity = ambIntensity * 0.6;
             }
 
             let hemi = this.scene.getObjectByName('__softFillLight');
@@ -727,6 +784,28 @@ function _defaultSun() {
         position: [30, 60, 30], target: [0, 0, 0],
         palette_index: null, colorHex: '#fffbe0', castShadow: true,
     };
+}
+
+function _buildMaterialFromDef(matDef, fallbackColor, overrides = {}, THREE) {
+    const ch = matDef?.channels || {};
+    let color = overrides.colorHex || ch.color?.value || fallbackColor || '#888888';
+    let emissive = overrides.emissive || ch.luminance?.value || '#000000';
+    let emissiveIntensity = overrides.emissiveIntensity ?? (ch.luminance?.value ? 0.8 : 0.012);
+    let opacity = overrides.opacity ?? ch.transparency?.opacity ?? 1.0;
+    let transparent = opacity < 1.0;
+    let roughness = overrides.roughness ?? ch.reflectance?.roughness ?? 0.8;
+    let metalness = overrides.metalness ?? ch.reflectance?.metalness ?? 0.0;
+
+    return new THREE.MeshStandardMaterial({
+        color: new THREE.Color(color),
+        emissive: new THREE.Color(emissive),
+        emissiveIntensity,
+        roughness,
+        metalness,
+        opacity,
+        transparent,
+        flatShading: true,
+    });
 }
 
 function _disposeObject(obj) {

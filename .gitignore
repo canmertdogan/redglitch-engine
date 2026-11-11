@@ -130,6 +130,8 @@ screenshots/
 
 # Generated reports / local screenshots
 engine-lockstep-report.json
+docs/tools/smoke/
+docs/tools/audit*.json
 
 # LLM training experiments (not part of redglitch-engine)
 llm/

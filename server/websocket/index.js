@@ -12,13 +12,22 @@ const path = require('path');
  * @returns {Object} WebSocket server instance and utility functions
  */
 function setupWebSocket(server, options = {}) {
+    // FINDING-10: origin/host verify + no absolute path leak
     const {
         rootDir = __dirname,
         getActiveProject = () => rootDir,
         projectsRoot = path.join(rootDir, 'projects')
     } = options;
 
-    const wss = new WebSocket.Server({ server });
+    const wss = new WebSocket.Server({ server, verifyClient: (info) => {
+        const origin = info.origin || info.req.headers.origin || info.req.headers.referer || '';
+        const host = (info.req.headers.host || '').split(':')[0];
+        if (host && !['localhost','127.0.0.1','[::1]'].includes(host)) return false;
+        if (origin && origin !== 'null') {
+            try { const u = new URL(origin); if (!['localhost','127.0.0.1','[::1]'].includes(u.hostname)) return false; } catch { return false; }
+        }
+        return true;
+    }});
     const connectedClients = new Set();
     let fileWatcher = null;
 
@@ -111,7 +120,6 @@ function setupWebSocket(server, options = {}) {
                     type: 'file:changed',
                     data: {
                         path: relativePath,
-                        fullPath: filePath,
                         timestamp: Date.now()
                     }
                 });
@@ -124,7 +132,6 @@ function setupWebSocket(server, options = {}) {
                     type: 'file:added',
                     data: {
                         path: relativePath,
-                        fullPath: filePath,
                         timestamp: Date.now()
                     }
                 });
@@ -137,7 +144,6 @@ function setupWebSocket(server, options = {}) {
                     type: 'file:deleted',
                     data: {
                         path: relativePath,
-                        fullPath: filePath,
                         timestamp: Date.now()
                     }
                 });

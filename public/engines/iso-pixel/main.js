@@ -616,7 +616,12 @@ class IsoGame {
                      const top = z + height; 
                      
                      // Only collide with solid blocks
-                     // TODO: Check transparency/passable flags
+                     // Passable check: tile 0 = walkable/transparent, skip collision
+                     const tileVal = map.layers[l][idx];
+                     if (tileVal === 0 || tileVal === null || tileVal === undefined) continue;
+                     if (map.alpha && map.alpha[l] && map.alpha[l][idx] === 0) continue;
+                     if (map.passable && map.passable[l] && map.passable[l][idx] === false) continue;
+                     // Only solid blocks reach here
                      if (top > maxZ) maxZ = top;
                  }
             }

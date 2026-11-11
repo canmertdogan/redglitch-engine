@@ -1,3 +1,4 @@
+function _safeAssign(target, source) { if (!source || typeof source !== 'object') return target; for (const k of Object.keys(source)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; target[k] = source[k]; } return target; }
 /**
  * EngineAdapter - Base interface for all engine adapters
  * Provides a uniform API for Campaign Controller to interact with different engine types
@@ -452,10 +453,10 @@ class EngineAdapter {
         // Default behavior: attempt to locate the collection in the global namespace and patch it.
         if (typeof window !== 'undefined' && window.RedglitchDB) {
             if (!window.RedglitchDB[collection]) window.RedglitchDB[collection] = {};
-            Object.assign(window.RedglitchDB[collection], data);
+            _safeAssign(window.RedglitchDB[collection], data);
             console.log(`[EngineAdapter] Patched global DB collection: ${collection}`);
         } else if (this.engine && this.engine.db && this.engine.db[collection]) {
-            Object.assign(this.engine.db[collection], data);
+            _safeAssign(this.engine.db[collection], data);
             console.log(`[EngineAdapter] Patched engine DB collection: ${collection}`);
         }
     }

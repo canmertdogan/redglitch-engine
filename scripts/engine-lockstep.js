@@ -88,16 +88,27 @@ async function listProjectNames() {
     return names.sort();
 }
 
-async function collectFiles(dir, baseDir = dir, out = new Map()) {
+// Test-only trees and files never ship inside a project's engine copy, so they
+// must not be compared by lockstep (otherwise every run reports them as missing).
+const TEST_DIR_NAMES = new Set(['__tests__', '__test__', 'tests', 'test']);
+function isTestArtifact(relPath) {
+    const parts = relPath.split('/');
+    if (parts.some((p) => TEST_DIR_NAMES.has(p))) return true;
+    const name = parts[parts.length - 1] || '';
+    return /\.(test|spec)\.[cm]?js$/.test(name);
+}
+
+async function collectFiles(dir, baseDir = dir, out = new Map(), skip = null) {
     const entries = await fs.readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-            await collectFiles(fullPath, baseDir, out);
+            await collectFiles(fullPath, baseDir, out, skip);
             continue;
         }
         if (!entry.isFile()) continue;
         const relPath = toPosixPath(path.relative(baseDir, fullPath));
+        if (skip && skip(relPath)) continue;
         const buf = await fs.readFile(fullPath);
         const hash = crypto.createHash('sha256').update(buf).digest('hex');
         out.set(relPath, { fullPath, hash, size: buf.length });
@@ -169,7 +180,7 @@ async function main() {
         throw new Error(`Unknown project(s): ${missingProjects.join(', ')}`);
     }
 
-    const publicFiles = await collectFiles(PUBLIC_ENGINES);
+    const publicFiles = await collectFiles(PUBLIC_ENGINES, PUBLIC_ENGINES, new Map(), isTestArtifact);
     const allowEntries = options.apply ? await loadAllowEntries(options) : [];
     const backupStamp = new Date().toISOString().replace(/[:.]/g, '-');
 
@@ -194,7 +205,7 @@ async function main() {
 
     for (const projectName of selectedProjects) {
         const projectEngines = path.join(PROJECTS_ROOT, projectName, 'engines');
-        const projectFiles = await collectFiles(projectEngines);
+        const projectFiles = await collectFiles(projectEngines, projectEngines, new Map(), isTestArtifact);
 
         const missingInProject = [];
         const differentContent = [];

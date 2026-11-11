@@ -149,8 +149,42 @@ export default class WorldGeometry {
             this._buildProceduralRoom(levelData);
         }
 
-        this._buildTriggers(levelData?.triggers ?? []);
-        this._buildPortals(levelData?.portals   ?? []);
+        const allTriggers = [...(levelData?.triggers ?? [])];
+        if (Array.isArray(levelData?.entities)) {
+            for (const ent of levelData.entities) {
+                if (ent.type === 'trigger') {
+                    allTriggers.push({
+                        id: ent.id,
+                        position: ent.position,
+                        width: ent.width || ent.properties?.size || (ent.properties?.radius ? ent.properties.radius * 2 : 2),
+                        height: ent.height || ent.properties?.size || 2,
+                        depth: ent.depth || ent.properties?.size || (ent.properties?.radius ? ent.properties.radius * 2 : 2),
+                        onEnter: ent.properties?.onEnter || null,
+                        onExit: ent.properties?.onExit || null,
+                    });
+                }
+            }
+        }
+        this._buildTriggers(allTriggers);
+
+        const allPortals = [...(levelData?.portals ?? [])];
+        if (Array.isArray(levelData?.entities)) {
+            for (const ent of levelData.entities) {
+                if (ent.type === 'portal') {
+                    const pos = ent.position || [0, 0, 0];
+                    allPortals.push({
+                        idA: ent.id,
+                        posA: pos,
+                        normalA: { x: 0, y: 0, z: 1 },
+                        idB: ent.properties?.targetPortal || ent.id,
+                        posB: ent.properties?.targetPos || pos,
+                        normalB: { x: 0, y: 0, z: -1 },
+                        radius: ent.properties?.radius ?? 1.5,
+                    });
+                }
+            }
+        }
+        this._buildPortals(allPortals);
     }
 
     // ── Per-frame update ──────────────────────────────────────────────────────
@@ -225,40 +259,74 @@ export default class WorldGeometry {
         }
 
         for (const def of geometryData) {
-            // ── Geometry Factory (Phase 64/65) ──────────────────────────────
-            const type = (def.blockType || def.type || 'box').toLowerCase();
-            const w = def.width  || def.w || 1;
-            const h = def.height || def.h || 1;
-            const d = def.depth  || def.d || 1;
-            
-            const geo = PrimitiveFactory.create(type, w, h, d);
+            let mesh = def.id ? this._scene.getObjectByName(def.id) : null;
+            if (!mesh) {
+                let geo;
+                if ((def.type === 'trimesh' || def.type === 'prop') && def.positions) {
+                    geo = new THREE.BufferGeometry();
+                    geo.setAttribute('position', new THREE.Float32BufferAttribute(def.positions, 3));
+                    if (def.normals) geo.setAttribute('normal', new THREE.Float32BufferAttribute(def.normals, 3));
+                    if (def.colors) geo.setAttribute('color', new THREE.Float32BufferAttribute(def.colors, 3));
+                    if (def.uvs) geo.setAttribute('uv', new THREE.Float32BufferAttribute(def.uvs, 2));
+                    if (def.indices) geo.setIndex(new THREE.BufferAttribute(new (def.indices.length > 65535 ? Uint32Array : Uint16Array)(def.indices), 1));
+                    if (!def.normals) geo.computeVertexNormals();
+                } else if (def.shape_type === 'custom_csg' && def.custom_vertices) {
+                    geo = new THREE.BufferGeometry();
+                    geo.setAttribute('position', new THREE.Float32BufferAttribute(def.custom_vertices, 3));
+                    if (def.custom_normals) geo.setAttribute('normal', new THREE.Float32BufferAttribute(def.custom_normals, 3));
+                    if (def.custom_uvs) geo.setAttribute('uv', new THREE.Float32BufferAttribute(def.custom_uvs, 2));
+                    if (def.custom_indices) geo.setIndex(new THREE.Uint16BufferAttribute(def.custom_indices, 1));
+                    geo.computeVertexNormals();
+                } else {
+                    const type = (def.blockType || def.type || 'box').toLowerCase();
+                    const w = def.width  || def.w || 1;
+                    const h = def.height || def.h || 1;
+                    const d = def.depth  || def.d || 1;
+                    geo = PrimitiveFactory.create(type, w, h, d);
+                }
 
-            let mat;
+                let mat;
+                if (def.textureId && this._atlas) {
+                    this._atlas.applyBlockUVs(geo, def.textureId);
+                    mat = this._atlas.getMaterial(THREE);
+                } else {
+                    mat = hexMaterial(def.colorHex || def.color || '#888888');
+                }
 
-            if (def.textureId && this._atlas) {
-                this._atlas.applyBlockUVs(geo, def.textureId);
-                mat = this._atlas.getMaterial(THREE);
-            } else {
-                mat = hexMaterial(def.colorHex || def.color || '#888888');
+                if (geo.getAttribute('color')) {
+                    mat = mat.clone();
+                    mat.vertexColors = true;
+                }
+
+                mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(def.position[0], def.position[1], def.position[2]);
+                if (def.rotation) mesh.quaternion.set(...def.rotation);
+                if (def.scale)    mesh.scale.set(...def.scale);
+
+                mesh.castShadow    = true;
+                mesh.receiveShadow = true;
+                mesh.name          = def.id || 'editor_shape';
+
+                this._scene.add(mesh);
             }
 
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(def.position[0], def.position[1], def.position[2]);
-            if (def.rotation) mesh.quaternion.set(...def.rotation);
-            if (def.scale)    mesh.scale.set(...def.scale);
+            if (!this._colMeshes.includes(mesh)) {
+                this._colMeshes.push(mesh);
+            }
 
-            mesh.castShadow    = true;
-            mesh.receiveShadow = true;
-            mesh.name          = def.id || 'editor_shape';
+            mesh.updateMatrixWorld(true);
+            const shapeType = (def.blockType || def.type || 'box').toLowerCase();
+            const hasRotation = Array.isArray(def.rotation) && (def.rotation[0] !== 0 || def.rotation[1] !== 0 || def.rotation[2] !== 0);
+            const isCustomShape = ['slope', 'wedge', 'stairs', 'arch', 'cone', 'cylinder', 'pillar', 'sphere', 'trimesh', 'prop'].includes(shapeType) || def.shape_type === 'custom_csg' || hasRotation;
 
-            this._scene.add(mesh);
-            this._colMeshes.push(mesh);
-
-            // Add static collision body
-            this._addBoxCollider(
-                mesh.position.x, mesh.position.y, mesh.position.z,
-                (def.width || 1) * mesh.scale.x, (def.height || 1) * mesh.scale.y, (def.depth || 1) * mesh.scale.z
-            );
+            if (isCustomShape) {
+                this._addTrimeshBody(mesh, def);
+            } else {
+                this._addBoxCollider(
+                    mesh.position.x, mesh.position.y, mesh.position.z,
+                    (def.width || def.w || 1) * mesh.scale.x, (def.height || def.h || 1) * mesh.scale.y, (def.depth || def.d || 1) * mesh.scale.z
+                );
+            }
         }
     }
 
@@ -496,12 +564,27 @@ export default class WorldGeometry {
     _buildTriggers(specs) {
         // From level JSON definitions
         for (const spec of specs) {
+            let aabb;
+            if (spec.min && spec.max) {
+                aabb = new THREE.Box3(
+                    new THREE.Vector3(spec.min.x ?? spec.min[0], spec.min.y ?? spec.min[1], spec.min.z ?? spec.min[2]),
+                    new THREE.Vector3(spec.max.x ?? spec.max[0], spec.max.y ?? spec.max[1], spec.max.z ?? spec.max[2]),
+                );
+            } else {
+                const px = spec.position?.[0] ?? (spec.position?.x ?? (spec.x ?? 0));
+                const py = spec.position?.[1] ?? (spec.position?.y ?? (spec.y ?? 0));
+                const pz = spec.position?.[2] ?? (spec.position?.z ?? (spec.z ?? 0));
+                const hw = ((spec.width || spec.size || 2) * 0.5);
+                const hh = ((spec.height || spec.size || 2) * 0.5);
+                const hd = ((spec.depth || spec.size || 2) * 0.5);
+                aabb = new THREE.Box3(
+                    new THREE.Vector3(px - hw, py - hh, pz - hd),
+                    new THREE.Vector3(px + hw, py + hh, pz + hd),
+                );
+            }
             this._triggers.push({
-                id:      spec.id,
-                aabb:    new THREE.Box3(
-                    new THREE.Vector3(spec.min.x, spec.min.y, spec.min.z),
-                    new THREE.Vector3(spec.max.x, spec.max.y, spec.max.z),
-                ),
+                id:      spec.id || `trigger_${this._triggers.length}`,
+                aabb,
                 onEnter: spec.onEnter ?? null,
                 onExit:  spec.onExit  ?? null,
                 active:  false,
@@ -560,13 +643,17 @@ export default class WorldGeometry {
      */
     _buildPortals(specs) {
         for (const spec of specs) {
+            const pA = spec.posA ?? spec.positionA ?? { x: 0, y: 0, z: 0 };
+            const pB = spec.posB ?? spec.positionB ?? { x: 0, y: 0, z: 0 };
+            const nA = spec.normalA ?? { x: 0, y: 0, z: 1 };
+            const nB = spec.normalB ?? { x: 0, y: 0, z: -1 };
             this._portals.push({
-                idA:     spec.idA,
-                posA:    new THREE.Vector3(spec.posA.x, spec.posA.y, spec.posA.z),
-                normalA: new THREE.Vector3(spec.normalA?.x ?? 0, spec.normalA?.y ?? 0, spec.normalA?.z ?? 1).normalize(),
-                idB:     spec.idB,
-                posB:    new THREE.Vector3(spec.posB.x, spec.posB.y, spec.posB.z),
-                normalB: new THREE.Vector3(spec.normalB?.x ?? 0, spec.normalB?.y ?? 0, spec.normalB?.z ?? -1).normalize(),
+                idA:     spec.idA || 'portal_A',
+                posA:    new THREE.Vector3(pA.x ?? pA[0] ?? 0, pA.y ?? pA[1] ?? 0, pA.z ?? pA[2] ?? 0),
+                normalA: new THREE.Vector3(nA.x ?? nA[0] ?? 0, nA.y ?? nA[1] ?? 0, nA.z ?? nA[2] ?? 1).normalize(),
+                idB:     spec.idB || 'portal_B',
+                posB:    new THREE.Vector3(pB.x ?? pB[0] ?? 0, pB.y ?? pB[1] ?? 0, pB.z ?? pB[2] ?? 0),
+                normalB: new THREE.Vector3(nB.x ?? nB[0] ?? 0, nB.y ?? nB[1] ?? 0, nB.z ?? nB[2] ?? -1).normalize(),
                 radius:  spec.radius ?? 1.2,
             });
         }

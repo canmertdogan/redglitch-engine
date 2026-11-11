@@ -132,7 +132,7 @@ function collectFetchCalls(fn) {
     }
   }
 
-  const endpointMapRegex = /const\s+endpoint\s*=\s*\{([\s\S]*?)\};/g;
+  const endpointMapRegex = /const\s+(?:default)?endpoint\s*=\s*\{([\s\S]*?)\};/g;
   while ((match = endpointMapRegex.exec(source))) {
     const afterMap = source.slice(match.index + match[0].length);
     const fetchEndpointCall = afterMap.match(/fetch\(\s*endpoint[\s\S]*?(?:,\s*\{[\s\S]*?method\s*:\s*['"`]([A-Za-z]+)['"`])?/);
@@ -142,6 +142,15 @@ function collectFetchCalls(fn) {
     }
   }
 
+  const allowedMapRegex = /const\s+ALLOWED(?:_ENDPOINTS|_LIST)\s*=\s*\{([\s\S]*?)\};/g;
+  while ((match = allowedMapRegex.exec(source))) {
+    const afterMap = source.slice(match.index + match[0].length);
+    const fetchEndpointCall = afterMap.match(/fetch\(\s*(?:endpoint|ALLOWED\w*)[\s\S]*?(?:,\s*\{[\s\S]*?method\s*:\s*['"`]([A-Za-z]+)['"`])?/);
+    const method = fetchEndpointCall?.[1]?.toUpperCase() || null;
+    for (const endpoint of extractStringArray(match[1])) {
+      if (endpoint.startsWith('/api/')) calls.push({ endpoint, method });
+    }
+  }
   const seen = new Set();
   return calls.filter((call) => {
     const key = `${call.method || ''} ${call.endpoint}`;

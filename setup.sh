@@ -47,9 +47,10 @@ ${BLUE}[3/5] Setting up Python backend...${NC}"
 if command -v python3 &> /dev/null; then
     echo -e "${GREEN}✓ Python 3 found.${NC}"
     
-    # Create virtual environment if it doesn't exist
-    if [ ! -d "backend/venv" ]; then
-        echo "Creating virtual environment in backend/venv..."
+    # Create virtual environment if it doesn't exist or is stale (dangling symlink to removed Xcode python)
+    if [ ! -x "backend/venv/bin/python3" ]; then
+        echo "Backend venv interpreter missing or stale — recreating backend/venv..."
+        rm -rf backend/venv
         python3 -m venv backend/venv
     fi
     

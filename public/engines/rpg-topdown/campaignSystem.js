@@ -242,7 +242,9 @@ window.CampaignSystem = class CampaignSystem {
                 break;
 
             case 'cutscene':
-                if (this.game.dialogueSystem) {
+                if (this.game.interactiveCutsceneEngine && typeof this.game.interactiveCutsceneEngine.play === 'function') {
+                    this.game.interactiveCutsceneEngine.play(node.cutsceneId, () => this.continueFlow(node));
+                } else if (this.game.dialogueSystem) {
                      this.game.dialogueSystem.start(node.cutsceneId, () => {
                          this.continueFlow(node);
                      });

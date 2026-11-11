@@ -76,22 +76,22 @@ const Pf3dEditor = (() => {
     let _sculpting        = false;
     
     let LowPolyTerrainGen = null;
-    import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
+    import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(e => console.warn('[Platformer3D] LowPolyTerrainGen unavailable:', e));
     
     let Renderer3D = null;
     import('/engines/shared/Renderer3D.js').then(m => { 
         Renderer3D = m.default; 
         window.PrimitiveFactory = m.PrimitiveFactory;
-    }).catch(() => {});
+    }).catch(e => console.warn('[Platformer3D] Renderer3D unavailable:', e));
 
     let PaletteManager = null;
     import('/engines/shared/PaletteManager.js').then(m => { 
         PaletteManager = m.default; 
         _palManager = new PaletteManager();
-    }).catch(() => {});
+    }).catch(e => console.warn('[Platformer3D] PaletteManager unavailable:', e));
     
     let SkyboxSystem = null;
-    import('/engines/shared/SkyboxSystem.js').then(m => { SkyboxSystem = m.default; }).catch(() => {});
+    import('/engines/shared/SkyboxSystem.js').then(m => { SkyboxSystem = m.default; }).catch(e => console.warn('[Platformer3D] SkyboxSystem unavailable:', e));
 
     let _palManager = null;
 
@@ -155,7 +155,9 @@ const Pf3dEditor = (() => {
     // THREE.JS SETUP
     // ─────────────────────────────────────────────────────────────────────────
 
-    function _initThree(callback) {
+    function _escapeHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+    function _jsArg(v){return JSON.stringify(String(v==null?'':v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function _initThree(callback) {
         const canvas = document.getElementById('viewport-canvas');
         const wrap   = document.getElementById('viewport-wrap');
 
@@ -766,6 +768,9 @@ const Pf3dEditor = (() => {
     // ─────────────────────────────────────────────────────────────────────────
 
     function _showProperties(id, group) {
+        // Defensive: ids from loaded levels are data — never inject raw into inline handlers/HTML.
+        id = String(id ?? '').replace(/[^a-zA-Z0-9_-]/g, '') || 'obj_unknown';
+        group = group === 'entity' ? 'entity' : 'object';
         const propsBody = document.getElementById('props-body');
         const obj = group === 'object' ? _state.objects.find(o => o.id === id)
                                        : _state.entities.find(e => e.id === id);
@@ -820,7 +825,7 @@ const Pf3dEditor = (() => {
             `}
 
             <div style="margin-top:12px;display:flex;gap:6px;">
-                <button class="btn btn-danger" style="flex:1" onclick="Pf3dEditor.deleteById('${id}','${group}')">
+                <button class="btn btn-danger" style="flex:1" onclick="Pf3dEditor.deleteById(${_jsArg(id)},${_jsArg(group)})">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -1000,11 +1005,11 @@ const Pf3dEditor = (() => {
             if (!_hierarchyCollapsed.entities) {
                 for (const en of _state.entities) {
                     const sel = en.id === _selectedId ? ' selected' : '';
-                    html += `<div class="hier-item${sel}" data-id="${en.id}" onclick="Pf3dEditor._selectById('${en.id}','entity')">
+                    html += `<div class="hier-item${sel}" data-id="${_escapeHtml(en.id)}" onclick="Pf3dEditor._selectById(${_jsArg(en.id)},'entity')">
                         <span style="font-size:.75rem;width:14px;text-align:center;color:${_entityColorHex(en.type)}">●</span>
                         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${en.type}</span>
                         <span class="hier-type">ENT</span>
-                        <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility('${en.id}')" title="Toggle visibility"><i class="fas fa-eye"></i></button>
+                        <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility(${_jsArg(en.id)})" title="Toggle visibility"><i class="fas fa-eye"></i></button>
                     </div>`;
                 }
             }
@@ -1016,11 +1021,11 @@ const Pf3dEditor = (() => {
             if (!_hierarchyCollapsed.objects) {
                 for (const obj of _state.objects) {
                     const sel = obj.id === _selectedId ? ' selected' : '';
-                    html += `<div class="hier-item${sel}" data-id="${obj.id}" onclick="Pf3dEditor._selectById('${obj.id}','object')">
+                    html += `<div class="hier-item${sel}" data-id="${_escapeHtml(obj.id)}" onclick="Pf3dEditor._selectById(${_jsArg(obj.id)},'object')">
                         <span style="font-size:.75rem;width:14px;text-align:center;color:#${_getColor(obj.colorIdx ?? 12).toString(16).padStart(6,'0')}">■</span>
                         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${obj.subtype || obj.type}</span>
                         <span class="hier-type">OBJ</span>
-                        <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility('${obj.id}')" title="Toggle visibility"><i class="fas fa-eye"></i></button>
+                        <button class="hier-vis" onclick="event.stopPropagation();Pf3dEditor._toggleVisibility(${_jsArg(obj.id)})" title="Toggle visibility"><i class="fas fa-eye"></i></button>
                     </div>`;
                 }
             }
@@ -1219,7 +1224,8 @@ const Pf3dEditor = (() => {
         if (!_undoStack.length) return;
         const cur  = JSON.stringify({ objects: _state.objects, entities: _state.entities });
         _redoStack.push(cur);
-        const snap = JSON.parse(_undoStack.pop());
+        let snap;
+        try { snap = JSON.parse(_undoStack.pop()); } catch (_) { _setStatus('Undo snapshot corrupted — ignored'); return; }
         _state.objects  = snap.objects;
         _state.entities = snap.entities;
         deselectAll();
@@ -1234,7 +1240,8 @@ const Pf3dEditor = (() => {
         if (!_redoStack.length) return;
         const cur  = JSON.stringify({ objects: _state.objects, entities: _state.entities });
         _undoStack.push(cur);
-        const snap = JSON.parse(_redoStack.pop());
+        let snap;
+        try { snap = JSON.parse(_redoStack.pop()); } catch (_) { _setStatus('Redo snapshot corrupted — ignored'); return; }
         _state.objects  = snap.objects;
         _state.entities = snap.entities;
         deselectAll();
@@ -1846,19 +1853,19 @@ const Pf3dEditor = (() => {
             }
             list.innerHTML = items.map(({ proj, levels }) => `
                 <div style="margin-bottom:14px;">
-                    <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${proj.name}</div>
+                    <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${_escapeHtml(proj.name)}</div>
                     ${levels.map(l => `
                         <div style="padding:8px 12px; background:#150f0a; border:1px solid #222; margin-bottom:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
                              onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#222'"
-                             onclick="Pf3dEditor.browseLoad('${proj.name.replace(/'/g, "\\'")}', '${l.id}')">
-                            <span style="color:#ccc;">${l.name || l.id}</span>
-                            <span style="color:#555; font-size:0.75rem;">${l.id}</span>
+                             onclick="Pf3dEditor.browseLoad(${_jsArg(proj.name)},${_jsArg(l.id)})">
+                            <span style="color:#ccc;">${_escapeHtml(l.name || l.id)}</span>
+                            <span style="color:#555; font-size:0.75rem;">${_escapeHtml(l.id)}</span>
                         </div>
                     `).join('')}
                 </div>
             `).join('');
         } catch(e) {
-            list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${e.message}</div>`;
+            list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${_escapeHtml(e.message)}</div>`;
         }
     }
 
@@ -1868,8 +1875,14 @@ const Pf3dEditor = (() => {
     }
 
     async function browseLoad(project, levelId) {
-        closeBrowse();
-        await loadLevel(null, project, levelId);
+        try {
+            closeBrowse();
+            await loadLevel(null, project, levelId);
+        } catch (e) {
+            const list = document.getElementById('browse-list');
+            if (list) list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${_escapeHtml(e.message)}</div>`;
+            else _setStatus('Load error: ' + e.message);
+        }
     }
 
     return {

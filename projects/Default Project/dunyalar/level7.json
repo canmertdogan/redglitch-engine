@@ -1428,5 +1428,9 @@
     }
   ],
   "name": "level7",
-  "engineType": "rpg-topdown"
+  "engineType": "rpg-topdown",
+  "spawnX": 240,
+  "spawnY": 576,
+  "exitX": 1440,
+  "exitY": 288
 }

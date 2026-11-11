@@ -750,7 +750,7 @@ export default class Editor3DCore {
 
         // Offset so successive spawns don't stack
         const offset = this._levelData.geometry.length * 0.1;
-        const id = `geo_${Date.now().toString(36)}`;
+        const id = `geo_${Date.now().toString(36)}_${(Math.random()*1e6|0).toString(36)}`;
 
         const def = {
             id,
@@ -781,7 +781,7 @@ export default class Editor3DCore {
         if (!this._levelData.lights) this._levelData.lights = [];
 
         this._pushUndo();
-        const id = `light_${Date.now().toString(36)}`;
+        const id = `light_${Date.now().toString(36)}_${(Math.random()*1e6|0).toString(36)}`;
         this._levelData.lights.push({
             id, type: 'point',
             position: [0, 3, 0],
@@ -801,7 +801,7 @@ export default class Editor3DCore {
         if (!this._levelData.entities) this._levelData.entities = [];
 
         this._pushUndo();
-        const id = `entity_${Date.now().toString(36)}`;
+        const id = `entity_${Date.now().toString(36)}_${(Math.random()*1e6|0).toString(36)}`;
         this._levelData.entities.push({
             id, type: 'spawn',
             position: [0, 1, 0]
@@ -1125,6 +1125,52 @@ export default class Editor3DCore {
         this._updatePropertiesPanel();
     }
 
+    _addEntityProperty(entId) {
+        this._pushUndo();
+        const ent = this._levelData?.entities?.find(e => e.id === entId);
+        if (!ent) return;
+        if (!ent.properties) ent.properties = {};
+        let newKey = 'prop_1';
+        let i = 1;
+        while (ent.properties[newKey] !== undefined) {
+            i++;
+            newKey = `prop_${i}`;
+        }
+        ent.properties[newKey] = '';
+        this._markDirty();
+        this._updatePropertiesPanel();
+    }
+
+    _removeEntityProperty(entId, key) {
+        this._pushUndo();
+        const ent = this._levelData?.entities?.find(e => e.id === entId);
+        if (!ent || !ent.properties) return;
+        delete ent.properties[key];
+        this._markDirty();
+        this._updatePropertiesPanel();
+    }
+
+    _updateEntityPropertyKey(entId, oldKey, newKey) {
+        if (oldKey === newKey || !newKey.trim()) return;
+        this._pushUndo();
+        const ent = this._levelData?.entities?.find(e => e.id === entId);
+        if (!ent || !ent.properties) return;
+        ent.properties[newKey] = ent.properties[oldKey];
+        delete ent.properties[oldKey];
+        this._markDirty();
+        this._updatePropertiesPanel();
+    }
+
+    _updateEntityPropertyValue(entId, key, value) {
+        this._pushUndo();
+        const ent = this._levelData?.entities?.find(e => e.id === entId);
+        if (!ent) return;
+        if (!ent.properties) ent.properties = {};
+        ent.properties[key] = value;
+        this._markDirty();
+        this._updatePropertiesPanel();
+    }
+
     _deleteMaterial(matId) {
         this._pushUndo();
         // Remove material
@@ -1188,6 +1234,37 @@ export default class Editor3DCore {
     _applyPropertyChange(obj, field, value) {
         this._pushUndo();
         const DEG = Math.PI / 180;
+        if (obj.userData?._isEntity) {
+            const ent = this._levelData?.entities?.find(e => e.id === obj.name);
+            switch (field) {
+                case 'name':
+                    if (ent) ent.id = value;
+                    obj.name = value;
+                    break;
+                case 'type':
+                    if (ent) ent.type = value;
+                    obj.userData.type = value;
+                    const col = this._entityColor(value);
+                    if (obj.material?.color) {
+                        obj.material.color.set(col);
+                        if (obj.material.emissive) obj.material.emissive.set(col);
+                    }
+                    break;
+                case 'px': obj.position.x = value; break;
+                case 'py': obj.position.y = value; break;
+                case 'pz': obj.position.z = value; break;
+                case 'rx': obj.rotation.x = value * DEG; break;
+                case 'ry': obj.rotation.y = value * DEG; break;
+                case 'rz': obj.rotation.z = value * DEG; break;
+                case 'sx': obj.scale.x = value; break;
+                case 'sy': obj.scale.y = value; break;
+                case 'sz': obj.scale.z = value; break;
+            }
+            this._commitTransformToLevelData(obj);
+            this._markDirty();
+            return;
+        }
+
         switch (field) {
             case 'name': obj.name = value; break;
             case 'material_id':
@@ -1428,19 +1505,42 @@ export default class Editor3DCore {
         if (!levelData) return;
 
         // Build geometry
-        if (Array.isArray(levelData.geometry)) {
-            for (const def of levelData.geometry) {
+        let geometryList = Array.isArray(levelData.geometry) ? levelData.geometry : [];
+        if (geometryList.length === 0 && Array.isArray(levelData.platforms) && levelData.platforms.length > 0) {
+            geometryList = levelData.platforms.map((p, idx) => {
+                const w = Math.max(0.1, Number(p.w ?? p.width ?? 2));
+                const h = Math.max(0.1, Number(p.h ?? p.height ?? 1));
+                const d = Math.max(0.1, Number(p.d ?? p.depth ?? 2));
+                const x = Number(p.x ?? p.pos?.x ?? 0);
+                const y = Number(p.y ?? p.pos?.y ?? 0) + h * 0.5;
+                const z = Number(p.z ?? p.pos?.z ?? 0);
+                return {
+                    id: p.id || `platform_${idx}`,
+                    type: p.blockType || p.subtype || 'box',
+                    shape_type: p.blockType || p.subtype || 'box',
+                    width: w, height: h, depth: d,
+                    position: [x, y, z],
+                    colorHex: p.colorHex || null,
+                    palette_index: p.colorIdx ?? 122,
+                };
+            });
+        }
+
+        if (geometryList.length > 0) {
+            for (const def of geometryList) {
                 const w = def.width  || def.w || 1;
                 const h = def.height || def.h || 1;
                 const d = def.depth  || def.d || 1;
 
-                // Choose geometry based on shape_type
+                // Choose geometry based on shape_type or type
                 let geo;
                 if ((def.type === 'trimesh' || def.type === 'prop') && def.positions) {
                     geo = new THREE.BufferGeometry();
                     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(def.positions), 3));
                     if (def.normals) geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(def.normals), 3));
                     if (def.colors) geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(def.colors), 3));
+                    if (def.uvs) geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(def.uvs), 2));
+                    if (def.indices) geo.setIndex(new THREE.BufferAttribute(new (def.indices.length > 65535 ? Uint32Array : Uint16Array)(def.indices), 1));
                     if (!def.normals) geo.computeVertexNormals();
                 } else if (def.shape_type === 'custom_csg') {
                     geo = new THREE.BufferGeometry();
@@ -1452,7 +1552,8 @@ export default class Editor3DCore {
                     // Always compute vertex normals to fix black rendering bug on CSG
                     geo.computeVertexNormals();
                 } else {
-                    switch (def.shape_type) {
+                    const shapeType = (def.shape_type || def.type || def.blockType || 'box').toLowerCase();
+                    switch (shapeType) {
                         case 'sphere':
                             geo = new THREE.SphereGeometry(w / 2, 24, 16);
                             break;
@@ -1556,8 +1657,68 @@ export default class Editor3DCore {
         }
 
         // Build entities as markers
-        if (Array.isArray(levelData.entities)) {
-            for (const ent of levelData.entities) {
+        const entityList = Array.isArray(levelData.entities) ? [...levelData.entities] : [];
+        const existingIds = new Set(entityList.map(e => e.id));
+
+        // If playerSpawn exists and not in entities, add as marker
+        if (levelData.playerSpawn && !existingIds.has('player_spawn') && !entityList.some(e => e.type === 'player-spawn' || e.type === 'player_spawn' || e.type === 'spawn')) {
+            const sp = levelData.playerSpawn;
+            const px = Array.isArray(sp) ? sp[0] : (sp.x ?? 0);
+            const py = Array.isArray(sp) ? sp[1] : (sp.y ?? 0);
+            const pz = Array.isArray(sp) ? sp[2] : (sp.z ?? 0);
+            entityList.push({
+                id: 'player_spawn',
+                type: 'player-spawn',
+                position: [px, py, pz],
+            });
+        }
+        // If levelExit exists and not in entities, add as marker
+        if (levelData.levelExit && !existingIds.has('level_exit') && !entityList.some(e => e.type === 'exit' || e.type === 'level-exit' || e.type === 'level_exit' || e.type === 'goal')) {
+            const ex = levelData.levelExit;
+            const px = Array.isArray(ex.position) ? ex.position[0] : (ex.x ?? ex.pos?.x ?? 0);
+            const py = Array.isArray(ex.position) ? ex.position[1] : (ex.y ?? ex.pos?.y ?? 0);
+            const pz = Array.isArray(ex.position) ? ex.position[2] : (ex.z ?? ex.pos?.z ?? 0);
+            entityList.push({
+                id: 'level_exit',
+                type: 'level-exit',
+                position: [px, py, pz],
+            });
+        }
+        // If checkpoints exist and not in entities, add as markers
+        if (Array.isArray(levelData.checkpoints)) {
+            levelData.checkpoints.forEach((cp, idx) => {
+                const id = cp.id || `checkpoint_${idx}`;
+                if (!existingIds.has(id)) {
+                    const px = cp.position?.x ?? (Array.isArray(cp.position) ? cp.position[0] : (cp.pos?.x ?? cp.x ?? 0));
+                    const py = cp.position?.y ?? (Array.isArray(cp.position) ? cp.position[1] : (cp.pos?.y ?? cp.y ?? 0));
+                    const pz = cp.position?.z ?? (Array.isArray(cp.position) ? cp.position[2] : (cp.pos?.z ?? cp.z ?? 0));
+                    entityList.push({
+                        id,
+                        type: 'checkpoint',
+                        position: [px, py, pz],
+                    });
+                }
+            });
+        }
+        // If collectibles exist and not in entities, add as markers
+        if (Array.isArray(levelData.collectibles)) {
+            levelData.collectibles.forEach((c, idx) => {
+                const id = c.id || `collectible_${idx}`;
+                if (!existingIds.has(id)) {
+                    const px = c.position?.x ?? (Array.isArray(c.position) ? c.position[0] : (c.pos?.x ?? c.x ?? 0));
+                    const py = c.position?.y ?? (Array.isArray(c.position) ? c.position[1] : (c.pos?.y ?? c.y ?? 0));
+                    const pz = c.position?.z ?? (Array.isArray(c.position) ? c.position[2] : (c.pos?.z ?? c.z ?? 0));
+                    entityList.push({
+                        id,
+                        type: c.type || 'coin',
+                        position: [px, py, pz],
+                    });
+                }
+            });
+        }
+
+        if (entityList.length > 0) {
+            for (const ent of entityList) {
                 const entColor = this._entityColor(ent.type);
                 const geo = ent.type === 'vehicle'
                     ? new THREE.BoxGeometry(ent.width || 1.8, ent.height || 0.75, ent.depth || 3)
@@ -2089,7 +2250,13 @@ export default class Editor3DCore {
 
     _serializeLevelData() {
         const data = { ...(this._levelData || {}) };
-        data.engineType = this._mode;
+        const STUDIO_SUBMODES = ['terrain', 'proplib', 'playerstudio', 'npcstudio', 'sculptstudio'];
+        if (STUDIO_SUBMODES.includes(this._mode)) {
+            data.studioMode = this._mode;
+            data.engineType = this._levelData?.engineType || 'unified-3d';
+        } else {
+            data.engineType = this._mode;
+        }
         data.geometry = [];
         data.entities = [];
         data.lights   = [];
@@ -2138,6 +2305,9 @@ export default class Editor3DCore {
                     if (nrm) geoData.normals = Array.from(nrm.array);
                     const col = mesh.geometry.getAttribute('color');
                     if (col) geoData.colors = Array.from(col.array);
+                    const uvs = mesh.geometry.getAttribute('uv');
+                    if (uvs) geoData.uvs = Array.from(uvs.array);
+                    if (mesh.geometry.index) geoData.indices = Array.from(mesh.geometry.index.array);
                 }
                 
                 data.geometry.push(geoData);
@@ -2263,6 +2433,72 @@ export default class Editor3DCore {
             }
         }
 
+        // Ensure checkpoints, collectibles, and exit are synchronized for engine runtimes
+        const checkpointEntities = data.entities.filter(e => e.type === 'checkpoint');
+        if (checkpointEntities.length > 0) {
+            data.checkpoints = checkpointEntities.map(cp => ({
+                id: cp.id,
+                position: {
+                    x: cp.position[0],
+                    y: cp.position[1],
+                    z: cp.position[2],
+                },
+                x: cp.position[0],
+                y: cp.position[1],
+                z: cp.position[2],
+                activated: !!cp.properties?.activated,
+            }));
+        }
+
+        const collectibleEntities = data.entities.filter(e =>
+            ['coin', 'star', 'gem', 'collectible', 'powerup', 'key'].includes(e.type)
+        );
+        if (collectibleEntities.length > 0) {
+            data.collectibles = collectibleEntities.map(c => ({
+                id: c.id,
+                type: c.type === 'collectible' ? 'coin' : c.type,
+                position: [c.position[0], c.position[1], c.position[2]],
+                pos: { x: c.position[0], y: c.position[1], z: c.position[2] },
+                x: c.position[0],
+                y: c.position[1],
+                z: c.position[2],
+                config: c.properties || {},
+            }));
+        }
+
+        const exitEntity = data.entities.find(e =>
+            ['exit', 'level-exit', 'level_exit', 'goal'].includes(e.type)
+        );
+        if (exitEntity?.position) {
+            data.levelExit = {
+                x: exitEntity.position[0],
+                y: exitEntity.position[1],
+                z: exitEntity.position[2],
+                position: [exitEntity.position[0], exitEntity.position[1], exitEntity.position[2]],
+            };
+        }
+
+        // Generate platforms fallback from geometry for platformer-3d engine compatibility
+        if (data.geometry.length > 0) {
+            data.platforms = data.geometry.map(g => ({
+                id: g.id,
+                blockType: g.type,
+                subtype: g.type,
+                x: g.position[0],
+                y: g.position[1] - (g.height || 1) * 0.5,
+                z: g.position[2],
+                w: g.width,
+                h: g.height,
+                d: g.depth,
+                width: g.width,
+                height: g.height,
+                depth: g.depth,
+                colorHex: g.colorHex,
+                colorIdx: g.palette_index ?? 122,
+                rot: g.rotation,
+            }));
+        }
+
         // Let mode panel inject mode-specific data
         if (this._modePanel && typeof this._modePanel.onSerialize === 'function') {
             this._modePanel.onSerialize(data);
@@ -2341,7 +2577,13 @@ export default class Editor3DCore {
         }
 
         const data = this._serializeLevelData();
-        sessionStorage.setItem('redglitch_playtest_data', JSON.stringify(data));
+        const jsonStr = JSON.stringify(data);
+        sessionStorage.setItem('redglitch_playtest_data', jsonStr);
+        try {
+            localStorage.setItem('redglitch_playtest_data', jsonStr);
+        } catch (e) {
+            console.warn('[Editor3DCore] Could not save playtest data to localStorage:', e);
+        }
         const url = `/engines/unified-3d/index.html?engine=${encodeURIComponent(runtimeMode)}&playtest=true`;
         window.open(url, '_blank');
     }
@@ -2690,6 +2932,8 @@ export default class Editor3DCore {
         const entDef = this._levelData.entities?.find(e => e.id === name);
         if (entDef) {
             entDef.position = [mesh.position.x, mesh.position.y, mesh.position.z];
+            entDef.rotation = [mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w];
+            entDef.scale    = [mesh.scale.x, mesh.scale.y, mesh.scale.z];
             return;
         }
     }
@@ -2766,7 +3010,7 @@ export default class Editor3DCore {
         if (!this._levelData.lights) this._levelData.lights = [];
 
         this._pushUndo();
-        const id = `light_${Date.now().toString(36)}`;
+        const id = `light_${Date.now().toString(36)}_${(Math.random()*1e6|0).toString(36)}`;
         this._levelData.lights.push({
             id,
             type: type || 'point',
@@ -2790,7 +3034,7 @@ export default class Editor3DCore {
         if (!this._levelData.entities) this._levelData.entities = [];
 
         this._pushUndo();
-        const id = `entity_${Date.now().toString(36)}`;
+        const id = `entity_${Date.now().toString(36)}_${(Math.random()*1e6|0).toString(36)}`;
         this._levelData.entities.push({
             id,
             type: type || 'spawn',
@@ -3006,12 +3250,16 @@ export default class Editor3DCore {
 
     _entityColor(type) {
         const map = {
-            'player-spawn': '#27ae60', 'player_spawn': '#27ae60',
-            'enemy-grunt': '#e74c3c',  'enemy': '#e74c3c',
-            'pickup-health': '#2ecc71', 'pickup': '#3498db',
+            'player-spawn': '#27ae60', 'player_spawn': '#27ae60', 'spawn': '#27ae60',
+            'enemy-grunt': '#e74c3c',  'enemy': '#e74c3c', 'enemy_grunt': '#e74c3c',
+            'enemy_walker': '#e74c3c', 'enemy_sniper': '#c0392b', 'enemy_drone': '#d35400',
+            'pickup-health': '#2ecc71', 'pickup': '#3498db', 'pickup-ammo': '#e67e22', 'ammo': '#e67e22',
             'door': '#e67e22', 'trigger': '#f39c12',
-            'level-exit': '#ff6b35', 'checkpoint': '#9b59b6',
-            'npc': '#1abc9c', 'collectible': '#f1c40f',
+            'level-exit': '#ff6b35', 'level_exit': '#ff6b35', 'exit': '#ff6b35', 'goal': '#ff6b35', 'portal': '#9b59b6',
+            'checkpoint': '#9b59b6',
+            'npc': '#1abc9c', 'collectible': '#f1c40f', 'coin': '#f1c40f', 'star': '#f39c12', 'gem': '#9b59b6',
+            'hazard': '#e74c3c', 'spike': '#c0392b', 'lava': '#e74c3c', 'saw': '#d35400',
+            'audio_emitter': '#00bcd4', 'sound': '#00bcd4', 'audio': '#00bcd4', 'ambient_sound': '#00bcd4',
             'vehicle': '#3f6fb4',
         };
         return map[type] || '#aaaaaa';

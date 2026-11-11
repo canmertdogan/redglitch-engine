@@ -5,6 +5,8 @@ window.Core = class Core {
         this.mapSystem = new window.MapSystem(this.ctx);
         this.dialogueSystem = new window.DialogueSystem(); this.achievementSystem = new window.AchievementSystem(); this.saveSystem = new window.SaveSystem();
         this.questSystem = new window.QuestSystem(this);
+        this.itemDefs = new window.ItemDefinitions ? new window.ItemDefinitions() : null;
+        if (this.itemDefs) this.itemDefs.load().catch(()=>{});
         this.campaign = new window.CampaignSystem(this); 
         this.uiSystem = new window.UISystem(this);
         
@@ -356,6 +358,139 @@ window.Core = class Core {
         console.log('[RPG Core] Destroyed');
     }
 
+    /**
+     * Spawn one prefab decoration (`{type:'prefab', data:'<file>.json'}`).
+     * Shared by loadLevel and loadLevelFromData so the two code paths cannot
+     * drift apart again. Components are applied through
+     * `_applyPrefabComponents`, and the resulting fields are consumed by the
+     * runtime (collider size in hit tests, light in the lighting pass, loot on
+     * death, particle emission per tick).
+     */
+    async _spawnPrefabAt(d) {
+        try {
+            const res = await fetch(`dunyalar/definitions/${d.data}`);
+            if (!res.ok) return;
+            const prefab = await res.json();
+            if (!prefab || !Array.isArray(prefab.components)) return;
+            const hasStats = prefab.components.some(c => c && c.type === 'Stats');
+            const script = prefab.components.find(c => c && c.type === 'Script');
+            const id = script && script.scriptId ? script.scriptId : 'demo';
+            const entity = hasStats
+                ? new window.Enemy(d.x * 48, d.y * 48, id, this)
+                : new window.NPC(d.x * 48, d.y * 48, id, this);
+            entity.prefabId = String(d.data).replace(/\.json$/, '');
+            if (prefab.name && entity.def) entity.def.name = prefab.name;
+            if (prefab.sprite) {
+                if (entity.def && entity.def.animations && entity.def.animations.idle) {
+                    entity.def.animations.idle.sprite = prefab.sprite;
+                }
+                entity.sprites = entity.sprites || {};
+                entity.sprites.idle = window.createPixelImage(prefab.sprite);
+            }
+            this._applyPrefabComponents(entity, prefab);
+            if (hasStats) this.enemies.push(entity);
+            else this.npcs.push(entity);
+        } catch (e) {
+            console.warn('Prefab error', e);
+        }
+    }
+
+    /** Map serialized prefab components onto live entity fields. */
+    _applyPrefabComponents(entity, prefab) {
+        for (const comp of prefab.components) {
+            if (!comp || !comp.type) continue;
+            switch (comp.type) {
+                case 'Collider': {
+                    const w = Number.isFinite(comp.width) ? comp.width : (entity.width || 16);
+                    const h = Number.isFinite(comp.height) ? comp.height : (entity.height || 16);
+                    entity.width = w;
+                    entity.height = h;
+                    entity.collider = {
+                        w, h,
+                        offsetX: Number(comp.offsetX) || 0,
+                        offsetY: Number(comp.offsetY) || 0,
+                        isTrigger: comp.isTrigger === true,
+                        solid: comp.solid !== false && comp.isTrigger !== true,
+                    };
+                    break;
+                }
+                case 'Light':
+                    entity.light = {
+                        radius: Number.isFinite(comp.radius) ? comp.radius : 100,
+                        color: comp.color || '#ffffff',
+                        intensity: Number.isFinite(comp.intensity) ? comp.intensity : 0.8,
+                        pulse: comp.pulse === true,
+                    };
+                    break;
+                case 'Loot':
+                    entity.loot = {
+                        table: comp.table || 'common',
+                        chance: Number.isFinite(comp.chance) ? comp.chance : 1,
+                        goldMin: Number.isFinite(comp.goldMin) ? comp.goldMin : 0,
+                        goldMax: Number.isFinite(comp.goldMax) ? comp.goldMax : 0,
+                        items: Array.isArray(comp.items) ? comp.items.slice() : undefined,
+                    };
+                    break;
+                case 'Particle':
+                    entity.particle = {
+                        system: comp.system || 'spark',
+                        active: comp.active !== false,
+                        offset: comp.offset && typeof comp.offset === 'object'
+                            ? { x: Number(comp.offset.x) || 0, y: Number(comp.offset.y) || 0 }
+                            : { x: 0, y: 0 },
+                        rate: Number.isFinite(comp.rate) ? comp.rate : 10,
+                    };
+                    break;
+                case 'Stats':
+                    if (Number.isFinite(comp.hp)) { entity.maxHp = comp.hp; entity.hp = comp.hp; }
+                    if (Number.isFinite(comp.speed)) entity.speed = comp.speed;
+                    if (Number.isFinite(comp.damage)) entity.damage = comp.damage;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    /** Emit prefab Particle component emissions for one entity. */
+    _emitEntityParticle(entity, dt) {
+        const p = entity && entity.particle;
+        if (!p || !p.active) return;
+        const rate = Number.isFinite(p.rate) && p.rate > 0 ? Math.min(p.rate, 60) : 10;
+        entity._particleAccum = (entity._particleAccum || 0) + dt;
+        const interval = 1 / rate;
+        if (entity._particleAccum < interval) return;
+        entity._particleAccum = 0;
+        const colors = { fire: '#ff7b00', spark: '#ffe066', smoke: '#777777', magic: '#b06cff', water: '#4fc3f7' };
+        const color = colors[p.system] || '#ffe066';
+        const cx = entity.x + (entity.width * entity.scale) / 2 + (p.offset.x || 0);
+        const cy = entity.y + (entity.height * entity.scale) / 2 + (p.offset.y || 0);
+        this.spawnParticle(cx, cy, (Math.random() - 0.5) * 20, -30 - Math.random() * 20, color, 0.5 + Math.random() * 0.4, 3);
+    }
+
+    /** Feed prefab Light components into the per-frame lighting pass. */
+    _collectEntityLights(lights, viewX, viewY, viewW, viewH) {
+        const push = (ent) => {
+            const l = ent && ent.light;
+            if (!l) return;
+            const lx = ent.x + (ent.width * ent.scale) / 2 + (ent.collider ? ent.collider.offsetX * ent.scale : 0);
+            const ly = ent.y + (ent.height * ent.scale) / 2 + (ent.collider ? ent.collider.offsetY * ent.scale : 0);
+            const radius = Number.isFinite(l.radius) ? l.radius : 100;
+            if (lx < viewX - radius || lx > viewX + viewW + radius ||
+                ly < viewY - radius || ly > viewY + viewH + radius) return;
+            const pulse = l.pulse ? 0.85 + Math.sin(Date.now() * 0.005) * 0.15 : 1;
+            lights.push({
+                x: lx,
+                y: ly,
+                radius: radius * pulse,
+                color: l.color || '#ffffff',
+                intensity: (Number.isFinite(l.intensity) ? l.intensity : 0.8) * pulse,
+            });
+        };
+        if (Array.isArray(this.enemies)) this.enemies.forEach(push);
+        if (Array.isArray(this.npcs)) this.npcs.forEach(push);
+    }
+
     async loadLevelFromData(dungeonData) {
         try {
             await this.mapSystem.loadMap(dungeonData); this.enemies = []; this.npcs = [];
@@ -364,7 +499,7 @@ window.Core = class Core {
                     if (d.type === 'enemy') this.enemies.push(new window.Enemy(d.x * 48, d.y * 48, d.data, this));
                     else if (d.type === 'npc') this.npcs.push(new window.NPC(d.x * 48, d.y * 48, d.data, this));
                     else if (d.type === 'prefab') {
-                        try { const res = await fetch(`dunyalar/definitions/${d.data}`); if (res.ok) { const prefab = await res.json(); const hasStats = prefab.components.some(c => c.type === 'Stats'); const script = prefab.components.find(c => c.type === 'Script'); const id = script ? script.scriptId : 'demo'; if (hasStats) { const en = new window.Enemy(d.x * 48, d.y * 48, id, this); en.def.name = prefab.name; en.prefabId = d.data.replace('.json', ''); if(prefab.sprite) { en.def.animations.idle.sprite = prefab.sprite; en.sprites.idle = window.createPixelImage(prefab.sprite); } this.enemies.push(en); } else { const npc = new window.NPC(d.x * 48, d.y * 48, id, this); npc.prefabId = d.data.replace('.json', ''); if(prefab.sprite) { npc.def.animations.idle.sprite = prefab.sprite; npc.sprites.idle = window.createPixelImage(prefab.sprite); } this.npcs.push(npc); } } } catch(e) { console.warn("Prefab error", e); }
+                        await this._spawnPrefabAt(d);
                     }
                 }
             };
@@ -405,7 +540,7 @@ window.Core = class Core {
                     if (d.type === 'enemy') this.enemies.push(new window.Enemy(d.x * 48, d.y * 48, d.data, this));
                     else if (d.type === 'npc') this.npcs.push(new window.NPC(d.x * 48, d.y * 48, d.data, this));
                     else if (d.type === 'prefab') {
-                        try { const res = await fetch(`dunyalar/definitions/${d.data}`); if (res.ok) { const prefab = await res.json(); const hasStats = prefab.components.some(c => c.type === 'Stats'); const script = prefab.components.find(c => c.type === 'Script'); const id = script ? script.scriptId : 'demo'; if (hasStats) { const en = new window.Enemy(d.x * 48, d.y * 48, id, this); en.def.name = prefab.name; en.prefabId = d.data.replace('.json', ''); if(prefab.sprite) { en.def.animations.idle.sprite = prefab.sprite; en.sprites.idle = window.createPixelImage(prefab.sprite); } this.enemies.push(en); } else { const npc = new window.NPC(d.x * 48, d.y * 48, id, this); npc.prefabId = d.data.replace('.json', ''); if(prefab.sprite) { npc.def.animations.idle.sprite = prefab.sprite; npc.sprites.idle = window.createPixelImage(prefab.sprite); } this.npcs.push(npc); } } } catch(e) { console.warn("Prefab error", e); }
+                        await this._spawnPrefabAt(d);
                     }
                 }
             };
@@ -542,11 +677,12 @@ window.Core = class Core {
             if(this.uiSystem) this.uiSystem.showScreen('inventory');
         }
         
-        this.enemies.forEach(en => { try { en.update(deltaTime); } catch(e) { console.warn("Enemy Error:", e); } }); 
-        this.npcs.forEach(npc => { try { npc.update(deltaTime); } catch(e) { console.warn("NPC Error:", e); } });
+        this.enemies.forEach(en => { try { en.update(deltaTime); this._emitEntityParticle(en, deltaTime); } catch(e) { console.warn("Enemy Error:", e); } }); 
+        this.npcs.forEach(npc => { try { npc.update(deltaTime); this._emitEntityParticle(npc, deltaTime); } catch(e) { console.warn("NPC Error:", e); } });
         this.weather.update(deltaTime, this.canvas.width, this.canvas.height);
         
         // Update Logic System
+        if (this.vsl && typeof this.vsl.update === 'function') { try { this.vsl.update(deltaTime); } catch(e){ console.error('VSL Error:', e);} }
         if (this.logicSystem) {
             try {
                 this.logicSystem.updateAll(deltaTime);
@@ -597,16 +733,24 @@ window.Core = class Core {
                     if (entity === this.player) continue; 
                     if (entity.hp !== undefined && entity.maxHp !== undefined) {
                         const fcx = fb.x + (fb.width * fb.scale) / 2, fcy = fb.y + (fb.height * fb.scale) / 2;
-                        const ecx = entity.x + 24, ecy = entity.y + 24;
-                        if (Math.sqrt((fcx - ecx) ** 2 + (fcy - ecy) ** 2) < 30) { 
+                        const col = entity.collider;
+                        const ecx = entity.x + (entity.width * entity.scale) / 2 + (col ? col.offsetX * entity.scale : 0);
+                        const ecy = entity.y + (entity.height * entity.scale) / 2 + (col ? col.offsetY * entity.scale : 0);
+                        const hitRadius = col ? Math.max(col.w, col.h) * entity.scale / 2 + 10 : 30;
+                        if (Math.sqrt((fcx - ecx) ** 2 + (fcy - ecy) ** 2) < hitRadius) { 
                             const dmg = fb.damage ?? 25;
-                            entity.hp -= dmg; fb.life = 0; 
+                            if (typeof entity.takeDamage === 'function') entity.takeDamage(dmg, 'physical');
+                            else entity.hp -= dmg;
+                            fb.life = 0; 
                             if(this.fx) this.fx.popText(entity.x + 24, entity.y, String(dmg), "#ff0000");
                             this.createExplosion(fb.x, fb.y, '#ff0000', 5); 
                             if (entity.hp <= 0) { 
-                                this.createExplosion(entity.x + 24, entity.y + 24, '#e74c3c', 15); 
-                                const idx = this.enemies.indexOf(entity);
-                                if (idx > -1) this.enemies.splice(idx, 1); 
+                                if (typeof entity.die === 'function') entity.die();
+                                else { 
+                                    this.createExplosion(entity.x + 24, entity.y + 24, '#e74c3c', 15); 
+                                    const idx = this.enemies.indexOf(entity);
+                                    if (idx > -1) this.enemies.splice(idx, 1); 
+                                } 
                             } 
                             fb.active = false; removed = true; break; 
                         } 
@@ -971,6 +1115,7 @@ window.Core = class Core {
                 color: 'rgba(231, 76, 60, 0.4)',
                 intensity: 0.6
             });
+            this._collectEntityLights(lights, viewX, viewY, viewW, viewH);
             this.fireballs.forEach(fb => {
                 if(!fb.active) return;
                 lights.push({

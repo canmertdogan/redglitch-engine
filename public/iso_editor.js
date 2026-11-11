@@ -1,5 +1,6 @@
 // iso_editor.js - Dedicated IsoPixel Studio Logic
 const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+const _jsArg = function (v) { return JSON.stringify(String(v == null ? '' : v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); };
 // Integrated with EventBus, SharedProjectState, and AssetManager
 
 // Integration system references
@@ -1794,7 +1795,7 @@ window.refreshWorldsList = async () => {
                     <div class="asset-meta">WORLD</div>
                 </div>
                 <div class="asset-actions">
-                    <button class="action-btn" title="Delete World" onclick="deleteWorld('${f}', event)">
+                    <button class="action-btn" title="Delete World" onclick="deleteWorld(${_jsArg(f)}, event)">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>

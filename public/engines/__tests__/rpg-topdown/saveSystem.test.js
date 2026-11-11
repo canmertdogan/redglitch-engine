@@ -118,10 +118,51 @@ test('load — returns parsed data on success', async () => {
   try {
     const sys = new SaveSystem();
     const result = await sys.load('user', 2);
-    assert.deepEqual(result, payload);
+    assert.equal(result.level, 'save1');
+    assert.equal(result.player.x, 50);
+    // Legacy (schema-less) slot is migrated in place
+    assert.equal(result._schema, SaveSystem.SCHEMA);
+    assert.equal(result._version, SaveSystem.FORMAT_VERSION);
   } finally {
     globalThis.fetch = origFetch;
   }
+});
+
+test('save — writes schema + version into the payload', async () => {
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => {
+    const body = JSON.parse(opts.body);
+    assert.equal(body._schema, SaveSystem.SCHEMA);
+    assert.equal(body._version, SaveSystem.FORMAT_VERSION);
+    return { ok: true };
+  };
+  try {
+    const sys = new SaveSystem();
+    await sys.save('testuser', 1, makeGameState());
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
+test('migrate — rejects 3D saves', () => {
+  assert.equal(
+    SaveSystem.migrate({ _schema: 'redglitch.3d.save.v3', player: { x: 1 } }),
+    null
+  );
+});
+
+test('migrate — fills missing containers for legacy saves', () => {
+  const migrated = SaveSystem.migrate({ level: 'a' });
+  assert.deepEqual(migrated.flags, {});
+  assert.deepEqual(migrated.inventory, []);
+  assert.deepEqual(migrated.activeSkills, []);
+  assert.equal(migrated.player.maxMana, 50);
+  assert.equal(migrated.player.maxStamina, 100);
+});
+
+test('migrate — returns null for non-object payloads', () => {
+  assert.equal(SaveSystem.migrate(null), null);
+  assert.equal(SaveSystem.migrate('nope'), null);
 });
 
 test('load — returns null on 404', async () => {

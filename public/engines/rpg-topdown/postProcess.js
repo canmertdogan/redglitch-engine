@@ -63,8 +63,8 @@ window.PostProcessSystem = class PostProcessSystem {
             for (const name of list) {
                 const res = await fetch(`/api/shaders/${name}`);
                 if (res.ok) {
-                    const data = await res.json();
-                    this.loadShader(name, data.content);
+                    const data = await res.text();
+                    this.loadShader(name, data);
                 }
             }
         } catch(e) {}

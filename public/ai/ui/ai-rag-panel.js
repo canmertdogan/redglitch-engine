@@ -307,7 +307,7 @@ export class RAGPanel {
     /* ---- Hit-zone broadcast (pointer-event passthrough) ----------------- */
 
     _startHitZoneBroadcast() {
-        setInterval(() => {
+        this._hitZoneIntervalId = setInterval(() => {
             const zones = [];
             const ids = ['rag-container', 'rag-search-panel', 'rag-btn'];
             ids.forEach((id) => {

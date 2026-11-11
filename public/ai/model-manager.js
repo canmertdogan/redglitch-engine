@@ -16,20 +16,6 @@ export class ModelManager {
      * Detect the best available backend.
      */
     async detectBackend() {
-        if (this.backend) return this.backend;
-
-        if (AI_CONFIG.features.enableWebGPU && navigator.gpu) {
-            try {
-                const adapter = await navigator.gpu.requestAdapter();
-                if (adapter) {
-                    this.backend = 'webgpu';
-                    return 'webgpu';
-                }
-            } catch (e) {
-                console.warn('[ModelManager] WebGPU detection failed:', e);
-            }
-        }
-
         this.backend = 'wasm';
         return 'wasm';
     }

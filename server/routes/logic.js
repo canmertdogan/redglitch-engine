@@ -10,6 +10,7 @@ const ensureDir = async (dir) => {
     await fs.mkdir(dir, { recursive: true });
 };
 
+function safeParseJSON(raw, label) { try { return JSON.parse(raw); } catch (e) { const err = new Error(`Invalid JSON in ${label}`); err.code = 'INVALID_JSON'; throw err; } }
 function isSafeBaseName(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
@@ -39,14 +40,27 @@ router.post('/save', async (req, res) => {
         
         // Save the visual workspace (JSON)
         if (json) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.json`), json, 'utf8');
-        
+
         // Save the executable JavaScript
         if (js) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.js`), typeof js === 'string' ? js : JSON.stringify(js), 'utf8');
 
-        // Save the AST (JSON)
-        if (ast) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.ast.json`), typeof ast === 'string' ? ast : JSON.stringify(ast, null, 2), 'utf8');
-        
-        res.json({ success: true });
+        // Compile graph -> AST automatically so engines can run it (LogicInterpreter needs ast.events)
+        let compiledAst = null;
+        if (json) {
+            try {
+                const graph = typeof json === 'string' ? JSON.parse(json) : json;
+                if (graph && Array.isArray(graph.nodes)) {
+                    const { compileLogicGraph } = require('../utils/logicCompiler');
+                    compiledAst = compileLogicGraph(graph);
+                }
+            } catch { /* compile is best-effort; workspace still saved */ }
+        }
+        // Save the AST (JSON) — explicit AST wins, otherwise compiled
+        const astToWrite = ast || compiledAst;
+        if (astToWrite) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.ast.json`), typeof astToWrite === 'string' ? astToWrite : JSON.stringify(astToWrite, null, 2), 'utf8');
+
+        // Expose whether engine can actually run it
+        res.json({ success: true, compiled: !!compiledAst, events: compiledAst ? Object.keys(compiledAst.events || {}) : [] });
     } catch (err) {
         res.status(500).json({ error: 'Failed to save logic' });
     }
@@ -101,7 +115,7 @@ router.get('/:name', async (req, res) => {
         
         // For .algorithm requests, return parsed JSON directly
         if (req.params.name.endsWith('.algorithm')) {
-            res.json(JSON.parse(json));
+            res.json(safeParseJSON(json, 'logic JSON'))
         } else {
             // For regular requests, return wrapped format
             res.json({ json });
@@ -117,7 +131,7 @@ router.get('/ast/:name', async (req, res) => {
         if (!isSafeBaseName(req.params.name)) return res.status(400).json({ error: 'Invalid name' });
         const activeProject = projectService.getActiveProject();
         const ast = await fs.readFile(path.join(activeProject, 'data', 'logic', `${req.params.name}.ast.json`), 'utf8');
-        res.json(JSON.parse(ast));
+        res.json(safeParseJSON(ast, 'logic AST'))
     } catch (err) {
         res.status(404).json({ error: 'AST not found' });
     }
@@ -149,6 +163,7 @@ router.delete('/:name', async (req, res) => {
 
 // Support POST for .algorithm files (from test panel)
 router.post('/:name', async (req, res) => {
+    if (!req.body || typeof req.body !== 'object') return res.status(400).json({ error: 'Invalid request body' });
     try {
         const activeProject = projectService.getActiveProject();
         const normalizedFile = normalizeLogicName(req.params.name, true);

@@ -158,6 +158,7 @@
             'shared/AssetManager.js',
             'shared/DialogueSystem.js',
             'shared/QuestSystem.js',
+            'shared/LogicInterpreter.js',
             'shared/LogicSystem.js',
             'shared/UISystem.js',
             'shared/UIRenderer.js',
@@ -186,6 +187,7 @@
             'shared/LoggerHook.js',
             'shared/EventBus.js',
             'shared/AssetManager.js',
+            'shared/LogicInterpreter.js',
             'shared/LogicSystem.js',
             'shared/UISystem.js',
             'shared/UIRenderer.js',
@@ -205,6 +207,7 @@
             'shared/AssetManager.js',
             'shared/DialogueSystem.js',
             'shared/QuestSystem.js',
+            'shared/LogicInterpreter.js',
             'shared/LogicSystem.js',
             'shared/UISystem.js',
             'shared/UIRenderer.js',
@@ -233,18 +236,24 @@
             'shared/LoggerHook.js',
             'shared/EventBus.js',
             'shared/AssetManager.js',
+            'shared/LogicInterpreter.js',
+            'shared/LogicSystem.js',
             'engines/3d/main.js'
         ],
         'topdown-3d': [
             'shared/LoggerHook.js',
             'shared/EventBus.js',
             'shared/AssetManager.js',
+            'shared/LogicInterpreter.js',
+            'shared/LogicSystem.js',
             'engines/3d/main.js'
         ],
         'platformer-3d': [
             'shared/LoggerHook.js',
             'shared/EventBus.js',
             'shared/AssetManager.js',
+            'shared/LogicInterpreter.js',
+            'shared/LogicSystem.js',
             'engines/3d/main.js'
         ]
     };

@@ -144,7 +144,9 @@ window.LogicInterpreter = class LogicInterpreter {
             'flow_foreach': async (ctx) => {
                 const arr = await this.resolveValue(ctx, 'array') || [];
                 const loopMem = { ...ctx.memory };
-                for (let i = 0; i < arr.length; i++) {
+                const limit = Math.min(arr.length, MAX_LOOP_ITER);
+                if (arr.length > limit) console.warn(`[LogicInterpreter] flow_foreach capped at ${limit} items`);
+                for (let i = 0; i < limit; i++) {
                     loopMem.index = i;
                     loopMem.item = arr[i];
                     const local = { ...ctx, memory: loopMem };

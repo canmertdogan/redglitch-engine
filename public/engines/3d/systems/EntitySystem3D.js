@@ -160,8 +160,31 @@ export default class EntitySystem3D {
         root.scale.set(...scl);
         this.scene.add(root);
 
+        // ── Team resolution (maps Studio archetype faction/type to engine team) ──
+        let team = prop.team;
+        if (team === undefined) {
+            if (def.type === 'enemy' || def.type?.startsWith('enemy_') || prop.faction === 'enemy') {
+                team = 1;
+            } else if (prop.faction === 'ally') {
+                team = 0;
+            } else if (prop.faction === 'neutral' || prop.faction === 'civilian') {
+                team = 2;
+            } else {
+                team = 0;
+            }
+        }
+
         // ── Stats ─────────────────────────────────────────────────────────
-        const stats = _defaultStats(prop.stats);
+        const baseStats = {
+            hp: prop.health ?? prop.hp,
+            maxHp: prop.health ?? prop.maxHp,
+            speed: prop.speed,
+            attack: prop.attack,
+            defense: prop.defense,
+            visionRadius: prop.detectionRadius,
+            ...(prop.stats || {})
+        };
+        const stats = _defaultStats(baseStats);
 
         // ── Mesh3D ────────────────────────────────────────────────────────
         let meshGroup  = null;
@@ -173,7 +196,7 @@ export default class EntitySystem3D {
                 const gltf  = await this.assets.loadGLTF(prop.modelUrl);
                 meshGroup   = gltf.scene;
                 // Apply flat shading + team colour
-                _applyTeamColor(meshGroup, prop.team ?? 0, this.palette);
+                _applyTeamColor(meshGroup, team, this.palette);
                 root.add(meshGroup);
 
                 // Animation mixer
@@ -191,11 +214,11 @@ export default class EntitySystem3D {
             } catch (e) {
                 console.warn(`[EntitySystem3D] Model load failed: ${prop.modelUrl}`, e.message);
                 // Fallback: low-poly capsule placeholder
-                meshGroup = _buildPlaceholderMesh(prop.team ?? 0, this.palette);
+                meshGroup = _buildPlaceholderMesh(team, this.palette);
                 root.add(meshGroup);
             }
         } else {
-            meshGroup = _buildPlaceholderMesh(prop.team ?? 0, this.palette);
+            meshGroup = _buildPlaceholderMesh(team, this.palette);
             root.add(meshGroup);
         }
 
@@ -246,9 +269,16 @@ export default class EntitySystem3D {
                 pathIdx:   0,
                 enabled:   prop.aiEnabled ?? true,
             },
-            team:        prop.team ?? 0,
+            team,
         });
 
+        if (this._entities.has(id)) {
+            let suffix = 2;
+            let newId = id;
+            while (this._entities.has(newId)) { newId = `${id}_${suffix++}`; }
+            entity.id = newId;
+            id = newId;
+        }
         this._entities.set(id, entity);
         return entity;
     }

@@ -56,13 +56,13 @@ const FPSEditor = (() => {
     let _sculptStrength = 0.08;
     let _sculpting      = false;
     let LowPolyTerrainGen = null;
-    import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(() => {});
+    import('/engines/shared/LowPolyTerrainGen.js').then(m => { LowPolyTerrainGen = m.default; }).catch(e => console.warn('[FPS] LowPolyTerrainGen unavailable:', e));
     
     let Renderer3D = null;
-    import('/engines/shared/Renderer3D.js').then(m => { Renderer3D = m.default; }).catch(() => {});
+    import('/engines/shared/Renderer3D.js').then(m => { Renderer3D = m.default; }).catch(e => console.warn('[FPS] Renderer3D unavailable:', e));
     
     let SkyboxSystem = null;
-    import('/engines/shared/SkyboxSystem.js').then(m => { SkyboxSystem = m.default; }).catch(() => {});
+    import('/engines/shared/SkyboxSystem.js').then(m => { SkyboxSystem = m.default; }).catch(e => console.warn('[FPS] SkyboxSystem unavailable:', e));
 
     let _tilesetEnabled = false;
     let _atlas          = null;
@@ -103,7 +103,9 @@ const FPSEditor = (() => {
     let _painting2d = false;
     let _paintPrev  = null;
 
-    function _init2d() {
+    function _escapeHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+    function _jsArg(v){return JSON.stringify(String(v==null?'':v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function _init2d() {
         _c2d  = document.getElementById('canvas-2d');
         _ctx2d = _c2d.getContext('2d');
         _resize2d();
@@ -1156,7 +1158,7 @@ const FPSEditor = (() => {
     function undo() {
         if (!_undoStack.length) return;
         _redoStack.push(_snapshot());
-        const prev = JSON.parse(_undoStack.pop());
+        let prev; try { prev = JSON.parse(_undoStack.pop()); } catch (_) { return; }
         _state.voxelGrid = prev.voxelGrid;
         _state.entities  = prev.entities;
         _state.triggers  = prev.triggers;
@@ -1170,7 +1172,7 @@ const FPSEditor = (() => {
     function redo() {
         if (!_redoStack.length) return;
         _undoStack.push(_snapshot());
-        const next = JSON.parse(_redoStack.pop());
+        let next; try { next = JSON.parse(_redoStack.pop()); } catch (_) { return; }
         _state.voxelGrid = next.voxelGrid;
         _state.entities  = next.entities;
         _state.triggers  = next.triggers;
@@ -1726,13 +1728,13 @@ const FPSEditor = (() => {
                 ? '<div style="color:#444; padding:10px 0; font-size:0.85rem; text-align:center;">No saved FPS levels yet — create one above.</div>'
                 : items.map(({ proj, levels }) => `
                     <div style="margin-bottom:14px;">
-                        <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${proj.name}</div>
+                        <div style="color:#ff6b35; font-size:0.8rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">📁 ${_escapeHtml(proj.name)}</div>
                         ${levels.map(l => `
                             <div style="padding:8px 12px; background:#150f0a; border:1px solid #222; margin-bottom:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
                                  onmouseover="this.style.borderColor='#ff6b35'" onmouseout="this.style.borderColor='#222'"
-                                 onclick="FPSEditor.browseLoad('${proj.name.replace(/'/g, "\\'")}', '${l.id}')">
-                                <span style="color:#ccc;">${l.name || l.id}</span>
-                                <span style="color:#555; font-size:0.75rem;">${l.id}</span>
+                                 onclick="FPSEditor.browseLoad(${_jsArg(proj.name)},${_jsArg(l.id)})">
+                                <span style="color:#ccc;">${_escapeHtml(l.name || l.id)}</span>
+                                <span style="color:#555; font-size:0.75rem;">${_escapeHtml(l.id)}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -1745,7 +1747,7 @@ const FPSEditor = (() => {
             if (sel && _state.project) sel.value = _state.project;
 
         } catch(e) {
-            list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${e.message}</div>`;
+            list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${_escapeHtml(e.message)}</div>`;
         }
     }
 
@@ -1755,8 +1757,14 @@ const FPSEditor = (() => {
     }
 
     async function browseLoad(project, levelId) {
-        closeBrowse();
-        await loadFromAPI(project, levelId);
+        try {
+            closeBrowse();
+            await loadFromAPI(project, levelId);
+        } catch (e) {
+            const list = document.getElementById('browse-list');
+            if (list && typeof _escapeHtml === 'function') list.innerHTML = `<div style="color:#ff4444; padding:20px; text-align:center;">Error: ${_escapeHtml(e.message)}</div>`;
+            else if (list) list.textContent = 'Load error: ' + e.message;
+        }
     }
 
     function browseCreate() {
@@ -1899,7 +1907,16 @@ const FPSEditor = (() => {
                 } else if (type === 'update') {
                     const prev = _snapshot();
                     const idx = _state.entities.findIndex(e => e.id === id);
-                    if (idx !== -1) Object.assign(_state.entities[idx], data);
+                    if (idx !== -1 && data && typeof data === 'object') {
+                        // Prototype pollution guard: never merge __proto__/constructor/prototype keys,
+                        // and only copy own enumerable fields.
+                        const safe = {};
+                        for (const k of Object.keys(data)) {
+                            if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+                            safe[k] = data[k];
+                        }
+                        _state.entities[idx] = { ..._state.entities[idx], ...safe };
+                    }
                     _pushUndo(prev);
                     markDirty();
                     _rebuild3d();
@@ -1917,7 +1934,14 @@ const FPSEditor = (() => {
                 } else if (type === 'update') {
                     const prev = _snapshot();
                     const idx = _state.triggers.findIndex(t => t.id === id);
-                    if (idx !== -1) Object.assign(_state.triggers[idx], data);
+                    if (idx !== -1 && data && typeof data === 'object') {
+                        const safe = {};
+                        for (const k of Object.keys(data)) {
+                            if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+                            safe[k] = data[k];
+                        }
+                        _state.triggers[idx] = { ..._state.triggers[idx], ...safe };
+                    }
                     _pushUndo(prev);
                     markDirty();
                     _rebuild3d();

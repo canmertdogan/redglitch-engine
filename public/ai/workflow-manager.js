@@ -137,7 +137,21 @@ export class WorkflowManager {
         return rollbackResults;
     }
 
+    _checkRollbackPath(descriptorPath) {
+        // C3: never trust descriptor blindly — re-run permission gate on rollback path.
+        if (!descriptorPath) return false;
+        const pg = this.registry?.permissionGate;
+        if (pg && typeof pg.canModifyFile === 'function') {
+            try { return pg.canModifyFile(descriptorPath).allowed !== false; } catch { return false; }
+        }
+        return true;
+    }
     _rollbackRequestForDescriptor(descriptor) {
+        if (descriptor.path && !this._checkRollbackPath(descriptor.path)) return null;
+        if (descriptor.endpoint === undefined && descriptor.previousContent !== undefined) { /* restore-json from data.update */ }
+        if (descriptor.type === 'restore-json' && descriptor.endpoint) {
+            try { return { endpoint: descriptor.endpoint, body: JSON.parse(descriptor.previousContent || '[]') }; } catch { return null; }
+        }
         if (descriptor.type === 'delete-file') {
             return { endpoint: '/api/ide/delete', body: { file: descriptor.path } };
         }

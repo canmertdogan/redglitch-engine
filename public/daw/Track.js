@@ -62,25 +62,52 @@ class Track {
         const durationBeats = (this.engine.bpm / 60) * durationSec;
         
         const clip = {
-            id: Date.now() + Math.random(),
+            id: (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)),
             type: 'audio',
             startBeat,
             buffer,
-            durationBeats,
+            durationSec,
+            durationBeats, // snapshot at insert time (see getClipDurationBeats for live BPM)
             offset: 0 // offset into sample
         };
         this.audioClips.push(clip);
         return clip;
     }
 
+    /**
+     * Duration of an audio clip in beats at the engine's current BPM.
+     * `clip.durationBeats` is a snapshot; this stays correct after a BPM change.
+     */
+    getClipDurationBeats(clip) {
+        if (!clip) return 0;
+        const bpm = Number.isFinite(this.engine?.bpm) ? this.engine.bpm : 120;
+        const seconds = Number.isFinite(clip.durationSec) ? clip.durationSec : (clip.buffer?.duration ?? 0);
+        return (bpm / 60) * seconds;
+    }
+
     playAudioClip(clip, startTime, offsetSec = 0, durationSec = null) {
+        // FINDING-TRACK: clip offsets are stored on the clip; buffer bounds must be
+        // read from clip.buffer (this.instrument.buffer does not exist) and the
+        // start() arguments must all be finite or WebAudio throws.
+        if (!clip || !clip.buffer || !this.ctx) return null;
+        const bufferDuration = clip.buffer.duration;
+        if (!Number.isFinite(bufferDuration) || bufferDuration <= 0) return null;
+
+        const clipOffset = Number.isFinite(clip.offset) ? clip.offset : 0;
+        const safeOffset = Math.max(0, Math.min(clipOffset + (Number.isFinite(offsetSec) ? offsetSec : 0), bufferDuration - 0.01));
+        const remaining = Math.max(0, bufferDuration - safeOffset);
+        const safeDuration = (Number.isFinite(durationSec) && durationSec > 0)
+            ? Math.min(durationSec, remaining)
+            : remaining;
+
         const source = this.ctx.createBufferSource();
         source.buffer = clip.buffer;
         
         // Connect to mixer
         source.connect(this.mixerChannel.input);
         
-        source.start(startTime, clip.offset + offsetSec, durationSec || (clip.buffer.duration - clip.offset));
+        source.start(startTime, safeOffset, safeDuration);
+        return source;
     }
     
     // Automation management
@@ -123,6 +150,7 @@ class Track {
         
         // Linear interpolation
         const range = next.beat - prev.beat;
+        if (!(range > 0)) return next.value; // coincident points → no divide-by-zero
         const progress = (beat - prev.beat) / range;
         return prev.value + (next.value - prev.value) * progress;
     }
@@ -165,13 +193,16 @@ class Track {
     }
     
     removeEffect(index) {
-        // Todo: Implement remove in MixerChannel
+        // Delegate to MixerChannel: removes the insert at `index` and rebuilds the chain.
+        if (this.mixerChannel && typeof this.mixerChannel.removeInsert === 'function') {
+            this.mixerChannel.removeInsert(index);
+        }
     }
     
     // Clip management
     addClip(startBeat, lengthBeats) {
         const clip = {
-            id: Date.now() + Math.random(),
+            id: (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)),
             startBeat,
             lengthBeats,
             notes: []
@@ -190,7 +221,7 @@ class Track {
     // Note management
     addNote(pitch, startBeat, lengthBeats, velocity = 100) {
         const note = {
-            id: Date.now() + Math.random(),
+            id: (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2)),
             pitch,
             startBeat,
             lengthBeats,
@@ -236,10 +267,13 @@ class Track {
     
     // Instrument connection
     setInstrument(instrument) {
-        // Disconnect old instrument if it exists?
-        // Note: Instrument classes usually don't have disconnect() easily exposed 
-        // without digging into their internals, but we assume we are replacing it.
-        
+        // FINDING-TRACK: disconnect the previous instrument so replacing it does not
+        // leave a second signal path feeding the mixer channel.
+        if (this.instrument && this.instrument !== instrument && this.instrument.output) {
+            try { this.instrument.output.disconnect(this.mixerChannel.input); }
+            catch { /* was not connected */ }
+        }
+
         this.instrument = instrument;
         if (instrument && instrument.output) {
             // Connect Instrument Output -> Mixer Channel Input

@@ -476,6 +476,7 @@
 
             if (isPlaytest) {
                 const raw = sessionStorage.getItem('redglitch_playtest_data')
+                         || localStorage.getItem('redglitch_playtest_data')
                          || localStorage.getItem('temp_playtest_fps3d')
                          || localStorage.getItem('temp_playtest_topdown3d')
                          || localStorage.getItem('temp_playtest_platformer3d');

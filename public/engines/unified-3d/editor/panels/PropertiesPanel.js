@@ -1,6 +1,8 @@
 import * as THREE from '/lib/three/three.module.js';
 import { ShaderRegistry } from '/engines/shared/ShaderRegistry.js';
 
+const _escAttr = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 export default class PropertiesPanel {
     constructor(editor) {
         this.editor = editor;
@@ -157,13 +159,13 @@ export default class PropertiesPanel {
             panel.innerHTML = `
                 <div class="prop-group">
                     <div class="prop-label">Material Name</div>
-                    <input type="text" class="prop-input" value="${mat.name || ''}" data-mat-field="name">
+                    <input type="text" class="prop-input" value="${_escAttr(mat.name)}" data-mat-field="name">
                 </div>
                 <div class="prop-group">
                     <div class="prop-label">Shader Type</div>
                     <select class="prop-input" data-mat-field="shader_id">
                         ${ShaderRegistry.getAvailableShaders().map(s => 
-                            `<option value="${s.id}" ${(mat.shader_id || 'standard') === s.id ? 'selected' : ''}>${s.name}</option>`
+                            `<option value="${_escAttr(s.id)}" ${(mat.shader_id || 'standard') === s.id ? 'selected' : ''}>${s.name}</option>`
                         ).join('')}
                     </select>
                 </div>
@@ -215,7 +217,7 @@ export default class PropertiesPanel {
                 <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Normal Channel</div>
                 <div class="prop-group">
                     <div class="prop-label">Normal Map</div>
-                    <input type="text" class="prop-input" placeholder="/assets/textures/normal.png" value="${mat.channels?.normal?.map || ''}" data-mat-field="channels.normal.map">
+                    <input type="text" class="prop-input" placeholder="/assets/textures/normal.png" value="${_escAttr(mat.channels?.normal?.map)}" data-mat-field="channels.normal.map">
                 </div>
                 <div class="prop-group">
                     <div class="prop-label">Intensity</div>
@@ -369,7 +371,7 @@ export default class PropertiesPanel {
                 </div>
                 <div class="prop-group">
                     <div class="prop-label">Name</div>
-                    <input type="text" class="prop-input" value="${obj.name || ''}" data-light-field="name">
+                    <input type="text" class="prop-input" value="${_escAttr(obj.name)}" data-light-field="name">
                 </div>
                 <div class="prop-group">
                     <div class="prop-label">Position</div>
@@ -437,6 +439,127 @@ export default class PropertiesPanel {
             return;
         }
 
+        if (obj.userData && obj.userData._isEntity) {
+            const ent = (this.editor._levelData?.entities || []).find(e => e.id === obj.name) || obj.userData;
+            const p = obj.position;
+            const r = obj.rotation;
+            const s = obj.scale;
+            const currentType = ent.type || obj.userData.type || 'spawn';
+            const props = ent.properties || obj.userData.properties || {};
+
+            const entityTypes = [
+                { id: 'player-spawn', label: '⛳ Player Spawn' },
+                { id: 'enemy', label: '👾 Enemy (Basic)' },
+                { id: 'enemy_walker', label: '🤖 Enemy (Walker)' },
+                { id: 'enemy_sniper', label: '🎯 Enemy (Sniper)' },
+                { id: 'enemy_drone', label: '🚁 Enemy (Drone)' },
+                { id: 'npc', label: '💬 NPC / Hero' },
+                { id: 'checkpoint', label: '🏁 Checkpoint' },
+                { id: 'collectible', label: '⭐ Collectible / Coin' },
+                { id: 'level-exit', label: '🚪 Level Exit' },
+                { id: 'hazard', label: '⚠️ Hazard (Spikes/Lava)' },
+                { id: 'trigger', label: '⚡ Trigger Volume' },
+                { id: 'audio_emitter', label: '🔊 Spatial Audio Emitter' },
+                { id: 'pickup-ammo', label: '📦 Ammo Pickup' },
+                { id: 'vehicle', label: '🚗 Vehicle' },
+            ];
+
+            panel.innerHTML = `
+                <div style="padding:8px 12px 4px; display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-accent);">👾 Entity (${currentType})</span>
+                    <button class="kas-btn icon" id="btn-delete-selected" style="height:20px; width:20px; font-size:10px; border-color:var(--kas-red); color:var(--kas-red);" title="Delete Entity (Del)"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">ID / Name</div>
+                    <input type="text" class="prop-input" value="${_escAttr(obj.name)}" data-ent-field="name">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Type</div>
+                    <select class="prop-input" data-ent-field="type">
+                        ${entityTypes.map(t => `<option value="${t.id}" ${currentType === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Position</div>
+                    <div class="prop-vec3">
+                        <input type="number" step="0.1" value="${p.x.toFixed(2)}" data-ent-field="px">
+                        <input type="number" step="0.1" value="${p.y.toFixed(2)}" data-ent-field="py">
+                        <input type="number" step="0.1" value="${p.z.toFixed(2)}" data-ent-field="pz">
+                    </div>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Rotation (°)</div>
+                    <div class="prop-vec3">
+                        <input type="number" step="1" value="${(r.x * 180 / Math.PI).toFixed(1)}" data-ent-field="rx">
+                        <input type="number" step="1" value="${(r.y * 180 / Math.PI).toFixed(1)}" data-ent-field="ry">
+                        <input type="number" step="1" value="${(r.z * 180 / Math.PI).toFixed(1)}" data-ent-field="rz">
+                    </div>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Scale</div>
+                    <div class="prop-vec3">
+                        <input type="number" step="0.1" value="${s.x.toFixed(2)}" data-ent-field="sx">
+                        <input type="number" step="0.1" value="${s.y.toFixed(2)}" data-ent-field="sy">
+                        <input type="number" step="0.1" value="${s.z.toFixed(2)}" data-ent-field="sz">
+                    </div>
+                </div>
+                ${this._renderEntityPropertiesUI(currentType, props, ent.id || obj.name)}
+            `;
+
+            panel.querySelectorAll('input, select').forEach(input => {
+                if (input.classList.contains('custom-ent-prop-key') || input.classList.contains('custom-ent-prop-val')) return;
+                input.addEventListener('change', () => {
+                    const field = input.dataset.entField;
+                    const propKey = input.dataset.entProp;
+                    if (field) {
+                        const val = (field === 'name' || field === 'type') ? input.value : parseFloat(input.value);
+                        this.editor._applyPropertyChange(obj, field, val);
+                        if (field === 'type') {
+                            this._updatePropertiesPanel();
+                        }
+                    } else if (propKey) {
+                        let val = input.type === 'checkbox' ? input.checked : input.value;
+                        if (input.type === 'number') val = parseFloat(val);
+                        this.editor._updateEntityPropertyValue(ent.id || obj.name, propKey, val);
+                    }
+                });
+            });
+
+            panel.querySelectorAll('.custom-ent-prop-key').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    this.editor._updateEntityPropertyKey(ent.id || obj.name, e.target.dataset.oldKey, e.target.value);
+                });
+            });
+
+            panel.querySelectorAll('.custom-ent-prop-val').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    this.editor._updateEntityPropertyValue(ent.id || obj.name, e.target.dataset.key, e.target.value);
+                });
+            });
+
+            const btnAddProp = document.getElementById('btn-add-ent-prop');
+            if (btnAddProp) {
+                btnAddProp.addEventListener('click', () => {
+                    this.editor._addEntityProperty(ent.id || obj.name);
+                });
+            }
+
+            panel.querySelectorAll('.btn-del-ent-prop').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    this.editor._removeEntityProperty(ent.id || obj.name, e.target.dataset.key);
+                });
+            });
+
+            const delBtn = panel.querySelector('#btn-delete-selected');
+            if (delBtn) {
+                delBtn.addEventListener('click', () => {
+                    this.editor._deleteSelected();
+                });
+            }
+
+            return;
+        }
+
         const p = obj.position;
         const r = obj.rotation;
         const s = obj.scale;
@@ -451,7 +574,7 @@ export default class PropertiesPanel {
             </div>
             <div class="prop-group">
                 <div class="prop-label">Name</div>
-                <input type="text" class="prop-input" value="${obj.name || ''}" data-field="name">
+                <input type="text" class="prop-input" value="${_escAttr(obj.name)}" data-field="name">
             </div>
             ${this._renderMaterialAssignmentsUI(obj)}
             <div class="prop-group">
@@ -630,6 +753,179 @@ export default class PropertiesPanel {
         html += `
             <div class="prop-group">
                 <button class="kas-btn btn-add-layer" data-channel="color" style="width:100%; font-size:10px;"><i class="fas fa-plus"></i> ADD LAYER</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    _renderEntityPropertiesUI(type, props = {}, entId) {
+        let html = `
+            <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
+            <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Gameplay Attributes</div>
+        `;
+
+        const isAudio = ['audio_emitter', 'audio', 'sound', 'ambient_sound'].includes(type);
+        const isEnemy = ['enemy', 'enemy-grunt', 'enemy_walker', 'enemy_sniper', 'enemy_drone'].includes(type);
+        const isNpc = type === 'npc';
+        const isCol = ['collectible', 'coin', 'gem', 'star'].includes(type);
+        const isHaz = ['hazard', 'spike', 'lava', 'saw'].includes(type);
+        const isTrig = type === 'trigger';
+
+        if (isAudio) {
+            html += `
+                <div class="prop-group">
+                    <div class="prop-label">Sound File</div>
+                    <input type="text" class="prop-input" placeholder="/muzikler/track.mp3" value="${props.sound || props.soundUrl || ''}" data-ent-prop="sound">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Looping</div>
+                    <input type="checkbox" ${props.loop !== false ? 'checked' : ''} data-ent-prop="loop">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Volume</div>
+                    <input type="number" step="0.05" min="0" max="1" class="prop-input" value="${props.volume ?? 1.0}" data-ent-prop="volume">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Ref Distance (m)</div>
+                    <input type="number" step="1" min="1" class="prop-input" value="${props.refDistance ?? 5}" data-ent-prop="refDistance">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Max Distance (m)</div>
+                    <input type="number" step="1" min="1" class="prop-input" value="${props.maxDistance ?? 30}" data-ent-prop="maxDistance">
+                </div>
+            `;
+        } else if (isEnemy) {
+            html += `
+                <div class="prop-group">
+                    <div class="prop-label">Health</div>
+                    <input type="number" step="5" min="1" class="prop-input" value="${props.health ?? 100}" data-ent-prop="health">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Speed</div>
+                    <input type="number" step="0.5" min="0.1" class="prop-input" value="${props.speed ?? 4}" data-ent-prop="speed">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Attack Damage</div>
+                    <input type="number" step="1" min="0" class="prop-input" value="${props.attack ?? 10}" data-ent-prop="attack">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Detect Radius</div>
+                    <input type="number" step="1" min="1" class="prop-input" value="${props.detectionRadius ?? 15}" data-ent-prop="detectionRadius">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Team</div>
+                    <select class="prop-input" data-ent-prop="team">
+                        <option value="1" ${(props.team ?? 1) == 1 ? 'selected' : ''}>Enemy (Team 1)</option>
+                        <option value="0" ${(props.team ?? 1) == 0 ? 'selected' : ''}>Ally (Team 0)</option>
+                        <option value="2" ${(props.team ?? 1) == 2 ? 'selected' : ''}>Neutral (Team 2)</option>
+                    </select>
+                </div>
+            `;
+        } else if (isNpc) {
+            html += `
+                <div class="prop-group">
+                    <div class="prop-label">NPC Name</div>
+                    <input type="text" class="prop-input" placeholder="Guard, Merchant..." value="${props.name || props.npcName || ''}" data-ent-prop="name">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Greeting / Line</div>
+                    <input type="text" class="prop-input" placeholder="Hello traveler..." value="${props.dialogue || ''}" data-ent-prop="dialogue">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Health</div>
+                    <input type="number" step="5" min="1" class="prop-input" value="${props.health ?? 100}" data-ent-prop="health">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Team</div>
+                    <select class="prop-input" data-ent-prop="team">
+                        <option value="0" ${(props.team ?? 0) == 0 ? 'selected' : ''}>Ally (Team 0)</option>
+                        <option value="1" ${(props.team ?? 0) == 1 ? 'selected' : ''}>Enemy (Team 1)</option>
+                        <option value="2" ${(props.team ?? 0) == 2 ? 'selected' : ''}>Neutral (Team 2)</option>
+                    </select>
+                </div>
+            `;
+        } else if (isCol) {
+            html += `
+                <div class="prop-group">
+                    <div class="prop-label">Item Kind</div>
+                    <select class="prop-input" data-ent-prop="kind">
+                        <option value="coin" ${(props.kind || 'coin') === 'coin' ? 'selected' : ''}>Coin</option>
+                        <option value="gem" ${(props.kind || '') === 'gem' ? 'selected' : ''}>Gem</option>
+                        <option value="star" ${(props.kind || '') === 'star' ? 'selected' : ''}>Star</option>
+                        <option value="potion" ${(props.kind || '') === 'potion' ? 'selected' : ''}>Health Potion</option>
+                        <option value="key" ${(props.kind || '') === 'key' ? 'selected' : ''}>Key</option>
+                    </select>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Point Value</div>
+                    <input type="number" step="1" min="1" class="prop-input" value="${props.value ?? 1}" data-ent-prop="value">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Respawn</div>
+                    <input type="checkbox" ${props.respawn ? 'checked' : ''} data-ent-prop="respawn">
+                </div>
+            `;
+        } else if (isHaz) {
+            html += `
+                <div class="prop-group">
+                    <div class="prop-label">Hazard Kind</div>
+                    <select class="prop-input" data-ent-prop="hazardType">
+                        <option value="spike" ${(props.hazardType || 'spike') === 'spike' ? 'selected' : ''}>Spikes</option>
+                        <option value="lava" ${(props.hazardType || '') === 'lava' ? 'selected' : ''}>Lava Pool</option>
+                        <option value="saw" ${(props.hazardType || '') === 'saw' ? 'selected' : ''}>Circular Saw</option>
+                        <option value="laser" ${(props.hazardType || '') === 'laser' ? 'selected' : ''}>Laser Beam</option>
+                    </select>
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Damage</div>
+                    <input type="number" step="1" min="1" class="prop-input" value="${props.damage ?? 1}" data-ent-prop="damage">
+                </div>
+            `;
+        } else if (isTrig) {
+            html += `
+                <div class="prop-group">
+                    <div class="prop-label">Trigger Radius</div>
+                    <input type="number" step="0.5" min="0.5" class="prop-input" value="${props.radius ?? 2}" data-ent-prop="radius">
+                </div>
+                <div class="prop-group">
+                    <div class="prop-label">Event Tag</div>
+                    <input type="text" class="prop-input" placeholder="on_enter_room_1" value="${props.event || ''}" data-ent-prop="event">
+                </div>
+            `;
+        }
+
+        const customEntries = Object.entries(props).filter(([k]) =>
+            !['sound', 'loop', 'volume', 'refDistance', 'maxDistance', 'health', 'speed', 'attack', 'detectionRadius', 'team', 'dialogue', 'name', 'npcName', 'kind', 'value', 'respawn', 'hazardType', 'damage', 'radius', 'event'].includes(k)
+        );
+
+        html += `
+            <hr style="border:0; border-bottom:1px solid var(--border-subtle); margin: 8px 0;">
+            <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Custom Properties</div>
+        `;
+
+        if (customEntries.length > 0) {
+            for (const [key, value] of customEntries) {
+                html += `
+                    <div style="display:flex; gap:4px; margin:4px 12px; align-items:center;">
+                        <input type="text" class="prop-input custom-ent-prop-key" style="flex:1;" value="${key}" data-old-key="${key}">
+                        <span style="color:var(--text-muted);">:</span>
+                        <input type="text" class="prop-input custom-ent-prop-val" style="flex:1;" value="${value}" data-key="${key}">
+                        <button class="kas-btn btn-del-ent-prop" data-key="${key}" style="padding:2px 6px; font-size:10px; color:var(--kas-red);"><i class="fas fa-times" style="pointer-events:none;"></i></button>
+                    </div>
+                `;
+            }
+        } else {
+            html += `
+                <div class="prop-group" style="padding:4px 12px; color:var(--text-muted); font-size:10px; font-style:italic;">
+                    No custom properties.
+                </div>
+            `;
+        }
+
+        html += `
+            <div class="prop-group" style="padding:4px 12px;">
+                <button class="kas-btn" id="btn-add-ent-prop" style="width:100%; font-size:10px;"><i class="fas fa-plus"></i> ADD PROPERTY</button>
             </div>
         `;
 

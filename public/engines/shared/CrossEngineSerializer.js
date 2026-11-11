@@ -4,6 +4,17 @@
  */
 
 window.CrossEngineSerializer = class CrossEngineSerializer {
+    static safeMerge(target, source) {
+        // FINDING-POLLUTION: Object.assign with __proto__ setter pollutes global — drop dangerous keys
+        if (!source || typeof source !== 'object') return target;
+        for (const k of Object.keys(source)) {
+            if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+            target[k] = source[k];
+        }
+        return target;
+    }
+    static SCHEMA_VERSION = '1.1';
+
     /**
      * Serialize inventory items to cross-engine format
      * @param {Array} inventory - Engine-specific inventory array
@@ -18,7 +29,7 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
                 id: item.id || item.type,
                 name: item.name,
                 type: item.type,
-                quantity: item.quantity || 1,
+                quantity: item.quantity ?? 1,
                 properties: item.properties || {},
                 icon: item.icon,
                 description: item.description
@@ -33,16 +44,16 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
      */
     static deserializeInventory(items) {
         if (!items || !Array.isArray(items)) return [];
-        
+
         return items.map(itemData => ({
             id: itemData.id,
             name: itemData.name,
             type: itemData.type,
-            quantity: itemData.quantity,
-            properties: itemData.properties,
+            quantity: itemData.quantity ?? 1,
+            properties: itemData.properties ?? {},
             icon: itemData.icon,
-            description: itemData.description
-        }));
+            description: itemData.description ?? ''
+        })).filter(item => item.id !== undefined);
     }
     
     /**
@@ -75,10 +86,17 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
      */
     static deserializeEquipment(equipment) {
         if (!equipment || typeof equipment !== 'object') return {};
-        
+
         const deserialized = {};
         for (const slot in equipment) {
-            deserialized[slot] = { ...equipment[slot] };
+            const item = equipment[slot];
+            if (item) {
+                deserialized[slot] = {
+                    ...item,
+                    stats: item.stats || {},
+                    properties: item.properties || {}
+                };
+            }
         }
         return deserialized;
     }
@@ -123,32 +141,26 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
      * @param {Object} questSystem - Quest system instance to populate
      */
     static deserializeQuests(quests, questSystem) {
-        if (!questSystem || !quests) return;
-        
-        if (!questSystem.activeQuests) {
-            questSystem.activeQuests = [];
-        }
-        
-        if (!questSystem.completedQuests) {
-            questSystem.completedQuests = [];
-        }
-        
-        // Clear existing
+        if (!questSystem || !quests || typeof quests !== 'object') return;
+
         questSystem.activeQuests = [];
         questSystem.completedQuests = [];
-        
-        // Restore quests
+        if (!questSystem.failedQuests) questSystem.failedQuests = [];
+
+        // Restore quests with defaults for legacy saves missing new fields
         for (const questId in quests) {
-            const questData = quests[questId];
-            
+            const questData = quests[questId] || {};
+
             if (questData.status === 'completed') {
                 questSystem.completedQuests.push(questId);
+            } else if (questData.status === 'failed') {
+                questSystem.failedQuests.push(questId);
             } else {
                 questSystem.activeQuests.push({
                     id: questId,
-                    status: questData.status,
-                    progress: questData.progress,
-                    completedObjectives: questData.completedObjectives,
+                    status: questData.status || 'active',
+                    progress: questData.progress || {},
+                    completedObjectives: questData.completedObjectives || [],
                     startTime: questData.startTime
                 });
             }
@@ -205,8 +217,8 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         return skills.map(skill => ({
             id: skill.id,
             name: skill.name,
-            level: skill.level || 1,
-            experience: skill.experience || 0,
+            level: skill.level ?? 1,
+            experience: skill.experience ?? 0,
             // Don't persist cooldowns or active status
         }));
     }
@@ -218,15 +230,15 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
      */
     static deserializeSkills(skills) {
         if (!skills || !Array.isArray(skills)) return [];
-        
+
         return skills.map(skillData => ({
             id: skillData.id,
-            name: skillData.name,
-            level: skillData.level,
-            experience: skillData.experience,
+            name: skillData.name ?? '',
+            level: skillData.level ?? 1,
+            experience: skillData.experience ?? 0,
             cooldown: 0,
             active: false
-        }));
+        })).filter(skill => skill.id !== undefined);
     }
     
     /**
@@ -272,7 +284,7 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         const player = engine.player;
         
         return {
-            schemaVersion: '1.0',
+            schemaVersion: this.SCHEMA_VERSION,
             // Core stats (always persist)
             hp: player.hp,
             maxHp: player.maxHp,
@@ -311,7 +323,8 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         
         const player = engine.player;
         
-        // Legacy save detection
+        // Legacy save detection + migration: older saves may lack newer fields.
+        // deserialize* methods apply defaults, so no field access can throw on undefined.
         if (!playerData.schemaVersion) {
             console.warn('[CrossEngineSerializer] Loading legacy player state without schemaVersion. Applying best-effort migration.');
         }
@@ -344,8 +357,8 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         
         // Equipment
         if (playerData.equipment) {
-            if (!player.equipment) player.equipment = {};
-            Object.assign(player.equipment, this.deserializeEquipment(playerData.equipment));
+            player.equipment = {};
+            this.safeMerge(player.equipment, this.deserializeEquipment(playerData.equipment));
         }
         
         // Quests
@@ -366,8 +379,8 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
         
         // Flags
         if (playerData.flags) {
-            if (!engine.flags) engine.flags = {};
-            Object.assign(engine.flags, this.deserializeFlags(playerData.flags));
+            engine.flags = {};
+            this.safeMerge(engine.flags, this.deserializeFlags(playerData.flags));
         }
         
         // Refresh UI if available
@@ -491,9 +504,12 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
      */
     static serializeTransform3D(obj) {
         if (!obj) return { position: [0,0,0], rotation: [0,0,0,1], scale: [1,1,1] };
-        const p = obj.position || { x:0, y:0, z:0 };
-        const q = obj.quaternion || { x:0, y:0, z:0, w:1 };
-        const s = obj.scale || { x:1, y:1, z:1 };
+        const pRaw = obj.position || obj.pos || { x:0, y:0, z:0 };
+        const p = Array.isArray(pRaw) ? { x: pRaw[0] ?? 0, y: pRaw[1] ?? 0, z: pRaw[2] ?? 0 } : pRaw;
+        const qRaw = obj.quaternion || obj.rotation || { x:0, y:0, z:0, w:1 };
+        const q = Array.isArray(qRaw) ? { x: qRaw[0] ?? 0, y: qRaw[1] ?? 0, z: qRaw[2] ?? 0, w: qRaw[3] ?? 1 } : qRaw;
+        const sRaw = obj.scale || { x:1, y:1, z:1 };
+        const s = Array.isArray(sRaw) ? { x: sRaw[0] ?? 1, y: sRaw[1] ?? 1, z: sRaw[2] ?? 1 } : sRaw;
         return {
             position: [p.x, p.y, p.z],
             rotation: [q.x, q.y, q.z, q.w],   // quaternion xyzw
@@ -581,6 +597,17 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
                 chunk_data:    g.chunk_data    || null,
             })),
             entities: (levelData.entities || []).map(e => CrossEngineSerializer.serializeEntity3D(e)),
+            // FINDING-LEVEL: passthrough extra playability fields (was dropping them)
+            ...(levelData.playerSpawn ? { playerSpawn: levelData.playerSpawn } : {}),
+            ...(levelData.checkpoints ? { checkpoints: levelData.checkpoints } : {}),
+            ...(levelData.levelExit ? { levelExit: levelData.levelExit } : {}),
+            ...(levelData.triggers ? { triggers: levelData.triggers } : {}),
+            ...(levelData.portals ? { portals: levelData.portals } : {}),
+            ...(levelData.terrain ? { terrain: levelData.terrain } : {}),
+            ...(levelData.fog ? { fog: levelData.fog } : {}),
+            ...(levelData.bgm ? { bgm: levelData.bgm } : {}),
+            ...(levelData.music ? { music: levelData.music } : {}),
+            ...(levelData.lighting ? { lighting: levelData.lighting } : {}),
             lights:   (levelData.lights   || []).map(l => ({
                 id:          l.id,
                 type:        l.type,
@@ -617,6 +644,18 @@ window.CrossEngineSerializer = class CrossEngineSerializer {
             navmesh:    data.navmesh    || null,
             skybox:     data.skybox     || null,
             physics:    { ...(data.physics || {}) },
+            // FINDING-LEVEL: mirror serializeLevel3D passthrough so a
+            // serialize→deserialize round-trip keeps playability data.
+            ...(data.playerSpawn ? { playerSpawn: data.playerSpawn } : {}),
+            ...(data.checkpoints ? { checkpoints: data.checkpoints } : {}),
+            ...(data.levelExit ? { levelExit: data.levelExit } : {}),
+            ...(data.triggers ? { triggers: data.triggers } : {}),
+            ...(data.portals ? { portals: data.portals } : {}),
+            ...(data.terrain ? { terrain: data.terrain } : {}),
+            ...(data.fog ? { fog: data.fog } : {}),
+            ...(data.bgm ? { bgm: data.bgm } : {}),
+            ...(data.music ? { music: data.music } : {}),
+            ...(data.lighting ? { lighting: data.lighting } : {}),
         };
     }
 };

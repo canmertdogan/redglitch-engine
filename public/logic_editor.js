@@ -969,7 +969,9 @@ const workspace = Blockly.inject('blockly-div', {
   theme: RedglitchStudioTheme,
   grid: { spacing: 40, length: 2, colour: '#1a1a2e', snap: true },
   zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
-  trashcan: true
+  trashcan: true,
+  sounds: false,
+  media: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 });
 
 async function saveLogic() {

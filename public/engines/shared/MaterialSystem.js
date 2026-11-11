@@ -65,7 +65,8 @@ export class MaterialSystem {
      */
     static deserialize(data) {
         if (!data) return null;
-        let parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        let parsed;
+        try { parsed = typeof data === 'string' ? JSON.parse(data) : data; } catch (e) { console.warn('[MaterialSystem] invalid JSON', e); return null; }
 
         // Create a base material to ensure all channels exist
         let mat = this.createMaterial(parsed.name || "Imported Material");
@@ -85,7 +86,7 @@ export class MaterialSystem {
         if (parsed.channels) {
             for (const [key, channelDef] of Object.entries(parsed.channels)) {
                 if (mat.channels[key]) {
-                    Object.assign(mat.channels[key], channelDef);
+                    (()=>{ for(const k of Object.keys(channelDef||{})){ if(k==='__proto__'||k==='constructor'||k==='prototype') continue; mat.channels[key][k]=channelDef[k]; } })();
                 }
             }
         }

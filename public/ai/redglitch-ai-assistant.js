@@ -290,6 +290,59 @@ class IRABAssistantSimple {
             };
         }
     }
+
+    /**
+     * Agentic Development: Decompose objective into structured actionable plan.
+     */
+    async planGoal(goal, options = {}) {
+        await this.waitForCore();
+        if (!this.ai || !this.ai.planGoal) {
+            throw new Error('AI Core does not support Agentic Planner');
+        }
+        return this.ai.planGoal(goal, options);
+    }
+
+    /**
+     * Agentic Development: Sequentially execute decomposed plan with live telemetry.
+     */
+    async executePlan(plan, options = {}) {
+        await this.waitForCore();
+        if (!this.ai || !this.ai.executePlan) {
+            throw new Error('AI Core does not support Plan Execution');
+        }
+        return this.ai.executePlan(plan, options);
+    }
+
+    /**
+     * Abort any actively running agent plan.
+     */
+    abortPlan() {
+        if (this.ai && this.ai.agentPlanner) {
+            this.ai.agentPlanner.abort();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Retrieve available agent roles and specs.
+     */
+    getRoles() {
+        if (this.ai && this.ai.agentPlanner) {
+            return this.ai.agentPlanner.getRoles();
+        }
+        return null;
+    }
+
+    /**
+     * Retrieve completed plan history and diffs.
+     */
+    getPlannerHistory() {
+        if (this.ai && this.ai.agentPlanner) {
+            return this.ai.agentPlanner.history || [];
+        }
+        return [];
+    }
 }
 
 // Expose globally

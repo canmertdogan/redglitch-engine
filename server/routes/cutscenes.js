@@ -5,6 +5,9 @@ const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const safeFs = require('../utils/safeFs');
 
+function safeParseJSON(raw, label) {
+    try { return JSON.parse(raw); } catch (e) { const err = new Error(`Invalid JSON in ${label}`); err.code = 'INVALID_JSON'; throw err; }
+}
 function isSafeCutsceneId(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
@@ -71,7 +74,7 @@ router.get('/cutscenes/:id', async (req, res) => {
         
         const filePath = path.join(targetDir, `${req.params.id}.json`);
         const data = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(data));
+        res.json(safeParseJSON(data, 'cutscene'))
     } catch (err) {
         console.error('Error reading cutscene:', err);
         res.status(404).json({ error: 'Cutscene not found' });
@@ -119,7 +122,7 @@ router.get('/dialogues', async (req, res) => {
             : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions');
         const filePath = path.join(targetDir, 'dialogues.json');
         const data = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(data));
+        res.json(safeParseJSON(data, 'cutscene'))
     } catch (err) { 
         res.json([]); 
     }

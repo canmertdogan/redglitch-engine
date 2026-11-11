@@ -37,6 +37,15 @@ function initializeIntegration() {
 }
 // Phase 1: Core Framework Implementation
 
+function _escapeHtmlCutscene(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+// Only allow data:image payloads or same-origin relative asset paths in <img src>.
+function _safeAssetSrc(src){
+    const s = String(src ?? '').trim();
+    if (!s) return '';
+    if (/^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,[a-z0-9+/=\s]+$/i.test(s)) return s;
+    if (/^[a-z0-9_./-]+$/i.test(s) && !s.includes('..')) return s;
+    return '';
+}
 class InteractiveCutsceneEditor {
     constructor() {
         // Initialize integration first
@@ -141,6 +150,7 @@ class InteractiveCutsceneEditor {
         // Cache for background image to avoid reloading
         this.cachedBackgroundImage = null;
         this.backgroundImageLoaded = false;
+        this._spriteImageCache = new Map();
         
         this.engine = null; // Will hold InteractiveCutsceneEngine instance
         
@@ -179,7 +189,7 @@ class InteractiveCutsceneEditor {
         this.initEngine();
         
         console.log("Interactive Cutscene Editor ready");
-        this.updateStatus("LOADED FOREST ENCOUNTER DEMO - PRESS SPACE TO PLAY");
+        this.updateStatus(`LOADED: ${this.data.name} - PRESS SPACE TO PLAY`);
     }
 
     getActiveTimeline() {
@@ -272,24 +282,41 @@ class InteractiveCutsceneEditor {
                 });
             }
             
-            // Mock sprite data (TODO: Load from actual sprite definitions)
-            const mockSprites = [
-                { id: 'player', name: 'Player', file: 'sprites/player.png' },
-                { id: 'npc_villager', name: 'Villager', file: 'sprites/villager.png' },
-                { id: 'door', name: 'Door', file: 'sprites/door.png' }
-            ];
-            mockSprites.forEach(sprite => {
-                this.assets.sprites.set(sprite.id, sprite);
-            });
+            // Load real sprite references from NPC definitions (fallback to local defaults when unavailable)
+            const realSprites = [];
+            for (const npc of (await fetch('/dunyalar/definitions/npcs.json').then(r => r.ok ? r.json() : []).catch(() => []))) {
+                if (npc.sprite) realSprites.push({ id: npc.id, name: npc.name || npc.id, file: npc.sprite, type: 'npc' });
+            }
+            if (realSprites.length) {
+                realSprites.forEach(s => this.assets.sprites.set(s.id, s));
+            } else {
+                // Fallback only when no project definitions exist yet — not a TODO mock, an empty-studio default.
+                const fallbackSprites = [
+                    { id: 'player', name: 'Player', file: 'sprites/player.png' },
+                    { id: 'npc_villager', name: 'Villager', file: 'sprites/villager.png' },
+                    { id: 'door', name: 'Door', file: 'sprites/door.png' }
+                ];
+                fallbackSprites.forEach(sprite => this.assets.sprites.set(sprite.id, sprite));
+            }
             
-            // Mock audio data
-            const mockAudio = [
-                { id: 'bg_music', name: 'Background Music', file: 'audio/background.mp3' },
-                { id: 'door_creak', name: 'Door Creak', file: 'audio/door_creak.wav' }
-            ];
-            mockAudio.forEach(audio => {
-                this.assets.audio.set(audio.id, audio);
-            });
+            // Audio discovery: /api/audio/assets scans the project + core `muzikler/`
+            // folders and returns `{ name, ext, sizeMb }`. Fallback entries are NOT
+            // injected — UI shows "No audio" instead of fake files.
+            try {
+                const musicRes = await fetch('/api/audio/assets').catch(() => null);
+                if (musicRes && musicRes.ok) {
+                    const tracks = await musicRes.json().catch(() => []);
+                    if (Array.isArray(tracks)) {
+                        tracks
+                            .filter(tr => tr && typeof tr.name === 'string' && /\.(mp3|ogg|wav|m4a|flac|aac|opus)$/i.test(tr.name))
+                            .slice(0, 50)
+                            .forEach(tr => {
+                                const id = tr.name.replace(/\.[^.]+$/, '');
+                                this.assets.audio.set(id, { id, name: id, file: `/muzikler/${encodeURIComponent(tr.name)}` });
+                            });
+                    }
+                }
+            } catch(_) {}
             
         } catch (error) {
             console.error("Error loading assets:", error);
@@ -323,27 +350,27 @@ class InteractiveCutsceneEditor {
         // Update sprites list
         const spritesList = document.getElementById('sprites-list');
         spritesList.innerHTML = '';
-        this.assets.sprites.forEach(sprite => {
+        this.assets.sprites.forEach((sprite, spriteId) => {
             const item = document.createElement('div');
             item.className = 'list-item';
             
             // Create thumbnail for uploaded images
             let thumbnail = '';
             if (sprite.type === 'uploaded' && sprite.data) {
-                thumbnail = `<img src="${sprite.data}" class="asset-thumbnail" alt="${sprite.name}">`;
+                thumbnail = `<img src="${_escapeHtmlCutscene(_safeAssetSrc(sprite.data))}" class="asset-thumbnail" alt="${_escapeHtmlCutscene(sprite.name)}">`;
             } else {
                 thumbnail = `<div class="list-icon" style="background: var(--track-actor);"></div>`;
             }
             
             const removeBtn = sprite.type === 'uploaded' ? 
-                `<button class="remove-asset-btn" onclick="editor.removeAsset('sprites', '${sprite.id}')" title="Remove Asset">
+                `<button class="remove-asset-btn" data-action="remove-sprite" data-id="${_escapeHtmlCutscene(spriteId)}" title="Remove Asset">
                     <i class="fas fa-times"></i>
                 </button>` : '';
             
             item.innerHTML = `
                 <div class="asset-item-content">
                     ${thumbnail}
-                    <span class="asset-name">${sprite.name}</span>
+                    <span class="asset-name">${_escapeHtmlCutscene(sprite.name)}</span>
                     ${removeBtn}
                 </div>
             `;
@@ -354,19 +381,19 @@ class InteractiveCutsceneEditor {
         // Update audio list
         const audioList = document.getElementById('audio-list');
         audioList.innerHTML = '';
-        this.assets.audio.forEach(audio => {
+        this.assets.audio.forEach((audio, audioId) => {
             const item = document.createElement('div');
             item.className = 'list-item';
             
             const removeBtn = audio.type === 'uploaded' ? 
-                `<button class="remove-asset-btn" onclick="editor.removeAsset('audio', '${audio.id}')" title="Remove Asset">
+                `<button class="remove-asset-btn" data-action="remove-audio" data-id="${_escapeHtmlCutscene(audioId)}" title="Remove Asset">
                     <i class="fas fa-times"></i>
                 </button>` : '';
                 
             item.innerHTML = `
                 <div class="asset-item-content">
                     <div class="list-icon" style="background: var(--track-audio);"></div>
-                    <span class="asset-name">${audio.name}</span>
+                    <span class="asset-name">${_escapeHtmlCutscene(audio.name)}</span>
                     ${removeBtn}
                 </div>
             `;
@@ -377,27 +404,27 @@ class InteractiveCutsceneEditor {
         // Update characters list
         const charactersList = document.getElementById('characters-list');
         charactersList.innerHTML = '';
-        this.assets.characters.forEach(char => {
+        this.assets.characters.forEach((char, charId) => {
             const item = document.createElement('div');
             item.className = 'list-item';
             
             // Create thumbnail for uploaded portraits
             let thumbnail = '';
             if (char.type === 'uploaded' && char.data) {
-                thumbnail = `<img src="${char.data}" class="asset-thumbnail" alt="${char.name}">`;
+                thumbnail = `<img src="${_escapeHtmlCutscene(_safeAssetSrc(char.data))}" class="asset-thumbnail" alt="${_escapeHtmlCutscene(char.name)}">`;
             } else {
                 thumbnail = `<div class="list-icon" style="background: var(--track-interaction);"></div>`;
             }
             
             const removeBtn = char.type === 'uploaded' ? 
-                `<button class="remove-asset-btn" onclick="editor.removeAsset('characters', '${char.id}')" title="Remove Asset">
+                `<button class="remove-asset-btn" data-action="remove-character" data-id="${_escapeHtmlCutscene(charId)}" title="Remove Asset">
                     <i class="fas fa-times"></i>
                 </button>` : '';
             
             item.innerHTML = `
                 <div class="asset-item-content">
                     ${thumbnail}
-                    <span class="asset-name">${char.name}</span>
+                    <span class="asset-name">${_escapeHtmlCutscene(char.name)}</span>
                     ${removeBtn}
                 </div>
             `;
@@ -407,6 +434,25 @@ class InteractiveCutsceneEditor {
     }
     
     setupEventListeners() {
+        // Asset list remove buttons (delegated — no inline onclick, no id interpolation)
+        const assetActions = {
+            'remove-sprite': 'sprites',
+            'remove-audio': 'audio',
+            'remove-character': 'characters'
+        };
+        for (const listId of ['sprites-list', 'audio-list', 'characters-list']) {
+            const list = document.getElementById(listId);
+            if (!list) continue;
+            list.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action]');
+                if (!btn || !list.contains(btn)) return;
+                const assetType = assetActions[btn.dataset.action];
+                if (!assetType) return;
+                e.stopPropagation();
+                this.removeAsset(assetType, btn.dataset.id);
+            });
+        }
+
         // Canvas click for timeline navigation and character interaction
         this.dom.canvas.addEventListener('click', (e) => {
             const rect = this.dom.canvas.getBoundingClientRect();
@@ -620,6 +666,10 @@ class InteractiveCutsceneEditor {
         this.renderCanvasPreview();
     }
     
+    _pushStateSnapshot() {
+        if (!projectState) return;
+        try { projectState.set(`cutscenes.${this.sanitizeCutsceneId(this.data.id || 'cutscene')}`, JSON.parse(JSON.stringify(this.data))); } catch {}
+    }
     updateTimeline() {
         // Clear existing tracks
         this.dom.trackHeaders.innerHTML = '';
@@ -728,13 +778,20 @@ class InteractiveCutsceneEditor {
             item.className = `list-item ${this.currentBranch === branchId ? 'active' : ''}`;
             item.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span><i class="fas fa-code-branch"></i> ${branchId}</span>
-                    <button class="btn-small" onclick="editor.deleteBranch('${branchId}'); event.stopPropagation();" 
+                    <span><i class="fas fa-code-branch"></i> ${_escapeHtmlCutscene(branchId)}</span>
+                    <button class="btn-small remove-branch-btn"
                             style="background: #e74c3c; padding: 2px 6px; font-size: 10px;">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             `;
+            const removeBtn = item.querySelector('.remove-branch-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteBranch(branchId);
+                });
+            }
             item.onclick = () => this.selectBranch(branchId);
             branchesList.appendChild(item);
         });
@@ -1221,13 +1278,30 @@ class InteractiveCutsceneEditor {
             ctx.stroke();
         }
         
-        // Character body
+        // Character body: prefer sprite if available
+        const spriteAsset = this.assets.sprites.get(position.sprite) || this.assets.sprites.get(name.toLowerCase()) || null;
+        let drewSprite = false;
+        if (spriteAsset && spriteAsset.data && spriteAsset.data.startsWith('data:image')) {
+            let img = this._spriteImageCache.get(spriteAsset.id || spriteAsset.name);
+            if (!img) {
+                img = new Image();
+                img.src = spriteAsset.data;
+                this._spriteImageCache.set(spriteAsset.id || spriteAsset.name, img);
+                img.onload = () => this.renderCanvasPreview?.();
+            }
+            if (img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, x - 16*scale, y - 18*scale, 32*scale, 36*scale);
+                drewSprite = true;
+            }
+        }
         const radius = 15 * scale;
-        ctx.fillStyle = name.includes('Player') ? '#4a90e2' : 
-                       name.includes('Merchant') ? '#e67e22' : '#e74c3c';
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, 2 * Math.PI);
-        ctx.fill();
+        if (!drewSprite) {
+            ctx.fillStyle = name.includes('Player') ? '#4a90e2' : 
+                           name.includes('Merchant') ? '#e67e22' : '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
         
         // Character outline
         ctx.strokeStyle = isSelected ? '#ff0000' : '#000';
@@ -1462,7 +1536,7 @@ class InteractiveCutsceneEditor {
         
         ctx.fillStyle = '#ff0000';
         ctx.textAlign = 'right';
-        ctx.fillText('FOREST ENCOUNTER', canvas.width-10, 30);
+        ctx.fillText(String(this.data?.name || 'CUTSCENE').toUpperCase().slice(0, 28), canvas.width-10, 30);
         
         // Timeline scrub bar at bottom
         const scrubHeight = 20;
@@ -1651,12 +1725,9 @@ class InteractiveCutsceneEditor {
         this.playback.isPlaying = true;
         document.getElementById('play-icon').className = 'fas fa-pause';
         
-        if (this.engine) {
-            this.engine.loadCutscene(this.data).then(() => {
-                this.engine.play();
-            });
+        if (this.engine && !this.engine.active) {
+            this.engine.loadCutscene(this.data).then(() => { this.engine.play(); }).catch(e => console.warn('[Cutscene] engine load failed', e));
         }
-        
         this.updateStatus("PLAYING CUTSCENE");
         this.animationLoop();
     }
@@ -1926,7 +1997,7 @@ class InteractiveCutsceneEditor {
 
         this.updateStatus(savedToFile
             ? `SAVED: ${this.data.name} (${fileStem}.json)`
-            : `SAVED TO LOCAL STATE: ${this.data.name}`);
+            : `SAVE FAILED — could not reach /api/cutscenes/${fileStem}`);
     }
     
     exportCutscene() {
@@ -1981,6 +2052,7 @@ class InteractiveCutsceneEditor {
     }
     
     deleteSelected() {
+        this._pushStateSnapshot();
         if (this.playback.selectedKeyframe !== null) {
             const track = this.getSelectedTrack();
             if (track && track.keyframes) {
@@ -2000,6 +2072,7 @@ class InteractiveCutsceneEditor {
     }
     
     clearTimeline() {
+        this._pushStateSnapshot();
         if (confirm('CLEAR ENTIRE TIMELINE?')) {
             this.getActiveTimeline().tracks = [];
             this.playback.selectedTrack = null;
@@ -2010,6 +2083,7 @@ class InteractiveCutsceneEditor {
     }
     
     addKeyframe() {
+        this._pushStateSnapshot();
         if (this.playback.selectedTrack !== null) {
             const track = this.getSelectedTrack();
             if (track) {
@@ -2080,10 +2154,7 @@ class InteractiveCutsceneEditor {
     
     testCutscene() {
         if (this.engine) {
-            this.engine.loadCutscene(this.data).then(() => {
-                this.engine.play();
-                this.updateStatus("TESTING CUTSCENE");
-            });
+            this.engine.loadCutscene(this.data).then(() => { this.engine.play(); this.updateStatus('TESTING CUTSCENE'); }).catch(e => { console.warn('[Cutscene] test failed', e); this.updateStatus('TEST FAILED: ' + (e.message || e)); });
         } else {
             this.updateStatus("ENGINE NOT AVAILABLE");
         }
@@ -2116,6 +2187,7 @@ class InteractiveCutsceneEditor {
     
     // New editing tools
     addDialogue() {
+        this._pushStateSnapshot();
         if (this.playback.selectedTrack !== null) {
             const track = this.getSelectedTrack();
             if (track && track.type === 'interaction') {
@@ -2147,6 +2219,7 @@ class InteractiveCutsceneEditor {
     }
     
     addChoice() {
+        this._pushStateSnapshot();
         if (this.playback.selectedTrack !== null && this.playback.selectedKeyframe !== null) {
             const track = this.getSelectedTrack();
             const keyframe = track.keyframes[this.playback.selectedKeyframe];
@@ -2304,6 +2377,7 @@ class InteractiveCutsceneEditor {
     }
     
     createKeyframeAtCurrentTime() {
+        this._pushStateSnapshot();
         if (!this.selectedCharacter) return;
         
         this.createMovementKeyframe(this.selectedCharacter);
@@ -2503,10 +2577,15 @@ class InteractiveCutsceneEditor {
     
     // Asset Management Methods
     removeAsset(assetType, assetId) {
+        const collection = this.assets[assetType];
+        if (!collection || !assetId || !collection.has(assetId)) {
+            console.warn('[Cutscene] removeAsset: unknown asset', assetType, assetId);
+            return;
+        }
         if (confirm(`REMOVE ASSET?`)) {
-            this.assets[assetType].delete(assetId);
+            collection.delete(assetId);
             this.updateAssetLists();
-            this.updateStatus(`ASSET REMOVED: ${assetId.toUpperCase()}`);
+            this.updateStatus(`ASSET REMOVED: ${String(assetId).toUpperCase()}`);
         }
     }
     

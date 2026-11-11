@@ -29,6 +29,18 @@ function makeOverlayHandler(projectService) {
             const resolvedProj = path.resolve(projectFilePath);
             if (!resolvedRoot.startsWith(rootAllowed + path.sep) && resolvedRoot !== rootAllowed) return next();
             if (!resolvedProj.startsWith(projAllowed + path.sep) && resolvedProj !== projAllowed) return next();
+            // FINDING-03: symlink escape check via realpath (file or parent)
+            const fs = require('fs');
+            try {
+                for (const [cand, allow] of [[resolvedRoot, rootAllowed], [resolvedProj, projAllowed]]) {
+                    let realAllow = allow;
+                    try { realAllow = fs.realpathSync(allow); } catch {}
+                    let realCand = null;
+                    try { realCand = fs.realpathSync(cand); } catch {}
+                    if (!realCand) { try { realCand = fs.realpathSync(path.dirname(cand)); } catch {} }
+                    if (realCand && realCand !== realAllow && !realCand.startsWith(realAllow + path.sep)) return next();
+                }
+            } catch {}
 
             const tryRoot = (cb) => res.sendFile(rootFilePath, (e) => {
                 // Only swallow ENOENT; forward permission/IO errors instead of

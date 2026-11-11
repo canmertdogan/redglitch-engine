@@ -14,7 +14,8 @@ class CampaignController {
         
         // Cross-engine persistent state
         this.globalFlags = {};
-        this.variables = {}; 
+        this.variables = {};
+        if (typeof fetch === 'function') fetch('/api/variables').then(r=>r.ok?r.json():null).then(v=>{ if (v && typeof v === 'object') { for (const k of Object.keys(v)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; this.variables[k] = v[k]; } } }).catch(()=>{}); 
         this.playerData = null;
         this.inventorySystem = new window.InventorySystem(); 
         this.questProgress = {};
@@ -22,6 +23,14 @@ class CampaignController {
         
         // Ability system
         this.equippedAbilities = [null, null, null, null];
+        
+        // LogicSystem — campaign-wide algorithm runtime (compiled ASTs)
+        this._campaignLogic = null;
+        if (window.LogicSystem && window.LogicInterpreter) {
+            try { this._campaignLogic = new window.LogicSystem(this); this.logicSystem = this._campaignLogic; } catch (e) { console.warn('[CampaignController] LogicSystem attach failed', e); }
+        } else {
+            console.warn('[CampaignController] LogicSystem not loaded — campaign algorithm scripts will not run');
+        }
         
         // Campaign metadata
         this.campaignId = null;
@@ -165,8 +174,8 @@ class CampaignController {
             window.RedglitchEventBus.on('system:memory:patch', (event) => {
                 const { namespace, patch } = event.data || {};
                 if (namespace === 'campaign' && patch) {
-                    if (patch.variables) Object.assign(this.variables, patch.variables);
-                    if (patch.globalFlags) Object.assign(this.globalFlags, patch.globalFlags);
+                    if (patch.variables) (()=>{ const s=this.variables||{}; for(const k of Object.keys(patch.variables||{})){ if(k==='__proto__'||k==='constructor'||k==='prototype') continue; s[k]=patch.variables[k]; } })();
+                    if (patch.globalFlags) (()=>{ const s=this.globalFlags||{}; for(const k of Object.keys(patch.globalFlags||{})){ if(k==='__proto__'||k==='constructor'||k==='prototype') continue; s[k]=patch.globalFlags[k]; } })();
                     console.log('[CampaignController] Campaign Memory patched by Data-Driven IDE');
                 }
             });

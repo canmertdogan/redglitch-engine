@@ -948,13 +948,16 @@ document.getElementById('upload-tex-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const img = new Image();
+    const _url = URL.createObjectURL(file);
     img.onload = () => {
         customTextureData = img;
         textureCache = {};
         generateTexture('custom');
         statusMsg('Custom texture loaded');
+        setTimeout(() => URL.revokeObjectURL(_url), 5000);
     };
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => URL.revokeObjectURL(_url);
+    img.src = _url;
 });
 document.getElementById('bg-color').addEventListener('input', (e) => {
     const h = e.target.value;

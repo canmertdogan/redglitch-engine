@@ -22,8 +22,13 @@ export class PermissionGate {
         /\/server\/middleware\/.*\.js$/,                // Backend middleware
         /\/server\/utils\/.*\.js$/,                     // Backend utilities
         /^\/electron-main\.js$/,                        // Electron entry
+        /^\/preload\.js$/,                              // Electron preload bridge
         /^\/build-game\.js$/,                           // Build system
         /^\/build-adapter\.js$/,                        // Adapter build
+        /\/backend\/.*\.py$/,                           // Python AI backend
+        /\/scripts\/.*\.(js|mjs|py)$/,                  // Tooling scripts
+        /\/\.git\//,                                    // Git internals
+        /^\/redglitch\.json$/,                          // Project manifest
         /capacitor\.config\.ts$/,                       // Mobile config
         /package\.json$/,                               // Dependencies (without review)
         /package-lock\.json$/                           // Lock file

@@ -68,10 +68,19 @@ test('data.update posts to plural definition endpoints', async () => {
     await registry.tools.get('data.update').execute({ type: 'items', data: [{ id: 'item1' }] });
     await registry.tools.get('data.update').execute({ type: 'skills', data: [{ id: 'skill1' }] });
 
-    assert.deepEqual(calls.map((call) => call.url), [
+    // data.update now does a GET backup before each POST (rollback) — assert POST endpoints in order
+    const postUrls = calls.filter(c => c.body !== undefined).map(c => c.url);
+    const allUrls = calls.map(c => c.url);
+    assert.deepEqual(postUrls, [
         '/api/npcs',
         '/api/items',
         '/api/skills',
+    ]);
+    // Also ensure each POST was preceded by a GET to the same endpoint
+    assert.deepEqual(allUrls, [
+        '/api/npcs', '/api/npcs',
+        '/api/items', '/api/items',
+        '/api/skills', '/api/skills',
     ]);
 });
 

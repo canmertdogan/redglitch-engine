@@ -149,11 +149,17 @@
         </div>
 
         <div class="toolbar-group" style="margin-left: auto;">
-            <select id="parent-kai-model-select" class="ai-model-select" title="AI Model / Backend" onchange="window.KAI.setModel(this.value)">
-                <option value="native">NATIVE // QWEN3B</option>
-                <option value="local">WEBGPU // LOCAL</option>
-                <option value="cerebras">CEREBRAS // CLOUD</option>
-                <option value="opencode-zen">OPENCODE // ZEN</option>
+            <select id="parent-kai-model-select" class="ai-model-select" title="AI Provider" onchange="window.KAI.setModel(this.value)">
+                <option value="openrouter" selected>OPENROUTER</option>
+                <option value="google-ai-studio">GOOGLE AI STUDIO</option>
+                <option value="openai">OPENAI</option>
+                <option value="anthropic">ANTHROPIC</option>
+                <option value="gemini">GEMINI</option>
+                <option value="groq">GROQ</option>
+                <option value="deepseek">DEEPSEEK</option>
+                <option value="mistral">MISTRAL</option>
+                <option value="ollama">OLLAMA</option>
+                <option value="native">LOCAL (CORTEX)</option>
             </select>
             <button id="parent-kai-mode-toggle" class="tool-btn ai-toggle-btn off" title="Toggle AI Assistant" onclick="window.KAI.toggleMode()">
                 <i class="fas fa-brain"></i> <span>AI: OFF</span>
@@ -610,12 +616,6 @@
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                    border: none; pointer-events: none; z-index: 9998;">
     </iframe>
-
-    <!-- RAG AI Panel (separate, dedicated RAG search UI) -->
-    <iframe id="rag-ai-panel" src="ai/ui/ai-rag-panel.html?v=1"
-            style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                   border: none; pointer-events: none; z-index: 9997;">
-    </iframe>
     
     <script>
         // Kai Bridge to parent
@@ -639,6 +639,10 @@
                 settings.provider = provider;
                 localStorage.setItem('kai_settings', JSON.stringify(settings));
 
+                if (provider !== 'native' && window.destroyIrabBridge) {
+                    window.destroyIrabBridge();
+                }
+
                 // Push into the live settings controller (if the Kai panel is already loaded)
                 // so the switch takes effect immediately without a page reload.
                 const iframe = document.getElementById('kai-ai-panel');
@@ -650,7 +654,19 @@
                 const AIChatUI = iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI;
                 if (AIChatUI) AIChatUI.updateChatMeta();
                 if (window.KAI.showBalloon) {
-                    const labels = { native: 'Native Cortex', local: 'WebGPU (local)', cerebras: 'Cerebras Cloud', 'opencode-zen': 'OpenCode Zen', openrouter: 'OpenRouter Cloud' };
+                    const labels = {
+                        openrouter: 'OpenRouter (Universal)',
+                        'google-ai-studio': 'Google AI Studio',
+                        openai: 'OpenAI Direct',
+                        anthropic: 'Anthropic Claude',
+                        gemini: 'Google Gemini',
+                        groq: 'Groq LPU',
+                        deepseek: 'DeepSeek',
+                        mistral: 'Mistral AI',
+                        ollama: 'Ollama (Local)',
+                        custom: 'Custom Gateway',
+                        native: 'Native Cortex'
+                    };
                     window.KAI.showBalloon(`Model switched to ${labels[provider] || provider}.`);
                 }
             },
@@ -810,12 +826,20 @@
                 setState('off');
             };
 
-            // Pick up an already-running bridge (AI mode was on from a previous session)
-            if (window.irab) {
+            // Reflect state: cloud providers are immediately ready, native bridge only connects when selected
+            const isEnabled = localStorage.getItem('kai_ai_enabled') === 'true';
+            let currentProvider = 'openrouter';
+            try {
+                currentProvider = JSON.parse(localStorage.getItem('kai_settings') || '{}').provider || 'openrouter';
+            } catch (_) {}
+
+            if (currentProvider !== 'native') {
+                setState(isEnabled ? 'online' : 'off');
+            } else if (window.irab) {
                 attachBridgeHooks(window.irab);
                 setState(window.irab.isConnected ? 'online' : 'connecting');
             } else {
-                setState(localStorage.getItem('kai_ai_enabled') === 'true' ? 'connecting' : 'off');
+                setState(isEnabled ? 'connecting' : 'off');
             }
         })();
     </script>

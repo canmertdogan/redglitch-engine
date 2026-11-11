@@ -85,20 +85,16 @@ class MixerChannel {
 
     // --- Effects (Inserts) ---
 
-    addInsert(effectPlugin, index = -1) {
-        // Disconnect everything
-        this.input.disconnect();
-        
-        // Remove existing connections between inserts
-        if (this.inserts.length > 0) {
-            this.input.disconnect();
-            for (let i = 0; i < this.inserts.length; i++) {
-                this.inserts[i].disconnect();
-            }
-            // Last insert was connected to fader
-        } else {
-             this.input.disconnect(this.faderNode);
+    _disconnectChain() {
+        try { this.input.disconnect(); } catch { /* no-op */ }
+        for (const plugin of this.inserts) {
+            try { plugin.disconnect(); } catch { /* no-op */ }
         }
+    }
+
+    addInsert(effectPlugin, index = -1) {
+        if (!effectPlugin) return;
+        this._disconnectChain();
 
         // Add to array
         if (index === -1) {
@@ -113,17 +109,8 @@ class MixerChannel {
     
     removeInsert(index) {
         if (index < 0 || index >= this.inserts.length) return;
-        
-        // Disconnect everything
-        if (this.inserts.length > 0) {
-            this.input.disconnect();
-            for (let i = 0; i < this.inserts.length; i++) {
-                this.inserts[i].disconnect();
-            }
-        } else {
-             this.input.disconnect(this.faderNode);
-        }
 
+        this._disconnectChain();
         this.inserts.splice(index, 1);
         this.rebuildChain();
     }
@@ -133,33 +120,29 @@ class MixerChannel {
         
         for (let i = 0; i < this.inserts.length; i++) {
             const plugin = this.inserts[i];
-            if (plugin.active) {
-                // If the plugin has its own input property (which our AudioPlugin does)
-                // we connect to that.
-                if (plugin.input) {
-                    currentNode.connect(plugin.input);
-                    currentNode = plugin; // The plugin instance becomes the source for next
-                } else {
-                    // Fallback for raw nodes
-                    currentNode.connect(plugin);
-                    currentNode = plugin;
-                }
-            }
+            if (!plugin.active) continue;
+            // AudioPlugin instances expose their own `input`; raw nodes do not.
+            currentNode.connect(plugin.input || plugin);
+            currentNode = plugin;
         }
         
         // Finally connect to fader
-        if (currentNode instanceof AudioPlugin) {
-            currentNode.connect(this.faderNode);
-        } else {
-            currentNode.connect(this.faderNode);
-        }
+        currentNode.connect(this.faderNode);
     }
 
     // --- Metering ---
 
+    _readTimeDomain() {
+        // Reuse a single buffer — allocating per frame caused GC churn.
+        if (!this._meterArray || this._meterArray.length !== this.analyzer.frequencyBinCount) {
+            this._meterArray = new Float32Array(this.analyzer.frequencyBinCount);
+        }
+        this.analyzer.getFloatTimeDomainData(this._meterArray);
+        return this._meterArray;
+    }
+
     getPeakLevel() {
-        const array = new Float32Array(this.analyzer.frequencyBinCount);
-        this.analyzer.getFloatTimeDomainData(array);
+        const array = this._readTimeDomain();
         
         let max = 0;
         for(let i = 0; i < array.length; i++) {
@@ -180,8 +163,7 @@ class MixerChannel {
     }
 
     getRMSLevel() {
-        const array = new Float32Array(this.analyzer.frequencyBinCount);
-        this.analyzer.getFloatTimeDomainData(array);
+        const array = this._readTimeDomain();
         
         let sum = 0;
         for (let i = 0; i < array.length; i++) {

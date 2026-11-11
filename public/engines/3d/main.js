@@ -137,6 +137,13 @@ class Redglitch3DGame extends Engine3DAdapter {
         this.onLevelReady   = null;
         this.onGameOver     = null;
         this.onLevelComplete = null;
+
+        // Connect LogicSystem (compiled Algorithm Studio ASTs)
+        if (window.LogicSystem && window.LogicInterpreter) {
+            try { window.LogicSystem.ensure(this, { tick: true }); } catch (e) { console.warn('[3d] LogicSystem attach failed', e); }
+        } else {
+            console.warn('[3d] LogicSystem not loaded — algorithm scripts will not run');
+        }
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -361,6 +368,9 @@ class Redglitch3DGame extends Engine3DAdapter {
     _update(dt) {
         // 1. Input
         this.input?.update(dt);
+
+        // 1b. LogicSystem tick (compiled Algorithm Studio ASTs)
+        if (this.logicSystem) { try { this.logicSystem.updateAll(dt); } catch (e) { console.error('LogicSystem Error:', e); } }
 
         // 2. Mode-specific systems in declared order
         for (const key of this._updateOrder) {

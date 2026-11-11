@@ -300,9 +300,10 @@ export default class PlatformerMode extends ModeInterface {
         // Build runtime level data with geometry + lights
         const runtimeLevel = this._buildRuntimeLevelData(playableLevel);
 
-        // Populate visual platform meshes into the scene since they are loaded
-        // from the 'platforms' format instead of the 'geometry' format.
-        if (this.game && typeof this.game._populateGeometry === 'function') {
+        // Populate visual platform meshes into the scene only if not already populated
+        // from 'geometry' format by Engine3DAdapter.
+        const hadOriginalGeometry = Array.isArray(playableLevel.geometry) && playableLevel.geometry.length > 0;
+        if (!hadOriginalGeometry && this.game && typeof this.game._populateGeometry === 'function') {
             await this.game._populateGeometry(runtimeLevel.geometry);
         }
 
@@ -329,15 +330,33 @@ export default class PlatformerMode extends ModeInterface {
 
         // Checkpoints
         if (this.checkpoints) {
-            if (Array.isArray(playableLevel.checkpoints) && playableLevel.checkpoints.length > 0) {
+            const cpSource = (Array.isArray(playableLevel.checkpoints) && playableLevel.checkpoints.length > 0)
+                ? playableLevel.checkpoints
+                : (Array.isArray(playableLevel.entities) ? playableLevel.entities.filter(e => e.type === 'checkpoint') : []);
+
+            if (cpSource.length > 0) {
                 const merged = { ...playableLevel };
-                merged.checkpoints = playableLevel.checkpoints.map(cp => ({
-                    id:  cp.id,
-                    x:   cp.pos?.x ?? cp.x ?? 0,
-                    y:   cp.pos?.y ?? cp.y ?? 0,
-                    z:   cp.pos?.z ?? cp.z ?? 0,
-                    yaw: cp.yaw || 0,
-                }));
+                merged.checkpoints = cpSource.map((cp, idx) => {
+                    const px = cp.position?.x ?? (Array.isArray(cp.position) ? cp.position[0] : (cp.pos?.x ?? cp.x ?? 0));
+                    const py = cp.position?.y ?? (Array.isArray(cp.position) ? cp.position[1] : (cp.pos?.y ?? cp.y ?? 0));
+                    const pz = cp.position?.z ?? (Array.isArray(cp.position) ? cp.position[2] : (cp.pos?.z ?? cp.z ?? 0));
+                    return {
+                        id: cp.id || `checkpoint_${idx}`,
+                        position: { x: px, y: py, z: pz },
+                        pos: { x: px, y: py, z: pz },
+                        x: px, y: py, z: pz,
+                        yaw: cp.yaw || 0,
+                    };
+                });
+                if (!merged.levelExit && Array.isArray(playableLevel.entities)) {
+                    const exitEnt = playableLevel.entities.find(e => ['exit', 'level-exit', 'level_exit', 'goal'].includes(e.type));
+                    if (exitEnt?.position) {
+                        const exX = Array.isArray(exitEnt.position) ? exitEnt.position[0] : (exitEnt.position.x ?? 0);
+                        const exY = Array.isArray(exitEnt.position) ? exitEnt.position[1] : (exitEnt.position.y ?? 0);
+                        const exZ = Array.isArray(exitEnt.position) ? exitEnt.position[2] : (exitEnt.position.z ?? 0);
+                        merged.levelExit = { x: exX, y: exY, z: exZ };
+                    }
+                }
                 this.checkpoints.spawnFromLevelData(merged);
             } else {
                 this.checkpoints.spawnFromLevelData(playableLevel);
@@ -349,17 +368,32 @@ export default class PlatformerMode extends ModeInterface {
         if (this.collectibles) {
             const colEntities = [];
             if (Array.isArray(playableLevel.collectibles)) {
-                playableLevel.collectibles.forEach(c => colEntities.push({
-                    type: c.type || 'coin',
-                    x: c.pos?.x ?? c.x ?? 0,
-                    y: c.pos?.y ?? c.y ?? 0,
-                    z: c.pos?.z ?? c.z ?? 0,
-                    ...c.config,
-                }));
+                playableLevel.collectibles.forEach(c => {
+                    const px = c.position?.x ?? (Array.isArray(c.position) ? c.position[0] : (c.pos?.x ?? c.x ?? 0));
+                    const py = c.position?.y ?? (Array.isArray(c.position) ? c.position[1] : (c.pos?.y ?? c.y ?? 0));
+                    const pz = c.position?.z ?? (Array.isArray(c.position) ? c.position[2] : (c.pos?.z ?? c.z ?? 0));
+                    colEntities.push({
+                        type: c.type || 'coin',
+                        id: c.id,
+                        position: [px, py, pz],
+                        x: px, y: py, z: pz,
+                        properties: c.config || c.properties || {},
+                    });
+                });
             }
             if (Array.isArray(playableLevel.entities)) {
-                const collectibleTypes = new Set(['coin', 'star', 'key', 'powerup', 'coin_trail_arc']);
-                playableLevel.entities.filter(e => collectibleTypes.has(e.type)).forEach(e => colEntities.push(e));
+                const collectibleTypes = new Set(['coin', 'star', 'gem', 'key', 'powerup', 'collectible', 'coin_trail_arc', 'coin_trail_ring', 'coin_trail_line']);
+                playableLevel.entities.filter(e => collectibleTypes.has(e.type)).forEach(e => {
+                    const px = Array.isArray(e.position) ? e.position[0] : (e.position?.x ?? e.x ?? 0);
+                    const py = Array.isArray(e.position) ? e.position[1] : (e.position?.y ?? e.y ?? 0);
+                    const pz = Array.isArray(e.position) ? e.position[2] : (e.position?.z ?? e.z ?? 0);
+                    colEntities.push({
+                        ...e,
+                        type: e.type === 'collectible' ? 'coin' : e.type,
+                        position: [px, py, pz],
+                        x: px, y: py, z: pz,
+                    });
+                });
             }
             if (colEntities.length) this.collectibles.spawnFromLevelData(colEntities);
         }
@@ -371,6 +405,51 @@ export default class PlatformerMode extends ModeInterface {
         }
 
         this.vehicles?.load(playableLevel);
+
+        // Hydrate player controller presets from 3D Studio Player Studio if defined
+        if (playableLevel.player?.speed && this.charController) {
+            this.charController._runSpeed = Number(playableLevel.player.speed);
+        }
+        if (playableLevel.player?.jump && this.charController) {
+            this.charController._jumpSpeed = Number(playableLevel.player.jump);
+        }
+        if (playableLevel.player?.health) {
+            this._health = Number(playableLevel.player.health);
+        }
+
+        // Collect hazards from entities and geometry
+        this._hazards = [];
+        const hazardTypes = new Set(['hazard', 'spike', 'lava', 'saw', 'laser', 'crusher']);
+        if (Array.isArray(playableLevel.entities)) {
+            for (const ent of playableLevel.entities) {
+                if (hazardTypes.has(ent.type)) {
+                    const pos = ent.position || [0, 0, 0];
+                    this._hazards.push({
+                        id: ent.id,
+                        x: pos[0] ?? 0,
+                        y: pos[1] ?? 0,
+                        z: pos[2] ?? 0,
+                        radius: Number(ent.properties?.radius || 1.2),
+                        damage: Number(ent.properties?.damage || 1),
+                    });
+                }
+            }
+        }
+        if (Array.isArray(playableLevel.geometry)) {
+            for (const geo of playableLevel.geometry) {
+                if (hazardTypes.has(geo.type)) {
+                    const pos = geo.position || [0, 0, 0];
+                    this._hazards.push({
+                        id: geo.id,
+                        x: pos[0] ?? 0,
+                        y: pos[1] ?? 0,
+                        z: pos[2] ?? 0,
+                        radius: Math.max(geo.width || 1, geo.depth || 1) * 0.5,
+                        damage: 1,
+                    });
+                }
+            }
+        }
 
         // Place player at spawn
         this._respawn();
@@ -455,6 +534,29 @@ export default class PlatformerMode extends ModeInterface {
 
         // Invincibility countdown
         if (this._invincFrames > 0) this._invincFrames--;
+
+        // Hazard collision check
+        if (this._hazards?.length && this._invincFrames <= 0) {
+            const charPos = this._getPlayerPosition();
+            if (charPos) {
+                for (const haz of this._hazards) {
+                    const dx = charPos.x - haz.x;
+                    const dy = Math.abs(charPos.y - haz.y);
+                    const dz = charPos.z - haz.z;
+                    const distSq = dx * dx + dz * dz;
+                    if (distSq < (haz.radius * haz.radius) && dy < 1.5) {
+                        this._health = Math.max(0, this._health - haz.damage);
+                        this._invincFrames = 60;
+                        this.playerChar?.takeDamage?.(haz.damage);
+                        this.vfx?.flashInvincible?.();
+                        if (this._health <= 0) {
+                            this._triggerDeath();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
 
         // Death plane check
         const pos = this._getPlayerPosition();
@@ -698,7 +800,7 @@ export default class PlatformerMode extends ModeInterface {
 
             // Use pixel-accurate TRIMESH collision shapes for slopes, stairs, and other non-box primitives
             const platformType = String(def.type || '').toLowerCase();
-            const isCustomShape = ['slope', 'wedge', 'stairs', 'arch', 'cone', 'cylinder', 'pillar', 'sphere'].includes(platformType);
+            const isCustomShape = ['slope', 'wedge', 'stairs', 'arch', 'cone', 'cylinder', 'pillar', 'sphere', 'trimesh', 'prop'].includes(platformType) || def.shape_type === 'custom_csg';
 
             const bodyConfig = {
                 type:        BodyType.STATIC,
@@ -707,8 +809,8 @@ export default class PlatformerMode extends ModeInterface {
                     y: Number(def.position?.[1] ?? mesh.position.y),
                     z: Number(def.position?.[2] ?? mesh.position.z),
                 },
-                friction:    Number.isFinite(def._friction) ? def._friction : 0.7,
-                restitution: Number.isFinite(def._restitution) ? def._restitution : 0,  // 0 = no bounce
+                friction:    Number.isFinite(def._friction) ? def._friction : (platformType === 'ice' ? 0.05 : 0.7),
+                restitution: Number.isFinite(def._restitution) ? def._restitution : (platformType === 'bounce' ? 1.8 : 0),
             };
 
             if (isCustomShape) {

@@ -9,6 +9,7 @@ const ensureDir = async (dir) => {
     await fs.mkdir(dir, { recursive: true });
 };
 
+function safeParseJSON(raw, label) { try { return JSON.parse(raw); } catch (e) { const err = new Error(`Invalid JSON in ${label}`); err.code = 'INVALID_JSON'; throw err; } }
 function isSafeName(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
@@ -96,7 +97,7 @@ router.get('/ast/:name', async (req, res) => {
         if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid brain name' });
         const activeProject = projectService.getActiveProject();
         const ast = await fs.readFile(path.join(activeProject, 'data', 'brains', `${req.params.name}.ast.json`), 'utf8');
-        res.json(JSON.parse(ast));
+        res.json(safeParseJSON(ast, 'brain AST'))
     } catch (err) {
         res.status(404).json({ error: 'AST not found' });
     }

@@ -106,15 +106,24 @@ export default class PlayerStudioPanel {
 
     _buildProperties() {
         const profile = this._selectedProfile();
+        const health = this._readNumber('player-health', profile.health);
+        const speed = this._readNumber('player-speed', profile.speed);
+        const jump = this._readNumber('player-jump', profile.jump);
         return {
             studio: 'player',
             profile: profile.id,
             label: profile.label,
             cameraMode: document.getElementById('player-camera-mode')?.value || profile.camera,
-            health: this._readNumber('player-health', profile.health),
-            speed: this._readNumber('player-speed', profile.speed),
-            jump: this._readNumber('player-jump', profile.jump),
+            health,
+            speed,
+            jump,
             primarySpawn: true,
+            team: 0,
+            stats: {
+                hp: health,
+                maxHp: health,
+                speed,
+            }
         };
     }
 

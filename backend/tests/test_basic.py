@@ -28,7 +28,10 @@ async def test_chat_endpoint_missing_fields():
 
 
 @pytest.mark.anyio
-async def test_rag_reindex_endpoint():
+async def test_rag_reindex_endpoint(monkeypatch):
+    from rag import rag
+    monkeypatch.setattr(rag, "_ensure_embedder", lambda: True)
+    monkeypatch.setattr(rag, "ingest_project", lambda force=False: None)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/ai/rag/reindex")

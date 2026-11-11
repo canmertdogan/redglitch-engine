@@ -19,6 +19,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,7 +27,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STUDIO_JS = path.join(ROOT, 'public', 'js', 'Studio.js');
 const DOCS_DIR = path.join(ROOT, 'docs', 'tools');
 const SHOTS_DIR = path.join(DOCS_DIR, 'smoke');
-const TMP_PREFIX = path.join('/private/var/folders/x3/ysmvvpws5b59hfwlpdxkyy4r0000gn/T/opencode', 'redglitch-smoke-');
+const TMP_PREFIX = path.join(os.tmpdir(), 'redglitch-smoke-');
 
 const args = process.argv.slice(2);
 const flag = {
@@ -339,6 +340,7 @@ async function main() {
         const tool = tools[i];
         process.stdout.write(`[smoke] [${i + 1}/${tools.length}] ${tool.id} ... `);
         const r = await auditOne(tool, i);
+        stripNoise(r);
         results[i] = r;
         console.log(classify(r));
       }

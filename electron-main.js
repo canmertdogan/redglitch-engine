@@ -87,7 +87,8 @@ class CortexManager {
                 PYTHONUNBUFFERED: '1',
                 TOKENIZERS_PARALLELISM: 'false',
                 OBJC_DISABLE_INITIALIZE_FORK_SAFETY: 'YES',
-                GGML_METAL: '0'
+                GGML_METAL: '0',
+                IRAB_DISABLE_WATCHER: '1'
             }
         });
 

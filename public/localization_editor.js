@@ -656,11 +656,45 @@ ${Object.entries(report.completionByLanguage)
     }
     
     bulkTranslate() {
-        alert("BULK TRANSLATION FEATURE COMING SOON!\n\nThis feature will allow:\n- Auto-translation via APIs\n- Find and replace operations\n- Bulk text operations");
+        // Functional bulk: prompt find/replace applied to ALL languages/keys, with confirm + save.
+        const find = prompt('Bulk translate — Find text (exact match, e.g. START GAME):');
+        if (!find) return;
+        const repl = prompt('Replace with:', '');
+        if (repl === null) return;
+        let count = 0;
+        Object.keys(this.data).forEach(k => {
+            const entry = this.data[k];
+            if (!entry || typeof entry !== 'object') return;
+            this.activeLanguages.forEach(lang => {
+                if (typeof entry[lang] === 'string' && entry[lang].includes(find)) {
+                    entry[lang] = entry[lang].replaceAll(find, repl);
+                    count++;
+                }
+            });
+        });
+        if (count === 0) { alert('No matches found for: ' + find); return; }
+        if (confirm(`Replaced ${count} cell(s). Save now?`)) { this.save?.(); this.render?.(); }
+        alert(`Bulk replace done: ${count} cell(s) updated.`);
     }
     
     settings() {
-        alert("SETTINGS FEATURE COMING SOON!\n\nThis feature will allow:\n- Custom language configurations\n- Auto-save preferences\n- Export/import settings");
+        // Functional settings: edit active languages, persistence, export/import.
+        const current = this.activeLanguages.join(', ');
+        const next = prompt('Active languages (comma-separated, must exist in language list):', current);
+        if (!next) return;
+        const langs = next.split(',').map(s => s.trim()).filter(s => this.languages[s]);
+        if (!langs.length) { alert('No valid languages. Use codes like EN, TR, RU, DE.'); return; }
+        this.activeLanguages = langs;
+        this.selectedLanguages = new Set(langs);
+        try { localStorage.setItem('redglitch_localization_langs', JSON.stringify(langs)); } catch {}
+        // Export/import: offer to export JSON
+        if (confirm('Settings saved for ' + langs.join(', ') + '. Export translations JSON now?')) {
+            const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'localization-export.json'; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }
+        this.render?.();
     }
 }
 

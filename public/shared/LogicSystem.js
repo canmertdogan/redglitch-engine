@@ -10,9 +10,26 @@ window.LogicSystem = class LogicSystem {
         this.algorithmRuntimes = new Map();
         this.algorithms = new Map();
         this.loadedScripts = new Set();
+        this._algorithmEntities = new Map();
         
         this.interpreter = new window.LogicInterpreter(game);
         this.behaviorRunners = new Map();
+    }
+
+    static ensure(game, { tick = false } = {}) {
+        if (!window.LogicSystem) return null;
+        if (!game.logicSystem) {
+            game.logicSystem = new window.LogicSystem(game);
+        }
+        if (tick) {
+            const orig = game._logicTickBound || null;
+            if (!orig) {
+                const bound = (dt) => { try { game.logicSystem.updateAll(dt); } catch (e) { console.error('LogicSystem Error:', e); } };
+                game._logicTickBound = bound;
+                game._tickLogic = bound;
+            }
+        }
+        return game.logicSystem;
     }
     
     async loadScript(scriptName) {
@@ -84,6 +101,7 @@ window.LogicSystem = class LogicSystem {
             
             entity.algorithmScript = scriptName;
             entity.algorithmEvents = events;
+            this.trackAlgorithmEntity(entity);
             
             if (algorithmData.events) {
             } else {
@@ -112,7 +130,11 @@ window.LogicSystem = class LogicSystem {
             }
 
             const module = await this.loadScript(scriptName);
-            if (!module) {
+            if (!module) return;
+            // Generator-style brains (BrainRuntime coroutine): instantiate if module exports a brain function
+            if (window.BrainRuntime && (module.brain || module.default || module.generator)) {
+                const fn = module.brain || module.default || module.generator;
+                if (typeof fn === 'function') { try { entity.brainRuntime = new window.BrainRuntime(entity, fn); this.behaviorRunners.set(entity.id, entity.brainRuntime); this.trackAlgorithmEntity(entity); entity.algorithmEvents = ['update']; entity.algorithmScript = scriptName; } catch(e){ console.warn('[LogicSystem] BrainRuntime failed', e);} }
                 return;
             }
             
@@ -188,12 +210,25 @@ window.LogicSystem = class LogicSystem {
     }
     
     async updateAll(dt) {
+        // regular script runtimes
         for (const [entityId, runtime] of this.runtimes) {
             const entity = runtime.owner;
             if (entity && entity.logicScript && entity.logicEvents?.includes('update')) {
                 await this.trigger(entity, 'update', { dt });
             }
         }
+        // algorithm (AST) entities — attached via attachToEntity but not in runtimes
+        for (const [entityId, entity] of this._algorithmEntities || []) {
+            if (entity && entity.algorithmEvents?.includes('update')) {
+                await this.trigger(entity, 'update', { dt });
+            }
+        }
+    }
+
+    trackAlgorithmEntity(entity) {
+        if (!entity) return;
+        if (!this._algorithmEntities) this._algorithmEntities = new Map();
+        this._algorithmEntities.set(entity.id, entity);
     }
     
     detach(entity) {

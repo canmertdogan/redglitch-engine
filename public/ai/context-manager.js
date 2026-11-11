@@ -26,7 +26,13 @@ export class ContextManager {
         return String(value)
             .replace(/[<>"`]/g, '')
             .replace(/[\r\n\t]+/g, ' ')
-            .trim();
+            .replace(/\|im_start\|/gi, '')
+            .replace(/\|im_end\|/gi, '')
+            // Neutralize explicit role override attempts inside untrusted content.
+            .replace(/\b(system|assistant|user)\s*:\s*/gi, '')
+            .replace(/\b(ignore previous instructions?)\b/gi, '')
+            .trim()
+            .slice(0, 8000);
     }
 
     buildPrompt(userMessage, ragContext = "", toolsPrompt = "", editorState = null) {

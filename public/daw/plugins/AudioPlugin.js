@@ -8,6 +8,7 @@ class AudioPlugin {
         this.ctx = ctx;
         this.name = name || "Plugin";
         this.active = true;
+        this.params = {};
         
         // Input and Output nodes are essential for the chain
         this.input = this.ctx.createGain();
@@ -47,8 +48,17 @@ class AudioPlugin {
     }
 
     setParam(key, value) {
-        console.warn(`${this.name}: setParam '${key}' not implemented.`);
+        // Store param so serialization (ProjectManager) and subclasses can read it.
+        // Subclasses that override setParam handle their own AudioParam wiring; base keeps the value.
+        this.params[key] = value;
+        // Common AudioParams: forward to internal nodes if present
+        const node = this.effect || this.node || this.gainNode || this.filter || null;
+        if (node && node[key] && node[key].value !== undefined) {
+            try { node[key].value = Number(value); } catch {}
+        }
+        if (value !== undefined && typeof this.onParam === 'function') { try { this.onParam(key, value); } catch {} }
     }
+    getParam(key) { return this.params[key]; }
 
     getInterface() {
         const div = document.createElement('div');

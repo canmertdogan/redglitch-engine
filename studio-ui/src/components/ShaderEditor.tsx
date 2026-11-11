@@ -1675,14 +1675,12 @@ const ShaderEditor: React.FC = () => {
         setIsSaving(true);
         const data = { ...shader, layers };
         try {
-            await fetch('/api/assets/upload', {
+            // Use dedicated shader route so file lands in <project>/data/shaders/*.frag (engine reads .frag there),
+            // not <project>/assets/data/shaders/*.json (assets/upload forces assets/ prefix and engine never finds it).
+            await fetch('/api/shaders/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    path: `data/shaders/${shader.name}.json`,
-                    content: JSON.stringify(data, null, 2),
-                    isBase64: false
-                })
+                body: JSON.stringify({ name: shader.name, content: activeCode })
             });
         } catch (e) {
             console.error(e);

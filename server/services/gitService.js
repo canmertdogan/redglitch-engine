@@ -53,7 +53,7 @@ class GitService {
             if (!this.isSafePath(filePath) && filePath !== '.') {
                 return { success: false, error: 'Invalid file path' };
             }
-            await this.execute(['add', filePath]);
+            await this.execute(['add', '--', filePath]);
             return { success: true };
         } catch (e) {
             return { success: false, error: e.stderr };

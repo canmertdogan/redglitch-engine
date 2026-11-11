@@ -110,8 +110,11 @@ export default class CheckpointSystem3D {
 
         // Start / player spawn portal
         const spawn = data.playerSpawn ?? { x: 0, y: 0, z: 0 };
-        this._startPos = new THREE.Vector3(spawn.x, spawn.y, spawn.z);
-        this._spawnStartPortal(spawn.x, spawn.y, spawn.z);
+        const sx = Array.isArray(spawn) ? spawn[0] : (spawn.x ?? spawn.pos?.x ?? 0);
+        const sy = Array.isArray(spawn) ? spawn[1] : (spawn.y ?? spawn.pos?.y ?? 0);
+        const sz = Array.isArray(spawn) ? spawn[2] : (spawn.z ?? spawn.pos?.z ?? 0);
+        this._startPos = new THREE.Vector3(sx, sy, sz);
+        this._spawnStartPortal(sx, sy, sz);
 
         // Checkpoints
         if (Array.isArray(data.checkpoints)) {
@@ -121,7 +124,10 @@ export default class CheckpointSystem3D {
         // Level exit portal
         if (data.levelExit) {
             const e = data.levelExit;
-            this._spawnExitPortal(e.x ?? 0, e.y ?? 0, e.z ?? 0);
+            const ex = Array.isArray(e) ? e[0] : (Array.isArray(e.position) ? e.position[0] : (e.x ?? e.pos?.x ?? 0));
+            const ey = Array.isArray(e) ? e[1] : (Array.isArray(e.position) ? e.position[1] : (e.y ?? e.pos?.y ?? 0));
+            const ez = Array.isArray(e) ? e[2] : (Array.isArray(e.position) ? e.position[2] : (e.z ?? e.pos?.z ?? 0));
+            this._spawnExitPortal(ex, ey, ez);
         }
 
         // Set initial active position to spawn
@@ -134,11 +140,10 @@ export default class CheckpointSystem3D {
      */
     fromData(checkpoints) {
         for (const cp of checkpoints) {
-            const pos = new THREE.Vector3(
-                cp.position?.x ?? 0,
-                cp.position?.y ?? 0,
-                cp.position?.z ?? 0
-            );
+            const px = cp.position?.x ?? (Array.isArray(cp.position) ? cp.position[0] : (cp.pos?.x ?? cp.x ?? 0));
+            const py = cp.position?.y ?? (Array.isArray(cp.position) ? cp.position[1] : (cp.pos?.y ?? cp.y ?? 0));
+            const pz = cp.position?.z ?? (Array.isArray(cp.position) ? cp.position[2] : (cp.pos?.z ?? cp.z ?? 0));
+            const pos = new THREE.Vector3(px, py, pz);
             const mesh = this._buildCheckpointMesh(false);
             mesh.position.copy(pos);
             this._scene.add(mesh);

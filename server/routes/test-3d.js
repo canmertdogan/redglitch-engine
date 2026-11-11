@@ -37,16 +37,13 @@ const testResults = {
 };
 
 let testPromise = null;
+let activeStore = testResults; // FINDING-17: run-all snapshot isolation
 
 // Helper: Record test result
 function recordTest(category, testName, passed, message = '', details = {}) {
-    if (!testResults.timestamp) {
-        testResults.timestamp = new Date().toISOString();
-    }
-
-    if (!testResults.tests[category]) {
-        testResults.tests[category] = [];
-    }
+    const store = activeStore;
+    if (!store.timestamp) { store.timestamp = new Date().toISOString(); }
+    if (!store.tests[category]) { store.tests[category] = []; }
 
     const result = {
         name: testName,
@@ -56,13 +53,9 @@ function recordTest(category, testName, passed, message = '', details = {}) {
         details
     };
 
-    testResults.tests[category].push(result);
-    testResults.summary.total++;
-    if (passed) {
-        testResults.summary.passed++;
-    } else {
-        testResults.summary.failed++;
-    }
+    store.tests[category].push(result);
+    store.summary.total++;
+    if (passed) { store.summary.passed++; } else { store.summary.failed++; }
 
     return result;
 }
@@ -94,7 +87,7 @@ router.post('/shared-3d', (req, res) => {
             { name: 'AssetLoader3D module', rel: 'shared/AssetLoader3D.js' },
             { name: 'Engine3DBase module', rel: 'shared/Engine3DBase.js' }
         ]);
-        res.json({ category, tests: results, timestamp: testResults.timestamp });
+        res.json({ category, tests: results, timestamp: activeStore.timestamp });
     } catch (err) {
         res.status(500).json({ error: err.message, category });
     }
@@ -113,7 +106,7 @@ router.post('/topdown-3d', (req, res) => {
             { name: 'FogOfWar3D', rel: '3d/systems/FogOfWar3D.js' },
             { name: 'AbilitySystem3D', rel: '3d/systems/AbilitySystem3D.js' }
         ]);
-        res.json({ category, tests: results, timestamp: testResults.timestamp });
+        res.json({ category, tests: results, timestamp: activeStore.timestamp });
     } catch (err) {
         res.status(500).json({ error: err.message, category });
     }
@@ -132,7 +125,7 @@ router.post('/fps-3d', (req, res) => {
             { name: 'EnemyAI', rel: '3d/systems/EnemyAI.js' },
             { name: 'DecalSystem', rel: '3d/systems/DecalSystem.js' }
         ]);
-        res.json({ category, tests: results, timestamp: testResults.timestamp });
+        res.json({ category, tests: results, timestamp: activeStore.timestamp });
     } catch (err) {
         res.status(500).json({ error: err.message, category });
     }
@@ -151,7 +144,7 @@ router.post('/platformer-3d', (req, res) => {
             { name: 'CheckpointSystem3D', rel: '3d/systems/CheckpointSystem3D.js' },
             { name: 'EnemyPlatformer3D', rel: '3d/systems/EnemyPlatformer3D.js' }
         ]);
-        res.json({ category, tests: results, timestamp: testResults.timestamp });
+        res.json({ category, tests: results, timestamp: activeStore.timestamp });
     } catch (err) {
         res.status(500).json({ error: err.message, category });
     }
@@ -163,10 +156,10 @@ router.post('/run-all', (req, res) => {
         return res.status(409).json({ error: 'A 3D test run is already in progress' });
     }
 
-    // Fresh results for this run so concurrent callers don't corrupt each other.
-    testResults.timestamp = new Date().toISOString();
-    testResults.tests = {};
-    testResults.summary = { passed: 0, failed: 0, total: 0 };
+    // Fresh snapshot for this run — concurrent single-category calls write to global, not snapshot.
+    const runSnapshot = { timestamp: new Date().toISOString(), tests: {}, summary: { passed: 0, failed: 0, total: 0 } };
+    const previousStore = activeStore;
+    activeStore = runSnapshot;
 
     // Helper to run POST request internally
     function runCategoryTests(category) {
@@ -191,17 +184,23 @@ router.post('/run-all', (req, res) => {
             for (const category of categories) {
                 await runCategoryTests(category);
             }
+            // Publish snapshot to global on completion (so /results shows last run)
+            testResults.timestamp = runSnapshot.timestamp;
+            testResults.tests = runSnapshot.tests;
+            testResults.summary = runSnapshot.summary;
             return {
-                timestamp: testResults.timestamp,
-                summary: testResults.summary,
-                tests: testResults.tests,
+                timestamp: runSnapshot.timestamp,
+                summary: runSnapshot.summary,
+                tests: runSnapshot.tests,
                 allTestsCompleted: true
             };
         } finally {
+            activeStore = previousStore;
             testPromise = null;
         }
     })();
 
+    // Atomic in Node: no await between isRunning check and assignment; concurrent requests block on 409.
     testPromise = runPromise;
     runPromise.then(
         (result) => res.json(result),
@@ -309,7 +308,7 @@ router.post('/advanced/shared-3d-runtime', (req, res) => {
             results.push({ test: 'Physics3DWorld cannon-es integration', status: 'FAIL', error: e.message });
         }
 
-        res.json({ category, tests: results, timestamp: testResults.timestamp });
+        res.json({ category, tests: results, timestamp: activeStore.timestamp });
     } catch (err) {
         res.status(500).json({ error: err.message, category });
     }

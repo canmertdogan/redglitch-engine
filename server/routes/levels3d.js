@@ -199,9 +199,15 @@ function levelFilePath(projectDir, levelId) {
  * preserved as-is; only the engineType field is validated strictly.
  * For other engine types the legacy schema normalisation is applied.
  */
+const STUDIO_SUBMODES = ['terrain', 'proplib', 'playerstudio', 'npcstudio', 'sculptstudio'];
+
 function validateLevel3D(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
         throw new Error('Level data must be a JSON object');
+    }
+    if (raw.engineType && STUDIO_SUBMODES.includes(raw.engineType)) {
+        raw.editorMode = raw.engineType;
+        raw.engineType = 'unified-3d';
     }
     if (raw.engineType && !VALID_3D_ENGINE_TYPES.includes(raw.engineType)) {
         throw new Error(`Invalid engineType "${raw.engineType}". Must be one of: ${VALID_3D_ENGINE_TYPES.join(', ')}`);

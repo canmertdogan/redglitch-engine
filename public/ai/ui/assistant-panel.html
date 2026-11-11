@@ -8,15 +8,20 @@
         @import url('/fonts/fonts.css');
 
         :root {
-            --kai-bg: #020b1c;
-            --kai-panel: #051630;
-            --kai-border: #ff0000;
-            --kai-accent: #ff0000;
+            --kai-bg: #050814;
+            --kai-panel: #090e20;
+            --kai-surface: #0e152e;
+            --kai-border: #ff2255;
+            --kai-accent: #ff2255;
+            --kai-cyan: #00f0ff;
+            --kai-amber: #ffb800;
+            --kai-green: #00ff88;
             --kai-text: #d0e0ff;
-            --kai-user-bg: #003366;
-            --kai-system-bg: #1a1a1a;
+            --kai-text-dim: #768ca8;
+            --kai-user-bg: #002b55;
+            --kai-system-bg: #121829;
             --kai-font: 'VT323', monospace;
-            --kai-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+            --kai-shadow: 0 0 15px rgba(255, 34, 85, 0.25);
         }
 
         body[data-kai-size="small"]  { font-size: 14px; }
@@ -219,20 +224,34 @@
             box-shadow: none;
         }
 
-        /* === CHAT WINDOW (TERMINAL) === */
+        /* === CHAT WINDOW (TERMINAL & AGENTIC HUB) === */
         #ai-chat-panel {
             position: fixed;
-            bottom: 100px;
+            bottom: 85px;
             right: 20px;
-            width: 650px;
-            height: 550px;
+            width: 740px;
+            max-width: calc(100vw - 32px);
+            height: 620px;
+            max-height: calc(100vh - 100px);
             background: var(--kai-bg);
             border: 2px solid var(--kai-accent);
             display: none;
             flex-direction: column;
             z-index: 9998;
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            box-shadow: 0 0 35px rgba(0,0,0,0.85), 0 0 15px rgba(255, 34, 85, 0.25);
             overflow: hidden;
+            transition: width 0.2s ease, height 0.2s ease, top 0.2s ease, bottom 0.2s ease, left 0.2s ease, right 0.2s ease;
+        }
+
+        #ai-chat-panel.maximized {
+            top: 16px !important;
+            bottom: 16px !important;
+            left: 16px !important;
+            right: 16px !important;
+            width: calc(100vw - 32px) !important;
+            height: calc(100vh - 32px) !important;
+            max-width: none !important;
+            max-height: none !important;
         }
 
         /* CRT Scanline Effect */
@@ -254,7 +273,7 @@
         }
 
         @keyframes termOpen {
-            from { opacity: 0; transform: scale(0.9); }
+            from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
 
@@ -266,52 +285,127 @@
             flex-direction: column;
             cursor: move;
             z-index: 10002;
-            box-shadow: 0 2px 12px rgba(255, 0, 0, 0.35);
+            box-shadow: 0 2px 14px rgba(255, 34, 85, 0.4);
         }
 
         #ai-chat-header-row {
-            padding: 5px 10px;
+            padding: 5px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: bold;
-            font-size: 22px;
+            font-size: 21px;
+            letter-spacing: 0.5px;
         }
 
         #ai-chat-title::before {
             content: '>> ';
+            color: #fff;
         }
 
-        .xp-window-controls { display: flex; gap: 10px; }
+        .xp-window-controls { display: flex; gap: 8px; align-items: center; }
         .xp-control-btn {
             background: transparent;
-            border: none;
+            border: 1px solid rgba(0, 0, 0, 0.3);
             color: var(--kai-bg);
             font-family: var(--kai-font);
-            font-size: 24px;
+            font-size: 20px;
+            padding: 0 6px;
             cursor: pointer;
             font-weight: bold;
+            line-height: 1.1;
+            transition: all 0.1s;
         }
-        .xp-control-btn:hover { color: #fff; }
+        .xp-control-btn:hover {
+            color: #fff;
+            border-color: #fff;
+            background: rgba(0, 0, 0, 0.2);
+        }
 
         /* Header meta strip: live model/session readout under the title bar */
         #ai-chat-meta {
-            background: rgba(0, 0, 0, 0.35);
+            background: rgba(0, 0, 0, 0.45);
             border-top: 1px solid rgba(0, 0, 0, 0.3);
             padding: 3px 10px;
             display: flex;
-            gap: 16px;
+            gap: 14px;
             font-size: 14px;
-            color: rgba(2, 11, 28, 0.75);
+            color: rgba(255, 255, 255, 0.7);
             letter-spacing: 0.5px;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow-x: auto;
         }
         #ai-chat-meta .meta-item { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
         #ai-chat-meta .meta-dot {
             width: 7px; height: 7px; border-radius: 50%;
-            background: #033; box-shadow: 0 0 4px rgba(0,0,0,0.4);
+            background: #ff5555; box-shadow: 0 0 4px rgba(255,0,0,0.5);
             flex-shrink: 0;
         }
-        #ai-chat-meta .meta-dot.live { background: #003300; animation: pulse 1.2s infinite; }
+        #ai-chat-meta .meta-dot.live { background: #00ff88; box-shadow: 0 0 6px #00ff88; animation: pulse 1.2s infinite; }
+        #ai-chat-meta-mission {
+            color: var(--kai-amber);
+            font-weight: bold;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            padding-left: 10px;
+        }
+
+        /* === WORKSPACE NAVIGATION TABS === */
+        #ai-workspace-nav {
+            display: flex;
+            background: #02050e;
+            border-top: 1px solid rgba(255, 34, 85, 0.4);
+            border-bottom: 2px solid var(--kai-border);
+            padding: 0;
+            gap: 1px;
+        }
+
+        .workspace-tab {
+            flex: 1;
+            background: rgba(8, 14, 30, 0.85);
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--kai-text-dim);
+            font-family: var(--kai-font);
+            font-size: 16px;
+            padding: 7px 6px;
+            cursor: pointer;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .workspace-tab:hover {
+            color: #fff;
+            background: rgba(255, 34, 85, 0.15);
+        }
+
+        .workspace-tab.active {
+            color: var(--kai-cyan);
+            border-bottom-color: var(--kai-cyan);
+            background: rgba(0, 240, 255, 0.12);
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+        }
+
+        /* === VIEW PANES === */
+        .ai-view-pane {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ai-view-pane.active {
+            display: flex;
+        }
 
         /* MESSAGES */
         #ai-chat-messages {
@@ -880,8 +974,563 @@
         }
         .kai-mode-dialog h2 { color: var(--kai-accent); margin-bottom: 12px; }
         .kai-mode-dialog p { line-height: 1.35; margin-bottom: 12px; }
-        .kai-mode-actions { display: flex; gap: 10px; margin-top: 20px; }
-        .kai-mode-actions button { flex: 1; padding: 12px; }
+        /* === AGENTIC PLANNER DECK === */
+        .planner-deck {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 10px;
+            gap: 10px;
+            overflow-y: auto;
+            background: linear-gradient(180deg, rgba(5, 10, 24, 0.98), rgba(2, 5, 14, 0.99));
+        }
+
+        .planner-objective-box {
+            background: rgba(14, 21, 46, 0.7);
+            border: 1px solid rgba(255, 34, 85, 0.35);
+            border-left: 3px solid var(--kai-border);
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .deck-section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--kai-border);
+            font-size: 17px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .planner-model-indicator {
+            font-size: 13px;
+            color: var(--kai-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            padding: 1px 7px;
+            background: rgba(0, 240, 255, 0.08);
+            letter-spacing: 0.5px;
+        }
+
+        #planner-goal-input {
+            width: 100%;
+            height: 56px;
+            background: #000;
+            border: 1px solid #2a3b5c;
+            color: #fff;
+            font-family: var(--kai-font);
+            font-size: 19px;
+            padding: 8px 10px;
+            resize: none;
+            outline: none;
+            transition: all 0.15s;
+        }
+        #planner-goal-input:focus {
+            border-color: var(--kai-cyan);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+        }
+
+        .planner-chips-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+        }
+        .chips-label {
+            font-size: 14px;
+            color: var(--kai-text-dim);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .plan-chip {
+            background: rgba(255, 34, 85, 0.08);
+            border: 1px solid rgba(255, 34, 85, 0.35);
+            color: #ff99aa;
+            font-family: var(--kai-font);
+            font-size: 14px;
+            padding: 2px 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-transform: uppercase;
+        }
+        .plan-chip:hover {
+            background: var(--kai-border);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(255, 34, 85, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* ROLES */
+        .planner-roles-pod {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(4, 8, 20, 0.6);
+            padding: 8px;
+            border: 1px solid #1c2742;
+        }
+        .role-selector-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .role-chip {
+            background: #060b19;
+            border: 1px solid #263554;
+            color: var(--kai-text-dim);
+            font-family: var(--kai-font);
+            font-size: 15px;
+            padding: 4px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s;
+        }
+        .role-chip:hover {
+            border-color: var(--kai-amber);
+            color: var(--kai-amber);
+        }
+        .role-chip.active {
+            background: rgba(255, 184, 0, 0.15);
+            border-color: var(--kai-amber);
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 184, 0, 0.35);
+        }
+        .role-chip .role-icon { font-size: 16px; }
+
+        .role-description-banner {
+            font-size: 14px;
+            color: #9cb2cf;
+            padding: 4px 8px;
+            border-left: 2px solid var(--kai-amber);
+            background: rgba(255, 184, 0, 0.05);
+            line-height: 1.3;
+        }
+        .role-desc-title {
+            color: var(--kai-amber);
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        /* ACTIONS BAR */
+        .planner-actions-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 2px;
+            flex-wrap: wrap;
+        }
+        .deck-btn {
+            font-family: var(--kai-font);
+            font-size: 17px;
+            padding: 6px 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .deck-btn.primary {
+            background: var(--kai-border);
+            color: #fff;
+            border-color: var(--kai-border);
+        }
+        .deck-btn.primary:hover {
+            background: #ff386b;
+            box-shadow: 0 0 14px rgba(255, 34, 85, 0.6);
+        }
+        .deck-btn.execute {
+            background: var(--kai-cyan);
+            color: #000;
+            border-color: var(--kai-cyan);
+        }
+        .deck-btn.execute:hover:not(:disabled) {
+            background: #fff;
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.7);
+        }
+        .deck-btn.execute:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            background: #192238;
+            color: #667799;
+            border-color: #263352;
+        }
+        .deck-btn.abort {
+            background: #ff0033;
+            color: #fff;
+            border-color: #ff0033;
+            animation: pulse 1s infinite;
+        }
+        .deck-btn.secondary {
+            background: transparent;
+            border-color: #334466;
+            color: #8899bb;
+        }
+        .deck-btn.secondary:hover {
+            border-color: #fff;
+            color: #fff;
+        }
+
+        /* BLUEPRINT SECTION */
+        .planner-blueprint-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(3, 7, 18, 0.75);
+            border: 1px solid #1a253c;
+            padding: 10px;
+            min-height: 220px;
+        }
+        .blueprint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1c2742;
+            padding-bottom: 6px;
+        }
+        .blueprint-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 17px;
+            min-width: 0;
+        }
+        .blueprint-label {
+            color: var(--kai-cyan);
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .blueprint-name {
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 380px;
+        }
+        .blueprint-status-badge {
+            font-size: 13px;
+            padding: 2px 8px;
+            background: #000;
+            border: 1px solid #334466;
+            color: #8899bb;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .blueprint-status-badge.ready {
+            border-color: var(--kai-cyan);
+            color: var(--kai-cyan);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+        }
+        .blueprint-status-badge.running {
+            border-color: var(--kai-amber);
+            color: var(--kai-amber);
+            animation: pulse 1.2s infinite;
+        }
+        .blueprint-status-badge.completed {
+            border-color: var(--kai-green);
+            color: var(--kai-green);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+        }
+        .blueprint-status-badge.failed {
+            border-color: #ff3333;
+            color: #ff6666;
+        }
+
+        /* PROGRESS TRACK */
+        .planner-progress-track {
+            height: 8px;
+            background: #000;
+            border: 1px solid #1f2b45;
+            position: relative;
+            overflow: hidden;
+        }
+        .planner-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--kai-border), var(--kai-cyan));
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--kai-cyan);
+            width: 0%;
+        }
+        .planner-progress-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--kai-text-dim);
+            letter-spacing: 0.5px;
+        }
+
+        /* STEPS LIST */
+        .planner-steps-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 4px;
+        }
+        .planner-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+            color: #556688;
+            gap: 10px;
+        }
+        .planner-empty-state .empty-icon { font-size: 32px; opacity: 0.6; }
+        .planner-empty-state .empty-text { font-size: 16px; max-width: 440px; line-height: 1.35; }
+
+        .planner-step-card {
+            background: rgba(14, 21, 46, 0.7);
+            border: 1px solid #1f2b45;
+            border-left: 3px solid #334466;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        .planner-step-card.running {
+            border-left-color: var(--kai-amber);
+            background: rgba(255, 184, 0, 0.08);
+            box-shadow: 0 0 12px rgba(255, 184, 0, 0.15);
+        }
+        .planner-step-card.completed {
+            border-left-color: var(--kai-green);
+            background: rgba(0, 255, 136, 0.05);
+        }
+        .planner-step-card.failed {
+            border-left-color: #ff3333;
+            background: rgba(255, 51, 51, 0.08);
+        }
+
+        .step-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .step-card-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .step-num {
+            font-weight: bold;
+            color: var(--kai-cyan);
+            font-size: 17px;
+        }
+        .step-role-badge {
+            font-size: 12px;
+            padding: 1px 6px;
+            background: #000;
+            border: 1px solid #334;
+            color: var(--kai-amber);
+            text-transform: uppercase;
+        }
+        .step-title {
+            color: #fff;
+            font-size: 17px;
+            font-weight: bold;
+        }
+        .step-status-tag {
+            font-size: 13px;
+            padding: 1px 6px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .step-status-tag.pending { color: #556688; }
+        .step-status-tag.running { color: var(--kai-amber); animation: pulse 1s infinite; }
+        .step-status-tag.completed { color: var(--kai-green); }
+        .step-status-tag.failed { color: #ff5555; }
+
+        .step-card-desc {
+            font-size: 15px;
+            color: #99aacc;
+            line-height: 1.25;
+        }
+        .step-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #556677;
+            margin-top: 2px;
+        }
+        .step-tool-badge {
+            font-family: monospace;
+            font-size: 12px;
+            background: #000;
+            padding: 1px 5px;
+            border: 1px solid #223;
+            color: var(--kai-cyan);
+        }
+        .step-output-toggle {
+            background: transparent;
+            border: 1px solid #334;
+            color: #8899aa;
+            font-family: var(--kai-font);
+            font-size: 12px;
+            padding: 1px 6px;
+            cursor: pointer;
+        }
+        .step-output-toggle:hover {
+            border-color: var(--kai-cyan);
+            color: var(--kai-cyan);
+        }
+        .step-output-console {
+            background: #000;
+            border: 1px solid #223348;
+            color: #88dd88;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 6px;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-top: 4px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* === DIFF INSPECTOR DECK === */
+        .diff-inspector-deck {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 10px;
+            gap: 8px;
+            background: linear-gradient(180deg, rgba(5, 10, 24, 0.98), rgba(2, 5, 14, 0.99));
+        }
+        .diff-deck-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(14, 21, 46, 0.7);
+            border: 1px solid #1a253c;
+            padding: 8px 12px;
+        }
+        .diff-deck-title {
+            color: var(--kai-border);
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .diff-meta-tag {
+            font-size: 12px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--kai-cyan);
+            color: var(--kai-cyan);
+            padding: 1px 6px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .diff-summary-strip {
+            display: flex;
+            gap: 16px;
+            background: #040816;
+            border: 1px solid #1a243a;
+            padding: 6px 12px;
+            font-size: 14px;
+            align-items: center;
+        }
+        .summary-item.add-count { color: var(--kai-green); font-weight: bold; }
+        .summary-item.del-count { color: #ff5577; font-weight: bold; }
+        .summary-item.file-count { color: var(--kai-cyan); font-weight: bold; }
+        .summary-item.status-text { color: #778899; margin-left: auto; font-style: italic; }
+
+        .diff-viewport {
+            flex: 1;
+            background: #02040b;
+            border: 1px solid #1b263b;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.45;
+            padding: 8px;
+        }
+        .diff-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            color: #556688;
+            gap: 10px;
+        }
+        .diff-empty-state .empty-icon { font-size: 32px; opacity: 0.6; }
+        .diff-empty-state .empty-title { font-size: 18px; color: var(--kai-cyan); font-weight: bold; }
+        .diff-empty-state .empty-text { font-size: 14px; max-width: 440px; line-height: 1.4; color: #7788aa; }
+
+        .diff-file-block {
+            margin-bottom: 14px;
+            border: 1px solid #223348;
+            background: #030611;
+        }
+        .diff-file-header {
+            background: #0b1428;
+            border-bottom: 1px solid #223348;
+            padding: 5px 10px;
+            font-size: 13px;
+            color: var(--kai-cyan);
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        .diff-line {
+            display: flex;
+            padding: 1px 4px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .diff-line.add {
+            background: rgba(0, 255, 136, 0.12);
+            color: #38ef90;
+        }
+        .diff-line.del {
+            background: rgba(255, 34, 85, 0.14);
+            color: #ff6688;
+        }
+        .diff-line.same {
+            color: #667788;
+        }
+        .diff-line-no {
+            width: 36px;
+            flex-shrink: 0;
+            color: #445566;
+            user-select: none;
+            text-align: right;
+            margin-right: 10px;
+            font-size: 11px;
+        }
+        .diff-line-marker {
+            width: 14px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+        .diff-line-content {
+            flex: 1;
+        }
+
+        /* INTEGRATED CONFIG VIEW */
+        #view-config #xp-settings {
+            position: static;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            border: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -940,282 +1589,449 @@
         </div>
     </div>
 
-    <!-- Chat Window -->
+    <!-- Chat & Agentic Development Window -->
     <div id="ai-chat-panel">
         <div id="ai-chat-header">
             <div id="ai-chat-header-row">
-                <span id="ai-chat-title">KAI_TERMINAL // STUDIO_PRO</span>
+                <span id="ai-chat-title">KAI_TERMINAL // AGENTIC_STUDIO</span>
                 <div class="xp-window-controls">
-                    <button class="xp-control-btn settings" onclick="AISettings.toggle()" title="Kernel Config">[*]</button>
-                    <button class="xp-control-btn" onclick="AIChatUI.closeChat()" title="Shutdown">[X]</button>
+                    <button type="button" class="xp-control-btn maximize" onclick="AIChatUI.toggleMaximize()" title="Expand / Restore Window">[⛶]</button>
+                    <button type="button" class="xp-control-btn settings" onclick="AISettings.toggle()" title="Neural Config">[*]</button>
+                    <button type="button" class="xp-control-btn" onclick="AIChatUI.closeChat()" title="Shutdown">[X]</button>
                 </div>
             </div>
             <div id="ai-chat-meta">
-                <span class="meta-item"><span class="meta-dot live" id="ai-chat-meta-dot"></span><span id="ai-chat-meta-model">NATIVE_CORTEX</span></span>
-                <span class="meta-item" id="ai-chat-meta-rag">RAG: --</span>
+                <span class="meta-item"><span class="meta-dot live" id="ai-chat-meta-dot"></span><span id="ai-chat-meta-model">OPENROUTER</span></span>
+                <span class="meta-item" id="ai-chat-meta-rag">RAG: ONLINE</span>
+                <span class="meta-item" id="ai-chat-meta-mission">MISSION: STANDBY</span>
                 <span class="meta-item" id="ai-chat-meta-session">SESSION: 00:00</span>
             </div>
+            <div id="ai-workspace-nav">
+                <button type="button" class="workspace-tab active" id="tab-nav-chat" onclick="AIChatUI.switchWorkspace('chat')">
+                    <span class="tab-icon">💬</span> TERMINAL
+                </button>
+                <button type="button" class="workspace-tab" id="tab-nav-planner" onclick="AIChatUI.switchWorkspace('planner')">
+                    <span class="tab-icon">⚡</span> AGENTIC DECK
+                </button>
+                <button type="button" class="workspace-tab" id="tab-nav-diff" onclick="AIChatUI.switchWorkspace('diff')">
+                    <span class="tab-icon">🔍</span> DIFF INSPECTOR
+                </button>
+                <button type="button" class="workspace-tab" id="tab-nav-config" onclick="AIChatUI.switchWorkspace('config')">
+                    <span class="tab-icon">⚙️</span> NEURAL CONFIG
+                </button>
+            </div>
         </div>
 
-        <div id="ai-chat-messages"></div>
+        <!-- View 1: Terminal / Chat -->
+        <div id="view-chat" class="ai-view-pane active">
+            <div id="ai-chat-messages"></div>
 
-        <div id="ai-chat-input-container">
-            <div id="ai-chat-input-wrap">
-                <div id="ai-chat-prompt-glyph">&gt;</div>
-                <textarea id="ai-chat-input" placeholder="ENTER COMMAND OR QUERY..."></textarea>
-            </div>
-            <div class="xp-input-toolbar">
-                <div class="xp-toolbar-section">
-                    <button class="xp-tool-btn" title="Clear History" onclick="document.getElementById('ai-chat-messages').innerHTML=''">[CLR]</button>
-                    <button class="xp-tool-btn" title="Copy Last Response" onclick="window.copyLastKaiResponse()">[CPY]</button>
-                    <button class="xp-tool-btn" title="Project Context" onclick="AIChatUI.queryContext()">[CTX]</button>
-                    <button class="xp-tool-btn" title="System Status" onclick="AIChatUI.addMessage('system', '>> KERNEL_STATUS: OPTIMAL\n>> BRAIN_SYNC: 100%\n>> RAG_LATENCY: 12ms')">[LOG]</button>
+            <div id="ai-chat-input-container">
+                <div id="ai-chat-input-wrap">
+                    <div id="ai-chat-prompt-glyph">&gt;</div>
+                    <textarea id="ai-chat-input" placeholder="ENTER COMMAND, QUERY OR /PLAN OBJECTIVE..."></textarea>
                 </div>
-                <button id="ai-chat-send" onclick="AIChatUI.sendMessage()">TRANSMIT</button>
+                <div class="xp-input-toolbar">
+                    <div class="xp-toolbar-section">
+                        <button type="button" class="xp-tool-btn" title="Clear History" onclick="document.getElementById('ai-chat-messages').innerHTML=''">[CLR]</button>
+                        <button type="button" class="xp-tool-btn" title="Copy Last Response" onclick="window.copyLastKaiResponse()">[CPY]</button>
+                        <button type="button" class="xp-tool-btn" title="Project Context" onclick="AIChatUI.queryContext()">[CTX]</button>
+                        <button type="button" class="xp-tool-btn" title="Agentic Planner" onclick="AIChatUI.switchWorkspace('planner')">[PLAN]</button>
+                        <button type="button" class="xp-tool-btn" title="System Status" onclick="AIChatUI.addMessage('system', '>> KERNEL_STATUS: OPTIMAL\n>> AGENT_PLANNER: ACTIVE\n>> RAG_LATENCY: 12ms')">[LOG]</button>
+                    </div>
+                    <button type="button" id="ai-chat-send" onclick="AIChatUI.sendMessage()">TRANSMIT</button>
+                </div>
             </div>
         </div>
 
+        <!-- View 2: Agentic Planner Mission Deck -->
+        <div id="view-planner" class="ai-view-pane">
+            <div class="planner-deck">
+                <div class="planner-objective-box">
+                    <div class="deck-section-title">
+                        <span>>> MISSION OBJECTIVE // AGENTIC BLUEPRINT GENERATOR</span>
+                        <span class="planner-model-indicator" id="planner-active-model">MODEL: OPENROUTER</span>
+                    </div>
+                    <textarea id="planner-goal-input" placeholder="Define high-level game development goal (e.g., 'Create a dark dungeon level with lava traps and an elite goblin warlord boss encounter')..."></textarea>
+                    
+                    <!-- Quick Preset Chips -->
+                    <div class="planner-chips-bar">
+                        <span class="chips-label">PRESETS:</span>
+                        <button type="button" class="plan-chip" onclick="AIChatUI.setPlannerGoal('Create a fiery dungeon level with lava hazard tiles and boss chamber')">🗺️ DUNGEON LEVEL</button>
+                        <button type="button" class="plan-chip" onclick="AIChatUI.setPlannerGoal('Design an elite Goblin Warlord boss with heavy cleave attack and fire aura')">⚔️ BOSS ENCOUNTER</button>
+                        <button type="button" class="plan-chip" onclick="AIChatUI.setPlannerGoal('Generate legendary Flameblade sword item with burning damage and rare loot drop')">🎒 LOOT / ITEM</button>
+                        <button type="button" class="plan-chip" onclick="AIChatUI.setPlannerGoal('Create Lost Relic questline with NPC elder elder_morn and 3 branching dialogues')">📜 QUESTLINE</button>
+                        <button type="button" class="plan-chip" onclick="AIChatUI.setPlannerGoal('Audit active project data, validate item schemas and test physics integrity')">🛡️ QA AUDIT</button>
+                    </div>
+
+                    <!-- Role Selector Pod -->
+                    <div class="planner-roles-pod">
+                        <span class="chips-label">ACTIVE AGENT ROLE SPECIALIZATION:</span>
+                        <div class="role-selector-buttons" id="planner-role-selector">
+                            <button type="button" class="role-chip active" data-role="architect" onclick="AIChatUI.selectRole('architect')">
+                                <span class="role-icon">🏛️</span> ARCHITECT
+                            </button>
+                            <button type="button" class="role-chip" data-role="gameplay" onclick="AIChatUI.selectRole('gameplay')">
+                                <span class="role-icon">⚡</span> GAMEPLAY
+                            </button>
+                            <button type="button" class="role-chip" data-role="world" onclick="AIChatUI.selectRole('world')">
+                                <span class="role-icon">🗺️</span> WORLD
+                            </button>
+                            <button type="button" class="role-chip" data-role="narrative" onclick="AIChatUI.selectRole('narrative')">
+                                <span class="role-icon">📜</span> NARRATIVE
+                            </button>
+                            <button type="button" class="role-chip" data-role="qa" onclick="AIChatUI.selectRole('qa')">
+                                <span class="role-icon">🛡️</span> QA SENTINEL
+                            </button>
+                        </div>
+                        <div class="role-description-banner" id="planner-role-desc">
+                            <span class="role-desc-title">LEAD ARCHITECT:</span> System architecture, module orchestration & game loop decomposition.
+                        </div>
+                    </div>
+
+                    <!-- Action Controls -->
+                    <div class="planner-actions-bar">
+                        <button type="button" class="deck-btn primary" id="btn-decompose-plan" onclick="AIChatUI.decomposePlannerGoal()">
+                            ⚡ DECOMPOSE OBJECTIVE
+                        </button>
+                        <button type="button" class="deck-btn execute" id="btn-execute-plan" disabled onclick="AIChatUI.executeActivePlan()">
+                            ▶ AUTO-EXECUTE BLUEPRINT
+                        </button>
+                        <button type="button" class="deck-btn abort" id="btn-abort-plan" style="display: none;" onclick="AIChatUI.abortActivePlan()">
+                            ⏹ ABORT MISSION
+                        </button>
+                        <button type="button" class="deck-btn secondary" id="btn-reset-plan" onclick="AIChatUI.resetPlanner()">
+                            ↺ RESET
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Plan Execution Blueprint & Timeline -->
+                <div class="planner-blueprint-section" id="planner-blueprint-section">
+                    <div class="blueprint-header">
+                        <div class="blueprint-title-wrap">
+                            <span class="blueprint-label">BLUEPRINT:</span>
+                            <span class="blueprint-name" id="blueprint-goal-title">AWAITING OBJECTIVE...</span>
+                        </div>
+                        <div class="blueprint-status-badge" id="blueprint-status-badge">STANDBY</div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="planner-progress-track">
+                        <div class="planner-progress-fill" id="planner-progress-fill"></div>
+                    </div>
+                    <div class="planner-progress-meta">
+                        <span id="planner-progress-text">0 / 0 STEPS COMPLETED</span>
+                        <span id="planner-progress-percent">0%</span>
+                    </div>
+
+                    <!-- Step Cards Container -->
+                    <div class="planner-steps-list" id="planner-steps-list">
+                        <div class="planner-empty-state">
+                            <div class="empty-icon">🎯</div>
+                            <div class="empty-text">ENTER AN OBJECTIVE ABOVE AND CLICK "DECOMPOSE OBJECTIVE" TO GENERATE AN AUTONOMOUS MULTI-STEP BLUEPRINT.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 3: Diff & Mutation Inspector -->
+        <div id="view-diff" class="ai-view-pane">
+            <div class="diff-inspector-deck">
+                <div class="diff-deck-header">
+                    <div class="diff-header-left">
+                        <span class="diff-deck-title">>> MUTATION AUDIT // FILE & DATA INTEGRITY</span>
+                        <span class="diff-meta-tag" id="diff-meta-status">LIVE MONITORING</span>
+                    </div>
+                    <div class="diff-header-right">
+                        <select id="diff-history-select" onchange="AIChatUI.onDiffHistorySelect(this.value)">
+                            <option value="">-- Active Plan Mutations --</option>
+                        </select>
+                        <button type="button" class="deck-btn secondary" style="padding: 2px 8px; font-size: 13px;" onclick="AIChatUI.clearDiffs()">CLEAR</button>
+                    </div>
+                </div>
+
+                <!-- Summary Strip -->
+                <div class="diff-summary-strip" id="diff-summary-strip">
+                    <span class="summary-item file-count" id="diff-summary-files">FILES: 0</span>
+                    <span class="summary-item add-count" id="diff-summary-adds">+0 ADDITIONS</span>
+                    <span class="summary-item del-count" id="diff-summary-dels">-0 DELETIONS</span>
+                    <span class="summary-item status-text" id="diff-summary-msg">NO PENDING MUTATIONS</span>
+                </div>
+
+                <!-- Diff Viewport -->
+                <div class="diff-viewport" id="diff-viewport">
+                    <div class="diff-empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <div class="empty-title">NO ACTIVE MUTATIONS</div>
+                        <div class="empty-text">Changes made by the Agentic Planner or AI tools will appear here in unified diff format with syntax highlighting and audit logs.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View 4: Neural Config -->
+        <div id="view-config" class="ai-view-pane">
+            <!-- Settings Hub (Advanced Multi-Tab) -->
+            <div id="xp-settings">
+                <div class="xp-settings-header">
+                    <span>>> KAI_KERNEL_CONFIGURATION</span>
+                    <span style="cursor: pointer;" onclick="AIChatUI.switchWorkspace('chat')">[X]</span>
+                </div>
+                
+                <div class="settings-tabs">
+                    <div id="tab-brain" class="settings-tab active" onclick="AISettings.switchTab('brain', this)">BRAIN</div>
+                    <div id="tab-engine" class="settings-tab" onclick="AISettings.switchTab('engine', this)">ENGINE</div>
+                    <div id="tab-project" class="settings-tab" onclick="AISettings.switchTab('project', this)">MEMORY</div>
+                    <div id="tab-interface" class="settings-tab" onclick="AISettings.switchTab('interface', this)">UI</div>
+                    <div id="tab-debug" class="settings-tab" onclick="AISettings.switchTab('debug', this)">DEBUG</div>
+                </div>
+
+                <!-- Tab: Brain -->
+                <div id="pane-brain" class="settings-pane active">
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">SAMPLING_CONTROL</span>
+                        <div class="setting-control-row">
+                            <label>Temperature:</label>
+                            <input type="range" id="setting-temp" min="0.1" max="1.5" step="0.1" value="0.7" oninput="document.getElementById('val-temp').textContent=this.value">
+                            <span id="val-temp" style="width: 30px; color: var(--kai-accent);">0.7</span>
+                        </div>
+                        <div class="setting-control-row">
+                            <label>Top-P:</label>
+                            <input type="range" id="setting-top-p" min="0.1" max="1.0" step="0.05" value="0.9" oninput="document.getElementById('val-top-p').textContent=this.value">
+                            <span id="val-top-p" style="width: 30px; color: var(--kai-accent);">0.9</span>
+                        </div>
+                        <div class="setting-control-row">
+                            <label>Max New Tokens:</label>
+                            <input type="number" id="setting-max-tokens" value="512" step="32" style="width: 80px;">
+                        </div>
+                    </div>
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">CONTEXT_WINDOW</span>
+                        <div class="setting-control-row">
+                            <label>Window Size:</label>
+                            <select id="setting-context-window">
+                                <option value="1024">1024 (FAST)</option>
+                                <option value="2048">2048 (BALANCED)</option>
+                                <option value="4096">4096 (DEEP)</option>
+                                <option value="8192">8192 (EXTENDED)</option>
+                                <option value="16384">16384 (RAG OPTIMIZED)</option>
+                                <option value="32768">32768 (LARGE)</option>
+                                <option value="65536">65536 (MASSIVE)</option>
+                                <option value="128000" selected>128000 (OMNI - 128K)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Engine -->
+                <div id="pane-engine" class="settings-pane">
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">AI_PROVIDER</span>
+                        <div class="setting-control-row">
+                            <select id="setting-provider" style="width: 100%; font-weight: bold;" onchange="AISettings.onProviderChange(this.value)">
+                                <option value="openrouter">OPENROUTER</option>
+                                <option value="google-ai-studio">GOOGLE AI STUDIO</option>
+                                <option value="openai">OPENAI</option>
+                                <option value="anthropic">ANTHROPIC</option>
+                                <option value="gemini">GOOGLE GEMINI</option>
+                                <option value="groq">GROQ</option>
+                                <option value="deepseek">DEEPSEEK</option>
+                                <option value="mistral">MISTRAL AI</option>
+                                <option value="ollama">OLLAMA (LOCAL)</option>
+                                <option value="custom">CUSTOM ENDPOINT</option>
+                                <option value="native">LOCAL (CORTEX)</option>
+                            </select>
+                        </div>
+                        <div id="provider-description" style="font-size: 11px; color: #888; margin-top: 4px; line-height: 1.3;">
+                            Universal AI router with access to Claude 3.7, GPT-4o, DeepSeek R1, Gemini 2.5 and more.
+                        </div>
+                    </div>
+
+                    <!-- Provider Credentials & Configuration -->
+                    <div class="xp-setting-group" id="group-provider-config">
+                        <span class="xp-setting-label" id="provider-config-title">PROVIDER_CONFIGURATION</span>
+                        
+                        <div class="setting-control-row" id="row-api-key">
+                            <label>API Key:</label>
+                            <div style="display: flex; width: 65%; gap: 4px;">
+                                <input type="password" id="setting-api-key" placeholder="Enter API key..." autocomplete="off" style="flex: 1;">
+                                <button type="button" class="xp-button" id="btn-toggle-key" style="padding: 2px 6px; font-size: 11px;" onclick="AISettings.toggleKeyVisibility()">SHOW</button>
+                            </div>
+                        </div>
+
+                        <div class="setting-control-row" id="row-base-url">
+                            <label>Base URL:</label>
+                            <input type="text" id="setting-base-url" placeholder="https://..." style="width: 65%;">
+                        </div>
+
+                        <div class="setting-control-row">
+                            <label>Model ID:</label>
+                            <input type="text" id="setting-model-id" list="ai-models-datalist" placeholder="Select or type model..." style="width: 65%;">
+                            <datalist id="ai-models-datalist"></datalist>
+                        </div>
+
+                        <div class="setting-control-row">
+                            <label>Presets:</label>
+                            <select id="setting-quick-model" style="width: 65%;" onchange="AISettings.selectPresetModel(this.value)">
+                                <option value="">-- Quick Select Preset --</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-control-row" style="display: flex; gap: 6px; margin-top: 8px;">
+                            <button type="button" class="xp-button" style="flex: 1; font-size: 11px;" onclick="AISettings.refreshModelCatalog()">FETCH MODELS</button>
+                            <button type="button" class="xp-button" style="flex: 1; font-size: 11px;" onclick="AISettings.testCurrentConnection()">TEST CONNECTION</button>
+                        </div>
+                        <div id="connection-test-status" style="font-size: 11px; margin-top: 6px; display: none; padding: 4px 6px; border-radius: 2px;"></div>
+                    </div>
+
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">EMBEDDINGS (RAG)</span>
+                        <div class="setting-control-row">
+                            <label>Provider:</label>
+                            <select id="setting-embeddings-provider" style="width: 65%;">
+                                <option value="local">LOCAL (TRANSFORMERS.JS)</option>
+                                <option value="openai">OPENAI-COMPATIBLE ENDPOINT</option>
+                            </select>
+                        </div>
+                        <div class="setting-control-row">
+                            <label>Base URL:</label>
+                            <input type="text" id="setting-embeddings-base-url" placeholder="https://api.openai.com/v1" style="width: 65%;">
+                        </div>
+                        <div class="setting-control-row">
+                            <label>API Key:</label>
+                            <input type="password" id="setting-embeddings-api-key" placeholder="sk-..." autocomplete="off" style="width: 65%;">
+                        </div>
+                        <div class="setting-control-row">
+                            <label>Model:</label>
+                            <input type="text" id="setting-embeddings-model" placeholder="text-embedding-3-small" style="width: 65%;">
+                        </div>
+                    </div>
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">QUANTIZATION</span>
+                        <div class="setting-control-row">
+                            <select id="setting-quantization" style="width: 100%;">
+                                <option value="q4f16">4-BIT (OPTIMIZED)</option>
+                                <option value="q8">8-BIT (PRECISE)</option>
+                                <option value="f16">16-BIT (HEAVY)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="kai-ad-grid">
+                        <a class="kai-ad-square" href="https://openrouter.ai/keys" target="_blank" title="Get OpenRouter API Key">
+                            <span class="kai-ad-icon">OR</span>
+                            <span class="kai-ad-name">OPENROUTER</span>
+                            <span class="kai-ad-desc">UNIVERSAL API</span>
+                            <span class="kai-ad-cta">GET KEY ></span>
+                        </a>
+                        <a class="kai-ad-square" href="https://aistudio.google.com/app/apikey" target="_blank" title="Get Google AI Studio Gemini API Key">
+                            <span class="kai-ad-icon">✨</span>
+                            <span class="kai-ad-name">AI STUDIO</span>
+                            <span class="kai-ad-desc">GEMINI 2.5 API</span>
+                            <span class="kai-ad-cta">GET KEY ></span>
+                        </a>
+                        <a class="kai-ad-square" href="https://ollama.com" target="_blank" title="Download Ollama for Free Local AI">
+                            <span class="kai-ad-icon">🦙</span>
+                            <span class="kai-ad-name">OLLAMA</span>
+                            <span class="kai-ad-desc">FREE & OFFLINE</span>
+                            <span class="kai-ad-cta">DOWNLOAD ></span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tab: Project/Memory -->
+                <div id="pane-project" class="settings-pane">
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">COGNITION (RAG)</span>
+                        <div class="setting-control-row">
+                            <label>Enable Local Indexing:</label>
+                            <input type="checkbox" id="setting-rag" checked>
+                        </div>
+                        <div class="setting-control-row">
+                            <button class="xp-button" style="width: 100%; font-size: 14px;" onclick="AIChatUI.reindexCodebase()">RE-INDEX PROJECT CODEBASE</button>
+                        </div>
+                    </div>
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">HISTORY</span>
+                        <div class="setting-control-row">
+                            <label>Max History Messages:</label>
+                            <input type="number" id="setting-history-limit" value="6" min="0" max="20" style="width: 60px;">
+                        </div>
+                        <div class="setting-control-row">
+                            <button class="xp-button" style="width: 100%; font-size: 14px;" onclick="AIChatUI.clearHistory()">CLEAR CONVERSATION MEMORY</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Interface -->
+                <div id="pane-interface" class="settings-pane">
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">AI FEATURES</span>
+                        <div class="setting-control-row">
+                            <label>Enable Kai + Copilot:</label>
+                            <input type="checkbox" id="setting-ai-enabled">
+                        </div>
+                    </div>
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">FONT</span>
+                        <div class="setting-control-row">
+                            <label>Size:</label>
+                            <select id="setting-font-size" style="flex: 2;">
+                                <option value="small">Small</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">VISUALS</span>
+                        <div class="setting-control-row">
+                            <label>CRT Scanlines:</label>
+                            <input type="checkbox" id="setting-crt" checked onchange="document.getElementById('ai-chat-panel').style.filter = this.checked ? 'contrast(1.1)' : 'none'">
+                        </div>
+                        <div class="setting-control-row">
+                            <label>Terminal Glow:</label>
+                            <input type="checkbox" id="setting-glow" checked>
+                        </div>
+                    </div>
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">AUDIO</span>
+                        <div class="setting-control-row">
+                            <label>Kernel SFX:</label>
+                            <input type="checkbox" id="setting-sounds" checked>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Debug -->
+                <div id="pane-debug" class="settings-pane">
+                    <div class="xp-setting-group">
+                        <span class="xp-setting-label">SYSTEM_LOGS</span>
+                        <div id="debug-stream" style="font-family: monospace; font-size: 11px; color: #4a4; height: 220px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #222;">
+                            [08:42:11] KERNEL_INIT_COMPLETE<br>
+                            [08:42:12] EVENT_BUS_BRIDGE_CONNECTED<br>
+                            [08:42:12] RAG_VECTOR_STORE_READY (153 chunks)<br>
+                            [08:42:13] MONITORING_STUDIO_EVENTS...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="xp-settings-buttons">
+                    <button class="xp-button" onclick="AISettings.save()">APPLY</button>
+                    <button class="xp-button secondary" onclick="AIChatUI.switchWorkspace('chat')">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Status Bar -->
         <div class="xp-status-bar">
             <div class="xp-status-indicator">
                 <div class="xp-status-dot"></div>
                 <span id="xp-status-text">ONLINE</span>
             </div>
+            <div id="xp-role-indicator" style="color: var(--kai-amber); font-weight: bold; font-size: 14px;">ROLE: LEAD ARCHITECT</div>
             <div id="xp-char-count">0/500</div>
-        </div>
-
-        <!-- Settings Hub (Advanced Multi-Tab) -->
-        <div id="xp-settings">
-            <div class="xp-settings-header">
-                <span>>> KAI_KERNEL_CONFIGURATION</span>
-                <span style="cursor: pointer;" onclick="AISettings.toggle()">[X]</span>
-            </div>
-            
-            <div class="settings-tabs">
-                <div id="tab-brain" class="settings-tab active" onclick="AISettings.switchTab('brain', this)">BRAIN</div>
-                <div id="tab-engine" class="settings-tab" onclick="AISettings.switchTab('engine', this)">ENGINE</div>
-                <div id="tab-project" class="settings-tab" onclick="AISettings.switchTab('project', this)">MEMORY</div>
-                <div id="tab-interface" class="settings-tab" onclick="AISettings.switchTab('interface', this)">UI</div>
-                <div id="tab-debug" class="settings-tab" onclick="AISettings.switchTab('debug', this)">DEBUG</div>
-            </div>
-
-            <!-- Tab: Brain -->
-            <div id="pane-brain" class="settings-pane active">
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">SAMPLING_CONTROL</span>
-                    <div class="setting-control-row">
-                        <label>Temperature:</label>
-                        <input type="range" id="setting-temp" min="0.1" max="1.5" step="0.1" value="0.7" oninput="document.getElementById('val-temp').textContent=this.value">
-                        <span id="val-temp" style="width: 30px; color: var(--kai-accent);">0.7</span>
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Top-P:</label>
-                        <input type="range" id="setting-top-p" min="0.1" max="1.0" step="0.05" value="0.9" oninput="document.getElementById('val-top-p').textContent=this.value">
-                        <span id="val-top-p" style="width: 30px; color: var(--kai-accent);">0.9</span>
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Max New Tokens:</label>
-                        <input type="number" id="setting-max-tokens" value="512" step="32" style="width: 80px;">
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">CONTEXT_WINDOW</span>
-                    <div class="setting-control-row">
-                        <label>Window Size:</label>
-                        <select id="setting-context-window">
-                            <option value="1024">1024 (FAST)</option>
-                            <option value="2048">2048 (BALANCED)</option>
-                            <option value="4096">4096 (DEEP)</option>
-                            <option value="8192">8192 (EXTENDED)</option>
-                            <option value="16384">16384 (RAG OPTIMIZED)</option>
-                            <option value="32768">32768 (LARGE)</option>
-                            <option value="65536">65536 (MASSIVE)</option>
-                            <option value="128000" selected>128000 (OMNI - 128K)</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: Engine -->
-            <div id="pane-engine" class="settings-pane">
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">INFERENCE_BACKEND</span>
-                    <div class="setting-control-row">
-                        <select id="setting-provider" style="width: 100%;">
-                            <option value="native">NATIVE_CORTEX (PYTHON/GGUF)</option>
-                            <option value="local">WEB_GPU (TRANSFORMERS.JS)</option>
-                            <option value="cerebras">CLOUD_ORCHESTRATOR</option>
-                            <option value="opencode-zen">OPENCODE_ZEN (CLOUD)</option>
-                            <option value="openrouter">OPENROUTER (CLOUD)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">OPENCODE_ZEN</span>
-                    <div class="setting-control-row">
-                        <label>API Key:</label>
-                        <input type="password" id="setting-opencode-zen-key" placeholder="OpenCode Zen key" autocomplete="off" style="width: 65%;">
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Model ID:</label>
-                        <input type="text" id="setting-opencode-zen-model" list="opencode-zen-models" value="kimi-k2.5" placeholder="kimi-k2.5" style="width: 65%;">
-                        <datalist id="opencode-zen-models"></datalist>
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">CEREBRAS (CLOUD)</span>
-                    <div class="setting-control-row">
-                        <label>API Key:</label>
-                        <input type="password" id="setting-cerebras-key" placeholder="csk-..." autocomplete="off" style="width: 65%;">
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Model:</label>
-                        <input type="text" id="setting-cerebras-model" value="llama3.1-8b" placeholder="llama3.1-8b" style="width: 65%;">
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">OPENROUTER (CLOUD)</span>
-                    <div class="setting-control-row">
-                        <label>API Key:</label>
-                        <input type="password" id="setting-openrouter-key" placeholder="sk-or-..." autocomplete="off" style="width: 65%;">
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Model ID:</label>
-                        <input type="text" id="setting-openrouter-model" list="openrouter-models" value="openai/gpt-4o-mini" placeholder="openai/gpt-4o-mini" style="width: 65%;">
-                        <datalist id="openrouter-models"></datalist>
-                    </div>
-                    <div class="setting-control-row">
-                        <button class="xp-button" style="width: 100%; font-size: 12px;" onclick="AISettings.loadOpenRouterModels()">REFRESH MODEL LIST</button>
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">EMBEDDINGS (RAG)</span>
-                    <div class="setting-control-row">
-                        <label>Provider:</label>
-                        <select id="setting-embeddings-provider" style="width: 65%;">
-                            <option value="local">LOCAL (TRANSFORMERS.JS)</option>
-                            <option value="openai">OPENAI-COMPATIBLE ENDPOINT</option>
-                        </select>
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Base URL:</label>
-                        <input type="text" id="setting-embeddings-base-url" placeholder="https://api.openai.com/v1" style="width: 65%;">
-                    </div>
-                    <div class="setting-control-row">
-                        <label>API Key:</label>
-                        <input type="password" id="setting-embeddings-api-key" placeholder="sk-..." autocomplete="off" style="width: 65%;">
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Model:</label>
-                        <input type="text" id="setting-embeddings-model" placeholder="text-embedding-3-small" style="width: 65%;">
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">QUANTIZATION</span>
-                    <div class="setting-control-row">
-                        <select id="setting-quantization" style="width: 100%;">
-                            <option value="q4f16">4-BIT (OPTIMIZED)</option>
-                            <option value="q8">8-BIT (PRECISE)</option>
-                            <option value="f16">16-BIT (HEAVY)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="kai-ad-grid">
-                    <a class="kai-ad-square" href="https://cloud.cerebras.ai/" target="_blank" title="Cerebras Cloud - Sign up">
-                        <span class="kai-ad-icon">C</span>
-                        <span class="kai-ad-name">CEREBRAS</span>
-                        <span class="kai-ad-desc">CLOUD INFERENCE</span>
-                        <span class="kai-ad-cta">SIGN UP ></span>
-                    </a>
-                    <a class="kai-ad-square" href="https://opencode.ai" target="_blank" title="OpenCode - Sign up">
-                        <span class="kai-ad-icon">O</span>
-                        <span class="kai-ad-name">OPENCODE</span>
-                        <span class="kai-ad-desc">ZEN API</span>
-                        <span class="kai-ad-cta">SIGN UP ></span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Tab: Project/Memory -->
-            <div id="pane-project" class="settings-pane">
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">COGNITION (RAG)</span>
-                    <div class="setting-control-row">
-                        <label>Enable Local Indexing:</label>
-                        <input type="checkbox" id="setting-rag" checked>
-                    </div>
-                    <div class="setting-control-row">
-                        <button class="xp-button" style="width: 100%; font-size: 14px;" onclick="AIChatUI.reindexCodebase()">RE-INDEX PROJECT CODEBASE</button>
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">HISTORY</span>
-                    <div class="setting-control-row">
-                        <label>Max History Messages:</label>
-                        <input type="number" id="setting-history-limit" value="6" min="0" max="20" style="width: 60px;">
-                    </div>
-                    <div class="setting-control-row">
-                        <button class="xp-button" style="width: 100%; font-size: 14px;" onclick="AIChatUI.clearHistory()">CLEAR CONVERSATION MEMORY</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: Interface -->
-            <div id="pane-interface" class="settings-pane">
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">AI FEATURES</span>
-                    <div class="setting-control-row">
-                        <label>Enable Kai + Copilot:</label>
-                        <input type="checkbox" id="setting-ai-enabled">
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">FONT</span>
-                    <div class="setting-control-row">
-                        <label>Size:</label>
-                        <select id="setting-font-size" style="flex: 2;">
-                            <option value="small">Small</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="large">Large</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">VISUALS</span>
-                    <div class="setting-control-row">
-                        <label>CRT Scanlines:</label>
-                        <input type="checkbox" id="setting-crt" checked onchange="document.getElementById('ai-chat-panel').style.filter = this.checked ? 'contrast(1.1)' : 'none'">
-                    </div>
-                    <div class="setting-control-row">
-                        <label>Terminal Glow:</label>
-                        <input type="checkbox" id="setting-glow" checked>
-                    </div>
-                </div>
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">AUDIO</span>
-                    <div class="setting-control-row">
-                        <label>Kernel SFX:</label>
-                        <input type="checkbox" id="setting-sounds" checked>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: Debug -->
-            <div id="pane-debug" class="settings-pane">
-                <div class="xp-setting-group">
-                    <span class="xp-setting-label">SYSTEM_LOGS</span>
-                    <div id="debug-stream" style="font-family: monospace; font-size: 11px; color: #4a4; height: 220px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #222;">
-                        [08:42:11] KERNEL_INIT_COMPLETE<br>
-                        [08:42:12] EVENT_BUS_BRIDGE_CONNECTED<br>
-                        [08:42:12] RAG_VECTOR_STORE_READY (153 chunks)<br>
-                        [08:42:13] MONITORING_STUDIO_EVENTS...
-                    </div>
-                </div>
-            </div>
-
-            <div class="xp-settings-buttons">
-                <button class="xp-button" onclick="AISettings.save()">APPLY</button>
-                <button class="xp-button secondary" onclick="AISettings.toggle()">CANCEL</button>
-            </div>
         </div>
     </div>
 
@@ -1235,7 +2051,7 @@
 
     <!-- Load AI Scripts -->
     <script src="../irab-personality.js?v=7"></script>
-    <script src="../cerebras-adapter.js?v=7"></script>
+    <script type="module" src="../openrouter-adapter.js?v=8"></script>
     <!-- Shared AI mode gate. The core engine is imported only after opt-in. -->
     <script type="module" src="../ai-mode.mjs?v=1"></script>
     <!-- Compatibility Layer -->

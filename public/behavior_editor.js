@@ -4,6 +4,7 @@
  * Integrated with EventBus, SharedProjectState, and AssetManager
  */
 const _escapeHtml = window.escapeHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+const _jsArg = function (v) { return JSON.stringify(String(v == null ? '' : v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); };
 
 // Integration system references
 let eventBus, projectState, assetManager;
@@ -724,8 +725,55 @@ class BrainArchitect {
     }
     
     autoLayout() {
-        // Simple left-to-right layout
-        alert('Auto-layout coming soon! For now, use alignment tools.');
+        // Left-to-right BFS layout: roots (sensor) at depth 0, follow wires.
+        if (!this.nodes.length) return;
+        const byId = new Map(this.nodes.map(n => [n.id, n]));
+        const adj = new Map();
+        this.wires.forEach(w => {
+            if (!adj.has(w.from)) adj.set(w.from, new Set());
+            adj.get(w.from).add(w.to);
+        });
+        const visited = new Set();
+        const queue = [];
+        // Roots: sensor_spawn / sensor cat, else nodes with no incoming
+        const hasIncoming = new Set(this.wires.map(w => w.to));
+        this.nodes.forEach(n => {
+            if (n.type === 'sensor_spawn' || n.cat === 'sensor' || !hasIncoming.has(n.id)) queue.push({ id: n.id, depth: 0 });
+        });
+        if (!queue.length) queue.push({ id: this.nodes[0].id, depth: 0 });
+        const depthOf = new Map();
+        while (queue.length) {
+            const { id, depth } = queue.shift();
+            if (visited.has(id)) continue;
+            visited.add(id);
+            depthOf.set(id, depth);
+            (adj.get(id) || []).forEach(nid => {
+                if (!visited.has(nid) && byId.has(nid)) queue.push({ id: nid, depth: depth + 1 });
+            });
+        }
+        // Unconnected nodes get depth = maxDepth+1
+        const maxD = depthOf.size ? Math.max(...depthOf.values()) : 0;
+        this.nodes.forEach(n => { if (!depthOf.has(n.id)) depthOf.set(n.id, maxD + 1); });
+        // Group by depth, assign x = 100 + depth*220, y = 80 + index*110
+        const byDepth = new Map();
+        this.nodes.forEach(n => {
+            const d = depthOf.get(n.id);
+            if (!byDepth.has(d)) byDepth.set(d, []);
+            byDepth.get(d).push(n);
+        });
+        byDepth.forEach((list, depth) => {
+            const x = 80 + depth * 220;
+            list.forEach((n, i) => {
+                n.x = x;
+                n.y = 80 + i * 110;
+                const el = document.getElementById(n.id);
+                if (el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+            });
+        });
+        this.renderWires();
+        this.saveState?.();
+        // Keep canvas focus so user sees result; center if transform exists
+        if (this.dom?.canvas) this.dom.canvas.focus?.();
     }
     
     showKeyboardShortcuts() {
@@ -2111,7 +2159,7 @@ Created for Redglitch Game Engine
         header.className = 'comment-header';
         header.innerHTML = `
             <div class="comment-type">${comment.type}</div>
-            <div class="comment-close" onclick="editor.deleteComment('${comment.id}')">✕</div>
+            <div class="comment-close" onclick="editor.deleteComment(${_jsArg(comment.id)})">✕</div>
         `;
         
         // Make header draggable
@@ -2183,14 +2231,14 @@ Created for Redglitch Game Engine
             <div class="ctx-item" onclick="editor.changeCommentType('${commentId}', 'warning')">
                 <i class="fas fa-exclamation-triangle"></i> WARNING (Red)
             </div>
-            <div class="ctx-item" onclick="editor.changeCommentType('${commentId}', 'todo')">
+            <div class="ctx-item" onclick="editor.changeCommentType('${String(commentId).replace(/'/g, '\\\'')}', 'todo')">
                 <i class="fas fa-check-circle"></i> TODO (Green)
             </div>
             <div class="ctx-item" onclick="editor.changeCommentType('${commentId}', 'info')">
                 <i class="fas fa-info-circle"></i> INFO (Blue)
             </div>
             <div class="ctx-separator"></div>
-            <div class="ctx-item" onclick="editor.deleteComment('${commentId}')">
+            <div class="ctx-item" onclick="editor.deleteComment(${_jsArg(commentId)})">
                 <i class="fas fa-trash"></i> DELETE
             </div>
         `;

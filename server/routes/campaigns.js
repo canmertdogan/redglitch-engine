@@ -5,6 +5,9 @@ const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const safeFs = require('../utils/safeFs');
 
+function safeParseJSON(raw, label) {
+    try { return JSON.parse(raw); } catch (e) { const err = new Error(`Invalid JSON in ${label}`); err.code = 'INVALID_JSON'; throw err; }
+}
 function isSafeId(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
@@ -38,6 +41,7 @@ async function saveDefinition(filename, data) {
 
 // Save campaign flow definition
 router.post('/campaign', async (req, res) => {
+    if (!req.body || typeof req.body !== 'object') return res.status(400).json({ error: 'Invalid request body' });
     try {
         await saveDefinition('campaign.json', req.body);
         res.json({ success: true });
@@ -93,7 +97,7 @@ router.get('/campaigns/:name', async (req, res) => {
         }
         
         const data = await fs.readFile(campaignFile, 'utf8');
-        res.json(JSON.parse(data));
+        res.json(safeParseJSON(data, 'campaign'))
     } catch (err) {
         console.error('Error loading campaign:', err);
         res.status(404).json({ error: 'Campaign not found' });
@@ -144,9 +148,12 @@ router.get('/campaign-state/:username', async (req, res) => {
         const activeProject = projectService.getActiveProject();
         const stateFile = path.join(activeProject, 'data', 'saves', `campaign_${req.params.username}.json`);
         const data = await fs.readFile(stateFile, 'utf8');
-        res.json(JSON.parse(data));
+        res.json(safeParseJSON(data, 'campaign'))
     } catch (err) {
-        res.status(404).json({ error: 'No saved campaign state' });
+        if (err.code === 'ENOENT') {
+            return res.json(null);
+        }
+        res.status(500).json({ error: 'Failed to read campaign state' });
     }
 });
 

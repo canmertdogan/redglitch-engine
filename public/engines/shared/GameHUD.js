@@ -247,6 +247,13 @@ class GameHUD {
         this.scaleContainer.style.transform = `translate(-50%, -50%) scale(${scale})`;
     }
 
+    _screenMap() { return (this.data && this.data.screens) || this._screens || this.screens || {}; }
+    listScreens() { return Object.keys(this._screenMap()); }
+    showCustomScreen(name, opts) {
+        if (name && this._screenMap()[name]) return this.showScreen(name, opts);
+        console.warn('[GameHUD] Custom screen not found (available: ' + this.listScreens().join(',') + '):', name);
+        return false;
+    }
     load(uiData) {
         this.data = uiData;
         if (uiData && uiData.resolution) {
@@ -494,9 +501,32 @@ class GameHUD {
         return el;
     }
 
+    /**
+     * Button `script` values come from the UI designer and are prefixed:
+     *   navigate:<screenId>  → switch to another screen in the same .redui config
+     *   action:<engineAction> → hand a bare action id to the host engine
+     *   showScreen:<screenId> → legacy alias for navigate:
+     * Unprefixed values (legacy configs) are passed through unchanged.
+     */
     _triggerAction(script) {
         if (!script) return;
-        if (this.onAction) this.onAction(script);
+        const raw = String(script).trim();
+        if (raw.startsWith('navigate:')) {
+            const target = raw.slice('navigate:'.length).trim();
+            if (target) this.showCustomScreen(target);
+            return;
+        }
+        if (raw.startsWith('showScreen:')) {
+            const target = raw.slice('showScreen:'.length).trim();
+            if (target) this.showCustomScreen(target);
+            return;
+        }
+        if (raw.startsWith('action:')) {
+            const action = raw.slice('action:'.length).trim();
+            if (action && this.onAction) this.onAction(action);
+            return;
+        }
+        if (this.onAction) this.onAction(raw);
     }
 
     setActiveSlot(slotId) {

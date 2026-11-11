@@ -11,8 +11,8 @@ export class TokenizerUtils {
      */
     static estimateTokens(text) {
         if (!text) return 0;
-        // Basic heuristic: 4 characters per token for English/Code
-        return Math.ceil(text.length / 4);
+        // Conservative heuristic: 2 chars/token (avoids undercount for CJK/emoji/code). Was 4 (H5).
+        return Math.ceil(text.length / 2);
     }
 
     /**
@@ -23,7 +23,7 @@ export class TokenizerUtils {
      * @returns {string}
      */
     static truncateToTokenBudget(text, maxTokens, fromStart = true) {
-        const estimatedChars = maxTokens * 4;
+        const estimatedChars = maxTokens * 2;
         if (text.length <= estimatedChars) return text;
 
         if (fromStart) {

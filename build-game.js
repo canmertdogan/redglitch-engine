@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const { bakeVoxToGlb } = require('./scripts/voxel-baker');
 
 // All engine types recognized by the build system
@@ -11,7 +11,7 @@ const VALID_ENGINE_TYPES = new Set([
 const IS_3D_ENGINE = new Set(['unified-3d']);
 
 // --- CONFIGURATION ---
-const PROJECT_NAME = process.argv[2] || 'Default Project';
+const PROJECT_NAME = (process.argv[2] || 'Default Project').replace(/[^a-zA-Z0-9 _\-]/g, '').trim() || 'Default Project';
 const PROJECT_DIR = path.join(__dirname, 'projects', PROJECT_NAME);
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DIST_DIR = path.join(__dirname, 'dist', 'game');
@@ -102,7 +102,7 @@ try {
         const adapterScript = path.join(__dirname, 'build-adapter.js');
         if (fs.existsSync(adapterScript)) {
             console.log('[BUILDER] Updating Android adapter...');
-            execSync(`node "${adapterScript}"`, { cwd: __dirname, stdio: 'inherit' });
+            execFileSync(process.execPath, [adapterScript], { cwd: __dirname, stdio: 'inherit' });
         }
     }
 

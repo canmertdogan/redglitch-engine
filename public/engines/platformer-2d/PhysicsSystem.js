@@ -57,13 +57,20 @@ class PhysicsSystem {
         
         if (Math.abs(entity.vx) < 0.01) entity.vx = 0;
 
+        // Substep to prevent tunneling (FINDING): cap per-step displacement to tileSize/2
+        const substep = (dx, dy) => {
+            const tile = this.tileSize || 32;
+            const maxStep = tile / 2;
+            let steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / maxStep));
+            steps = Math.max(1, Math.min(steps, 8));
+            return { dx: dx/steps, dy: dy/steps, steps };
+        };
+        const vel = substep(entity.vx * scale, entity.vy * scale);
         // 4. X Movement & Collision (scale velocities to current dt)
-        entity.x += entity.vx * scale;
-        this.checkCollisions(entity, map, 'x');
+        for (let i=0;i<vel.steps;i++) { entity.x += vel.dx; this.checkCollisions(entity, map, 'x'); }
 
         // 5. Y Movement & Collision
-        entity.y += entity.vy * scale;
-        this.checkCollisions(entity, map, 'y');
+        for (let i=0;i<vel.steps;i++) { entity.y += vel.dy; this.checkCollisions(entity, map, 'y'); }
         
         // 6. Map Bounds & Void Protection
         const mapMaxX = (map.width || 0) * this.tileSize;
@@ -204,7 +211,7 @@ class PhysicsSystem {
                 // Slopes (9, 10)
                 else if (tileType === 9 || tileType === 10) {
                     // Slopes are always Y-resolution
-                    if (axis === 'y') this.resolveSlope(entity, tx, ty, tileSize, tileType);
+                    if (axis === 'y') this.resolveSlope(entity, tx, ty, tileSize, tileType, prevY);
                 }
 
                 // Ladder (11)
@@ -246,7 +253,7 @@ class PhysicsSystem {
         if (!wasOnGround && entity.onLand) entity.onLand();
     }
 
-    resolveSlope(entity, tx, ty, tileSize, type) {
+    resolveSlope(entity, tx, ty, tileSize, type, prevY = entity.y) {
         // Find center X but also check edges to prevent falling through at boundaries
         const checkPoints = [entity.x + 2, entity.x + entity.w / 2, entity.x + entity.w - 2];
         let highestSlopeY = Infinity;
@@ -262,7 +269,8 @@ class PhysicsSystem {
 
         if (highestSlopeY !== Infinity && entity.y + entity.h > highestSlopeY) {
             // Only snap if we were above it or close to it
-            if (prevY + entity.h <= highestSlopeY + 10) {
+            const prevYsafe = Number.isFinite(prevY) ? prevY : entity.y;
+            if (prevYsafe + entity.h <= highestSlopeY + 10) {
                 entity.y = highestSlopeY - entity.h;
                 entity.vy = 0;
                 entity.onGround = true;

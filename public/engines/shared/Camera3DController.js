@@ -229,6 +229,8 @@ class Camera3DController {
      * @param {number} delta  Elapsed seconds (already capped by Engine3DBase)
      */
     update(delta) {
+        if (!Number.isFinite(delta) || delta < 0) return;
+        delta = Math.min(delta, 0.05);
         this._applyMouseLook(delta);
         this._updateMode(delta);
         this._applyShake(delta);
@@ -238,6 +240,7 @@ class Camera3DController {
     // ── Resize ────────────────────────────────────────────────────────────────
 
     resize(width, height) {
+        if (!Number.isFinite(width) || !Number.isFinite(height) || height <= 0 || width <= 0) return;
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
     }

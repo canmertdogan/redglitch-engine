@@ -289,7 +289,8 @@ async function loadEffect() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!data || typeof data !== 'object') throw new Error('Invalid effect data');
-        Object.assign(config, data);
+        // Prototype pollution guard: drop __proto__/constructor/prototype keys
+        for (const k of Object.keys(data || {})) { if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue; config[k] = data[k]; }
 
         // Sync UI (Manual... tedious but necessary without framework)
         const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };

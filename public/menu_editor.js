@@ -1812,7 +1812,45 @@ class UIStudio {
     // PREVIEW MODE (stub)
     // ═══════════════════════════════════════
     togglePreview() {
-        alert('Preview mode coming soon — will simulate UI interactions without launching the game.');
+        // Functional preview: overlay modal showing current screen, elements clickable.
+        // Button elements with script `navigate:<screen>` switch screen.
+        let overlay = document.getElementById('menu-preview-overlay');
+        if (overlay) { overlay.remove(); this._previewOn = false; return; }
+        const screens = this.data?.screens || {};
+        const ids = Object.keys(screens);
+        if (!ids.length) { alert('No screens to preview.'); return; }
+        this._previewScreen = ids[0];
+        overlay = document.createElement('div');
+        overlay.id = 'menu-preview-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column;';
+        const stage = document.createElement('div');
+        stage.style.cssText = 'position:relative;width:640px;height:360px;background:#0a0a14;border:2px solid #444;overflow:hidden;';
+        const bar = document.createElement('div');
+        bar.style.cssText = 'color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;width:640px;';
+        bar.innerHTML = '<span>Preview — click buttons to navigate. Esc/× to exit.</span><button id="menu-preview-close" style="cursor:pointer">×</button>';
+        overlay.appendChild(bar); overlay.appendChild(stage);
+        document.body.appendChild(overlay);
+        this._previewOn = true;
+        const render = () => {
+            stage.innerHTML = '';
+            const screen = screens[this._previewScreen] || { elements: [] };
+            (screen.elements || []).forEach(el => {
+                const r = el.rect || { x: 50, y: 50, w: 120, h: 40 };
+                const s = el.style || {};
+                const div = document.createElement('div');
+                div.textContent = el.text || el.id || el.type;
+                div.style.cssText = `position:absolute;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;background:${s.backgroundColor||'#222'};color:${s.color||'#fff'};border:${s.borderWidth||1}px solid ${s.borderColor||'#555'};font-size:${s.fontSize||14}px;text-align:center;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;`;
+                if (el.script && el.script.startsWith('navigate:')) {
+                    div.title = '→ ' + el.script.slice(9);
+                    div.onclick = () => { const tgt = el.script.slice(9); if (screens[tgt]) { this._previewScreen = tgt; render(); } };
+                }
+                stage.appendChild(div);
+            });
+        };
+        render();
+        overlay.querySelector('#menu-preview-close').onclick = () => { overlay.remove(); this._previewOn=false; };
+        overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); this._previewOn=false; } };
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.parentNode) { overlay.remove(); this._previewOn=false; } }, { once: true });
     }
 }
 

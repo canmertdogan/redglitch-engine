@@ -12,6 +12,14 @@ function sanitizeProjectName(name) {
     return (name || '').replace(/[^a-zA-Z0-9 \-_]/g, '').trim();
 }
 
+function safeLevelFileName(filename) {
+    // FINDING-18/basename: strict basename + isSafeLevelId check (blocks ..\\, hidden, .json-only)
+    const base = path.basename(String(filename || ''));
+    if (!base.endsWith('.json')) return null;
+    const stem = base.slice(0, -5);
+    if (!isSafeLevelId(stem)) return null;
+    return base;
+}
 function isSafeLevelId(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
@@ -52,6 +60,32 @@ function normalizeLevelPayload(payload, forcedEngineType = null) {
     if (!level.type) {
         level.type = engineType === 'iso-pixel' ? 'isometric' : engineType;
     }
+    // Canonical level guarantees (F-LEVEL): name/id/version defaults + spawn/goal normalization
+    if (!level.name && level.metadata?.name) level.name = level.metadata.name;
+    if (!level.version) level.version = '1.0';
+    // Normalize spawn: object {x,y} wins; pixel spawnX/spawnY -> spawn object (tile->pixel conversion handled by runtime)
+    if (!level.spawn || typeof level.spawn !== 'object') {
+        if (typeof level.spawnX === 'number' && typeof level.spawnY === 'number') {
+            level.spawn = { x: level.spawnX, y: level.spawnY };
+        } else if (level.spawn == null) {
+            level.spawn = { x: 0, y: 0 };
+        }
+    }
+    if (level.spawn && typeof level.spawn === 'object') {
+        level.spawn = { x: Number(level.spawn.x) || 0, y: Number(level.spawn.y) || 0 };
+        // Keep legacy spawnX/spawnY in sync (pixels)
+        if (level.spawnX === undefined) level.spawnX = level.spawn.x;
+        if (level.spawnY === undefined) level.spawnY = level.spawn.y;
+    }
+    // Normalize goal/exit: goal wins, copy to exit for compat
+    const goal = level.goal || level.exit || null;
+    if (goal && typeof goal === 'object' && Number.isFinite(goal.x)) {
+        level.goal = { x: Number(goal.x), y: Number(goal.y) || 0 };
+        if (!level.exit) level.exit = { ...level.goal };
+    } else {
+        // Levels without goal/exit cannot be completed — default far corner so they remain loadable but clearly incomplete
+        if (!level.goal && !level.exit) level.goal = { x: 0, y: 0 };
+    }
     return level;
 }
 
@@ -78,8 +112,7 @@ router.get('/', async (req, res) => {
         
         const levels = [];
         try {
-            await fs.mkdir(mainDunyalarDir, { recursive: true });
-            const files = await fs.readdir(mainDunyalarDir);
+            const files = await fs.readdir(mainDunyalarDir).catch(e => { if (e.code === 'ENOENT') return []; throw e; });
             const jsonFiles = files.filter(f => f.endsWith('.json'));
             
             for (const file of jsonFiles) {
@@ -154,10 +187,7 @@ router.get('/platformer-levels/:project', async (req, res) => {
         }
         const levelDir = path.join(projectPath, 'dunyalar');
         
-        // Ensure directory exists
-        await fs.mkdir(levelDir, { recursive: true });
-        
-        const files = await fs.readdir(levelDir);
+        const files = await fs.readdir(levelDir).catch(e => { if (e.code === 'ENOENT') return []; throw e; });
         const jsonFiles = files.filter(f => f.endsWith('.json'));
         
         res.json(jsonFiles);
@@ -215,8 +245,8 @@ router.get('/levels', async (req, res) => {
 // Get a single level by filename
 router.get('/levels/:filename', async (req, res) => {
     const { filename } = req.params;
-    const safeName = path.basename(filename);
-    if (!safeName.endsWith('.json')) {
+    const safeName = safeLevelFileName(filename);
+    if (!safeName) {
         return res.status(400).json({ error: 'Filename must end with .json' });
     }
     const activeProject = projectService.getActiveProject();
@@ -227,7 +257,7 @@ router.get('/levels/:filename', async (req, res) => {
     const filePath = path.join(targetDir, safeName);
     try {
         const data = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(data));
+        let _p; try { _p = JSON.parse(data); } catch { return res.status(500).json({ error: 'Level file corrupted' }); } res.json(_p);
     } catch (err) {
         res.status(404).json({ error: 'Level not found' });
     }
@@ -235,8 +265,8 @@ router.get('/levels/:filename', async (req, res) => {
 // Save level (generic)
 router.post('/levels/:filename', async (req, res) => {
     const { filename } = req.params;
-    const safeName = path.basename(filename);
-    if (!safeName.endsWith('.json')) {
+    const safeName = safeLevelFileName(filename);
+    if (!safeName) {
         return res.status(400).json({ error: 'Filename must end with .json' });
     }
     const activeProject = projectService.getActiveProject();
@@ -264,9 +294,8 @@ router.post('/levels/:filename', async (req, res) => {
 // Delete level (generic)
 router.delete('/levels/:filename', async (req, res) => {
     const { filename } = req.params;
-    const safeName = path.basename(filename);
-    
-    if (!safeName.endsWith('.json')) {
+    const safeName = safeLevelFileName(filename);
+    if (!safeName) {
         return res.status(400).json({ error: 'Filename must end with .json' });
     }
     

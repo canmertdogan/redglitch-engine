@@ -685,9 +685,61 @@ export class AlgorithmStudio {
     }
     
     showQuickAdd() {
-        // TODO Phase 2: Implement quick add palette
-        this.log('Quick Add: Not yet implemented', 'warn');
-        alert('Quick Add feature coming in Phase 7!\nFor now, use the Library panel to add nodes.');
+        // Quick Add palette — searchable list of all node types rendered from LIB.
+        // Clicking a row spawns the node at a staggered offset near the viewport center.
+        const overlay = document.getElementById('quick-add-overlay') || this._buildQuickAddOverlay();
+        overlay.style.display = 'flex';
+        const input = overlay.querySelector('input');
+        if (input) { input.value = ''; this._filterQuickAdd(overlay, ''); input.focus(); }
+        this.log('Quick Add: palette open', 'info');
+    }
+
+    _buildQuickAddOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'quick-add-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:9999;';
+        overlay.innerHTML = `
+            <div style="width:420px;max-height:70vh;background:#1a1d23;border:1px solid #333;border-radius:8px;display:flex;flex-direction:column;overflow:hidden;">
+                <input type="text" placeholder="Type to filter nodes... (Esc to close)" style="padding:10px;border:none;background:#12151a;color:#fff;font:inherit;outline:none;border-bottom:1px solid #333;">
+                <div class="quick-add-list" style="overflow-y:auto;padding:8px;"></div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+        const input = overlay.querySelector('input');
+        input.addEventListener('input', () => this._filterQuickAdd(overlay, input.value));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') overlay.style.display = 'none';
+            if (e.key === 'Enter') {
+                const first = overlay.querySelector('.quick-add-item');
+                if (first) first.click();
+            }
+        });
+        return overlay;
+    }
+
+    _filterQuickAdd(overlay, query) {
+        const list = overlay.querySelector('.quick-add-list');
+        const q = (query || '').toLowerCase();
+        const entries = Object.entries(LIB).filter(([type, def]) => !q || type.toLowerCase().includes(q) || (def.title || '').toLowerCase().includes(q) || (def.cat || '').toLowerCase().includes(q));
+        list.innerHTML = entries.map(([type, def]) => {
+            const escT = this._escapeAttr(type);
+            const escTitle = this._escapeAttr(def.title || type);
+            const escCat = this._escapeAttr(def.cat || 'Node');
+            return `<div class="quick-add-item" data-type="${escT}" style="padding:7px 10px;cursor:pointer;border-radius:4px;display:flex;justify-content:space-between;" onmouseover="this.style.background='#2a2e36'" onmouseout="this.style.background='transparent'"><span>${escTitle}</span><span style="color:#888;font-size:11px;">${escCat}</span></div>`;
+        }).join('') || '<div style="padding:12px;color:#888;">No nodes match.</div>';
+        list.querySelectorAll('.quick-add-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const type = el.dataset.type;
+                const n = this.nodes.length;
+                this.spawnNode(type, 160 + (n % 6) * 28, 140 + (n % 6) * 28);
+                overlay.style.display = 'none';
+                this.log(`Quick Add: spawned ${type}`, 'info');
+            });
+        });
+    }
+
+    _escapeAttr(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     }
     
     toggleDebugMode() {
@@ -705,9 +757,57 @@ export class AlgorithmStudio {
     }
     
     showLayoutPresets() {
-        // TODO Phase 3: Implement layout presets
-        this.log('Layout Presets: Not yet implemented', 'warn');
-        alert('Layout Presets coming in Phase 3!\nFor now, use Ctrl+1/2/3 to toggle panels.');
+        // Layout presets: switch the visible panel set (left library / right inspector / bottom console).
+        const presets = {
+            default: { left: true, right: true, bottom: true, label: 'Default (all panels)' },
+            graph: { left: false, right: false, bottom: false, label: 'Graph only (focus)' },
+            debug: { left: true, right: true, bottom: true, label: 'Debug (all + console emphasized)' },
+            minimal: { left: true, right: false, bottom: false, label: 'Minimal (library only)' },
+        };
+        const overlay = document.getElementById('layout-preset-overlay') || this._buildLayoutOverlay(presets);
+        overlay.style.display = 'flex';
+        overlay.querySelectorAll('.layout-preset-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.preset === this.activePreset);
+        });
+    }
+
+    _buildLayoutOverlay(presets) {
+        const overlay = document.createElement('div');
+        overlay.id = 'layout-preset-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:9999;';
+        overlay.innerHTML = `<div style="width:360px;background:#1a1d23;border:1px solid #333;border-radius:8px;padding:12px;">
+            <div style="font-weight:600;margin-bottom:10px;">Layout Presets</div>
+            ${Object.entries(presets).map(([key, p]) => `<div class="layout-preset-item" data-preset="${key}" style="padding:8px 10px;cursor:pointer;border-radius:4px;margin-bottom:4px;" onmouseover="this.style.background='#2a2e36'" onmouseout="this.style.background='transparent'">${p.label}</div>`).join('')}
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+        overlay.querySelectorAll('.layout-preset-item').forEach(el => {
+            el.addEventListener('click', () => {
+                this.applyLayoutPreset(el.dataset.preset);
+                overlay.style.display = 'none';
+            });
+        });
+        return overlay;
+    }
+
+    applyLayoutPreset(name) {
+        const presets = {
+            default: { left: '#palette-panel, #lib-panel, .panel-left', right: '#inspector-panel, .panel-right', bottom: '#console-panel, .panel-bottom', show: true },
+            graph: { left: '#palette-panel, #lib-panel, .panel-left', right: '#inspector-panel, .panel-right', bottom: '#console-panel, .panel-bottom', show: false },
+            debug: { left: '#palette-panel, #lib-panel, .panel-left', right: '#inspector-panel, .panel-right', bottom: '#console-panel, .panel-bottom', show: true },
+            minimal: { left: '#palette-panel, #lib-panel, .panel-left', right: '#inspector-panel, .panel-right', bottom: '#console-panel, .panel-bottom', show: false },
+        };
+        const cfg = presets[name] || presets.default;
+        this.activePreset = name;
+        const showLeft = name === 'default' || name === 'debug' || name === 'minimal';
+        const showRight = name === 'default' || name === 'debug';
+        const showBottom = name === 'default' || name === 'debug';
+        document.querySelectorAll(cfg.left).forEach(el => { if (el && el.style) el.style.display = showLeft ? '' : 'none'; });
+        document.querySelectorAll(cfg.right).forEach(el => { if (el && el.style) el.style.display = showRight ? '' : 'none'; });
+        document.querySelectorAll(cfg.bottom).forEach(el => { if (el && el.style) el.style.display = showBottom ? '' : 'none'; });
+        if (name === 'debug') this.debugMode = true;
+        this.log(`Layout Preset: ${name}`, 'info');
+        try { localStorage.setItem('redglitch_layout_preset', name); } catch(_) {}
     }
     
     initToolKeyboardShortcuts() {

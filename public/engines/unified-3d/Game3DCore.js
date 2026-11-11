@@ -123,6 +123,13 @@ export default class Game3DCore extends Engine3DAdapter {
         this.onReady       = null;
         this.onLevelReady  = null;
         this.onGameOver    = null;
+
+        // Connect LogicSystem (compiled Algorithm Studio ASTs)
+        if (window.LogicSystem && window.LogicInterpreter) {
+            try { window.LogicSystem.ensure(this, { tick: true }); } catch (e) { console.warn('[Game3DCore] LogicSystem attach failed', e); }
+        } else {
+            console.warn('[Game3DCore] LogicSystem not loaded — algorithm scripts will not run');
+        }
     }
 
     // ── Engine type accessor ──────────────────────────────────────────────────
@@ -309,6 +316,45 @@ export default class Game3DCore extends Engine3DAdapter {
             });
         }
 
+        // Hydrate background music & spatial audio emitters
+        if (this.audio) {
+            const musicTrack = level.bgm || level.music || level.audioTrack;
+            if (musicTrack) {
+                this.audio.playMusic(musicTrack).catch(err => {
+                    console.warn('[Game3DCore] playMusic failed:', err.message);
+                });
+            }
+
+            if (Array.isArray(level.entities)) {
+                this._levelAudioEmitters = [];
+                for (const ent of level.entities) {
+                    const entType = (ent.type || '').toLowerCase();
+                    if (['audio_emitter', 'audio', 'ambient_sound', 'sound'].includes(entType)) {
+                        const props = ent.properties || {};
+                        const soundUrl = props.sound || props.soundUrl || props.audioFile || props.src || props.file;
+                        if (soundUrl) {
+                            const pos = ent.position || [0, 0, 0];
+                            const dummy = new this.THREE.Object3D();
+                            dummy.position.set(pos[0] ?? 0, pos[1] ?? 0, pos[2] ?? 0);
+                            this.scene.add(dummy);
+                            const emitter = this.audio.createEmitter(dummy, {
+                                sound: soundUrl,
+                                loop: props.loop !== false,
+                                volume: Number.isFinite(props.volume) ? props.volume : 1.0,
+                                refDistance: Number.isFinite(props.refDistance) ? props.refDistance : 5,
+                                maxDistance: Number.isFinite(props.maxDistance) ? props.maxDistance : 30,
+                                rolloffFactor: Number.isFinite(props.rolloffFactor) ? props.rolloffFactor : 1.0,
+                            });
+                            this._levelAudioEmitters.push({ dummy, emitter, soundUrl });
+                            this.audio.load(soundUrl, soundUrl).then(() => {
+                                emitter.play(soundUrl);
+                            }).catch(e => console.warn('[Game3DCore] Emitter audio load failed:', e.message));
+                        }
+                    }
+                }
+            }
+        }
+
         // Delegate to mode
         if (this.mode) {
             await this.mode.onLevelLoaded(level);
@@ -320,6 +366,17 @@ export default class Game3DCore extends Engine3DAdapter {
         this._accumulator  = 0;
         this._currentLevel = null;
         this._levelComplete = false;
+
+        if (this.audio) {
+            this.audio.stopMusic();
+            if (this._levelAudioEmitters) {
+                for (const item of this._levelAudioEmitters) {
+                    item.emitter?._stop?.(true);
+                    this.scene.remove(item.dummy);
+                }
+                this._levelAudioEmitters = [];
+            }
+        }
 
         // Delegate to mode
         if (this.mode) {
@@ -445,6 +502,9 @@ export default class Game3DCore extends Engine3DAdapter {
 
         // 2. Mode-specific update (camera, entities, HUD, VFX, etc.)
         if (this.mode) this.mode.update(dt);
+
+        // 2b. LogicSystem tick (compiled Algorithm Studio ASTs)
+        if (this.logicSystem) { try { this.logicSystem.updateAll(dt); } catch (e) { console.error('LogicSystem Error:', e); } }
 
         // 3. Camera
         this.camera3d?.update(dt);
