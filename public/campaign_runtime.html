@@ -1330,6 +1330,7 @@
     <script src="shared/SharedProjectState.js"></script>
     <script src="shared/SchemaRegistry.js"></script>
     <script src="shared/AssetManager.js"></script>
+    <script src="shared/WorldTilesetLoader.js"></script>
     <script src="shared/DialogueSystem.js"></script>
     <script src="engines/rpg-topdown/InteractiveCutsceneEngine.js"></script>
     <script src="shared/QuestSystem.js"></script>
@@ -1372,8 +1373,88 @@
             await window.ItemDefinitions.load();
             console.log(`[Runtime] Loaded ${window.ItemDefinitions.getCount()} items`);
 
-            // Get slot ID from URL
+            // Get slot ID or playtest flags from URL
             const urlParams = new URLSearchParams(window.location.search);
+            const isPlaytest = urlParams.get('playtest') === 'true';
+            const playtestRaw = sessionStorage.getItem('redglitch_playtest_data');
+            const requestedLevel = urlParams.get('level');
+
+            if (isPlaytest || (requestedLevel && !urlParams.get('slot'))) {
+                try {
+                    updateLoadingBar(25, 'Initializing playtest session...');
+
+                    let levelData = null;
+                    if (playtestRaw) {
+                        levelData = JSON.parse(playtestRaw);
+                    } else if (requestedLevel) {
+                        const res = await fetch(`dunyalar/${encodeURIComponent(requestedLevel)}.json`);
+                        if (!res.ok) throw new Error('Level not found');
+                        levelData = await res.json();
+                    }
+
+                    const rawType = urlParams.get('engine') || levelData?.engineType || levelData?.type || 'rpg-topdown';
+                    const playtestEngine = (rawType === 'isometric' || rawType === 'iso') ? 'iso-pixel' : rawType;
+
+                    campaignController = new CampaignController();
+                    window.campaignController = campaignController;
+                    await campaignController._switchEngine(playtestEngine);
+                    const adapter = campaignController.currentAdapter;
+
+                    updateLoadingBar(70, 'Loading level...');
+                    if (levelData && playtestEngine === 'rpg-topdown' && typeof adapter.engine.loadLevelFromData === 'function') {
+                        await adapter.engine.loadLevelFromData(levelData);
+                        if (!adapter.engine || campaignController.currentAdapter !== adapter) return;
+                        adapter.engine.currentLevelId = levelData.name || requestedLevel || 'playtest';
+                        adapter.isLoaded = true;
+                        adapter.levelCompleteCallback = () => {
+                            showNotification('Playtest level complete! Press Retry or close tab to return to editor.', 'success');
+                            adapter.stop();
+                        };
+                        adapter._startExitMonitoring();
+                    } else if (levelData && playtestEngine === 'iso-pixel') {
+                        adapter.engine.levelMetadata = levelData;
+                        adapter.engine.map = levelData;
+                        await adapter.engine.init();
+                        if (!adapter.engine || campaignController.currentAdapter !== adapter) return;
+                        adapter.engine.initialized = true;
+                        adapter.isLoaded = true;
+                        if (typeof adapter._startCompletionMonitoring === 'function') adapter._startCompletionMonitoring();
+                        adapter.levelCompleteCallback = () => {
+                            showNotification('Playtest level complete! Press Retry or close tab to return to editor.', 'success');
+                            adapter.stop();
+                        };
+                    } else {
+                        await adapter.loadLevel(requestedLevel || 'level1');
+                        if (!adapter.engine || campaignController.currentAdapter !== adapter) return;
+                    }
+
+                    adapter.start();
+                    updateHUD();
+                    updateLoadingBar(100, 'Ready!');
+
+                    setTimeout(() => {
+                        document.getElementById('loading-screen')?.classList.add('hidden');
+                        document.getElementById('game-container')?.classList.add('active');
+                        setupFullscreenButton();
+                        setupMobileControls();
+                        setupInventoryButton();
+                        setupPowersButton();
+                        setupInventoryTabs();
+                        setupKeyboardShortcuts();
+                        setupSearch();
+                        setupSort();
+                        powerSelector = new PowerSelector(campaignController);
+                        setInterval(updateHotbar, 500);
+                        updateHotbar();
+                    }, 300);
+                    return;
+                } catch (error) {
+                    console.error('[Runtime] Playtest failed:', error);
+                    showError('Playtest failed: ' + error.message);
+                    return;
+                }
+            }
+
             slotId = parseInt(urlParams.get('slot'));
 
             if (!slotId || slotId < 1 || slotId > 5) {

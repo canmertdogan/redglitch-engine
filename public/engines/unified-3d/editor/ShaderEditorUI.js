@@ -3,6 +3,7 @@
  * Manages the Monaco Editor instance for the Shader Registry.
  */
 
+import * as THREE from '/lib/three/three.module.js';
 import { ShaderRegistry } from '/engines/shared/ShaderRegistry.js';
 
 export class ShaderEditorUI {
@@ -253,7 +254,7 @@ export class ShaderEditorUI {
         this.logSuccess('Compiling shader...');
 
         // 1. Run Static Analysis before handing to WebGL
-        const staticErrors = ShaderRegistry.validateShader(def, window.THREE);
+        const staticErrors = ShaderRegistry.validateShader(def, THREE);
         if (staticErrors.length > 0) {
             staticErrors.forEach(err => this.logError(`[Static Analysis] ${err}`));
             this.logError('Proceeding to compiler despite warnings...');

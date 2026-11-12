@@ -46,6 +46,7 @@ interface AudioEvent {
         fadeIn: number;
         fadeOut: number;
     };
+    clipMeta?: Record<string, any>;
 }
 
 interface AudioBus {
@@ -94,27 +95,38 @@ const CanvasSpectrum: React.FC<{ isPlaying: boolean; color: string }> = ({ isPla
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        if (!isPlaying) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#1a1d26';
+            ctx.fillRect(0, canvas.height - 2, canvas.width, 2);
+            return;
+        }
+
         let frame = 0;
+        let animationId = 0;
         const render = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const barWidth = 4;
             const gap = 2;
             const bars = Math.floor(canvas.width / (barWidth + gap));
-            
+            const kaeData: Uint8Array | null = (window as any).KAE?.getSpectrumData?.('master') || null;
+            const hasEnergy = kaeData ? kaeData.some((v) => v > 0) : false;
+
             for (let i = 0; i < bars; i++) {
-                const height = isPlaying 
-                    ? (Math.sin(frame * 0.2 + i * 0.5) * 20 + 30 + Math.random() * 20)
-                    : (Math.sin(i * 0.8) * 5 + 10);
-                
+                const height = hasEnergy && kaeData
+                    ? Math.max(2, (kaeData[Math.min(kaeData.length - 1, Math.floor((i / bars) * (kaeData.length * 0.5)))] / 255) * (canvas.height - 4))
+                    : (Math.sin(frame * 0.25 + i * 0.45) * 18 + 26);
+
                 ctx.fillStyle = color;
-                ctx.globalAlpha = 0.8;
+                ctx.globalAlpha = 0.85;
                 ctx.fillRect(i * (barWidth + gap), canvas.height - height, barWidth, height);
             }
+            ctx.globalAlpha = 1;
             frame++;
             animationId = requestAnimationFrame(render);
         };
 
-        let animationId = requestAnimationFrame(render);
+        animationId = requestAnimationFrame(render);
         return () => cancelAnimationFrame(animationId);
     }, [isPlaying, color]);
 
@@ -245,7 +257,8 @@ const withEventDefaults = (input?: Partial<AudioEvent>): AudioEvent => ({
         cooldown: typeof input?.playback?.cooldown === 'number' ? input.playback.cooldown : 0.1,
         fadeIn: typeof input?.playback?.fadeIn === 'number' ? input.playback.fadeIn : 0,
         fadeOut: typeof input?.playback?.fadeOut === 'number' ? input.playback.fadeOut : 0
-    }
+    },
+    clipMeta: input?.clipMeta && typeof input.clipMeta === 'object' ? { ...input.clipMeta } : {}
 });
 
 const normalizeMap = (rawMap: any): AudioMap => {
@@ -306,33 +319,94 @@ const AudioStudio: React.FC = () => {
     const [transportBpm, setTransportBpm] = useState(120);
     const [transportState, setTransportState] = useState<'normal' | 'combat' | 'stealth'>('normal');
     const [transportEnv, setTransportEnv] = useState<'dry' | 'cave' | 'hall'>('dry');
+    const [isAuditioning, setIsAuditioning] = useState(false);
+    const [busLevels, setBusLevels] = useState<Record<string, number>>({});
+
+    const fallbackCtxRef = React.useRef<AudioContext | null>(null);
+    const fallbackOscRef = React.useRef<OscillatorNode | null>(null);
+    const auditionTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!isReady) return;
+
+        // Dynamically load SoundManager.js so window.KAE is available for audition & metering
+        if (!(window as any).KAE && !document.querySelector('script[src="/shared/SoundManager.js"]')) {
+            const s = document.createElement('script');
+            s.src = '/shared/SoundManager.js';
+            s.onload = () => {
+                const kae = (window as any).KAE;
+                if (kae) {
+                    kae.loadMap(audioMap);
+                    kae.setGameState?.(transportState);
+                    void kae.setEnvironment?.(transportEnv);
+                }
+            };
+            document.body.appendChild(s);
+        }
 
         void loadAudioMap();
         void loadAssets();
         void discoverEvents();
 
-        const unsub = eventBus?.on('audio:trigger', (event: any) => {
+        const unsubTriggerId = eventBus?.on('audio:trigger', (event: any) => {
             const name = event?.data?.name || 'unknown:event';
             const clip = event?.data?.clip;
             addHistory(name, clip);
         });
 
-        return () => unsub?.();
+        return () => {
+            if (unsubTriggerId && eventBus?.off) eventBus.off('audio:trigger', unsubTriggerId);
+        };
     }, [isReady]);
+
+    useEffect(() => {
+        const kae = (window as any).KAE;
+        if (kae?.loadMap) {
+            kae.loadMap(audioMap);
+        }
+    }, [audioMap]);
+
+    useEffect(() => {
+        const kae = (window as any).KAE;
+        if (kae?.setGameState) {
+            kae.setGameState(transportState);
+        }
+    }, [transportState]);
+
+    useEffect(() => {
+        const kae = (window as any).KAE;
+        if (kae?.setEnvironment) {
+            void kae.setEnvironment(transportEnv);
+        }
+    }, [transportEnv]);
+
+    useEffect(() => {
+        if (!isAuditioning) {
+            setBusLevels({});
+            return;
+        }
+        const timer = setInterval(() => {
+            const kae = (window as any).KAE;
+            if (!kae?.getBusLevel) return;
+            const next: Record<string, number> = {};
+            for (const busName of Object.keys(audioMap.buses || {})) {
+                next[busName] = kae.getBusLevel(busName) || 0;
+            }
+            setBusLevels(next);
+        }, 60);
+        return () => clearInterval(timer);
+    }, [isAuditioning, audioMap.buses]);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault();
-                void saveMap();
+                void saveMapRef.current();
             }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [audioMap, isReady]);
+    }, []);
 
     useEffect(() => {
         if (!selectedEvent) {
@@ -428,6 +502,18 @@ const AudioStudio: React.FC = () => {
             setIsSaving(false);
         }
     };
+
+    const saveMapRef = React.useRef(saveMap);
+    saveMapRef.current = saveMap;
+
+    useEffect(() => {
+        const unsubSave = eventBus?.on('system:global_save', () => {
+            void saveMapRef.current();
+        });
+        return () => {
+            if (unsubSave && eventBus?.off) eventBus.off('system:global_save', unsubSave);
+        };
+    }, [eventBus]);
 
     const setDirty = () => setIsDirty(true);
 
@@ -588,9 +674,136 @@ const AudioStudio: React.FC = () => {
         setDirty();
     };
 
-    const auditionEvent = (eventId: string, clip?: string) => {
+    const deleteEvent = (eventId: string) => {
+        if (!eventId || !audioMap.events[eventId]) return;
+        if (!confirm(`Delete audio event "${eventId}"?`)) return;
+        const remainingKeys = Object.keys(audioMap.events).filter(k => k !== eventId);
+        setAudioMap(prev => {
+            const nextEvents = { ...prev.events };
+            delete nextEvents[eventId];
+            return { ...prev, events: nextEvents };
+        });
+        setSelectedEvent(remainingKeys[0] || null);
+        setDirty();
+        setStatusLine(`DELETED: ${eventId}`);
+    };
+
+    const stopAudition = () => {
+        if (auditionTimerRef.current) {
+            clearTimeout(auditionTimerRef.current);
+            auditionTimerRef.current = null;
+        }
+        try {
+            const kae = (window as any).KAE;
+            if (selectedEvent && kae?.stopEvent) {
+                kae.stopEvent(selectedEvent);
+            } else if (kae?.stopAll) {
+                kae.stopAll();
+            }
+        } catch { /* ignore */ }
+        if (fallbackOscRef.current) {
+            try { fallbackOscRef.current.stop(); } catch { /* already stopped */ }
+            try { fallbackOscRef.current.disconnect(); } catch { /* ignore */ }
+            fallbackOscRef.current = null;
+        }
+        setIsAuditioning(false);
+    };
+
+    const playFallbackTone = async (eventId: string, cfg?: AudioEvent) => {
+        try {
+            const kae = (window as any).KAE;
+            let ctx: AudioContext | null = kae?.ctx || fallbackCtxRef.current;
+            if (!ctx) {
+                const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+                if (!AudioCtx) return;
+                ctx = new AudioCtx();
+                fallbackCtxRef.current = ctx;
+            }
+            if (ctx.state === 'suspended') {
+                await ctx.resume().catch(() => {});
+            }
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+            const baseFreq = eventId.includes('ui') ? 660 : eventId.includes('music') ? 220 : 440;
+            osc.type = eventId.includes('music') ? 'triangle' : 'sine';
+            osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+            filter.type = cfg?.filter?.type || 'lowpass';
+            filter.frequency.value = Math.min(20000, Math.max(80, cfg?.filter?.freq || 4000));
+            const vol = Math.min(1, Math.max(0.05, (cfg?.playback?.volume ?? 0.6) * 0.25));
+            const dur = 0.25;
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(kae?.buses?.get?.(cfg?.group || 'sfx') || ctx.destination);
+            fallbackOscRef.current = osc;
+            osc.onended = () => {
+                try { osc.disconnect(); filter.disconnect(); gain.disconnect(); } catch {}
+                if (fallbackOscRef.current === osc) fallbackOscRef.current = null;
+                setIsAuditioning(false);
+            };
+            osc.start();
+            osc.stop(ctx.currentTime + dur);
+        } catch {
+            setIsAuditioning(false);
+        }
+    };
+
+    const auditionEvent = async (eventId: string, clip?: string) => {
+        stopAudition();
+        setIsAuditioning(true);
         eventBus?.emit('audio:trigger', { name: eventId, clip, audition: true });
         addHistory(eventId, clip);
+
+        const cfg = audioMap.events[eventId];
+        const kae = (window as any).KAE;
+        let playedVoice: any = null;
+
+        try {
+            if (kae) {
+                await kae.init?.();
+                if (kae.ctx?.state === 'suspended') {
+                    await kae.ctx.resume().catch(() => {});
+                }
+                kae.loadMap?.(audioMap);
+                kae.setGameState?.(transportState);
+
+                if (clip) {
+                    const url = clip.startsWith('/') || clip.startsWith('http') ? clip : `/muzikler/${clip}`;
+                    const buffer = await kae.loadBuffer?.(url);
+                    if (buffer) {
+                        playedVoice = kae._playBuffer?.(buffer, {
+                            volume: cfg?.playback?.volume ?? 1.0,
+                            bus: cfg?.group || 'sfx',
+                            loop: cfg?.playback?.mode === 'loop',
+                            fadeIn: cfg?.playback?.fadeIn ?? 0,
+                            fadeOut: cfg?.playback?.fadeOut ?? 0,
+                            reverb: cfg?.reverb ?? 0,
+                            filter: cfg?.filter,
+                            eventName: eventId,
+                            onEnded: () => setIsAuditioning(false),
+                        });
+                    }
+                } else {
+                    // Reset cooldown briefly for direct editor audition clicks
+                    kae.eventCooldowns?.delete?.(eventId);
+                    playedVoice = await kae.playEvent?.(eventId, {
+                        onEnded: () => setIsAuditioning(false),
+                    });
+                }
+            }
+        } catch (err) {
+            console.warn('[AudioStudio] KAE audition failed, falling back to WebAudio tone', err);
+        }
+
+        if (!playedVoice) {
+            await playFallbackTone(eventId, cfg);
+        } else if (cfg?.playback?.mode !== 'loop') {
+            const durMs = Math.max(400, ((playedVoice?.source?.buffer?.duration || 0.8) * 1000) + 100);
+            auditionTimerRef.current = setTimeout(() => setIsAuditioning(false), durMs);
+        }
     };
 
     const handleDragStart = (e: React.DragEvent, assetId: string) => {
@@ -1014,7 +1227,8 @@ const AudioStudio: React.FC = () => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button
-                                        onClick={() => auditionEvent(selectedEvent)}
+                                        onClick={() => void auditionEvent(selectedEvent)}
+                                        title="Play / Audition Event"
                                         style={{
                                             width: '44px',
                                             height: '44px',
@@ -1028,17 +1242,34 @@ const AudioStudio: React.FC = () => {
                                         <Play size={20} />
                                     </button>
                                     <button
+                                        onClick={stopAudition}
+                                        title="Stop Playback"
                                         style={{
                                             width: '44px',
                                             height: '44px',
-                                            border: `1px solid ${THEME.border}`,
+                                            border: `1px solid ${isAuditioning ? THEME.accent : THEME.border}`,
                                             background: THEME.bgPanelAlt,
-                                            color: THEME.textMute,
+                                            color: isAuditioning ? THEME.accent : THEME.textMute,
                                             cursor: 'pointer',
                                             boxShadow: THEME.retroOut
                                         }}
                                     >
                                         <Square size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => deleteEvent(selectedEvent)}
+                                        title="Delete Event"
+                                        style={{
+                                            width: '44px',
+                                            height: '44px',
+                                            border: `1px solid ${THEME.border}`,
+                                            background: THEME.bgPanelAlt,
+                                            color: THEME.danger,
+                                            cursor: 'pointer',
+                                            boxShadow: THEME.retroOut
+                                        }}
+                                    >
+                                        <Trash2 size={18} />
                                     </button>
                                 </div>
                             </div>
@@ -1143,7 +1374,7 @@ const AudioStudio: React.FC = () => {
                                     <BarChart3 size={16} /> SIGNAL MONITOR
                                 </div>
                                 <div style={{ background: '#000', border: `1px solid ${THEME.border}`, padding: '4px' }}>
-                                    <CanvasSpectrum isPlaying={true} color={THEME.accent} />
+                                    <CanvasSpectrum isPlaying={isAuditioning} color={THEME.accent} />
                                 </div>
                             </div>
                         </div>
@@ -1338,7 +1569,7 @@ const AudioStudio: React.FC = () => {
 
                 <div style={{ flexGrow: 1, display: 'flex', gap: '12px', padding: '16px', overflowX: 'auto', background: THEME.bgDeep }}>
                     {busEntries.map(([busName, bus]) => {
-                        const meterLevel = Math.max(0.04, Math.min(1, bus.gain + (Math.random() * 0.05)));
+                        const meterLevel = isAuditioning ? Math.max(0, Math.min(1, busLevels[busName] ?? 0)) : 0;
                         return (
                             <div
                                 key={busName}

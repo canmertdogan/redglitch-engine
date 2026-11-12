@@ -317,6 +317,10 @@ export default class TerrainEditorPanel {
                     <input type="range" id="terr-brush-strength" min="0.05" max="1" step="0.05" value="${this._brushStrength}" style="flex:1;">
                     <span id="terr-strength-val" style="min-width:22px;text-align:center;">${this._brushStrength.toFixed(2)}</span>
                 </div>
+                <div class="tool-row">
+                    <label>Color:</label>
+                    <input type="color" id="terr-paint-color" value="${this._paintColor}" style="height:22px; padding:0; border:1px solid #333;">
+                </div>
             </div>
         `;
 
@@ -438,6 +442,12 @@ export default class TerrainEditorPanel {
         strengthSlider?.addEventListener('input', () => {
             this._brushStrength = parseFloat(strengthSlider.value);
             c.querySelector('#terr-strength-val').textContent = this._brushStrength.toFixed(2);
+            this._updateSculptTool();
+        });
+
+        const paintColorInput = c.querySelector('#terr-paint-color');
+        paintColorInput?.addEventListener('input', () => {
+            this._paintColor = paintColorInput.value || '#4a7c3f';
             this._updateSculptTool();
         });
     }
@@ -1528,29 +1538,73 @@ export default class TerrainEditorPanel {
         };
     }
 
+    _mapTriSculptToolName(tool) {
+        if (tool === 'raise' || tool === 'lower') return 'elevate';
+        if (tool === 'paint') return 'facet-paint';
+        return tool || 'elevate';
+    }
+
+    _syncSculptedGeometryToUserData() {
+        const geom = this._terrainMesh?.geometry;
+        if (!geom) return;
+        const pos = geom.getAttribute('position');
+        const nrm = geom.getAttribute('normal');
+        const col = geom.getAttribute('color');
+        this._terrainMesh.userData.sculptedPositions = pos ? Array.from(pos.array) : undefined;
+        this._terrainMesh.userData.sculptedNormals = nrm ? Array.from(nrm.array) : undefined;
+        this._terrainMesh.userData.sculptedColors = col ? Array.from(col.array) : undefined;
+        this.editor?._markDirty();
+    }
+
+    _detachSculptPointerSync() {
+        if (this._sculptPointerAbort) {
+            this._sculptPointerAbort.abort();
+            this._sculptPointerAbort = null;
+        }
+    }
+
     _initSculptTools() {
         if (!this.editor || !this._terrainMesh) return;
+        this._detachSculptPointerSync();
         if (this._sculptInstance) { this._sculptInstance.dispose(); this._sculptInstance = null; }
 
         import('/engines/shared/editor/TriSculptTools.js').then(mod => {
             const TriSculptTools = mod.default;
-            this._sculptInstance = new TriSculptTools(
-                this.editor.scene, this.editor.camera, this.editor.renderer.domElement
+            const domElement = this.editor.renderer.domElement;
+            const sculpt = new TriSculptTools(
+                this.editor.scene, this.editor.camera, domElement
             );
-            this._sculptInstance.setMesh(this._terrainMesh);
-            const tool = this._sculptTool || 'raise';
-            this._sculptInstance.setTool(tool === 'lower' ? 'elevate' : tool === 'raise' ? 'elevate' : tool);
-            this._sculptInstance.setBrushRadius(this._brushRadius);
-            this._sculptInstance.setBrushStrength(this._brushStrength);
+
+            // Enforce explicit directional elevate behavior for 'raise' vs 'lower'
+            const baseApplyElevate = sculpt._applyElevate.bind(sculpt);
+            sculpt._applyElevate = (hit, delta) => {
+                const mag = Math.max(0.08, Math.abs(delta || 0));
+                const signedDelta = this._sculptTool === 'lower' ? -mag : mag;
+                return baseApplyElevate(hit, signedDelta);
+            };
+
+            sculpt.setMesh(this._terrainMesh);
+            sculpt.setTool(this._mapTriSculptToolName(this._sculptTool || 'raise'));
+            sculpt.setBrushRadius(this._brushRadius);
+            sculpt.setBrushStrength(this._brushStrength);
+            sculpt.setColor(this._paintColor || '#4a7c3f');
+
+            const ac = new AbortController();
+            this._sculptPointerAbort = ac;
+            domElement.addEventListener('pointerup', () => {
+                if (this._sculptTool) this._syncSculptedGeometryToUserData();
+            }, { signal: ac.signal });
+
+            this._sculptInstance = sculpt;
         }).catch(e => console.warn('[TerrainEditorPanel] TriSculptTools not available:', e));
     }
 
     _updateSculptTool() {
         if (!this._sculptInstance) return;
-        const tool = this._sculptTool || 'raise';
-        this._sculptInstance.setTool(tool === 'lower' ? 'elevate' : tool === 'raise' ? 'elevate' : tool);
+        this._sculptInstance.setTool(this._mapTriSculptToolName(this._sculptTool || 'raise'));
         this._sculptInstance.setBrushRadius(this._brushRadius);
         this._sculptInstance.setBrushStrength(this._brushStrength);
+        this._sculptInstance.setColor(this._paintColor || '#4a7c3f');
     }
 
     onSceneRebuilt(levelData) {
@@ -1599,6 +1653,7 @@ export default class TerrainEditorPanel {
     }
 
     dispose() {
+        this._detachSculptPointerSync();
         if (this._sculptInstance) { this._sculptInstance.dispose(); this._sculptInstance = null; }
         this._terrainMesh = null;
         this._waterMesh = null;

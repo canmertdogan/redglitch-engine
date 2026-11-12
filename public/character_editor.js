@@ -202,7 +202,7 @@ window.onload = async () => {
     setupEventListeners();
 
     // 4. Start Preview Loop
-    requestAnimationFrame(renderLoop);
+    scheduleCharLoop();
 };
 
 function updateUIFromData() {
@@ -224,17 +224,17 @@ function updateUIFromData() {
 
 function updateDataFromUI() {
     charData.name = document.getElementById('char-name').value;
-    charData.hp = parseInt(document.getElementById('stat-hp').value);
-    charData.stamina = parseInt(document.getElementById('stat-stamina').value);
-    charData.mana = parseInt(document.getElementById('stat-mana').value);
-    charData.speed = parseInt(document.getElementById('stat-speed').value);
-    charData.jumpForce = parseInt(document.getElementById('stat-jump').value);
+    charData.hp = parseInt(document.getElementById('stat-hp').value, 10) || 100;
+    charData.stamina = parseInt(document.getElementById('stat-stamina').value, 10) || 100;
+    charData.mana = parseInt(document.getElementById('stat-mana').value, 10) || 0;
+    charData.speed = parseInt(document.getElementById('stat-speed').value, 10) || 250;
+    charData.jumpForce = parseInt(document.getElementById('stat-jump').value, 10) || 600;
     charData.glowColor = document.getElementById('glow-color').value;
     
-    charData.segmentCount = parseInt(document.getElementById('cfg-segments').value);
-    charData.segmentSpacing = parseInt(document.getElementById('cfg-spacing').value);
-    charData.tapering = parseInt(document.getElementById('cfg-taper').value) / 100;
-    charData.wobble = parseInt(document.getElementById('cfg-wobble').value);
+    charData.segmentCount = parseInt(document.getElementById('cfg-segments').value, 10) || 1;
+    charData.segmentSpacing = parseInt(document.getElementById('cfg-spacing').value, 10) || 8;
+    charData.tapering = (parseInt(document.getElementById('cfg-taper').value, 10) || 0) / 100;
+    charData.wobble = parseInt(document.getElementById('cfg-wobble').value, 10) || 0;
 
     updateLabelValues();
 }
@@ -295,13 +295,20 @@ function renderSprite(ctx, key, img, x, y, w, h) {
 }
 
 // --- TAB LOGIC ---
-window.showTab = function(tabId) {
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    
-    document.getElementById('tab-' + tabId).classList.add('active');
-    const btnIdx = (tabId === 'visuals') ? 0 : (tabId === 'stats' ? 1 : 2);
-    document.querySelectorAll('.tab-btn')[btnIdx].classList.add('active');
+window.showTab = function(tabId, btnEl) {
+    document.querySelectorAll('.tab-content').forEach(c => { c.style.display = 'none'; });
+    const targetTab = document.getElementById('tab-' + tabId);
+    if (targetTab) targetTab.style.display = 'block';
+
+    document.querySelectorAll('.list-item').forEach(i => i.classList.remove('active'));
+    const activeBtn = btnEl || document.querySelector(`.list-item[data-tab="${CSS.escape(tabId)}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+};
+
+window.togglePreviewPanel = function() {
+    const panel = document.getElementById('preview-panel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
 };
 
 // --- PREVIEW LOGIC ---
@@ -313,7 +320,47 @@ window.setPreviewState = function(state) {
     else btns[0].classList.add('active');
 };
 
+window.__studioPaused = false;
+var _charRaf = null;
+var _lastCharDraw = -120;
+function scheduleCharLoop() {
+    if (!_charRaf && !window.__studioPaused && !document.hidden) {
+        _charRaf = requestAnimationFrame(renderLoop);
+    }
+}
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'studio:visibility') {
+        window.__studioPaused = !e.data.visible;
+        if (e.data.visible) {
+            _lastCharDraw = -120;
+            scheduleCharLoop();
+        } else if (_charRaf) {
+            cancelAnimationFrame(_charRaf);
+            _charRaf = null;
+        }
+    }
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (_charRaf) {
+            cancelAnimationFrame(_charRaf);
+            _charRaf = null;
+        }
+    } else {
+        _lastCharDraw = -120;
+        scheduleCharLoop();
+    }
+});
+
 function renderLoop(timestamp) {
+    _charRaf = null;
+    if (window.__studioPaused || document.hidden) return;
+    const now = timestamp || performance.now();
+    if (!isMoving && now - _lastCharDraw < 66) {
+        scheduleCharLoop();
+        return;
+    }
+    _lastCharDraw = now;
     previewTime += 0.016;
     
     // 1. Simulate Slither Movement for preview
@@ -373,7 +420,7 @@ function renderLoop(timestamp) {
 
     ctx.shadowBlur = 0;
 
-    requestAnimationFrame(renderLoop);
+    scheduleCharLoop();
 }
 
 // --- IO ---
@@ -388,7 +435,16 @@ function persistToProject() {
     }).then(r => { if (!r.ok) throw new Error('project save failed'); });
 }
 
-window.saveToBrowser = function() {
+function showToast(msg, isError = false) {
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = `position:fixed;bottom:16px;right:16px;z-index:10000;padding:8px 14px;background:${isError ? '#3a0d0d' : '#0b2416'};color:${isError ? '#ff8a8a' : '#7ef2a6'};border:1px solid ${isError ? '#ff4444' : '#2ecc71'};font-family:inherit;font-size:0.95rem;`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+}
+
+window.saveToBrowser = async function(options = {}) {
+    const silent = Boolean(options && options.silent);
     updateDataFromUI();
     localStorage.setItem('redglitch_character', JSON.stringify(charData));
     
@@ -396,10 +452,15 @@ window.saveToBrowser = function() {
     saveCharacterToState();
 
     // Persist to the project so the hero survives across sessions
-    persistToProject().catch(e => console.warn('[character_editor] project save failed:', e.message));
-    
-    alert("SYSTEM UPDATED: HERO CONFIG SAVED.");
+    try {
+        await persistToProject();
+        if (!silent) showToast("SYSTEM UPDATED: HERO CONFIG SAVED.");
+    } catch (e) {
+        console.warn('[character_editor] project save failed:', e.message);
+        if (!silent) showToast("HERO SAVED LOCALLY (PROJECT WRITE FAILED)", true);
+    }
 };
+window.save = window.saveToBrowser;
 
 window.downloadJSON = function() {
     updateDataFromUI();
@@ -409,6 +470,7 @@ window.downloadJSON = function() {
     a.href = url;
     a.download = `hero_${charData.name}.json`;
     a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
 // New character function
@@ -429,28 +491,47 @@ window.newCharacter = function() {
         headData: null,
         bodyData: null
     };
+    headImg.src = "";
+    bodyImg.src = "";
+    const headIn = document.getElementById('head-input');
+    const bodyIn = document.getElementById('body-input');
+    if (headIn) headIn.value = '';
+    if (bodyIn) bodyIn.value = '';
     updateUIFromData();
     
     if (eventBus) {
         eventBus.emit('character:new', { timestamp: Date.now() });
     }
+    showToast("NEW HERO PROFILE CREATED");
 };
 
 // Load character list
 window.showCharacterList = function() {
     const characters = getAllCharacters();
     if (characters.length === 0) {
-        alert('NO SAVED CHARACTERS FOUND');
+        showToast('NO SAVED CHARACTERS IN PROJECT STATE');
         return;
     }
     
-    const list = characters.map(c => `${c.name} (${c.id})`).join('\n');
-    const selected = prompt(`SELECT CHARACTER:\n\n${list}\n\nEnter character name:`);
+    const list = characters.map((c, idx) => `${idx + 1}. ${c.name} (${c.id})`).join('\n');
+    const selected = prompt(`SELECT CHARACTER:\n\n${list}\n\nEnter character name or number:`);
     
     if (selected) {
-        const char = characters.find(c => c.name.toLowerCase() === selected.toLowerCase());
+        const trimmed = selected.trim();
+        const byNum = Number(trimmed);
+        let char = null;
+        if (Number.isInteger(byNum) && byNum >= 1 && byNum <= characters.length) {
+            char = characters[byNum - 1];
+        } else {
+            char = characters.find(c => (c.name || '').toLowerCase() === trimmed.toLowerCase() || c.id === trimmed);
+        }
         if (char) {
             loadCharacterById(char.id);
+            if (charData.headData) headImg.src = charData.headData; else headImg.src = '';
+            if (charData.bodyData) bodyImg.src = charData.bodyData; else bodyImg.src = '';
+            showToast(`LOADED: ${char.name}`);
+        } else {
+            showToast('CHARACTER NOT FOUND', true);
         }
     }
 };

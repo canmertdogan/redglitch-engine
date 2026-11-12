@@ -11,8 +11,11 @@ export class WorkflowManager {
         this.registry = toolRegistry;
         this.eventBus = eventBus;
         this.isExecuting = false;
+        this._activeDepth = 0;
+        this.maxDepth = 5;
         this.cancelRequested = false;
         this.maxSteps = 20;
+        this._wfCounter = 0;
     }
 
     /**
@@ -30,13 +33,21 @@ export class WorkflowManager {
      * Execute a sequence of tool calls as a single transaction.
      * If any step fails, it attempts to rollback previous steps.
      */
-    async executeWorkflow(calls, workflowId = `workflow_${Date.now()}`) {
-        if (this.isExecuting) return { success: false, error: "Already executing a workflow" };
+    async executeWorkflow(calls, workflowId = null, options = {}) {
+        const resolvedWorkflowId = workflowId || `workflow_${Date.now()}_${++this._wfCounter}`;
+        const nested = Boolean(options?.nested);
+        if (this.isExecuting && !nested) return { success: false, error: "Already executing a workflow" };
+        if (nested && this._activeDepth >= this.maxDepth) {
+            return { success: false, error: `Maximum nested workflow depth (${this.maxDepth}) exceeded` };
+        }
         if (!Array.isArray(calls) || calls.length > this.maxSteps) {
             return { success: false, error: `Workflow must contain at most ${this.maxSteps} steps` };
         }
+        this._activeDepth++;
         this.isExecuting = true;
-        this.cancelRequested = false;
+        if (!nested) {
+            this.cancelRequested = false;
+        }
 
         const results = [];
         const executedActions = [];
@@ -48,7 +59,7 @@ export class WorkflowManager {
                 if (this.cancelRequested) throw Object.assign(new Error('Workflow cancelled'), { code: 'CANCELLED' });
                 this.eventBus?.emit('ai:workflow:step', { index, name: call.name, args: call.args });
                 
-                const response = await this.registry.execute(call.name, call.args, call.id || `${workflowId}:${index}`);
+                const response = await this.registry.execute(call.name, call.args, call.id || `${resolvedWorkflowId}:${index}`);
                 
                 if (!response.success) {
                     failedStep = {
@@ -67,7 +78,6 @@ export class WorkflowManager {
                 executedActions.push({ name: call.name, args: call.args, result: response.result });
             }
 
-            this.isExecuting = false;
             const successResult = { success: true, results, count: calls.length };
             this.eventBus?.emit('ai:workflow:complete', successResult);
             return successResult;
@@ -75,8 +85,6 @@ export class WorkflowManager {
         } catch (error) {
             console.error("[WorkflowManager] Workflow failed. Rolling back...", error);
             const rollbackResults = await this.rollback(executedActions);
-            this.isExecuting = false;
-            this.cancelRequested = false;
             const failureResult = {
                 success: false,
                 error: error.message,
@@ -87,6 +95,12 @@ export class WorkflowManager {
             };
             this.eventBus?.emit('ai:workflow:complete', failureResult);
             return failureResult;
+        } finally {
+            this._activeDepth = Math.max(0, this._activeDepth - 1);
+            this.isExecuting = this._activeDepth > 0;
+            if (this._activeDepth === 0) {
+                this.cancelRequested = false;
+            }
         }
     }
 

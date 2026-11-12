@@ -641,7 +641,13 @@ export default class PropLibraryPanel {
         const sc = new THREE.Vector3();
         group.matrixWorld.decompose(pos, quat, sc);
 
-        for (const mesh of tempGroup.children) {
+        // Snapshot children before adding to meshGroup (Three.js reparenting mutates tempGroup.children in place)
+        const placedMeshes = [...tempGroup.children];
+        if (placedMeshes.length === 0) return;
+
+        this.editor._pushUndo();
+
+        for (const mesh of placedMeshes) {
             mesh.position.copy(mesh.position.clone().multiply(sc).add(pos));
             mesh.quaternion.multiply(quat);
             mesh.scale.multiply(sc);
@@ -652,7 +658,7 @@ export default class PropLibraryPanel {
 
         // Select all parts
         const parts = [];
-        for (const mesh of tempGroup.children) {
+        for (const mesh of placedMeshes) {
             const found = this.editor.scene.getObjectByName(mesh.name);
             if (found) parts.push(found);
         }
@@ -668,7 +674,7 @@ export default class PropLibraryPanel {
             propId: id,
             position: [center.x, center.y, center.z],
             scale: scale,
-            meshNames: tempGroup.children.map(m => m.name),
+            meshNames: placedMeshes.map(m => m.name),
         });
 
         this.editor._markDirty();
@@ -688,10 +694,12 @@ export default class PropLibraryPanel {
         }
         const toRemove = [];
         for (const child of this.editor.meshGroup.children) {
-            if (child.userData?.propId && names.has(child.name)) {
+            if (child.userData?.propId && (names.size === 0 || names.has(child.name))) {
                 toRemove.push(child);
             }
         }
+        if (toRemove.length === 0 && this.editor._propGroups.length === 0) return;
+        this.editor._pushUndo();
         for (const m of toRemove) {
             this.editor.meshGroup.remove(m);
             m.geometry?.dispose();

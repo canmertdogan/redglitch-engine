@@ -33,8 +33,24 @@ interface NPC {
     };
 }
 
+function makeUniqueCloneId(sourceId: string, existingIds: Set<string>): string {
+    const base = sourceId.replace(/_COPY(?:_\d+)?$/, '') + '_COPY';
+    let idx = 1;
+    while (existingIds.has(`${base}_${idx}`)) idx++;
+    return `${base}_${idx}`;
+}
+
+function resolveSpriteImageUrl(key: string): string | null {
+    if (!key || (!key.includes('/') && !key.endsWith('.png'))) return null;
+    if (key.startsWith('http://') || key.startsWith('https://') || key.startsWith('data:') || key.startsWith('/')) {
+        return key;
+    }
+    if (key.startsWith('sprite-art/') || key.startsWith('assets/')) return '/' + key;
+    return `/sprite-art/${key}`;
+}
+
 const NPCEditor: React.FC = () => {
-    const { isReady, sprites, emit, projectState } = useStudio();
+    const { isReady, sprites, emit, projectState, subscribe } = useStudio();
     const [npcs, setNpcs] = useState<NPC[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
@@ -52,44 +68,100 @@ const NPCEditor: React.FC = () => {
     
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
     const toastRef = useRef<ToastHandle>(null);
+    const npcsRef = useRef<NPC[]>([]);
+    const isDirtyRef = useRef(false);
+    const savingRef = useRef(false);
+    const saveRef = useRef<() => Promise<void>>(async () => {});
 
-    // Schema Migration Helper
+    useEffect(() => { npcsRef.current = npcs; }, [npcs]);
+    useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
+
+    // Schema Migration Helper (always normalizes nested objects; never copies dialogue as a sprite key)
     const ensureNewSchema = (n: any): NPC => {
-        if (!n.animations || !n.animations.idle || !n.animations.idle.down) {
-            const oldSprite = (n.animations && n.animations.idle) ? n.animations.idle.sprite : (n.sprite || n.dialogue || 'player');
-            return {
-                id: n.id,
-                name: n.name || n.id,
-                type: 'npc',
-                stats: n.stats || { speed: 50 },
-                interaction: n.interaction || { dialogue: n.dialogue || 'demo', range: 60 },
-                behavior: n.behavior || { type: 'wander', range: 100, idleTime: 3.0, script: '' },
-                animations: {
-                    idle: { down: oldSprite, up: oldSprite, side: oldSprite, speed: 0.2 },
-                    walk: { down: oldSprite, up: oldSprite, side: oldSprite, speed: 0.15 },
-                    talk: { base: oldSprite, speed: 0.2 }
+        const anim = n?.animations || {};
+        const fallbackSprite =
+            anim.idle?.down ||
+            anim.idle?.sprite ||
+            anim.idle?.base ||
+            n?.sprite ||
+            'player';
+
+        return {
+            id: String(n?.id || 'npc_' + Date.now().toString().slice(-4)),
+            name: String(n?.name || n?.id || 'New Villager'),
+            type: 'npc',
+            stats: {
+                speed: Number(n?.stats?.speed ?? n?.speed ?? 50) || 50
+            },
+            interaction: {
+                dialogue: String(n?.interaction?.dialogue ?? n?.dialogue ?? ''),
+                range: Number(n?.interaction?.range ?? n?.range ?? 60) || 60
+            },
+            behavior: {
+                type: String(n?.behavior?.type || 'wander'),
+                range: Number(n?.behavior?.range ?? 100) || 0,
+                idleTime: Number(n?.behavior?.idleTime ?? 3.0) || 0,
+                script: String(n?.behavior?.script || '')
+            },
+            animations: {
+                idle: {
+                    down: anim.idle?.down || anim.idle?.sprite || fallbackSprite,
+                    up: anim.idle?.up || anim.idle?.sprite || fallbackSprite,
+                    side: anim.idle?.side || anim.idle?.sprite || fallbackSprite,
+                    speed: Number(anim.idle?.speed ?? 0.2) || 0.2
+                },
+                walk: {
+                    down: anim.walk?.down || anim.walk?.sprite || fallbackSprite,
+                    up: anim.walk?.up || anim.walk?.sprite || fallbackSprite,
+                    side: anim.walk?.side || anim.walk?.sprite || fallbackSprite,
+                    speed: Number(anim.walk?.speed ?? 0.15) || 0.15
+                },
+                talk: {
+                    base: anim.talk?.base || anim.talk?.sprite || fallbackSprite,
+                    speed: Number(anim.talk?.speed ?? 0.2) || 0.2
                 }
-            };
-        }
-        return n;
+            }
+        };
     };
 
     useEffect(() => {
-        if (isReady) {
-            loadNPCs();
-            loadTemplates();
-            loadBrains();
-        }
-    }, [isReady]);
+        if (!isReady) return;
+        loadNPCs();
+        loadTemplates();
+        loadBrains();
+
+        const unsubLoad = subscribe('npc:load', (event: any) => {
+            const npcId = event?.data?.npcId;
+            if (npcId) {
+                const idx = npcsRef.current.findIndex(n => n.id === npcId);
+                if (idx >= 0) setCurrentIndex(idx);
+            }
+        });
+        const unsubSave = subscribe('system:global_save', () => {
+            if (isDirtyRef.current) saveRef.current();
+        });
+        const handleSaveMessage = (e: MessageEvent) => {
+            if (e.data?.type === 'redglitch:save-request' && (e.origin === window.location.origin || e.source === window.parent || e.source === window.top)) {
+                if (isDirtyRef.current) saveRef.current();
+            }
+        };
+        window.addEventListener('message', handleSaveMessage);
+
+        return () => {
+            unsubLoad();
+            unsubSave();
+            window.removeEventListener('message', handleSaveMessage);
+        };
+    }, [isReady, subscribe]);
 
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault();
                 saveToServer();
             }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
                 e.preventDefault();
                 duplicateNPC();
             }
@@ -115,8 +187,10 @@ const NPCEditor: React.FC = () => {
             const res = await fetch('/api/npcs');
             if (res.ok) {
                 const data = await res.json();
-                const migrated = data.map(ensureNewSchema);
+                const migrated = Array.isArray(data) ? data.map(ensureNewSchema) : [];
                 setNpcs(migrated.length > 0 ? migrated : [getDefaultNPC()]);
+            } else {
+                setNpcs([getDefaultNPC()]);
             }
         } catch (e) {
             setNpcs([getDefaultNPC()]);
@@ -172,27 +246,46 @@ const NPCEditor: React.FC = () => {
     };
 
     const saveToServer = async () => {
+        if (savingRef.current) return;
+        savingRef.current = true;
         try {
+            const payload = npcsRef.current;
             const res = await fetch('/api/npcs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(npcs)
+                body: JSON.stringify(payload)
             });
             if (res.ok) {
                 setIsDirty(false);
                 toastRef.current?.show('DATABASE SAVED', 'success');
-                emit('npc:saved_all', { count: npcs.length });
+                emit('npc:saved_all', { count: payload.length });
+                if (projectState) {
+                    const map: any = {};
+                    payload.forEach(n => map[n.id] = n);
+                    projectState.set('npcs', map);
+                }
+            } else {
+                let errMsg = `SAVE FAILED (${res.status})`;
+                try {
+                    const errData = await res.json();
+                    if (errData?.error) errMsg = errData.error;
+                } catch {}
+                toastRef.current?.show(errMsg, 'error');
             }
-        } catch (e) {
-            toastRef.current?.show('SAVE FAILED', 'error');
+        } catch (e: any) {
+            toastRef.current?.show(e?.message || 'SAVE FAILED', 'error');
+        } finally {
+            savingRef.current = false;
         }
     };
+    saveRef.current = saveToServer;
 
     const duplicateNPC = () => {
         const current = npcs[currentIndex];
+        if (!current) return;
         const clone = JSON.parse(JSON.stringify(current));
-        clone.id = current.id + "_copy_" + Date.now().toString().slice(-4);
-        clone.name = current.name + " (COPY)";
+        clone.id = makeUniqueCloneId(current.id, new Set(npcs.map(n => n.id)));
+        clone.name = `${current.name || current.id} (COPY)`;
         setNpcs([...npcs, clone]);
         setCurrentIndex(npcs.length);
         setIsDirty(true);
@@ -200,13 +293,71 @@ const NPCEditor: React.FC = () => {
     };
 
     const deleteNPC = () => {
-        if (npcs.length <= 1) return;
+        if (npcs.length <= 1) {
+            toastRef.current?.show('CANNOT DELETE LAST NPC', 'info');
+            return;
+        }
         const id = npcs[currentIndex].id;
         const newNpcs = npcs.filter((_, i) => i !== currentIndex);
         setNpcs(newNpcs);
         setCurrentIndex(Math.max(0, currentIndex - 1));
         setIsDirty(true);
         toastRef.current?.show(`DELETED ${id}`, 'info');
+    };
+
+    const openDialogueEditor = () => {
+        const current = npcs[currentIndex];
+        if (!current) return;
+        const dialogueId = current.interaction.dialogue || `${current.id}_dialogue`;
+        if (!current.interaction.dialogue) {
+            updateCurrentNPC('interaction.dialogue', dialogueId);
+        }
+        emit('dialogue:load', { dialogueId });
+        emit('studio:open_tool', {
+            toolId: 'dialogue',
+            params: { id: dialogueId }
+        });
+        const parentWin = window.parent as any;
+        if (parentWin && parentWin !== window) {
+            if (typeof parentWin.openDialogueEditor === 'function') {
+                parentWin.openDialogueEditor(dialogueId);
+                return;
+            }
+            if (typeof parentWin.openWindow === 'function' && Array.isArray(parentWin.tools)) {
+                const tool = parentWin.tools.find((t: any) => t.id === 'dialogue');
+                if (tool) {
+                    parentWin.openWindow({ ...tool, src: `${tool.src}?id=${encodeURIComponent(dialogueId)}` });
+                    return;
+                }
+            }
+        }
+        window.open(`/studio-dist/dialogue_editor.html?id=${encodeURIComponent(dialogueId)}`, '_blank');
+    };
+
+    const openBrainEditor = () => {
+        const current = npcs[currentIndex];
+        if (!current) return;
+        const brainName = current.behavior.script || `${current.id}_ai`;
+        emit('studio:open_tool', {
+            toolId: 'behavior',
+            src: `../behavior_editor.html?script=${encodeURIComponent(brainName)}`,
+            title: 'AI Brains'
+        });
+        const parentWin = window.parent as any;
+        if (parentWin && parentWin !== window) {
+            if (typeof parentWin.openBehaviorEditor === 'function') {
+                parentWin.openBehaviorEditor(brainName);
+                return;
+            }
+            if (typeof parentWin.openWindow === 'function' && Array.isArray(parentWin.tools)) {
+                const tool = parentWin.tools.find((t: any) => t.id === 'behavior');
+                if (tool) {
+                    parentWin.openWindow({ ...tool, src: `${tool.src}?script=${encodeURIComponent(brainName)}` });
+                    return;
+                }
+            }
+        }
+        window.open(`/behavior_editor.html?script=${encodeURIComponent(brainName)}`, '_blank');
     };
 
     const filteredNPCs = useMemo(() => {
@@ -219,7 +370,7 @@ const NPCEditor: React.FC = () => {
 
     const renderPreview = () => {
         const canvas = previewCanvasRef.current;
-        if (!canvas || !sprites) return;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
@@ -227,12 +378,13 @@ const NPCEditor: React.FC = () => {
         if (!npc) return;
 
         let spriteKey = '';
-        if (previewState === 'talk') spriteKey = npc.animations.talk.base;
-        else spriteKey = (npc.animations as any)[previewState][previewDir];
+        if (previewState === 'talk') spriteKey = npc.animations?.talk?.base || npc.animations?.idle?.down || 'player';
+        else spriteKey = (npc.animations as any)?.[previewState]?.[previewDir] || npc.animations?.idle?.down || 'player';
 
-        const sprite = sprites[spriteKey];
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+        ctx.imageSmoothingEnabled = false;
+
+        const sprite = sprites ? sprites[spriteKey] : null;
         if (sprite) {
             const scale = previewZoom;
             const offsetX = (canvas.width - sprite.width * scale) / 2;
@@ -247,12 +399,39 @@ const NPCEditor: React.FC = () => {
                     }
                 }
             });
+            return;
+        }
+
+        const imgUrl = resolveSpriteImageUrl(spriteKey);
+        if (imgUrl) {
+            const img = new Image();
+            img.onload = () => {
+                if (!previewCanvasRef.current) return;
+                const c = previewCanvasRef.current.getContext('2d');
+                if (!c) return;
+                c.clearRect(0, 0, canvas.width, canvas.height);
+                c.imageSmoothingEnabled = false;
+                const drawW = Math.min(canvas.width * 0.85, (img.width || 32) * previewZoom);
+                const drawH = Math.min(canvas.height * 0.85, (img.height || 32) * previewZoom);
+                c.drawImage(img, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
+            };
+            img.src = imgUrl;
         }
     };
 
     if (!isReady) return <div style={{ color: 'var(--accent)', padding: '20px' }}>INITIALIZING STUDIO KERNEL...</div>;
 
     const currentNPC = npcs[currentIndex] || getDefaultNPC();
+    const spriteKeys = sprites ? Object.keys(sprites) : [];
+    const renderSpriteSelect = (value: string, onChange: (val: string) => void) => {
+        const hasCustom = Boolean(value && !spriteKeys.includes(value));
+        return (
+            <select value={value} onChange={(e) => onChange(e.target.value)} style={{ flex: 1 }}>
+                {hasCustom && <option value={value}>{value}</option>}
+                {spriteKeys.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+        );
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -273,7 +452,7 @@ const NPCEditor: React.FC = () => {
                 <button className="tool-btn" onClick={saveToServer} title="Save (Ctrl+S)"><Save size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
                 <button className="tool-btn" onClick={() => setShowTemplateModal(true)} title="New from Template"><PlusCircle size={16} /></button>
-                <button className="tool-btn" onClick={() => { setNpcs([...npcs, getDefaultNPC()]); setCurrentIndex(npcs.length); }} title="New NPC"><Plus size={16} /></button>
+                <button className="tool-btn" onClick={() => { setNpcs([...npcs, getDefaultNPC()]); setCurrentIndex(npcs.length); setIsDirty(true); }} title="New NPC"><Plus size={16} /></button>
                 <button className="tool-btn" onClick={duplicateNPC} title="Duplicate (Ctrl+D)"><Copy size={16} /></button>
                 <button className="tool-btn" style={{ color: '#e74c3c' }} onClick={deleteNPC} title="Delete"><Trash size={16} /></button>
                 
@@ -293,8 +472,11 @@ const NPCEditor: React.FC = () => {
                 <Sidebar 
                     title="CHARACTERS" 
                     items={filteredNPCs} 
-                    currentIndex={npcs.indexOf(filteredNPCs[currentIndex])} 
-                    onSelect={(idx) => setCurrentIndex(npcs.indexOf(filteredNPCs[idx]))}
+                    currentIndex={filteredNPCs.indexOf(npcs[currentIndex])} 
+                    onSelect={(idx) => {
+                        const actualIdx = npcs.indexOf(filteredNPCs[idx]);
+                        if (actualIdx >= 0) setCurrentIndex(actualIdx);
+                    }}
                     renderItem={(item, active) => (
                         <div style={{
                             padding: '10px',
@@ -328,7 +510,7 @@ const NPCEditor: React.FC = () => {
                                 <label>Dialogue Script</label>
                                 <div style={{ display: 'flex', gap: '5px' }}>
                                     <input type="text" value={currentNPC.interaction.dialogue} onChange={(e) => updateCurrentNPC('interaction.dialogue', e.target.value)} style={{ flex: 1 }} />
-                                    <button className="tool-btn"><MessageSquare size={14} /></button>
+                                    <button className="tool-btn" onClick={openDialogueEditor} title="Open Dialogue Editor"><MessageSquare size={14} /></button>
                                 </div>
                             </FormSection>
 
@@ -336,11 +518,11 @@ const NPCEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
                                         <label>Walk Speed</label>
-                                        <input type="number" value={currentNPC.stats.speed} onChange={(e) => updateCurrentNPC('stats.speed', parseInt(e.target.value))} />
+                                        <input type="number" value={currentNPC.stats.speed} onChange={(e) => updateCurrentNPC('stats.speed', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Interaction Range</label>
-                                        <input type="number" value={currentNPC.interaction.range} onChange={(e) => updateCurrentNPC('interaction.range', parseInt(e.target.value))} />
+                                        <input type="number" value={currentNPC.interaction.range} onChange={(e) => updateCurrentNPC('interaction.range', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -359,7 +541,7 @@ const NPCEditor: React.FC = () => {
                                                 <option value="">None</option>
                                                 {availableBrains.map(b => <option key={b} value={b}>{b}</option>)}
                                             </select>
-                                            <button className="tool-btn"><Brain size={14} /></button>
+                                            <button className="tool-btn" onClick={openBrainEditor} title="Open AI Brain Editor"><Brain size={14} /></button>
                                         </div>
                                     </div>
                                 </div>
@@ -367,19 +549,21 @@ const NPCEditor: React.FC = () => {
                         </div>
 
                         <FormSection title="Animations (Directional)">
-                            {['idle', 'walk'].map(state => (
+                            {(['idle', 'walk'] as const).map(state => (
                                 <div key={state} style={{ marginBottom: '15px' }}>
                                     <label style={{ color: 'var(--accent)' }}>{state.toUpperCase()} SPRITES</label>
-                                    {['down', 'up', 'side'].map(dir => (
+                                    {(['down', 'up', 'side'] as const).map(dir => (
                                         <div key={dir} style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
                                             <span style={{ width: '50px', fontSize: '0.8rem', color: '#666', textTransform: 'uppercase' }}>{dir}</span>
-                                            <select value={(currentNPC.animations as any)[state][dir]} onChange={(e) => updateCurrentNPC(`animations.${state}.${dir}`, e.target.value)} style={{ flex: 1 }}>
-                                                {sprites && Object.keys(sprites).map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
+                                            {renderSpriteSelect(currentNPC.animations[state][dir], (val) => updateCurrentNPC(`animations.${state}.${dir}`, val))}
                                         </div>
                                     ))}
                                 </div>
                             ))}
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <span style={{ width: '50px', fontSize: '0.8rem', color: '#666', textTransform: 'uppercase' }}>Talk</span>
+                                {renderSpriteSelect(currentNPC.animations.talk.base, (val) => updateCurrentNPC('animations.talk.base', val))}
+                            </div>
                         </FormSection>
                     </div>
                 </div>
@@ -438,8 +622,33 @@ const NPCEditor: React.FC = () => {
                         <div className="panel-content" style={{ padding: '15px' }}>
                             {templates.map(t => (
                                 <div key={t.id} className="template-item" onClick={() => {
-                                    const newNPC = { ...getDefaultNPC(), id: t.id + "_" + Date.now().toString().slice(-4), name: t.name, ...t.data };
-                                    setNpcs([...npcs, ensureNewSchema(newNPC)]);
+                                    const { components, sprite: tplSprite, ...restData } = (t.data || {});
+                                    const statsComp = Array.isArray(components) ? components.find((c: any) => c?.type === 'Stats') : null;
+                                    const scriptComp = Array.isArray(components) ? components.find((c: any) => c?.type === 'Script') : null;
+                                    const base = getDefaultNPC();
+                                    const spriteChoice = tplSprite || base.animations.idle.down;
+                                    const templateCandidate = {
+                                        ...base,
+                                        ...restData,
+                                        id: makeUniqueCloneId(`${t.id}_${Date.now().toString().slice(-4)}`, new Set(npcs.map(n => n.id))),
+                                        name: t.name || restData.name || t.id,
+                                        stats: {
+                                            ...base.stats,
+                                            ...(restData.stats || {}),
+                                            ...(statsComp?.speed !== undefined ? { speed: statsComp.speed } : {})
+                                        },
+                                        behavior: {
+                                            ...base.behavior,
+                                            ...(restData.behavior || {}),
+                                            ...(scriptComp?.scriptId ? { script: scriptComp.scriptId } : {})
+                                        },
+                                        animations: restData.animations || {
+                                            idle: { down: spriteChoice, up: spriteChoice, side: spriteChoice, speed: 0.2 },
+                                            walk: { down: spriteChoice, up: spriteChoice, side: spriteChoice, speed: 0.15 },
+                                            talk: { base: spriteChoice, speed: 0.2 }
+                                        }
+                                    };
+                                    setNpcs([...npcs, ensureNewSchema(templateCandidate)]);
                                     setCurrentIndex(npcs.length);
                                     setShowTemplateModal(false);
                                     setIsDirty(true);

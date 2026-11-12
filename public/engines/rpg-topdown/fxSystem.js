@@ -189,8 +189,8 @@ class Emitter {
             return;
         }
 
-        // Continuous
-        if (this.config.mode === 'continuous') {
+        // Continuous / Stream / Loop modes all emit continuously while active
+        if (this.config.mode === 'continuous' || this.config.mode === 'stream' || this.config.mode === 'loop') {
             const rate = this.config.count || 10; 
             const interval = 1.0 / rate;
             this.spawnTimer += dt;
@@ -277,7 +277,7 @@ window.FXSystem = class FXSystem {
         try {
             const list = await fetch('/api/fx/list').then(r => r.json());
             for (const name of list) {
-                const config = await fetch(`/api/fx/${name}`).then(r => r.json());
+                const config = await fetch(`/api/fx/${encodeURIComponent(name)}`).then(r => r.json());
                 this.effects[name] = config;
             }
             console.log(`FX System: Loaded ${list.length} effects.`);

@@ -32,7 +32,44 @@ interface Prefab {
     id: string;
     name: string;
     sprite: string;
+    savedFile?: string;
     components: ComponentWrapper[];
+}
+
+const AGGREGATE_DEFINITION_FILES = new Set([
+    'items.json', 'quests.json', 'enemies.json', 'npcs.json',
+    'dialogues.json', 'skills.json', 'achievements.json',
+    'variables.json', 'ui.json', 'campaign.json',
+    'locales.json', 'music.json',
+]);
+
+function isValidPrefabData(data: any): boolean {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+    if (!Array.isArray(data.components)) return false;
+    return data.components.every((c: any) =>
+        c && typeof c === 'object' && (typeof c.type === 'string' || typeof c.data?.type === 'string')
+    );
+}
+
+function sanitizePrefabFileName(name: string): string {
+    return String(name || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function resolveCssColor(varName: string, fallback: string): string {
+    if (typeof window === 'undefined') return fallback;
+    const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    return v || fallback;
+}
+
+function getImageSpriteCandidates(spriteKey: string): string[] {
+    if (!spriteKey) return [];
+    if (spriteKey.startsWith('/') || spriteKey.startsWith('http://') || spriteKey.startsWith('https://') || spriteKey.startsWith('data:')) {
+        return [spriteKey];
+    }
+    if (spriteKey.startsWith('sprite-art/') || spriteKey.startsWith('assets/')) {
+        return ['/' + spriteKey];
+    }
+    return [`/sprite-art/${spriteKey}`, `/assets/${spriteKey}`];
 }
 
 const COMPONENT_TYPES: Record<string, any> = {
@@ -48,9 +85,9 @@ const COMPONENT_TYPES: Record<string, any> = {
 
 let _globalClipboard: Component | null = null;
 
-const RetroButton: React.FC<{ onClick: () => void; active?: boolean; danger?: boolean; title?: string; children: React.ReactNode; style?: React.CSSProperties }> = ({ onClick, active, danger, title, children, style }) => (
+const RetroButton: React.FC<{ onClick: (e?: React.MouseEvent<HTMLButtonElement>) => void; active?: boolean; danger?: boolean; title?: string; children: React.ReactNode; style?: React.CSSProperties }> = ({ onClick, active, danger, title, children, style }) => (
     <button
-        onClick={onClick}
+        onClick={(e) => onClick(e)}
         title={title}
         style={{
             background: active ? 'var(--accent)' : 'var(--bg-panel)',
@@ -142,7 +179,7 @@ const SpriteThumbnail: React.FC<{ spriteData: any, scale?: number }> = ({ sprite
 };
 
 const PrefabEditor: React.FC = () => {
-    const { isReady, sprites, emit, projectState } = useStudio();
+    const { isReady, sprites, emit, eventBus, projectState } = useStudio();
     
     // Core State
     const [prefabs, setPrefabs] = useState<Prefab[]>([]);
@@ -174,13 +211,35 @@ const PrefabEditor: React.FC = () => {
     const [showFileBrowser, setShowFileBrowser] = useState(false);
     const [showSpriteBrowser, setShowSpriteBrowser] = useState(false);
     const [availablePrefabs, setAvailablePrefabs] = useState<string[]>([]);
+    const imageCacheRef = useRef<Map<string, HTMLImageElement | 'loading' | 'error'>>(new Map());
     const toastRef = useRef<ToastHandle>(null);
 
     const compOrder = Object.keys(COMPONENT_TYPES);
 
+    const refreshAvailablePrefabs = useCallback(async () => {
+        try {
+            const res = await fetch('/api/ide/list?dir=dunyalar/definitions');
+            if (res.ok) {
+                const entries = await res.json();
+                const list = (Array.isArray(entries) ? entries : [])
+                    .filter((f: any) => !f.isDirectory && typeof f.name === 'string' && f.name.endsWith('.json') && !AGGREGATE_DEFINITION_FILES.has(f.name))
+                    .map((f: any) => f.name.replace(/\.json$/i, ''));
+                setAvailablePrefabs(list);
+            }
+        } catch (err) {
+            console.warn('[PrefabEditor] Failed to list definitions', err);
+        }
+    }, []);
+
     useEffect(() => {
         if (isReady) loadPrefabs();
     }, [isReady]);
+
+    useEffect(() => {
+        if (showFileBrowser) {
+            void refreshAvailablePrefabs();
+        }
+    }, [showFileBrowser, refreshAvailablePrefabs]);
 
     useEffect(() => {
         renderPreview();
@@ -229,15 +288,37 @@ const PrefabEditor: React.FC = () => {
 
     const loadPrefabs = async () => {
         try {
-            const res = await fetch('/api/assets?type=prefab');
-            let initialData = [];
-            if (res.ok) {
-                const data = await res.json();
-                initialData = data.length > 0 ? data.map((d: any) => ensureSchema(d)) : [getDefaultPrefab()];
-            } else {
-                initialData = [getDefaultPrefab()];
+            const listRes = await fetch('/api/ide/list?dir=dunyalar/definitions');
+            if (!listRes.ok) {
+                const def = [getDefaultPrefab()];
+                setPrefabs(def);
+                pushHistory(def);
+                return;
             }
+            const entries = await listRes.json();
+            const jsonFiles = (Array.isArray(entries) ? entries : []).filter(
+                (f: any) => !f.isDirectory && typeof f.name === 'string' && f.name.endsWith('.json') && !AGGREGATE_DEFINITION_FILES.has(f.name)
+            );
+            setAvailablePrefabs(jsonFiles.map((f: any) => f.name.replace(/\.json$/i, '')));
+
+            const loaded: Prefab[] = [];
+            for (const entry of jsonFiles) {
+                try {
+                    const r = await fetch(`/api/ide/read?file=${encodeURIComponent(`dunyalar/definitions/${entry.name}`)}`);
+                    if (!r.ok) continue;
+                    const parsed = JSON.parse(await r.text());
+                    if (!isValidPrefabData(parsed)) continue;
+                    loaded.push(ensureSchema(parsed, entry.name.replace(/\.json$/i, '')));
+                } catch {
+                    // Ignore malformed or non-prefab JSON files
+                }
+            }
+
+            const initialData = loaded.length > 0 ? loaded : [getDefaultPrefab()];
             setPrefabs(initialData);
+            setCurrentIndex(0);
+            setSelectedCompIdx(0);
+            setIsDirty(false);
             pushHistory(initialData);
         } catch (e) {
             const def = [getDefaultPrefab()];
@@ -246,20 +327,33 @@ const PrefabEditor: React.FC = () => {
         }
     };
 
-    const ensureSchema = (d: any): Prefab => {
-        let comps = Array.isArray(d.components) ? d.components : [{ type: 'Transform', ...COMPONENT_TYPES.Transform.defaults }];
-        if (comps.length > 0 && !comps[0].id) {
-            comps = comps.map((c: any) => ({
+    const ensureSchema = (d: any, savedFile?: string): Prefab => {
+        const rawComps = Array.isArray(d.components) ? d.components : [];
+        let comps: ComponentWrapper[] = rawComps.map((c: any) => {
+            if (c && c.id && c.data && typeof c.data.type === 'string') {
+                return c;
+            }
+            const cType = c?.type || 'Transform';
+            return {
                 id: Math.random().toString(36).substr(2, 9),
                 hidden: false,
                 locked: false,
-                data: { type: c.type || 'Transform', ...COMPONENT_TYPES[c.type || 'Transform']?.defaults, ...c }
-            }));
+                data: { type: cType, ...COMPONENT_TYPES[cType]?.defaults, ...c }
+            };
+        });
+        if (!comps.some(c => c.data.type === 'Transform')) {
+            comps = [{
+                id: 'root_transform_' + Math.random().toString(36).substr(2, 6),
+                hidden: false,
+                locked: false,
+                data: { type: 'Transform', ...COMPONENT_TYPES.Transform.defaults }
+            }, ...comps];
         }
         return {
-            id: d.id || d.name || 'prefab_' + Date.now(),
-            name: d.name || d.id || 'New_Entity',
+            id: d.id || savedFile || d.name || 'prefab_' + Date.now(),
+            name: d.name || savedFile || d.id || 'New_Entity',
             sprite: d.sprite || 'player',
+            savedFile,
             components: comps
         };
     };
@@ -360,6 +454,7 @@ const PrefabEditor: React.FC = () => {
         const clone = JSON.parse(JSON.stringify(current));
         clone.id = current.id + '_copy_' + Date.now().toString().slice(-4);
         clone.name = current.name + ' COPY';
+        delete clone.savedFile;
         const newArr = [...prefabs, clone];
         setPrefabs(newArr);
         setCurrentIndex(newArr.length - 1);
@@ -367,30 +462,65 @@ const PrefabEditor: React.FC = () => {
         pushHistory(newArr);
     };
 
-    const deletePrefab = () => {
-        if (prefabs.length <= 1) return;
-        const newPrefabs = prefabs.filter((_, i) => i !== currentIndex);
+    const deletePrefab = async () => {
+        const target = prefabs[currentIndex];
+        if (!target) return;
+        const safeName = sanitizePrefabFileName(target.savedFile || target.name);
+        if (target.savedFile && safeName) {
+            if (!confirm(`Delete prefab "${target.name}" (${safeName}.json)?`)) return;
+            try {
+                const res = await fetch('/api/ide/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: `dunyalar/definitions/${safeName}.json` })
+                });
+                if (!res.ok) {
+                    toastRef.current?.show('DELETE FAILED', 'error');
+                    return;
+                }
+            } catch {
+                toastRef.current?.show('DELETE IO ERROR', 'error');
+                return;
+            }
+        } else if (prefabs.length <= 1) {
+            return;
+        }
+
+        const filtered = prefabs.filter((_, i) => i !== currentIndex);
+        const newPrefabs = filtered.length > 0 ? filtered : [getDefaultPrefab()];
         setPrefabs(newPrefabs);
-        setCurrentIndex(Math.max(0, currentIndex - 1));
-        setIsDirty(true);
+        setCurrentIndex(Math.max(0, Math.min(currentIndex - 1, newPrefabs.length - 1)));
+        setSelectedCompIdx(0);
+        setIsDirty(false);
         pushHistory(newPrefabs);
+        if (target.savedFile) {
+            toastRef.current?.show(`DELETED ${safeName}`, 'info');
+            void refreshAvailablePrefabs();
+        }
     };
 
-    const saveToServer = async () => {
-        const prefab = prefabs[currentIndex];
+    const saveToServer = async (interactive = true) => {
+        const idx = currentIndex;
+        const prefab = prefabs[idx];
         if (!prefab) return;
 
-        let name = prefab.name;
+        let name = (prefab.name || '').trim();
         if (!name || name === 'New_Entity') {
-            const n = prompt('Enter unique prefab name:');
-            if (!n) return;
-            updateCurrentPrefab('name', n, false);
-            name = n;
+            if (!interactive && !isDirty) return;
+            const n = interactive ? prompt('Enter unique prefab name:') : null;
+            if (!n || !n.trim()) return;
+            name = n.trim();
+        }
+
+        const safeName = sanitizePrefabFileName(name);
+        if (!safeName) {
+            toastRef.current?.show('INVALID PREFAB NAME', 'error');
+            return;
         }
 
         try {
             const engineFormat = {
-                name: prefab.name,
+                name,
                 sprite: prefab.sprite,
                 components: prefab.components.map(c => c.data)
             };
@@ -399,23 +529,47 @@ const PrefabEditor: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    file: `dunyalar/definitions/${name}.json`,
+                    file: `dunyalar/definitions/${safeName}.json`,
                     content: JSON.stringify(engineFormat, null, 2)
                 })
             });
 
-            if (res.ok) {
-                setIsDirty(false);
-                toastRef.current?.show('SAVED TO DISK', 'success');
-                emit('prefab:saved', { prefabId: prefab.id });
-                if (projectState) projectState.set(`prefabs.${name}`, { name, lastModified: Date.now() });
-            } else {
+            if (!res.ok) {
                 toastRef.current?.show('SAVE FAILED', 'error');
+                return;
             }
+
+            setPrefabs(prev => prev.map((p, i) => (i === idx ? { ...p, name, savedFile: safeName } : p)));
+            setIsDirty(false);
+            toastRef.current?.show('SAVED TO DISK', 'success');
+            emit('system:prefab:update', { prefabId: name });
+            emit('prefab:saved', { prefabId: name });
+            if (projectState) projectState.set(`prefabs.${safeName}`, { name, lastModified: Date.now() });
+            void refreshAvailablePrefabs();
         } catch (e) {
             toastRef.current?.show('IO ERROR', 'error');
         }
     };
+
+    const saveToServerRef = useRef(saveToServer);
+    saveToServerRef.current = saveToServer;
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                void saveToServerRef.current(true);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        const unsubId = eventBus?.on('system:global_save', () => {
+            void saveToServerRef.current(false);
+        });
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            if (unsubId && eventBus?.off) eventBus.off('system:global_save', unsubId);
+        };
+    }, [eventBus]);
     
     const autoFitCollider = () => {
         const prefab = prefabs[currentIndex];
@@ -466,15 +620,17 @@ const PrefabEditor: React.FC = () => {
     // Viewport Interactions
     const screenToWorld = (sx: number, sy: number) => {
         const canvas = canvasRef.current;
-        if (!canvas) return {x:0, y:0};
+        if (!canvas) return { x: 0, y: 0 };
         const rect = canvas.getBoundingClientRect();
-        const cx = sx - rect.left;
-        const cy = sy - rect.top;
+        const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+        const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+        const cx = (sx - rect.left) * scaleX;
+        const cy = (sy - rect.top) * scaleY;
         const w = canvas.width;
         const h = canvas.height;
         return {
-            x: (cx - w/2 - offsetRef.current.x) / zoomRef.current,
-            y: (cy - h/2 - offsetRef.current.y) / zoomRef.current
+            x: (cx - w / 2 - offsetRef.current.x) / zoomRef.current,
+            y: (cy - h / 2 - offsetRef.current.y) / zoomRef.current
         };
     };
 
@@ -513,10 +669,17 @@ const PrefabEditor: React.FC = () => {
                 const comp = prefab.components[selectedCompIdx];
                 if (comp && !comp.locked && !comp.hidden) {
                     if (comp.data.type === 'Transform' || comp.data.type === 'Collider' || comp.data.type === 'Prefab') {
-                        const cx = (comp.data as any).x || (comp.data.type === 'Collider' ? (comp.data as ColliderComp).offsetX : 0);
-                        const cy = (comp.data as any).y || (comp.data.type === 'Collider' ? (comp.data as ColliderComp).offsetY : 0);
-                        
-                        const dist = Math.sqrt(Math.pow(wpos.x - cx, 2) + Math.pow(wpos.y - cy, 2));
+                        const transformComp = prefab.components.find((c: ComponentWrapper) => c.data.type === 'Transform')?.data as TransformComp | undefined;
+                        const tX = transformComp?.x || 0;
+                        const tY = transformComp?.y || 0;
+
+                        const isCollider = comp.data.type === 'Collider';
+                        const startCompX = isCollider ? ((comp.data as ColliderComp).offsetX || 0) : ((comp.data as any).x ?? 0);
+                        const startCompY = isCollider ? ((comp.data as ColliderComp).offsetY || 0) : ((comp.data as any).y ?? 0);
+                        const gizmoX = isCollider ? tX + startCompX : startCompX;
+                        const gizmoY = isCollider ? tY + startCompY : startCompY;
+
+                        const dist = Math.hypot(wpos.x - gizmoX, wpos.y - gizmoY);
                         if (dist < 20 / zoomRef.current) {
                             isDraggingGizmo.current = true;
                             dragTarget.current = {
@@ -524,8 +687,8 @@ const PrefabEditor: React.FC = () => {
                                 type: comp.data.type,
                                 startX: wpos.x,
                                 startY: wpos.y,
-                                startCompX: cx,
-                                startCompY: cy
+                                startCompX,
+                                startCompY
                             };
                             return;
                         }
@@ -537,15 +700,18 @@ const PrefabEditor: React.FC = () => {
         const onMouseMove = (e: MouseEvent) => {
             const { snapToGrid, gridSize, prefabs, currentIndex, screenToWorld } = prefabLiveRef.current;
             if (isDragging.current) {
-                offsetRef.current.x += e.clientX - lastMouse.current.x;
-                offsetRef.current.y += e.clientY - lastMouse.current.y;
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+                const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+                offsetRef.current.x += (e.clientX - lastMouse.current.x) * scaleX;
+                offsetRef.current.y += (e.clientY - lastMouse.current.y) * scaleY;
                 lastMouse.current = { x: e.clientX, y: e.clientY };
                 renderPreview();
             } else if (isDraggingGizmo.current && dragTarget.current) {
                 const wpos = screenToWorld(e.clientX, e.clientY);
-                let dx = wpos.x - dragTarget.current.startX;
-                let dy = wpos.y - dragTarget.current.startY;
-                
+                const dx = wpos.x - dragTarget.current.startX;
+                const dy = wpos.y - dragTarget.current.startY;
+
                 let nx = dragTarget.current.startCompX + dx;
                 let ny = dragTarget.current.startCompY + dy;
 
@@ -554,18 +720,27 @@ const PrefabEditor: React.FC = () => {
                     ny = Math.round(ny / gridSize) * gridSize;
                 }
 
-                const newPrefabs = [...prefabs];
-                const comp = newPrefabs[currentIndex].components[dragTarget.current.idx].data as any;
-                
-                if (comp.type === 'Collider') {
-                    comp.offsetX = nx;
-                    comp.offsetY = ny;
-                } else {
-                    comp.x = nx;
-                    comp.y = ny;
-                }
-                
-                setPrefabs(newPrefabs); 
+                const targetIdx = dragTarget.current.idx;
+                const newPrefabs = prefabs.map((p: Prefab, pIdx: number) => {
+                    if (pIdx !== currentIndex) return p;
+                    return {
+                        ...p,
+                        components: p.components.map((cw, cIdx) => {
+                            if (cIdx !== targetIdx) return cw;
+                            const nextData = { ...cw.data } as any;
+                            if (nextData.type === 'Collider') {
+                                nextData.offsetX = nx;
+                                nextData.offsetY = ny;
+                            } else {
+                                nextData.x = nx;
+                                nextData.y = ny;
+                            }
+                            return { ...cw, data: nextData };
+                        })
+                    };
+                });
+
+                setPrefabs(newPrefabs);
             }
         };
 
@@ -593,9 +768,37 @@ const PrefabEditor: React.FC = () => {
         };
     }, []);  // bind once; live values read via prefabLiveRef
 
+    const loadSpriteImage = (spriteKey: string): HTMLImageElement | null => {
+        if (!spriteKey) return null;
+        const cached = imageCacheRef.current.get(spriteKey);
+        if (cached instanceof HTMLImageElement) return cached;
+        if (cached === 'loading' || cached === 'error') return null;
+
+        const candidates = getImageSpriteCandidates(spriteKey);
+        if (candidates.length === 0) return null;
+
+        imageCacheRef.current.set(spriteKey, 'loading');
+        let idx = 0;
+        const img = new Image();
+        img.onload = () => {
+            imageCacheRef.current.set(spriteKey, img);
+            renderPreview();
+        };
+        img.onerror = () => {
+            idx += 1;
+            if (idx < candidates.length) {
+                img.src = candidates[idx];
+            } else {
+                imageCacheRef.current.set(spriteKey, 'error');
+            }
+        };
+        img.src = candidates[0];
+        return null;
+    };
+
     const renderPreview = () => {
         const canvas = canvasRef.current;
-        if (!canvas || !sprites) return;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
@@ -604,9 +807,11 @@ const PrefabEditor: React.FC = () => {
 
         const w = canvas.width;
         const h = canvas.height;
+        const bgColor = resolveCssColor('--bg-root', '#050608');
+        const accentColor = resolveCssColor('--accent', '#ff0000');
 
         ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = 'var(--bg-root)';
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, w, h);
 
         ctx.save();
@@ -636,31 +841,50 @@ const PrefabEditor: React.FC = () => {
         const tX = transform?.x || 0;
         const tY = transform?.y || 0;
 
-        // Draw Sprite
-        if (prefab.sprite && sprites[prefab.sprite] && (!transformWrapper || !transformWrapper.hidden)) {
-            const sprite = sprites[prefab.sprite];
-            const sw = sprite.width * scale;
-            const sh = sprite.height * scale;
+        // Draw Sprite (inline pixel-art SPRITES entry or image file under /sprite-art/ or /assets/)
+        if (prefab.sprite && (!transformWrapper || !transformWrapper.hidden)) {
+            const sprite = sprites?.[prefab.sprite];
+            if (sprite) {
+                const sw = sprite.width * scale;
+                const sh = sprite.height * scale;
 
-            sprite.data.forEach((row: string, y: number) => {
-                for (let x = 0; x < row.length; x++) {
-                    const color = sprite.palette[row[x]];
-                    if (color) {
-                        ctx.fillStyle = color;
-                        ctx.fillRect(
-                            tX + x * scale - sw / 2,
-                            tY + y * scale - sh / 2,
-                            scale, scale
-                        );
+                sprite.data.forEach((row: string, y: number) => {
+                    for (let x = 0; x < row.length; x++) {
+                        const color = sprite.palette[row[x]];
+                        if (color) {
+                            ctx.fillStyle = color;
+                            ctx.fillRect(
+                                tX + x * scale - sw / 2,
+                                tY + y * scale - sh / 2,
+                                scale, scale
+                            );
+                        }
+                    }
+                });
+
+                if (transformWrapper && selectedCompIdx === prefab.components.indexOf(transformWrapper)) {
+                    ctx.strokeStyle = accentColor;
+                    ctx.lineWidth = 1 / zoomRef.current;
+                    ctx.strokeRect(tX - sw / 2, tY - sh / 2, sw, sh);
+                }
+            } else if (/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(prefab.sprite) || prefab.sprite.includes('/')) {
+                const img = loadSpriteImage(prefab.sprite);
+                if (img && img.naturalWidth > 0) {
+                    const sw = img.naturalWidth * scale;
+                    const sh = img.naturalHeight * scale;
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(img, tX - sw / 2, tY - sh / 2, sw, sh);
+                    if (transformWrapper && selectedCompIdx === prefab.components.indexOf(transformWrapper)) {
+                        ctx.strokeStyle = accentColor;
+                        ctx.lineWidth = 1 / zoomRef.current;
+                        ctx.strokeRect(tX - sw / 2, tY - sh / 2, sw, sh);
                     }
                 }
-            });
-            
-            if (selectedCompIdx === prefab.components.indexOf(transformWrapper!)) {
-                ctx.strokeStyle = 'var(--accent)';
-                ctx.lineWidth = 1 / zoomRef.current;
-                ctx.strokeRect(tX - sw/2, tY - sh/2, sw, sh);
             }
+        }
+
+        if (transformWrapper && !transformWrapper.hidden && selectedCompIdx === prefab.components.indexOf(transformWrapper) && gizmoMode === 'translate') {
+            drawGizmo(ctx, tX, tY, zoomRef.current);
         }
 
         // Draw Components
@@ -750,7 +974,7 @@ const PrefabEditor: React.FC = () => {
                 </div>
                 
                 <RetroButton onClick={() => setShowFileBrowser(true)} title="Open"><FolderOpen size={16}/></RetroButton>
-                <RetroButton onClick={saveToServer} title="Save (Ctrl+S)" active={isDirty}><Save size={16}/></RetroButton>
+                <RetroButton onClick={() => void saveToServer(true)} title="Save (Ctrl+S)" active={isDirty}><Save size={16}/></RetroButton>
                 <div style={{ width: '2px', height: '24px', background: '#000', margin: '0 4px' }} />
                 <RetroButton onClick={undo} title="Undo" style={{ opacity: historyIndex > 0 ? 1 : 0.3 }}><Undo size={16}/></RetroButton>
                 <RetroButton onClick={redo} title="Redo" style={{ opacity: historyIndex < history.length - 1 ? 1 : 0.3 }}><Redo size={16}/></RetroButton>
@@ -1036,26 +1260,33 @@ const PrefabEditor: React.FC = () => {
                             <RetroButton onClick={() => setShowFileBrowser(false)} style={{ width: '20px', height: '20px', padding: 0 }}><X size={12}/></RetroButton>
                         </div>
                         <div style={{ padding: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', overflowY: 'auto', maxHeight: '400px' }}>
-                            <RetroButton onClick={async () => {
-                                const res = await fetch('/api/ide/list?dir=dunyalar/definitions');
-                                if (res.ok) setAvailablePrefabs((await res.json()).filter((f:any)=>f.name.endsWith('.json')).map((f:any)=>f.name.replace('.json','')));
-                            }} style={{ gridColumn: '1/-1', height: '32px' }}>REFRESH LIST</RetroButton>
+                            <RetroButton onClick={() => void refreshAvailablePrefabs()} style={{ gridColumn: '1/-1', height: '32px' }}>REFRESH LIST</RetroButton>
                             
                             {availablePrefabs.map(name => (
                                 <RetroButton 
                                     key={name} 
                                     onClick={async () => {
                                         try {
-                                            const res = await fetch(`/api/ide/read?file=dunyalar/definitions/${name}.json`);
-                                            if (res.ok) {
-                                                const data = JSON.parse(await res.text());
-                                                const p = ensureSchema(data);
-                                                setPrefabs([...prefabs, p]);
-                                                setCurrentIndex(prefabs.length);
-                                                setShowFileBrowser(false);
-                                                pushHistory([...prefabs, p]);
+                                            const res = await fetch(`/api/ide/read?file=${encodeURIComponent(`dunyalar/definitions/${name}.json`)}`);
+                                            if (!res.ok) {
+                                                toastRef.current?.show('FAILED TO READ FILE', 'error');
+                                                return;
                                             }
-                                        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+                                            const data = JSON.parse(await res.text());
+                                            if (!isValidPrefabData(data)) {
+                                                toastRef.current?.show('NOT A VALID PREFAB FILE', 'error');
+                                                return;
+                                            }
+                                            const p = ensureSchema(data, name);
+                                            const next = [...prefabs, p];
+                                            setPrefabs(next);
+                                            setCurrentIndex(next.length - 1);
+                                            setSelectedCompIdx(0);
+                                            setShowFileBrowser(false);
+                                            pushHistory(next);
+                                        } catch (err) {
+                                            toastRef.current?.show('INVALID PREFAB JSON', 'error');
+                                        }
                                     }}
                                     style={{ height: '32px', justifyContent: 'flex-start', paddingLeft: '8px' }}
                                 >

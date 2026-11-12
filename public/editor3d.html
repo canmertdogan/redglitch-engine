@@ -2417,22 +2417,7 @@
         });
     }
 
-    // ── Keyboard shortcuts ────────────────────────────────────────────
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            if (e.key === 's') { 
-                e.preventDefault(); 
-                editor.saveLevel(); 
-                if (window.parent && window.parent.RedglitchEventBus) {
-                    window.parent.RedglitchEventBus.emit('system:project:save_request');
-                }
-            }
-            if (e.key === 'z') { e.preventDefault(); editor.undo(); }
-            if (e.key === 'y') { e.preventDefault(); editor.redo(); }
-        }
-        if (e.key === 'F5') { e.preventDefault(); editor.playtest(); }
-        if (e.key === 'Delete') { editor.deleteSelected?.(); }
-    });
+    // Keyboard shortcuts (Ctrl+S/Z/Y, F5, Delete) are handled inside Editor3DCore._onKeyDown.
 
     // Listen for global save
     if (window.parent && window.parent.RedglitchEventBus) {

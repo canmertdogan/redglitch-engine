@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const assetRegistry = require('../services/AssetRegistry');
+const config = require('../config');
 const { resolveUnderRoot } = require('../utils/pathGuard');
 const { canAutomateMutation } = require('../utils/automationPolicy');
 const ALLOWED_EXTENSIONS = new Set(['.png','.jpg','.jpeg','.gif','.webp','.svg','.mp3','.ogg','.wav','.flac','.json','.glb','.gltf','.obj','.mtl','.vox','.pal','.blend','.frag','.vert','.atlas','.txt','.md','.html','.js','.css']);
@@ -31,33 +32,92 @@ router.post('/rebuild', async (req, res) => {
     }
 });
 
+async function walkAssetFiles(dir, skipNames = new Set(['.DS_Store'])) {
+    const results = [];
+    let entries;
+    try {
+        entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch (err) {
+        if (err.code === 'ENOENT') return results;
+        throw err;
+    }
+
+    for (const entry of entries) {
+        if (skipNames.has(entry.name) || entry.name.startsWith('.')) continue;
+        if (entry.name.endsWith('.bak') || entry.name.includes('.tmp.')) continue;
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            results.push(...(await walkAssetFiles(fullPath, skipNames)));
+        } else if (entry.isFile()) {
+            const stats = await fs.stat(fullPath);
+            results.push({
+                name: entry.name,
+                path: fullPath,
+                size: stats.size,
+                modified: stats.mtime
+            });
+        }
+    }
+    return results;
+}
+
+async function readDefinitionsMap(dir, source, targetMap) {
+    let entries;
+    try {
+        entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch (err) {
+        if (err.code === 'ENOENT') return;
+        throw err;
+    }
+
+    for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.endsWith('.json') || entry.name.startsWith('.')) continue;
+        const fullPath = path.join(dir, entry.name);
+        const stats = await fs.stat(fullPath);
+        targetMap.set(entry.name, {
+            name: entry.name,
+            path: `dunyalar/definitions/${entry.name}`,
+            size: stats.size,
+            modified: stats.mtime,
+            type: 'definition',
+            source
+        });
+    }
+}
+
 // GET /api/assets/list - List all assets with metadata (legacy/utility)
 router.get('/list', async (req, res) => {
     try {
         const activeProject = projectService.getActiveProject();
-        const assetsDir = path.join(activeProject, 'assets');
-        
+        const isRoot = projectService.isRootProject();
+        const scope = typeof req.query.scope === 'string' ? req.query.scope.toLowerCase() : '';
+        const include = typeof req.query.include === 'string' ? req.query.include.toLowerCase() : '';
         const assets = [];
-        
-        try {
-            const files = await fs.readdir(assetsDir, { withFileTypes: true });
-            for (const file of files) {
-                if (file.isFile()) {
-                    const filePath = path.join(assetsDir, file.name);
-                    const stats = await fs.stat(filePath);
-                    assets.push({
-                        name: file.name,
-                        path: filePath,
-                        size: stats.size,
-                        modified: stats.mtime
-                    });
-                }
-            }
-        } catch (err) {
-            // Assets directory might not exist yet
-            if (err.code !== 'ENOENT') throw err;
+
+        if (scope !== 'definitions') {
+            const assetsDir = path.join(activeProject, 'assets');
+            const projectAssets = await walkAssetFiles(assetsDir);
+            assets.push(...projectAssets);
         }
-        
+
+        const includeDefinitions =
+            scope === 'definitions' ||
+            include === 'definitions' ||
+            (scope !== 'assets' && include !== 'false' && include !== '0' && include !== 'assets');
+
+        if (includeDefinitions) {
+            const definitionsMap = new Map();
+            const engineDefDir = path.join(config.PUBLIC_DIR, 'dunyalar', 'definitions');
+            await readDefinitionsMap(engineDefDir, 'engine', definitionsMap);
+
+            if (!isRoot) {
+                const projectDefDir = path.join(activeProject, 'dunyalar', 'definitions');
+                await readDefinitionsMap(projectDefDir, 'project', definitionsMap);
+            }
+
+            assets.push(...definitionsMap.values());
+        }
+
         res.json(assets);
     } catch (error) {
         console.error('Error listing assets:', error);
@@ -67,8 +127,8 @@ router.get('/list', async (req, res) => {
 
 // POST /api/assets/upload - Upload an asset (Binary/Base64 support)
 router.post('/upload', async (req, res) => {
-    const { path: assetPath, content, isBase64 } = req.body;
-    if (typeof assetPath !== 'string' || !assetPath.trim()) {
+    const { path: rawPath, content, isBase64 } = req.body || {};
+    if (typeof rawPath !== 'string' || !rawPath.trim()) {
         return res.status(400).json({ error: 'No path provided' });
     }
     if (typeof content !== 'string') {
@@ -79,11 +139,12 @@ router.post('/upload', async (req, res) => {
     }
 
     // FINDING-02: confine uploads to assets/ under project + block sensitive/automation-protected paths.
+    let assetPath = rawPath.trim();
     if (!assetPath.startsWith('assets/') && !assetPath.includes('/assets/')) {
         // Force into assets/ namespace
         assetPath = 'assets/' + assetPath.replace(/^\/+/, '');
     }
-    const ext = require('path').extname(assetPath).toLowerCase();
+    const ext = path.extname(assetPath).toLowerCase();
     if (!ALLOWED_EXTENSIONS.has(ext)) {
         return res.status(400).json({ error: 'Unsupported file extension: ' + ext });
     }
@@ -93,9 +154,12 @@ router.post('/upload', async (req, res) => {
     try {
         const activeProject = projectService.getActiveProject();
         const fullPath = resolveUnderRoot(activeProject, assetPath);
-        
+        const insideAssets = assetPath.startsWith('assets/')
+            ? resolveUnderRoot(path.join(activeProject, 'assets'), assetPath.slice('assets/'.length))
+            : fullPath;
+
         // Security check
-        if (!fullPath) {
+        if (!fullPath || !insideAssets) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -106,6 +170,12 @@ router.post('/upload', async (req, res) => {
             await safeFs.safeWriteFullPath(activeProject, fullPath, base64Data, 'base64');
         } else {
             await safeFs.safeWriteFullPath(activeProject, fullPath, content, 'utf8');
+        }
+
+        try {
+            await assetRegistry.rebuild();
+        } catch (rebuildErr) {
+            console.error('[AssetManager:Upload] Registry rebuild failed:', rebuildErr.message);
         }
 
         console.log(`[AssetManager] Asset saved: ${assetPath}`);

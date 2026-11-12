@@ -66,9 +66,32 @@ class Synth8Bit extends Synthesizer {
         }
     }
     
+    getPulseWave(dutyCycle) {
+        const d = Math.max(0.05, Math.min(0.95, Number(dutyCycle) || 0.5));
+        if (!this._pulseWaves) this._pulseWaves = new Map();
+        const key = d.toFixed(3);
+        if (this._pulseWaves.has(key)) return this._pulseWaves.get(key);
+
+        if (typeof this.ctx.createPeriodicWave !== 'function') return null;
+        const harmonics = 64;
+        const real = new Float32Array(harmonics + 1);
+        const imag = new Float32Array(harmonics + 1);
+        for (let n = 1; n <= harmonics; n++) {
+            real[n] = (2 / (Math.PI * n)) * Math.sin(Math.PI * n * d);
+        }
+        const wave = this.ctx.createPeriodicWave(real, imag);
+        this._pulseWaves.set(key, wave);
+        return wave;
+    }
+
     createPulseVoice(frequency, velocity) {
         const osc = this.ctx.createOscillator();
-        osc.type = 'square';
+        const wave = this.getPulseWave(this.params.pulseWidth);
+        if (wave && typeof osc.setPeriodicWave === 'function') {
+            osc.setPeriodicWave(wave);
+        } else {
+            osc.type = 'square';
+        }
         osc.frequency.value = frequency;
         
         const gain = this.ctx.createGain();

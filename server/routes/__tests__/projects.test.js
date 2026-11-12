@@ -3,11 +3,12 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs').promises;
 const projectsRouter = require('../projects');
+const projectService = require('../../services/projectService');
 const config = require('../../config');
 const { request, createApp } = require('../../__tests__/helpers/route-test');
 const {
   testProjectName, isTestProject, createTestProject, projectExists,
-  cleanupTestProjects, resetActiveProject,
+  cleanupTestProjects, resetActiveProject, activateTestProject,
 } = require('../../__tests__/helpers/setup');
 
 test.beforeEach(resetActiveProject);
@@ -88,14 +89,53 @@ test('GET /api/projects — lists created project', async () => {
   assert.ok(found, `Expected ${projectName} in project list`);
 });
 
-test('DELETE /api/projects/:name — deletes a project', async () => {
+test('DELETE /api/projects/:name — deletes a project and resets active project if active', async () => {
   await cleanupTestProjects();
-  await createTestProject('delete_test');
+  const projectName = await createTestProject('delete_test');
+  await activateTestProject('delete_test');
+  assert.equal(projectService.isRootProject(), false);
+
   const app = createApp(projectsRouter);
-  const res = await request(app, 'DELETE', '/api/projects/__test_project_delete_test');
+  const res = await request(app, 'DELETE', `/api/projects/${projectName}`);
   assert.equal(res.status, 200);
   assert.equal(res.data.success, true);
   assert.equal(await projectExists('delete_test'), false);
+  assert.equal(projectService.isRootProject(), true);
+});
+
+test('GET /api/projects — populates valid lastModified even when redglitch.json is missing or lacks lastModified', async () => {
+  await cleanupTestProjects();
+  const projectName = await createTestProject('last_mod');
+  const noCfgName = testProjectName('no_cfg');
+  await fs.mkdir(path.join(config.PROJECTS_ROOT, noCfgName), { recursive: true });
+
+  const app = createApp(projectsRouter);
+  const res = await request(app, 'GET', '/api/projects');
+  assert.equal(res.status, 200);
+
+  for (const name of [projectName, noCfgName]) {
+    const found = res.data.find(p => p.name === name);
+    assert.ok(found, `Expected ${name} in project list`);
+    assert.ok(found.lastModified, `Expected lastModified on ${name}`);
+    assert.equal(Number.isNaN(Date.parse(found.lastModified)), false, `Expected valid date on ${name}`);
+  }
+});
+
+test('GET /api/projects/current — includes author, version, engineType, description from redglitch.json', async () => {
+  await cleanupTestProjects();
+  const projectName = await createTestProject('current_meta', { engineType: 'fps-3d' });
+  await activateTestProject('current_meta');
+
+  const app = createApp(projectsRouter);
+  const res = await request(app, 'GET', '/api/projects/current');
+  assert.equal(res.status, 200);
+  assert.equal(res.data.success, true);
+  assert.equal(res.data.name, projectName);
+  assert.equal(res.data.isRoot, false);
+  assert.equal(res.data.author, 'test');
+  assert.equal(res.data.version, '0.1.0');
+  assert.equal(res.data.engineType, 'fps-3d');
+  assert.equal(res.data.description, 'Test project');
 });
 
 test('GET /api/project/:name/state — returns state for project', async () => {

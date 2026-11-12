@@ -8,10 +8,10 @@ let eventBus, projectState, assetManager, studioBridge;
 
 async function initializeIsoIntegration() {
     if (typeof window !== 'undefined') {
-        // Wait for EventBus to be ready with polling and timeout
-        let retries = 20;
+        // Brief poll when EventBus initializes asynchronously (no 2000ms block on startup)
+        let retries = 4;
         while (!window.RedglitchEventBus && retries > 0) {
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 50));
             retries--;
         }
 
@@ -370,6 +370,8 @@ let state = {
     strategy: new IsoStrategy(),
     tilesetReady: false,
     mode: 'visual',
+    history: [],
+    historyIndex: -1,
     // FX Preview state
     fxPreview: false,
     fx: {
@@ -880,6 +882,26 @@ function syncShaderUI() {
 
 let nextLightId = 1;
 
+function syncLightsToFX() {
+    if (!fxSystem) return;
+    if (Array.isArray(fxSystem.softLights)) fxSystem.softLights.length = 0;
+    else if (fxSystem.softLights && typeof fxSystem.softLights.clear === 'function') fxSystem.softLights.clear();
+
+    if (!state.fxPreview) return;
+    for (const light of (state.fx.lights || [])) {
+        fxSystem.addSoftLight({
+            id: light.id,
+            x: light.x,
+            y: light.y,
+            z: light.z ?? 0,
+            radius: light.radius,
+            color: light.color,
+            intensity: light.intensity,
+            falloff: light.falloff
+        });
+    }
+}
+
 // Place a light at map position
 window.placeLight = (mapX, mapY) => {
     const type = document.getElementById('light-type').value;
@@ -887,34 +909,49 @@ window.placeLight = (mapX, mapY) => {
     const radius = parseInt(document.getElementById('light-radius').value);
     const intensity = parseFloat(document.getElementById('light-intensity').value);
     const falloff = document.getElementById('light-falloff').value;
-    
+    const z = state.currentZ || 0;
+
+    // Replace existing light at the same tile + elevation
+    state.fx.lights = (state.fx.lights || []).filter(l => {
+        if (l.x === mapX && l.y === mapY && (l.z ?? 0) === z) {
+            if (fxSystem) fxSystem.removeSoftLight(l.id);
+            return false;
+        }
+        return true;
+    });
+
     const light = {
         id: nextLightId++,
         type: type,
         x: mapX,
         y: mapY,
+        z: z,
         color: color,
         radius: radius,
         intensity: intensity,
         falloff: falloff
     };
-    
+
     state.fx.lights.push(light);
-    
+    map.lights = state.fx.lights;
+
     // Add to FX system for preview
     if (fxSystem && state.fxPreview) {
-        fxSystem.addSoftLight(mapX, mapY, {
+        fxSystem.addSoftLight({
             id: light.id,
+            x: mapX,
+            y: mapY,
+            z: z,
             radius: radius,
             color: color,
             intensity: intensity,
             falloff: falloff
         });
     }
-    
+
     updateLightsList();
     render();
-    console.log(`[IsoStudio] Placed ${type} light at (${mapX}, ${mapY})`);
+    console.log(`[IsoStudio] Placed ${type} light at (${mapX}, ${mapY}, z=${z})`);
 };
 
 // Remove a light by ID
@@ -922,9 +959,11 @@ window.removeLight = (id) => {
     const idx = state.fx.lights.findIndex(l => l.id === id);
     if (idx !== -1) {
         state.fx.lights.splice(idx, 1);
+        map.lights = state.fx.lights;
         if (fxSystem) fxSystem.removeSoftLight(id);
         updateLightsList();
         render();
+        pushHistory();
     }
 };
 
@@ -932,13 +971,15 @@ window.removeLight = (id) => {
 window.clearAllLights = () => {
     if (state.fx.lights.length === 0) return;
     if (!confirm('Remove all placed lights?')) return;
-    
+
     state.fx.lights.forEach(l => {
         if (fxSystem) fxSystem.removeSoftLight(l.id);
     });
     state.fx.lights = [];
+    map.lights = [];
     updateLightsList();
     render();
+    pushHistory();
 };
 
 // Update lights list UI
@@ -1105,18 +1146,67 @@ if (originalSetPaletteTab) {
 // --- PREFABS ---
 state.prefabCache = {};
 
+async function fetchDefinitionFiles() {
+    let entries = [];
+    try {
+        const res = await fetch('/api/ide/list?dir=' + encodeURIComponent('dunyalar/definitions') + '&t=' + Date.now());
+        if (res.ok) {
+            const data = await res.json();
+            const rawList = Array.isArray(data)
+                ? data
+                : (Array.isArray(data?.files) ? data.files : (Array.isArray(data?.entries) ? data.entries : []));
+            entries = rawList.map(item => typeof item === 'string'
+                ? { name: item, path: `dunyalar/definitions/${item}`, isDirectory: false }
+                : { name: item.name || String(item.path || '').split('/').pop(), path: item.path || `dunyalar/definitions/${item.name || ''}`, isDirectory: Boolean(item.isDirectory) });
+        }
+    } catch (e) {
+        console.warn('[IsoEditor] /api/ide/list failed, falling back:', e);
+    }
+
+    if (entries.length === 0) {
+        try {
+            const assetsRes = await fetch('/api/assets/list?t=' + Date.now());
+            if (assetsRes.ok) {
+                const assets = await assetsRes.json();
+                if (Array.isArray(assets)) {
+                    entries = assets.map(a => ({
+                        name: a.name || String(a.path || '').split('/').pop(),
+                        path: a.path || '',
+                        isDirectory: Boolean(a.isDirectory)
+                    }));
+                }
+            }
+        } catch (_) {}
+    }
+
+    return entries.filter(a => a && !a.isDirectory && a.name && a.name.toLowerCase().endsWith('.json') && !a.name.toLowerCase().endsWith('.bak'));
+}
+
 window.loadPrefabs = async () => {
     const list = document.getElementById('prefab-list');
+    if (!list) return;
     list.innerHTML = '<div style="color:#666; font-size:12px;">Scanning...</div>';
-    
+
     try {
-        const assetsRes = await fetch('/api/assets/list');
-        const assets = await assetsRes.json();
-        const prefabs = assets.filter(a => a.name.endsWith('.json') && (a.path.includes('definitions') || a.name.includes('prefab')));
-        
+        const systemFiles = new Set([
+            'enemies.json', 'npcs.json', 'skills.json', 'items.json', 'campaign.json',
+            'dialogues.json', 'music.json', 'ui.json', 'achievements.json', 'locales.json',
+            'animations.json', 'quests.json', 'variables.json', 'test_3d_campaign.json'
+        ]);
+        const entries = await fetchDefinitionFiles();
+        const prefabs = entries.filter(a => {
+            const p = String(a.path || '').toLowerCase();
+            const n = String(a.name || '').toLowerCase();
+            return (p.includes('definitions') || p === '' || n.includes('prefab')) && !systemFiles.has(n);
+        });
+
         list.innerHTML = '';
+        if (prefabs.length === 0) {
+            list.innerHTML = '<div style="color:#666; font-size:12px;">No prefabs found in definitions.</div>';
+            return;
+        }
         prefabs.forEach(p => {
-            const name = p.name.replace('.json','');
+            const name = p.name.replace(/\.json$/i, '');
             const d = document.createElement('div');
             d.className = 'asset-card';
             d.innerHTML = `
@@ -1129,46 +1219,98 @@ window.loadPrefabs = async () => {
             d.onclick = () => selectPrefab(p.name, d);
             list.appendChild(d);
         });
-    } catch(e) { list.innerHTML = 'Error loading prefabs'; }
+    } catch (e) { list.innerHTML = 'Error loading prefabs'; }
+};
+
+window.savePrefab = async () => {
+    const defaultName = (state.selectedInstance?.data || 'custom_prefab').replace(/\.json$/i, '');
+    const rawName = prompt('Enter prefab name (letters, numbers, _, -):', defaultName);
+    if (!rawName || !rawName.trim()) return;
+
+    const cleanName = rawName.trim().replace(/\.json$/i, '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!/^[a-zA-Z0-9_-]+$/.test(cleanName)) {
+        alert('Invalid prefab name.');
+        return;
+    }
+
+    const pos = state.mouseMapPos || { x: 0, y: 0 };
+    const base = state.selectedInstance
+        ? { ...state.selectedInstance }
+        : {
+            id: cleanName,
+            name: cleanName,
+            type: 'prefab',
+            sprite: (map.decorations || []).find(d => d.x === pos.x && d.y === pos.y)?.spriteUrl || null,
+            tileId: (map.layers?.[state.activeLayer]?.[pos.y * map.width + pos.x]) ?? state.selectedTileID,
+            shape: (map.shapes?.[state.activeLayer]?.[pos.y * map.width + pos.x]) ?? state.selectedShape,
+            components: [
+                { type: 'Transform', scale: 3 },
+                { type: 'Collider', width: 16, height: 16 }
+            ]
+        };
+
+    const filename = `${cleanName}.json`;
+    try {
+        const res = await fetch('/api/ide/write', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                file: `dunyalar/definitions/${filename}`,
+                content: JSON.stringify(base, null, 2)
+            })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        state.prefabCache[filename] = base;
+        state.selectedPrefab = filename;
+        await window.loadPrefabs();
+        alert(`Prefab '${cleanName}' saved!`);
+    } catch (err) {
+        console.error('[IsoEditor] savePrefab failed:', err);
+        alert('Failed to save prefab: ' + err.message);
+    }
 };
 
 async function selectPrefab(name, el) {
     state.tool = 'prefab';
     state.selectedPrefab = name;
     document.querySelectorAll('#prefab-list .asset-card').forEach(e => e.classList.remove('active'));
-    if(el) el.classList.add('active');
-    
+    if (el) el.classList.add('active');
+
     if (!state.prefabCache[name]) {
         try {
-            const res = await fetch(`/dunyalar/definitions/${name}`);
-            if(res.ok) state.prefabCache[name] = await res.json();
-        } catch(e) {}
+            const res = await fetch(`/dunyalar/definitions/${encodeURIComponent(name)}`);
+            if (res.ok) state.prefabCache[name] = await res.json();
+        } catch (e) {}
     }
 }
 
 window.loadNPCs = async () => {
     const list = document.getElementById('npc-list');
+    if (!list) return;
     list.innerHTML = '<div style="color:#666; font-size:12px;">Loading NPCs...</div>';
-    
+
     try {
-        const assetsRes = await fetch('/api/assets/list');
-        const assets = await assetsRes.json();
-        // Filter for potential NPC definitions (JSON files in definitions that aren't other types)
-        const npcFiles = assets.filter(a => 
-            a.name.endsWith('.json') && 
-            a.path.includes('definitions') && 
-            !a.name.includes('prefab') && 
-            !a.name.includes('quest') && 
-            !a.name.includes('item') &&
-            !a.name.includes('ui.json') &&
-            !a.name.includes('music.json')
-        );
-        
+        const excluded = new Set([
+            'enemies.json', 'skills.json', 'items.json', 'campaign.json', 'dialogues.json',
+            'music.json', 'ui.json', 'achievements.json', 'locales.json', 'animations.json',
+            'quests.json', 'variables.json', 'test_3d_campaign.json'
+        ]);
+        const entries = await fetchDefinitionFiles();
+        const npcFiles = entries.filter(a => {
+            const p = String(a.path || '').toLowerCase();
+            const n = String(a.name || '').toLowerCase();
+            return (p.includes('definitions') || p === '') &&
+                !n.includes('prefab') &&
+                !n.includes('quest') &&
+                !n.includes('item') &&
+                !excluded.has(n);
+        });
+
         list.innerHTML = '';
         npcFiles.forEach(n => {
-            const name = n.name.replace('.json','');
+            const name = n.name.replace(/\.json$/i, '');
             const d = document.createElement('div');
-            d.className = 'asset-card'; 
+            d.className = 'asset-card';
             d.innerHTML = `
                 <div class="asset-thumb">
                     <i class="fas fa-user-secret" style="color:var(--accent);"></i>
@@ -1181,7 +1323,7 @@ window.loadNPCs = async () => {
             d.onclick = () => selectNPC(name, d);
             list.appendChild(d);
         });
-    } catch(e) { list.innerHTML = 'Error loading NPCs'; }
+    } catch (e) { list.innerHTML = 'Error loading NPCs'; }
 };
 
 window.selectNPC = (id, el) => {
@@ -1251,21 +1393,19 @@ function updateProgress(percent, text) {
     if (bar) bar.style.width = percent + '%';
     if (txt) txt.innerText = text;
     
-    if (percent >= 100) {
+    if (percent >= 100 && overlay) {
+        overlay.style.pointerEvents = 'none';
         setTimeout(() => {
-            if (overlay) {
-                overlay.style.opacity = '0';
-                overlay.style.transition = 'opacity 0.5s';
-                setTimeout(() => overlay.style.display = 'none', 500);
-            }
-        }, 500);
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.15s';
+            setTimeout(() => { overlay.style.display = 'none'; }, 150);
+        }, 40);
     }
 }
 
 // --- INIT ---
 window.onload = async () => {
-    // Initialize integration first
-    await initializeIsoIntegration();
+    const integrationPromise = initializeIsoIntegration();
     
     updateProgress(10, "INITIALIZING SYSTEM...");
     console.log("[IsoStudio] Initializing...");
@@ -1274,9 +1414,12 @@ window.onload = async () => {
     // Ensure Map Data Structure
     if (!map.lights) map.lights = [];
 
-    // 1. Load Tileset
+    // 1. Load Tileset concurrently with integration readiness
     updateProgress(30, "LOADING TILESET...");
-    await loadTileset(CONFIG.tilesetPath);
+    await Promise.all([
+        loadTileset(CONFIG.tilesetPath),
+        integrationPromise
+    ]);
     
     // 2. Initialize FX Systems
     updateProgress(50, "LOADING FX SYSTEMS...");
@@ -1295,7 +1438,11 @@ window.onload = async () => {
     window.keys = {};
     window.addEventListener('keydown', e => {
         const ctrl = e.ctrlKey || e.metaKey;
-        if (ctrl && e.key === 's') {
+        const keyLower = e.key.toLowerCase();
+        const tag = e.target && e.target.tagName ? e.target.tagName.toUpperCase() : '';
+        const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+        if (ctrl && keyLower === 's') {
             e.preventDefault();
             if (typeof saveToServer === 'function') saveToServer();
             if (window.parent && window.parent.RedglitchEventBus) {
@@ -1303,17 +1450,33 @@ window.onload = async () => {
             }
             return;
         }
-        if (ctrl && e.key.toLowerCase() === 'k') {
+        if (ctrl && keyLower === 'k') {
             e.preventDefault();
             if (window.parent && window.parent.RedglitchEventBus) {
                 window.parent.RedglitchEventBus.emit('ai:toggle_chat');
             }
             return;
         }
+        if (inField) return;
+        if (ctrl && keyLower === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            undo();
+            return;
+        }
+        if (ctrl && (keyLower === 'y' || (keyLower === 'z' && e.shiftKey))) {
+            e.preventDefault();
+            redo();
+            return;
+        }
+        if (ctrl && keyLower === 'n' && !e.shiftKey) {
+            e.preventDefault();
+            newMap();
+            return;
+        }
         keys[e.code] = true;
-        if (e.key.toLowerCase() === 'q') changeZ(1);
-        if (e.key.toLowerCase() === 'e') changeZ(-1);
-        if (e.key.toLowerCase() === 'r') rotateShape();
+        if (keyLower === 'q') changeZ(1);
+        if (keyLower === 'e') changeZ(-1);
+        if (keyLower === 'r') rotateShape();
         if (e.key >= '1' && e.key <= '6') setShape(parseInt(e.key) - 1);
     });
     window.addEventListener('keyup', e => keys[e.code] = false);
@@ -1362,6 +1525,9 @@ window.onload = async () => {
     resize();
     centerView();
     updateLayerList();
+    state.history = [];
+    state.historyIndex = -1;
+    pushHistory();
     loop();
     updateProgress(100, "READY!");
 
@@ -1483,18 +1649,28 @@ async function loadTileset(path) {
 function initPalette() {
     const pal = document.getElementById('palette');
     pal.innerHTML = '';
-    const cols = tileset.width / 16;
-    const rows = tileset.height / 16;
+    const frag = document.createDocumentFragment();
+    const cols = Math.max(1, Math.floor(tileset.width / 16));
+    const rows = Math.max(1, Math.floor(tileset.height / 16));
     const total = cols * rows;
+    const spriteUrl = (window.RedglitchWorldTileset)
+        ? window.RedglitchWorldTileset.getPaletteSpriteUrl(tileset)
+        : ((tileset instanceof HTMLImageElement && tileset.src) ? tileset.src : 'sprite-art/worldpixelart_atlas.png');
 
-    for(let i=0; i<total; i++) {
+    for (let i = 0; i < total; i++) {
         const d = document.createElement('div');
         d.className = 'palette-item';
-        
-        const c = document.createElement('canvas'); c.width=16; c.height=16;
-        const cx = c.getContext('2d');
-        cx.drawImage(tileset, (i % cols)*16, Math.floor(i/cols)*16, 16, 16, 0, 0, 16, 16);
-        d.appendChild(c);
+
+        const thumb = document.createElement('div');
+        thumb.className = 'palette-thumb';
+        if (window.RedglitchWorldTileset) {
+            window.RedglitchWorldTileset.applyTileSpriteStyle(thumb, i, cols, rows, spriteUrl);
+        } else {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            thumb.style.cssText = `width:100%;height:100%;background-image:url("${spriteUrl}");background-size:${cols * 100}% ${rows * 100}%;background-position:${cols > 1 ? (col / (cols - 1)) * 100 : 0}% ${rows > 1 ? (row / (rows - 1)) * 100 : 0}%;image-rendering:pixelated;`;
+        }
+        d.appendChild(thumb);
 
         const span = document.createElement('span');
         span.innerText = i;
@@ -1506,8 +1682,9 @@ function initPalette() {
             d.classList.add('selected');
             updateBlockPreview(i);
         };
-        pal.appendChild(d);
+        frag.appendChild(d);
     }
+    pal.appendChild(frag);
 }
 
 // Copy the robust 2D-to-ISO caching from the Strategy
@@ -1549,15 +1726,30 @@ async function generateVegetationAsync(width, height, currentLayers, currentZ, c
 }
 
 async function combineWorldPixelArt() {
+    if (window.RedglitchWorldTileset) {
+        return window.RedglitchWorldTileset.loadWorldTilesetCanvas({ tileSize: 16 });
+    }
+
     const tempCanvas = document.createElement('canvas');
     const tSize = 16;
     const cols = 16;
-    const totalTiles = 600; 
+    const totalTiles = 600;
     const rows = Math.ceil(totalTiles / cols);
     tempCanvas.width = cols * tSize;
     tempCanvas.height = rows * tSize;
     const tCtx = tempCanvas.getContext('2d');
     tCtx.imageSmoothingEnabled = false;
+
+    try {
+        const atlas = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = 'sprite-art/worldpixelart_atlas.png';
+        });
+        tCtx.drawImage(atlas, 0, 0, tempCanvas.width, tempCanvas.height);
+        return tempCanvas;
+    } catch (_) {}
 
     const promises = [];
     for (let i = 1; i <= totalTiles; i++) {
@@ -1663,16 +1855,55 @@ function render() {
     }
 }
 
-function loop() {
+window.__studioPaused = false;
+let _isoLoopRaf = null;
+let _lastIsoIdleRender = -250;
+function scheduleIsoLoop() {
+    if (!_isoLoopRaf && !window.__studioPaused && !document.hidden) {
+        _isoLoopRaf = requestAnimationFrame(loop);
+    }
+}
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'studio:visibility') {
+        window.__studioPaused = !e.data.visible;
+        if (e.data.visible) {
+            _lastIsoIdleRender = -250;
+            scheduleIsoLoop();
+        } else if (_isoLoopRaf) {
+            cancelAnimationFrame(_isoLoopRaf);
+            _isoLoopRaf = null;
+        }
+    }
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (_isoLoopRaf) {
+            cancelAnimationFrame(_isoLoopRaf);
+            _isoLoopRaf = null;
+        }
+    } else {
+        _lastIsoIdleRender = -250;
+        scheduleIsoLoop();
+    }
+});
+
+function loop(ts) {
+    _isoLoopRaf = null;
+    if (window.__studioPaused || document.hidden) return;
+    let moved = false;
     if (window.keys) {
         const speed = 10 / state.zoom;
-        if (keys['KeyW'] || keys['ArrowUp']) state.camY += speed;
-        if (keys['KeyS'] || keys['ArrowDown']) state.camY -= speed;
-        if (keys['KeyA'] || keys['ArrowLeft']) state.camX += speed;
-        if (keys['KeyD'] || keys['ArrowRight']) state.camX -= speed;
+        if (keys['KeyW'] || keys['ArrowUp']) { state.camY += speed; moved = true; }
+        if (keys['KeyS'] || keys['ArrowDown']) { state.camY -= speed; moved = true; }
+        if (keys['KeyA'] || keys['ArrowLeft']) { state.camX += speed; moved = true; }
+        if (keys['KeyD'] || keys['ArrowRight']) { state.camX -= speed; moved = true; }
     }
-    render();
-    requestAnimationFrame(loop);
+    const now = ts || performance.now();
+    if (moved || state.fxPreview || (now - _lastIsoIdleRender >= 250)) {
+        _lastIsoIdleRender = now;
+        render();
+    }
+    scheduleIsoLoop();
 }
 
 function toggleSection(header) {
@@ -1825,23 +2056,27 @@ window.deleteWorld = async (filename, e) => {
 
 window.loadWorld = async (filename) => {
     try {
-        const res = await fetch(`/dunyalar/${filename}`);
-        if(res.ok) {
+        const res = await fetch(`/dunyalar/${encodeURIComponent(filename)}`);
+        if (res.ok) {
             const data = await res.json();
             if (!data || typeof data !== 'object') throw new Error('Invalid world data');
             map = data;
-            document.getElementById('level-name').value = map.name || filename.replace('.json','');
+            const fileStem = String(filename).replace(/\.json$/i, '');
+            document.getElementById('level-name').value = fileStem;
 
             // Restore arrays if needed
-            if(!Array.isArray(map.z)) map.z = [];
-            if(!Array.isArray(map.shapes)) map.shapes = [];
-            if(!Array.isArray(map.lights)) map.lights = [];
-            if(!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
             if (typeof map.width !== 'number' || map.width <= 0) map.width = 32;
             if (typeof map.height !== 'number' || map.height <= 0) map.height = 32;
+            if (!Array.isArray(map.layers) || map.layers.length === 0) {
+                map.layers = [new Array(map.width * map.height).fill(null)];
+            }
+            if (!Array.isArray(map.z)) map.z = [];
+            if (!Array.isArray(map.shapes)) map.shapes = [];
+            if (!Array.isArray(map.decorations)) map.decorations = [];
+            if (!Array.isArray(map.lights)) map.lights = [];
 
-            while(map.layers.length > map.z.length) map.z.push(new Array(map.width*map.height).fill(0));
-            while(map.layers.length > map.shapes.length) map.shapes.push(new Array(map.width*map.height).fill(0));
+            while (map.layers.length > map.z.length) map.z.push(new Array(map.width * map.height).fill(0));
+            while (map.layers.length > map.shapes.length) map.shapes.push(new Array(map.width * map.height).fill(0));
 
             // Load FX config if present
             if (map.fx && state.fx) {
@@ -1849,54 +2084,79 @@ window.loadWorld = async (filename) => {
                 syncLightingUI();
                 syncShaderUI();
             }
-            
-            // Load placed lights
-            if (map.lights && map.lights.length > 0) {
-                state.fx.lights = map.lights;
-                updateLightsList();
+
+            // Always reset lights from loaded world (even when empty)
+            state.fx.lights = Array.isArray(map.lights) ? map.lights.map(l => ({ ...l, z: l.z ?? 0 })) : [];
+            const maxLightId = state.fx.lights.reduce((mx, l) => Math.max(mx, Number(l.id) || 0), 0);
+            nextLightId = maxLightId + 1;
+            syncLightsToFX();
+            updateLightsList();
+
+            // Preload any referenced prefabs so they render immediately
+            const prefabNames = [...new Set(map.decorations.filter(d => d.type === 'prefab' && d.data).map(d => d.data))];
+            if (prefabNames.length > 0) {
+                Promise.all(prefabNames.map(async (pfName) => {
+                    if (state.prefabCache[pfName]) return;
+                    const pfFile = pfName.endsWith('.json') ? pfName : `${pfName}.json`;
+                    try {
+                        const pfRes = await fetch(`/dunyalar/definitions/${encodeURIComponent(pfFile)}`);
+                        if (pfRes.ok) state.prefabCache[pfName] = await pfRes.json();
+                    } catch (_) {}
+                })).then(() => render());
             }
-            
+
             state.activeLayer = 0;
+            map.occlusionDirty = true;
+            if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
             updateLayerList();
             render();
-            
+
+            state.history = [];
+            state.historyIndex = -1;
+            pushHistory();
+
             // Update active card in worlds list
             document.querySelectorAll('.asset-card').forEach(card => {
                 const cardName = card.querySelector('.asset-name')?.textContent;
-                card.classList.toggle('active', cardName === map.name);
+                card.classList.toggle('active', cardName === fileStem || cardName === map.name);
             });
-            
-            console.log("Loaded world:", map.name);
+
+            console.log("Loaded world:", fileStem);
         }
-    } catch(e) { console.error(e); alert("Failed to load world"); }
+    } catch (e) { console.error(e); alert("Failed to load world"); }
 };
 
 window.createNewWorld = () => {
-    if(!confirm("Create new world? Unsaved changes will be lost.")) return;
-    
+    if (!confirm("Create new world? Unsaved changes will be lost.")) return;
+
     const name = prompt("World name:", "new_world_" + Date.now());
     if (!name) return;
-    
+
     map = {
         name: name,
         width: 30, height: 30,
         type: 'iso-pixel',
         engineType: 'iso-pixel', // For campaign system
-        layers: [new Array(30*30).fill(null)],
-        z: [new Array(30*30).fill(0)],
-        shapes: [new Array(30*30).fill(0)],
+        layers: [new Array(30 * 30).fill(null)],
+        z: [new Array(30 * 30).fill(0)],
+        shapes: [new Array(30 * 30).fill(0)],
         decorations: [],
         lights: [],
         spawn: { x: 15, y: 15, z: 0 },
         fx: { ...state.fx }
     };
-    
+
     document.getElementById('level-name').value = name;
     state.activeLayer = 0;
     state.fx.lights = [];
+    syncLightsToFX();
     updateLayerList();
     updateLightsList();
+    if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
     render();
+    state.history = [];
+    state.historyIndex = -1;
+    pushHistory();
     console.log("Created new world:", name);
 };
 
@@ -1924,20 +2184,29 @@ window.playtest = () => {
 };
 
 window.newMap = () => {
-    if(!confirm("Create new map? Unsaved changes will be lost.")) return;
+    if (!confirm("Create new map? Unsaved changes will be lost.")) return;
     map = {
         width: 30, height: 30,
         type: 'iso-pixel',
         engineType: 'iso-pixel', // For campaign system
-        layers: [new Array(30*30).fill(null)],
-        z: [new Array(30*30).fill(0)],
-        shapes: [new Array(30*30).fill(0)],
-        decorations: [], lights: []
+        layers: [new Array(30 * 30).fill(null)],
+        z: [new Array(30 * 30).fill(0)],
+        shapes: [new Array(30 * 30).fill(0)],
+        decorations: [],
+        lights: [],
+        spawn: { x: 15, y: 15, z: 0 }
     };
     document.getElementById('level-name').value = 'new_world';
     state.activeLayer = 0;
+    state.fx.lights = [];
+    syncLightsToFX();
+    updateLightsList();
     updateLayerList();
+    if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
     render();
+    state.history = [];
+    state.historyIndex = -1;
+    pushHistory();
 };
 
 window.downloadJSON = () => {
@@ -2010,6 +2279,65 @@ function resize() {
 }
 window.resize = resize; // Expose globally for toggle handlers
 
+function applyHistorySnapshot(snapStr) {
+    const parsed = JSON.parse(snapStr);
+    if (!parsed || !parsed.map) return false;
+    map = parsed.map;
+    state.fx.lights = Array.isArray(parsed.lights) ? parsed.lights : [];
+    map.lights = state.fx.lights;
+    map.occlusionDirty = true;
+    state.activeLayer = Math.max(0, Math.min(state.activeLayer, (map.layers || []).length - 1));
+    if (state.strategy && state.strategy.invalidateChunks) state.strategy.invalidateChunks();
+    syncLightsToFX();
+    updateLightsList();
+    updateLayerList();
+    render();
+    return true;
+}
+
+function pushHistory() {
+    if (!map || typeof map !== 'object') return;
+    const snap = JSON.stringify({ map, lights: state.fx.lights || [] });
+    if (state.historyIndex >= 0 && state.history[state.historyIndex] === snap) return;
+    state.history = state.history.slice(0, state.historyIndex + 1);
+    state.history.push(snap);
+    if (state.history.length > 30) state.history.shift();
+    state.historyIndex = state.history.length - 1;
+}
+window.pushHistory = pushHistory;
+
+function undo() {
+    if (state.historyIndex <= 0) return;
+    state.historyIndex--;
+    try {
+        if (!applyHistorySnapshot(state.history[state.historyIndex])) state.historyIndex++;
+    } catch (e) {
+        console.error('[IsoEditor] Undo failed:', e);
+        state.historyIndex++;
+    }
+}
+window.undo = undo;
+
+function redo() {
+    if (state.historyIndex >= state.history.length - 1) return;
+    state.historyIndex++;
+    try {
+        if (!applyHistorySnapshot(state.history[state.historyIndex])) state.historyIndex--;
+    } catch (e) {
+        console.error('[IsoEditor] Redo failed:', e);
+        state.historyIndex--;
+    }
+}
+window.redo = redo;
+
+function changeZoom(delta) {
+    state.zoom = Math.max(0.2, Math.min(4, state.zoom + delta));
+    const zoomEl = document.getElementById('zoom-level');
+    if (zoomEl) zoomEl.innerText = Math.round(state.zoom * 100) + '%';
+    render();
+}
+window.changeZoom = changeZoom;
+
 function centerView() {
     state.camX = 0;
     state.camY = 0;
@@ -2019,7 +2347,7 @@ function centerView() {
 function setTool(t) {
     state.tool = t;
     document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tool-${t}`).classList.add('active');
+    document.getElementById(`tool-${t}`)?.classList.add('active');
 }
 
 // --- INPUTS ---
@@ -2030,6 +2358,9 @@ function onMouseDown(e) {
     } else if (e.button === 0) {
         if (state.tool === 'inspect') {
             inspectInstance();
+        } else if (state.tool === 'picker') {
+            paint();
+            render();
         } else {
             state.isDrawing = true;
             paint();
@@ -2047,14 +2378,16 @@ function onMouseMove(e) {
         state.camX += e.clientX - state.lastMouse.x;
         state.camY += e.clientY - state.lastMouse.y;
         state.lastMouse = { x: e.clientX, y: e.clientY };
-    } else if (state.isDrawing && state.tool !== 'inspect') {
+    } else if (state.isDrawing && state.tool !== 'inspect' && state.tool !== 'picker') {
         paint();
     }
 }
 
 function onMouseUp() {
+    const wasDrawing = state.isDrawing;
     state.isDrawing = false;
     state.isPanning = false;
+    if (wasDrawing) pushHistory();
 }
 
 function placeAtLayer(layerIdx, idx) {
@@ -2155,6 +2488,34 @@ function paint() {
         // Init collision layer if missing
         if (!map.collision) map.collision = new Array(map.width * map.height).fill(0);
         map.collision[idx] = state.selectedCollisionType;
+    } else if (state.tool === 'picker') {
+        let pickedTile = null;
+        let pickedShape = 0;
+        for (let l = map.layers.length - 1; l >= 0; l--) {
+            const t = map.layers[l][idx];
+            const z = map.z?.[l]?.[idx] ?? 0;
+            if (t !== null && t !== undefined && z === state.currentZ) {
+                pickedTile = t;
+                pickedShape = map.shapes?.[l]?.[idx] ?? 0;
+                break;
+            }
+        }
+        if (pickedTile === null) {
+            for (let l = map.layers.length - 1; l >= 0; l--) {
+                const t = map.layers[l][idx];
+                if (t !== null && t !== undefined) {
+                    pickedTile = t;
+                    pickedShape = map.shapes?.[l]?.[idx] ?? 0;
+                    break;
+                }
+            }
+        }
+        if (pickedTile !== null && pickedTile !== undefined) {
+            state.selectedTileID = pickedTile;
+            state.selectedShape = pickedShape;
+            updateBlockPreview(pickedTile);
+        }
+        setTool('block');
     } else if (state.tool === 'light') {
         // Use new soft light system
         placeLight(x, y);
@@ -2162,7 +2523,7 @@ function paint() {
         // Z-Aware Eraser: Only erase blocks at the current Z level across ALL layers
         // This is safer than indiscriminately erasing the active layer's block which might be at a different Z
         let erasedSomething = false;
-        
+
         for (let l = 0; l < map.layers.length; l++) {
             const t = map.layers[l][idx];
             const z = map.z[l][idx];
@@ -2172,16 +2533,27 @@ function paint() {
                 erasedSomething = true;
             }
         }
-        if(erasedSomething) {
+        if (erasedSomething) {
             map.occlusionDirty = true;
             if (state.strategy && state.strategy.invalidateChunks) {
                 state.strategy.invalidateChunks(x, y);
             }
         }
 
-        // If no block was found at this Z, maybe the user wants to erase decorations/lights?
+        // Erase decorations and soft lights at this tile + elevation
         map.decorations = map.decorations.filter(d => d.x !== x || d.y !== y);
-        if(map.lights) map.lights = map.lights.filter(l => l.x !== x || l.y !== y || l.z !== state.currentZ);
+        const removedLightIds = [];
+        state.fx.lights = (state.fx.lights || []).filter(l => {
+            const match = l.x === x && l.y === y && (l.z ?? 0) === state.currentZ;
+            if (match) removedLightIds.push(l.id);
+            return !match;
+        });
+        if (removedLightIds.length > 0) {
+            removedLightIds.forEach(id => { if (fxSystem) fxSystem.removeSoftLight(id); });
+            map.lights = state.fx.lights;
+            updateLightsList();
+        }
+        if (map.lights) map.lights = map.lights.filter(l => l.x !== x || l.y !== y || (l.z ?? 0) !== state.currentZ);
     }
 }
 

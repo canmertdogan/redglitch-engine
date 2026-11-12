@@ -62,19 +62,17 @@ class IRABAssistantSimple {
     }
 
     async waitForCore(timeout = 5000) {
+        const resolveCore = () => window.RedglitchAIInstance || (window.parent && window.parent.RedglitchAIInstance) || null;
+        const live = resolveCore();
+        if (live) {
+            this.ai = live;
+            return this.ai;
+        }
         if (this.ai) return this.ai;
-        if (window.RedglitchAIInstance) {
-            this.ai = window.RedglitchAIInstance;
-            return this.ai;
-        }
-        if (window.parent && window.parent.RedglitchAIInstance) {
-            this.ai = window.parent.RedglitchAIInstance;
-            return this.ai;
-        }
 
         console.log('Kai: Waiting for AI Core...');
         const start = Date.now();
-        while (!window.RedglitchAIInstance) {
+        while (!resolveCore()) {
             if (Date.now() - start > timeout) {
                 console.error("Kai: Core wait timeout.");
                 throw new Error("AI Core Connection Failed");
@@ -82,7 +80,7 @@ class IRABAssistantSimple {
             await new Promise(r => setTimeout(r, 100));
         }
         
-        this.ai = window.RedglitchAIInstance;
+        this.ai = resolveCore();
         return this.ai;
     }
 

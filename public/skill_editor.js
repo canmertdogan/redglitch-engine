@@ -65,20 +65,44 @@ let currentIndex = 0;
 const canvas = document.getElementById('previewCanvas');
 const ctx = canvas.getContext('2d');
 
+function showToast(msg, isError = false) {
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = `position:fixed;bottom:16px;right:16px;z-index:10000;padding:8px 14px;background:${isError ? '#3a0d0d' : '#0b2416'};color:${isError ? '#ff8a8a' : '#7ef2a6'};border:1px solid ${isError ? '#ff4444' : '#2ecc71'};font-family:inherit;font-size:0.95rem;`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+}
+
+window.togglePreviewPanel = function() {
+    const panel = document.getElementById('preview-panel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+};
+
 window.onload = async () => {
     // Initialize integration first
     initializeIntegration();
     
-    populateSpriteSelect();
+    await populateSpriteSelect();
     await loadFromServer();
     refreshList();
-    loadSkill(0);
+    if (skills.length > 0) loadSkill(0);
 
-    // Click to Edit Sprite
+    // Click to Edit Sprite in Pixel Art Studio
     document.getElementById('preview-box').onclick = () => {
-        const spriteKey = skills[currentIndex].sprite;
-        if (window.parent && window.parent.editSpriteInStudio) {
-            window.parent.editSpriteInStudio(spriteKey);
+        const spriteKey = skills[currentIndex]?.sprite || '';
+        if (window.parent && typeof window.parent.openTool === 'function') {
+            window.parent.openTool('pixel', spriteKey ? { sprite: spriteKey } : {});
+        } else if (window.parent && typeof window.parent.openWindow === 'function' && Array.isArray(window.parent.tools)) {
+            const pixelTool = window.parent.tools.find(t => t.id === 'pixel');
+            if (pixelTool) {
+                const sep = pixelTool.src.includes('?') ? '&' : '?';
+                const nextSrc = spriteKey ? `${pixelTool.src}${sep}sprite=${encodeURIComponent(spriteKey)}` : pixelTool.src;
+                window.parent.openWindow({ ...pixelTool, src: nextSrc });
+            }
+        } else {
+            const targetUrl = spriteKey ? `pixel_editor.html?sprite=${encodeURIComponent(spriteKey)}` : 'pixel_editor.html';
+            window.location.href = targetUrl;
         }
     };
 };
@@ -86,6 +110,7 @@ window.onload = async () => {
 async function populateSpriteSelect() {
     const sel = document.getElementById('skill-sprite');
     if (!sel) return;
+    sel.innerHTML = '';
     
     // 1. Add Pixel Art Sprites
     if (window.SPRITES) {
@@ -102,7 +127,11 @@ async function populateSpriteSelect() {
         const res = await fetch('/dunyalar/definitions/items.json');
         if (res.ok) {
             const items = await res.json();
-            const pngs = [...new Set(items.filter(i => i.sprite.endsWith('.png')).map(i => i.sprite))];
+            const pngs = [...new Set(
+                (Array.isArray(items) ? items : [])
+                    .filter(i => i?.sprite?.endsWith?.('.png'))
+                    .map(i => i.sprite)
+            )];
             pngs.forEach(png => {
                 const opt = document.createElement('option');
                 opt.value = png;
@@ -120,22 +149,32 @@ function refreshList() {
         const div = document.createElement('div');
         div.className = 'list-item';
         if (idx === currentIndex) div.classList.add('active');
-        div.innerText = s.name.toUpperCase();
+        div.innerText = (s.name || s.id || 'Unnamed').toUpperCase();
         div.onclick = () => loadSkill(idx);
         list.appendChild(div);
     });
 }
 
 function loadSkill(idx) {
+    if (!skills[idx]) return;
     currentIndex = idx;
     const s = skills[idx];
-    document.getElementById('skill-id').value = s.id;
-    document.getElementById('skill-name').value = s.name;
-    document.getElementById('skill-sprite').value = s.sprite;
-    document.getElementById('skill-mana').value = s.mana;
-    document.getElementById('skill-cooldown').value = s.cooldown;
-    document.getElementById('skill-type').value = s.type;
-    document.getElementById('skill-desc').value = s.desc;
+    document.getElementById('skill-id').value = s.id || '';
+    document.getElementById('skill-name').value = s.name || '';
+    const spriteSel = document.getElementById('skill-sprite');
+    if (spriteSel) {
+        if (s.sprite && !Array.from(spriteSel.options).some(o => o.value === s.sprite)) {
+            const opt = document.createElement('option');
+            opt.value = s.sprite;
+            opt.innerText = s.sprite;
+            spriteSel.appendChild(opt);
+        }
+        spriteSel.value = s.sprite || '';
+    }
+    document.getElementById('skill-mana').value = s.mana ?? 0;
+    document.getElementById('skill-cooldown').value = s.cooldown ?? 0;
+    document.getElementById('skill-type').value = s.type || 'projectile';
+    document.getElementById('skill-desc').value = s.description ?? s.desc ?? '';
     
     refreshList();
     renderPreview();
@@ -143,20 +182,49 @@ function loadSkill(idx) {
 
 function addNewSkill() {
     const id = "new_skill_" + Date.now().toString().slice(-4);
-    skills.push({ id, name: 'New Skill', sprite: 'target', mana: 10, cooldown: 0.5, type: 'projectile', desc: '' });
+    skills.push({ id, name: 'New Skill', sprite: 'target', mana: 10, cooldown: 0.5, type: 'projectile', description: '', desc: '' });
     loadSkill(skills.length - 1);
 }
 
-document.querySelectorAll('input, select').forEach(el => {
+function deleteCurrentSkill() {
+    if (!skills[currentIndex]) return;
+    const target = skills[currentIndex];
+    if (!confirm(`Delete skill "${target.name || target.id}"?`)) return;
+
+    skills.splice(currentIndex, 1);
+    if (eventBus) {
+        eventBus.emit('skill:deleted', { skillId: target.id, timestamp: Date.now() });
+    }
+    saveSkillsToState();
+
+    if (skills.length === 0) {
+        currentIndex = 0;
+        refreshList();
+        document.getElementById('skill-id').value = '';
+        document.getElementById('skill-name').value = '';
+        document.getElementById('skill-mana').value = '';
+        document.getElementById('skill-cooldown').value = '';
+        document.getElementById('skill-desc').value = '';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    } else {
+        loadSkill(Math.min(currentIndex, skills.length - 1));
+    }
+    showToast(`DELETED: ${target.name || target.id}`);
+}
+
+document.querySelectorAll('input, select, textarea').forEach(el => {
     el.onchange = () => {
         const s = skills[currentIndex];
+        if (!s) return;
         s.id = document.getElementById('skill-id').value;
         s.name = document.getElementById('skill-name').value;
         s.sprite = document.getElementById('skill-sprite').value;
-        s.mana = parseInt(document.getElementById('skill-mana').value);
-        s.cooldown = parseFloat(document.getElementById('skill-cooldown').value);
+        s.mana = parseInt(document.getElementById('skill-mana').value, 10) || 0;
+        s.cooldown = parseFloat(document.getElementById('skill-cooldown').value) || 0;
         s.type = document.getElementById('skill-type').value;
-        s.desc = document.getElementById('skill-desc').value;
+        const descText = document.getElementById('skill-desc').value;
+        s.description = descText;
+        s.desc = descText;
         refreshList();
         renderPreview();
     };
@@ -164,10 +232,12 @@ document.querySelectorAll('input, select').forEach(el => {
 
 function renderPreview() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const spriteKey = skills[currentIndex].sprite;
+    const spriteKey = skills[currentIndex]?.sprite;
+    if (!spriteKey || typeof window.createPixelImage !== 'function') return;
     const img = window.createPixelImage(spriteKey);
 
     const draw = (source) => {
+        if (!source || !source.width || !source.height) return;
         ctx.imageSmoothingEnabled = false;
         const scale = Math.min(canvas.width / source.width, canvas.height / source.height);
         const dw = source.width * scale;
@@ -191,24 +261,33 @@ function renderPreview() {
     }
 }
 
-async function saveToServer() {
+async function saveToServer(options = {}) {
+    const silent = Boolean(options && options.silent);
     try {
         const response = await fetch('/api/skills', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(skills)
         });
-        if (response.ok) {
-            // Save to shared state and broadcast
-            saveSkillsToState();
-            skills.forEach(skill => broadcastSkillUpdate(skill, 'updated'));
-            alert("Skill definitions saved to server!");
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
+        // Save to shared state and broadcast
+        saveSkillsToState();
+        skills.forEach(skill => broadcastSkillUpdate(skill, 'updated'));
+        if (silent) showToast("Skills auto-saved.");
+        else showToast("Skill definitions saved to server!");
     } catch (e) {
         console.error(e);
-        alert("Save failed.");
+        if (silent) showToast("Skill save failed.", true);
+        else alert("Save failed.");
     }
 }
+
+window.save = saveToServer;
+window.saveToServer = saveToServer;
+window.addNewSkill = addNewSkill;
+window.deleteCurrentSkill = deleteCurrentSkill;
 
 async function loadFromServer() {
     try {

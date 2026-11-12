@@ -194,6 +194,8 @@
             'shared/LocalizationSystem.js',
             'shared/SoundManager.js',
             'engines/shared/GameHUD.js',
+            'strategies/IsoStrategy.js',
+            'engines/rpg-topdown/sprites.js',
             'engines/iso-pixel/renderer.js',
             'engines/iso-pixel/fxSystem.js',
             'engines/iso-pixel/shaderSystem.js',
@@ -279,7 +281,9 @@
     for (const src of scripts) {
         await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            if (src.endsWith('engines/3d/main.js')) script.type = 'module';
+            if (src.endsWith('engines/3d/main.js') || src.endsWith('Unified3DAdapter.js') || src.endsWith('Engine3DAdapter.js')) {
+                script.type = 'module';
+            }
             // Handle special case for sprites.js which server.js might intercept
             // If server.js serves /base_game/sprites.js, we might need to adjust or update server.js
             // For now, we request the new path.

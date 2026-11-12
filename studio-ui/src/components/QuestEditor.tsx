@@ -14,7 +14,7 @@ interface QuestStage {
     text: string;
     type: 'talk' | 'kill' | 'collect' | 'location' | 'interact';
     target: string;
-    count: number;
+    amount: number;
 }
 
 interface Quest {
@@ -30,7 +30,43 @@ interface Quest {
         gold: number;
         items: string[]; // Array of Item IDs
     };
-    objectives: QuestStage[];
+    stages: QuestStage[];
+}
+
+function makeUniqueCloneId(sourceId: string, existingIds: Set<string>): string {
+    const base = sourceId.replace(/_COPY(?:_\d+)?$/, '') + '_COPY';
+    let idx = 1;
+    while (existingIds.has(`${base}_${idx}`)) idx++;
+    return `${base}_${idx}`;
+}
+
+function normalizeQuest(q: any): Quest {
+    const rawStages = Array.isArray(q?.stages)
+        ? q.stages
+        : (Array.isArray(q?.objectives) ? q.objectives : (Array.isArray(q?.steps) ? q.steps : []));
+    const { objectives: _obj, steps: _steps, ...rest } = (q || {});
+    return {
+        ...rest,
+        id: String(q?.id || 'quest_' + Date.now().toString().slice(-4)),
+        title: String(q?.title || 'Untitled Quest'),
+        description: String(q?.description || ''),
+        type: (q?.type || 'main') as Quest['type'],
+        giverId: String(q?.giverId || ''),
+        autoComplete: Boolean(q?.autoComplete),
+        prerequisites: Array.isArray(q?.prerequisites) ? q.prerequisites : [],
+        rewards: {
+            xp: Number(q?.rewards?.xp ?? 0) || 0,
+            gold: Number(q?.rewards?.gold ?? 0) || 0,
+            items: Array.isArray(q?.rewards?.items) ? q.rewards.items : []
+        },
+        stages: rawStages.map((s: any, i: number) => ({
+            id: String(s?.id || `stage_${i}_${Date.now().toString().slice(-4)}`),
+            text: String(s?.text || ''),
+            type: (s?.type || 'talk') as QuestStage['type'],
+            target: String(s?.target || ''),
+            amount: Math.max(1, Number(s?.amount ?? s?.count ?? 1) || 1)
+        }))
+    };
 }
 
 const QuestEditor: React.FC = () => {
@@ -42,25 +78,46 @@ const QuestEditor: React.FC = () => {
     const [availableItems, setAvailableItems] = useState<any[]>([]);
     const [isDirty, setIsDirty] = useState(false);
     const toastRef = useRef<ToastHandle>(null);
+    const questsRef = useRef<Quest[]>([]);
+    const isDirtyRef = useRef(false);
+    const savingRef = useRef(false);
+    const saveRef = useRef<() => Promise<void>>(async () => {});
+
+    useEffect(() => { questsRef.current = quests; }, [quests]);
+    useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
     useEffect(() => {
-        if (isReady) {
-            loadData();
-            
-            const unsub = subscribe('quest:load', (event: any) => {
-                if (event.data.questId) {
-                    const idx = quests.findIndex(q => q.id === event.data.questId);
-                    if (idx >= 0) setCurrentIndex(idx);
-                }
-            });
-            return unsub;
-        }
-    }, [isReady]);
+        if (!isReady) return;
+        loadData();
+
+        const unsubLoad = subscribe('quest:load', (event: any) => {
+            const qId = event?.data?.questId;
+            if (qId) {
+                const idx = questsRef.current.findIndex(q => q.id === qId);
+                if (idx >= 0) setCurrentIndex(idx);
+            }
+        });
+        const unsubSave = subscribe('system:global_save', () => {
+            if (isDirtyRef.current) saveRef.current();
+        });
+        const handleSaveMessage = (e: MessageEvent) => {
+            if (e.data?.type === 'redglitch:save-request' && (e.origin === window.location.origin || e.source === window.parent || e.source === window.top)) {
+                if (isDirtyRef.current) saveRef.current();
+            }
+        };
+        window.addEventListener('message', handleSaveMessage);
+
+        return () => {
+            unsubLoad();
+            unsubSave();
+            window.removeEventListener('message', handleSaveMessage);
+        };
+    }, [isReady, subscribe]);
 
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault();
                 saveToServer();
             }
@@ -79,7 +136,10 @@ const QuestEditor: React.FC = () => {
             
             if (qRes.ok) {
                 const data = await qRes.json();
-                setQuests(data.length > 0 ? data : [getDefaultQuest()]);
+                const list = Array.isArray(data) ? data.map(normalizeQuest) : [];
+                setQuests(list.length > 0 ? list : [getDefaultQuest()]);
+            } else {
+                setQuests([getDefaultQuest()]);
             }
             if (nRes.ok) setAvailableNPCs(await nRes.json());
             if (iRes.ok) setAvailableItems(await iRes.json());
@@ -98,7 +158,7 @@ const QuestEditor: React.FC = () => {
         autoComplete: false,
         prerequisites: [],
         rewards: { xp: 50, gold: 10, items: [] },
-        objectives: [{ id: 'obj_' + Date.now().toString().slice(-4), text: 'Talk to the giver', type: 'talk', target: '', count: 1 }]
+        stages: [{ id: 'stage_' + Date.now().toString().slice(-4), text: 'Talk to the giver', type: 'talk', target: '', amount: 1 }]
     });
 
     const updateQuest = (field: string, value: any) => {
@@ -120,36 +180,75 @@ const QuestEditor: React.FC = () => {
     };
 
     const saveToServer = async () => {
+        if (savingRef.current) return;
+        savingRef.current = true;
         try {
+            const payload = questsRef.current.map(q => {
+                const normalized = normalizeQuest(q);
+                return {
+                    ...normalized,
+                    stages: (normalized.stages || []).map(s => ({
+                        id: s.id,
+                        text: s.text,
+                        type: s.type,
+                        target: s.target,
+                        amount: Math.max(1, Number(s.amount) || 1)
+                    }))
+                };
+            });
             const res = await fetch('/api/quests', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(quests)
+                body: JSON.stringify(payload)
             });
             if (res.ok) {
                 setIsDirty(false);
                 toastRef.current?.show('JOURNAL UPDATED', 'success');
-                emit('quest:saved_all', { count: quests.length });
+                emit('quest:saved_all', { count: payload.length });
                 if (projectState) {
                     const map: any = {};
-                    quests.forEach(q => map[q.id] = q);
+                    payload.forEach(q => map[q.id] = q);
                     projectState.set('quests', map);
                 }
+            } else {
+                let errMsg = `SAVE FAILED (${res.status})`;
+                try {
+                    const errData = await res.json();
+                    if (errData?.error) errMsg = errData.error;
+                } catch {}
+                toastRef.current?.show(errMsg, 'error');
             }
-        } catch (e) {
-            toastRef.current?.show('SAVE FAILED', 'error');
+        } catch (e: any) {
+            toastRef.current?.show(e?.message || 'SAVE FAILED', 'error');
+        } finally {
+            savingRef.current = false;
         }
     };
+    saveRef.current = saveToServer;
 
     const addStage = () => {
         const quest = quests[currentIndex];
-        updateQuest('objectives', [...quest.objectives, { id: 'obj_' + Date.now().toString().slice(-4), text: '', type: 'kill', target: '', count: 1 }]);
+        if (!quest) return;
+        updateQuest('stages', [...(quest.stages || []), { id: 'stage_' + Date.now().toString().slice(-4), text: '', type: 'kill', target: '', amount: 1 }]);
     };
 
     const removeStage = (idx: number) => {
         const quest = quests[currentIndex];
-        const newStages = quest.objectives.filter((_, i) => i !== idx);
-        updateQuest('objectives', newStages);
+        if (!quest) return;
+        const newStages = (quest.stages || []).filter((_, i) => i !== idx);
+        updateQuest('stages', newStages);
+    };
+
+    const deleteQuest = () => {
+        if (quests.length <= 1) {
+            toastRef.current?.show('CANNOT DELETE LAST QUEST', 'info');
+            return;
+        }
+        const id = quests[currentIndex]?.id;
+        setQuests(quests.filter((_, i) => i !== currentIndex));
+        setCurrentIndex(Math.max(0, currentIndex - 1));
+        setIsDirty(true);
+        toastRef.current?.show(`DELETED ${id}`, 'info');
     };
 
     const togglePrereq = (qId: string) => {
@@ -189,15 +288,16 @@ const QuestEditor: React.FC = () => {
             <div id="toolbar" style={{ height: '44px', background: '#000', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '8px' }}>
                 <button className="tool-btn" onClick={saveToServer} title="Save (Ctrl+S)"><Save size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
-                <button className="tool-btn" onClick={() => { setQuests([...quests, getDefaultQuest()]); setCurrentIndex(quests.length); }} title="New Quest"><Plus size={16} /></button>
+                <button className="tool-btn" onClick={() => { setQuests([...quests, getDefaultQuest()]); setCurrentIndex(quests.length); setIsDirty(true); }} title="New Quest"><Plus size={16} /></button>
                 <button className="tool-btn" onClick={() => {
                     const clone = JSON.parse(JSON.stringify(currentQuest));
-                    clone.id += '_COPY';
+                    clone.id = makeUniqueCloneId(currentQuest.id, new Set(quests.map(q => q.id)));
+                    clone.title = `${currentQuest.title} (COPY)`;
                     setQuests([...quests, clone]);
                     setCurrentIndex(quests.length);
                     setIsDirty(true);
                 }} title="Duplicate"><Copy size={16} /></button>
-                <button className="tool-btn" style={{ color: '#e74c3c' }} title="Delete"><Trash size={16} /></button>
+                <button className="tool-btn" style={{ color: '#e74c3c' }} onClick={deleteQuest} title="Delete"><Trash size={16} /></button>
                 
                 <div style={{ marginLeft: 'auto', display: 'flex', position: 'relative', width: '200px' }}>
                     <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#444' }} />
@@ -215,8 +315,11 @@ const QuestEditor: React.FC = () => {
                 <Sidebar 
                     title="ACTIVE QUESTS" 
                     items={filteredQuests} 
-                    currentIndex={quests.indexOf(filteredQuests[currentIndex])} 
-                    onSelect={(idx) => setCurrentIndex(quests.indexOf(filteredQuests[idx]))}
+                    currentIndex={filteredQuests.indexOf(quests[currentIndex])} 
+                    onSelect={(idx) => {
+                        const actualIdx = quests.indexOf(filteredQuests[idx]);
+                        if (actualIdx >= 0) setCurrentIndex(actualIdx);
+                    }}
                     renderItem={(q, active) => (
                         <div style={{
                             padding: '10px', cursor: 'pointer', borderBottom: '1px solid #1a1a1a',
@@ -266,17 +369,17 @@ const QuestEditor: React.FC = () => {
                             </FormSection>
 
                             <FormSection title="Objectives & Steps">
-                                {currentQuest.objectives?.map((stage, idx) => (
-                                    <div key={idx} style={{ background: '#000', border: '1px solid #222', padding: '15px', marginBottom: '15px', borderRadius: '4px' }}>
+                                {(currentQuest.stages || []).map((stage, idx) => (
+                                    <div key={stage.id || idx} style={{ background: '#000', border: '1px solid #222', padding: '15px', marginBottom: '15px', borderRadius: '4px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                             <span style={{ color: 'var(--accent)', fontSize: '0.8rem', fontWeight: 'bold' }}>STEP #{idx + 1}</span>
                                             <Trash size={14} style={{ color: '#e74c3c', cursor: 'pointer' }} onClick={() => removeStage(idx)} />
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 80px', gap: '10px', marginBottom: '10px' }}>
                                             <select value={stage.type} onChange={(e) => {
-                                                const next = [...currentQuest.objectives];
-                                                next[idx].type = e.target.value as any;
-                                                updateQuest('objectives', next);
+                                                const next = [...(currentQuest.stages || [])];
+                                                next[idx] = { ...next[idx], type: e.target.value as QuestStage['type'] };
+                                                updateQuest('stages', next);
                                             }}>
                                                 <option value="talk">Talk To</option>
                                                 <option value="kill">Exterminate</option>
@@ -285,20 +388,20 @@ const QuestEditor: React.FC = () => {
                                                 <option value="interact">Manipulate</option>
                                             </select>
                                             <input type="text" placeholder="Target ID" value={stage.target} onChange={(e) => {
-                                                const next = [...currentQuest.objectives];
-                                                next[idx].target = e.target.value;
-                                                updateQuest('objectives', next);
+                                                const next = [...(currentQuest.stages || [])];
+                                                next[idx] = { ...next[idx], target: e.target.value };
+                                                updateQuest('stages', next);
                                             }} />
-                                            <input type="number" value={stage.count} onChange={(e) => {
-                                                const next = [...currentQuest.objectives];
-                                                next[idx].count = parseInt(e.target.value);
-                                                updateQuest('objectives', next);
+                                            <input type="number" min={1} value={stage.amount} onChange={(e) => {
+                                                const next = [...(currentQuest.stages || [])];
+                                                next[idx] = { ...next[idx], amount: Math.max(1, parseInt(e.target.value, 10) || 1) };
+                                                updateQuest('stages', next);
                                             }} />
                                         </div>
                                         <input type="text" placeholder="Journal Instruction (e.g. 'Speak with the Elder')" value={stage.text} onChange={(e) => {
-                                            const next = [...currentQuest.objectives];
-                                            next[idx].text = e.target.value;
-                                            updateQuest('objectives', next);
+                                            const next = [...(currentQuest.stages || [])];
+                                            next[idx] = { ...next[idx], text: e.target.value };
+                                            updateQuest('stages', next);
                                         }} />
                                     </div>
                                 ))}
@@ -330,11 +433,11 @@ const QuestEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
                                         <label>XP Bonus</label>
-                                        <input type="number" value={currentQuest.rewards.xp} onChange={(e) => updateQuest('rewards.xp', parseInt(e.target.value))} />
+                                        <input type="number" value={currentQuest.rewards.xp} onChange={(e) => updateQuest('rewards.xp', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Gold Reward</label>
-                                        <input type="number" value={currentQuest.rewards.gold} onChange={(e) => updateQuest('rewards.gold', parseInt(e.target.value))} />
+                                        <input type="number" value={currentQuest.rewards.gold} onChange={(e) => updateQuest('rewards.gold', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
                                 <label>Bonus Items</label>
@@ -396,10 +499,10 @@ const QuestEditor: React.FC = () => {
                             
                             <div style={{ borderTop: '1px solid #222', paddingTop: '15px' }}>
                                 <div style={{ fontSize: '0.75rem', color: '#444', marginBottom: '10px', letterSpacing: '1px' }}>OBJECTIVES:</div>
-                                {currentQuest.objectives?.map((s, i) => (
-                                    <div key={i} style={{ display: 'flex', gap: '10px', marginBottom: '8px', color: '#fff', fontSize: '0.95rem' }}>
+                                {(currentQuest.stages || []).map((s, i) => (
+                                    <div key={s.id || i} style={{ display: 'flex', gap: '10px', marginBottom: '8px', color: '#fff', fontSize: '0.95rem' }}>
                                         <Target size={14} style={{ color: 'var(--accent)', marginTop: '4px', flexShrink: 0 }} />
-                                        <span>{s.text || '...'}</span>
+                                        <span>{s.text || '...'}{s.amount > 1 ? ` (x${s.amount})` : ''}</span>
                                     </div>
                                 ))}
                             </div>

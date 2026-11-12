@@ -1,13 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Rocket, Layout, ShoppingBag, GraduationCap, Users, Settings, Plus, FolderOpen, Trash2, Cpu, HardDrive, Clock, ImageIcon, Swords, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Rocket, Layout, ShoppingBag, GraduationCap, Users, Settings, Plus, FolderOpen, Trash2, Cpu, HardDrive, Clock, ImageIcon, Swords, CheckCircle2, Box } from 'lucide-react';
 import Background from './Dashboard/Background';
+import Toast, { ToastHandle } from './shared/Toast';
 
 interface Project {
     name: string;
     path: string;
     engineType: string;
-    lastModified: string;
+    lastModified?: string;
 }
+
+const BLUEPRINTS = [
+    { id: 'rpg-topdown', name: 'RPG CORE', icon: Swords, desc: 'Top-down 2D RPG with quests, combat, and dialogue.' },
+    { id: 'platformer-2d', name: 'PLATFORMER 2D', icon: Rocket, desc: 'Side-scrolling physics, slopes, and action combat.' },
+    { id: 'iso-pixel', name: 'ISO PIXEL', icon: Layout, desc: '2.5D isometric perspective with depth-sorting.' },
+    { id: 'unified-3d', name: 'UNIFIED 3D', icon: Box, desc: '3D FPS, platformer, and top-down worlds with Three.js.' },
+] as const;
 
 const Dashboard: React.FC = () => {
     const [activeView, setActiveView] = useState('projects');
@@ -17,7 +25,10 @@ const Dashboard: React.FC = () => {
     const [username, setUsername] = useState(localStorage.getItem('redglitch_username') || 'Developer');
 
     const [wizardStep, setWizardStep] = useState(1);
-    const [newProjectData, setNewProjectData] = useState({ name: '', author: '', blueprint: 'rpg' });
+    const [newProjectData, setNewProjectData] = useState({ name: '', author: '', blueprint: 'rpg-topdown' });
+    const [wizardError, setWizardError] = useState<string | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const toastRef = useRef<ToastHandle>(null);
 
     useEffect(() => {
         loadProjects();
@@ -44,13 +55,145 @@ const Dashboard: React.FC = () => {
 
     const launchProject = async (name: string) => {
         try {
-            await fetch('/api/projects/switch', { 
+            const res = await fetch('/api/projects/switch', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify({ name }) 
             });
-            window.location.href = '../tools.html';
-        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+            if (!res.ok) {
+                let errMsg = `Failed to open project (${res.status})`;
+                try {
+                    const data = await res.json();
+                    if (data?.error) errMsg = data.error;
+                } catch {}
+                toastRef.current?.show(errMsg, 'error');
+                return;
+            }
+            (window.top || window).location.href = '../tools.html';
+        } catch (err: any) {
+            console.warn("[studio-ui] launchProject failed", err);
+            toastRef.current?.show(err?.message || 'FAILED TO LAUNCH PROJECT', 'error');
+        }
+    };
+
+    const revealProject = async (name: string) => {
+        try {
+            const res = await fetch('/api/projects/reveal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            if (!res.ok) {
+                let errMsg = `Reveal failed (${res.status})`;
+                try {
+                    const data = await res.json();
+                    if (data?.error) errMsg = data.error;
+                } catch {}
+                toastRef.current?.show(errMsg, 'error');
+            }
+        } catch (err: any) {
+            toastRef.current?.show(err?.message || 'REVEAL FAILED', 'error');
+        }
+    };
+
+    const deleteProject = async (name: string) => {
+        if (!window.confirm(`Delete project "${name}"? This action cannot be undone.`)) return;
+        try {
+            const res = await fetch(`/api/projects/${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            });
+            if (!res.ok) {
+                let errMsg = `Delete failed (${res.status})`;
+                try {
+                    const data = await res.json();
+                    if (data?.error) errMsg = data.error;
+                } catch {}
+                toastRef.current?.show(errMsg, 'error');
+                return;
+            }
+            toastRef.current?.show(`DELETED ${name}`, 'info');
+            await loadProjects();
+        } catch (err: any) {
+            toastRef.current?.show(err?.message || 'DELETE FAILED', 'error');
+        }
+    };
+
+    const validateProjectName = (rawName: string): string | null => {
+        const trimmed = rawName.trim();
+        if (!trimmed) return 'Project name is required.';
+        if (!/^[a-zA-Z0-9 \-_]+$/.test(trimmed)) {
+            return 'Project name may only contain letters, numbers, spaces, hyphens, and underscores.';
+        }
+        return null;
+    };
+
+    const handleProceedStep1 = () => {
+        const err = validateProjectName(newProjectData.name);
+        if (err) {
+            setWizardError(err);
+            return;
+        }
+        setWizardError(null);
+        setWizardStep(2);
+    };
+
+    const handleForgeProject = async () => {
+        if (isCreating) return;
+        const err = validateProjectName(newProjectData.name);
+        if (err) {
+            setWizardError(err);
+            return;
+        }
+
+        setWizardError(null);
+        setIsCreating(true);
+        try {
+            const payload: Record<string, any> = {
+                name: newProjectData.name.trim(),
+                author: newProjectData.author.trim() || username || 'Developer',
+                engineType: newProjectData.blueprint,
+                template: 'blank'
+            };
+            if (newProjectData.blueprint === 'unified-3d') {
+                payload.mode = 'fps-3d';
+            }
+
+            const res = await fetch('/api/projects/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                let errMsg = `Failed to create project (${res.status})`;
+                try {
+                    const data = await res.json();
+                    if (data?.error) errMsg = data.error;
+                } catch {}
+                setWizardError(errMsg);
+                toastRef.current?.show(errMsg, 'error');
+                return;
+            }
+
+            await loadProjects();
+            toastRef.current?.show('PROJECT CREATED', 'success');
+            setWizardStep(3);
+        } catch (e: any) {
+            const msg = e?.message || 'Network error creating project';
+            setWizardError(msg);
+            toastRef.current?.show(msg, 'error');
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    const openExternalSafe = (url: string) => {
+        const electronAPI = (window as any).electronAPI;
+        if (electronAPI?.openExternal) {
+            electronAPI.openExternal(url);
+        } else {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
     };
 
     const renderProjectGrid = () => (
@@ -58,7 +201,12 @@ const Dashboard: React.FC = () => {
             {/* New Project Card - Premium Style */}
             <div 
                 className="project-card new-project" 
-                onClick={() => { setActiveView('create'); setWizardStep(1); }}
+                onClick={() => {
+                    setNewProjectData({ name: '', author: username, blueprint: 'rpg-topdown' });
+                    setWizardError(null);
+                    setWizardStep(1);
+                    setActiveView('create');
+                }}
                 style={{ 
                     borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', 
                     opacity: 0.8, background: 'rgba(255, 0, 0, 0.02)',
@@ -80,8 +228,8 @@ const Dashboard: React.FC = () => {
                              <span>{p.engineType?.toUpperCase() || 'RPG'}</span>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                            <button className="tool-btn small" onClick={(e) => { e.stopPropagation(); }}><FolderOpen size={12} /></button>
-                            <button className="tool-btn small danger" onClick={(e) => { e.stopPropagation(); }}><Trash2 size={12} /></button>
+                            <button className="tool-btn small" title="Reveal in Folder" onClick={(e) => { e.stopPropagation(); revealProject(p.name); }}><FolderOpen size={12} /></button>
+                            <button className="tool-btn small danger" title="Delete Project" onClick={(e) => { e.stopPropagation(); deleteProject(p.name); }}><Trash2 size={12} /></button>
                         </div>
                     </div>
                     
@@ -93,7 +241,7 @@ const Dashboard: React.FC = () => {
                     <div className="project-meta" style={{ position: 'relative', zIndex: 2 }}>
                         <div className="meta-item">
                             <Clock size={12} />
-                            <span>{new Date(p.lastModified).toLocaleDateString()}</span>
+                            <span>{p.lastModified && !isNaN(Date.parse(p.lastModified)) ? new Date(p.lastModified).toLocaleDateString() : '—'}</span>
                         </div>
                         <div className="launch-tag">READY TO FORGE</div>
                     </div>
@@ -104,6 +252,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gridTemplateRows: '40px 1fr', height: '100vh', background: 'var(--bg-root)' }}>
+            <Toast ref={toastRef} />
             <Background enabled={!perfMode} />
 
             {/* HEADER */}
@@ -196,14 +345,14 @@ const Dashboard: React.FC = () => {
 
                 {activeView === 'community' && (
                     <div className="view-section active">
-                        <h1 style={{ borderBottom: '1px solid #1f2b42', paddingBottom: '10px', color: '#fff', fontSize: '24px' }}>COMMUNITY</h1>
+                        <h1 style={{ borderBottom: '1px solid #1f2b42', paddingBottom: '10px', color: '#fff', fontSize: '24px' }}>COMMUNITY & DOCS</h1>
                         <div style={{ maxWidth: '800px', margin: '20px auto', background: 'rgba(10, 14, 20, 0.95)', border: '1px solid #1f2b42', padding: '30px' }}>
-                            <h2 style={{ color: 'var(--accent)', marginTop: 0 }}>CONNECT WITH DEVELOPERS</h2>
+                            <h2 style={{ color: 'var(--accent)', marginTop: 0 }}>RESOURCES & SOURCE</h2>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' }}>
-                                <button className="tool-btn" style={{ padding: '15px' }}>DISCORD SERVER</button>
-                                <button className="tool-btn" style={{ padding: '15px' }}>GITHUB REPO</button>
-                                <button className="tool-btn" style={{ padding: '15px' }}>FORUMS</button>
-                                <button className="tool-btn" style={{ padding: '15px' }}>DOCUMENTATION</button>
+                                <button className="tool-btn" style={{ padding: '15px', width: '100%' }} onClick={() => window.open('../docs.html', '_blank', 'noopener,noreferrer')}>DOCUMENTATION</button>
+                                <button className="tool-btn" style={{ padding: '15px', width: '100%' }} onClick={() => openExternalSafe('https://github.com/canmertdogan/redglitch-engine')}>GITHUB REPO</button>
+                                <button className="tool-btn" style={{ padding: '15px', width: '100%' }} onClick={() => window.open('../credits.html', '_blank', 'noopener,noreferrer')}>ENGINE CREDITS</button>
+                                <button className="tool-btn" style={{ padding: '15px', width: '100%' }} onClick={() => window.open('../launcher.html', '_blank', 'noopener,noreferrer')}>GAME LAUNCHER</button>
                             </div>
                         </div>
                     </div>
@@ -225,6 +374,12 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <div style={{ maxWidth: '800px', margin: '0 auto', background: 'rgba(10, 14, 20, 0.95)', border: '1px solid #1f2b42', padding: '40px', borderRadius: '4px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+                             {wizardError && (
+                                <div style={{ background: 'rgba(231, 76, 60, 0.12)', border: '1px solid #e74c3c', color: '#ff8f95', padding: '10px 14px', marginBottom: '20px', fontSize: '14px' }}>
+                                    {wizardError}
+                                </div>
+                             )}
+
                              {wizardStep === 1 && (
                                 <div className="wizard-step">
                                     <h2 style={{ color: 'var(--accent)', marginTop: 0, letterSpacing: '1px' }}>PROJECT IDENTITY</h2>
@@ -235,7 +390,7 @@ const Dashboard: React.FC = () => {
                                             type="text" 
                                             placeholder="MY_NEW_WORLD" 
                                             value={newProjectData.name}
-                                            onChange={(e) => setNewProjectData({...newProjectData, name: e.target.value})}
+                                            onChange={(e) => { setWizardError(null); setNewProjectData({...newProjectData, name: e.target.value}); }}
                                             style={{ fontSize: '24px', padding: '15px' }} 
                                         />
                                     </div>
@@ -250,7 +405,7 @@ const Dashboard: React.FC = () => {
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
                                         <button className="tool-btn" onClick={() => setActiveView('projects')} style={{ padding: '10px 30px' }}>ABORT</button>
-                                        <button className="tool-btn primary" onClick={() => setWizardStep(2)} style={{ padding: '10px 50px' }}>PROCEED</button>
+                                        <button className="tool-btn primary" onClick={handleProceedStep1} style={{ padding: '10px 50px' }}>PROCEED</button>
                                     </div>
                                 </div>
                              )}
@@ -259,27 +414,25 @@ const Dashboard: React.FC = () => {
                                 <div className="wizard-step">
                                     <h2 style={{ color: 'var(--accent)', marginTop: 0 }}>SELECT ENGINE CORE</h2>
                                     <p style={{ color: '#666', marginBottom: '30px' }}>Choose the foundational architecture for your game logic.</p>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-                                        {[
-                                            { id: 'rpg', name: 'RPG CORE', icon: Swords, desc: 'Top-down world with complex entity stats.' },
-                                            { id: 'platformer', name: 'PLATFORMER', icon: Rocket, desc: 'Side-scrolling physics and precise jumping.' },
-                                            { id: 'iso', name: 'ISO PIXEL', icon: Layout, desc: '2.5D perspective with depth-sorting.' }
-                                        ].map(b => (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                                        {BLUEPRINTS.map(b => (
                                             <div 
                                                 key={b.id}
                                                 className={`project-card premium ${newProjectData.blueprint === b.id ? 'active' : ''}`}
                                                 onClick={() => setNewProjectData({...newProjectData, blueprint: b.id})}
-                                                style={{ textAlign: 'center', height: '180px', borderColor: newProjectData.blueprint === b.id ? 'var(--accent)' : '#222' }}
+                                                style={{ textAlign: 'center', height: '160px', borderColor: newProjectData.blueprint === b.id ? 'var(--accent)' : '#222' }}
                                             >
                                                 <b.icon size={32} color={newProjectData.blueprint === b.id ? 'var(--accent)' : '#444'} style={{ margin: '0 auto 15px' }} />
                                                 <div style={{ fontSize: '16px', fontWeight: 'bold', color: newProjectData.blueprint === b.id ? '#fff' : '#666' }}>{b.name}</div>
-                                                <div style={{ fontSize: '11px', color: '#444', marginTop: '10px' }}>{b.desc}</div>
+                                                <div style={{ fontSize: '11px', color: '#666', marginTop: '10px' }}>{b.desc}</div>
                                             </div>
                                         ))}
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px' }}>
-                                        <button className="tool-btn" onClick={() => setWizardStep(1)} style={{ padding: '10px 30px' }}>BACK</button>
-                                        <button className="tool-btn primary" onClick={() => setWizardStep(3)} style={{ padding: '10px 50px' }}>FORGE PROJECT</button>
+                                        <button className="tool-btn" onClick={() => setWizardStep(1)} disabled={isCreating} style={{ padding: '10px 30px' }}>BACK</button>
+                                        <button className="tool-btn primary" onClick={handleForgeProject} disabled={isCreating} style={{ padding: '10px 50px' }}>
+                                            {isCreating ? 'FORGING...' : 'FORGE PROJECT'}
+                                        </button>
                                     </div>
                                 </div>
                              )}
@@ -290,8 +443,8 @@ const Dashboard: React.FC = () => {
                                         <CheckCircle2 size={48} />
                                     </div>
                                     <h2 style={{ color: '#fff' }}>FORGING COMPLETE</h2>
-                                    <p style={{ color: '#666' }}>Project <b>{newProjectData.name.toUpperCase()}</b> has been registered to the engine core.</p>
-                                    <button className="tool-btn primary" onClick={() => setActiveView('projects')} style={{ marginTop: '40px', padding: '15px 60px', width: 'auto' }}>ENTER PROJECT EXPLORER</button>
+                                    <p style={{ color: '#666' }}>Project <b>{newProjectData.name.trim().toUpperCase()}</b> has been registered to the engine core.</p>
+                                    <button className="tool-btn primary" onClick={() => { setWizardStep(1); setWizardError(null); setActiveView('projects'); }} style={{ marginTop: '40px', padding: '15px 60px', width: 'auto' }}>ENTER PROJECT EXPLORER</button>
                                 </div>
                              )}
                         </div>
@@ -323,7 +476,7 @@ const Dashboard: React.FC = () => {
                             </div>
                             <button className="tool-btn" style={{ width: '100%', marginTop: '30px', padding: '10px' }} onClick={() => {
                                 localStorage.setItem('redglitch_username', username);
-                                alert('Settings Saved!');
+                                toastRef.current?.show('SETTINGS SAVED', 'success');
                             }}>SAVE CONFIGURATION</button>
                         </div>
                     </div>
@@ -333,21 +486,20 @@ const Dashboard: React.FC = () => {
                     <div className="view-section active">
                         <h1 style={{ borderBottom: '1px solid #1f2b42', paddingBottom: '10px', color: '#fff', fontSize: '24px' }}>TUTORIALS</h1>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginTop: '20px' }}>
-                            <div className="project-card">
+                            <div className="project-card" onClick={() => window.open('../docs.html', '_blank', 'noopener,noreferrer')}>
                                 <GraduationCap size={32} color="var(--accent)" />
                                 <div style={{ fontSize: '20px', fontWeight: 'bold', margin: '10px 0' }}>GETTING STARTED</div>
-                                <div style={{ color: '#666' }}>Build your first world in 5 minutes.</div>
+                                <div style={{ color: '#666' }}>Open the studio manual and engine reference.</div>
                             </div>
-                            <div className="project-card">
+                            <div className="project-card" onClick={() => { setNewProjectData({ name: '', author: username, blueprint: 'rpg-topdown' }); setWizardError(null); setWizardStep(1); setActiveView('create'); }}>
                                 <GraduationCap size={32} color="#2ecc71" />
-                                <div style={{ fontSize: '20px', fontWeight: 'bold', margin: '10px 0' }}>ADVANCED LOGIC</div>
-                                <div style={{ color: '#666' }}>Master the Node Logic and Scripting.</div>
+                                <div style={{ fontSize: '20px', fontWeight: 'bold', margin: '10px 0' }}>FORGE FIRST WORLD</div>
+                                <div style={{ color: '#666' }}>Launch the project creation wizard now.</div>
                             </div>
                         </div>
                     </div>
                 )}
             </main>
-...
             <style>{`
                 .project-card {
                     background: rgba(10, 14, 20, 0.9);

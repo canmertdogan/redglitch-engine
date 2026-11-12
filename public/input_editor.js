@@ -75,7 +75,10 @@ function render() {
         // Header
         const header = document.createElement('div');
         header.className = 'action-header';
-        header.innerHTML = `<span class="action-name">${action}</span>`;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'action-name';
+        nameSpan.textContent = action;
+        header.appendChild(nameSpan);
         
         const delBtn = document.createElement('button');
         delBtn.innerText = 'DELETE';
@@ -92,7 +95,9 @@ function render() {
         inputMap[action].forEach((key, idx) => {
             const chip = document.createElement('div');
             chip.className = 'binding-chip';
-            chip.innerHTML = `<span>${formatKey(key)}</span>`;
+            const keySpan = document.createElement('span');
+            keySpan.textContent = formatKey(key);
+            chip.appendChild(keySpan);
             
             const x = document.createElement('span');
             x.className = 'binding-remove';
@@ -176,9 +181,10 @@ function bindKey(code) {
     render();
 }
 
-async function save() {
+async function save(options = {}) {
+    const silent = Boolean(options && options.silent);
     try {
-        await fetch('/api/ide/write', {
+        const res = await fetch('/api/ide/write', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -186,6 +192,15 @@ async function save() {
                 content: JSON.stringify(inputMap, null, 2)
             })
         });
-        alert("Input Map Saved!");
-    } catch(e) { alert("Save Failed"); }
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        broadcastInputUpdate('updated');
+        if (!silent) alert("Input Map Saved!");
+    } catch(e) {
+        console.error('[InputEditor] Save failed:', e);
+        if (!silent) alert("Save Failed");
+    }
 }
+
+window.save = save;

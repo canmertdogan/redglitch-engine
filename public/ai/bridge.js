@@ -218,7 +218,7 @@ function isNativeProviderActive() {
 
 function isKaiModeEnabled() {
     const v = localStorage.getItem('kai_ai_enabled');
-    return v === 'true';
+    return v === 'true' || v === 'easy';
 }
 
 window.ensureIrabBridge = function ensureIrabBridge(options = {}) {

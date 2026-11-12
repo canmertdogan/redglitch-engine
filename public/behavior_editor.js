@@ -772,8 +772,28 @@ class BrainArchitect {
         });
         this.renderWires();
         this.saveState?.();
-        // Keep canvas focus so user sees result; center if transform exists
-        if (this.dom?.canvas) this.dom.canvas.focus?.();
+        // Keep canvas focus so user sees result
+        if (this.dom?.viewport) this.dom.viewport.focus?.();
+    }
+
+    closeEditor() {
+        if (window.parent && typeof window.parent.closeWindow === 'function') {
+            window.parent.closeWindow('win-behavior');
+        } else {
+            window.location.href = '/';
+        }
+    }
+
+    testBrain() {
+        const ast = this.compileToAST();
+        const js = this.compile();
+        if (ast?.error) {
+            alert('⚠️ Dry-Run Failed: ' + ast.error);
+            return;
+        }
+        const nodeCount = this.nodes.length;
+        const wireCount = this.wires.length;
+        alert(`✅ Brain Dry-Run OK\nNodes: ${nodeCount}, Wires: ${wireCount}\nGenerated ${js.split('\n').length} lines of behavior script.`);
     }
     
     showKeyboardShortcuts() {
@@ -1430,7 +1450,7 @@ Created for Redglitch Game Engine
             .filter(n => n.type === 'subgraph_input')
             .map(n => ({
                 name: n.data.paramName || 'input',
-                type: n.data.type || 'any',
+                type: n.data.paramType || n.data.type || 'any',
                 nodeId: n.id,
                 defaultValue: n.data.defaultValue || ''
             }));
@@ -1440,7 +1460,7 @@ Created for Redglitch Game Engine
             .filter(n => n.type === 'subgraph_output')
             .map(n => ({
                 name: n.data.outputName || 'output',
-                type: n.data.type || 'any',
+                type: n.data.outputType || n.data.type || 'any',
                 nodeId: n.id
             }));
         
@@ -1454,6 +1474,7 @@ Created for Redglitch Game Engine
             const oldEl = document.getElementById(node.id);
             if (oldEl) oldEl.remove();
             this.createNodeDOM(node, def);
+            this.renderWires();
         }
     }
     
@@ -1776,6 +1797,18 @@ Created for Redglitch Game Engine
     
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
+            // Do not hijack typing inside inputs, textareas, or selects
+            const activeField = e.target && e.target.closest ? e.target.closest('input, textarea, select') : null;
+            if (activeField) {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                    e.preventDefault();
+                    this.save();
+                } else if (e.key === 'Escape') {
+                    activeField.blur();
+                }
+                return;
+            }
+
             // ESC - Exit subgraph if in one
             if (e.key === 'Escape' && this.navigationStack.length > 1) {
                 e.preventDefault();
@@ -2182,6 +2215,7 @@ Created for Redglitch Game Engine
         // Right-click menu on comment
         div.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             this.showCommentContextMenu(e, comment.id);
         });
         
@@ -2219,26 +2253,30 @@ Created for Redglitch Game Engine
     showCommentContextMenu(e, commentId) {
         const comment = this.comments.find(c => c.id === commentId);
         if (!comment) return;
-        
+
+        document.querySelectorAll('.comment-context-menu').forEach(el => el.remove());
+
         const menu = document.createElement('div');
-        menu.className = 'context-menu visible';
+        menu.id = 'context-menu';
+        menu.className = 'context-menu comment-context-menu visible';
         menu.style.left = e.clientX + 'px';
         menu.style.top = e.clientY + 'px';
+        const idArg = _jsArg(commentId);
         menu.innerHTML = `
-            <div class="ctx-item" onclick="editor.changeCommentType('${commentId}', 'note')">
+            <div class="ctx-item" onclick="editor.changeCommentType(${idArg}, 'note')">
                 <i class="fas fa-sticky-note"></i> NOTE (Yellow)
             </div>
-            <div class="ctx-item" onclick="editor.changeCommentType('${commentId}', 'warning')">
+            <div class="ctx-item" onclick="editor.changeCommentType(${idArg}, 'warning')">
                 <i class="fas fa-exclamation-triangle"></i> WARNING (Red)
             </div>
-            <div class="ctx-item" onclick="editor.changeCommentType('${String(commentId).replace(/'/g, '\\\'')}', 'todo')">
+            <div class="ctx-item" onclick="editor.changeCommentType(${idArg}, 'todo')">
                 <i class="fas fa-check-circle"></i> TODO (Green)
             </div>
-            <div class="ctx-item" onclick="editor.changeCommentType('${commentId}', 'info')">
+            <div class="ctx-item" onclick="editor.changeCommentType(${idArg}, 'info')">
                 <i class="fas fa-info-circle"></i> INFO (Blue)
             </div>
             <div class="ctx-separator"></div>
-            <div class="ctx-item" onclick="editor.deleteComment(${_jsArg(commentId)})">
+            <div class="ctx-item" onclick="editor.deleteComment(${idArg})">
                 <i class="fas fa-trash"></i> DELETE
             </div>
         `;
@@ -2296,7 +2334,8 @@ Created for Redglitch Game Engine
         } catch(e) { console.warn("List fetch failed"); }
     }
 
-    async save() {
+    async save(options = {}) {
+        const silent = Boolean(options && options.silent);
         // Save current level before saving brain
         if (this.navigationStack.length > 0) {
             const currentLevel = this.navigationStack[this.navigationStack.length - 1];
@@ -2318,7 +2357,13 @@ Created for Redglitch Game Engine
             }
         }
         
-        const name = this.dom.nameInput.value || "npc_brain";
+        const name = (this.dom.nameInput.value || 'npc_brain').trim();
+        const isSafeName = /^[a-zA-Z0-9_-]+$/.test(name);
+        if (!isSafeName) {
+            if (!silent) alert('INVALID BRAIN NAME. Use only letters, numbers, "_" and "-".');
+            return false;
+        }
+
         const json = JSON.stringify({ 
             nodes: this.navigationStack[0].nodes,  // Save root level
             wires: this.navigationStack[0].wires,
@@ -2329,14 +2374,24 @@ Created for Redglitch Game Engine
         const js = this.compile();
         const ast = this.compileToAST();
         try {
-            await fetch('/api/brains/save', {
+            const res = await fetch('/api/brains/save', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ name, json, js, ast })
             });
-            alert("BRAIN SAVED.");
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            broadcastBehaviorUpdate(name, 'saved');
+            if (!silent) alert("BRAIN SAVED.");
             await this.fetchBrainList();
-        } catch(e) { alert("SAVE FAILED."); }
+            return true;
+        } catch(e) {
+            console.error('[BehaviorEditor] Save failed:', e);
+            if (!silent) alert("SAVE FAILED: " + e.message);
+            return false;
+        }
     }
 
     async loadBrain(name) {
@@ -2403,7 +2458,11 @@ Created for Redglitch Game Engine
         }
 
         const nid = id || `${type}_${this.nextNodeId++}_${Math.random().toString(36).substr(2,3).toUpperCase()}`;
-        const node = { id: nid, type, cat: def.cat, x, y, data: { ...def.defaults, ...data } };
+        const nodeData = { ...def.defaults, ...data };
+        if (type === 'subgraph' && !nodeData.subgraphId) {
+            nodeData.subgraphId = `subgraph_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+        }
+        const node = { id: nid, type, cat: def.cat, x, y, data: nodeData };
         this.nodes.push(node);
         this.createNodeDOM(node, def);
         this.select(nid);
@@ -2451,13 +2510,13 @@ Created for Redglitch Game Engine
                 portsHTML += `<div style="display: flex; justify-content: space-between; min-height: 20px; margin: 5px 0;">`;
                 
                 if (input) {
-                    portsHTML += `<span class="port-label-in" style="font-size: 10px; color: #999;">${input.name}</span>`;
+                    portsHTML += `<span class="port-label-in" style="font-size: 10px; color: #999;">${escapeHTML(input.name)}</span>`;
                 } else {
                     portsHTML += `<span></span>`;
                 }
                 
                 if (output) {
-                    portsHTML += `<span class="port-label-out" style="font-size: 10px; color: #999;">${output.name}</span>`;
+                    portsHTML += `<span class="port-label-out" style="font-size: 10px; color: #999;">${escapeHTML(output.name)}</span>`;
                 } else {
                     portsHTML += `<span></span>`;
                 }
@@ -2472,7 +2531,7 @@ Created for Redglitch Game Engine
                 <div class="node-body" style="padding: 10px;">
                     ${portsHTML}
                     <div style="text-align: center; color: #666; font-size: 10px; margin-top: 10px;">
-                        ${hasData ? '✓ Double-click to enter' : '⚠ No subgraph data'}
+                        ${hasData ? '✓ Double-click to enter' : '⚠ Double-click to edit'}
                     </div>
                 </div>
             `;
@@ -2481,40 +2540,52 @@ Created for Redglitch Game Engine
             const minHeight = 80 + maxPorts * 25;
             div.style.minHeight = `${minHeight}px`;
             
-            // Add input ports (left side)
-            inputs.forEach((input, index) => {
-                const port = document.createElement('div');
-                port.className = 'port in subgraph-port';
-                port.dataset.id = node.id;
-                port.dataset.port = input.name;
-                port.dataset.portType = input.type;
-                port.style.top = `${45 + index * 25}px`;
-                port.style.left = '-5px';
-                port.onmousedown = (e) => this.startDragWire(e, node.id, input.name);
-                div.appendChild(port);
-            });
+            // Add input ports (left side) or fallback single input port
+            if (inputs.length > 0) {
+                inputs.forEach((input, index) => {
+                    const port = document.createElement('div');
+                    port.className = 'port in subgraph-port';
+                    port.dataset.id = node.id;
+                    port.dataset.port = input.name;
+                    port.dataset.portType = input.type;
+                    port.style.top = `${45 + index * 25}px`;
+                    port.style.left = '-6px';
+                    port.onmousedown = (e) => e.stopPropagation();
+                    div.appendChild(port);
+                });
+            } else {
+                const pin = document.createElement('div');
+                pin.className = 'port in';
+                pin.dataset.id = node.id;
+                pin.dataset.port = 'in';
+                pin.dataset.type = 'in';
+                div.appendChild(pin);
+            }
             
-            // Add output ports (right side)
-            outputs.forEach((output, index) => {
-                const port = document.createElement('div');
-                port.className = 'port out subgraph-port';
-                port.dataset.id = node.id;
-                port.dataset.port = output.name;
-                port.dataset.portType = output.type;
-                port.style.top = `${45 + index * 25}px`;
-                port.style.right = '-5px';
-                port.onmousedown = (e) => this.startDragWire(e, node.id, output.name);
-                div.appendChild(port);
-            });
+            // Add output ports (right side) or fallback single output port
+            if (outputs.length > 0) {
+                outputs.forEach((output, index) => {
+                    const port = document.createElement('div');
+                    port.className = 'port out subgraph-port';
+                    port.dataset.id = node.id;
+                    port.dataset.port = output.name;
+                    port.dataset.portType = output.type;
+                    port.style.top = `${45 + index * 25}px`;
+                    port.style.right = '-6px';
+                    port.onmousedown = (e) => this.startDragWire(e, node.id, output.name);
+                    div.appendChild(port);
+                });
+            } else {
+                div.appendChild(this.createPort(node.id, 'out', 'out'));
+            }
             
             // Double-click to enter subgraph
             div.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
-                if (node.data.subgraphId) {
-                    this.enterSubgraph(node.id);
-                } else {
-                    alert('This subgraph has no content yet. Configure it in the inspector.');
+                if (!node.data.subgraphId) {
+                    node.data.subgraphId = `subgraph_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
                 }
+                this.enterSubgraph(node.id);
             });
         } else {
             // Normal node rendering
@@ -2526,30 +2597,31 @@ Created for Redglitch Game Engine
                     <span style="color:#666; font-size:0.8rem; padding-left:10px;">ID: ${node.id.split('_')[1]}</span>
                 </div>
             `;
-        }
 
-        // INPUT PORT
-        if (node.cat !== 'sensor' && node.type !== 'subgraph_input') {
-            const pin = document.createElement('div');
-            pin.className = 'port in';
-            pin.dataset.id = node.id;
-            pin.dataset.type = 'in';
-            div.appendChild(pin);
-        }
+            // INPUT PORT
+            if (node.cat !== 'sensor' && node.type !== 'subgraph_input') {
+                const pin = document.createElement('div');
+                pin.className = 'port in';
+                pin.dataset.id = node.id;
+                pin.dataset.port = 'in';
+                pin.dataset.type = 'in';
+                div.appendChild(pin);
+            }
 
-        // OUTPUT PORTS
-        if (node.type === 'logic_check' || node.type === 'logic_var_check') {
-            div.appendChild(this.createPort(node.id, 'true', 'true'));
-            div.appendChild(this.createPort(node.id, 'false', 'false'));
-            
-            // Labels
-            const lblT = document.createElement('div'); lblT.className = 'port-label'; lblT.innerText = 'TRUE'; lblT.style.top = '12px'; lblT.style.right = '10px'; lblT.style.color = '#2ecc71';
-            div.appendChild(lblT);
-            const lblF = document.createElement('div'); lblF.className = 'port-label'; lblF.innerText = 'FALSE'; lblF.style.top = '37px'; lblF.style.right = '10px'; lblF.style.color = '#e74c3c';
-            div.appendChild(lblF);
+            // OUTPUT PORTS
+            if (node.type === 'logic_check' || node.type === 'logic_var_check') {
+                div.appendChild(this.createPort(node.id, 'true', 'true'));
+                div.appendChild(this.createPort(node.id, 'false', 'false'));
+                
+                // Labels
+                const lblT = document.createElement('div'); lblT.className = 'port-label'; lblT.innerText = 'TRUE'; lblT.style.top = '12px'; lblT.style.right = '10px'; lblT.style.color = '#2ecc71';
+                div.appendChild(lblT);
+                const lblF = document.createElement('div'); lblF.className = 'port-label'; lblF.innerText = 'FALSE'; lblF.style.top = '37px'; lblF.style.right = '10px'; lblF.style.color = '#e74c3c';
+                div.appendChild(lblF);
 
-        } else if (node.type !== 'subgraph_output') {
-            div.appendChild(this.createPort(node.id, 'out', 'out'));
+            } else if (node.type !== 'subgraph_output') {
+                div.appendChild(this.createPort(node.id, 'out', 'out'));
+            }
         }
 
         // Dragging
@@ -2628,7 +2700,7 @@ Created for Redglitch Game Engine
         // Draw connections
         this.wires.forEach(w => {
             const p1 = this.getPortPos(w.from, w.port, 'out');
-            const p2 = this.getPortPos(w.to, 'in', 'in');
+            const p2 = this.getPortPos(w.to, w.toPort || 'in', 'in');
             if (p1 && p2) {
                 this.drawWire(p1, p2, false, w.id);
             }
@@ -2680,20 +2752,50 @@ Created for Redglitch Game Engine
     getPortPos(nid, port, dir) {
         const n = this.nodes.find(n => n.id === nid);
         if (!n) return null;
-        
-        // Offset relative to node position
-        // Standard node width = 180px (from CSS min-width)
-        // Standard Header height ~ 32px
+
+        const nodeEl = document.getElementById(nid);
+        if (nodeEl) {
+            let portEl = null;
+            if (dir === 'in') {
+                if (port && port !== 'in') {
+                    portEl = nodeEl.querySelector(`.port.in[data-port="${CSS.escape(port)}"]`);
+                }
+                if (!portEl) portEl = nodeEl.querySelector('.port.in');
+            } else {
+                if (port) {
+                    portEl = nodeEl.querySelector(`.port.out[data-port="${CSS.escape(port)}"], .port.${CSS.escape(port)}[data-port="${CSS.escape(port)}"]`);
+                }
+                if (!portEl) portEl = nodeEl.querySelector('.port.out, .port.true, .port.false');
+            }
+            if (portEl) {
+                return {
+                    x: n.x + portEl.offsetLeft + portEl.offsetWidth / 2,
+                    y: n.y + portEl.offsetTop + portEl.offsetHeight / 2
+                };
+            }
+        }
+
+        // Fallback geometry when DOM is not mounted yet
+        const width = n.type === 'subgraph' ? 200 : 180;
         let x = n.x;
         let y = n.y;
 
+        if (n.type === 'subgraph') {
+            if (dir === 'in') {
+                const idx = Math.max(0, (n.data?.inputs || []).findIndex(i => i.name === port));
+                return { x, y: y + (n.data?.inputs?.length ? 51 + idx * 25 : 21) };
+            } else {
+                const idx = Math.max(0, (n.data?.outputs || []).findIndex(o => o.name === port));
+                return { x: x + width, y: y + (n.data?.outputs?.length ? 51 + idx * 25 : 21) };
+            }
+        }
+
         if (dir === 'in') {
-            x -= 0; // Left edge
-            y += 21; // ~Center of header/top body
+            y += 21;
         } else {
-            x += 180; // Right edge
-            if (port === 'false') y += 46; // Lower port for False
-            else y += 21; // Standard top port
+            x += width;
+            if (port === 'false') y += 46;
+            else y += 21;
         }
         return { x, y };
     }
@@ -2793,9 +2895,16 @@ Created for Redglitch Game Engine
                 const el = document.elementFromPoint(e.clientX, e.clientY);
                 if (el && el.classList.contains('port') && el.classList.contains('in')) {
                     const targetId = el.dataset.id;
+                    const toPort = el.dataset.port || 'in';
                     // Prevent self-loop and duplicates
                     if (targetId !== this.dragState.nodeId) {
-                        this.wires.push({ id: 'w_'+Date.now(), from: this.dragState.nodeId, port: this.dragState.port, to: targetId });
+                        this.wires.push({
+                            id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+                            from: this.dragState.nodeId,
+                            port: this.dragState.port,
+                            to: targetId,
+                            toPort
+                        });
                         this.saveState();
                     }
                 }
@@ -2907,14 +3016,18 @@ Created for Redglitch Game Engine
     }
     
     renderPropsTab(n, def, container) {
-        const addProp = (key, label, type='text') => {
+        const addProp = (key, label, type='text', onUpdate = null) => {
             const row = document.createElement('div'); row.className = 'prop-row';
-            row.innerHTML = `<label class="prop-label">${label}</label>`;
+            row.innerHTML = `<label class="prop-label">${_escapeHtml(label)}</label>`;
             const inp = document.createElement('input'); 
             inp.className = 'prop-input';
             inp.type = type; 
             inp.value = n.data[key] !== undefined ? n.data[key] : '';
-            inp.oninput = (e) => { n.data[key] = e.target.value; };
+            inp.oninput = (e) => {
+                const val = type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value;
+                n.data[key] = val;
+                if (onUpdate) onUpdate(val);
+            };
             row.appendChild(inp); 
             container.appendChild(row);
         };
@@ -2929,13 +3042,17 @@ Created for Redglitch Game Engine
                 n.data.name = 'My Subgraph';
             }
             
-            addProp('name', 'Subgraph Name');
+            addProp('name', 'Subgraph Name', 'text', (newName) => {
+                const el = document.getElementById(n.id);
+                const hdr = el && el.querySelector('.node-header span');
+                if (hdr) hdr.innerHTML = `<i class="fas fa-box"></i> ${escapeHTML(newName || 'Unnamed').toUpperCase()}`;
+            });
             
             const idRow = document.createElement('div');
             idRow.className = 'prop-row';
             idRow.innerHTML = `
                 <label class="prop-label">Subgraph ID:</label>
-                <div class="prop-value" style="color: #f39c12;">${n.data.subgraphId}</div>
+                <div class="prop-value" style="color: #f39c12;">${_escapeHtml(n.data.subgraphId)}</div>
             `;
             container.appendChild(idRow);
             
@@ -2950,7 +3067,9 @@ Created for Redglitch Game Engine
         else if (n.type === 'subgraph_input') {
             addProp('paramName', 'Parameter Name');
             
-            // Type selector
+            // Type selector (stored in paramType)
+            const currentParamType = n.data.paramType || n.data.type || 'string';
+            n.data.paramType = currentParamType;
             const typeRow = document.createElement('div');
             typeRow.className = 'prop-row';
             typeRow.innerHTML = `<label class="prop-label">Type:</label>`;
@@ -2960,10 +3079,10 @@ Created for Redglitch Game Engine
                 const opt = document.createElement('option');
                 opt.value = type;
                 opt.textContent = type;
-                if (n.data.type === type) opt.selected = true;
+                if (currentParamType === type) opt.selected = true;
                 typeSelect.appendChild(opt);
             });
-            typeSelect.onchange = (e) => { n.data.type = e.target.value; };
+            typeSelect.onchange = (e) => { n.data.paramType = e.target.value; };
             typeRow.appendChild(typeSelect);
             container.appendChild(typeRow);
             
@@ -2974,7 +3093,9 @@ Created for Redglitch Game Engine
         else if (n.type === 'subgraph_output') {
             addProp('outputName', 'Output Name');
             
-            // Type selector
+            // Type selector (stored in outputType)
+            const currentOutputType = n.data.outputType || n.data.type || 'string';
+            n.data.outputType = currentOutputType;
             const typeRow = document.createElement('div');
             typeRow.className = 'prop-row';
             typeRow.innerHTML = `<label class="prop-label">Type:</label>`;
@@ -2984,22 +3105,46 @@ Created for Redglitch Game Engine
                 const opt = document.createElement('option');
                 opt.value = type;
                 opt.textContent = type;
-                if (n.data.type === type) opt.selected = true;
+                if (currentOutputType === type) opt.selected = true;
                 typeSelect.appendChild(opt);
             });
-            typeSelect.onchange = (e) => { n.data.type = e.target.value; };
+            typeSelect.onchange = (e) => { n.data.outputType = e.target.value; };
             typeRow.appendChild(typeSelect);
             container.appendChild(typeRow);
-            
+
+            addProp('value', 'Output Value');
             addProp('description', 'Description');
         }
         // REGULAR NODE PROPERTIES
         else {
-            // Render properties based on type
+            // Sensors
+            if (n.type === 'sensor_see_player' || n.type === 'sensor_near_player') {
+                addProp('range', 'Detection Range', 'number');
+            }
+            if (n.type === 'sensor_damaged') {
+                addProp('minDamage', 'Min Damage', 'number');
+            }
+            // Tasks
+            if (n.type === 'task_wander') {
+                addProp('range', 'Wander Radius', 'number');
+                addProp('duration', 'Duration (s)', 'number');
+            }
+            if (n.type === 'task_goto') {
+                addProp('x', 'Target X', 'number');
+                addProp('y', 'Target Y', 'number');
+            }
+            if (n.type === 'task_follow' || n.type === 'task_flee') {
+                addProp('range', 'Distance / Range', 'number');
+            }
+            if (n.type === 'task_patrol') {
+                addProp('range', 'Patrol Radius', 'number');
+                addProp('duration', 'Wait per Stop (s)', 'number');
+            }
+            // Expressions
             if (n.type === 'expr_say') addProp('text', 'Dialogue Text');
-            if (n.type === 'expr_emotion') addProp('type', 'Emotion (happy, sad)');
-            if (n.type === 'task_wander') addProp('range', 'Wander Radius', 'number');
-            if (n.type === 'task_goto') { addProp('x', 'Target X', 'number'); addProp('y', 'Target Y', 'number'); }
+            if (n.type === 'expr_emotion') addProp('type', 'Emotion (happy, sad, angry)');
+            if (n.type === 'expr_emote') addProp('type', 'Emote (exclamation, question, heart)');
+            // Logic
             if (n.type === 'logic_check') addProp('flag', 'Game Flag Name');
             if (n.type === 'logic_wait') addProp('time', 'Wait Seconds', 'number');
             if (n.type === 'logic_var_set' || n.type === 'logic_var_check') { 
@@ -3019,15 +3164,15 @@ Created for Redglitch Game Engine
         container.innerHTML = `
             <div class="prop-row">
                 <label class="prop-label">Type:</label>
-                <div class="prop-value">${n.type}</div>
+                <div class="prop-value">${_escapeHtml(n.type)}</div>
             </div>
             <div class="prop-row">
                 <label class="prop-label">Category:</label>
-                <div class="prop-value">${n.cat}</div>
+                <div class="prop-value">${_escapeHtml(n.cat)}</div>
             </div>
             <div class="prop-row">
                 <label class="prop-label">ID:</label>
-                <div class="prop-value">${n.id}</div>
+                <div class="prop-value">${_escapeHtml(n.id)}</div>
             </div>
             <div class="prop-row">
                 <label class="prop-label">Position:</label>
@@ -3035,34 +3180,82 @@ Created for Redglitch Game Engine
             </div>
             <div class="prop-row">
                 <label class="prop-label">Description:</label>
-                <div class="prop-value">${def ? (def.desc || 'No description available') : 'Unknown node type'}</div>
+                <div class="prop-value">${_escapeHtml(def ? (def.desc || 'No description available') : 'Unknown node type')}</div>
             </div>
         `;
     }
     
     renderCodeTab(n, def, container) {
-        // Generate code snippet for this node
+        const d = n.data || {};
         let codeSnippet = `// ${def ? def.title : n.type}\n`;
-        
-        if (n.cat === 'sensor') {
-            codeSnippet += `// Triggers when: ${def ? (def.desc || n.type) : n.type}\n`;
-        } else if (n.cat === 'task') {
-            codeSnippet += `await npc.${n.type.replace('task_', '')}(`;
-            const fields = def ? (def.fields || []) : [];
-            const params = fields.map(f => n.data[f.key] || f.key).join(', ');
-            codeSnippet += params + ');\nyield;';
-        } else if (n.cat === 'express') {
-            codeSnippet += `await npc.say("${n.data.text || 'Hello'}");\nyield;`;
-        } else if (n.cat === 'logic') {
-            const cond = n.data.condition || 'true';
-            codeSnippet += `if (${cond}) {\n  // logic path\n}`;
+
+        switch (n.type) {
+            case 'sensor_spawn':
+                codeSnippet += `// Entry point when NPC spawns`;
+                break;
+            case 'sensor_see_player':
+                codeSnippet += `if (npc.canSee(game.player, ${Number(d.range) || 150})) {\n  // proceed\n}`;
+                break;
+            case 'sensor_near_player':
+                codeSnippet += `if (npc.getDistance(game.player) < ${Number(d.range) || 100}) {\n  // proceed\n}`;
+                break;
+            case 'sensor_damaged':
+                codeSnippet += `if (npc.wasDamaged && npc.wasDamaged(${Number(d.minDamage) || 0})) {\n  // react to damage\n}`;
+                break;
+            case 'task_wander':
+                codeSnippet += `await npc.wander(${Number(d.range) || 100}, ${Number(d.duration) || 3});\nyield;`;
+                break;
+            case 'task_goto':
+                codeSnippet += `await npc.moveToPosition(${Number(d.x) || 0}, ${Number(d.y) || 0});\nyield;`;
+                break;
+            case 'task_follow':
+                codeSnippet += `if (npc.canSee(game.player, ${Number(d.range) || 200})) {\n  await npc.moveToPosition(game.player.x, game.player.y);\n  yield;\n}`;
+                break;
+            case 'task_flee':
+                codeSnippet += `await npc.flee(game.player, ${Number(d.range) || 200});\nyield;`;
+                break;
+            case 'task_patrol':
+                codeSnippet += `await npc.patrol(${Number(d.range) || 150}, ${Number(d.duration) || 2});\nyield;`;
+                break;
+            case 'expr_say':
+                codeSnippet += `await npc.say(${JSON.stringify(d.text || '...')});\nyield;`;
+                break;
+            case 'expr_emotion':
+                codeSnippet += `npc.setEmotion(${JSON.stringify(d.type || 'neutral')});`;
+                break;
+            case 'expr_emote':
+                codeSnippet += `if (npc.showEmote) npc.showEmote(${JSON.stringify(d.type || 'exclamation')});`;
+                break;
+            case 'logic_check':
+                codeSnippet += `if (npc.checkFlag(${JSON.stringify(d.flag || 'flag')})) {\n  // true\n} else {\n  // false\n}`;
+                break;
+            case 'logic_var_set':
+                codeSnippet += `npc.setVariable(${JSON.stringify(d.key || 'var')}, ${JSON.stringify(d.val || '0')});`;
+                break;
+            case 'logic_var_check':
+                codeSnippet += `if (npc.getVariable(${JSON.stringify(d.key || 'var')}) == ${JSON.stringify(d.val || '0')}) {\n  // true\n} else {\n  // false\n}`;
+                break;
+            case 'logic_wait':
+                codeSnippet += `await npc.wait(${Number(d.time) || 1.0});\nyield;`;
+                break;
+            case 'subgraph':
+                codeSnippet += `// Subgraph: ${d.name || d.subgraphId || 'unnamed'}\n// Double-click node to inspect internal nodes.`;
+                break;
+            case 'subgraph_input':
+                codeSnippet += `// Input param: ${d.paramName || 'param1'} (${d.paramType || 'string'})`;
+                break;
+            case 'subgraph_output':
+                codeSnippet += `// Output: ${d.outputName || 'result'} (${d.outputType || 'string'}) = ${JSON.stringify(d.value ?? '')}`;
+                break;
+            default:
+                codeSnippet += `// ${n.type}`;
         }
         
         container.innerHTML = `
             <div class="prop-row">
                 <label class="prop-label">Code Preview:</label>
             </div>
-            <pre style="background: #000; padding: 10px; border: 1px solid #ff0000; color: #0f0; font-family: VT323; font-size: 16px; overflow-x: auto; margin: 10px;">${codeSnippet}</pre>
+            <pre style="background: #000; padding: 10px; border: 1px solid #ff0000; color: #0f0; font-family: VT323; font-size: 16px; overflow-x: auto; margin: 10px;">${_escapeHtml(codeSnippet)}</pre>
         `;
     }
 
@@ -3074,12 +3267,16 @@ Created for Redglitch Game Engine
         return {
             name: this.dom.nameInput.value,
             generatedAt: new Date().toISOString(),
-            root: this.walkAST(start, 0)
+            root: this.walkAST(start, 0, new Set())
         };
     }
 
-    walkAST(node, depth) {
+    walkAST(node, depth, visited = new Set(), nodesList = this.nodes, wiresList = this.wires) {
         if (!node || depth > 100) return null;
+        if (visited.has(node.id)) return { id: node.id, type: 'loop_ref', target: node.id };
+
+        const nextVisited = new Set(visited);
+        nextVisited.add(node.id);
         
         const astNode = {
             id: node.id,
@@ -3087,24 +3284,32 @@ Created for Redglitch Game Engine
             data: { ...node.data }
         };
 
-        // Handle specific logic nodes with multiple outputs
+        // Handle specific node types
         if (node.type === 'logic_check' || node.type === 'logic_var_check') {
-            astNode.true = this.followAST(node.id, 'true', depth + 1);
-            astNode.false = this.followAST(node.id, 'false', depth + 1);
-        } else if (node.type === 'sensor_see_player' || node.type === 'sensor_near_player') {
-            astNode.next = this.followAST(node.id, 'out', depth + 1);
+            astNode.true = this.followAST(node.id, 'true', depth + 1, nextVisited, nodesList, wiresList);
+            astNode.false = this.followAST(node.id, 'false', depth + 1, nextVisited, nodesList, wiresList);
+        } else if (node.type === 'sensor_see_player' || node.type === 'sensor_near_player' || node.type === 'sensor_damaged') {
+            astNode.next = this.followAST(node.id, 'out', depth + 1, nextVisited, nodesList, wiresList);
+        } else if (node.type === 'subgraph') {
+            const sg = node.data?.subgraphId ? this.subgraphs[node.data.subgraphId] : null;
+            if (sg && Array.isArray(sg.nodes) && sg.nodes.length > 0) {
+                const sgEntry = sg.nodes.find(sn => sn.type === 'subgraph_input') || sg.nodes.find(sn => sn.cat === 'sensor') || sg.nodes[0];
+                astNode.subgraph = this.walkAST(sgEntry, depth + 1, nextVisited, sg.nodes, sg.wires || []);
+            }
+            const outPort = (node.data?.outputs && node.data.outputs[0]?.name) || 'out';
+            astNode.next = this.followAST(node.id, outPort, depth + 1, nextVisited, nodesList, wiresList);
         } else {
-            astNode.next = this.followAST(node.id, 'out', depth);
+            astNode.next = this.followAST(node.id, 'out', depth + 1, nextVisited, nodesList, wiresList);
         }
 
         return astNode;
     }
 
-    followAST(nid, port, depth) {
-        const wire = this.wires.find(w => w.from === nid && w.port === port);
+    followAST(nid, port, depth, visited = new Set(), nodesList = this.nodes, wiresList = this.wires) {
+        const wire = wiresList.find(w => w.from === nid && w.port === port);
         if (wire) {
-            const nextNode = this.nodes.find(n => n.id === wire.to);
-            return this.walkAST(nextNode, depth);
+            const nextNode = nodesList.find(n => n.id === wire.to);
+            return this.walkAST(nextNode, depth, visited, nodesList, wiresList);
         }
         return null;
     }
@@ -3126,7 +3331,7 @@ export async function* runBehavior(npc, game, system) {
   // Main behavior loop
   while (true) {
 `;
-        code += this.walk(start, 2);
+        code += this.walk(start, 2, new Set());
         code += `
     yield; // Allow game loop to continue
   }
@@ -3135,76 +3340,112 @@ export async function* runBehavior(npc, game, system) {
         return code;
     }
 
-    walk(node, depth) {
+    walk(node, depth, visited = new Set(), nodesList = this.nodes, wiresList = this.wires) {
         if (!node || depth > 50) return ""; // Prevent infinite recursion
         const pad = "  ".repeat(depth);
-        let out = "";
+        if (visited.has(node.id)) {
+            return `${pad}// Loop continues at ${node.id}\n`;
+        }
+        const nextVisited = new Set(visited);
+        nextVisited.add(node.id);
 
-        // Logic translation
-        const d = node.data;
+        let out = "";
+        const d = node.data || {};
         
         if (node.type === 'expr_say') {
-            out += `${pad}await npc.say("${d.text || '...'}");\n${pad}yield;\n`;
+            out += `${pad}await npc.say(${JSON.stringify(d.text || '...')});\n${pad}yield;\n`;
         }
         else if (node.type === 'task_wander') {
-            out += `${pad}await npc.wander(${d.range || 100}, ${d.duration || 3});\n${pad}yield;\n`;
+            out += `${pad}await npc.wander(${Number(d.range) || 100}, ${Number(d.duration) || 3});\n${pad}yield;\n`;
         }
         else if (node.type === 'task_goto') {
-            out += `${pad}await npc.moveToPosition(${d.x || 0}, ${d.y || 0});\n${pad}yield;\n`;
+            out += `${pad}await npc.moveToPosition(${Number(d.x) || 0}, ${Number(d.y) || 0});\n${pad}yield;\n`;
         }
         else if (node.type === 'task_follow') {
-            out += `${pad}if (npc.canSee(game.player, 200)) {\n`;
+            out += `${pad}if (npc.canSee(game.player, ${Number(d.range) || 200})) {\n`;
             out += `${pad}  await npc.moveToPosition(game.player.x, game.player.y);\n`;
             out += `${pad}  yield;\n`;
             out += `${pad}}\n`;
         }
+        else if (node.type === 'task_flee') {
+            out += `${pad}await npc.flee(game.player, ${Number(d.range) || 200});\n${pad}yield;\n`;
+        }
+        else if (node.type === 'task_patrol') {
+            out += `${pad}await npc.patrol(${Number(d.range) || 150}, ${Number(d.duration) || 2});\n${pad}yield;\n`;
+        }
         else if (node.type === 'logic_wait') {
-            out += `${pad}await npc.wait(${d.time || 1.0});\n${pad}yield;\n`;
+            out += `${pad}await npc.wait(${Number(d.time) || 1.0});\n${pad}yield;\n`;
         }
         else if (node.type === 'logic_var_set') {
-            out += `${pad}npc.setVariable('${d.key || 'var'}', '${d.val || '0'}');\n`;
+            out += `${pad}npc.setVariable(${JSON.stringify(d.key || 'var')}, ${JSON.stringify(d.val || '0')});\n`;
         }
         else if (node.type === 'expr_emotion') {
-            out += `${pad}npc.setEmotion('${d.type || 'neutral'}');\n`;
+            out += `${pad}npc.setEmotion(${JSON.stringify(d.type || 'neutral')});\n`;
+        }
+        else if (node.type === 'expr_emote') {
+            out += `${pad}if (npc.showEmote) npc.showEmote(${JSON.stringify(d.type || 'exclamation')});\n`;
+        }
+        else if (node.type === 'subgraph') {
+            out += `${pad}// Subgraph: ${d.name || d.subgraphId || 'unnamed'}\n`;
+            const sg = d.subgraphId ? this.subgraphs[d.subgraphId] : null;
+            if (sg && Array.isArray(sg.nodes) && sg.nodes.length > 0) {
+                const sgEntry = sg.nodes.find(sn => sn.type === 'subgraph_input') || sg.nodes.find(sn => sn.cat === 'sensor') || sg.nodes[0];
+                out += this.walk(sgEntry, depth, nextVisited, sg.nodes, sg.wires || []);
+            }
+        }
+        else if (node.type === 'subgraph_input') {
+            out += `${pad}// Subgraph Input: ${d.paramName || 'param1'} (${d.paramType || 'string'})\n`;
+        }
+        else if (node.type === 'subgraph_output') {
+            out += `${pad}// Subgraph Output: ${d.outputName || 'result'} (${d.outputType || 'string'})\n`;
         }
         
         // Traverse
         if (node.type === 'logic_check') {
-            out += `${pad}if (npc.checkFlag('${d.flag || 'flag'}')) {\n`;
-            out += this.follow(node.id, 'true', depth + 1);
+            out += `${pad}if (npc.checkFlag(${JSON.stringify(d.flag || 'flag')})) {\n`;
+            out += this.follow(node.id, 'true', depth + 1, nextVisited, nodesList, wiresList);
             out += `${pad}} else {\n`;
-            out += this.follow(node.id, 'false', depth + 1);
+            out += this.follow(node.id, 'false', depth + 1, nextVisited, nodesList, wiresList);
             out += `${pad}}\n`;
         }
         else if (node.type === 'logic_var_check') {
-            out += `${pad}if (npc.getVariable('${d.key || 'var'}') == '${d.val || '0'}') {\n`;
-            out += this.follow(node.id, 'true', depth + 1);
+            out += `${pad}if (npc.getVariable(${JSON.stringify(d.key || 'var')}) == ${JSON.stringify(d.val || '0')}) {\n`;
+            out += this.follow(node.id, 'true', depth + 1, nextVisited, nodesList, wiresList);
             out += `${pad}} else {\n`;
-            out += this.follow(node.id, 'false', depth + 1);
+            out += this.follow(node.id, 'false', depth + 1, nextVisited, nodesList, wiresList);
             out += `${pad}}\n`;
         }
         else if (node.type === 'sensor_see_player') {
-            out += `${pad}if (npc.canSee(game.player, ${d.range || 150})) {\n`;
-            out += this.follow(node.id, 'out', depth + 1);
+            out += `${pad}if (npc.canSee(game.player, ${Number(d.range) || 150})) {\n`;
+            out += this.follow(node.id, 'out', depth + 1, nextVisited, nodesList, wiresList);
             out += `${pad}}\n`;
         }
         else if (node.type === 'sensor_near_player') {
-            out += `${pad}if (npc.getDistance(game.player) < ${d.range || 100}) {\n`;
-            out += this.follow(node.id, 'out', depth + 1);
+            out += `${pad}if (npc.getDistance(game.player) < ${Number(d.range) || 100}) {\n`;
+            out += this.follow(node.id, 'out', depth + 1, nextVisited, nodesList, wiresList);
             out += `${pad}}\n`;
         }
-        else {
-            out += this.follow(node.id, 'out', depth);
+        else if (node.type === 'sensor_damaged') {
+            out += `${pad}if (npc.wasDamaged && npc.wasDamaged(${Number(d.minDamage) || 0})) {\n`;
+            out += this.follow(node.id, 'out', depth + 1, nextVisited, nodesList, wiresList);
+            out += `${pad}}\n`;
+        }
+        else if (node.type === 'subgraph') {
+            const outPort = (d.outputs && d.outputs[0]?.name) || 'out';
+            out += this.follow(node.id, outPort, depth + 1, nextVisited, nodesList, wiresList);
+        }
+        else if (node.type !== 'subgraph_output') {
+            out += this.follow(node.id, 'out', depth + 1, nextVisited, nodesList, wiresList);
         }
         
         return out;
     }
 
-    follow(nid, port, depth) {
-        const wire = this.wires.find(w => w.from === nid && w.port === port);
+    follow(nid, port, depth, visited = new Set(), nodesList = this.nodes, wiresList = this.wires) {
+        const wire = wiresList.find(w => w.from === nid && w.port === port);
         if (wire) {
-            const nextNode = this.nodes.find(n => n.id === wire.to);
-            return this.walk(nextNode, depth);
+            const nextNode = nodesList.find(n => n.id === wire.to);
+            return this.walk(nextNode, depth, visited, nodesList, wiresList);
         }
         return "";
     }
@@ -3213,14 +3454,14 @@ export async function* runBehavior(npc, game, system) {
 // LIBRARY DEFINITIONS
 const BRAIN_LIB = {
     sensor_spawn: { cat: 'sensor', title: 'ON SPAWN', defaults: {} },
-    sensor_see_player: { cat: 'sensor', title: 'SEE PLAYER', defaults: {} },
+    sensor_see_player: { cat: 'sensor', title: 'SEE PLAYER', defaults: { range: 150 } },
     sensor_near_player: { cat: 'sensor', title: 'NEAR PLAYER', defaults: { range: 100 } },
-    sensor_damaged: { cat: 'sensor', title: 'ON DAMAGED', defaults: {} },
-    task_wander: { cat: 'task', title: 'WANDER', defaults: { range: 150 } },
+    sensor_damaged: { cat: 'sensor', title: 'ON DAMAGED', defaults: { minDamage: 0 } },
+    task_wander: { cat: 'task', title: 'WANDER', defaults: { range: 150, duration: 3 } },
     task_goto: { cat: 'task', title: 'GO TO', defaults: { x: 0, y: 0 } },
-    task_follow: { cat: 'task', title: 'FOLLOW', defaults: {} },
-    task_flee: { cat: 'task', title: 'FLEE', defaults: {} },
-    task_patrol: { cat: 'task', title: 'PATROL', defaults: {} },
+    task_follow: { cat: 'task', title: 'FOLLOW', defaults: { range: 200 } },
+    task_flee: { cat: 'task', title: 'FLEE', defaults: { range: 200 } },
+    task_patrol: { cat: 'task', title: 'PATROL', defaults: { range: 150, duration: 2 } },
     expr_emotion: { cat: 'express', title: 'SET EMOTION', defaults: { type: 'happy' } },
     expr_say: { cat: 'express', title: 'SPEAK', defaults: { text: "..." } },
     expr_emote: { cat: 'express', title: 'EMOTE', defaults: { type: 'exclamation' } },
@@ -3236,3 +3477,4 @@ const BRAIN_LIB = {
 };
 
 window.editor = new BrainArchitect();
+window.save = (options) => window.editor.save(options);

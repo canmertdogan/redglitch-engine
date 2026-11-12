@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useStudio } from '../hooks/useStudio';
 import { 
     Image as ImageIcon, Music, Database, FileCode, Folder, Search, 
@@ -6,6 +6,7 @@ import {
     Info, HardDrive, CheckCircle2, AlertCircle, Zap
 } from 'lucide-react';
 import Sidebar from './shared/Sidebar';
+import Toast, { ToastHandle } from './shared/Toast';
 
 interface Asset {
     id: string;
@@ -19,13 +20,32 @@ interface Asset {
     };
 }
 
+const normalizeAssetUrl = (p?: string): string => {
+    if (!p) return '';
+    return p.startsWith('/') || p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:')
+        ? p
+        : '/' + p;
+};
+
+const detectUploadType = (file: File): string => {
+    if (file.type.startsWith('image/')) return 'image';
+    if (file.type.startsWith('audio/')) return 'audio';
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+    if (['wav', 'mp3', 'ogg', 'flac', 'm4a'].includes(ext)) return 'audio';
+    return 'data';
+};
+
 const AssetManager: React.FC = () => {
     const { isReady } = useStudio();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [indexing, setIndexing] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const toastRef = useRef<ToastHandle>(null);
 
     useEffect(() => {
         if (isReady) {
@@ -44,6 +64,7 @@ const AssetManager: React.FC = () => {
             }
         } catch (e) {
             console.error("Failed to load assets", e);
+            toastRef.current?.show('FAILED TO LOAD ASSETS', 'error');
         }
     };
 
@@ -51,9 +72,100 @@ const AssetManager: React.FC = () => {
         setIndexing(true);
         try {
             const res = await fetch('/api/assets/rebuild', { method: 'POST' });
-            if (res.ok) loadAssets();
-        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+            if (res.ok) {
+                await loadAssets();
+                toastRef.current?.show('ASSET INDEX REBUILT', 'success');
+            } else {
+                toastRef.current?.show('REBUILD FAILED', 'error');
+            }
+        } catch (err) {
+            console.warn("[studio-ui] swallowed error", err);
+            toastRef.current?.show('REBUILD FAILED', 'error');
+        }
         setIndexing(false);
+    };
+
+    const handleUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        e.target.value = '';
+        if (files.length === 0) return;
+
+        setUploading(true);
+        let uploadedCount = 0;
+        try {
+            for (const file of files) {
+                const dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result || ''));
+                    reader.onerror = () => reject(reader.error || new Error('Read failed'));
+                    reader.readAsDataURL(file);
+                });
+                const res = await fetch('/api/assets/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: file.name,
+                        data: dataUrl,
+                        type: detectUploadType(file),
+                    }),
+                });
+                if (!res.ok) {
+                    const errText = await res.text().catch(() => '');
+                    toastRef.current?.show(`UPLOAD FAILED: ${errText || file.name}`, 'error');
+                } else {
+                    uploadedCount++;
+                }
+            }
+            if (uploadedCount > 0) {
+                await loadAssets();
+                toastRef.current?.show(`IMPORTED ${uploadedCount} ASSET(S)`, 'success');
+            }
+        } catch (err) {
+            console.error('Upload error', err);
+            toastRef.current?.show('ASSET UPLOAD FAILED', 'error');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDownloadAsset = () => {
+        if (!selectedAsset) return;
+        const url = normalizeAssetUrl(selectedAsset.path);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = selectedAsset.name || 'asset';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleDeleteAsset = async () => {
+        if (!selectedAsset) return;
+        if (selectedAsset.metadata?.source === 'engine') {
+            toastRef.current?.show('ENGINE CORE ASSETS CANNOT BE DELETED', 'error');
+            return;
+        }
+        if (!confirm(`Delete asset "${selectedAsset.name}"?`)) return;
+        try {
+            const targetPath = (selectedAsset.id || selectedAsset.path).replace(/^\/+/, '');
+            const res = await fetch('/api/ide/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: targetPath }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                toastRef.current?.show(err.error || 'DELETE FAILED', 'error');
+                return;
+            }
+            await fetch('/api/assets/rebuild', { method: 'POST' });
+            setSelectedAssetId(null);
+            await loadAssets();
+            toastRef.current?.show('ASSET DELETED', 'success');
+        } catch (err) {
+            console.error('Delete error', err);
+            toastRef.current?.show('DELETE FAILED', 'error');
+        }
     };
 
     const filteredAssets = useMemo(() => {
@@ -64,6 +176,11 @@ const AssetManager: React.FC = () => {
             return matchesCat && matchesSearch;
         });
     }, [assets, activeCategory, searchQuery]);
+
+    // Progressive rendering: mounting 1,700+ <img> at once freezes the UI.
+    const PAGE_SIZE = 150;
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeCategory, searchQuery, assets]);
 
     const categories = [
         { id: 'all', label: 'All Assets', icon: HardDrive },
@@ -103,7 +220,21 @@ const AssetManager: React.FC = () => {
                 <button className="tool-btn" onClick={rebuildRegistry} title="Rebuild Index">
                     <RefreshCw size={16} className={indexing ? 'spin' : ''} />
                 </button>
-                <button className="tool-btn"><Upload size={16} /></button>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleUploadFiles}
+                    style={{ display: 'none' }}
+                />
+                <button
+                    className="tool-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    title="Import Asset"
+                >
+                    <Upload size={16} />
+                </button>
             </div>
 
             <div style={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
@@ -134,21 +265,28 @@ const AssetManager: React.FC = () => {
                 </div>
 
                 {/* GRID: ASSETS */}
-                <div style={{ 
+                <div
+                    onScroll={(e) => {
+                        const el = e.currentTarget;
+                        if (el.scrollTop + el.clientHeight > el.scrollHeight - 400) {
+                            setVisibleCount(c => (c < filteredAssets.length ? c + PAGE_SIZE : c));
+                        }
+                    }}
+                    style={{ 
                     flexGrow: 1, padding: '20px', overflowY: 'auto', 
-                    background: 'var(--bg-canvas)',
+                    background: 'var(--bg-deep)',
                     backgroundImage: 'radial-gradient(#222 1px, transparent 1px)',
                     backgroundSize: '25px 25px'
                 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '15px' }}>
-                        {filteredAssets.map(asset => (
+                        {filteredAssets.slice(0, visibleCount).map(asset => (
                             <div 
                                 key={asset.id}
                                 onClick={() => setSelectedAssetId(asset.id)}
                                 style={{
                                     background: '#0a0a0f', border: `1px solid ${selectedAssetId === asset.id ? 'var(--accent)' : '#222'}`,
                                     padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
-                                    cursor: 'pointer', transition: 'all 0.1s', position: 'relative',
+                                    cursor: 'pointer', position: 'relative', contentVisibility: 'auto', containIntrinsicSize: '120px 120px',
                                     boxShadow: selectedAssetId === asset.id ? '0 0 15px rgba(255, 0, 0, 0.2)' : 'none'
                                 }}
                             >
@@ -157,7 +295,7 @@ const AssetManager: React.FC = () => {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
                                 }}>
                                     {asset.type === 'image' ? (
-                                        <img src={asset.path} style={{ maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' }} />
+                                        <img loading="lazy" decoding="async" src={normalizeAssetUrl(asset.path)} style={{ maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' }} />
                                     ) : (
                                         asset.type === 'audio' ? <Music size={32} color="#2ecc71" /> : <Database size={32} color="#3498db" />
                                     )}
@@ -187,7 +325,7 @@ const AssetManager: React.FC = () => {
                                     marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' 
                                 }}>
                                     {selectedAsset.type === 'image' ? (
-                                        <img src={selectedAsset.path} style={{ maxWidth: '90%', maxHeight: '90%', imageRendering: 'pixelated' }} />
+                                        <img src={normalizeAssetUrl(selectedAsset.path)} style={{ maxWidth: '90%', maxHeight: '90%', imageRendering: 'pixelated' }} />
                                     ) : (
                                         selectedAsset.type === 'audio' ? <Music size={64} color="#2ecc71" /> : <Database size={64} color="#3498db" />
                                     )}
@@ -202,8 +340,14 @@ const AssetManager: React.FC = () => {
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px' }}>
-                                    <button className="tool-btn" style={{ width: '100%' }}><Download size={14} /></button>
-                                    <button className="tool-btn" style={{ width: '100%', color: '#e74c3c' }}><Trash2 size={14} /></button>
+                                    <button className="tool-btn" onClick={handleDownloadAsset} title="Download Asset" style={{ width: '100%' }}><Download size={14} /></button>
+                                    <button
+                                        className="tool-btn"
+                                        onClick={handleDeleteAsset}
+                                        disabled={selectedAsset.metadata?.source === 'engine'}
+                                        title={selectedAsset.metadata?.source === 'engine' ? 'Core engine asset (read-only)' : 'Delete Asset'}
+                                        style={{ width: '100%', color: '#e74c3c', opacity: selectedAsset.metadata?.source === 'engine' ? 0.4 : 1 }}
+                                    ><Trash2 size={14} /></button>
                                 </div>
                             </div>
                         ) : (
@@ -213,6 +357,7 @@ const AssetManager: React.FC = () => {
                 </div>
             </div>
 
+            <Toast ref={toastRef} />
             <style>{`
                 .spin { animation: spin 1s linear infinite; }
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

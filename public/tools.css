@@ -1,10 +1,10 @@
 :root {
     --bg: #050508;
     --bg-deep: #050508;
-    --bg-main: rgba(12, 12, 20, 0.82);
-    --bg-ui: rgba(20, 18, 30, 0.92);
-    --bg-card: rgba(12, 12, 20, 0.8);
-    --bg-card-hover: rgba(20, 18, 30, 0.95);
+    --bg-main: rgba(12, 12, 20, 0.94);
+    --bg-ui: rgba(20, 18, 30, 0.96);
+    --bg-card: rgba(12, 12, 20, 0.92);
+    --bg-card-hover: rgba(20, 18, 30, 0.98);
     --accent: #ff1e27;
     --accent-cyan: #ff1e27;
     --accent-glow: rgba(255, 30, 39, 0.35);
@@ -18,7 +18,8 @@
     --border: rgba(255, 255, 255, 0.05);
     --border-accent: rgba(255, 30, 39, 0.15);
     --edge-border: 1px solid rgba(255, 255, 255, 0.08);
-    --glass-blur: blur(12px);
+    /* Avoid full-screen GPU Gaussian blur readbacks over active WebGL/Canvas editor windows */
+    --glass-blur: none;
     --gold: #ffd700;
     --green: #2ecc71;
     --red: #e74c3c;
@@ -1539,8 +1540,7 @@
     }
 
     .build-selector {
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(8px);
+        background: rgba(10, 10, 18, 0.92);
         border: 1px solid var(--border);
         color: var(--text);
         width: 100%;

@@ -212,34 +212,26 @@ class CampaignEditor {
             'rpg-topdown', 'iso-pixel', 'platformer-2d',
             'unified-3d', 'topdown-3d', 'fps-3d', 'platformer-3d'
         ];
-        
-        console.log('[CampaignEditor] Loading levels by engine type...');
-        
-        for (const engineType of engineTypes) {
+
+        await Promise.all(engineTypes.map(async (engineType) => {
             try {
-                const url = `/api/levels/by-engine/${engineType}`;
-                console.log(`[CampaignEditor] Fetching: ${url}`);
-                const res = await fetch(url);
-                
+                const res = await fetch(`/api/levels/by-engine/${engineType}`);
                 if (res.ok) {
                     const data = await res.json();
-                    console.log(`[CampaignEditor] ${engineType}: ${data.levels.length} levels`, data.levels.map(l => l.id));
-                    this.availableLevelsByEngine[engineType] = data.levels.map(l => l.id);
+                    this.availableLevelsByEngine[engineType] = Array.isArray(data.levels)
+                        ? data.levels.map(l => l.id)
+                        : [];
                 } else {
-                    console.warn(`[CampaignEditor] Failed to fetch ${engineType}: ${res.status}`);
                     this.availableLevelsByEngine[engineType] = [];
                 }
             } catch (e) {
                 console.error(`[CampaignEditor] Error loading levels for ${engineType}:`, e);
                 this.availableLevelsByEngine[engineType] = [];
             }
-        }
-        
-        console.log('[CampaignEditor] Final availableLevelsByEngine:', this.availableLevelsByEngine);
-        
+        }));
+
         // Fallback: if no engine-specific data, assume all levels are rpg-topdown
         if (this.availableLevelsByEngine['rpg-topdown'].length === 0) {
-            console.log('[CampaignEditor] Using fallback: copying all levels to rpg-topdown');
             this.availableLevelsByEngine['rpg-topdown'] = [...this.availableLevels];
         }
     }
@@ -717,14 +709,15 @@ class CampaignEditor {
     endDragWire(e, toId) {
         if (this.dragState && this.dragState.type === 'wire') {
             const { from, port } = this.dragState;
-            if (from === toId) return; 
-            this.pushHistory();
+            if (from === toId) return;
             const srcNode = this.nodes.find(n => n.id === from);
+            if (!srcNode) return;
             if (port === 'out') srcNode.next = toId;
             if (port === 'true') srcNode.nextTrue = toId;
             if (port === 'false') srcNode.nextFalse = toId;
             this.rebuildConnections();
             this.renderWires();
+            this.pushHistory();
         }
         this.dragState = null;
     }
@@ -784,19 +777,54 @@ class CampaignEditor {
         
         return node.name || node.id;
     }
-    createPathSVG(p1, p2, isTemp, color) {
-        const dist = Math.sqrt((p1.x-p2.x)**2 + (p1.y-p2.y)**2);
-        const controlOffset = Math.min(150, dist * 0.5); 
+    createPathSVG(p1, p2, isTemp, color, conn = null) {
+        const dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        const controlOffset = Math.min(150, dist * 0.5);
         const cp1 = { x: p1.x, y: p1.y + controlOffset };
         const cp2 = { x: p2.x, y: p2.y - controlOffset };
         const d = `M ${p1.x} ${p1.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2.x} ${p2.y}`;
-        
+
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("d", d);
         path.setAttribute("stroke", color);
         path.setAttribute("fill", "none");
         path.setAttribute("stroke-width", "3");
+
+        if (!isTemp && conn) {
+            path.style.pointerEvents = 'stroke';
+            path.style.cursor = 'pointer';
+            const titleEl = document.createElementNS("http://www.w3.org/2000/svg", "title");
+            titleEl.textContent = `Click or right-click to disconnect (${conn.from}.${conn.port} -> ${conn.to})`;
+            path.appendChild(titleEl);
+
+            const removeThisWire = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.deleteConnection(conn.from, conn.port);
+            };
+            path.addEventListener('mousedown', (e) => e.stopPropagation());
+            path.addEventListener('click', removeThisWire);
+            path.addEventListener('contextmenu', removeThisWire);
+        } else {
+            path.style.pointerEvents = 'none';
+        }
         return path;
+    }
+
+    deleteConnection(fromId, port) {
+        const srcNode = this.nodes.find(n => n.id === fromId);
+        if (!srcNode) return;
+        let removed = false;
+        if (port === 'out' && srcNode.next) { delete srcNode.next; removed = true; }
+        else if (port === 'true' && srcNode.nextTrue) { delete srcNode.nextTrue; removed = true; }
+        else if (port === 'false' && srcNode.nextFalse) { delete srcNode.nextFalse; removed = true; }
+        if (removed) {
+            this.rebuildConnections();
+            this.renderWires();
+            this.renderInspector();
+            this.pushHistory();
+            this.showToast('Disconnected wire', false, true);
+        }
     }
 
     renderWires() {
@@ -805,14 +833,15 @@ class CampaignEditor {
             const p1 = this.getPortPos(c.from, c.port);
             const p2 = this.getPortPos(c.to, 'in');
             if (p1 && p2) {
-                const el = this.createPathSVG(p1, p2, false, (c.port === 'true' || c.port === 'false') ? (c.port === 'true' ? '#2ecc71' : '#e74c3c') : '#666');
+                const color = (c.port === 'true' || c.port === 'false') ? (c.port === 'true' ? '#2ecc71' : '#e74c3c') : '#666';
+                const el = this.createPathSVG(p1, p2, false, color, c);
                 this.dom.svg.appendChild(el);
             }
         });
         if (this.dragState && this.dragState.type === 'wire') {
             const p1 = this.getPortPos(this.dragState.from, this.dragState.port);
             const p2 = this.getCanvasPos(this.dragState.cx, this.dragState.cy);
-            if (p1) { 
+            if (p1) {
                 const el = this.createPathSVG(p1, p2, true, '#fff');
                 this.dom.svg.appendChild(el);
             }
@@ -857,10 +886,9 @@ class CampaignEditor {
     // --- LOGIC ---
 
     addNode(type, mx, my) {
-        this.pushHistory();
         const id = type + '_' + Math.floor(Math.random()*10000);
         let cx, cy;
-        
+
         if (mx !== undefined) {
             const pos = this.getCanvasPos(mx, my);
             cx = pos.x; cy = pos.y;
@@ -868,7 +896,7 @@ class CampaignEditor {
             cx = (-this.transform.x + this.dom.workspace.clientWidth/2) / this.transform.scale;
             cy = (-this.transform.y + this.dom.workspace.clientHeight/2) / this.transform.scale;
         }
-        
+
         const newNode = {
             id, type, x: cx - 100, y: cy, name: type.toUpperCase()
         };
@@ -894,6 +922,7 @@ class CampaignEditor {
         this.selection = id;
         this.renderInspector();
         this.updatePositions();
+        this.pushHistory();
     }
 
     deleteNode(id) {
@@ -901,21 +930,20 @@ class CampaignEditor {
             this.deleteNodes(Array.from(this.multiSelection));
             return;
         }
-        if(confirm("Delete this node?")) {
-            this.pushHistory();
+        if (confirm("Delete this node?")) {
             this.nodes = this.nodes.filter(n => n.id !== id);
             this._clearDanglingRefs(new Set([id]));
             this.rebuildConnections();
             this.selection = null;
             this.renderGraph();
             this.renderInspector();
+            this.pushHistory();
         }
     }
 
     deleteNodes(ids) {
         if (!ids || ids.length === 0) return;
         if (!confirm(`Delete ${ids.length} selected nodes?`)) return;
-        this.pushHistory();
         const idSet = new Set(ids);
         this.nodes = this.nodes.filter(n => !idSet.has(n.id));
         this._clearDanglingRefs(idSet);
@@ -924,6 +952,7 @@ class CampaignEditor {
         this.multiSelection.clear();
         this.renderGraph();
         this.renderInspector();
+        this.pushHistory();
     }
 
     // Clear next/nextTrue/nextFalse references on remaining nodes that pointed
@@ -988,24 +1017,67 @@ class CampaignEditor {
                 input = document.createElement('input');
                 input.type = type;
                 input.className = 'prop-input';
-                input.value = node[key] || '';
+                input.value = (node[key] !== undefined && node[key] !== null) ? String(node[key]) : '';
             }
 
             input.onchange = (e) => {
-                this.pushHistory();
-                node[key] = (type === 'checkbox') ? e.target.checked : e.target.value;
-                
+                if (key === 'id') {
+                    const newId = String(e.target.value || '').trim();
+                    const oldId = node.id;
+                    if (!newId) {
+                        alert('Node ID cannot be empty.');
+                        e.target.value = oldId;
+                        return;
+                    }
+                    if (newId !== oldId && this.nodes.some(other => other !== node && other.id === newId)) {
+                        alert(`Duplicate node ID "${newId}". Please choose a unique ID.`);
+                        e.target.value = oldId;
+                        return;
+                    }
+                    if (newId !== oldId) {
+                        node.id = newId;
+                        this.nodes.forEach(other => {
+                            if (other.next === oldId) other.next = newId;
+                            if (other.nextTrue === oldId) other.nextTrue = newId;
+                            if (other.nextFalse === oldId) other.nextFalse = newId;
+                        });
+                        if (this.selection === oldId) this.selection = newId;
+                        if (this.multiSelection.has(oldId)) {
+                            this.multiSelection.delete(oldId);
+                            this.multiSelection.add(newId);
+                        }
+                        this.rebuildConnections();
+                        this.renderGraph();
+                        this.renderInspector();
+                        this.pushHistory();
+                    }
+                    return;
+                }
+
+                let val = (type === 'checkbox') ? e.target.checked : e.target.value;
+                if (type === 'number' && val !== '') {
+                    const num = Number(val);
+                    if (!Number.isNaN(num)) val = num;
+                }
+                if (node.type === 'variable' && key === 'value') {
+                    const normalized = String(val).trim().toLowerCase();
+                    if (normalized === 'false' || normalized === '0') val = false;
+                    else if (normalized === 'true' || normalized === '1') val = true;
+                }
+                node[key] = val;
+
                 // Re-render graph if engine type changed (to update colors/badges)
                 if (key === 'engineType' && node.type === 'level') {
                     this.renderGraph();
                     this.renderInspector(); // Refresh to show correct levels
                 } else {
                     const dom = this.nodeElements.get(node.id);
-                    if(dom) {
+                    if (dom) {
                         if (node.type === 'comment') dom.querySelector('.node-body').innerText = node.text;
                         else dom.querySelector('.node-body').innerText = this.getNodeLabel(node);
                     }
                 }
+                this.pushHistory();
             };
             wrap.appendChild(input);
             ins.appendChild(wrap);
@@ -1054,7 +1126,7 @@ class CampaignEditor {
                     const editorMap = {
                         'rpg-topdown': 'editor.html',
                         'iso-pixel': 'iso_editor.html',
-                        'platformer-2d': 'pixel_editor.html',
+                        'platformer-2d': 'platformer_editor.html',
                         'unified-3d': 'editor3d.html',
                         'topdown-3d': 'editor3d.html',
                         'fps-3d': 'editor3d.html',
@@ -1301,6 +1373,7 @@ class CampaignEditor {
     pushHistory() {
         const state = JSON.stringify(this.nodes);
         if (typeof state !== 'string') return;
+        if (this.historyIndex >= 0 && this.history[this.historyIndex] === state) return;
         if (this.historyIndex < this.history.length - 1) this.history = this.history.slice(0, this.historyIndex + 1);
         this.history.push(state);
         if (this.history.length > 50) this.history.shift();
@@ -1347,15 +1420,17 @@ class CampaignEditor {
     copy() { if (this.selection) { const n = this.nodes.find(n => n.id === this.selection); if (n) this.clipboard = JSON.parse(JSON.stringify(n)); } }
     paste() {
         if (!this.clipboard) return;
-        this.pushHistory();
         const n = JSON.parse(JSON.stringify(this.clipboard));
-        n.id = n.type + '_' + Math.floor(Math.random()*100000);
+        n.id = n.type + '_' + Math.floor(Math.random() * 100000);
         n.x += 20; n.y += 20;
         delete n.next; delete n.nextTrue; delete n.nextFalse;
-        this.nodes.push(n); this.renderGraph(); this.selection = n.id; this.renderInspector();
+        this.nodes.push(n);
+        this.renderGraph();
+        this.selection = n.id;
+        this.renderInspector();
+        this.pushHistory();
     }
     autoLayout() {
-        this.pushHistory();
         const adj = {}; const roots = new Set(this.nodes.map(n => n.id));
         this.nodes.forEach(n => {
             adj[n.id] = [];
@@ -1377,6 +1452,7 @@ class CampaignEditor {
             n.x = r * 250 + 100; n.y = rows[r] * 150 + 100; rows[r]++;
         });
         this.updatePositions();
+        this.pushHistory();
     }
     async validate() {
         // Clear previous validation
@@ -1470,16 +1546,19 @@ class CampaignEditor {
         setTimeout(() => this.dom.toast.style.display = 'none', 3000);
     }
     search(q) {
-        if(!q) { this.nodeElements.forEach(el => el.style.opacity = '1'); return; }
+        if (!q) { this.nodeElements.forEach(el => el.style.opacity = '1'); return; }
         q = q.toLowerCase(); let first = null;
         this.nodes.forEach(n => {
-            const m = n.name.toLowerCase().includes(q) || n.id.toLowerCase().includes(q) || (n.text && n.text.toLowerCase().includes(q));
+            const nameMatch = (n.name || '').toLowerCase().includes(q);
+            const idMatch = (n.id || '').toLowerCase().includes(q);
+            const textMatch = n.text ? String(n.text).toLowerCase().includes(q) : false;
+            const m = nameMatch || idMatch || textMatch;
             const el = this.nodeElements.get(n.id);
-            if(el) { el.style.opacity = m ? '1' : '0.2'; if(m && !first) first = n; }
+            if (el) { el.style.opacity = m ? '1' : '0.2'; if (m && !first) first = n; }
         });
-        if(first) {
-            this.transform.x = -first.x * this.transform.scale + this.dom.workspace.clientWidth/2;
-            this.transform.y = -first.y * this.transform.scale + this.dom.workspace.clientHeight/2;
+        if (first) {
+            this.transform.x = -first.x * this.transform.scale + this.dom.workspace.clientWidth / 2;
+            this.transform.y = -first.y * this.transform.scale + this.dom.workspace.clientHeight / 2;
             this.updateTransform();
         }
     }
@@ -1493,43 +1572,51 @@ class CampaignEditor {
                 metadata: this.campaignMetadata,
                 nodes: this.nodes
             };
-            
-            await fetch(`/api/campaigns/${this.campaignName}`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(campaignData) 
+
+            const res = await fetch(`/api/campaigns/${encodeURIComponent(this.campaignName)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(campaignData)
             });
-            
+            if (!res.ok) {
+                const errText = await res.text().catch(() => '');
+                throw new Error(`HTTP ${res.status}${errText ? `: ${errText}` : ''}`);
+            }
+
             // Also save to legacy endpoint for backward compatibility
-            await fetch('/api/campaign', { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(this.nodes) 
-            }); 
-            
+            const legacyRes = await fetch('/api/campaign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.nodes)
+            });
+            if (!legacyRes.ok) {
+                console.warn(`[CampaignEditor] Legacy /api/campaign save returned HTTP ${legacyRes.status}`);
+            }
+
             // Broadcast to integration system
             this.broadcastUpdate('saved');
-            
+
             if (issueCount > 0) {
                 this.showToast(`Saved "${this.campaignName}" with ${issueCount} validation issue(s) - check flagged nodes`, true, false);
             } else {
                 this.showToast(`Campaign "${this.campaignName}" saved successfully!`, false, true);
             }
-            
-            const btn = document.querySelector('#toolbar .tool-btn[title*="Save"]'); 
-            if(btn) { btn.style.color = '#2ecc71'; setTimeout(() => btn.style.color = '', 1000); } 
-        } catch(e) { 
+
+            const btn = document.querySelector('#toolbar .tool-btn[title*="Save"]');
+            if (btn) { btn.style.color = '#2ecc71'; setTimeout(() => btn.style.color = '', 1000); }
+        } catch (e) {
             console.error('Save failed:', e);
-            this.showToast('Save failed!', true, false);
+            this.showToast('Save failed: ' + (e.message || 'Unknown error'), true, false);
+            throw e;
         }
     }
-    
+
     async loadCampaignFromServer(campaignName) {
         try {
-            const res = await fetch(`/api/campaigns/${campaignName}`);
+            const res = await fetch(`/api/campaigns/${encodeURIComponent(campaignName)}`);
             if (res.ok) {
                 const data = await res.json();
-                
+
                 // Handle both formats: new (with metadata) and old (nodes array)
                 if (data.metadata && data.nodes) {
                     this.campaignName = campaignName;
@@ -1537,16 +1624,19 @@ class CampaignEditor {
                     this.nodes = data.nodes;
                 } else if (Array.isArray(data)) {
                     // Legacy format
+                    this.campaignName = campaignName;
                     this.nodes = data;
                 }
-                
+
                 this.rebuildConnections();
                 this.renderGraph();
+                this.pushHistory();
+                if (typeof updateCampaignInfo === 'function') updateCampaignInfo();
                 this.showToast(`Campaign "${campaignName}" loaded!`, false, true);
             } else {
                 throw new Error('Campaign not found');
             }
-        } catch(e) {
+        } catch (e) {
             console.error('Load failed:', e);
             this.showToast(`Failed to load campaign "${campaignName}"`, true, false);
         }
@@ -1631,7 +1721,39 @@ window.adjustZoom = (d) => { window.editor.transform.scale = Math.max(0.2, Math.
 window.resetZoom = () => { window.editor.transform.scale = 1; window.editor.transform.x = 0; window.editor.transform.y = 0; window.editor.updateTransform(); };
 window.autoArrange = () => window.editor.autoLayout();
 window.toggleMapMode = () => { const bg = document.getElementById('map-background'); bg.style.display = bg.style.display === 'none' ? 'block' : 'none'; };
-window.runCampaign = () => { window.editor.save().then(() => window.open('index.html', '_blank')).catch(e => { console.error('[Campaign] Save before run failed:', e); alert('Kampanya kaydedilemedi: ' + (e.message || e)); }); };
+window.runCampaign = async () => {
+    try {
+        await window.editor.save();
+        const campaignId = (window.editor.campaignName || 'main_campaign').replace(/\.json$/i, '');
+        let slotId = 1;
+        if (typeof SlotManager !== 'undefined' && typeof CampaignSlot !== 'undefined') {
+            try {
+                const allSlots = await SlotManager.getAllSlots();
+                const matching = allSlots.find(s => !s.isEmpty && s.campaign?.file === campaignId);
+                const empty = allSlots.find(s => s.isEmpty);
+                const targetSlot = matching || empty || new CampaignSlot(1);
+                slotId = targetSlot.slotId || 1;
+                const nodes = window.editor.nodes || [];
+                const startNode = nodes.find(n => n.type === 'start')?.id || 'start';
+                const nodesMap = {};
+                nodes.forEach((n, idx) => { nodesMap[n.id || `node_${idx}`] = n; });
+                targetSlot.load(campaignId, {
+                    name: window.editor.campaignMetadata?.name || campaignId,
+                    description: window.editor.campaignMetadata?.description || '',
+                    startNode,
+                    nodes: nodesMap
+                }, 'Tester');
+                await SlotManager.saveSlot(targetSlot);
+            } catch (slotErr) {
+                console.warn('[Campaign] Failed to prepare test slot:', slotErr);
+            }
+        }
+        window.open(`campaign_runtime.html?slot=${encodeURIComponent(slotId)}&campaign=${encodeURIComponent(campaignId)}`, '_blank');
+    } catch (e) {
+        console.error('[Campaign] Save before run failed:', e);
+        alert('Kampanya kaydedilemedi: ' + (e.message || e));
+    }
+};
 window.undo = () => window.editor.undo();
 window.redo = () => window.editor.redo();
 window.copyNode = () => window.editor.copy();
@@ -1881,29 +2003,32 @@ window.loadCampaignFile = async () => {
 
 async function loadCampaignByName(name) {
     try {
-        const res = await fetch(`/api/campaigns/${name}`);
+        const res = await fetch(`/api/campaigns/${encodeURIComponent(name)}`);
         if (!res.ok) throw new Error('Campaign not found');
-        
+
         const data = await res.json();
-        
+        const cleanName = String(name).replace(/\.json$/i, '');
+
         // Handle both formats: {metadata, nodes} or just [nodes]
         if (data.nodes && Array.isArray(data.nodes)) {
             window.editor.nodes = data.nodes;
+            window.editor.campaignName = cleanName;
             if (data.metadata) {
                 window.editor.campaignMetadata = data.metadata;
-                window.editor.campaignName = name;
             }
         } else if (Array.isArray(data)) {
             window.editor.nodes = data;
+            window.editor.campaignName = cleanName;
         } else {
             throw new Error('Invalid campaign format');
         }
-        
+
         window.editor.rebuildConnections();
         window.editor.pushHistory();
         window.editor.renderGraph();
+        if (typeof updateCampaignInfo === 'function') updateCampaignInfo();
         closeLoadDialog();
-        window.editor.showToast(`Campaign "${name}" loaded!`, false, true);
+        window.editor.showToast(`Campaign "${cleanName}" loaded!`, false, true);
     } catch (e) {
         console.error('Failed to load campaign:', e);
         window.editor.showToast('Failed to load campaign', true, false);
@@ -1933,20 +2058,43 @@ window.importCampaign = () => {
 window.handleImportFile = (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    
+
+    const stemName = (file.name || 'imported_campaign')
+        .replace(/\.json$/i, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/g, '_')
+        .replace(/^_+|_+$/g, '') || 'imported_campaign';
+
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
             const data = JSON.parse(e.target.result);
             if (Array.isArray(data)) {
                 window.editor.nodes = data;
-                window.editor.rebuildConnections();
-                window.editor.pushHistory();
-                window.editor.renderGraph();
-                window.editor.showToast('Campaign imported!', false, true);
+                window.editor.campaignName = stemName;
+                window.editor.campaignMetadata = {
+                    ...(window.editor.campaignMetadata || {}),
+                    name: stemName
+                };
+            } else if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
+                window.editor.nodes = data.nodes;
+                window.editor.campaignName = (data.metadata?.id || stemName)
+                    .toLowerCase()
+                    .replace(/[^a-z0-9_]+/g, '_') || stemName;
+                if (data.metadata && typeof data.metadata === 'object') {
+                    window.editor.campaignMetadata = {
+                        ...window.editor.campaignMetadata,
+                        ...data.metadata
+                    };
+                }
             } else {
                 throw new Error('Invalid format');
             }
+            window.editor.rebuildConnections();
+            window.editor.renderGraph();
+            window.editor.pushHistory();
+            if (typeof updateCampaignInfo === 'function') updateCampaignInfo();
+            window.editor.showToast('Campaign imported!', false, true);
         } catch (err) {
             window.editor.showToast('Invalid campaign file', true, false);
         }
@@ -2195,7 +2343,14 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeModal();
         closeSaveDialog();
-        toggleMetadataWindow();
+        const metaWin = document.getElementById('metadata-window');
+        if (metaWin) metaWin.style.display = 'none';
+        const loadWin = document.getElementById('load-dialog');
+        if (loadWin) loadWin.style.display = 'none';
+        ['var-window', 'level-window', 'cutscene-window', 'quest-window', 'enemy-window'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
     }
 });
 

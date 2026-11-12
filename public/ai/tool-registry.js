@@ -3,6 +3,7 @@ import { NAMESPACE_ALIAS } from './namespace-router.js';
 import { ACTION_STATUS, ERROR_CODE, createActionPlan, normalizeArguments, normalizeToolDefinition, validateSchema } from './automation-contract.mjs';
 import { editorForTool } from './editor-catalog.mjs';
 import { getAutomationFlags } from './automation-flags.mjs';
+import { isAIEnabled } from './ai-mode.mjs';
 
 /**
  * Redglitch AI - Tool Registry (KAP)
@@ -11,7 +12,7 @@ import { getAutomationFlags } from './automation-flags.mjs';
 
 export class ToolRegistry {
     constructor(eventBus = null) {
-        this.eventBus = eventBus || window.RedglitchEventBus;
+        this.eventBus = eventBus || (typeof window !== 'undefined' ? window.RedglitchEventBus : null);
         this.permissionGate = new PermissionGate();
         this.tools = new Map();
         this.inFlight = new Map();
@@ -21,9 +22,12 @@ export class ToolRegistry {
         this._ready = false;
         this._listeners = [];
         this._pendingTimeouts = new Set();
+        this._registrationWaiters = new Map();
+        this._awaitingRegistrationIds = new Set();
+        this.editorReadyTimeoutMs = 7000;
 
-        console.log(`[ToolRegistry] Initialized in ${window.location.pathname}`);
-        this._debug(`Registry startup. Origin: ${window.location.origin}`);
+        console.log(`[ToolRegistry] Initialized in ${window?.location?.pathname || 'unknown'}`);
+        this._debug(`Registry startup. Origin: ${window?.location?.origin || 'unknown'}`);
 
         this._registerDefaults();
         this._setupListeners();
@@ -31,6 +35,7 @@ export class ToolRegistry {
 
         if (this.eventBus) {
             this.eventBus.emit('ai:tool:registry:ready');
+            this.eventBus.emit('ai:tool:discover');
             this._syncWithBackend();
         }
     }
@@ -40,11 +45,11 @@ export class ToolRegistry {
      * Call when the registry is no longer needed (e.g. AI disabled, page unload).
      */
     destroy() {
-        if (!this.eventBus) return;
-        for (const { event, handler } of this._listeners) {
-            this.eventBus.off(event, handler);
+        for (const waiters of this._registrationWaiters.values()) {
+            for (const resolve of [...waiters]) resolve(null);
         }
-        this._listeners = [];
+        this._registrationWaiters.clear();
+        this._awaitingRegistrationIds.clear();
         for (const timeoutId of this._pendingTimeouts) {
             clearTimeout(timeoutId);
         }
@@ -52,6 +57,11 @@ export class ToolRegistry {
         this.inFlight.clear();
         this.completedRequests.clear();
         this.tools.clear();
+        if (!this.eventBus) return;
+        for (const { event, handler } of this._listeners) {
+            this.eventBus.off(event, handler);
+        }
+        this._listeners = [];
     }
 
     _debug(msg, data = null) {
@@ -114,6 +124,7 @@ export class ToolRegistry {
             this._debug(`Tool discovered via announce: ${toolDef.name}`);
             if (this.tools.has(toolDef.name)) {
                 this._debug(`Ignoring repeated capability announcement: ${toolDef.name}`);
+                this._notifyRegistrationWaiters(toolDef.name, this.tools.get(toolDef.name));
                 this._checkPendingAction(toolDef.name);
                 return;
             }
@@ -125,6 +136,7 @@ export class ToolRegistry {
 
         // Discovery Request: When a new AI component joins, it asks for all tools
         const onToolDiscover = (event) => {
+            if (event?.source && event.source === this.eventBus.getSource()) return;
             // Only respond if we are the primary registry or the discovery came from elsewhere
             this._debug(`Discovery requested. Broadcasting all tools.`);
             for (const tool of this.tools.values()) {
@@ -186,6 +198,9 @@ export class ToolRegistry {
                 localStorage.removeItem('ai_pending_action');
                 return;
             }
+            if (action.id && this._awaitingRegistrationIds.has(action.id)) {
+                return;
+            }
 
             const { resolvedName } = this._resolveToolName(action.method);
 
@@ -238,6 +253,7 @@ export class ToolRegistry {
             throw error;
         }
         this.tools.set(compliantTool.name, compliantTool);
+        this._notifyRegistrationWaiters(compliantTool.name, compliantTool);
 
         this._debug(`Tool registered locally: ${compliantTool.name}`);
 
@@ -298,7 +314,7 @@ export class ToolRegistry {
     async execute(name, args, requestId = null) {
         const id = requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        if (localStorage.getItem('kai_ai_enabled') !== 'true') {
+        if (!isAIEnabled()) {
             return {
                 id,
                 tool: name,
@@ -325,13 +341,84 @@ export class ToolRegistry {
         }
     }
 
+    _notifyRegistrationWaiters(toolName, toolDef) {
+        const candidates = new Set([toolName]);
+        const { resolvedName } = this._resolveToolName(toolName);
+        if (resolvedName) candidates.add(resolvedName);
+        for (const candidate of candidates) {
+            const waiters = this._registrationWaiters.get(candidate);
+            if (!waiters || waiters.size === 0) continue;
+            for (const resolve of [...waiters]) {
+                resolve(toolDef);
+            }
+        }
+    }
+
+    _waitForToolRegistration(toolName, timeoutMs = this.editorReadyTimeoutMs) {
+        const existing = this.tools.get(toolName);
+        if (existing) {
+            return { promise: Promise.resolve(existing), cancel: () => {} };
+        }
+        const ms = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 7000;
+        let settled = false;
+        let timeoutId = null;
+        let resolver = null;
+
+        const cleanup = () => {
+            if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                this._pendingTimeouts.delete(timeoutId);
+                timeoutId = null;
+            }
+            const waiters = this._registrationWaiters.get(toolName);
+            if (waiters && resolver) {
+                waiters.delete(resolver);
+                if (waiters.size === 0) this._registrationWaiters.delete(toolName);
+            }
+        };
+
+        const promise = new Promise((resolve) => {
+            resolver = (toolDef) => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve(toolDef || null);
+            };
+            if (!this._registrationWaiters.has(toolName)) {
+                this._registrationWaiters.set(toolName, new Set());
+            }
+            this._registrationWaiters.get(toolName).add(resolver);
+
+            timeoutId = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve(null);
+            }, ms);
+            this._pendingTimeouts.add(timeoutId);
+        });
+
+        return {
+            promise,
+            cancel: () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+            }
+        };
+    }
+
     async _execute(name, args, id) {
         const startedAt = Date.now();
+        const rawArgs = args;
 
         // Resolve aliases before any routing decisions
         let { resolvedName, tool } = this._resolveToolName(name);
         name = resolvedName;
         args = normalizeArguments(tool, args);
+        if (typeof tool?.normalizeArgs === 'function') {
+            args = tool.normalizeArgs(args, rawArgs);
+        }
 
         const buildResponse = (response) => ({
             id,
@@ -347,47 +434,88 @@ export class ToolRegistry {
 
         const editor = this.flags.explicitCapabilityRouting ? editorForTool(name) : null;
         if (!tool && editor) {
-            // Prevent recursive or multiple redirects
-            if (window._ai_redirecting) {
-                return buildResponse({
+            const target = editor.id;
+            this._debug(`Capability ${namespace} unavailable. Navigating to ${target} and awaiting registration.`);
+
+            const waiter = this._waitForToolRegistration(name, this.editorReadyTimeoutMs);
+            this._awaitingRegistrationIds.add(id);
+
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('ai_pending_action', JSON.stringify({
+                    method: name,
+                    params: args,
+                    id,
+                    timestamp: Date.now()
+                }));
+            }
+
+            let navResponse = null;
+            if (!window._ai_redirecting) {
+                window._ai_redirecting = true;
+                try {
+                    navResponse = await this.execute('navigateTo', { target });
+                } finally {
+                    window._ai_redirecting = false;
+                }
+            }
+
+            if (navResponse?.result?.redirected) {
+                waiter.cancel();
+                this._awaitingRegistrationIds.delete(id);
+                const response = buildResponse({
                     success: false,
                     pending: true,
                     status: ACTION_STATUS.PENDING_EDITOR,
                     error: {
                         code: 'PENDING_EDITOR',
-                        message: `Already waiting for ${name} to register.`
+                        message: `Waiting for ${name}. Redirecting to ${target} for tool registration.`
                     }
                 });
+                if (this.eventBus) this.eventBus.emit('studio:action:result', response);
+                return response;
             }
-            window._ai_redirecting = true;
 
-            const target = editor.id;
-            this._debug(`Capability ${namespace} unavailable. Navigating to ${target}.`);
-            
-            localStorage.setItem('ai_pending_action', JSON.stringify({ 
-                method: name, 
-                params: args, 
-                id,
-                timestamp: Date.now()
-            }));
+            if (navResponse && navResponse.success === false) {
+                waiter.cancel();
+                this._awaitingRegistrationIds.delete(id);
+                this.cancelPendingAction(id);
+                const response = buildResponse({
+                    success: false,
+                    status: ACTION_STATUS.FAILED,
+                    error: navResponse.error || { code: ERROR_CODE.EDITOR_UNAVAILABLE, message: `Failed to open ${target} editor.` }
+                });
+                if (this.eventBus) this.eventBus.emit('studio:action:result', response);
+                return response;
+            }
+
+            // Ask already-open or keep-alive editors to announce immediately
+            this.eventBus?.emit('ai:tool:discover');
 
             try {
-                await this.execute('navigateTo', { target });
+                tool = await waiter.promise;
             } finally {
-                window._ai_redirecting = false;
+                this._awaitingRegistrationIds.delete(id);
             }
-            
-            const response = buildResponse({
-                success: false, 
-                pending: true, 
-                status: ACTION_STATUS.PENDING_EDITOR,
-                error: { 
-                    code: 'PENDING_EDITOR',
-                    message: `Waiting for ${name}. Navigated to ${target} for tool registration.` 
-                }
-            });
-            if (this.eventBus) this.eventBus.emit('studio:action:result', response);
-            return response;
+
+            if (!tool) {
+                this.cancelPendingAction(id);
+                const response = buildResponse({
+                    success: false,
+                    status: ACTION_STATUS.FAILED,
+                    error: {
+                        code: ERROR_CODE.EDITOR_TIMEOUT,
+                        message: `Timed out waiting for ${name} to register from ${target}.`
+                    }
+                });
+                if (this.eventBus) this.eventBus.emit('studio:action:result', response);
+                return response;
+            }
+
+            this.cancelPendingAction(id);
+            args = normalizeArguments(tool, rawArgs);
+            if (typeof tool?.normalizeArgs === 'function') {
+                args = tool.normalizeArgs(args, rawArgs);
+            }
         }
         
         if (!tool) {

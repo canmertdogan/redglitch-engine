@@ -9,6 +9,11 @@ class KVerb extends AudioPlugin {
         this.seconds = 3.0;
         this.decay = 2.0;
         this.mix = 0.5;
+        this.params = {
+            seconds: this.seconds,
+            decay: this.decay,
+            mix: this.mix
+        };
 
         this.convolver = this.ctx.createConvolver();
         this.wetNode = this.ctx.createGain();
@@ -54,15 +59,21 @@ class KVerb extends AudioPlugin {
         switch(key) {
             case 'seconds':
                 this.seconds = value;
+                this.params[key] = value;
                 this.generateImpulse();
                 break;
             case 'decay':
                 this.decay = value;
+                this.params[key] = value;
                 this.generateImpulse();
                 break;
             case 'mix':
                 this.mix = value;
+                this.params[key] = value;
                 this.updateMix();
+                break;
+            default:
+                super.setParam(key, value);
                 break;
         }
     }

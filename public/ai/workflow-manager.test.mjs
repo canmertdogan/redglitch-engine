@@ -129,3 +129,39 @@ test('rollback restores existing files and deletes created files in reverse orde
         { endpoint: '/api/ide/write', body: { file: 'existing.txt', content: 'before' } },
     ]);
 });
+
+test('executeWorkflow allows bounded nested sub-workflows while rejecting unnested concurrent runs', async () => {
+    const eventBus = new FakeEventBus();
+    let manager;
+    const registry = {
+        execute: async (name, args) => {
+            if (name === 'workflow.run') {
+                const sub = await manager.executeWorkflow(args.steps, 'nested-sub', { nested: true });
+                if (!sub.success) return { success: false, error: { code: 'EXECUTION_FAILED', message: sub.error } };
+                return { success: true, result: sub };
+            }
+            return { success: true, result: { step: name } };
+        },
+    };
+    manager = new WorkflowManager(registry, eventBus);
+    manager.maxDepth = 2;
+
+    const ok = await manager.executeWorkflow([
+        { name: 'workflow.run', args: { steps: [{ name: 'step.inner', args: {} }] } },
+    ]);
+    assert.equal(ok.success, true);
+    assert.equal(manager.isExecuting, false);
+
+    // Exceeding maxDepth fails cleanly without hanging
+    const tooDeep = await withQuietWorkflowLogs(() => manager.executeWorkflow([
+        {
+            name: 'workflow.run',
+            args: {
+                steps: [{ name: 'workflow.run', args: { steps: [{ name: 'step.tooDeep', args: {} }] } }],
+            },
+        },
+    ]));
+    assert.equal(tooDeep.success, false);
+    assert.match(tooDeep.error, /Maximum nested workflow depth/);
+    assert.equal(manager.isExecuting, false);
+});

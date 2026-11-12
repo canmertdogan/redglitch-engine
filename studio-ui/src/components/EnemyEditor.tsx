@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useStudio } from '../hooks/useStudio';
 import { 
     Save, Plus, PlusCircle, Trash, Skull, Brain, Swords, 
-    Copy, Search, Play, Pause, ZoomIn, ZoomOut, Shield, Gift, Zap
+    Copy, Search, Play, Pause, ZoomIn, ZoomOut, Shield, Gift, Zap, X 
 } from 'lucide-react';
 import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
@@ -47,6 +47,22 @@ interface Enemy {
     };
 }
 
+function makeUniqueCloneId(sourceId: string, existingIds: Set<string>): string {
+    const base = sourceId.replace(/_COPY(?:_\d+)?$/, '') + '_COPY';
+    let idx = 1;
+    while (existingIds.has(`${base}_${idx}`)) idx++;
+    return `${base}_${idx}`;
+}
+
+function resolveSpriteImageUrl(key: string): string | null {
+    if (!key || (!key.includes('/') && !key.endsWith('.png'))) return null;
+    if (key.startsWith('http://') || key.startsWith('https://') || key.startsWith('data:') || key.startsWith('/')) {
+        return key;
+    }
+    if (key.startsWith('sprite-art/') || key.startsWith('assets/')) return '/' + key;
+    return `/sprite-art/${key}`;
+}
+
 const EnemyEditor: React.FC = () => {
     const { isReady, sprites, emit, projectState, subscribe } = useStudio();
     const [enemies, setEnemies] = useState<Enemy[]>([]);
@@ -55,66 +71,136 @@ const EnemyEditor: React.FC = () => {
     const [isDirty, setIsDirty] = useState(false);
     const [templates, setTemplates] = useState<any[]>([]);
     const [availableBrains, setAvailableBrains] = useState<string[]>([]);
+    const [availableItems, setAvailableItems] = useState<any[]>([]);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
     
     // Animation Preview State
     const [previewState, setPreviewState] = useState<'idle' | 'run' | 'attack' | 'death'>('idle');
     const [previewDir, setPreviewDir] = useState<'down' | 'up' | 'side'>('down');
     const [previewZoom, setPreviewZoom] = useState(4);
-    const [isPlaying, setIsPlaying] = useState(true);
     
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
     const toastRef = useRef<ToastHandle>(null);
+    const enemiesRef = useRef<Enemy[]>([]);
+    const isDirtyRef = useRef(false);
+    const savingRef = useRef(false);
+    const saveRef = useRef<() => Promise<void>>(async () => {});
 
-    // Schema Migration Helper
+    useEffect(() => { enemiesRef.current = enemies; }, [enemies]);
+    useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
+
+    // Schema Migration Helper (safe for partial animations, legacy flat enemies, and prefab templates)
     const ensureNewSchema = (en: any): Enemy => {
-        if (!en.animations || !en.animations.idle.down) {
-            const oldSprite = (en.animations && en.animations.idle) ? en.animations.idle.sprite : (en.sprite || 'monster');
-            return {
-                id: en.id,
-                name: en.name || en.id,
-                type: 'enemy',
-                category: en.category || 'normal',
-                tags: en.tags || [],
-                stats: en.stats || { hp: 50, speed: 80, damage: 10, xp: 20 },
-                ai: en.ai || { type: 'patrol', range: 250, attackRange: 40, patrolRadius: 100, cooldown: 1.5, script: '' },
-                loot: en.loot || { gold: [0, 10], items: [], dropChance: 50 },
-                resistances: en.resistances || { resist: [], weakness: [], armor: 0, magicResist: 0 },
-                animations: {
-                    idle: { down: oldSprite, up: oldSprite, side: oldSprite, speed: 0.15 },
-                    run: { down: oldSprite, up: oldSprite, side: oldSprite, speed: 0.15 },
-                    attack: { base: oldSprite, speed: 0.15 },
-                    death: { base: oldSprite, speed: 0.15 }
+        const anim = en?.animations || {};
+        const fallbackSprite =
+            anim.idle?.down ||
+            anim.idle?.sprite ||
+            anim.idle?.base ||
+            en?.sprite ||
+            'monster';
+        const aiObj = typeof en?.ai === 'object' && en.ai !== null ? en.ai : {};
+        const aiType = typeof en?.ai === 'string' ? en.ai : (aiObj.type || 'patrol');
+
+        const rawGold = en?.loot?.gold;
+        const goldMin = Array.isArray(rawGold) ? (Number(rawGold[0]) || 0) : (Number(en?.loot?.goldMin) || 0);
+        const goldMax = Array.isArray(rawGold) ? (Number(rawGold[1]) || 0) : (Number(en?.loot?.goldMax) ?? 10);
+        const rawChance = en?.loot?.dropChance ?? (Number.isFinite(en?.loot?.chance) ? Math.round(en.loot.chance * 100) : 50);
+
+        return {
+            id: String(en?.id || 'enemy_' + Date.now().toString().slice(-4)),
+            name: String(en?.name || en?.id || 'New Monster'),
+            type: 'enemy',
+            category: String(en?.category || 'normal'),
+            tags: Array.isArray(en?.tags) ? en.tags.filter(Boolean) : [],
+            stats: {
+                hp: Number(en?.stats?.hp ?? en?.hp ?? 50) || 50,
+                speed: Number(en?.stats?.speed ?? en?.speed ?? 80) || 80,
+                damage: Number(en?.stats?.damage ?? en?.damage ?? 10) || 10,
+                xp: Number(en?.stats?.xp ?? en?.xp ?? 20) || 0
+            },
+            ai: {
+                type: aiType,
+                range: Number(aiObj.range ?? en?.range ?? 250) || 250,
+                attackRange: Number(aiObj.attackRange ?? 40) || 40,
+                patrolRadius: Number(aiObj.patrolRadius ?? 100) || 100,
+                cooldown: Number(aiObj.cooldown ?? 1.5) || 1.5,
+                script: String(aiObj.script || '')
+            },
+            loot: {
+                gold: [goldMin, goldMax],
+                dropChance: Number.isFinite(Number(rawChance)) ? Number(rawChance) : 50,
+                items: Array.isArray(en?.loot?.items) ? en.loot.items : (Array.isArray(en?.loot) ? en.loot : [])
+            },
+            resistances: {
+                armor: Number(en?.resistances?.armor ?? 0) || 0,
+                magicResist: Number(en?.resistances?.magicResist ?? 0) || 0,
+                resist: Array.isArray(en?.resistances?.resist) ? en.resistances.resist : [],
+                weakness: Array.isArray(en?.resistances?.weakness) ? en.resistances.weakness : []
+            },
+            animations: {
+                idle: {
+                    down: anim.idle?.down || anim.idle?.sprite || fallbackSprite,
+                    up: anim.idle?.up || anim.idle?.sprite || fallbackSprite,
+                    side: anim.idle?.side || anim.idle?.sprite || fallbackSprite,
+                    speed: Number(anim.idle?.speed ?? 0.15) || 0.15
+                },
+                run: {
+                    down: anim.run?.down || anim.run?.sprite || fallbackSprite,
+                    up: anim.run?.up || anim.run?.sprite || fallbackSprite,
+                    side: anim.run?.side || anim.run?.sprite || fallbackSprite,
+                    speed: Number(anim.run?.speed ?? 0.15) || 0.15
+                },
+                attack: {
+                    base: anim.attack?.base || anim.attack?.down || anim.attack?.sprite || fallbackSprite,
+                    speed: Number(anim.attack?.speed ?? 0.15) || 0.15
+                },
+                death: {
+                    base: anim.death?.base || anim.death?.down || anim.death?.sprite || fallbackSprite,
+                    speed: Number(anim.death?.speed ?? 0.15) || 0.15
                 }
-            };
-        }
-        return en;
+            }
+        };
     };
 
     useEffect(() => {
-        if (isReady) {
-            loadEnemies();
-            loadTemplates();
-            loadBrains();
-            
-            const unsub = subscribe('enemy:load', (event: any) => {
-                if (event.data.enemyId) {
-                    const idx = enemies.findIndex(e => e.id === event.data.enemyId);
-                    if (idx >= 0) setCurrentIndex(idx);
-                }
-            });
-            return unsub;
-        }
-    }, [isReady]);
+        if (!isReady) return;
+        loadEnemies();
+        loadTemplates();
+        loadBrains();
+        loadItems();
+
+        const unsubLoad = subscribe('enemy:load', (event: any) => {
+            const enemyId = event?.data?.enemyId;
+            if (enemyId) {
+                const idx = enemiesRef.current.findIndex(e => e.id === enemyId);
+                if (idx >= 0) setCurrentIndex(idx);
+            }
+        });
+        const unsubSave = subscribe('system:global_save', () => {
+            if (isDirtyRef.current) saveRef.current();
+        });
+        const handleSaveMessage = (e: MessageEvent) => {
+            if (e.data?.type === 'redglitch:save-request' && (e.origin === window.location.origin || e.source === window.parent || e.source === window.top)) {
+                if (isDirtyRef.current) saveRef.current();
+            }
+        };
+        window.addEventListener('message', handleSaveMessage);
+
+        return () => {
+            unsubLoad();
+            unsubSave();
+            window.removeEventListener('message', handleSaveMessage);
+        };
+    }, [isReady, subscribe]);
 
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault();
                 saveToServer();
             }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
                 e.preventDefault();
                 duplicateEnemy();
             }
@@ -132,8 +218,10 @@ const EnemyEditor: React.FC = () => {
             const res = await fetch('/api/enemies');
             if (res.ok) {
                 const data = await res.json();
-                const migrated = data.map(ensureNewSchema);
+                const migrated = Array.isArray(data) ? data.map(ensureNewSchema) : [];
                 setEnemies(migrated.length > 0 ? migrated : [getDefaultEnemy()]);
+            } else {
+                setEnemies([getDefaultEnemy()]);
             }
         } catch (e) {
             setEnemies([getDefaultEnemy()]);
@@ -151,6 +239,13 @@ const EnemyEditor: React.FC = () => {
         try {
             const res = await fetch('/api/brains/list');
             if (res.ok) setAvailableBrains(await res.json());
+        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+    };
+
+    const loadItems = async () => {
+        try {
+            const res = await fetch('/api/items');
+            if (res.ok) setAvailableItems(await res.json());
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
@@ -191,30 +286,46 @@ const EnemyEditor: React.FC = () => {
     };
 
     const saveToServer = async () => {
+        if (savingRef.current) return;
+        savingRef.current = true;
         try {
+            const payload = enemiesRef.current;
             const res = await fetch('/api/enemies', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(enemies)
+                body: JSON.stringify(payload)
             });
             if (res.ok) {
                 setIsDirty(false);
                 toastRef.current?.show('DATABASE SAVED', 'success');
-                emit('enemy:saved_all', { count: enemies.length });
+                emit('enemy:saved_all', { count: payload.length });
                 if (projectState) {
                     const map: any = {};
-                    enemies.forEach(e => map[e.id] = e);
+                    payload.forEach(e => map[e.id] = e);
                     projectState.set('enemies', map);
                 }
+            } else {
+                let errMsg = `SAVE FAILED (${res.status})`;
+                try {
+                    const errData = await res.json();
+                    if (errData?.error) errMsg = errData.error;
+                } catch {}
+                toastRef.current?.show(errMsg, 'error');
             }
-        } catch (e) {
-            toastRef.current?.show('SAVE FAILED', 'error');
+        } catch (e: any) {
+            toastRef.current?.show(e?.message || 'SAVE FAILED', 'error');
+        } finally {
+            savingRef.current = false;
         }
     };
+    saveRef.current = saveToServer;
 
     const duplicateEnemy = () => {
         const current = enemies[currentIndex];
-        const clone = { ...JSON.parse(JSON.stringify(current)), id: current.id + '_COPY' };
+        if (!current) return;
+        const clone = JSON.parse(JSON.stringify(current));
+        clone.id = makeUniqueCloneId(current.id, new Set(enemies.map(e => e.id)));
+        clone.name = `${current.name || current.id} (COPY)`;
         setEnemies([...enemies, clone]);
         setCurrentIndex(enemies.length);
         setIsDirty(true);
@@ -222,12 +333,41 @@ const EnemyEditor: React.FC = () => {
     };
 
     const deleteEnemy = () => {
-        if (enemies.length <= 1) return;
+        if (enemies.length <= 1) {
+            toastRef.current?.show('CANNOT DELETE LAST ENEMY', 'info');
+            return;
+        }
         const id = enemies[currentIndex].id;
         setEnemies(enemies.filter((_, i) => i !== currentIndex));
         setCurrentIndex(Math.max(0, currentIndex - 1));
         setIsDirty(true);
         toastRef.current?.show(`DELETED ${id}`, 'info');
+    };
+
+    const openBrainEditor = (scriptName?: string) => {
+        const current = enemies[currentIndex];
+        if (!current) return;
+        const brainName = scriptName || current.ai.script || `${current.id}_ai`;
+        emit('studio:open_tool', {
+            toolId: 'behavior',
+            src: `../behavior_editor.html?script=${encodeURIComponent(brainName)}`,
+            title: 'AI Brains'
+        });
+        const parentWin = window.parent as any;
+        if (parentWin && parentWin !== window) {
+            if (typeof parentWin.openBehaviorEditor === 'function') {
+                parentWin.openBehaviorEditor(brainName);
+                return;
+            }
+            if (typeof parentWin.openWindow === 'function' && Array.isArray(parentWin.tools)) {
+                const tool = parentWin.tools.find((t: any) => t.id === 'behavior');
+                if (tool) {
+                    parentWin.openWindow({ ...tool, src: `${tool.src}?script=${encodeURIComponent(brainName)}` });
+                    return;
+                }
+            }
+        }
+        window.open(`/behavior_editor.html?script=${encodeURIComponent(brainName)}`, '_blank');
     };
 
     const filteredEnemies = useMemo(() => {
@@ -240,7 +380,7 @@ const EnemyEditor: React.FC = () => {
 
     const renderPreview = () => {
         const canvas = previewCanvasRef.current;
-        if (!canvas || !sprites) return;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
@@ -248,13 +388,14 @@ const EnemyEditor: React.FC = () => {
         if (!enemy) return;
 
         let spriteKey = '';
-        if (previewState === 'attack') spriteKey = enemy.animations.attack.base;
-        else if (previewState === 'death') spriteKey = enemy.animations.death.base;
-        else spriteKey = (enemy.animations as any)[previewState][previewDir];
+        if (previewState === 'attack') spriteKey = enemy.animations?.attack?.base || enemy.animations?.idle?.down || 'monster';
+        else if (previewState === 'death') spriteKey = enemy.animations?.death?.base || enemy.animations?.idle?.down || 'monster';
+        else spriteKey = (enemy.animations as any)?.[previewState]?.[previewDir] || enemy.animations?.idle?.down || 'monster';
 
-        const sprite = sprites[spriteKey];
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+        ctx.imageSmoothingEnabled = false;
+
+        const sprite = sprites ? sprites[spriteKey] : null;
         if (sprite) {
             const scale = previewZoom;
             const offsetX = (canvas.width - sprite.width * scale) / 2;
@@ -269,12 +410,39 @@ const EnemyEditor: React.FC = () => {
                     }
                 }
             });
+            return;
+        }
+
+        const imgUrl = resolveSpriteImageUrl(spriteKey);
+        if (imgUrl) {
+            const img = new Image();
+            img.onload = () => {
+                if (!previewCanvasRef.current) return;
+                const c = previewCanvasRef.current.getContext('2d');
+                if (!c) return;
+                c.clearRect(0, 0, canvas.width, canvas.height);
+                c.imageSmoothingEnabled = false;
+                const drawW = Math.min(canvas.width * 0.85, (img.width || 32) * previewZoom);
+                const drawH = Math.min(canvas.height * 0.85, (img.height || 32) * previewZoom);
+                c.drawImage(img, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
+            };
+            img.src = imgUrl;
         }
     };
 
     if (!isReady) return <div style={{ color: 'var(--accent-villain)', padding: '20px' }}>BOOTING VILLAIN PROTOCOL...</div>;
 
     const currentEnemy = enemies[currentIndex] || getDefaultEnemy();
+    const spriteKeys = sprites ? Object.keys(sprites) : [];
+    const renderSpriteSelect = (value: string, onChange: (val: string) => void) => {
+        const hasCustom = Boolean(value && !spriteKeys.includes(value));
+        return (
+            <select value={value} onChange={(e) => onChange(e.target.value)} style={{ flex: 1 }}>
+                {hasCustom && <option value={value}>{value}</option>}
+                {spriteKeys.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+        );
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -295,7 +463,7 @@ const EnemyEditor: React.FC = () => {
                 <button className="tool-btn" onClick={saveToServer} title="Save (Ctrl+S)"><Save size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
                 <button className="tool-btn" onClick={() => setShowTemplateModal(true)} title="New from Template"><PlusCircle size={16} /></button>
-                <button className="tool-btn" onClick={() => { setEnemies([...enemies, getDefaultEnemy()]); setCurrentIndex(enemies.length); }} title="New Villain"><Plus size={16} /></button>
+                <button className="tool-btn" onClick={() => { setEnemies([...enemies, getDefaultEnemy()]); setCurrentIndex(enemies.length); setIsDirty(true); }} title="New Villain"><Plus size={16} /></button>
                 <button className="tool-btn" onClick={duplicateEnemy} title="Duplicate (Ctrl+D)"><Copy size={16} /></button>
                 <button className="tool-btn" style={{ color: '#e74c3c' }} onClick={deleteEnemy} title="Delete"><Trash size={16} /></button>
                 
@@ -315,8 +483,11 @@ const EnemyEditor: React.FC = () => {
                 <Sidebar 
                     title="ENEMIES" 
                     items={filteredEnemies} 
-                    currentIndex={enemies.indexOf(filteredEnemies[currentIndex])} 
-                    onSelect={(idx) => setCurrentIndex(enemies.indexOf(filteredEnemies[idx]))}
+                    currentIndex={filteredEnemies.indexOf(enemies[currentIndex])} 
+                    onSelect={(idx) => {
+                        const actualIdx = enemies.indexOf(filteredEnemies[idx]);
+                        if (actualIdx >= 0) setCurrentIndex(actualIdx);
+                    }}
                     renderItem={(item, active) => (
                         <div style={{
                             padding: '10px',
@@ -359,7 +530,7 @@ const EnemyEditor: React.FC = () => {
                                     </div>
                                     <div>
                                         <label>Tags (Comma separated)</label>
-                                        <input type="text" value={currentEnemy.tags.join(', ')} onChange={(e) => updateCurrentEnemy('tags', e.target.value.split(',').map(s => s.trim()))} />
+                                        <input type="text" value={currentEnemy.tags.join(', ')} onChange={(e) => updateCurrentEnemy('tags', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
                                     </div>
                                 </div>
                             </FormSection>
@@ -368,21 +539,21 @@ const EnemyEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
                                         <label>Health (HP)</label>
-                                        <input type="number" value={currentEnemy.stats.hp} onChange={(e) => updateCurrentEnemy('stats.hp', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.stats.hp} onChange={(e) => updateCurrentEnemy('stats.hp', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Base Damage</label>
-                                        <input type="number" value={currentEnemy.stats.damage} onChange={(e) => updateCurrentEnemy('stats.damage', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.stats.damage} onChange={(e) => updateCurrentEnemy('stats.damage', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div>
                                         <label>Move Speed</label>
-                                        <input type="number" value={currentEnemy.stats.speed} onChange={(e) => updateCurrentEnemy('stats.speed', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.stats.speed} onChange={(e) => updateCurrentEnemy('stats.speed', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Kill Reward (XP)</label>
-                                        <input type="number" value={currentEnemy.stats.xp} onChange={(e) => updateCurrentEnemy('stats.xp', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.stats.xp} onChange={(e) => updateCurrentEnemy('stats.xp', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
                             </FormSection>
@@ -391,35 +562,101 @@ const EnemyEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
                                         <label>Physical Armor</label>
-                                        <input type="number" value={currentEnemy.resistances.armor} onChange={(e) => updateCurrentEnemy('resistances.armor', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.resistances.armor} onChange={(e) => updateCurrentEnemy('resistances.armor', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Magic Resistance</label>
-                                        <input type="number" value={currentEnemy.resistances.magicResist} onChange={(e) => updateCurrentEnemy('resistances.magicResist', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.resistances.magicResist} onChange={(e) => updateCurrentEnemy('resistances.magicResist', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
-                                <label>Immune To (e.g. fire, poison)</label>
-                                <input type="text" value={currentEnemy.resistances.resist.join(', ')} onChange={(e) => updateCurrentEnemy('resistances.resist', e.target.value.split(',').map(s => s.trim()))} />
+                                <div style={{ marginBottom: '10px' }}>
+                                    <label>Immune To (e.g. fire, poison)</label>
+                                    <input type="text" value={currentEnemy.resistances.resist.join(', ')} onChange={(e) => updateCurrentEnemy('resistances.resist', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+                                </div>
+                                <div>
+                                    <label>Weakness (e.g. ice, holy)</label>
+                                    <input type="text" value={currentEnemy.resistances.weakness.join(', ')} onChange={(e) => updateCurrentEnemy('resistances.weakness', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+                                </div>
                             </FormSection>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <FormSection title="Loot & Drops">
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '15px' }}>
                                     <div>
-                                        <label>Base Gold</label>
-                                        <input type="number" value={currentEnemy.loot.gold[0]} onChange={(e) => updateCurrentEnemy('loot.gold', [parseInt(e.target.value), currentEnemy.loot.gold[1]])} />
+                                        <label>Min Gold</label>
+                                        <input type="number" value={currentEnemy.loot.gold[0]} onChange={(e) => updateCurrentEnemy('loot.gold', [parseInt(e.target.value, 10) || 0, currentEnemy.loot.gold[1]])} />
                                     </div>
                                     <div>
                                         <label>Max Gold</label>
-                                        <input type="number" value={currentEnemy.loot.gold[1]} onChange={(e) => updateCurrentEnemy('loot.gold', [currentEnemy.loot.gold[0], parseInt(e.target.value)])} />
+                                        <input type="number" value={currentEnemy.loot.gold[1]} onChange={(e) => updateCurrentEnemy('loot.gold', [currentEnemy.loot.gold[0], parseInt(e.target.value, 10) || 0])} />
                                     </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div>
                                         <label>Drop Chance (%)</label>
-                                        <input type="number" value={currentEnemy.loot.dropChance} onChange={(e) => updateCurrentEnemy('loot.dropChance', parseInt(e.target.value))} />
+                                        <input type="number" min={0} max={100} value={currentEnemy.loot.dropChance} onChange={(e) => updateCurrentEnemy('loot.dropChance', Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)))} />
                                     </div>
+                                </div>
+                                <label>Loot Items</label>
+                                <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
+                                    <select
+                                        style={{ flex: 1 }}
+                                        value=""
+                                        onChange={(e) => {
+                                            if (!e.target.value) return;
+                                            updateCurrentEnemy('loot.items', [...(currentEnemy.loot.items || []), { id: e.target.value, chance: 50, min: 1, max: 1 }]);
+                                        }}
+                                    >
+                                        <option value="">-- Add Item Drop --</option>
+                                        {availableItems.map((it: any) => (
+                                            <option key={it.id} value={it.id}>{it.name || it.id}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {(currentEnemy.loot.items || []).map((entry: any, idx: number) => {
+                                        const itemObj = typeof entry === 'string' ? { id: entry, chance: 100, min: 1, max: 1 } : entry;
+                                        return (
+                                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 65px 55px 28px', gap: '6px', alignItems: 'center', background: '#000', padding: '6px 8px', border: '1px solid #222' }}>
+                                                <span style={{ fontSize: '0.8rem', color: '#ddd', overflow: 'hidden', textOverflow: 'ellipsis' }}>{itemObj.id}</span>
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    max={100}
+                                                    title="Chance %"
+                                                    value={itemObj.chance ?? 100}
+                                                    onChange={(e) => {
+                                                        const next = [...(currentEnemy.loot.items || [])];
+                                                        next[idx] = { ...itemObj, chance: Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)) };
+                                                        updateCurrentEnemy('loot.items', next);
+                                                    }}
+                                                    style={{ padding: '3px 6px', fontSize: '0.8rem' }}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    title="Max Qty"
+                                                    value={itemObj.max ?? 1}
+                                                    onChange={(e) => {
+                                                        const qty = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                                        const next = [...(currentEnemy.loot.items || [])];
+                                                        next[idx] = { ...itemObj, min: Math.min(itemObj.min ?? 1, qty), max: qty };
+                                                        updateCurrentEnemy('loot.items', next);
+                                                    }}
+                                                    style={{ padding: '3px 6px', fontSize: '0.8rem' }}
+                                                />
+                                                <button
+                                                    className="tool-btn small"
+                                                    style={{ color: '#e74c3c' }}
+                                                    onClick={() => {
+                                                        const next = (currentEnemy.loot.items || []).filter((_: any, i: number) => i !== idx);
+                                                        updateCurrentEnemy('loot.items', next);
+                                                    }}
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </FormSection>
 
@@ -436,11 +673,11 @@ const EnemyEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
                                         <label>Detection Range</label>
-                                        <input type="number" value={currentEnemy.ai.range} onChange={(e) => updateCurrentEnemy('ai.range', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.ai.range} onChange={(e) => updateCurrentEnemy('ai.range', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Attack Range</label>
-                                        <input type="number" value={currentEnemy.ai.attackRange} onChange={(e) => updateCurrentEnemy('ai.attackRange', parseInt(e.target.value))} />
+                                        <input type="number" value={currentEnemy.ai.attackRange} onChange={(e) => updateCurrentEnemy('ai.attackRange', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
                                 <label>AI Brain Override</label>
@@ -449,24 +686,30 @@ const EnemyEditor: React.FC = () => {
                                         <option value="">Standard Engine AI</option>
                                         {availableBrains.map(b => <option key={b} value={b}>{b}</option>)}
                                     </select>
-                                    <button className="tool-btn"><Brain size={14} /></button>
+                                    <button className="tool-btn" onClick={() => openBrainEditor()} title="Open AI Brain Editor"><Brain size={14} /></button>
                                 </div>
                             </FormSection>
 
-                            <FormSection title="Animations (Directional)">
-                                {['idle', 'run'].map(state => (
+                            <FormSection title="Animations (Directional & Base)">
+                                {(['idle', 'run'] as const).map(state => (
                                     <div key={state} style={{ marginBottom: '15px' }}>
                                         <label style={{ color: 'var(--accent-villain)' }}>{state.toUpperCase()} SPRITES</label>
-                                        {['down', 'up', 'side'].map(dir => (
+                                        {(['down', 'up', 'side'] as const).map(dir => (
                                             <div key={dir} style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
                                                 <span style={{ width: '50px', fontSize: '0.8rem', color: '#666', textTransform: 'uppercase' }}>{dir}</span>
-                                                <select value={(currentEnemy.animations as any)[state][dir]} onChange={(e) => updateCurrentEnemy(`animations.${state}.${dir}`, e.target.value)} style={{ flex: 1 }}>
-                                                    {sprites && Object.keys(sprites).map(s => <option key={s} value={s}>{s}</option>)}
-                                                </select>
+                                                {renderSpriteSelect(currentEnemy.animations[state][dir], (val) => updateCurrentEnemy(`animations.${state}.${dir}`, val))}
                                             </div>
                                         ))}
                                     </div>
                                 ))}
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span style={{ width: '50px', fontSize: '0.8rem', color: '#666', textTransform: 'uppercase' }}>Attack</span>
+                                    {renderSpriteSelect(currentEnemy.animations.attack.base, (val) => updateCurrentEnemy('animations.attack.base', val))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                    <span style={{ width: '50px', fontSize: '0.8rem', color: '#666', textTransform: 'uppercase' }}>Death</span>
+                                    {renderSpriteSelect(currentEnemy.animations.death.base, (val) => updateCurrentEnemy('animations.death.base', val))}
+                                </div>
                             </FormSection>
                         </div>
                     </div>
@@ -522,8 +765,39 @@ const EnemyEditor: React.FC = () => {
                         <div className="panel-content" style={{ padding: '15px' }}>
                             {templates.map(t => (
                                 <div key={t.id} className="template-item" onClick={() => {
-                                    const newEnemy = { ...getDefaultEnemy(), id: t.id + "_" + Date.now().toString().slice(-4), name: t.name, ...t.data };
-                                    setEnemies([...enemies, ensureNewSchema(newEnemy)]);
+                                    const { components, sprite: tplSprite, ...restData } = (t.data || {});
+                                    const statsComp = Array.isArray(components) ? components.find((c: any) => c?.type === 'Stats') : null;
+                                    const scriptComp = Array.isArray(components) ? components.find((c: any) => c?.type === 'Script') : null;
+                                    const base = getDefaultEnemy();
+                                    const spriteChoice = tplSprite || base.animations.idle.down;
+                                    const templateCandidate = {
+                                        ...base,
+                                        ...restData,
+                                        id: makeUniqueCloneId(`${t.id}_${Date.now().toString().slice(-4)}`, new Set(enemies.map(e => e.id))),
+                                        name: t.name || restData.name || t.id,
+                                        stats: {
+                                            ...base.stats,
+                                            ...(restData.stats || {}),
+                                            ...(statsComp ? {
+                                                hp: statsComp.hp ?? base.stats.hp,
+                                                speed: statsComp.speed ?? base.stats.speed,
+                                                damage: statsComp.damage ?? base.stats.damage,
+                                                xp: statsComp.xpValue ?? statsComp.xp ?? base.stats.xp
+                                            } : {})
+                                        },
+                                        ai: {
+                                            ...base.ai,
+                                            ...(typeof restData.ai === 'object' && restData.ai !== null ? restData.ai : {}),
+                                            ...(scriptComp?.scriptId ? { script: scriptComp.scriptId } : {})
+                                        },
+                                        animations: restData.animations || {
+                                            idle: { down: spriteChoice, up: spriteChoice, side: spriteChoice, speed: 0.2 },
+                                            run: { down: spriteChoice, up: spriteChoice, side: spriteChoice, speed: 0.15 },
+                                            attack: { base: spriteChoice, speed: 0.1 },
+                                            death: { base: spriteChoice, speed: 0.2 }
+                                        }
+                                    };
+                                    setEnemies([...enemies, ensureNewSchema(templateCandidate)]);
                                     setCurrentIndex(enemies.length);
                                     setShowTemplateModal(false);
                                     setIsDirty(true);

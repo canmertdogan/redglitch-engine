@@ -275,9 +275,47 @@ async function loadBrains() {
     } catch(e) { console.warn("Brains fetch failed"); }
 }
 
-function loop() {
-    updatePreviewAnimation();
-    requestAnimationFrame(loop);
+window.__studioPaused = false;
+var _enemyLoopRaf = null;
+var _lastEnemyFrame = -50;
+function scheduleEnemyLoop() {
+    if (!_enemyLoopRaf && !window.__studioPaused && !document.hidden) {
+        _enemyLoopRaf = requestAnimationFrame(loop);
+    }
+}
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'studio:visibility') {
+        window.__studioPaused = !e.data.visible;
+        if (e.data.visible) {
+            _lastEnemyFrame = -50;
+            scheduleEnemyLoop();
+        } else if (_enemyLoopRaf) {
+            cancelAnimationFrame(_enemyLoopRaf);
+            _enemyLoopRaf = null;
+        }
+    }
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (_enemyLoopRaf) {
+            cancelAnimationFrame(_enemyLoopRaf);
+            _enemyLoopRaf = null;
+        }
+    } else {
+        _lastEnemyFrame = -50;
+        scheduleEnemyLoop();
+    }
+});
+
+function loop(ts) {
+    _enemyLoopRaf = null;
+    if (window.__studioPaused || document.hidden) return;
+    const now = ts || performance.now();
+    if (now - _lastEnemyFrame >= 33) {
+        _lastEnemyFrame = now;
+        updatePreviewAnimation();
+    }
+    scheduleEnemyLoop();
 }
 
 function refreshList() {

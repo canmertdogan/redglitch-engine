@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStudio } from '../hooks/useStudio';
 import { 
     Atom, Box, Code, Cpu, Database, Film, Flag, Folder, Gamepad, Globe, 
@@ -13,7 +13,7 @@ import Toast, { ToastHandle } from './shared/Toast';
 // Icon Map for serializable state handling
 const IconMap: Record<string, any> = {
     Rocket, Activity, Code, ImageIcon, UserPlus, Skull, Scroll, 
-    Flag, MessageSquare, Music, Zap, Box, Folder, Layout, Settings, Monitor
+    Flag, MessageSquare, Music, Zap, Box, Folder, Layout, Settings, Monitor, Film, Terminal, Play, Cpu
 };
 
 interface Tool {
@@ -42,35 +42,83 @@ interface WindowState {
     h: number;
 }
 
+const BUILD_TARGETS = [
+    { id: 'electron', label: 'DESKTOP (ELECTRON)' },
+    { id: 'web', label: 'WEB (HTML5)' },
+    { id: 'windows', label: 'WINDOWS (EXE)' },
+    { id: 'macos', label: 'MACOS (APP)' },
+    { id: 'android', label: 'ANDROID (APK)' },
+    { id: 'ios', label: 'IOS (XCODE)' },
+] as const;
+
+const STUDIO_TOOLS: Tool[] = [
+    { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', iconName: 'Rocket', src: '../dashboard.html', w: 900, h: 700, betaStatus: 'supported' },
+    { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', iconName: 'Activity', src: '../project_dashboard.html', w: 1000, h: 600, betaStatus: 'supported' },
+    { id: 'console', category: 'SYSTEM', title: 'System Logs', iconName: 'Terminal', src: '../console.html', w: 800, h: 500, betaStatus: 'supported' },
+    { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', iconName: 'Code', src: 'script_editor.html', w: 1000, h: 700 },
+    { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', iconName: 'ImageIcon', src: 'pixel_editor.html', w: 900, h: 650 },
+    { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', iconName: 'UserPlus', src: 'npc_editor.html', w: 700, h: 500 },
+    { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', iconName: 'Skull', src: 'enemy_editor.html', w: 700, h: 500 },
+    { id: 'item', category: 'ENTITIES', title: 'Item Database', iconName: 'Scroll', src: 'item_editor.html', w: 700, h: 500 },
+    { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', iconName: 'Box', src: '../studio-dist/prefab_editor.html', w: 800, h: 600 },
+    { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', iconName: 'Flag', src: 'quest_editor.html', w: 900, h: 600, betaStatus: 'experimental' },
+    { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', iconName: 'MessageSquare', src: 'dialogue_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
+    { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', iconName: 'Film', src: '../studio-dist/interactive_cutscene_editor.html', w: 1200, h: 800, betaStatus: 'experimental' },
+    { id: 'behavior', category: 'LOGIC & AI', title: 'AI Brains', iconName: 'Cpu', src: '../behavior_editor.html', w: 900, h: 600, betaStatus: 'experimental' },
+    { id: 'daw', category: 'ASSETS', title: 'Audio Studio', iconName: 'Music', src: 'daw_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
+    { id: 'fxpro', category: 'ASSETS', title: 'FX Master', iconName: 'Zap', src: 'fx_editor.html', w: 900, h: 650 },
+    { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_editor.html', w: 1200, h: 800, betaStatus: 'optional' },
+    { id: 'assets', category: 'ASSETS', title: 'File Manager', iconName: 'Folder', src: 'asset_manager.html', w: 900, h: 600 },
+    { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700, betaStatus: 'experimental' },
+    { id: 'ui_designer', category: 'INTERFACE', title: 'UI Designer', iconName: 'Monitor', src: 'ui_designer.html', w: 1200, h: 800, betaStatus: 'experimental' }
+];
+
 const StudioApp: React.FC = () => {
-    const { isReady, eventBus, subscribe, projectState } = useStudio();
+    const { isReady, emit, subscribe, projectState } = useStudio();
     const [activeProject, setActiveProject] = useState('LOADING...');
     const [windows, setWindows] = useState<Record<string, WindowState>>({});
     const [focusedWinId, setFocusedWinId] = useState<string | null>(null);
-    const [zIndexCounter, setZIndexCounter] = useState(100);
     const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
     const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
     const [rightSidebarPane, setRightSidebarPane] = useState<'devops' | 'files'>('devops');
     const [systemStats, setSystemStats] = useState({ cpu: 0, mem: 0 });
+    const [showBuildModal, setShowBuildModal] = useState(false);
+    const [buildTarget, setBuildTarget] = useState<string>('electron');
+    const [isBuilding, setIsBuilding] = useState(false);
+    const [buildOutput, setBuildOutput] = useState<string>('');
     const toastRef = useRef<ToastHandle>(null);
+    const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
+    const windowsRef = useRef<Record<string, WindowState>>({});
+    const zIndexCounterRef = useRef(100);
+    useEffect(() => { windowsRef.current = windows; }, [windows]);
 
-    const tools: Tool[] = [
-        { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', iconName: 'Rocket', src: '../dashboard.html', w: 900, h: 700, betaStatus: 'supported' },
-        { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', iconName: 'Activity', src: '../dashboard.html', w: 1000, h: 600, betaStatus: 'supported' },
-        { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', iconName: 'Code', src: 'script_editor.html', w: 1000, h: 700 },
-        { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', iconName: 'ImageIcon', src: 'pixel_editor.html', w: 900, h: 650 },
-        { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', iconName: 'UserPlus', src: 'npc_editor.html', w: 700, h: 500 },
-        { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', iconName: 'Skull', src: 'enemy_editor.html', w: 700, h: 500 },
-        { id: 'item', category: 'ENTITIES', title: 'Item Database', iconName: 'Scroll', src: 'item_editor.html', w: 700, h: 500 },
-        { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', iconName: 'Flag', src: 'quest_editor.html', w: 900, h: 600, betaStatus: 'experimental' },
-        { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', iconName: 'MessageSquare', src: 'dialogue_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
-        { id: 'daw', category: 'ASSETS', title: 'Audio Studio', iconName: 'Music', src: 'daw_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
-        { id: 'fxpro', category: 'ASSETS', title: 'FX Master', iconName: 'Zap', src: 'fx_editor.html', w: 900, h: 650 },
-        { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_editor.html', w: 1200, h: 800, betaStatus: 'optional' },
-        { id: 'assets', category: 'ASSETS', title: 'File Manager', iconName: 'Folder', src: 'asset_manager.html', w: 900, h: 600 },
-        { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700, betaStatus: 'experimental' },
-        { id: 'ui_designer', category: 'INTERFACE', title: 'UI Designer', iconName: 'Monitor', src: 'ui_designer.html', w: 1200, h: 800, betaStatus: 'experimental' }
-    ];
+    const tools = STUDIO_TOOLS;
+
+    const openWindow = useCallback((tool: Tool) => {
+        const nextZ = ++zIndexCounterRef.current;
+        setFocusedWinId(tool.id);
+        setWindows(prev => {
+            if (prev[tool.id]) {
+                return {
+                    ...prev,
+                    [tool.id]: { ...prev[tool.id], src: tool.src, isOpen: true, isMinimized: false, zIndex: nextZ }
+                };
+            }
+            const newWin: WindowState = {
+                id: tool.id,
+                title: tool.title,
+                iconName: tool.iconName,
+                src: tool.src,
+                isOpen: true,
+                isMinimized: false,
+                isMaximized: true,
+                zIndex: nextZ,
+                x: 30, y: 30,
+                w: tool.w, h: tool.h
+            };
+            return { ...prev, [tool.id]: newWin };
+        });
+    }, []);
 
     useEffect(() => {
         if (isReady) {
@@ -79,6 +127,99 @@ const StudioApp: React.FC = () => {
             return () => clearInterval(statsTimer);
         }
     }, [isReady]);
+
+    const handleGlobalSave = useCallback(async (silent = false) => {
+        try {
+            if (projectState?.isDirty && typeof projectState.saveProject === 'function') {
+                await projectState.saveProject();
+            }
+        } catch (err) {
+            console.warn('[StudioApp] projectState.saveProject failed', err);
+        }
+
+        emit('system:global_save', { timestamp: Date.now() });
+
+        const openWins = Object.values(windowsRef.current).filter(w => w.isOpen);
+        for (const w of openWins) {
+            const frameWin = iframeRefs.current[w.id]?.contentWindow as any;
+            if (!frameWin) continue;
+            try {
+                if (typeof frameWin.saveToServer === 'function') {
+                    await Promise.resolve(frameWin.saveToServer());
+                } else if (typeof frameWin.saveAllFiles === 'function') {
+                    await Promise.resolve(frameWin.saveAllFiles());
+                } else {
+                    frameWin.postMessage({ type: 'redglitch:save-request' }, window.location.origin);
+                }
+            } catch (err) {
+                console.warn('[StudioApp] Frame save failed:', w.id, err);
+            }
+        }
+
+        if (!silent) {
+            toastRef.current?.show(openWins.length > 0 ? `SAVED (${openWins.length} TOOLS)` : 'PROJECT SYNCED', 'success');
+        }
+    }, [emit, projectState]);
+
+    useEffect(() => {
+        if (!isReady) return;
+
+        const openToolWithQuery = (toolId: string, queryKey: string, queryVal: string) => {
+            const tool = tools.find(t => t.id === toolId);
+            if (!tool) return;
+            const sep = tool.src.includes('?') ? '&' : '?';
+            openWindow({ ...tool, src: queryVal ? `${tool.src}${sep}${queryKey}=${encodeURIComponent(queryVal)}` : tool.src });
+        };
+
+        const unsubOpen = subscribe('studio:open_tool', (event: any) => {
+            const data = event?.data || {};
+            if (data.toolId) {
+                const tool = tools.find(t => t.id === data.toolId);
+                if (tool) {
+                    const qs = data.params
+                        ? new URLSearchParams(data.params).toString()
+                        : '';
+                    const src = data.src || (qs ? `${tool.src}${tool.src.includes('?') ? '&' : '?'}${qs}` : tool.src);
+                    openWindow({ ...tool, src });
+                    return;
+                }
+            }
+            if (data.src) {
+                openWindow({
+                    id: data.toolId || 'custom_tool',
+                    category: 'SYSTEM',
+                    title: data.title || 'Tool',
+                    iconName: 'Box',
+                    src: data.src,
+                    w: 900,
+                    h: 650
+                });
+            }
+        });
+
+        const unsubSaveReq = subscribe('system:project:save_request', () => {
+            handleGlobalSave(false);
+        });
+
+        (window as any).editSpriteInStudio = (spriteKey: string) => openToolWithQuery('pixel', 'sprite', spriteKey || '');
+        (window as any).openPixelEditor = (spriteKey: string) => openToolWithQuery('pixel', 'sprite', spriteKey || '');
+        (window as any).openDialogueEditor = (dialogueId: string) => openToolWithQuery('dialogue', 'id', dialogueId || '');
+        (window as any).openBehaviorEditor = (scriptName: string) => openToolWithQuery('behavior', 'script', scriptName || '');
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                handleGlobalSave(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            unsubOpen();
+            unsubSaveReq();
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isReady, subscribe, openWindow, handleGlobalSave]);
 
     const loadCurrentProject = async () => {
         try {
@@ -109,37 +250,84 @@ const StudioApp: React.FC = () => {
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
-    const openWindow = (tool: Tool) => {
-        const nextZ = zIndexCounter + 1;
-        setZIndexCounter(nextZ);
-        setFocusedWinId(tool.id);
-        
-        setWindows(prev => {
-            if (prev[tool.id]) {
-                return {
-                    ...prev,
-                    [tool.id]: { ...prev[tool.id], isOpen: true, isMinimized: false, zIndex: nextZ }
-                };
+    const handleHeaderMinimize = () => {
+        const electronAPI = (window as any).electronAPI;
+        if (electronAPI?.minimize) {
+            electronAPI.minimize();
+            return;
+        }
+        if (focusedWinId && windows[focusedWinId]) {
+            setWindows(prev => ({ ...prev, [focusedWinId]: { ...prev[focusedWinId], isMinimized: true } }));
+        }
+    };
+
+    const handleHeaderMaximize = () => {
+        const electronAPI = (window as any).electronAPI;
+        if (electronAPI?.maximize) {
+            electronAPI.maximize();
+            return;
+        }
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.().catch(() => {
+                if (focusedWinId) toggleMaximize(focusedWinId);
+            });
+        } else {
+            document.exitFullscreen?.().catch(() => {});
+        }
+    };
+
+    const handlePlay = async () => {
+        await handleGlobalSave(true);
+        const launchUrl = `../campaign_runtime.html?studio_run=1&t=${Date.now()}`;
+        const popup = window.open(launchUrl, 'redglitch-runtime');
+        if (!popup) {
+            openWindow({
+                id: 'runtime_preview',
+                category: 'SYSTEM',
+                title: 'Runtime Preview',
+                iconName: 'Play',
+                src: launchUrl,
+                w: 1100,
+                h: 720
+            });
+        }
+        toastRef.current?.show('LAUNCHING RUNTIME', 'info');
+    };
+
+    const handleRunBuild = async () => {
+        if (isBuilding) return;
+        setIsBuilding(true);
+        setBuildOutput(`Starting ${buildTarget} build...\n`);
+        try {
+            const res = await fetch('/api/build', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: buildTarget })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success !== false) {
+                setBuildOutput(prev => prev + (data.log ? data.log + '\n' : '') + `BUILD COMPLETE: ${data.path || 'dist/game'}`);
+                toastRef.current?.show('BUILD COMPLETE', 'success');
+            } else {
+                const errText = data.error || `Build failed (${res.status})`;
+                setBuildOutput(prev => prev + (data.log ? data.log + '\n' : '') + `ERROR: ${errText}`);
+                toastRef.current?.show(errText, 'error');
             }
-            const newWin: WindowState = {
-                id: tool.id,
-                title: tool.title,
-                iconName: tool.iconName,
-                src: tool.src,
-                isOpen: true,
-                isMinimized: false,
-                isMaximized: true,
-                zIndex: nextZ,
-                x: 30, y: 30,
-                w: tool.w, h: tool.h
-            };
-            return { ...prev, [tool.id]: newWin };
-        });
+        } catch (err: any) {
+            setBuildOutput(prev => prev + `ERROR: ${err?.message || 'Network error'}`);
+            toastRef.current?.show('BUILD REQUEST FAILED', 'error');
+        } finally {
+            setIsBuilding(false);
+        }
+    };
+
+    const handleOpenLogs = () => {
+        const consoleTool = tools.find(t => t.id === 'console');
+        if (consoleTool) openWindow(consoleTool);
     };
 
     const focusWindow = (id: string) => {
-        const nextZ = zIndexCounter + 1;
-        setZIndexCounter(nextZ);
+        const nextZ = ++zIndexCounterRef.current;
         setFocusedWinId(id);
         setWindows(prev => ({
             ...prev,
@@ -167,6 +355,10 @@ const StudioApp: React.FC = () => {
         );
     }
 
+    const categories = ['SYSTEM', 'WORLD ARCHITECT', 'ENTITIES', 'LOGIC & AI', 'ASSETS', 'INTERFACE'].filter(cat =>
+        tools.some(t => t.category === cat)
+    );
+
     return (
         <div style={{ 
             display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', 
@@ -186,25 +378,25 @@ const StudioApp: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', height: '100%', flexShrink: 0 }}>
-                    <div className="win-control-btn"><Minus size={13} /></div>
-                    <div className="win-control-btn"><Square size={11} /></div>
-                    <div className="win-control-btn close" onClick={() => window.location.href = '../dashboard.html'}><X size={15} /></div>
+                    <div className="win-control-btn" onClick={handleHeaderMinimize} title="Minimize"><Minus size={13} /></div>
+                    <div className="win-control-btn" onClick={handleHeaderMaximize} title="Maximize / Fullscreen"><Square size={11} /></div>
+                    <div className="win-control-btn close" onClick={() => window.location.href = '../dashboard.html'} title="Return to Launcher"><X size={15} /></div>
                 </div>
             </header>
 
             {/* QUICK TOOLBAR */}
             <div style={{ height: '38px', background: '#000', borderBottom: '1px solid #1f2b42', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '5px' }}>
                 <div style={{ display: 'flex', gap: '2px', borderRight: '1px solid #222', paddingRight: '10px' }}>
-                    <button className="tool-btn-q" onClick={loadCurrentProject}><Folder size={16} /></button>
-                    <button className="tool-btn-q"><Save size={16} /></button>
+                    <button className="tool-btn-q" onClick={loadCurrentProject} title="Reload Active Project"><Folder size={16} /></button>
+                    <button className="tool-btn-q" onClick={() => handleGlobalSave(false)} title="Save All (Ctrl+S)"><Save size={16} /></button>
                 </div>
                 <div style={{ display: 'flex', gap: '2px', borderRight: '1px solid #222', paddingRight: '10px', paddingLeft: '5px' }}>
-                    <button className="tool-btn-q" style={{ color: '#2ecc71' }}><Play size={16} /></button>
-                    <button className="tool-btn-q"><Hammer size={16} /></button>
+                    <button className="tool-btn-q" style={{ color: '#2ecc71' }} onClick={handlePlay} title="Playtest Runtime"><Play size={16} /></button>
+                    <button className="tool-btn-q" onClick={() => setShowBuildModal(true)} title="Build Game"><Hammer size={16} /></button>
                 </div>
                 <div style={{ display: 'flex', gap: '2px', paddingLeft: '5px' }}>
-                    <button className="tool-btn-q" onClick={() => setLeftSidebarCollapsed(!leftSidebarCollapsed)}><Columns size={16} /></button>
-                    <button className="tool-btn-q" onClick={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}><Columns size={16} style={{ transform: 'scaleX(-1)' }} /></button>
+                    <button className="tool-btn-q" onClick={() => setLeftSidebarCollapsed(!leftSidebarCollapsed)} title="Toggle Left Sidebar"><Columns size={16} /></button>
+                    <button className="tool-btn-q" onClick={() => setRightSidebarCollapsed(!rightSidebarCollapsed)} title="Toggle Right Sidebar"><Columns size={16} style={{ transform: 'scaleX(-1)' }} /></button>
                 </div>
             </div>
 
@@ -215,7 +407,7 @@ const StudioApp: React.FC = () => {
                     <aside style={{ width: '220px', background: '#080c18', borderRight: '2px solid #020408', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
                         <div style={{ padding: '10px', color: 'var(--accent)', borderBottom: '1px solid #2c3e50', fontSize: '13px', letterSpacing: '1px' }}>PUBLIC BETA TOOLS</div>
                         <div style={{ flex: 1, overflowY: 'auto', padding: '5px' }} className="pixel-scroll">
-                            {['SYSTEM', 'WORLD ARCHITECT', 'ENTITIES', 'LOGIC & AI', 'ASSETS'].map(cat => (
+                            {categories.map(cat => (
                                 <div key={cat} style={{ marginBottom: '15px' }}>
                                     <div style={{ color: '#555', fontSize: '11px', padding: '5px', borderBottom: '1px solid #111', marginBottom: '5px', fontWeight: 'bold' }}>{cat}</div>
                                     {tools.filter(t => t.category === cat).map(tool => {
@@ -286,6 +478,7 @@ const StudioApp: React.FC = () => {
                                 </div>
                                 <div style={{ flex: 1, background: '#000', position: 'relative' }}>
                                     <iframe 
+                                        ref={(el) => { iframeRefs.current[win.id] = el; }}
                                         src={win.src} 
                                         style={{ width: '100%', height: '100%', border: 'none', background: '#000' }} 
                                         title={win.title}
@@ -316,8 +509,8 @@ const StudioApp: React.FC = () => {
                                 <>
                                     <div className="cat-title" style={{ borderBottom: '1px solid #222', marginBottom: '10px' }}>RUNTIME CONTROL</div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                        <button className="ops-btn-new"><Play size={14} color="#2ecc71" /> PLAY</button>
-                                        <button className="ops-btn-new"><Terminal size={14} /> LOGS</button>
+                                        <button className="ops-btn-new" onClick={handlePlay}><Play size={14} color="#2ecc71" /> PLAY</button>
+                                        <button className="ops-btn-new" onClick={handleOpenLogs}><Terminal size={14} /> LOGS</button>
                                     </div>
                                 </>
                             ) : (
@@ -330,6 +523,36 @@ const StudioApp: React.FC = () => {
                     </aside>
                 )}
             </div>
+
+            {showBuildModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="panel" style={{ width: '520px', maxWidth: '92vw', height: 'auto', maxHeight: '80vh', border: '2px solid var(--accent)', background: '#080c18' }}>
+                        <div className="panel-header">
+                            <span>BUILD PIPELINE — {activeProject}</span>
+                            <button className="win-btn close" onClick={() => !isBuilding && setShowBuildModal(false)}>×</button>
+                        </div>
+                        <div className="panel-content" style={{ padding: '18px' }}>
+                            <label>TARGET PLATFORM</label>
+                            <select value={buildTarget} onChange={(e) => setBuildTarget(e.target.value)} disabled={isBuilding}>
+                                {BUILD_TARGETS.map(t => (
+                                    <option key={t.id} value={t.id}>{t.label}</option>
+                                ))}
+                            </select>
+                            {buildOutput && (
+                                <pre style={{ background: '#000', border: '1px solid #1f2b42', color: '#8fa0bc', padding: '10px', maxHeight: '220px', overflow: 'auto', fontSize: '12px', whiteSpace: 'pre-wrap' }}>
+                                    {buildOutput}
+                                </pre>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                                <button className="ops-btn-new" onClick={() => setShowBuildModal(false)} disabled={isBuilding}>CLOSE</button>
+                                <button className="ops-btn-new" style={{ borderColor: 'var(--accent)', color: '#fff' }} onClick={handleRunBuild} disabled={isBuilding}>
+                                    <Hammer size={14} /> {isBuilding ? 'BUILDING...' : 'RUN BUILD'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* STATUS BAR */}
             <footer style={{ height: '25px', background: '#000', borderTop: '1px solid #1f2b42', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', fontSize: '12px', color: '#8fa0bc' }}>

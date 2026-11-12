@@ -1159,7 +1159,62 @@ class PrefabEditor {
     }
 
     // ── Canvas Rendering ──────────────────────────────────────────────
-    _animate() { this._draw(); requestAnimationFrame(()=>this._animate()); }
+    _ensureVisibilityHooks() {
+        if (this._visHooked) return;
+        this._visHooked = true;
+        this._studioPaused = false;
+        this._rafId = null;
+        this._lastDrawAt = -200;
+        this._lastActiveInput = 0;
+        const markActive = () => { this._lastActiveInput = performance.now(); };
+        if (this.canvas) {
+            this.canvas.addEventListener('pointerdown', markActive, { passive: true });
+            this.canvas.addEventListener('pointermove', markActive, { passive: true });
+            this.canvas.addEventListener('wheel', markActive, { passive: true });
+        }
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'studio:visibility') {
+                this._studioPaused = !e.data.visible;
+                if (e.data.visible) {
+                    this._lastDrawAt = -200;
+                    this._scheduleAnimate();
+                } else if (this._rafId) {
+                    cancelAnimationFrame(this._rafId);
+                    this._rafId = null;
+                }
+            }
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (this._rafId) {
+                    cancelAnimationFrame(this._rafId);
+                    this._rafId = null;
+                }
+            } else if (!this._studioPaused) {
+                this._lastDrawAt = -200;
+                this._scheduleAnimate();
+            }
+        });
+    }
+
+    _scheduleAnimate() {
+        if (!this._rafId && !this._studioPaused && !document.hidden) {
+            this._rafId = requestAnimationFrame((ts) => this._animate(ts));
+        }
+    }
+
+    _animate(ts) {
+        this._ensureVisibilityHooks();
+        this._rafId = null;
+        if (this._studioPaused || document.hidden) return;
+        const now = ts || performance.now();
+        const isActive = (now - this._lastActiveInput) < 350;
+        if (isActive || (now - this._lastDrawAt >= 200)) {
+            this._lastDrawAt = now;
+            this._draw();
+        }
+        this._scheduleAnimate();
+    }
 
     _draw() {
         const ctx=this.ctx, W=this.canvas.width, H=this.canvas.height;

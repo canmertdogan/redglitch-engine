@@ -392,6 +392,8 @@
         </div>
     </div>
 
+    <script src="js/CampaignSlot.js"></script>
+    <script src="js/SlotManager.js"></script>
     <script>
         class CampaignLauncher {
             constructor() {
@@ -605,14 +607,39 @@
                 });
             }
 
-            startCampaign(continueMode) {
-                // Store campaign info in sessionStorage for the game to read
+            async startCampaign(continueMode) {
+                if (!this.selectedCampaign) return;
+                // Store campaign info in sessionStorage for compatibility
                 sessionStorage.setItem('redglitch_campaign_id', this.selectedCampaign);
                 sessionStorage.setItem('redglitch_campaign_continue', continueMode ? '1' : '0');
                 sessionStorage.setItem('redglitch_save_slot', this.selectedSlot.toString());
-                
-                // Redirect to game
-                window.location.href = 'index.html?mode=campaign';
+
+                // Ensure the selected slot is initialized for campaign_runtime.html
+                try {
+                    const slotId = this.selectedSlot || 1;
+                    const campaign = this.campaigns.find(c => c.id === this.selectedCampaign);
+                    const campaignId = this.selectedCampaign.replace(/\.json$/i, '');
+                    let slot = await SlotManager.getSlot(slotId);
+                    if (!continueMode || slot.isEmpty || slot.campaign?.file !== campaignId) {
+                        const nodes = Array.isArray(campaign?.nodes) ? campaign.nodes : [];
+                        const startNode = nodes.find(n => n.type === 'start')?.id || 'start';
+                        const nodesMap = {};
+                        nodes.forEach((n, idx) => { nodesMap[n.id || `node_${idx}`] = n; });
+                        slot = new CampaignSlot(slotId);
+                        slot.load(campaignId, {
+                            name: campaign?.metadata?.name || campaign?.name || campaignId,
+                            description: campaign?.metadata?.description || '',
+                            startNode,
+                            nodes: nodesMap
+                        }, this.username || 'Player');
+                        await SlotManager.saveSlot(slot);
+                    }
+                } catch (err) {
+                    console.warn('[CampaignLauncher] Slot setup warning:', err);
+                }
+
+                // Launch campaign runtime cleanly
+                window.location.href = `campaign_runtime.html?slot=${encodeURIComponent(this.selectedSlot)}&campaign=${encodeURIComponent(this.selectedCampaign)}`;
             }
         }
 

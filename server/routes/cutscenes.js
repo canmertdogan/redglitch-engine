@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const safeFs = require('../utils/safeFs');
+const config = require('../config');
 
 function safeParseJSON(raw, label) {
     try { return JSON.parse(raw); } catch (e) { const err = new Error(`Invalid JSON in ${label}`); err.code = 'INVALID_JSON'; throw err; }
@@ -116,15 +117,25 @@ router.delete('/cutscenes/:id', async (req, res) => {
 
 // --- DIALOGUES API ---
 router.get('/dialogues', async (req, res) => {
+    const fallbackPath = path.join(config.PUBLIC_DIR, 'dunyalar', 'definitions', 'dialogues.json');
+    const primaryPath = projectService.isRootProject()
+        ? fallbackPath
+        : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions', 'dialogues.json');
+
     try {
-        const targetDir = projectService.isRootProject()
-            ? path.join(projectService.getProjectPath(), 'public', 'dunyalar', 'definitions')
-            : path.join(projectService.getActiveProject(), 'dunyalar', 'definitions');
-        const filePath = path.join(targetDir, 'dialogues.json');
-        const data = await fs.readFile(filePath, 'utf8');
-        res.json(safeParseJSON(data, 'cutscene'))
-    } catch (err) { 
-        res.json([]); 
+        let data;
+        try {
+            data = await fs.readFile(primaryPath, 'utf8');
+        } catch (err) {
+            if (err.code !== 'ENOENT' || primaryPath === fallbackPath) throw err;
+            data = await fs.readFile(fallbackPath, 'utf8');
+        }
+        res.json(safeParseJSON(data, 'dialogues'));
+    } catch (err) {
+        if (err.code === 'INVALID_JSON') {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json([]);
     }
 });
 

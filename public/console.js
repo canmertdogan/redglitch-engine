@@ -128,12 +128,18 @@ class Terminal {
 
         // System Shell Command
         if (raw.startsWith('sh ')) {
-            const command = raw.substring(3);
+            const parts = raw.substring(3).trim().split(/\s+/).filter(Boolean);
+            const command = parts[0] || '';
+            const args = parts.slice(1);
+            if (!command) {
+                this.log('Usage: sh <command> [args...]', 'warning', 'SHELL');
+                return;
+            }
             try {
                 const res = await fetch('/api/ide/terminal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command })
+                    body: JSON.stringify({ command, args })
                 });
                 
                 if (!res.ok) {
@@ -155,13 +161,23 @@ class Terminal {
 
         // JavaScript Execution
         try {
-            if (!window.__DEBUG_CONSOLE_ENABLED) {
+            let parentDebugEnabled = false;
+            let sameOriginParent = false;
+            if (window.parent && window.parent !== window) {
+                try {
+                    sameOriginParent = window.parent.location.origin === window.location.origin;
+                    if (sameOriginParent) parentDebugEnabled = Boolean(window.parent.__DEBUG_CONSOLE_ENABLED);
+                } catch (_) {
+                    sameOriginParent = false;
+                }
+            }
+            if (!window.__DEBUG_CONSOLE_ENABLED && !parentDebugEnabled) {
                 this.log('JS eval is disabled. Enable with window.__DEBUG_CONSOLE_ENABLED = true in DevTools.', 'warning', 'SYS');
                 return;
             }
-            // Attempt to access parent IDE context if available
-            const context = window.parent || window;
-            const result = eval.call(context, raw);
+            const result = (sameOriginParent && typeof window.parent.eval === 'function')
+                ? window.parent.eval(raw)
+                : window.eval(raw);
             if (result !== undefined) {
                 this.log(String(result), 'success', 'JS');
             }
@@ -176,7 +192,7 @@ const terminal = new Terminal();
 // Listen for messages from parent
 window.addEventListener('message', (e) => {
     const data = e.data;
-    if (data.type === 'log') {
+    if (data && data.type === 'log') {
         terminal.log(data.message, data.level, data.source);
     }
 });

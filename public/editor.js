@@ -26,9 +26,11 @@ class WorldEditor {
             spawn: {x: 5, y: 5},
             exit: null,
             weather: 'none',
-            lighting: 'day'
+            lighting: 'day',
+            shader: 'default'
         };
-        
+        window.map = map;
+
         let editorState = {
             mode: 'visual',
             tool: 'pen',
@@ -47,6 +49,7 @@ class WorldEditor {
             selectedCollisionType: 1,  // Default: Solid (Shadowed)
             currentFilename: null  // Track current file for Save vs Save As
         };
+        window.editorState = editorState;
         
         // Collision Type Definitions
         const COLLISION_TYPES = {
@@ -91,14 +94,13 @@ class WorldEditor {
             if (bar) bar.style.width = percent + '%';
             if (txt) txt.innerText = text;
             
-            if (percent >= 100) {
+            if (percent >= 100 && overlay) {
+                overlay.style.pointerEvents = 'none';
                 setTimeout(() => {
-                    if (overlay) {
-                        overlay.style.opacity = '0';
-                        overlay.style.transition = 'opacity 0.5s';
-                        setTimeout(() => overlay.style.display = 'none', 500);
-                    }
-                }, 500);
+                    overlay.style.opacity = '0';
+                    overlay.style.transition = 'opacity 0.15s';
+                    setTimeout(() => { overlay.style.display = 'none'; }, 150);
+                }, 40);
             }
         }
         
@@ -309,7 +311,48 @@ class WorldEditor {
             document.getElementById('btn-save-server').onclick = () => saveToServer(false);
             document.getElementById('btn-save-as').onclick = () => saveToServer(true);
             document.getElementById('btn-download').onclick = downloadJSON;
-            document.getElementById('btn-clear').onclick = () => { if(confirm("Clear map?")) initMap(map.width, map.height); };
+            document.getElementById('btn-clear').onclick = () => {
+                if (!confirm("Clear map?")) return;
+                map.layers = [new Array(map.width * map.height).fill(287)];
+                map.collision = new Array(map.width * map.height).fill(0);
+                map.decorations = [];
+                map.layerProps = [{ visible: true, locked: false, name: 'Layer 0' }];
+                editorState.activeLayer = 0;
+                resizeCanvasElement();
+                updateLayerList();
+                render();
+                pushHistory();
+            };
+
+            const mapTypeEl = document.getElementById('map-type');
+            if (mapTypeEl) {
+                mapTypeEl.addEventListener('change', (e) => {
+                    map.type = e.target.value || 'topdown';
+                    resizeCanvasElement();
+                    render();
+                    pushHistory();
+                });
+            }
+            const weatherEl = document.getElementById('fx-weather');
+            if (weatherEl) {
+                weatherEl.addEventListener('change', (e) => {
+                    map.weather = e.target.value || 'none';
+                    render();
+                    pushHistory();
+                });
+            }
+            const lightingEl = document.getElementById('fx-lighting');
+            if (lightingEl) {
+                lightingEl.addEventListener('change', (e) => {
+                    map.lighting = e.target.value || 'day';
+                    render();
+                    pushHistory();
+                });
+            }
+            const showGridEl = document.getElementById('show-grid');
+            if (showGridEl) showGridEl.addEventListener('change', () => render());
+            const showCollEl = document.getElementById('show-collision');
+            if (showCollEl) showCollEl.addEventListener('change', () => render());
             
             updateProgress(30, "LOADING TEXTURE ATLAS...");
             await loadTileset(map.tilesetPath);
@@ -320,17 +363,12 @@ class WorldEditor {
             updateProgress(60, "BOOTING FX SYSTEM...");
             window.fx = new FXSystem(ctx, canvas.width, canvas.height);
             
-            updateProgress(70, "INDEXING ACTORS...");
-            await loadActors();
-            
-            updateProgress(85, "SCANNING PREFABS...");
-            await loadPrefabs();
-            
-            // Check if function exists before calling
-            if (typeof loadLevelList === 'function') {
-                updateProgress(90, "FETCHING SERVER LEVELS...");
-                await loadLevelList();
-            }
+            updateProgress(70, "LOADING ACTORS, PREFABS & LEVELS...");
+            await Promise.all([
+                loadActors(),
+                loadPrefabs(),
+                typeof loadLevelList === 'function' ? loadLevelList() : Promise.resolve()
+            ]);
             
             updateLayerList();
             updateZoomUI();
@@ -339,6 +377,7 @@ class WorldEditor {
             
             // Real-time Level List Update
             setInterval(() => {
+                if (document.hidden || window.__studioPaused) return;
                 if (typeof loadLevelList === 'function') loadLevelList();
             }, 5000);
             
@@ -364,27 +403,65 @@ class WorldEditor {
             // Check for pending AI action immediately
             _topdownPendingCheck();
         
-            // Add Keyboard Shortcut for Save
+            // Add Keyboard Shortcuts (Save, Undo, Redo, New Map, Collision)
             document.addEventListener('keydown', (e) => {
+                const mod = e.ctrlKey || e.metaKey;
+                const tag = e.target && e.target.tagName ? e.target.tagName.toUpperCase() : '';
+                const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
                 // Save (Ctrl+S)
-                if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
+                if (mod && e.key.toLowerCase() === 's' && !e.shiftKey) {
                     e.preventDefault();
                     console.log("Ctrl+S detected. Triggering save...");
                     saveToServer(false); // Quick save
                     if (window.parent && window.parent.RedglitchEventBus) {
                         window.parent.RedglitchEventBus.emit('system:project:save_request');
                     }
+                    return;
                 }
-                
+
                 // Save As (Ctrl+Shift+S)
-                if ((e.ctrlKey || e.metaKey) && e.key === 'S' && e.shiftKey) {
+                if (mod && e.key.toLowerCase() === 's' && e.shiftKey) {
                     e.preventDefault();
                     console.log("Ctrl+Shift+S detected. Triggering Save As...");
                     saveToServer(true); // Save As
+                    return;
                 }
-                
+
+                // Open (Ctrl+O)
+                if (mod && e.key.toLowerCase() === 'o' && !e.shiftKey) {
+                    e.preventDefault();
+                    toggleLevelWindow();
+                    return;
+                }
+
+                if (inField) return;
+
+                // Undo (Ctrl+Z) & Redo (Ctrl+Y / Ctrl+Shift+Z)
+                if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    undo();
+                    return;
+                }
+                if (mod && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+                    e.preventDefault();
+                    redo();
+                    return;
+                }
+
+                // New Map (Ctrl+N)
+                if (mod && e.key.toLowerCase() === 'n' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (confirm('New Map? Unsaved changes will be lost.')) {
+                        initMap(30, 20);
+                        editorState.currentFilename = null;
+                        updateFilenameDisplay('level1');
+                    }
+                    return;
+                }
+
                 // Collision type shortcuts (0-8 keys) when in collision mode
-                if (editorState.mode === 'collision' && !e.ctrlKey && !e.altKey) {
+                if (editorState.mode === 'collision' && !mod && !e.altKey) {
                     const key = e.key;
                     if (key >= '0' && key <= '8') {
                         const type = parseInt(key);
@@ -400,9 +477,49 @@ class WorldEditor {
             initPropButtons();
         };
         
-        function loop() {
-            if (window.fx) { window.fx.update(); render(); }
-            requestAnimationFrame(loop);
+        window.__studioPaused = false;
+        let _editorLoopRaf = null;
+        let _lastIdleRender = -250;
+        function scheduleEditorLoop() {
+            if (!_editorLoopRaf && !window.__studioPaused && !document.hidden) {
+                _editorLoopRaf = requestAnimationFrame(loop);
+            }
+        }
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'studio:visibility') {
+                window.__studioPaused = !e.data.visible;
+                if (e.data.visible) {
+                    _lastIdleRender = -250;
+                    scheduleEditorLoop();
+                } else if (_editorLoopRaf) {
+                    cancelAnimationFrame(_editorLoopRaf);
+                    _editorLoopRaf = null;
+                }
+            }
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (_editorLoopRaf) {
+                    cancelAnimationFrame(_editorLoopRaf);
+                    _editorLoopRaf = null;
+                }
+            } else {
+                _lastIdleRender = -250;
+                scheduleEditorLoop();
+            }
+        });
+
+        function loop(ts) {
+            _editorLoopRaf = null;
+            if (window.__studioPaused || document.hidden) return;
+            const weatherActive = !!(typeof map !== 'undefined' && map.weather && map.weather !== 'none');
+            const active = weatherActive || (typeof isDrawing !== 'undefined' && isDrawing);
+            const now = ts || performance.now();
+            if (active || (now - _lastIdleRender >= 250)) {
+                _lastIdleRender = now;
+                if (window.fx) { window.fx.update(); render(); }
+            }
+            scheduleEditorLoop();
         }
         
         // --- UI UTILS ---
@@ -576,85 +693,158 @@ class WorldEditor {
             try {
                 if (forceScan) {
                     console.log("Triggering manual asset scan...");
-                    await fetch('/api/assets/rebuild', { method: 'POST' });
+                    await fetch('/api/assets/rebuild', { method: 'POST' }).catch(() => {});
                 }
 
-                // Cache-buster to ensure we get fresh results
-                let assetsRes = await fetch('/api/assets/list?t=' + Date.now());
-                if (!assetsRes.ok) throw new Error(`Asset list failed: ${assetsRes.status}`);
-                let assets = await assetsRes.json();
-                if (!Array.isArray(assets)) assets = [];
+                const systemNames = new Set([
+                    'enemies.json', 'npcs.json', 'skills.json', 'items.json',
+                    'campaign.json', 'dialogues.json', 'music.json', 'ui.json',
+                    'achievements.json', 'locales.json', 'animations.json',
+                    'quests.json', 'variables.json', 'test_3d_campaign.json'
+                ]);
+                const knownPrefixes = ['soldier','archer','goblin','orc','ghost','skeleton','slime','boss_demon','villager_man','villager_woman','chest_wood','chest_gold','health_font','save_shrine','door_locked','lever_switch','spikes_trap','merchant','camp_fire','potted_plant'];
 
-                console.log(`Loaded ${assets.length} total assets.`);
-
-                // Auto-scan if no assets found
-                if (assets.length === 0 && !forceScan) {
-                    console.log("No assets indexed. Triggering auto-scan...");
-                    await fetch('/api/assets/rebuild', { method: 'POST' });
-                    assetsRes = await fetch('/api/assets/list?t=' + Date.now());
-                    if (!assetsRes.ok) throw new Error(`Asset list failed after scan: ${assetsRes.status}`);
-                    assets = await assetsRes.json();
-                    if (!Array.isArray(assets)) assets = [];
+                let entries = [];
+                try {
+                    const ideRes = await fetch('/api/ide/list?dir=' + encodeURIComponent('dunyalar/definitions') + '&t=' + Date.now());
+                    if (ideRes.ok) {
+                        const data = await ideRes.json();
+                        const rawList = Array.isArray(data)
+                            ? data
+                            : (Array.isArray(data?.files) ? data.files : (Array.isArray(data?.entries) ? data.entries : []));
+                        entries = rawList.map(item => typeof item === 'string'
+                            ? { name: item, path: `dunyalar/definitions/${item}`, isDirectory: false }
+                            : { name: item.name || String(item.path || '').split('/').pop(), path: item.path || `dunyalar/definitions/${item.name || ''}`, isDirectory: Boolean(item.isDirectory) });
+                    }
+                } catch (ideErr) {
+                    console.warn('[Editor] /api/ide/list prefab fetch failed, falling back:', ideErr);
                 }
-        
-                const prefabs = assets.filter(a => {
-                    const p = a.path.toLowerCase();
-                    const n = a.name.toLowerCase();
-                    const isJson = n.endsWith('.json');
-                    const isDefinition = p.includes('definitions');
-                    // Explicitly include our known prefabs
-                    const isCustomPrefab = ['soldier','archer','goblin','orc','ghost','skeleton','slime','boss_demon','villager_man','villager_woman','chest_wood','chest_gold','health_font','save_shrine','door_locked','lever_switch','spikes_trap','merchant','camp_fire','potted_plant'].some(name => n.startsWith(name));
-                    const isSystem = ['enemies.json', 'npcs.json', 'skills.json', 'items.json', 'campaign.json', 'dialogues.json', 'music.json', 'ui.json', 'achievements.json', 'locales.json', 'animations.json'].includes(n);
-                    
-                    return isJson && (isDefinition || isCustomPrefab) && !isSystem;
+
+                if (entries.length === 0) {
+                    let assetsRes = await fetch('/api/assets/list?t=' + Date.now());
+                    if (assetsRes.ok) {
+                        let assets = await assetsRes.json();
+                        if (!Array.isArray(assets)) assets = [];
+                        if (assets.length === 0 && !forceScan) {
+                            await fetch('/api/assets/rebuild', { method: 'POST' }).catch(() => {});
+                            assetsRes = await fetch('/api/assets/list?t=' + Date.now());
+                            if (assetsRes.ok) {
+                                assets = await assetsRes.json();
+                                if (!Array.isArray(assets)) assets = [];
+                            }
+                        }
+                        entries = assets.map(a => ({
+                            name: a.name || String(a.path || '').split('/').pop(),
+                            path: a.path || '',
+                            isDirectory: Boolean(a.isDirectory)
+                        }));
+                    }
+                }
+
+                const prefabs = entries.filter(a => {
+                    if (!a || a.isDirectory || !a.name) return false;
+                    const p = String(a.path || '').toLowerCase();
+                    const n = String(a.name).toLowerCase();
+                    const isJson = n.endsWith('.json') && !n.endsWith('.bak');
+                    const isDefinition = p.includes('definitions') || p === '';
+                    const isCustomPrefab = knownPrefixes.some(prefix => n.startsWith(prefix));
+                    return isJson && (isDefinition || isCustomPrefab) && !systemNames.has(n);
                 });
-                
+
                 console.log(`Filtered ${prefabs.length} prefabs.`);
-        
+
                 const list = document.getElementById('prefab-list');
-                if(list) {
+                if (list) {
                     list.innerHTML = '';
                     prefabs.forEach(p => {
                         const div = document.createElement('div');
+                        div.dataset.filename = p.name;
                         div.style.cssText = "padding:8px; border-bottom:1px solid #333; cursor:pointer; color:#ccc;";
                         const nameSpan = document.createElement('span');
-                        nameSpan.textContent = '🧩 ' + p.name.replace('.json','');
+                        nameSpan.textContent = '🧩 ' + p.name.replace('.json', '');
                         div.appendChild(nameSpan);
                         div.onclick = () => selectPrefab(p.name);
                         list.appendChild(div);
                     });
                 }
-            } catch(e) { console.log("Prefab list error", e); }
+            } catch (e) { console.log("Prefab list error", e); }
         }
         window.loadPrefabs = loadPrefabs;
-        
+
         async function selectPrefab(filename) {
             editorState.selectedPrefab = filename;
-            Array.from(document.getElementById('prefab-list').children).forEach(el => {
-                el.style.background = el.innerText.includes(filename.replace('.json','')) ? '#2ecc71' : 'transparent';
-                el.style.color = el.innerText.includes(filename.replace('.json','')) ? '#000' : '#ccc';
-            });
-            
+            const list = document.getElementById('prefab-list');
+            if (list) {
+                Array.from(list.children).forEach(el => {
+                    const match = el.dataset.filename === filename;
+                    el.style.background = match ? '#2ecc71' : 'transparent';
+                    el.style.color = match ? '#000' : '#ccc';
+                });
+            }
+
             if (!editorState.prefabCache[filename]) {
                 try {
-                    const res = await fetch(`dunyalar/definitions/${filename}`);
-                    if(res.ok) editorState.prefabCache[filename] = await res.json();
-                } catch(e) {}
+                    const res = await fetch(`dunyalar/definitions/${encodeURIComponent(filename)}`);
+                    if (res.ok) editorState.prefabCache[filename] = await res.json();
+                } catch (e) {}
             }
         }
-        
+
         // --- RENDER ---
+        function getTileCoordsFromEvent(e) {
+            const rect = canvas.getBoundingClientRect();
+            const ts = CONFIG.tileSize * CONFIG.scale;
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            if (map.type === 'isometric') {
+                const tileW = ts;
+                const tileH = ts * 0.5;
+                const originX = map.height * (tileW / 2);
+                const originY = ts;
+                const dx = (px - originX) / (tileW / 2);
+                const dy = (py - originY) / (tileH / 2);
+                return {
+                    tx: Math.floor((dx + dy) / 2),
+                    ty: Math.floor((dy - dx) / 2)
+                };
+            }
+            return {
+                tx: Math.floor(px / ts),
+                ty: Math.floor(py / ts)
+            };
+        }
+
+        function updateMapShader(shader) {
+            map.shader = shader || 'default';
+            if (canvas) {
+                const filterMap = {
+                    default: 'none',
+                    grayscale: 'grayscale(100%)',
+                    sepia: 'sepia(80%)',
+                    crt: 'contrast(1.15) saturate(1.1)',
+                    night: 'brightness(0.7) hue-rotate(190deg)',
+                    invert: 'invert(100%)'
+                };
+                canvas.style.filter = filterMap[map.shader] || 'none';
+            }
+            if (window.fx && typeof window.fx.setShader === 'function') {
+                window.fx.setShader(map.shader);
+            }
+            render();
+        }
+        window.updateMapShader = updateMapShader;
+
         function render() {
             if (!editorState.tilesetReady) return;
             const ts = CONFIG.tileSize * CONFIG.scale;
             ctx.imageSmoothingEnabled = false;
             ctx.fillStyle = (map.type === 'platformer') ? '#1a1a1a' : '#111';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
             if (map.type === 'isometric') renderIsometric(ts);
             else renderStandard(ts);
-        
-            if (document.getElementById('show-grid').checked) {
+
+            if (map.type !== 'isometric' && document.getElementById('show-grid').checked) {
                 ctx.strokeStyle = 'rgba(255,255,255,0.1)';
                 ctx.beginPath();
                 for (let x = 0; x <= map.width; x++) { ctx.moveTo(x*ts, 0); ctx.lineTo(x*ts, canvas.height); }
@@ -680,6 +870,79 @@ class WorldEditor {
             }
         }
         
+        function renderIsometric(ts) {
+            const totalCols = Math.max(1, Math.floor(tileset.width / 16));
+            const tileW = ts;
+            const tileH = ts * 0.5;
+            const originX = map.height * (tileW / 2);
+            const originY = ts;
+            const showGrid = Boolean(document.getElementById('show-grid')?.checked);
+            const showCol = Boolean(document.getElementById('show-collision')?.checked || editorState.mode === 'collision');
+
+            const isoPos = (gx, gy) => ({
+                x: originX + (gx - gy) * (tileW / 2),
+                y: originY + (gx + gy) * (tileH / 2)
+            });
+
+            const drawDiamond = (cx, cy) => {
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + tileW / 2, cy + tileH / 2);
+                ctx.lineTo(cx, cy + tileH);
+                ctx.lineTo(cx - tileW / 2, cy + tileH / 2);
+                ctx.closePath();
+            };
+
+            for (let y = 0; y < map.height; y++) {
+                for (let x = 0; x < map.width; x++) {
+                    const idx = y * map.width + x;
+                    const { x: cx, y: cy } = isoPos(x, y);
+
+                    map.layers.forEach((layer, layerIdx) => {
+                        if (!layer) return;
+                        if (map.layerProps && map.layerProps[layerIdx] && !map.layerProps[layerIdx].visible) return;
+                        const tileID = layer[idx];
+                        if (tileID === null || tileID === undefined) return;
+                        const sx = (tileID % totalCols) * 16;
+                        const sy = Math.floor(tileID / totalCols) * 16;
+                        ctx.save();
+                        drawDiamond(cx, cy);
+                        ctx.clip();
+                        ctx.drawImage(tileset, sx, sy, 16, 16, cx - tileW / 2, cy, tileW, tileH);
+                        ctx.restore();
+                    });
+
+                    if (showGrid) {
+                        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                        drawDiamond(cx, cy);
+                        ctx.stroke();
+                    }
+
+                    if (showCol && map.collision && map.collision[idx] !== 0) {
+                        const typeInfo = COLLISION_TYPES[map.collision[idx]];
+                        if (typeInfo) {
+                            ctx.fillStyle = typeInfo.color;
+                            drawDiamond(cx, cy);
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+
+            map.decorations.forEach(d => {
+                const { x: cx, y: cy } = isoPos(d.x, d.y);
+                drawObject(d, cx, cy + tileH / 2, ts);
+            });
+            if (map.spawn) {
+                const { x: cx, y: cy } = isoPos(map.spawn.x, map.spawn.y);
+                drawObject({ type: 'spawn' }, cx, cy + tileH / 2, ts);
+            }
+            if (map.exit) {
+                const { x: cx, y: cy } = isoPos(map.exit.x, map.exit.y);
+                drawObject({ type: 'exit' }, cx, cy + tileH / 2, ts);
+            }
+        }
+
         function renderStandard(ts) {
             const totalCols = Math.floor(tileset.width / 16);
             // Render all layers in order
@@ -707,9 +970,11 @@ class WorldEditor {
                         return map.collision[r*map.width+c]===1;
                     }
                 };
-                window.fx.renderShadows(mapWrapper, 0, 0, CONFIG.scale);
-                window.fx.setWeather(map.weather); window.fx.setLighting(map.lighting);
-                window.fx.renderWeather(0, 0);
+                if (typeof window.fx.renderShadows === 'function') window.fx.renderShadows(mapWrapper, 0, 0, CONFIG.scale);
+                if (typeof window.fx.setWeather === 'function') window.fx.setWeather(map.weather);
+                if (typeof window.fx.setLighting === 'function') window.fx.setLighting(map.lighting);
+                else if (typeof window.fx.applyLightingPreset === 'function') window.fx.applyLightingPreset(map.lighting);
+                if (typeof window.fx.renderWeather === 'function') window.fx.renderWeather(0, 0);
             }
         
             if (document.getElementById('show-collision').checked || editorState.mode === 'collision') {
@@ -875,17 +1140,18 @@ class WorldEditor {
         
         // --- PAINT ---
         function paint(e) {
-            const rect = canvas.getBoundingClientRect();
-            const ts = CONFIG.tileSize * CONFIG.scale;
-            const tx = Math.floor((e.clientX - rect.left) / ts);
-            const ty = Math.floor((e.clientY - rect.top) / ts);
-            
-            // Auto-Expand Logic
-            if (tx < 0) { expandMap(0, 0, 0, 1); return; }
-            if (ty < 0) { expandMap(1, 0, 0, 0); return; }
-            if (tx >= map.width) { expandMap(0, 1, 0, 0); return; }
-            if (ty >= map.height) { expandMap(0, 0, 1, 0); return; }
-        
+            const { tx, ty } = getTileCoordsFromEvent(e);
+
+            // Auto-Expand Logic (top-down/platformer orthographic grid)
+            if (map.type === 'isometric') {
+                if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) return;
+            } else {
+                if (tx < 0) { expandMap(0, 0, 0, 1); return; }
+                if (ty < 0) { expandMap(1, 0, 0, 0); return; }
+                if (tx >= map.width) { expandMap(0, 1, 0, 0); return; }
+                if (ty >= map.height) { expandMap(0, 0, 1, 0); return; }
+            }
+
             const idx = ty * map.width + tx;
         
             // Handle Rect Tool Dragging state
@@ -1025,56 +1291,53 @@ class WorldEditor {
         initDOM();
 
         canvas.addEventListener('mousedown', e => {
-            pushHistory(); 
-            editorState.isDrawing = true; 
-            
-            const rect = canvas.getBoundingClientRect();
-            const ts = CONFIG.tileSize * CONFIG.scale;
-            const tx = Math.floor((e.clientX - rect.left) / ts);
-            const ty = Math.floor((e.clientY - rect.top) / ts);
-            
+            editorState.isDrawing = true;
+
+            const { tx, ty } = getTileCoordsFromEvent(e);
+
             if (editorState.tool === 'rect') {
                 editorState.dragStart = { x: tx, y: ty };
                 editorState.dragEnd = { x: tx, y: ty }; // Init end to start
             } else {
-                paint(e); 
+                paint(e);
             }
         });
-        
+
         // Double-click to edit decorations (signs, NPCs, enemies, etc.)
         canvas.addEventListener('dblclick', e => {
-            const rect = canvas.getBoundingClientRect();
-            const ts = CONFIG.tileSize * CONFIG.scale;
-            const tx = Math.floor((e.clientX - rect.left) / ts);
-            const ty = Math.floor((e.clientY - rect.top) / ts);
-            
+            const { tx, ty } = getTileCoordsFromEvent(e);
+
             // Find decoration at this position
             const deco = map.decorations.find(d => d.x === tx && d.y === ty);
-            
+
             if (deco) {
                 if (deco.type === 'sign') {
                     const newText = prompt("Enter sign text:", deco.data || "");
                     if (newText !== null) {
                         deco.data = newText;
                         render();
+                        pushHistory();
                     }
                 } else if (deco.type === 'npc') {
                     const newId = prompt("Enter NPC ID:", deco.data || "villager");
                     if (newId !== null) {
                         deco.data = newId;
                         render();
+                        pushHistory();
                     }
                 } else if (deco.type === 'enemy') {
                     const newId = prompt("Enter enemy ID:", deco.data || "slime");
                     if (newId !== null) {
                         deco.data = newId;
                         render();
+                        pushHistory();
                     }
                 } else if (deco.type === 'chest') {
                     const newItems = prompt("Enter chest contents (comma-separated item IDs):", deco.data || "apple,potion");
                     if (newItems !== null) {
                         deco.data = newItems;
                         render();
+                        pushHistory();
                     }
                 } else {
                     // Generic data editing for other prop types
@@ -1082,6 +1345,7 @@ class WorldEditor {
                     if (newData !== null) {
                         deco.data = newData;
                         render();
+                        pushHistory();
                     }
                 }
             } else {
@@ -1093,24 +1357,29 @@ class WorldEditor {
                     if (newData !== null) {
                         map.exit.data = newData;
                         render();
+                        pushHistory();
                     }
                 }
             }
         });
-        
-        canvas.addEventListener('mousemove', e => { 
-            if (editorState.isDrawing) paint(e); 
+
+        canvas.addEventListener('mousemove', e => {
+            if (editorState.isDrawing) paint(e);
         });
-        
-        canvas.addEventListener('mouseup', () => { 
-            if (editorState.isDrawing && editorState.tool === 'rect') {
+
+        const finishDrawingStroke = () => {
+            if (!editorState.isDrawing) return;
+            if (editorState.tool === 'rect') {
                 commitRect();
                 editorState.dragStart = null;
                 editorState.dragEnd = null;
             }
-            editorState.isDrawing = false; 
+            editorState.isDrawing = false;
             render(); // Clear overlay
-        });
+            pushHistory(); // Post-mutation snapshot (deduped if unchanged)
+        };
+        canvas.addEventListener('mouseup', finishDrawingStroke);
+        window.addEventListener('mouseup', finishDrawingStroke);
         
         // --- TOOLS ---
         function setTool(tool) {
@@ -1145,25 +1414,23 @@ class WorldEditor {
         function resizeMap() {
             const newW = parseInt(document.getElementById('map-w').value);
             const newH = parseInt(document.getElementById('map-h').value);
-            
+
             if (isNaN(newW) || isNaN(newH) || newW < 1 || newH < 1) {
                 alert("Invalid dimensions!");
                 return;
             }
-        
+
             // Smart Resize (Expand/Crop from Top-Left)
-            pushHistory();
-            
             const dW = newW - map.width;
             const dH = newH - map.height;
-            
+
             if (dW >= 0 && dH >= 0) {
                 expandMap(0, dW, dH, 0); // Expand right/bottom
             } else {
                 // Destructive resize (crop)
                 const oldW = map.width;
                 const oldH = map.height;
-                
+
                 map.layers = map.layers.map(layer => {
                     const newLayer = new Array(newW * newH).fill(null);
                     for (let y = 0; y < Math.min(oldH, newH); y++) {
@@ -1173,7 +1440,7 @@ class WorldEditor {
                     }
                     return newLayer;
                 });
-                
+
                 const newCol = new Array(newW * newH).fill(0);
                 for (let y = 0; y < Math.min(oldH, newH); y++) {
                     for (let x = 0; x < Math.min(oldW, newW); x++) {
@@ -1181,15 +1448,16 @@ class WorldEditor {
                     }
                 }
                 map.collision = newCol;
-                
+
                 map.decorations = map.decorations.filter(d => d.x < newW && d.y < newH);
-                if(map.spawn && (map.spawn.x >= newW || map.spawn.y >= newH)) map.spawn = {x:0, y:0};
-                
+                if (map.spawn && (map.spawn.x >= newW || map.spawn.y >= newH)) map.spawn = { x: 0, y: 0 };
+
                 map.width = newW;
                 map.height = newH;
                 resizeCanvasElement();
                 render();
             }
+            pushHistory();
         }
         
         function setMode(mode) {
@@ -1244,9 +1512,41 @@ class WorldEditor {
         document.getElementById('mode-prefabs').onclick = () => setMode('prefabs');
         
         // --- HISTORY ---
+        function applyHistorySnapshot(snapStr) {
+            const parsed = JSON.parse(snapStr);
+            if (!parsed || typeof parsed !== 'object') return false;
+            map = parsed;
+            if (!Array.isArray(map.layers) || map.layers.length === 0) {
+                map.layers = [new Array((map.width || 30) * (map.height || 20)).fill(null)];
+            }
+            if (!Array.isArray(map.collision)) {
+                map.collision = new Array((map.width || 30) * (map.height || 20)).fill(0);
+            }
+            if (!Array.isArray(map.decorations)) map.decorations = [];
+            window.map = map;
+
+            const wEl = document.getElementById('map-w');
+            const hEl = document.getElementById('map-h');
+            if (wEl) wEl.value = map.width;
+            if (hEl) hEl.value = map.height;
+            if (document.getElementById('map-type')) document.getElementById('map-type').value = map.type || 'topdown';
+            if (document.getElementById('fx-shader')) document.getElementById('fx-shader').value = map.shader || 'default';
+            if (document.getElementById('fx-weather')) document.getElementById('fx-weather').value = map.weather || 'none';
+            if (document.getElementById('fx-lighting')) document.getElementById('fx-lighting').value = map.lighting || 'day';
+
+            editorState.activeLayer = Math.max(0, Math.min(editorState.activeLayer, map.layers.length - 1));
+            resizeCanvasElement();
+            updateLayerList();
+            render();
+            return true;
+        }
+
         window.pushHistory = function() {
             if (!map || typeof map !== 'object') return;
             const snap = JSON.stringify(map);
+            if (editorState.historyIndex >= 0 && editorState.history[editorState.historyIndex] === snap) {
+                return;
+            }
             editorState.history = editorState.history.slice(0, editorState.historyIndex + 1);
             editorState.history.push(snap);
             if (editorState.history.length > 20) editorState.history.shift();
@@ -1256,158 +1556,165 @@ class WorldEditor {
             if (editorState.historyIndex > 0) {
                 editorState.historyIndex--;
                 try {
-                    const parsed = JSON.parse(editorState.history[editorState.historyIndex]);
-                    if (parsed && typeof parsed === 'object') {
-                        map = parsed;
-                        if (!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
+                    if (!applyHistorySnapshot(editorState.history[editorState.historyIndex])) {
+                        editorState.historyIndex++;
                     }
                 } catch (e) {
                     console.error('[Editor] Undo failed:', e);
                     editorState.historyIndex++;
-                    return;
                 }
-                editorState.activeLayer = Math.min(editorState.activeLayer, (map.layers || []).length - 1);
-                updateLayerList();
-                render();
             }
         };
         window.redo = function() {
             if (editorState.historyIndex < editorState.history.length - 1) {
                 editorState.historyIndex++;
                 try {
-                    const parsed = JSON.parse(editorState.history[editorState.historyIndex]);
-                    if (parsed && typeof parsed === 'object') {
-                        map = parsed;
-                        if (!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
+                    if (!applyHistorySnapshot(editorState.history[editorState.historyIndex])) {
+                        editorState.historyIndex--;
                     }
                 } catch (e) {
                     console.error('[Editor] Redo failed:', e);
                     editorState.historyIndex--;
-                    return;
                 }
-                editorState.activeLayer = Math.min(editorState.activeLayer, (map.layers || []).length - 1);
-                updateLayerList();
-                render();
             }
         };
-        
+
         async function changeTileset(path) {
             if (path === 'CUSTOM') {
                 document.getElementById('custom-tileset-path').style.display = 'block';
                 return;
             }
             document.getElementById('custom-tileset-path').style.display = 'none';
-            
+
             editorState.tilesetReady = false;
             map.tilesetPath = path;
             await loadTileset(path);
             render();
         }
-        
+
         // --- LOADING ---
         async function loadTileset(path) {
             return new Promise(r => {
                 if (path === 'WORLD_PIXEL_ART') {
                     combineWorldPixelArt().then(c => { tileset = c; editorState.tilesetReady = true; initPalette(); r(); });
                 } else {
-                    tileset.src = path;
-                    tileset.onload = () => { editorState.tilesetReady = true; initPalette(); r(); };
+                    const fallbackPath = 'base_game/assets/world_tileset.png';
+                    const img = new Image();
+                    img.onload = () => {
+                        tileset = img;
+                        editorState.tilesetReady = true;
+                        initPalette();
+                        r();
+                    };
+                    img.onerror = () => {
+                        console.warn('[Editor] Failed to load tileset:', path, '— falling back to', fallbackPath);
+                        if (path !== fallbackPath) {
+                            const fb = new Image();
+                            fb.onload = () => {
+                                tileset = fb;
+                                editorState.tilesetReady = true;
+                                initPalette();
+                                r();
+                            };
+                            fb.onerror = () => {
+                                editorState.tilesetReady = true;
+                                r();
+                            };
+                            fb.src = fallbackPath;
+                        } else {
+                            editorState.tilesetReady = true;
+                            r();
+                        }
+                    };
+                    img.src = path;
                 }
             });
         }
         
         function initPalette() {
             paletteGrid.innerHTML = '';
-            const total = (tileset.width/16) * (tileset.height/16);
-            // Increased limit to show all tiles
-            for(let i=0; i<total; i++) { 
+            // Build off-DOM with CSS sprites (0 <canvas> allocations for 600 tiles).
+            const frag = document.createDocumentFragment();
+            const cols = Math.max(1, Math.floor(tileset.width / 16));
+            const rows = Math.max(1, Math.floor(tileset.height / 16));
+            const total = cols * rows;
+            const spriteUrl = (window.RedglitchWorldTileset)
+                ? window.RedglitchWorldTileset.getPaletteSpriteUrl(tileset)
+                : ((tileset instanceof HTMLImageElement && tileset.src) ? tileset.src : 'sprite-art/worldpixelart_atlas.png');
+            const effectiveUrl = (tileset && tileset.dataset && tileset.dataset.spriteUrl) ? tileset.dataset.spriteUrl : spriteUrl;
+
+            for (let i = 0; i < total; i++) {
                 const d = document.createElement('div');
                 d.className = 'palette-item';
-                d.dataset.id = i; // For search filtering
-        
-                const c = document.createElement('canvas'); c.width=16; c.height=16;
-                const cx = c.getContext('2d');
-                const sx = (i % (tileset.width/16)) * 16;
-                const sy = Math.floor(i / (tileset.width/16)) * 16;
-                cx.drawImage(tileset, sx, sy, 16, 16, 0, 0, 16, 16);
-                d.appendChild(c);
-                
-                // Restore ID Label
+                d.dataset.id = i;
+
+                const thumb = document.createElement('div');
+                thumb.className = 'palette-thumb';
+                if (window.RedglitchWorldTileset) {
+                    window.RedglitchWorldTileset.applyTileSpriteStyle(thumb, i, cols, rows, effectiveUrl);
+                } else {
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    thumb.style.cssText = `width:100%;height:100%;background-image:url("${effectiveUrl}");background-size:${cols * 100}% ${rows * 100}%;background-position:${cols > 1 ? (col / (cols - 1)) * 100 : 0}% ${rows > 1 ? (row / (rows - 1)) * 100 : 0}%;image-rendering:pixelated;`;
+                }
+                d.appendChild(thumb);
+
                 const span = document.createElement('span');
                 span.innerText = i;
                 d.appendChild(span);
-        
+
                 d.onclick = () => { editorState.selectedTileID = i; setMode('visual'); };
-                paletteGrid.appendChild(d);
+                frag.appendChild(d);
             }
+            paletteGrid.appendChild(frag);
         }
         
         async function combineWorldPixelArt() {
+            const progressBar = document.getElementById('loading-bar');
+            const progressText = document.getElementById('loading-text');
+            if (window.RedglitchWorldTileset) {
+                return window.RedglitchWorldTileset.loadWorldTilesetCanvas({
+                    tileSize: 16,
+                    fallbackUrl: 'base_game/assets/world_tileset.png',
+                    onProgress: (pct) => {
+                        if (progressBar) progressBar.style.width = (30 + (pct / 100) * 20) + '%';
+                        if (progressText) progressText.innerText = `ASSEMBLING TILES... ${pct}%`;
+                    }
+                });
+            }
+
             const canvas = document.createElement('canvas');
             const tSize = 16;
             const cols = 16;
-            const totalTiles = 600; 
+            const totalTiles = 600;
             const rows = Math.ceil(totalTiles / cols);
-            
             canvas.width = cols * tSize;
             canvas.height = rows * tSize;
             const ctx = canvas.getContext('2d');
-        
-            // Use the global loading bar
-            const progressBar = document.getElementById('loading-bar');
-            const progressText = document.getElementById('loading-text');
-            
-            let loadedCount = 0;
-            const promises = [];
-            for (let i = 1; i <= totalTiles; i++) {
-                promises.push(new Promise(resolve => {
+            try {
+                const atlas = await new Promise((resolve, reject) => {
                     const img = new Image();
-                    img.onload = () => {
-                        const x = ((i - 1) % cols) * tSize;
-                        const y = Math.floor((i - 1) / cols) * tSize;
-                        ctx.drawImage(img, x, y, tSize, tSize);
-                        
-                        loadedCount++;
-                        if (progressBar) {
-                            // Map 30-50% of global loading to texture loading
-                            const percent = 30 + (loadedCount / totalTiles) * 20; 
-                            progressBar.style.width = percent + '%';
-                        }
-                        if (progressText && loadedCount % 20 === 0) {
-                            progressText.innerText = `ASSEMBLING TILES... ${Math.floor((loadedCount / totalTiles) * 100)}%`;
-                        }
-                        resolve();
-                    };
-                    img.onerror = () => {
-                        // Silent fail for missing tiles
-                        loadedCount++; 
-                        resolve();
-                    };
-                    img.src = `sprite-art/worldpixelart/texture_16px%20${i}.png`;
-                }));
-            }
-            
-            await Promise.all(promises);
-            
-            // Fallback logic
-            if (loadedCount < 50 || ctx.getImageData(0,0,1,1).data[3] === 0) { 
-                 console.warn("Detailed tileset failed. Loading default.");
-                 return new Promise(r => {
-                     const fallback = new Image();
-                     fallback.src = 'base_game/assets/world_tileset.png';
-                     fallback.onload = () => {
-                         canvas.width = fallback.width;
-                         canvas.height = fallback.height;
-                         ctx.drawImage(fallback, 0, 0);
-                         r(canvas);
-                     };
-                     fallback.onerror = () => {
-                         r(canvas); 
-                     };
-                 });
-            }
-        
-            return canvas;
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = 'sprite-art/worldpixelart_atlas.png';
+                });
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(atlas, 0, 0, canvas.width, canvas.height);
+                return canvas;
+            } catch (_) {}
+
+            return new Promise((r) => {
+                const fallback = new Image();
+                fallback.src = 'base_game/assets/world_tileset.png';
+                fallback.onload = () => {
+                    canvas.width = fallback.width;
+                    canvas.height = fallback.height;
+                    ctx.drawImage(fallback, 0, 0);
+                    canvas.dataset.spriteUrl = 'base_game/assets/world_tileset.png';
+                    r(canvas);
+                };
+                fallback.onerror = () => r(canvas);
+            });
         }
         
         function expandMap(top, right, bottom, left) {
@@ -1460,13 +1767,23 @@ class WorldEditor {
             render();
         }
         
-        function initMap(w, h) { 
-            map.width=w; map.height=h; 
-            map.layers=[new Array(w*h).fill(287)]; 
-            map.collision=new Array(w*h).fill(0); 
-            resizeCanvasElement(); 
+        function initMap(w, h) {
+            map.width = w;
+            map.height = h;
+            map.layers = [new Array(w * h).fill(287)];
+            map.layerProps = [{ visible: true, locked: false, name: 'Layer 0' }];
+            map.collision = new Array(w * h).fill(0);
+            map.decorations = [];
+            map.spawn = { x: Math.min(5, Math.max(0, w - 1)), y: Math.min(5, Math.max(0, h - 1)) };
+            map.exit = null;
+            editorState.activeLayer = 0;
+            window.map = map;
+            resizeCanvasElement();
             updateLayerList();
-            render(); 
+            render();
+            editorState.history = [];
+            editorState.historyIndex = -1;
+            pushHistory();
         }
         
         function updateLayerList() {
@@ -1519,43 +1836,49 @@ class WorldEditor {
         window.selectLayer = selectLayer;
         
         function addLayer() {
-            pushHistory();
             map.layers.push(new Array(map.width * map.height).fill(null));
             editorState.activeLayer = map.layers.length - 1;
             updateLayerList();
             render();
+            pushHistory();
         }
         window.addLayer = addLayer;
-        
+
         function removeLayer() {
             if (map.layers.length <= 1) return alert("Cannot remove last layer");
             if (!confirm(`Remove Layer ${editorState.activeLayer}?`)) return;
-            
-            pushHistory();
+
             map.layers.splice(editorState.activeLayer, 1);
+            if (Array.isArray(map.layerProps)) map.layerProps.splice(editorState.activeLayer, 1);
             editorState.activeLayer = Math.max(0, editorState.activeLayer - 1);
             updateLayerList();
             render();
+            pushHistory();
         }
         window.removeLayer = removeLayer;
-        
+
         function moveLayer(delta) {
             const from = editorState.activeLayer;
             const to = from + delta;
             if (to < 0 || to >= map.layers.length) return;
-            
-            pushHistory();
+
             const temp = map.layers[from];
             map.layers[from] = map.layers[to];
             map.layers[to] = temp;
+            if (Array.isArray(map.layerProps)) {
+                const tmpP = map.layerProps[from];
+                map.layerProps[from] = map.layerProps[to];
+                map.layerProps[to] = tmpP;
+            }
             editorState.activeLayer = to;
             updateLayerList();
             render();
+            pushHistory();
         }
         window.moveLayer = moveLayer;
-        
+
         function updateZoomUI() { document.getElementById('zoom-level').innerText = Math.round(CONFIG.scale * 100) + '%'; }
-        
+
         function changeZoom(delta) {
             CONFIG.scale += delta;
             if (CONFIG.scale < CONFIG.minScale) CONFIG.scale = CONFIG.minScale;
@@ -1564,23 +1887,32 @@ class WorldEditor {
             updateZoomUI();
             if (typeof render === 'function') render();
         }
-        
-        function resizeCanvasElement() { canvas.width = map.width * 16 * CONFIG.scale; canvas.height = map.height * 16 * CONFIG.scale; }
-        
+
+        function resizeCanvasElement() {
+            const ts = 16 * CONFIG.scale;
+            if (map.type === 'isometric') {
+                canvas.width = Math.ceil((map.width + map.height) * (ts / 2) + ts);
+                canvas.height = Math.ceil((map.width + map.height) * (ts / 4) + ts * 2);
+            } else {
+                canvas.width = map.width * ts;
+                canvas.height = map.height * ts;
+            }
+        }
+
         async function loadLevelFromServer(filename) {
             try {
-                const res = await fetch(`dunyalar/${filename}`);
-                if(res.ok) {
+                const res = await fetch(`dunyalar/${encodeURIComponent(filename)}`);
+                if (res.ok) {
                     const data = await res.json();
-                    loadMapData(data);
-                    
+                    loadMapData(data, filename);
+
                     // Only close modal if open
                     const win = document.getElementById('level-window');
                     if (win && win.style.display !== 'none') {
                         toggleLevelWindow();
                     }
                 }
-            } catch(e) { console.error("Error loading level:", e); }
+            } catch (e) { console.error("Error loading level:", e); }
         }
         
         function toggleLevelWindow() {
@@ -1604,7 +1936,7 @@ class WorldEditor {
             sessionStorage.setItem('redglitch_playtest_data', serializedMap);
             localStorage.setItem('redglitch_test_session', sessionId);
         
-            const playtestUrl = `index.html?engine=rpg-topdown&playtest=true&session=${encodeURIComponent(sessionId)}&ts=${Date.now()}`;
+            const playtestUrl = `campaign_runtime.html?engine=rpg-topdown&playtest=true&session=${encodeURIComponent(sessionId)}&ts=${Date.now()}`;
             playtestWindowRef = window.open(playtestUrl, PLAYTEST_WINDOW_NAME);
         
             if (playtestWindowRef) {
@@ -1615,50 +1947,69 @@ class WorldEditor {
             }
         }
         
-        function loadMapData(data) {
+        function loadMapData(data, sourceFilename = null) {
             if (!data || typeof data !== 'object') {
                 console.error('[Editor] Invalid map data: expected object');
                 alert('Invalid map file format.');
                 return;
             }
             map = data;
+            window.map = map;
 
             // Ensure required fields have safe defaults
             if (typeof map.width !== 'number' || isNaN(map.width) || map.width <= 0) map.width = 32;
             if (typeof map.height !== 'number' || isNaN(map.height) || map.height <= 0) map.height = 32;
-            if (!Array.isArray(map.layers)) map.layers = [{ name: 'Layer 1', tiles: [] }];
+            if (!Array.isArray(map.layers) || map.layers.length === 0) {
+                map.layers = [new Array(map.width * map.height).fill(null)];
+            }
+            if (!Array.isArray(map.collision) || map.collision.length < map.width * map.height) {
+                const col = new Array(map.width * map.height).fill(0);
+                if (Array.isArray(map.collision)) {
+                    for (let i = 0; i < map.collision.length && i < col.length; i++) col[i] = map.collision[i];
+                }
+                map.collision = col;
+            }
             if (!map.decorations) map.decorations = [];
 
-            const filename = map.name || 'unnamed';
+            const fileStem = sourceFilename ? String(sourceFilename).replace(/\.json$/i, '') : '';
+            const safeFallback = (map.name || 'unnamed').replace(/\.json$/i, '');
+            const filename = fileStem || safeFallback;
             document.getElementById('level-name').value = filename;
             document.getElementById('map-w').value = map.width;
             document.getElementById('map-h').value = map.height;
             if (document.getElementById('map-type')) document.getElementById('map-type').value = map.type || 'topdown';
             if (document.getElementById('fx-shader')) document.getElementById('fx-shader').value = map.shader || 'default';
+            if (document.getElementById('fx-weather')) document.getElementById('fx-weather').value = map.weather || 'none';
+            if (document.getElementById('fx-lighting')) document.getElementById('fx-lighting').value = map.lighting || 'day';
 
-            // Track current filename
-            editorState.currentFilename = filename;
+            // Track actual file stem so maps with spaces in map.name still save cleanly
+            editorState.currentFilename = fileStem || safeFallback;
             updateFilenameDisplay(filename);
 
             editorState.activeLayer = 0;
             resizeCanvasElement();
             updateLayerList();
-            render();
+            if (typeof updateMapShader === 'function') updateMapShader(map.shader || 'default');
+            else render();
+
+            editorState.history = [];
+            editorState.historyIndex = -1;
+            pushHistory();
         }
-        
+
         function loadLevelFromFile(e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = (ev) => {
                 try {
-                    const data = JSON.parse(e.target.result);
-                    loadMapData(data);
+                    const data = JSON.parse(ev.target.result);
+                    loadMapData(data, file.name);
                 } catch (err) { alert("Invalid JSON file"); }
             };
             reader.readAsText(file);
         }
-        
+
         async function saveToServer(forcePrompt = false) {
             let nameInput = document.getElementById('level-name');
             if (!nameInput) {
@@ -1666,11 +2017,11 @@ class WorldEditor {
                 alert("Critical Error: Level name input field is missing from the UI.");
                 return;
             }
-            
-            let name = nameInput.value;
-            
+
+            let name = nameInput.value.trim();
+
             // If forcing prompt (Save As) or no current filename, ask for name
-            if (forcePrompt || !editorState.currentFilename || name.trim() === "" || name === "level1") {
+            if (forcePrompt || !editorState.currentFilename || name === "" || (!editorState.currentFilename && name === "level1")) {
                 const promptName = prompt("Enter a name for this level:", name || "level1");
                 if (!promptName) return; // User cancelled
                 name = promptName.trim();
@@ -1680,39 +2031,50 @@ class WorldEditor {
                 }
                 nameInput.value = name;
             }
-            
-            console.log("Attempting to save level:", name);
-            
+
             // Strip extension if present
-            if (name.endsWith('.json')) name = name.replace('.json', '');
-            
+            if (name.endsWith('.json')) name = name.replace(/\.json$/i, '');
+
+            if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+                const sanitized = name.replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'level1';
+                const adjusted = prompt("Level filenames may only contain letters, numbers, underscores, and hyphens:", sanitized);
+                if (!adjusted || !/^[a-zA-Z0-9_-]+$/.test(adjusted.trim())) {
+                    alert("Invalid level filename.");
+                    return;
+                }
+                name = adjusted.trim();
+                nameInput.value = name;
+            }
+
+            console.log("Attempting to save level:", name);
+
             map.name = name;
             editorState.currentFilename = name; // Track current file
-            
+
             // Convert spawn format to game engine format (spawnX/spawnY in pixels)
             if (map.spawn && typeof map.spawn === 'object') {
                 map.spawnX = map.spawn.x * 48; // Convert tile to pixel (16 * 3 scale)
                 map.spawnY = map.spawn.y * 48;
                 // Keep spawn object for editor compatibility
             }
-            
+
             // Convert exit format if needed
             if (map.exit && typeof map.exit === 'object') {
                 map.exitX = map.exit.x * 48;
                 map.exitY = map.exit.y * 48;
             }
-            
+
             // Validate map data
             if (!map || typeof map !== 'object') {
-                 alert("Error: Map data is corrupted or missing.");
-                 return;
+                alert("Error: Map data is corrupted or missing.");
+                return;
             }
-        
+
             try {
                 const payload = JSON.stringify(map);
                 console.log(`Sending save request for ${name}. Payload size: ${payload.length} chars.`);
-                
-                const res = await fetch(`/api/levels/${name}.json`, {
+
+                const res = await fetch(`/api/levels/${encodeURIComponent(name)}.json`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: payload
@@ -2015,51 +2377,7 @@ class WorldEditor {
                 item.style.display = item.dataset.id.includes(q) ? 'flex' : 'none';
             });
         }
-        
-        async function loadLevelList() {
-            try {
-                const res = await fetch('/api/files/levels');
-                if (res.ok) {
-                    const files = await res.json();
-                    
-                    // Suggest Next Name
-                    const nextName = suggestNextLevelName(files);
-                    const nameInput = document.getElementById('level-name');
-                    if (nameInput && (nameInput.value === 'level1' || nameInput.value === 'unnamed' || nameInput.value === '')) {
-                        nameInput.value = nextName;
-                    }
-        
-                    // 1. Floating Window List
-                    const list = document.getElementById('level-list');
-                    if (list) {
-                        list.innerHTML = '';
-                        files.forEach(f => {
-                            const div = document.createElement('div');
-                            div.style.cssText = "padding:5px; border-bottom:1px solid #333; cursor:pointer; color:#ccc;";
-                            div.innerText = f.replace('.json', '');
-                            div.onclick = () => loadLevelFromServer(f);
-                            list.appendChild(div);
-                        });
-                    }
-        
-                    // 2. Sidebar List
-                    const sidebarList = document.getElementById('sidebar-level-list');
-                    if (sidebarList) {
-                        sidebarList.innerHTML = '';
-                        files.forEach(f => {
-                            const div = document.createElement('div');
-                            div.style.cssText = "padding:8px; border-bottom:1px solid #222; cursor:pointer; color:#aaa; font-size:0.9rem; display:flex; align-items:center; gap:8px;";
-                            div.innerHTML = `<i class="fas fa-file-code" style="font-size:0.7rem; color:#555;"></i> <span>${_escapeHtml(f.replace('.json', ''))}</span>`;
-                            div.onmouseover = () => div.style.color = '#fff';
-                            div.onmouseout = () => div.style.color = '#aaa';
-                            div.onclick = () => loadLevelFromServer(f);
-                            sidebarList.appendChild(div);
-                        });
-                    }
-                }
-            } catch (e) { console.warn("Failed to load level list", e); }
-        }
-        
+
         function suggestNextLevelName(files) {
             let maxNum = 0;
             files.forEach(f => {
@@ -2071,7 +2389,7 @@ class WorldEditor {
             });
             return `level${maxNum + 1}`;
         }
-        
+
         // --- EXPORTS ---
         window.initMap = initMap;
         window.toggleLevelWindow = toggleLevelWindow;
@@ -2084,8 +2402,9 @@ class WorldEditor {
         window.loadLevelList = loadLevelList;
         window.autoMapTiles = autoMapTiles;
         window.openTileMapper = openTileMapper;
-        
-        
+        window.updateMapShader = updateMapShader;
+
+
         // --- PUBLIC API ---
         this.initDOM = initDOM;
         this.updateProgress = updateProgress;
@@ -2098,7 +2417,9 @@ class WorldEditor {
         this.toggleSection = toggleSection;
         this.findNextLevelName = findNextLevelName;
         this.render = render;
+        this.renderIsometric = renderIsometric;
         this.renderStandard = renderStandard;
+        this.updateMapShader = updateMapShader;
         this.drawObject = drawObject;
         this.paint = paint;
         this.floodFill = floodFill;

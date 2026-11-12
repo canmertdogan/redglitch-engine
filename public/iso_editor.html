@@ -345,7 +345,8 @@
             display: flex; align-items: center; justify-content: center; position: relative;
             overflow: hidden;
         }
-        .palette-item canvas {
+        .palette-item canvas,
+        .palette-item .palette-thumb {
             width: 100%; height: 100%;
             image-rendering: pixelated;
         }
@@ -555,8 +556,8 @@
         <button class="tool-btn" title="Save" onclick="saveToServer()"><i class="fas fa-save"></i></button>
         <div class="tool-sep"></div>
         
-        <button class="tool-btn" title="Undo"><i class="fas fa-undo"></i></button>
-        <button class="tool-btn" title="Redo"><i class="fas fa-redo"></i></button>
+        <button class="tool-btn" title="Undo" onclick="undo()"><i class="fas fa-undo"></i></button>
+        <button class="tool-btn" title="Redo" onclick="redo()"><i class="fas fa-redo"></i></button>
         <div class="tool-sep"></div>
 
         <button class="tool-btn" title="Center" onclick="centerView()"><i class="fas fa-crosshairs"></i></button>
@@ -1217,10 +1218,8 @@
     <script src="/shared/SharedProjectState.js"></script>
     <script src="/shared/AssetManager.js"></script>
     <script type="module" src="/ai/studio-bridge.js"></script>
-    
-    <!-- AI Brain for local action recovery -->
-    <script type="module" src="/ai/redglitch-ai.js"></script>
-    
+
+    <script src="/shared/WorldTilesetLoader.js"></script>
     <script src="iso_editor.js"></script>
     <script>
         function toggleInspector(force) {

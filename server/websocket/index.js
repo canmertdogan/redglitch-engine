@@ -106,9 +106,12 @@ function setupWebSocket(server, options = {}) {
         ].filter(Boolean);
         
         fileWatcher = chokidar.watch(watchPaths, {
-            ignored: /node_modules|\.git|dist|builds/,
+            // Skip huge vendored/binary trees: thousands of files here cost
+            // startup CPU + inotify/fsevents handles for zero hot-reload value.
+            ignored: /node_modules|[\\/]\.git[\\/]|[\\/](dist|builds|studio-dist|lib|sprite-art|muzikler|fonts|saves|chroma_db)[\\/]|\.(glb|wasm|onnx|ttf|woff2?)$|corpus-embeddings\.json$/,
             persistent: true,
-            ignoreInitial: true
+            ignoreInitial: true,
+            awaitWriteFinish: { stabilityThreshold: 120, pollInterval: 40 }
         });
         
         fileWatcher

@@ -12,6 +12,7 @@ class EventBus {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.sourceId = this.generateSourceId();
+        this._seq = 0;
         this._recentSignatures = new Map(); // dedup key -> timestamp (for postMessage + WS double delivery)
         
         this.init();
@@ -34,7 +35,11 @@ class EventBus {
         if (typeof window !== 'undefined') {
             window.addEventListener('message', (event) => {
                 if (event.data && event.data.sourceType === 'redglitch-event') {
-                    this.handleRemoteEvent(event.data.event);
+                    const localOrigin = window.location?.origin;
+                    if (localOrigin && localOrigin !== 'null' && event.origin && event.origin !== 'null' && event.origin !== localOrigin) {
+                        return;
+                    }
+                    this.handleRemoteEvent(event.data.event, event.source || null);
                 }
             });
         }
@@ -191,11 +196,13 @@ class EventBus {
      * Emit an event
      */
     emit(event, data = null) {
+        const source = this.getSource();
         const eventData = {
+            id: `${source}:${++this._seq}`,
             type: event,
             data: data,
             timestamp: Date.now(),
-            source: this.getSource()
+            source
         };
         
         // Add to history
@@ -231,34 +238,74 @@ class EventBus {
         this.emit('system:memory:patch', { namespace, patch });
     }
 
+    _getTargetOrigin() {
+        if (typeof window === 'undefined' || !window.location) return '*';
+        const origin = window.location.origin;
+        return (origin && origin !== 'null' && origin !== 'file://') ? origin : '*';
+    }
+
+    _getChildIframes() {
+        if (typeof document === 'undefined') return [];
+        if (typeof document.getElementsByTagName === 'function') {
+            return document.getElementsByTagName('iframe');
+        }
+        if (typeof document.querySelectorAll === 'function') {
+            return document.querySelectorAll('iframe');
+        }
+        return [];
+    }
+
+    _relayToChildIframes(message, excludeWindow = null) {
+        const iframes = this._getChildIframes();
+        if (!iframes || iframes.length === 0) return;
+        const targetOrigin = this._getTargetOrigin();
+        for (let i = 0; i < iframes.length; i++) {
+            try {
+                const childWin = iframes[i].contentWindow;
+                if (childWin && childWin !== excludeWindow) {
+                    childWin.postMessage(message, targetOrigin);
+                }
+            } catch (e) {}
+        }
+    }
+
     /**
      * Handle events from remote sources
      */
-    handleRemoteEvent(eventData) {
+    handleRemoteEvent(eventData, messageSource = null) {
         if (!eventData || eventData.source === this.getSource()) {
             // Ignore our own events
             return;
         }
 
-        // Dedupe: the same event can arrive twice — once via postMessage (direct iframe)
-        // and once via the WebSocket relay. Both share source/type/timestamp/data, so
-        // drop the second copy within a short window.
-        const sig = `${eventData.source}|${eventData.type}|${eventData.timestamp}|${JSON.stringify(eventData.data)}`;
+        // Dedupe: prefer O(1) unique event id over JSON.stringify when present.
+        const sig = eventData.id
+            ? `id:${eventData.id}`
+            : `${eventData.source}|${eventData.type}|${eventData.timestamp}|${typeof eventData.data === 'object' ? (eventData.data && eventData.data.id) || '' : String(eventData.data)}`;
         const now = Date.now();
         const last = this._recentSignatures.get(sig) || 0;
-        if (now - last < 200) {
+        if (now - last < 5000) {
             return;
         }
         this._recentSignatures.set(sig, now);
         // Prune stale entries to bound memory
         if (this._recentSignatures.size > 500) {
             for (const [k, t] of this._recentSignatures) {
-                if (now - t > 2000) this._recentSignatures.delete(k);
+                if (now - t > 5000) this._recentSignatures.delete(k);
             }
         }
 
         this.addToHistory(eventData);
         this.handleLocalEvent(eventData);
+
+        // Only top/parent hubs relay downward to child iframes (never traverse in leaf iframes).
+        const isHubOrParent = typeof window === 'undefined' || window === window.top || window.parent === window;
+        if (isHubOrParent && this._getChildIframes().length > 0) {
+            this._relayToChildIframes({
+                sourceType: 'redglitch-event',
+                event: eventData
+            }, messageSource);
+        }
     }
 
     /**
@@ -306,28 +353,22 @@ class EventBus {
             sourceType: 'redglitch-event',
             event: eventData
         };
+        const targetOrigin = this._getTargetOrigin();
 
         // Broadcast to parent window (if we are in an iframe)
-        if (window.parent && window.parent !== window) {
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
             try {
-                window.parent.postMessage(message, window.location.origin);
+                window.parent.postMessage(message, targetOrigin);
             } catch (e) {}
         }
         
         // Broadcast to all child iframes
-        const iframes = document.querySelectorAll('iframe');
-        iframes.forEach(iframe => {
-            try {
-                if (iframe.contentWindow) {
-                    iframe.contentWindow.postMessage(message, window.location.origin);
-                }
-            } catch (e) {}
-        });
+        this._relayToChildIframes(message);
         
         // Broadcast to opener (if we were opened as a popup)
-        if (window.opener && window.opener !== window) {
+        if (typeof window !== 'undefined' && window.opener && window.opener !== window) {
             try {
-                window.opener.postMessage(message, window.location.origin);
+                window.opener.postMessage(message, targetOrigin);
             } catch (err) {}
         }
     }

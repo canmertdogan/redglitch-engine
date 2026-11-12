@@ -86,14 +86,30 @@ window.MapSystem = class MapSystem {
     }
 
     async combineWorldPixelArt() {
+        if (typeof window !== 'undefined' && window.RedglitchWorldTileset) {
+            return window.RedglitchWorldTileset.loadWorldTilesetCanvas({ tileSize: 16 });
+        }
+
         const canvas = document.createElement('canvas');
         const tSize = 16; const cols = 16; const totalTiles = 600;
         canvas.width = cols * tSize; canvas.height = Math.ceil(totalTiles / cols) * tSize;
         const ctx = canvas.getContext('2d');
+
+        // Fast-path: single pre-packed 256x608 atlas
+        try {
+            const img = await new Promise((resolve, reject) => {
+                const atlas = new Image();
+                atlas.onload = () => resolve(atlas);
+                atlas.onerror = reject;
+                atlas.src = 'sprite-art/worldpixelart_atlas.png';
+            });
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            return canvas;
+        } catch (_) {}
+
         const promises = [];
-        
         console.log("Generating Dynamic World Tileset...");
-        
         for (let i = 1; i <= totalTiles; i++) {
             promises.push(new Promise(resolve => {
                 const img = new Image();
@@ -104,7 +120,6 @@ window.MapSystem = class MapSystem {
                     resolve();
                 };
                 img.onerror = () => {
-                    // Log but don't fail the promise
                     if (i < 10) console.warn(`Texture ${i} missing from worldpixelart`);
                     resolve(); 
                 };

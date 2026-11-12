@@ -24,6 +24,13 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({ error: 'File path must be relative' });
         }
         const result = await gitService.add(file);
+        if (!result || result.success === false) {
+            const status = result?.error === 'Invalid file path' ? 400 : 500;
+            return res.status(status).json({
+                success: false,
+                error: result?.error || 'Git add failed'
+            });
+        }
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message || 'Error adding file to git' });
@@ -37,6 +44,13 @@ router.post('/commit', async (req, res) => {
             return res.status(400).json({ error: 'Commit message required' });
         }
         const result = await gitService.commit(message);
+        if (!result || result.success === false) {
+            const status = result?.error === 'Commit message required' ? 400 : 500;
+            return res.status(status).json({
+                success: false,
+                error: result?.error || 'Git commit failed'
+            });
+        }
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message || 'Error committing to git' });

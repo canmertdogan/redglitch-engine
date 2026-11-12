@@ -113,14 +113,14 @@
             <i class="fas fa-magic"></i> SKILL STUDIO
         </div>
         <div class="menu-item" onclick="saveToServer()">File</div>
-        <div class="menu-item">View</div>
+        <div class="menu-item" onclick="togglePreviewPanel()">View</div>
     </div>
 
     <div id="toolbar">
         <button class="tool-btn" onclick="saveToServer()" title="Save"><i class="fas fa-save"></i></button>
         <div class="tool-sep"></div>
         <button class="tool-btn" onclick="addNewSkill()" title="New Skill"><i class="fas fa-plus"></i></button>
-        <button class="tool-btn" style="color:#e74c3c;" title="Delete"><i class="fas fa-trash"></i></button>
+        <button class="tool-btn" onclick="deleteCurrentSkill()" style="color:#e74c3c;" title="Delete"><i class="fas fa-trash"></i></button>
     </div>
 
     <div id="layout">
@@ -186,7 +186,7 @@
 
     </div>
 
-    <script src="base_game/sprites.js"></script>
+    <script src="engines/rpg-topdown/sprites.js"></script>
     
     <!-- Integration System -->
     <script src="/shared/EventBus.js"></script>

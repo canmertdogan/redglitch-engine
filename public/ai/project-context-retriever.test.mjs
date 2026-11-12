@@ -31,3 +31,31 @@ test('retrieves bounded active-project context and excludes generated and sensit
         globalThis.fetch = originalFetch;
     }
 });
+
+test('handles { tree, truncated: true } responses from /api/ide/tree', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+        if (url === '/api/projects/current') return { ok: true, json: async () => ({ name: 'LargeProj' }) };
+        if (url === '/api/ide/tree') return {
+            ok: true,
+            json: async () => ({
+                truncated: true,
+                tree: [{
+                    name: 'Project: LargeProj',
+                    type: 'dir',
+                    children: [
+                        { name: 'MANIFESTO.md', path: 'projects/LargeProj/MANIFESTO.md', type: 'file' },
+                    ],
+                }],
+            }),
+        };
+        return { ok: true, text: async () => 'Truncated project manifesto' };
+    };
+    try {
+        const context = await new ProjectContextRetriever({ maxFiles: 4 }).retrieve('manifesto');
+        assert.match(context, /MANIFESTO\.md/);
+        assert.match(context, /Truncated project manifesto/);
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+});

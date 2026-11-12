@@ -362,7 +362,7 @@
                             <div class="entity-tool" data-entity="enemy"><i class="fas fa-skull"></i> Basic Enemy</div>
                         </div>
                     </div>
-                    <div class="panel" style="flex-grow:1; min-height:0;">
+                    <div id="panel-prefabs" class="panel" style="flex-grow:1; min-height:0;">
                         <div class="panel-header">Prefabs</div>
                         <div class="panel-content">
                             <button onclick="editor.loadPrefabs()" class="btn-full" style="margin-bottom:8px;">🔄 Rescan Prefabs</button>
@@ -475,6 +475,11 @@
             
             const content = document.getElementById(`tab-${tabId}`);
             if (content) content.classList.add('active');
+
+            if (tabId === 'entities') {
+                const prefabsPanel = document.getElementById('panel-prefabs');
+                if (prefabsPanel) prefabsPanel.style.display = 'block';
+            }
         }
 
         function toggleSidebar(side) {
@@ -504,6 +509,7 @@
         window.StudioBridge = StudioBridge;
         window.dispatchEvent(new Event('studio-bridge-ready'));
     </script>
+    <script src="/shared/WorldTilesetLoader.js"></script>
     <script src="platformer_editor.js"></script>
 </body>
 </html>

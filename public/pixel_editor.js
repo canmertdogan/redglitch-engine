@@ -353,17 +353,55 @@ function loadHistory(snap) {
     updateUI();
 }
 
-function loop() {
-    requestAnimationFrame(loop);
+window.__studioPaused = false;
+var _pixelLoopRaf = null;
+var _lastPixelIdleDraw = -120;
+function schedulePixelLoop() {
+    if (!_pixelLoopRaf && !window.__studioPaused && !document.hidden) {
+        _pixelLoopRaf = requestAnimationFrame(loop);
+    }
+}
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'studio:visibility') {
+        window.__studioPaused = !e.data.visible;
+        if (e.data.visible) {
+            _lastPixelIdleDraw = -120;
+            schedulePixelLoop();
+        } else if (_pixelLoopRaf) {
+            cancelAnimationFrame(_pixelLoopRaf);
+            _pixelLoopRaf = null;
+        }
+    }
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (_pixelLoopRaf) {
+            cancelAnimationFrame(_pixelLoopRaf);
+            _pixelLoopRaf = null;
+        }
+    } else {
+        _lastPixelIdleDraw = -120;
+        schedulePixelLoop();
+    }
+});
+
+function loop(ts) {
+    _pixelLoopRaf = null;
+    if (window.__studioPaused || document.hidden) return;
+    const now = ts || performance.now();
     if (app.isPlaying) {
-        const now = Date.now();
-        if (!app.lastTick || now - app.lastTick > (1000/app.fps)) { 
-            app.lastTick = now; 
+        const dNow = Date.now();
+        if (!app.lastTick || dNow - app.lastTick > (1000/app.fps)) { 
+            app.lastTick = dNow; 
             advanceAnim(); 
             syncTimelineHighlight();
         }
+        renderPreview();
+    } else if (now - _lastPixelIdleDraw >= 100) {
+        _lastPixelIdleDraw = now;
+        renderPreview();
     }
-    renderPreview();
+    schedulePixelLoop();
 }
 
 function syncTimelineHighlight() {

@@ -41,11 +41,14 @@ export default class FPSEditorPanel {
                 import('/fps_editor/ColorPalette.js').catch(() => null),
                 import('/fps_editor/MapExporter.js').catch(() => null),
             ]);
-            if (BT) this.BrushTools    = BT.default ?? BT;
-            if (ES) this.EntitySpawner = ES.default ?? ES;
-            if (LE) this.LightEditor   = LE.default ?? LE;
-            if (CP) this.ColorPalette  = CP.default ?? CP;
-            if (ME) this.MapExporter   = ME.default ?? ME;
+            if (BT) this.BrushTools    = BT.default ?? (BT.BrushTools || window.BrushTools || null);
+            if (ES) this.EntitySpawner = ES.default ?? (ES.EntitySpawner || window.EntitySpawner || null);
+            if (LE) this.LightEditor   = LE.default ?? (LE.LightEditor || window.LightEditor || null);
+            if (CP) this.ColorPalette  = CP.default ?? (CP.ColorPalette || window.ColorPalette || null);
+            const meMod = ME?.default ?? ME;
+            this.MapExporter = (meMod && typeof meMod.exportToFile === 'function')
+                ? meMod
+                : (window.MapExporter || null);
         } catch (e) {
             console.warn('[FPSEditorPanel] Failed to load tool modules:', e);
         }
@@ -78,8 +81,6 @@ export default class FPSEditorPanel {
                 <div class="tool-section-title">DRAW MODE</div>
                 <div class="tool-buttons">
                     <button class="draw-btn active" data-draw="pencil">✏️ Pencil</button>
-                    <button class="draw-btn" data-draw="rect">◻️ Rect</button>
-                    <button class="draw-btn" data-draw="fill">🪣 Fill</button>
                 </div>
             </div>
             <div class="tool-section">
@@ -139,7 +140,37 @@ export default class FPSEditorPanel {
         layerUp?.addEventListener('click', () => { this._activeY++; layerVal.textContent = this._activeY; });
         layerDown?.addEventListener('click', () => { this._activeY = Math.max(0, this._activeY - 1); layerVal.textContent = this._activeY; });
 
+        document.getElementById('fps-export-btn')?.addEventListener('click', () => this._exportMap());
         document.getElementById('fps-playtest-btn')?.addEventListener('click', () => this.editor?.playtest());
+    }
+
+    _exportMap() {
+        if (!this.editor) return;
+        const levelData = this.editor._serializeLevelData();
+        const exporter = (this.MapExporter && typeof this.MapExporter.exportToFile === 'function')
+            ? this.MapExporter
+            : window.MapExporter;
+        if (exporter && typeof exporter.exportToFile === 'function') {
+            exporter.exportToFile({
+                mapName: levelData.name || this.editor._levelId || 'fps_level',
+                project: this.editor._project || '',
+                voxelGrid: levelData.voxelGrid || this._voxelGrid || {},
+                cellSize: 1,
+                entities: levelData.entities || [],
+                lights: levelData.lights || [],
+                triggers: levelData.triggers || [],
+                fog: levelData.fog,
+                skybox: levelData.skybox,
+                playerSpawn: levelData.playerSpawn,
+            });
+            return;
+        }
+        const filename = `${(levelData.name || 'fps_level').replace(/\s+/g, '_')}.fpsmap.json`;
+        const blob = new Blob([JSON.stringify(levelData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     onSceneRebuilt(levelData) {
@@ -152,8 +183,8 @@ export default class FPSEditorPanel {
         data.voxelGrid = this._voxelGrid;
 
         // The runtime (Engine3DAdapter._populateGeometry) consumes `geometry` box
-        // meshes, not the editor-only `voxelGrid` dict. Convert each voxel cell into
-        // a box geometry entry so the FPS-built static world actually renders.
+        // meshes, not the editor-only `voxelGrid` dict. Replace any previous `vox_*`
+        // entries rather than duplicating them across repeated saves.
         const boxes = [];
         for (const key of Object.keys(this._voxelGrid || {})) {
             const [x, y, z] = key.split(',').map(Number);
@@ -168,7 +199,9 @@ export default class FPSEditorPanel {
                 depth: 1,
             });
         }
-        data.geometry = (Array.isArray(data.geometry) ? data.geometry : []).concat(boxes);
+        const existingGeo = Array.isArray(data.geometry) ? data.geometry : [];
+        const nonVoxelGeo = existingGeo.filter(g => !g?.id || !String(g.id).startsWith('vox_'));
+        data.geometry = nonVoxelGeo.concat(boxes);
     }
 
     onModeChanged(mode) {

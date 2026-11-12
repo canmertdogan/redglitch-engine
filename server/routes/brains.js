@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const safeFs = require('../utils/safeFs');
+const config = require('../config');
+const { resolveUnderRoot } = require('../utils/pathGuard');
 
 const ensureDir = async (dir) => {
     await fs.mkdir(dir, { recursive: true });
@@ -14,13 +16,33 @@ function isSafeName(value) {
     return typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value);
 }
 
+async function readBrainFile(fileName) {
+    const projectDir = path.join(projectService.getActiveProject(), 'data', 'brains');
+    const engineDir = path.join(config.PUBLIC_DIR, 'data', 'brains');
+    const projectFile = resolveUnderRoot(projectDir, fileName);
+    const engineFile = resolveUnderRoot(engineDir, fileName);
+
+    if (!projectFile || !engineFile) {
+        const err = new Error('Access denied');
+        err.code = 'EACCES';
+        throw err;
+    }
+
+    try {
+        return await fs.readFile(projectFile, 'utf8');
+    } catch (err) {
+        if (err.code !== 'ENOENT' || projectFile === engineFile) throw err;
+        return await fs.readFile(engineFile, 'utf8');
+    }
+}
+
 // List all NPC brains (Hybrid)
 router.get('/list', async (req, res) => {
     try {
         const isRoot = projectService.isRootProject();
         const activeProject = projectService.getActiveProject();
         const projectDir = path.join(activeProject, 'data', 'brains');
-        const engineDir = path.join(__dirname, '..', '..', 'public', 'data', 'brains');
+        const engineDir = path.join(config.PUBLIC_DIR, 'data', 'brains');
         
         const brainFiles = new Set();
         
@@ -70,8 +92,7 @@ router.post('/save', async (req, res) => {
 router.get('/js/:name', async (req, res) => {
     try {
         if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid brain name' });
-        const activeProject = projectService.getActiveProject();
-        const js = await fs.readFile(path.join(activeProject, 'data', 'brains', `${req.params.name}.js`), 'utf8');
+        const js = await readBrainFile(`${req.params.name}.js`);
         res.set('Content-Type', 'application/javascript');
         res.send(js);
     } catch (err) {
@@ -83,8 +104,7 @@ router.get('/js/:name', async (req, res) => {
 router.get('/:name', async (req, res) => {
     try {
         if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid brain name' });
-        const activeProject = projectService.getActiveProject();
-        const json = await fs.readFile(path.join(activeProject, 'data', 'brains', `${req.params.name}.json`), 'utf8');
+        const json = await readBrainFile(`${req.params.name}.json`);
         res.json({ json });
     } catch (err) {
         res.status(404).json({ error: 'Brain not found' });
@@ -95,10 +115,10 @@ router.get('/:name', async (req, res) => {
 router.get('/ast/:name', async (req, res) => {
     try {
         if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid brain name' });
-        const activeProject = projectService.getActiveProject();
-        const ast = await fs.readFile(path.join(activeProject, 'data', 'brains', `${req.params.name}.ast.json`), 'utf8');
-        res.json(safeParseJSON(ast, 'brain AST'))
+        const ast = await readBrainFile(`${req.params.name}.ast.json`);
+        res.json(safeParseJSON(ast, 'brain AST'));
     } catch (err) {
+        if (err.code === 'INVALID_JSON') return res.status(500).json({ error: err.message });
         res.status(404).json({ error: 'AST not found' });
     }
 });

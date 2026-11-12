@@ -39,7 +39,7 @@ router.post('/save', async (req, res) => {
         await ensureDir(logicDir);
         
         // Save the visual workspace (JSON)
-        if (json) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.json`), json, 'utf8');
+        if (json) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.json`), typeof json === 'string' ? json : JSON.stringify(json, null, 2), 'utf8');
 
         // Save the executable JavaScript
         if (js) await safeFs.safeWriteFullPath(logicDir, path.join(logicDir, `${name}.js`), typeof js === 'string' ? js : JSON.stringify(js), 'utf8');
@@ -73,8 +73,10 @@ router.get('/list', async (req, res) => {
         const logicDir = path.join(activeProject, 'data', 'logic');
         await ensureDir(logicDir);
         const files = await fs.readdir(logicDir);
-        // Only return JSON files (the visual data) and strip extension
-        const scripts = files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', ''));
+        // Only return workspace JSON files (exclude compiled *.ast.json) and strip extension
+        const scripts = files
+            .filter(f => f.endsWith('.json') && !f.endsWith('.ast.json'))
+            .map(f => f.replace('.json', ''));
         res.json(scripts);
     } catch (err) {
         res.status(500).json({ error: 'Failed to list scripts' });

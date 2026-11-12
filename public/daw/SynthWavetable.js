@@ -100,6 +100,7 @@ class SynthWavetable extends Synthesizer {
             oscillator: osc,
             osc,
             sub,
+            subGain,
             mixer,
             filter,
             gain: vca
@@ -126,11 +127,44 @@ class SynthWavetable extends Synthesizer {
         // Filter Envelope
         this.applyFilterEnvelope(voice.filter, time, duration);
         
+        const delay = Math.max(0, time - this.ctx.currentTime);
+        const tail = Math.max(this.params.release, this.params.filterRelease);
         setTimeout(() => {
             this.stopVoice(voiceId);
-        }, (duration + Math.max(this.params.release, this.params.filterRelease)) * 1000);
+        }, (delay + duration + tail) * 1000);
         
         return voiceId;
+    }
+
+    stopVoice(voiceId) {
+        const voice = this.voices.get(voiceId);
+        if (!voice) return;
+        this.voices.delete(voiceId);
+
+        try {
+            const releaseTime = Math.max(this.params.release, this.params.filterRelease) || 0;
+            const stopTime = this.ctx.currentTime + releaseTime;
+            const disconnectNodes = () => {
+                try { voice.osc.disconnect(); } catch {}
+                if (voice.sub) { try { voice.sub.disconnect(); } catch {} }
+                if (voice.subGain) { try { voice.subGain.disconnect(); } catch {} }
+                try { voice.mixer.disconnect(); } catch {}
+                try { voice.filter.disconnect(); } catch {}
+                try { voice.gain.disconnect(); } catch {}
+            };
+            if ('onended' in voice.osc) {
+                voice.osc.onended = disconnectNodes;
+            }
+            voice.osc.stop(stopTime);
+            if (voice.sub) {
+                voice.sub.stop(stopTime);
+            }
+            if (!('onended' in voice.osc) || releaseTime === 0) {
+                setTimeout(disconnectNodes, Math.max(10, releaseTime * 1000 + 20));
+            }
+        } catch (e) {
+            // Already stopped
+        }
     }
 
     applyFilterEnvelope(filter, startTime, duration) {

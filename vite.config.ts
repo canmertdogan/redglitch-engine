@@ -29,6 +29,29 @@ export default defineConfig({
         interactive_cutscene_editor: path.resolve(__dirname, 'studio-ui/interactive_cutscene_editor.html'),
         ui_designer: path.resolve(__dirname, 'studio-ui/ui_designer.html'),
         studio_main: path.resolve(__dirname, 'studio-ui/studio_main.html'),
+      },
+      output: {
+        manualChunks(id) {
+          const normalized = id.replace(/\\/g, '/');
+          if (!normalized.includes('/node_modules/')) return undefined;
+          if (
+            normalized.includes('/node_modules/react/') ||
+            normalized.includes('/node_modules/react-dom/') ||
+            normalized.includes('/node_modules/scheduler/')
+          ) {
+            return 'vendor-react';
+          }
+          if (normalized.includes('/node_modules/lucide-react/')) {
+            return 'vendor-icons';
+          }
+          if (
+            normalized.includes('/node_modules/@monaco-editor/') ||
+            normalized.includes('/node_modules/monaco-editor/')
+          ) {
+            return 'vendor-monaco';
+          }
+          return undefined;
+        }
       }
     }
   },
@@ -46,6 +69,15 @@ export default defineConfig({
       '/dunyalar': 'http://127.0.0.1:3000',
       '/assets': 'http://127.0.0.1:3000',
       '/muzikler': 'http://127.0.0.1:3000',
+      '/shared': 'http://127.0.0.1:3000',
+      '/base_game': 'http://127.0.0.1:3000',
+      '/fonts': 'http://127.0.0.1:3000',
+      '/lib': 'http://127.0.0.1:3000',
+      '/engines': 'http://127.0.0.1:3000',
+      '/sprite-art': 'http://127.0.0.1:3000',
+      '/ai': 'http://127.0.0.1:3000',
+      '/data': 'http://127.0.0.1:3000',
+      '/interfaces': 'http://127.0.0.1:3000',
     }
   }
 });

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
 import { useStudio } from '../hooks/useStudio';
+
+loader.config({ paths: { vs: '/lib/monaco/vs' } });
 import {
     Play, Save, Plus, Box, Eye, EyeOff,
     Sliders, RefreshCw, AlertCircle, CheckCircle2,
@@ -13,8 +15,18 @@ interface Shader {
     name: string;
     code: string;
     uniforms: any;
+    savedName?: string;
     layers?: ShaderLayer[];
 }
+
+const DEFAULT_POSTPROCESS_CODE = `precision mediump float;
+varying vec2 vTexCoord;
+uniform sampler2D uTexture;
+uniform float uTime;
+void main() {
+    vec4 col = texture2D(uTexture, vTexCoord);
+    gl_FragColor = col;
+}`;
 
 interface ShaderTemplate {
     id: string;
@@ -54,9 +66,10 @@ uniform sampler2D uTexture;
 uniform float uTime;
 uniform vec2 uResolution;
 void main() {
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
     vec2 uv = vTexCoord;
     vec4 col = texture2D(uTexture, uv);
-    float scanline = sin(uv.y * uResolution.y * 0.5) * 0.08;
+    float scanline = sin(uv.y * res.y * 0.5) * 0.08;
     float vig = 1.0 - length(uv - 0.5) * 0.6;
     gl_FragColor = vec4((col.rgb - scanline) * vig, 1.0);
 }` },
@@ -100,8 +113,9 @@ uniform sampler2D uTexture;
 uniform vec2 uResolution;
 uniform float uTime;
 void main() {
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
     float size = 16.0 + sin(uTime) * 8.0;
-    vec2 uv = floor(vTexCoord * uResolution / size) * size / uResolution;
+    vec2 uv = floor(vTexCoord * res / size) * size / res;
     gl_FragColor = texture2D(uTexture, uv);
 }` },
     { id: 'kaleidoscope', name: 'Kaleidoscope', category: '2D Effects', desc: 'Mirrored segment kaleidoscope', code: `precision highp float;
@@ -124,8 +138,9 @@ uniform sampler2D uTexture;
 uniform vec2 uResolution;
 uniform float uTime;
 void main() {
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
     vec4 c = texture2D(uTexture, vTexCoord);
-    vec2 px = 1.0 / uResolution;
+    vec2 px = 1.0 / res;
     vec4 b = vec4(0.0);
     for (int x = -2; x <= 2; x++) {
         for (int y = -2; y <= 2; y++) {
@@ -143,7 +158,8 @@ varying vec2 vTexCoord;
 uniform sampler2D uTexture;
 uniform vec2 uResolution;
 void main() {
-    vec2 px = 1.0 / uResolution;
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
+    vec2 px = 1.0 / res;
     float c = texture2D(uTexture, vTexCoord).r;
     float l = texture2D(uTexture, vTexCoord + vec2(-px.x, 0.0)).r;
     float r = texture2D(uTexture, vTexCoord + vec2(px.x, 0.0)).r;
@@ -159,7 +175,8 @@ varying vec2 vTexCoord;
 uniform sampler2D uTexture;
 uniform vec2 uResolution;
 void main() {
-    vec2 px = 1.0 / uResolution;
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
+    vec2 px = 1.0 / res;
     vec4 col = vec4(0.0);
     for (int x = -3; x <= 3; x++) {
         for (int y = -3; y <= 3; y++) {
@@ -173,7 +190,8 @@ varying vec2 vTexCoord;
 uniform sampler2D uTexture;
 uniform vec2 uResolution;
 void main() {
-    vec2 px = 1.0 / uResolution;
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
+    vec2 px = 1.0 / res;
     vec4 c = texture2D(uTexture, vTexCoord);
     vec4 l = texture2D(uTexture, vTexCoord + vec2(-px.x, 0.0));
     vec4 r = texture2D(uTexture, vTexCoord + vec2(px.x, 0.0));
@@ -186,7 +204,8 @@ varying vec2 vTexCoord;
 uniform sampler2D uTexture;
 uniform vec2 uResolution;
 void main() {
-    vec2 px = 1.0 / uResolution;
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
+    vec2 px = 1.0 / res;
     float c = texture2D(uTexture, vTexCoord).r;
     float tr = texture2D(uTexture, vTexCoord + px).r;
     float bl = texture2D(uTexture, vTexCoord - px).r;
@@ -212,8 +231,9 @@ uniform sampler2D uTexture;
 uniform vec2 uResolution;
 uniform float uTime;
 void main() {
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
     vec4 col = texture2D(uTexture, vTexCoord);
-    float scan = abs(sin(vTexCoord.y * uResolution.y * 0.5 + uTime * 5.0)) * 0.15;
+    float scan = abs(sin(vTexCoord.y * res.y * 0.5 + uTime * 5.0)) * 0.15;
     gl_FragColor = vec4(col.rgb * (1.0 - scan), 1.0);
 }` },
     { id: 'rgb-split', name: 'RGB Split Glitch', category: '2D Effects', desc: 'RGB channel separation glitch', code: `precision highp float;
@@ -436,9 +456,10 @@ uniform sampler2D uTexture;
 uniform vec2 uResolution;
 uniform float uTime;
 void main() {
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
     vec4 col = texture2D(uTexture, vTexCoord);
     float gray = dot(col.rgb, vec3(0.299, 0.587, 0.114));
-    vec2 grid = vTexCoord * uResolution / 12.0;
+    vec2 grid = vTexCoord * res / 12.0;
     float dotSize = 0.5 + gray * 0.5;
     float d = length(fract(grid) - 0.5);
     float pattern = smoothstep(dotSize * 0.5, dotSize * 0.4, d);
@@ -450,9 +471,10 @@ varying vec2 vTexCoord;
 uniform sampler2D uTexture;
 uniform vec2 uResolution;
 void main() {
+    vec2 res = uResolution.x > 0.0 ? uResolution : vec2(800.0, 600.0);
     vec4 col = texture2D(uTexture, vTexCoord);
     float gray = dot(col.rgb, vec3(0.299, 0.587, 0.114));
-    vec2 pos = mod(floor(vTexCoord * uResolution / 4.0), 4.0);
+    vec2 pos = mod(floor(vTexCoord * res / 4.0), 4.0);
     float bayer = (pos.x + pos.y * 4.0) / 16.0;
     float dithered = step(bayer, gray);
     gl_FragColor = vec4(vec3(dithered), 1.0);
@@ -1191,11 +1213,12 @@ const THEME = {
 };
 
 const ShaderEditor: React.FC = () => {
-    const { isReady, projectState } = useStudio();
+    const { isReady, projectState, eventBus } = useStudio();
     const [shaders, setShaders] = useState<Shader[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [compileStatus, setCompileStatus] = useState<'idle' | 'compiling' | 'success' | 'error'>('idle');
     const [isSaving, setIsSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState<string | null>(null);
     const [errorMsg, setErrorLog] = useState('');
     const [showTemplates, setShowTemplates] = useState(false);
     const [meshType, setMeshType] = useState<MeshType>('sphere');
@@ -1456,10 +1479,13 @@ const ShaderEditor: React.FC = () => {
         const fboBRef = { fbo: null as FBO | null };
         const fboCRef = { fbo: null as FBO | null };
 
+        let cancelled = false;
         let lastFpsTime = 0;
         let fpsCount = 0;
+        let lastAnimUiUpdate = 0;
         const renderLoop = (time: number) => {
-            requestAnimationFrame(renderLoop);
+            if (cancelled) return;
+            animRef.current = requestAnimationFrame(renderLoop);
             const g = glRef.current;
             if (!g) return;
 
@@ -1473,6 +1499,10 @@ const ShaderEditor: React.FC = () => {
                 let t = animTimeRef.current + dt;
                 if (t >= animDuration) t = 0;
                 animTimeRef.current = t;
+                if (now - lastAnimUiUpdate >= 50) {
+                    lastAnimUiUpdate = now;
+                    setAnimTime(t);
+                }
                 const kfs = keyframesRef.current;
                 for (const [name, frames] of Object.entries(kfs)) {
                     if (!frames.length) continue;
@@ -1505,12 +1535,15 @@ const ShaderEditor: React.FC = () => {
                 const fboC = ensureFBO(fboCRef, w, h);
                 const blendProgs = fboCacheRef.current.blendProgs;
 
+                let accumFBO = fboA;
+                let outFBO = fboC;
+
                 for (let i = 0; i < visibleLayers.length; i++) {
                     const layer = visibleLayers[i];
                     renderLayerToFBO(g, layer, fboB, time);
 
                     if (i === 0) {
-                        g.bindFramebuffer(g.FRAMEBUFFER, fboA.fbo);
+                        g.bindFramebuffer(g.FRAMEBUFFER, accumFBO.fbo);
                         g.viewport(0, 0, w, h);
                         g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
                         let blitProg = blendProgs['replace'];
@@ -1536,12 +1569,12 @@ const ShaderEditor: React.FC = () => {
                             blendProgs[layer.blendMode] = blendProg;
                         }
                         if (blendProg) {
-                            g.bindFramebuffer(g.FRAMEBUFFER, fboC.fbo);
+                            g.bindFramebuffer(g.FRAMEBUFFER, outFBO.fbo);
                             g.viewport(0, 0, w, h);
                             g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
                             g.useProgram(blendProg);
                             g.activeTexture(g.TEXTURE0);
-                            g.bindTexture(g.TEXTURE_2D, fboA.tex);
+                            g.bindTexture(g.TEXTURE_2D, accumFBO.tex);
                             g.uniform1i(g.getUniformLocation(blendProg, 'uAccum'), 0);
                             g.activeTexture(g.TEXTURE1);
                             g.bindTexture(g.TEXTURE_2D, fboB.tex);
@@ -1555,9 +1588,9 @@ const ShaderEditor: React.FC = () => {
                             g.vertexAttribPointer(qLoc, 2, g.FLOAT, false, 0, 0);
                             g.drawArrays(g.TRIANGLE_STRIP, 0, 4);
                         }
-                        const tmpTex = fboA.tex;
-                        (fboA as any).tex = fboC.tex;
-                        (fboC as any).tex = tmpTex;
+                        const tmp = accumFBO;
+                        accumFBO = outFBO;
+                        outFBO = tmp;
                     }
                 }
 
@@ -1572,7 +1605,7 @@ const ShaderEditor: React.FC = () => {
                 if (finalProg) {
                     g.useProgram(finalProg);
                     g.activeTexture(g.TEXTURE0);
-                    g.bindTexture(g.TEXTURE_2D, fboA.tex);
+                    g.bindTexture(g.TEXTURE_2D, accumFBO.tex);
                     g.uniform1i(g.getUniformLocation(finalProg, 'uTexture'), 0);
                     const qLoc = g.getAttribLocation(finalProg, 'aPosition');
                     g.bindBuffer(g.ARRAY_BUFFER, quadBuffer);
@@ -1585,14 +1618,17 @@ const ShaderEditor: React.FC = () => {
             fpsCount++;
             if (time - lastFpsTime >= 1000) {
                 setFps(fpsCount);
-                setFrameTime(Math.round(1000 / fpsCount));
+                setFrameTime(fpsCount > 0 ? Math.round(1000 / fpsCount) : 0);
                 fpsCount = 0;
                 lastFpsTime = time;
             }
         };
         animRef.current = requestAnimationFrame(renderLoop);
 
-        return () => cancelAnimationFrame(animRef.current);
+        return () => {
+            cancelled = true;
+            cancelAnimationFrame(animRef.current);
+        };
     }, [isReady, meshVersion]);
 
     useEffect(() => {
@@ -1654,50 +1690,137 @@ const ShaderEditor: React.FC = () => {
             const res = await fetch('/api/shaders/list');
             if (res.ok) {
                 const names = await res.json();
-                if (names.length > 0) {
+                if (Array.isArray(names) && names.length > 0) {
                     const loaded = await Promise.all(names.map(async (n: string) => {
-                        const r = await fetch(`/api/shaders/${n}`);
-                        return r.ok ? await r.text() : null;
+                        const r = await fetch(`/api/shaders/${encodeURIComponent(n)}`);
+                        if (!r.ok) return null;
+                        const code = await r.text();
+                        return {
+                            id: 'shader_' + n,
+                            name: n,
+                            savedName: n,
+                            code,
+                            uniforms: {},
+                            layers: [{
+                                id: 'layer_1',
+                                name: 'Layer 1',
+                                code,
+                                blendMode: 'replace' as BlendMode,
+                                opacity: 1,
+                                visible: true,
+                            }],
+                        } as Shader;
                     }));
-                    setShaders(loaded.filter(l => l !== null));
+                    const valid = loaded.filter((l): l is Shader => l !== null);
+                    setShaders(valid.length > 0 ? valid : [getDefaultShader()]);
                 } else {
                     setShaders([getDefaultShader()]);
                 }
+            } else {
+                setShaders([getDefaultShader()]);
             }
         } catch (e) {
             setShaders([getDefaultShader()]);
         }
     };
 
-    const saveToServer = async () => {
+    const saveToServer = async (interactive = true) => {
         const shader = shaders[currentIndex];
         if (!shader) return;
+        const safeName = (shader.name || '').trim().replace(/[^a-zA-Z0-9._-]+/g, '_');
+        if (!safeName) {
+            setSaveMessage('INVALID NAME');
+            return;
+        }
         setIsSaving(true);
-        const data = { ...shader, layers };
+        setSaveMessage('SAVING...');
         try {
             // Use dedicated shader route so file lands in <project>/data/shaders/*.frag (engine reads .frag there),
             // not <project>/assets/data/shaders/*.json (assets/upload forces assets/ prefix and engine never finds it).
-            await fetch('/api/shaders/save', {
+            const res = await fetch('/api/shaders/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: shader.name, content: activeCode })
+                body: JSON.stringify({ name: safeName, content: activeCode })
             });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                setSaveMessage(err?.error || `SAVE FAILED (${res.status})`);
+                if (interactive) alert(err?.error || `SAVE FAILED (${res.status})`);
+                return;
+            }
+            setShaders(prev => prev.map((s, idx) => (idx === currentIndex ? { ...s, name: safeName, savedName: safeName, code: activeCode, layers } : s)));
+            setSaveMessage('SAVED');
+            setTimeout(() => setSaveMessage(null), 2000);
         } catch (e) {
             console.error(e);
+            setSaveMessage('SAVE ERROR');
+            if (interactive) alert('SAVE ERROR');
         } finally {
             setIsSaving(false);
         }
     };
 
+    const deleteCurrentShader = async () => {
+        const shader = shaders[currentIndex];
+        if (!shader) return;
+        if (!confirm(`Delete shader "${shader.name}"?`)) return;
+        const targetName = shader.savedName || shader.name;
+        if (shader.savedName) {
+            try {
+                let res = await fetch(`/api/shaders/${encodeURIComponent(targetName)}`, { method: 'DELETE' });
+                if (res.status === 404) {
+                    const fileName = targetName.endsWith('.frag') ? targetName : `${targetName}.frag`;
+                    res = await fetch('/api/ide/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: `data/shaders/${fileName}` })
+                    });
+                }
+                if (!res.ok && res.status !== 404) {
+                    alert(`DELETE FAILED (${res.status})`);
+                    return;
+                }
+            } catch {
+                alert('DELETE FAILED');
+                return;
+            }
+        }
+        const remaining = shaders.filter((_, i) => i !== currentIndex);
+        const nextList = remaining.length > 0 ? remaining : [getDefaultShader()];
+        prevShaderIdRef.current = '';
+        setShaders(nextList);
+        setCurrentIndex(Math.max(0, Math.min(currentIndex - 1, nextList.length - 1)));
+    };
+
+    const saveToServerRef = useRef(saveToServer);
+    saveToServerRef.current = saveToServer;
+
+    useEffect(() => {
+        const onSaveKey = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                void saveToServerRef.current(true);
+            }
+        };
+        window.addEventListener('keydown', onSaveKey);
+        const unsubSave = eventBus?.on('system:global_save', () => {
+            void saveToServerRef.current(false);
+        });
+        return () => {
+            window.removeEventListener('keydown', onSaveKey);
+            if (unsubSave && eventBus?.off) eventBus.off('system:global_save', unsubSave);
+        };
+    }, [eventBus]);
+
     const getDefaultShader = (): Shader => ({
         id: 'shader_' + Date.now(),
         name: 'new_shader',
-        code: TEMPLATES[0].code,
+        code: DEFAULT_POSTPROCESS_CODE,
         uniforms: {},
         layers: [{
             id: 'layer_1',
             name: 'Layer 1',
-            code: TEMPLATES[0].code,
+            code: DEFAULT_POSTPROCESS_CODE,
             blendMode: 'replace',
             opacity: 1,
             visible: true,
@@ -1881,14 +2004,26 @@ const ShaderEditor: React.FC = () => {
             <div id="toolbar" style={{ height: '44px', background: THEME.bgDeep, borderBottom: '2px solid #000', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '8px', fontFamily: "'VT323', monospace" }}>
                 <button className="tool-btn" onClick={() => compileShader(activeCode)} title="Compile"><Play size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
-                <button className="tool-btn" onClick={saveToServer} disabled={isSaving} title="Save"><Save size={16} /></button>
+                <input
+                    type="text"
+                    value={currentShader.name}
+                    onChange={e => {
+                        const name = e.target.value;
+                        setShaders(prev => prev.map((s, idx) => (idx === currentIndex ? { ...s, name } : s)));
+                    }}
+                    placeholder="shader_name"
+                    aria-label="Shader Name"
+                    style={{ width: '140px', padding: '3px 6px', fontSize: '0.9rem', background: THEME.bgPanelAlt, border: '1px solid ' + THEME.border, color: THEME.textMain, fontFamily: "'VT323', monospace" }}
+                />
+                <button className="tool-btn" onClick={() => void saveToServer(true)} disabled={isSaving} title="Save (Ctrl+S)"><Save size={16} /></button>
+                <button className="tool-btn" onClick={() => void deleteCurrentShader()} style={{ color: THEME.danger }} title="Delete Shader"><Trash2 size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <button className="tool-btn" onClick={undo} disabled={undoIndexRef.current <= 0} title="Undo (Ctrl+Z)" style={{ fontSize: '0.7rem', padding: '4px 8px', width: 'auto' }}>↩</button>
                 <button className="tool-btn" onClick={redo} disabled={undoIndexRef.current >= undoStackRef.current.length - 1} title="Redo (Ctrl+Shift+Z)" style={{ fontSize: '0.7rem', padding: '4px 8px', width: 'auto' }}>↪</button>
                 <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <button className="tool-btn" onClick={() => { setShowTemplates(true); setSearchQuery(''); setSelectedCategory(null); }} title="Templates"><LayoutGrid size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
-                <button className="tool-btn" onClick={() => setShaders([...shaders, getDefaultShader()])} title="New Shader"><Plus size={16} /></button>
+                <button className="tool-btn" onClick={() => { prevShaderIdRef.current = ''; const next = [...shaders, getDefaultShader()]; setShaders(next); setCurrentIndex(next.length - 1); }} title="New Shader"><Plus size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: THEME.borderMute }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <List size={14} style={{ color: THEME.textDim }} />
@@ -1927,6 +2062,7 @@ const ShaderEditor: React.FC = () => {
                         <input type="checkbox" checked={autocompile} onChange={e => setAutocompile(e.target.checked)} style={{ width: 'auto' }} />
                         AUTO
                     </label>
+                    {saveMessage && <div style={{ color: saveMessage.includes('FAIL') || saveMessage.includes('ERR') || saveMessage.includes('INVALID') ? THEME.danger : THEME.ok, fontSize: '0.8rem' }}>{saveMessage}</div>}
                     {layers.filter(l => l.visible).length > 1 && <div style={{ color: THEME.accent, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}><Eye size={13} /> {layers.filter(l => l.visible).length}L</div>}
                     {compileStatus === 'success' && <div style={{ color: THEME.ok, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={14} /> READY</div>}
                     {compileStatus === 'error' && <div style={{ color: THEME.danger, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={14} /> ERROR</div>}
@@ -1964,9 +2100,7 @@ const ShaderEditor: React.FC = () => {
                             onChange={(val) => {
                                 const code = val || '';
                                 setLayers(prev => prev.map((l, i) => i === activeLayerIdx ? { ...l, code } : l));
-                                const next = [...shaders];
-                                next[currentIndex].code = code;
-                                setShaders(next);
+                                setShaders(prev => prev.map((s, idx) => idx === currentIndex ? { ...s, code } : s));
                             }}
                             options={{
                                 fontSize: 14,

@@ -58,11 +58,13 @@ class AchievementEditor {
 
     setupInputs() {
         const update = () => {
-            if (!this.selectedId) return;
-            const item = this.data.find(a => a.id === this.selectedId);
+            if (this.selectedId === null || this.selectedId === undefined) return;
+            const oldId = this.selectedId;
+            const item = this.data.find(a => a.id === oldId);
             if (!item) return;
 
-            item.id = this.dom.inputs.id.value;
+            const newId = this.dom.inputs.id.value;
+            item.id = newId;
             item.title = this.dom.inputs.title.value;
             item.desc = this.dom.inputs.desc.value;
             item.trigger = this.dom.inputs.trigger.value;
@@ -71,6 +73,15 @@ class AchievementEditor {
             item.prereq = this.dom.inputs.prereq.value;
             item.rewardType = this.dom.inputs.rewardType.value;
             item.rewardValue = this.dom.inputs.rewardValue.value;
+
+            if (newId !== oldId) {
+                const oldEl = this.dom.list.querySelector(`.ach-item[data-id="${CSS.escape(String(oldId))}"]`);
+                if (oldEl) {
+                    oldEl.dataset.id = newId;
+                    oldEl.onclick = () => this.select(item.id);
+                }
+                this.selectedId = newId;
+            }
 
             this.updatePreview(item);
             this.renderListItem(item);
@@ -126,7 +137,7 @@ class AchievementEditor {
     }
 
     renderListItem(item) {
-        const el = this.dom.list.querySelector(`.ach-item[data-id="${item.id}"]`);
+        const el = this.dom.list.querySelector(`.ach-item[data-id="${CSS.escape(String(item.id))}"]`);
         if (el) {
             el.innerHTML = `
                 <div class="ach-item-icon">${_escapeHtml(item.icon || '🏆')}</div>
@@ -146,7 +157,7 @@ class AchievementEditor {
         this.dom.empty.style.display = 'none';
         
         document.querySelectorAll('.ach-item').forEach(el => el.classList.remove('active'));
-        const activeEl = this.dom.list.querySelector(`.ach-item[data-id="${id}"]`);
+        const activeEl = this.dom.list.querySelector(`.ach-item[data-id="${CSS.escape(String(id))}"]`);
         if (activeEl) activeEl.classList.add('active');
 
         const item = this.data.find(a => a.id === id);
@@ -201,7 +212,8 @@ class AchievementEditor {
         }
     }
 
-    async save() {
+    async save(options = {}) {
+        const silent = Boolean(options && options.silent);
         try {
             const content = JSON.stringify(this.data, null, 2);
             const res = await fetch('/api/ide/write', {
@@ -217,14 +229,17 @@ class AchievementEditor {
                 if (window.RedglitchEventBus) {
                     window.RedglitchEventBus.emit('achievements:updated', this.data);
                 }
-                alert("DATABASE UPDATED.");
-            } else alert("SAVE FAILED.");
+                if (!silent) alert("DATABASE UPDATED.");
+            } else if (!silent) {
+                alert("SAVE FAILED.");
+            }
             
         } catch (e) {
             console.error(e);
-            alert("ERROR SAVING");
+            if (!silent) alert("ERROR SAVING");
         }
     }
 }
 
 window.editor = new AchievementEditor();
+window.save = (options) => window.editor.save(options);

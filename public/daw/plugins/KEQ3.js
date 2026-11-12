@@ -15,6 +15,14 @@ class KEQ3 extends AudioPlugin {
         this.lowGain = 0;
         this.midGain = 0;
         this.highGain = 0;
+        this.params = {
+            lowFreq: this.lowFreq,
+            midFreq: this.midFreq,
+            highFreq: this.highFreq,
+            lowGain: this.lowGain,
+            midGain: this.midGain,
+            highGain: this.highGain
+        };
 
         // Filters
         this.lowFilter = this.ctx.createBiquadFilter();
@@ -45,27 +53,36 @@ class KEQ3 extends AudioPlugin {
         switch(key) {
             case 'lowGain':
                 this.lowGain = value;
+                this.params[key] = value;
                 this.lowFilter.gain.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'midGain':
                 this.midGain = value;
+                this.params[key] = value;
                 this.midFilter.gain.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'highGain':
                 this.highGain = value;
+                this.params[key] = value;
                 this.highFilter.gain.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'lowFreq':
                 this.lowFreq = value;
+                this.params[key] = value;
                 this.lowFilter.frequency.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'midFreq':
                 this.midFreq = value;
+                this.params[key] = value;
                 this.midFilter.frequency.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'highFreq':
                 this.highFreq = value;
+                this.params[key] = value;
                 this.highFilter.frequency.setTargetAtTime(value, this.ctx.currentTime, 0.05);
+                break;
+            default:
+                super.setParam(key, value);
                 break;
         }
     }

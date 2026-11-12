@@ -625,7 +625,7 @@
                     <span><i class="fas fa-file-import"></i> Import JSON</span>
                 </div>
                 <div class="menu-separator"></div>
-                <div class="menu-dropdown-item" onclick="window.location.href='/'">
+                <div class="menu-dropdown-item" onclick="editor.closeEditor()">
                     <span><i class="fas fa-times"></i> Close</span>
                 </div>
             </div>
@@ -705,9 +705,9 @@
                 <div class="menu-dropdown-item" onclick="editor.validateBrain()">
                     <span><i class="fas fa-check-circle"></i> Validate Brain</span>
                 </div>
-                <div class="menu-dropdown-item disabled">
+                <div class="menu-dropdown-item" onclick="editor.testBrain()">
                     <span><i class="fas fa-play"></i> Test Brain</span>
-                    <span class="menu-shortcut">Coming Soon</span>
+                    <span class="menu-shortcut">Dry Run</span>
                 </div>
                 <div class="menu-separator"></div>
                 <div class="menu-dropdown-item" onclick="editor.cleanupOrphans()">

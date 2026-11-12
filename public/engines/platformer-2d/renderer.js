@@ -160,28 +160,42 @@ class PlatformerRenderer {
     async combineWorldPixelArt() {
         if (window._cachedCombinedTileset) return window._cachedCombinedTileset;
 
-        console.log('[PlatformerRenderer] Combining tileset...');
-        const canvas = document.createElement('canvas');
         const tSize = (window.PlatformerConfig && window.PlatformerConfig.SOURCE_TILE_SIZE) || 16;
+        if (window.RedglitchWorldTileset) {
+            const canvas = await window.RedglitchWorldTileset.loadWorldTilesetCanvas({ tileSize: tSize });
+            window._cachedCombinedTileset = canvas;
+            return canvas;
+        }
+
+        const canvas = document.createElement('canvas');
         const cols = 16;
-        const totalTiles = 600; 
+        const totalTiles = 600;
         const rows = Math.ceil(totalTiles / cols);
         canvas.width = cols * tSize;
         canvas.height = rows * tSize;
         const ctx = canvas.getContext('2d');
         ctx.imageSmoothingEnabled = false;
-        
-        const v = Date.now();
-        const batchSize = 50; // Load in batches to avoid browser throttling
-        
-        // Use fetch + createImageBitmap for async decoding where available
+
+        try {
+            const atlasImg = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = 'sprite-art/worldpixelart_atlas.png';
+            });
+            ctx.drawImage(atlasImg, 0, 0, canvas.width, canvas.height);
+            window._cachedCombinedTileset = canvas;
+            return canvas;
+        } catch (_) {}
+
+        const batchSize = 50;
         const supportsImageBitmap = typeof createImageBitmap === 'function';
         for (let i = 1; i <= totalTiles; i += batchSize) {
             const promises = [];
             for (let j = i; j < i + batchSize && j <= totalTiles; j++) {
                 const x = ((j - 1) % cols) * tSize;
                 const y = Math.floor((j - 1) / cols) * tSize;
-                const url = encodeURI('/sprite-art/worldpixelart/texture_16px ' + j + '.png?v=' + v);
+                const url = encodeURI('/sprite-art/worldpixelart/texture_16px ' + j + '.png');
 
                 if (supportsImageBitmap) {
                     promises.push(fetch(url)
@@ -192,7 +206,6 @@ class PlatformerRenderer {
                         })
                         .catch(() => {}));
                 } else {
-                    // Fallback to Image() for older browsers
                     promises.push(new Promise(resolve => {
                         const img = new Image();
                         img.onload = () => { ctx.drawImage(img, x, y, tSize, tSize); resolve(); };
@@ -204,7 +217,6 @@ class PlatformerRenderer {
             await Promise.all(promises);
         }
 
-        console.log('[PlatformerRenderer] Tileset combined.');
         window._cachedCombinedTileset = canvas;
         return canvas;
     }

@@ -6,6 +6,8 @@
  * step execution with diff generation, and telemetry for the studio UI.
  */
 
+import { normalizeEditorTarget } from './tool-aliases.mjs';
+
 export const AGENT_ROLES = {
     architect: {
         id: 'architect',
@@ -127,19 +129,56 @@ export class AgentPlanner {
         return heuristicPlan;
     }
 
+    _normalizeStepArgs(tool, args) {
+        const next = args && typeof args === 'object' && !Array.isArray(args) ? { ...args } : {};
+        if (tool === 'iso.spawn_prefab') {
+            if (next.name === undefined) {
+                next.name = next.type || next.prefabID || next.prefab || next.id;
+            }
+            delete next.type;
+            delete next.prefabID;
+            delete next.prefab;
+            delete next.z;
+        } else if (tool === 'fs.edit_file') {
+            if (next.new_content === undefined && next.patch === undefined && next.replacement !== undefined) {
+                next.new_content = String(next.replacement);
+            }
+            delete next.target;
+            delete next.replacement;
+        } else if (tool === 'data.update') {
+            if (next.data !== undefined && !Array.isArray(next.data)) {
+                next.data = (next.data && typeof next.data === 'object') ? [next.data] : [];
+            }
+        } else if (tool === 'navigateTo') {
+            if (next.target !== undefined) {
+                next.target = normalizeEditorTarget(next.target);
+            }
+        } else if (tool === 'project.updateManifesto') {
+            if (next.content === undefined && next.vision !== undefined) {
+                const pillars = Array.isArray(next.corePillars) && next.corePillars.length
+                    ? `\n\n## Core Pillars\n${next.corePillars.map((p) => `- ${p}`).join('\n')}`
+                    : '';
+                next.content = `# Project Vision\n\n${next.vision}${pillars}`;
+            }
+            delete next.vision;
+            delete next.corePillars;
+        }
+        return next;
+    }
+
     async _decomposeViaLLM(goal, role, llm) {
         const systemPrompt = `You are the Redglitch Studio Agentic Planner.
 Decompose this game development goal into structured, discrete steps.
 Available tools:
-- data.update: create or modify npcs, items, quests, skills. args: { "type": "items"|"npcs"|"quests"|"skills", "data": {...} }
+- data.update: create or modify npcs, items, quests, skills (read existing via data.list first, then write the full merged array). args: { "type": "items"|"npcs"|"quests"|"skills", "data": [...] }
 - data.list: inspect game data. args: { "type": "items"|"npcs"|"quests"|"skills" }
 - fs.create_file: create a new script or level file. args: { "path": string, "content": string }
 - fs.write: write file. args: { "path": string, "content": string }
-- fs.edit_file: edit file. args: { "path": string, "target": string, "replacement": string }
+- fs.edit_file: edit file. args: { "path": string, "new_content"?: string, "patch"?: string }
 - fs.read: inspect file content. args: { "path": string }
-- iso.spawn_prefab: spawn object or NPC in 2.5D world. args: { "type": string, "x": number, "y": number }
-- navigateTo: open studio editor. args: { "target": "editor"|"iso_studio"|"platformer_studio"|"asset-manager"|"daw" }
-- project.updateManifesto: update design manifesto. args: { "vision": string, "corePillars": string[] }
+- iso.spawn_prefab: spawn object or NPC in 2.5D world. args: { "name": string, "x": number, "y": number }
+- navigateTo: open studio editor. args: { "target": "editor"|"iso_studio"|"platformer_studio"|"script"|"asset_manager"|"daw"|"studio_3d"|"ui_designer"|"quest"|"npc"|"item"|"dialogue"|"cutscene"|"algorithm"|"behavior"|"prefab"|"fx"|"shader"|"pixel" }
+- project.updateManifesto: update design manifesto. args: { "content": string }
 
 Respond ONLY with valid JSON matching:
 {
@@ -179,18 +218,21 @@ Respond ONLY with valid JSON matching:
             role: parsed.role || role,
             createdAt: new Date().toISOString(),
             status: 'ready',
-            steps: parsed.steps.map((s, idx) => ({
-                id: s.id || idx + 1,
-                title: s.title || `Step ${idx + 1}`,
-                description: s.description || '',
-                role: s.role || role,
-                tool: s.tool || 'fs.read',
-                args: s.args || {},
-                risk: s.risk || (s.tool.includes('delete') ? 'high' : s.tool.includes('write') || s.tool.includes('update') ? 'low' : 'safe'),
-                status: 'pending',
-                output: null,
-                error: null
-            }))
+            steps: parsed.steps.map((s, idx) => {
+                const tool = s.tool || 'fs.read';
+                return {
+                    id: s.id || idx + 1,
+                    title: s.title || `Step ${idx + 1}`,
+                    description: s.description || '',
+                    role: s.role || role,
+                    tool,
+                    args: this._normalizeStepArgs(tool, s.args || {}),
+                    risk: s.risk || (tool.includes('delete') ? 'high' : tool.includes('write') || tool.includes('update') ? 'low' : 'safe'),
+                    status: 'pending',
+                    output: null,
+                    error: null
+                };
+            })
         };
     }
 
@@ -218,13 +260,13 @@ Respond ONLY with valid JSON matching:
                 tool: 'data.update',
                 args: {
                     type: 'quests',
-                    data: {
+                    data: [{
                         id: `quest_${slug}`,
                         title: goal.slice(0, 35),
                         description: `Automated quest created for: ${goal}`,
                         reward: { exp: 100, gold: 50 },
                         status: 'available'
-                    }
+                    }]
                 },
                 risk: 'low',
                 status: 'pending'
@@ -237,11 +279,11 @@ Respond ONLY with valid JSON matching:
                 tool: 'data.update',
                 args: {
                     type: 'npcs',
-                    data: {
+                    data: [{
                         id: `npc_${slug}`,
                         name: 'Elder Sentinel',
                         dialogue: [`Greetings, adventurer. ${goal}`, 'May your blade stay sharp.']
-                    }
+                    }]
                 },
                 risk: 'low',
                 status: 'pending'
@@ -276,14 +318,14 @@ Respond ONLY with valid JSON matching:
                 tool: 'data.update',
                 args: {
                     type: 'items',
-                    data: {
+                    data: [{
                         id: itemId,
                         name: goal.slice(0, 25),
                         description: `Crafted via Agentic Planner: ${goal}`,
                         value: 50,
                         rarity: 'rare',
                         consumable: q.includes('potion')
-                    }
+                    }]
                 },
                 risk: 'low',
                 status: 'pending'
@@ -315,8 +357,8 @@ Respond ONLY with valid JSON matching:
                 description: 'Place spawn landmark or generator prefab in level.',
                 role: 'world',
                 tool: 'iso.spawn_prefab',
-                args: { type: 'spawn_gate', x: 0, y: 0, z: 0 },
-                risk: 'safe',
+                args: { name: 'spawn_gate', x: 0, y: 0 },
+                risk: 'low',
                 status: 'pending'
             });
             steps.push({
@@ -325,7 +367,7 @@ Respond ONLY with valid JSON matching:
                 description: 'Navigate to target level editor for interactive verification.',
                 role: 'world',
                 tool: 'navigateTo',
-                args: { target: q.includes('platformer') ? 'platformer_studio' : 'iso_studio' },
+                args: { target: q.includes('platformer') ? 'platformer_studio' : q.includes('3d') ? 'studio_3d' : (q.includes('topdown') || q.includes('top-down') || q.includes('rpg')) ? 'editor' : 'iso_studio' },
                 risk: 'safe',
                 status: 'pending'
             });
@@ -347,7 +389,9 @@ Respond ONLY with valid JSON matching:
                 description: `Align project vision with current milestone: ${goal.slice(0, 40)}.`,
                 role: 'architect',
                 tool: 'project.updateManifesto',
-                args: { vision: goal, corePillars: ['Responsive Gameplay', 'Dynamic AI', 'Modular Systems'] },
+                args: {
+                    content: `# Project Vision\n\n${goal}\n\n## Core Pillars\n- Responsive Gameplay\n- Dynamic AI\n- Modular Systems`
+                },
                 risk: 'low',
                 status: 'pending'
             });
@@ -412,7 +456,29 @@ Respond ONLY with valid JSON matching:
                 if (typeof options.executor === 'function') {
                     executionResult = await options.executor(step);
                 } else if (this.toolRegistry) {
-                    executionResult = await this.toolRegistry.execute(step.tool, step.args || {});
+                    let stepArgs = this._normalizeStepArgs(step.tool, step.args || {});
+                    if (step.tool === 'data.update' && stepArgs.type) {
+                        const incoming = Array.isArray(stepArgs.data) ? stepArgs.data : [];
+                        let merged = incoming;
+                        try {
+                            const existingRes = await this.toolRegistry.execute('data.list', { type: stepArgs.type });
+                            if (existingRes?.success && Array.isArray(existingRes.result)) {
+                                const byId = new Map();
+                                const unkeyed = [];
+                                for (const entry of existingRes.result) {
+                                    if (entry && entry.id !== undefined) byId.set(entry.id, entry);
+                                    else unkeyed.push(entry);
+                                }
+                                for (const entry of incoming) {
+                                    if (entry && entry.id !== undefined) byId.set(entry.id, entry);
+                                    else unkeyed.push(entry);
+                                }
+                                merged = [...byId.values(), ...unkeyed];
+                            }
+                        } catch (_) {}
+                        stepArgs = { ...stepArgs, data: merged };
+                    }
+                    executionResult = await this.toolRegistry.execute(step.tool, stepArgs);
                 } else {
                     // Simulated success for test environments
                     executionResult = { success: true, message: `Simulated execution of ${step.tool}` };
@@ -429,7 +495,7 @@ Respond ONLY with valid JSON matching:
                         targetPlan.diffs.push(diff);
                         this._emitTelemetry('diff_generated', { plan: targetPlan, step, diff });
                     } else if (step.tool === 'fs.edit_file') {
-                        const diff = computeUnifiedDiff(step.args?.target || '', step.args?.replacement || '', step.args?.path || 'file.txt');
+                        const diff = computeUnifiedDiff('', step.args?.new_content || step.args?.patch || step.args?.replacement || '', step.args?.path || 'file.txt');
                         targetPlan.diffs.push(diff);
                         this._emitTelemetry('diff_generated', { plan: targetPlan, step, diff });
                     } else if (step.tool === 'data.update') {

@@ -63,8 +63,8 @@
                     <i class="fas fa-caret-down brand-dropdown-caret" aria-hidden="true"></i>
                 </div>
                 <div class="dropdown-content brand-dropdown-menu">
-                    <div class="dropdown-item" onclick="openProjectManager(); closeAllDropdowns();"><span>📂</span> Load Project</div>
-                    <div class="dropdown-item" onclick="document.getElementById('project-modal').style.display='flex'; document.getElementById('new-proj-name').focus(); closeAllDropdowns();"><span>➕</span> New Project</div>
+                    <div class="dropdown-item" onclick="openProjectManager('open'); closeAllDropdowns();"><span>📂</span> Load Project</div>
+                    <div class="dropdown-item" onclick="openProjectManager('new'); closeAllDropdowns();"><span>➕</span> New Project</div>
                     <div class="dropdown-divider"></div>
                     <div class="dropdown-item" onclick="saveGlobalProject(); closeAllDropdowns();"><span>💾</span> Save Project</div>
                     <div class="dropdown-divider"></div>
@@ -106,10 +106,10 @@
     <!-- QUICK ACCESS TOOLBAR (Power User) -->
     <div id="quick-toolbar">
         <div class="toolbar-group">
-            <button class="tool-btn" title="Open Project List (Ctrl+O)" onclick="openProjectManager()"><i class="fas fa-folder-open"></i></button>
+            <button class="tool-btn" title="Open Project List (Ctrl+O)" onclick="openProjectManager('open')"><i class="fas fa-folder-open"></i></button>
             <button class="tool-btn" title="Open Explorer" onclick="openExplorer()"><i class="fas fa-folder"></i></button>
             <button class="tool-btn" title="Save All (Ctrl+S)" onclick="saveGlobalProject()"><i class="fas fa-save"></i></button>
-            <button class="tool-btn" title="Project Settings" onclick="alert('Project Settings: Coming Soon')"><i class="fas fa-cog"></i></button>
+            <button class="tool-btn" title="Project Command Center & Settings" onclick="openProjectSettings()"><i class="fas fa-cog"></i></button>
         </div>
 
         <div class="toolbar-group">
@@ -131,8 +131,8 @@
         </div>
 
         <div class="toolbar-group">
-            <button class="tool-btn" title="Git Pull" onclick="alert('Git Pull: Simulating...')"><i class="fas fa-arrow-down"></i></button>
-            <button class="tool-btn" title="Git Push" onclick="alert('Git Push: Simulating...')"><i class="fas fa-arrow-up"></i></button>
+            <button class="tool-btn" title="Git Pull unavailable (no remote configured — local Git only)" disabled style="opacity:0.4; cursor:not-allowed;"><i class="fas fa-arrow-down"></i></button>
+            <button class="tool-btn" title="Git Push unavailable (no remote configured — local Git only)" disabled style="opacity:0.4; cursor:not-allowed;"><i class="fas fa-arrow-up"></i></button>
         </div>
 
         <div class="toolbar-group">
@@ -242,11 +242,12 @@
                         <div class="dev-ops-panel">
                             <div class="cat-title">BUILD PIPELINE</div>
                             <select class="build-selector" id="build-target" onchange="setBuildTarget(this.value)">
-                                <option value="win">WINDOWS (EXE)</option>
+                                <option value="windows">WINDOWS (EXE)</option>
                                 <option value="macos">MACOS (.APP)</option>
                                 <option value="android">ANDROID (APK)</option>
                                 <option value="ios">IOS (XCODE)</option>
                                 <option value="web">WEB (HTML5)</option>
+                                <option value="electron">ELECTRON (DESKTOP)</option>
                                 <option value="all">ALL TARGETS (CI)</option>
                             </select>
                             <div class="ops-btn-row">
@@ -260,42 +261,45 @@
                             <div class="cat-title">ASSET PIPELINE</div>
                             <div class="dev-ops-grid">
                                 <div class="ops-btn" onclick="scanAssets()"><i class="fas fa-sync"></i> INDEX</div>
-                                <div class="ops-btn" onclick="alert('Optimizing...')"><i class="fas fa-compress"></i> CRUNCH</div>
-                                <div class="ops-btn" onclick="alert('Probing...')"><i class="fas fa-search"></i> PROBE</div>
-                                <div class="ops-btn" onclick="openTool('asset_manager.html')"><i class="fas fa-folder-open"></i> VIEW</div>
+                                <div class="ops-btn" onclick="crunchAssets()"><i class="fas fa-compress"></i> CRUNCH</div>
+                                <div class="ops-btn" onclick="probeAssets()"><i class="fas fa-search"></i> PROBE</div>
+                                <div class="ops-btn" onclick="openTool('studio-dist/asset_manager.html')"><i class="fas fa-folder-open"></i> VIEW</div>
                             </div>
                         </div>
 
                         <!-- GIT CONTROL -->
                         <div class="dev-ops-panel">
-                            <div class="cat-title">VERSION CONTROL</div>
+                            <div class="cat-title" style="display:flex; justify-content:space-between; align-items:center;">
+                                VERSION CONTROL
+                                <i class="fas fa-sync" style="cursor:pointer; font-size:0.75rem;" title="Refresh Git Status" onclick="refreshGitStatus()"></i>
+                            </div>
                             <div class="git-status-line">
-                                <span>BRANCH: <span style="color:var(--accent)">main</span></span>
-                                <span><span style="color:var(--green)">2+</span> <span style="color:var(--red)">0-</span></span>
+                                <span>STATUS: <span id="git-branch-name" style="color:var(--accent)">checking...</span></span>
+                                <span id="git-changes-summary"><span style="color:var(--green)">0+</span> <span style="color:var(--red)">0Δ</span></span>
                             </div>
                             <div class="ops-btn-row">
-                                <div class="ops-btn" onclick="alert('Pulling...')"><i class="fas fa-arrow-down"></i> PULL</div>
-                                <div class="ops-btn" onclick="alert('Committing...')"><i class="fas fa-check"></i> COMMIT</div>
-                                <div class="ops-btn" onclick="alert('Pushing...')"><i class="fas fa-arrow-up"></i> PUSH</div>
+                                <button type="button" class="ops-btn" disabled title="No remote configured (local Git only)" style="opacity:0.45; cursor:not-allowed;"><i class="fas fa-arrow-down"></i> NO REMOTE</button>
+                                <button type="button" class="ops-btn" onclick="commitGitChanges()" title="Stage all and commit"><i class="fas fa-check"></i> COMMIT</button>
+                                <button type="button" class="ops-btn" disabled title="No remote configured (local Git only)" style="opacity:0.45; cursor:not-allowed;"><i class="fas fa-arrow-up"></i> NO REMOTE</button>
                             </div>
                         </div>
 
                         <!-- DEBUG FLAGS -->
                         <div class="dev-ops-panel">
                             <div class="cat-title">ENGINE FLAGS</div>
-                            <label class="retro-toggle"><span style="color:#aaa;">GHOST MODE</span> <input type="checkbox" onchange="toggleGhostMode(this.checked)"></label>
-                            <label class="retro-toggle"><span style="color:#aaa;">GOD MODE</span> <input type="checkbox"></label>
-                            <label class="retro-toggle"><span style="color:#aaa;">COLLIDERS</span> <input type="checkbox"></label>
-                            <label class="retro-toggle"><span style="color:#aaa;">AI BRAINS</span> <input type="checkbox" checked></label>
-                            <label class="retro-toggle"><span style="color:#aaa;">VERBOSE LOG</span> <input type="checkbox" checked></label>
+                            <label class="retro-toggle"><span style="color:#aaa;">GHOST MODE</span> <input type="checkbox" id="flag-ghost-mode" onchange="toggleGhostMode(this.checked)"></label>
+                            <label class="retro-toggle"><span style="color:#aaa;">GOD MODE</span> <input type="checkbox" id="flag-god-mode" onchange="toggleEngineFlag('godMode', this.checked)"></label>
+                            <label class="retro-toggle"><span style="color:#aaa;">COLLIDERS</span> <input type="checkbox" id="flag-colliders" onchange="toggleEngineFlag('colliders', this.checked)"></label>
+                            <label class="retro-toggle"><span style="color:#aaa;">AI BRAINS</span> <input type="checkbox" id="flag-ai-brains" checked onchange="toggleEngineFlag('aiBrains', this.checked)"></label>
+                            <label class="retro-toggle"><span style="color:#aaa;">VERBOSE LOG</span> <input type="checkbox" id="flag-verbose-log" checked onchange="toggleEngineFlag('verboseLog', this.checked)"></label>
                         </div>
 
                         <!-- DATA OPS -->
                         <div class="dev-ops-panel">
                             <div class="cat-title">DATA MANAGEMENT</div>
                             <div class="ops-btn-row">
-                                <div class="ops-btn" style="color:var(--red); border-color:#522;" onclick="if(confirm('Wipe saves?')) alert('Deleted.')"><i class="fas fa-trash"></i> WIPE SAVE</div>
-                                <div class="ops-btn" onclick="alert('Exporting DB...')"><i class="fas fa-database"></i> DUMP DB</div>
+                                <div class="ops-btn" style="color:var(--red); border-color:#522;" onclick="wipeSaves()"><i class="fas fa-trash"></i> WIPE SAVE</div>
+                                <div class="ops-btn" onclick="dumpProjectDatabase()"><i class="fas fa-database"></i> DUMP DB</div>
                             </div>
                         </div>
                     </div>
@@ -415,7 +419,7 @@
                     <div>
                         <div class="form-label" style="margin-bottom:12px;">Select Build Target</div>
                         <div class="bw-target-grid">
-                            <div class="bw-target-card selected" id="bwtc-win" onclick="bwSelectTarget('win')">
+                            <div class="bw-target-card selected" id="bwtc-windows" onclick="bwSelectTarget('windows')">
                                 <div class="tc-icon">🪟</div>
                                 <div class="tc-label">WINDOWS</div>
                                 <div class="tc-sub">.exe installer</div>
@@ -489,10 +493,26 @@
         <div class="modal-box">
             <div class="modal-header">
                 <div class="modal-title"><span>🚀</span> Architect's Forge</div>
+                <div style="display:flex; align-items:center; gap:8px; margin-left:auto; margin-right:16px;">
+                    <button type="button" id="pm-tab-open" class="bw-btn bw-btn-primary" onclick="switchProjectModalTab('open')">OPEN PROJECT</button>
+                    <button type="button" id="pm-tab-new" class="bw-btn bw-btn-cancel" onclick="switchProjectModalTab('new')">NEW PROJECT</button>
+                </div>
                 <div class="modal-close" onclick="closeProjectModal()">×</div>
             </div>
-            
-            <div class="modal-body">
+
+            <!-- OPEN EXISTING PROJECT PANE -->
+            <div id="pm-pane-open" class="modal-body" style="flex-direction:column; padding:20px; gap:14px; overflow-y:auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="gallery-title">Select Existing Project</div>
+                    <button type="button" class="bw-btn bw-btn-cancel" style="padding:6px 12px; font-size:0.75rem;" onclick="loadExistingProjects()"><i class="fas fa-sync"></i> REFRESH</button>
+                </div>
+                <div id="existing-projects-list" class="gallery-grid" style="padding:0;">
+                    <!-- JS Injected Project Cards -->
+                </div>
+            </div>
+
+            <!-- NEW PROJECT PANE -->
+            <div id="pm-pane-new" class="modal-body" style="display:none;">
                 <!-- LEFT: TEMPLATES -->
                 <div class="template-gallery">
                     <div class="gallery-header">
@@ -537,11 +557,11 @@
     <!-- ENHANCED STATUS BAR -->
     <div id="status-bar">
         <div class="sb-section">
-            <div class="sb-item" onclick="openProjectManager()">
+            <div class="sb-item" onclick="openProjectManager('open')">
                 <span class="sb-icon">📂</span> <span id="sb-project-name">LOADING...</span>
             </div>
-            <div class="sb-item" onclick="toggleRightSidebar()">
-                <span class="sb-icon">🎋</span> <span id="sb-git-branch">main*</span> <span class="sb-icon" style="font-size:10px;">↻</span>
+            <div class="sb-item" onclick="toggleRightSidebar(); switchRightSidebar('devops');">
+                <span class="sb-icon">🎋</span> <span id="sb-git-branch">git</span> <span class="sb-icon" style="font-size:10px;">↻</span>
             </div>
             <div class="sb-item" onclick="toggleConsole()">
                 <span class="sb-icon sb-error">ⓧ</span> <span id="sb-errors">0</span>&nbsp;
@@ -611,14 +631,22 @@
         window.RedglitchThoughtVisualizer = new ThoughtVisualizer(window.RedglitchEventBus);
     </script>
     
-    <!-- KAI AI Assistant (Redglitch AI Micro Edition) -->
-    <iframe id="kai-ai-panel" src="ai/ui/assistant-panel.html?v=10"
+    <!-- KAI AI Assistant (Redglitch AI Micro Edition) — mounted after shell load so Command Center & tools open without waiting on AI iframe -->
+    <iframe id="kai-ai-panel" data-src="ai/ui/assistant-panel.html?v=10"
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                    border: none; pointer-events: none; z-index: 9998;">
     </iframe>
     
     <script>
         // Kai Bridge to parent
+        function ensureKaiSrc() {
+            const iframe = document.getElementById('kai-ai-panel');
+            if (iframe && !iframe.getAttribute('src') && iframe.dataset && iframe.dataset.src) {
+                iframe.src = iframe.dataset.src;
+            }
+            return iframe;
+        }
+
         window.KAI = {
             toggleMode: () => {
                 // Killswitch: while the AI is actively generating, a click aborts
@@ -628,9 +656,15 @@
                     if (window.irab && window.irab.abort) window.irab.abort();
                     return;
                 }
-                const iframe = document.getElementById('kai-ai-panel');
+                const iframe = ensureKaiSrc();
                 if (iframe && iframe.contentWindow && iframe.contentWindow.toggleKaiMode) {
                     iframe.contentWindow.toggleKaiMode();
+                } else if (iframe && iframe.dataset && iframe.dataset.src) {
+                    iframe.addEventListener('load', () => {
+                        if (iframe.contentWindow && iframe.contentWindow.toggleKaiMode) {
+                            iframe.contentWindow.toggleKaiMode();
+                        }
+                    }, { once: true });
                 }
             },
             setModel: (provider) => {
@@ -641,7 +675,13 @@
 
                 if (provider !== 'native' && window.destroyIrabBridge) {
                     window.destroyIrabBridge();
+                } else if (provider === 'native' && window.ensureIrabBridge) {
+                    const aiFlag = localStorage.getItem('kai_ai_enabled');
+                    if (aiFlag === 'true' || aiFlag === 'easy') {
+                        window.ensureIrabBridge({ force: false });
+                    }
                 }
+                if (window.KAI.syncStatus) window.KAI.syncStatus();
 
                 // Push into the live settings controller (if the Kai panel is already loaded)
                 // so the switch takes effect immediately without a page reload.
@@ -677,9 +717,15 @@
                 }
             },
             openChat: () => {
-                const iframe = document.getElementById('kai-ai-panel');
+                const iframe = ensureKaiSrc();
                 if (iframe && iframe.contentWindow && iframe.contentWindow.AIChatUI) {
                     iframe.contentWindow.AIChatUI.openChat();
+                } else if (iframe && iframe.dataset && iframe.dataset.src) {
+                    iframe.addEventListener('load', () => {
+                        if (iframe.contentWindow && iframe.contentWindow.AIChatUI) {
+                            iframe.contentWindow.AIChatUI.openChat();
+                        }
+                    }, { once: true });
                 }
             },
             dismissBalloon: () => {
@@ -746,6 +792,17 @@
                     iframe.style.pointerEvents = 'auto';
                 }
             });
+
+            if (!iframe.getAttribute('src') && iframe.dataset && iframe.dataset.src) {
+                const mountDeferredKai = () => {
+                    if (!iframe.getAttribute('src')) iframe.src = iframe.dataset.src;
+                };
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(mountDeferredKai, { timeout: 300 });
+                } else {
+                    setTimeout(mountDeferredKai, 80);
+                }
+            }
         });
     </script>
 
@@ -820,27 +877,35 @@
                 return result;
             };
 
+            function syncState() {
+                const rawAiEnabled = localStorage.getItem('kai_ai_enabled');
+                const isEnabled = rawAiEnabled === 'true' || rawAiEnabled === 'easy';
+                let currentProvider = 'openrouter';
+                try {
+                    currentProvider = JSON.parse(localStorage.getItem('kai_settings') || '{}').provider || 'openrouter';
+                } catch (_) {}
+
+                if (!isEnabled) {
+                    setState('off');
+                } else if (currentProvider !== 'native') {
+                    setState('online');
+                } else if (window.irab) {
+                    attachBridgeHooks(window.irab);
+                    setState(window.irab.isConnected ? 'online' : 'connecting');
+                } else {
+                    setState('connecting');
+                }
+            }
+
+            if (window.KAI) window.KAI.syncStatus = syncState;
+
             const rawDestroy = window.destroyIrabBridge;
             window.destroyIrabBridge = function (...args) {
                 if (rawDestroy) rawDestroy.apply(this, args);
-                setState('off');
+                syncState();
             };
 
-            // Reflect state: cloud providers are immediately ready, native bridge only connects when selected
-            const isEnabled = localStorage.getItem('kai_ai_enabled') === 'true';
-            let currentProvider = 'openrouter';
-            try {
-                currentProvider = JSON.parse(localStorage.getItem('kai_settings') || '{}').provider || 'openrouter';
-            } catch (_) {}
-
-            if (currentProvider !== 'native') {
-                setState(isEnabled ? 'online' : 'off');
-            } else if (window.irab) {
-                attachBridgeHooks(window.irab);
-                setState(window.irab.isConnected ? 'online' : 'connecting');
-            } else {
-                setState(isEnabled ? 'connecting' : 'off');
-            }
+            syncState();
         })();
     </script>
 

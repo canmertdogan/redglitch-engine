@@ -235,7 +235,7 @@ if (process.platform === 'darwin') {
 
 // Start the Express server (only loaded when we have the single instance lock)
 let expressApp, httpServer, PORT;
-const SPLASH_CLOSE_DELAY_MS = 900;
+const SPLASH_CLOSE_DELAY_MS = 150;
 
 let mainWindow;
 let splashWindow;
@@ -398,7 +398,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js')
         },
         autoHideMenuBar: false,
-        backgroundColor: '#f5f7fb',
+        backgroundColor: '#050508',
         frame: false,
         resizable: true,
         center: true

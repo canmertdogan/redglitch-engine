@@ -63,11 +63,13 @@ class ProjectManager {
             params: {}
         };
         
-        if (instrument instanceof Synth8Bit) {
+        if (typeof Synth8Bit !== 'undefined' && instrument instanceof Synth8Bit) {
             data.type = '8bit';
-        } else if (instrument instanceof Synth32Bit) {
+        } else if (typeof Synth32Bit !== 'undefined' && instrument instanceof Synth32Bit) {
             data.type = '32bit';
-        } else if (instrument instanceof Sampler) {
+        } else if (typeof SynthWavetable !== 'undefined' && instrument instanceof SynthWavetable) {
+            data.type = 'wavetable';
+        } else if (typeof Sampler !== 'undefined' && instrument instanceof Sampler) {
             data.type = 'sampler';
         }
         
@@ -127,6 +129,8 @@ class ProjectManager {
             instrument = new Synth8Bit(this.daw.engine.ctx);
         } else if (instrumentData.type === '32bit') {
             instrument = new Synth32Bit(this.daw.engine.ctx);
+        } else if (instrumentData.type === 'wavetable') {
+            instrument = new SynthWavetable(this.daw.engine.ctx);
         } else if (instrumentData.type === 'sampler') {
             instrument = new Sampler(this.daw.engine.ctx);
         }
@@ -221,7 +225,7 @@ class ProjectManager {
         }
     }
     
-    async exportToWAV(duration = 60, callback = null) {
+    async exportToWAV(duration = null, callback = null) {
         // Functional offline render: OfflineAudioContext + simple oscillator notes from all tracks.
         try {
             const bpm = this.daw?.engine?.bpm || 120;

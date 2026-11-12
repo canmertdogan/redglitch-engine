@@ -5,8 +5,10 @@ window.Core = class Core {
         this.mapSystem = new window.MapSystem(this.ctx);
         this.dialogueSystem = new window.DialogueSystem(); this.achievementSystem = new window.AchievementSystem(); this.saveSystem = new window.SaveSystem();
         this.questSystem = new window.QuestSystem(this);
-        this.itemDefs = new window.ItemDefinitions ? new window.ItemDefinitions() : null;
-        if (this.itemDefs) this.itemDefs.load().catch(()=>{});
+        this.itemDefs = typeof window.ItemDefinitions === 'function'
+            ? new window.ItemDefinitions()
+            : (window.ItemDefinitions || null);
+        if (this.itemDefs && !this.itemDefs.loaded && typeof this.itemDefs.load === 'function') this.itemDefs.load().catch(()=>{});
         this.campaign = new window.CampaignSystem(this); 
         this.uiSystem = new window.UISystem(this);
         

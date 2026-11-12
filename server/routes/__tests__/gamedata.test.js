@@ -50,3 +50,46 @@ test('POST singular definition aliases save data readable from plural endpoints'
     );
   }
 });
+
+test('DELETE /api/fx/:name deletes an FX config and rejects invalid names', async () => {
+  await cleanupTestProjects();
+  await createTestProject('gamedata_fx_del');
+  activateTestProject('gamedata_fx_del');
+  const app = createApp(gamedataRouter);
+
+  const saveRes = await request(app, 'POST', '/api/fx/save', {
+    name: 'spark_burst',
+    config: { id: 'spark_burst', name: 'spark_burst', count: 20 },
+  });
+  assert.equal(saveRes.status, 200);
+  assert.equal(saveRes.data.success, true);
+
+  const badRes = await request(app, 'DELETE', '/api/fx/bad%2Fname');
+  assert.equal(badRes.status, 400);
+
+  const delRes = await request(app, 'DELETE', '/api/fx/spark_burst');
+  assert.equal(delRes.status, 200);
+  assert.equal(delRes.data.success, true);
+
+  const missingRes = await request(app, 'DELETE', '/api/fx/spark_burst');
+  assert.equal(missingRes.status, 404);
+});
+
+test('GET /api/variables preserves string arrays and object maps across project merge', async () => {
+  await cleanupTestProjects();
+  await createTestProject('gamedata_vars');
+  activateTestProject('gamedata_vars');
+  const app = createApp(gamedataRouter);
+
+  const arrSave = await request(app, 'POST', '/api/variables', ['has_key', 'boss_defeated']);
+  assert.equal(arrSave.status, 200);
+  const arrRead = await request(app, 'GET', '/api/variables');
+  assert.equal(arrRead.status, 200);
+  assert.deepEqual(arrRead.data, ['has_key', 'boss_defeated']);
+
+  const objSave = await request(app, 'POST', '/api/variables', { difficulty: 'hard', score: 42 });
+  assert.equal(objSave.status, 200);
+  const objRead = await request(app, 'GET', '/api/variables');
+  assert.equal(objRead.status, 200);
+  assert.deepEqual(objRead.data, { difficulty: 'hard', score: 42 });
+});

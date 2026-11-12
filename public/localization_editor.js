@@ -75,6 +75,8 @@ class LocalizationEditor {
         this.selectedLanguages = new Set(this.activeLanguages); // For filtering
         this.searchQuery = "";
         this.isDirty = false; // Track unsaved changes
+        this._savePromise = null;
+        this._storedLanguages = this._loadStoredLanguages();
         
         // DOM references
         this.dom = {
@@ -105,14 +107,53 @@ class LocalizationEditor {
         // Setup event listeners
         this.setupEventListeners();
         
+        // Apply stored languages if saved (uppercased)
+        if (this._storedLanguages && this._storedLanguages.length > 0) {
+            const merged = [...new Set([...this._storedLanguages, ...this.activeLanguages])];
+            this.activeLanguages = merged;
+            this.selectedLanguages = new Set(this._storedLanguages);
+        }
+
         // Initial render
         this.render();
         
         console.log("Localization Studio ready");
         this.updateStatus("LOCALIZATION STUDIO READY");
     }
-    
+
+    _loadStoredLanguages() {
+        try {
+            const raw = localStorage.getItem('redglitch_localization_langs');
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return null;
+            const normalized = parsed
+                .map(s => String(s || '').trim().toUpperCase())
+                .filter(code => code && this.languages[code]);
+            return normalized.length ? [...new Set(normalized)] : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    _saveStoredLanguages(langs) {
+        try {
+            const normalized = langs.map(s => String(s || '').trim().toUpperCase()).filter(Boolean);
+            localStorage.setItem('redglitch_localization_langs', JSON.stringify([...new Set(normalized)]));
+        } catch (e) {}
+    }
+
     setupEventListeners() {
+        // Global Studio Save listener
+        const globalBus = (window.parent && window.parent !== window && window.parent.RedglitchEventBus) || eventBus;
+        if (globalBus) {
+            globalBus.on('system:global_save', () => {
+                if (this.isDirty) {
+                    this.saveProject();
+                }
+            });
+        }
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey) {
@@ -157,13 +198,18 @@ class LocalizationEditor {
                 const loadedData = await response.json();
                 this.data = loadedData;
                 
-                // Extract active languages from data
+                // Extract active languages from data (normalized uppercase)
                 const foundLangs = new Set();
                 Object.values(this.data).forEach(translations => {
-                    Object.keys(translations).forEach(lang => foundLangs.add(lang));
+                    Object.keys(translations || {}).forEach(lang => {
+                        const code = String(lang || '').trim().toUpperCase();
+                        if (code) foundLangs.add(code);
+                    });
                 });
-                this.activeLanguages = Array.from(foundLangs);
-                this.selectedLanguages = new Set(this.activeLanguages);
+                const stored = this._loadStoredLanguages();
+                const merged = stored ? [...new Set([...stored, ...foundLangs])] : Array.from(foundLangs);
+                this.activeLanguages = merged.length ? merged : ["EN"];
+                this.selectedLanguages = new Set(stored || this.activeLanguages);
                 
                 this.updateStatus("PROJECT LOADED SUCCESSFULLY");
             } else {
@@ -176,26 +222,50 @@ class LocalizationEditor {
     }
     
     async saveProject() {
-        try {
-            // Save to Redglitch project structure
-            const response = await fetch('/api/ide/write', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    file: 'dunyalar/definitions/locales.json',
-                    content: JSON.stringify(this.data, null, 2)
-                })
-            });
-            
-            if (response.ok) {
-                this.isDirty = false;
-                this.updateStatus("PROJECT SAVED SUCCESSFULLY");
-            } else {
-                throw new Error("Save failed");
+        if (this._savePromise) return this._savePromise;
+        this._savePromise = (async () => {
+            try {
+                // Save to Redglitch project structure
+                const response = await fetch('/api/ide/write', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file: 'dunyalar/definitions/locales.json',
+                        content: JSON.stringify(this.data, null, 2)
+                    })
+                });
+                
+                if (response.ok) {
+                    this.isDirty = false;
+                    this.updateStatus("PROJECT SAVED SUCCESSFULLY");
+                    broadcastLocalizationUpdate(null, 'saved');
+                } else {
+                    throw new Error("Save failed");
+                }
+            } catch (error) {
+                console.error("Save error:", error);
+                this.updateStatus("ERROR: COULD NOT SAVE PROJECT");
             }
-        } catch (error) {
-            console.error("Save error:", error);
-            this.updateStatus("ERROR: COULD NOT SAVE PROJECT");
+        })();
+        try {
+            return await this._savePromise;
+        } finally {
+            this._savePromise = null;
+        }
+    }
+
+    async save() {
+        return this.saveProject();
+    }
+
+    exit() {
+        if (this.isDirty && !confirm('Unsaved localization changes will be lost. Close anyway?')) {
+            return;
+        }
+        if (window.parent && typeof window.parent.closeWindow === 'function') {
+            window.parent.closeWindow('win-loc');
+        } else {
+            window.close();
         }
     }
     
@@ -488,6 +558,7 @@ class LocalizationEditor {
         
         this.activeLanguages.push(cleanLangCode);
         this.selectedLanguages.add(cleanLangCode);
+        this._saveStoredLanguages(this.activeLanguages);
         this.isDirty = true;
         this.render();
         this.updateStatus(`LANGUAGE ADDED: ${cleanLangCode}`);
@@ -581,11 +652,13 @@ class LocalizationEditor {
     }
     
     parseCSV(csvText) {
-        const lines = csvText.split('\n').filter(line => line.trim());
+        const normalized = String(csvText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const lines = normalized.split('\n').filter(line => line.trim());
         if (lines.length < 2) throw new Error("Invalid CSV format");
         
-        const headers = lines[0].split(',').map(h => h.trim());
-        const languages = headers.slice(1); // Skip 'Key' column
+        const headers = this.parseCSVLine(lines[0]).map(h => h.trim());
+        const languages = headers.slice(1).map(l => l.toUpperCase()).filter(Boolean); // Skip 'Key' column
+        if (languages.length === 0) throw new Error("CSV missing language columns");
         
         // Update active languages
         this.activeLanguages = languages;
@@ -595,7 +668,7 @@ class LocalizationEditor {
         const newData = {};
         for (let i = 1; i < lines.length; i++) {
             const cells = this.parseCSVLine(lines[i]);
-            if (cells.length >= 2) {
+            if (cells.length >= 1 && cells[0]) {
                 const key = cells[0];
                 newData[key] = {};
                 
@@ -611,24 +684,37 @@ class LocalizationEditor {
     }
     
     parseCSVLine(line) {
+        const cleanLine = String(line || '').replace(/\r$/, '');
         const result = [];
         let current = '';
         let inQuotes = false;
         
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                result.push(current.trim());
-                current = '';
+        for (let i = 0; i < cleanLine.length; i++) {
+            const char = cleanLine[i];
+            if (inQuotes) {
+                if (char === '"') {
+                    if (cleanLine[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    current += char;
+                }
             } else {
-                current += char;
+                if (char === '"') {
+                    inQuotes = true;
+                } else if (char === ',') {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
             }
         }
         result.push(current.trim());
-        
-        return result.map(cell => cell.replace(/^"|"$/g, '').replace(/""/g, '"'));
+        return result;
     }
     
     generateReport() {
@@ -655,7 +741,7 @@ ${Object.entries(report.completionByLanguage)
         alert(reportText);
     }
     
-    bulkTranslate() {
+    async bulkTranslate() {
         // Functional bulk: prompt find/replace applied to ALL languages/keys, with confirm + save.
         const find = prompt('Bulk translate — Find text (exact match, e.g. START GAME):');
         if (!find) return;
@@ -673,7 +759,11 @@ ${Object.entries(report.completionByLanguage)
             });
         });
         if (count === 0) { alert('No matches found for: ' + find); return; }
-        if (confirm(`Replaced ${count} cell(s). Save now?`)) { this.save?.(); this.render?.(); }
+        this.isDirty = true;
+        this.render?.();
+        if (confirm(`Replaced ${count} cell(s). Save now?`)) {
+            await this.saveProject();
+        }
         alert(`Bulk replace done: ${count} cell(s) updated.`);
     }
     
@@ -682,11 +772,11 @@ ${Object.entries(report.completionByLanguage)
         const current = this.activeLanguages.join(', ');
         const next = prompt('Active languages (comma-separated, must exist in language list):', current);
         if (!next) return;
-        const langs = next.split(',').map(s => s.trim()).filter(s => this.languages[s]);
+        const langs = [...new Set(next.split(',').map(s => s.trim().toUpperCase()).filter(s => this.languages[s]))];
         if (!langs.length) { alert('No valid languages. Use codes like EN, TR, RU, DE.'); return; }
         this.activeLanguages = langs;
         this.selectedLanguages = new Set(langs);
-        try { localStorage.setItem('redglitch_localization_langs', JSON.stringify(langs)); } catch {}
+        this._saveStoredLanguages(langs);
         // Export/import: offer to export JSON
         if (confirm('Settings saved for ' + langs.join(', ') + '. Export translations JSON now?')) {
             const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
@@ -701,6 +791,7 @@ ${Object.entries(report.completionByLanguage)
 // Initialize the localization editor
 window.addEventListener('DOMContentLoaded', () => {
     window.editor = new LocalizationEditor();
+    window.save = () => window.editor?.saveProject();
 });
 
 console.log("LOCALIZATION STUDIO LOADED");

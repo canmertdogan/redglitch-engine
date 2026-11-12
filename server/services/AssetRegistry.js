@@ -5,10 +5,12 @@ const projectService = require('./projectService');
 class AssetRegistry {
     constructor() {
         this.cache = null;
+        this.cachedProjectPath = null;
     }
 
     async getRegistry() {
-        if (!this.cache) await this.rebuild();
+        const activeProject = projectService.getActiveProject();
+        if (!this.cache || this.cachedProjectPath !== activeProject) await this.rebuild();
         return this.cache;
     }
 
@@ -17,6 +19,7 @@ class AssetRegistry {
         console.log(`[AssetRegistry] Rebuilding for: ${activeProject}`);
         
         const assets = await this._scanProject(activeProject);
+        this.cachedProjectPath = activeProject;
         this.cache = { 
             assets,
             updated: Date.now(),
@@ -36,7 +39,8 @@ class AssetRegistry {
             { dir: 'muzikler', type: 'audio' },
             { dir: 'dunyalar', type: 'data' },
             { dir: 'sprite-art', type: 'image' },
-            { dir: 'data', type: 'data' }
+            { dir: 'data', type: 'data' },
+            { dir: 'scripts', type: 'script' }
         ];
 
         // 1. Scan CORE ENGINE (public/) if we are in a sub-project
@@ -77,25 +81,37 @@ class AssetRegistry {
 
     _mapFileToAsset(file, defaultType, isEngineCore, isRoot = true, projectBase = '') {
         const ext = path.extname(file.dirent.name).toLowerCase();
+        const relNorm = String(file.rel || '').replace(/\\/g, '/').replace(/^\/+/, '');
         let type = defaultType;
-        if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) type = 'image';
-        else if (['.mp3', '.wav', '.ogg'].includes(ext)) type = 'audio';
-        else if (['.json', '.algorithm', '.3dmap', '.psd', '.ai', '.xcf', '.aseprite'].includes(ext)) type = 'data';
+        if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(ext)) type = 'image';
+        else if (['.mp3', '.wav', '.ogg', '.flac'].includes(ext)) type = 'audio';
+        else if (['.frag', '.vert', '.glsl'].includes(ext)) type = 'shader';
+        else if (
+            ext === '.js' &&
+            (relNorm.startsWith('data/logic/') ||
+                relNorm.startsWith('data/brains/') ||
+                relNorm.startsWith('scripts/') ||
+                defaultType === 'script')
+        ) {
+            type = 'script';
+        } else if (['.json', '.algorithm', '.3dmap', '.psd', '.ai', '.xcf', '.aseprite'].includes(ext)) {
+            type = 'data';
+        }
 
-        let assetPath = file.rel;
+        let assetPath = relNorm;
         if (isEngineCore) {
             // Engine core files are served from / (e.g. /assets/foo.png)
-            assetPath = `/${assetPath}`;
+            assetPath = `/${relNorm}`;
         } else if (!isRoot) {
             // Project files are served from /projects/Name/ (e.g. /projects/my-game/assets/foo.png)
-            assetPath = `projects/${projectBase}/${assetPath}`;
+            assetPath = `/projects/${projectBase}/${relNorm}`;
         } else {
             // Root project (main engine) files are served from /
-            assetPath = `/${assetPath}`;
+            assetPath = `/${relNorm}`;
         }
 
         return {
-            id: file.rel.replace(/\\/g, '/'),
+            id: relNorm,
             name: file.dirent.name,
             path: assetPath,
             type: type,
@@ -115,6 +131,7 @@ class AssetRegistry {
 
         for (const d of entries) {
             if (d.name === 'node_modules' || d.name === '.git' || d.name.startsWith('.')) continue;
+            if (d.name.endsWith('.bak') || d.name.includes('.tmp.')) continue;
             const childFull = path.join(dir, d.name);
             const childRel = path.join(rel, d.name).replace(/\\/g, '/');
             if (d.isDirectory()) {

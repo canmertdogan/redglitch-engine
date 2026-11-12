@@ -30,7 +30,8 @@ const TYPE_ICONS = {
     label: 'fas fa-font',
     button: 'fas fa-mouse-pointer',
     image: 'far fa-image',
-    bar: 'fas fa-battery-half'
+    bar: 'fas fa-battery-half',
+    slot: 'fas fa-box'
 };
 
 // ═══════════════════════════════════════════
@@ -38,52 +39,78 @@ const TYPE_ICONS = {
 // ═══════════════════════════════════════════
 const ELEMENT_DEFAULTS = {
     panel: {
-        rect: { x: 50, y: 50, w: 300, h: 200 },
-        style: { backgroundColor: 'rgba(10,10,20,0.9)', borderColor: '#444', borderWidth: 2, color: '#fff', fontSize: 16, textAlign: 'left' },
+        anchor: 'top-left',
+        rect: { x: 40, y: 40, w: 280, h: 180 },
+        style: {
+            backgroundColor: 'rgba(13, 18, 30, 0.90)',
+            borderColor: '#000000',
+            borderWidth: 2,
+            borderRadius: 0,
+            boxShadow: 'inset 2px 2px 0 rgba(255,255,255,0.08), 3px 3px 0 rgba(0,0,0,0.6)',
+            color: '#f4f7ff',
+            fontSize: 14,
+            textAlign: 'left',
+            zIndex: 10
+        },
         props: {}
     },
     label: {
+        anchor: 'top-left',
         text: 'TEXT LABEL',
-        rect: { x: 50, y: 50, w: 200, h: 40 },
-        style: { backgroundColor: 'transparent', color: '#ff0000', fontSize: 24, textAlign: 'left', borderWidth: 0, borderColor: 'transparent' },
+        rect: { x: 40, y: 40, w: 200, h: 28 },
+        style: {
+            backgroundColor: 'transparent',
+            color: '#ffd36a',
+            fontSize: 18,
+            fontWeight: '700',
+            textAlign: 'left',
+            borderWidth: 0,
+            borderColor: 'transparent',
+            textShadow: '2px 2px 0 #000',
+            zIndex: 12
+        },
         props: {}
     },
     button: {
+        anchor: 'top-left',
         text: 'BUTTON',
-        rect: { x: 50, y: 50, w: 156, h: 42 },
+        rect: { x: 40, y: 40, w: 180, h: 38 },
         style: {
-            backgroundColor: 'rgba(0,0,0,0.45)',
-            backgroundImage: 'linear-gradient(180deg, rgba(255,30,39,0.1), rgba(0,0,0,0.2))',
-            color: '#ff1e27',
-            borderWidth: 1,
-            borderColor: 'rgba(255,30,39,0.36)',
-            fontSize: 16,
+            backgroundColor: 'rgba(10, 14, 24, 0.9)',
+            color: '#62ff9a',
+            borderWidth: 2,
+            borderColor: '#62ff9a',
+            borderRadius: 0,
+            fontSize: 15,
             textAlign: 'center',
-            boxShadow: '0 8px 18px rgba(0,0,0,0.34)',
             textTransform: 'uppercase',
-            letterSpacing: '0px',
-            fontWeight: '700'
+            letterSpacing: 1,
+            fontWeight: '700',
+            zIndex: 12
         },
         script: '',
         props: {}
     },
     image: {
+        anchor: 'top-left',
         src: '',
-        rect: { x: 50, y: 50, w: 120, h: 120 },
-        style: { backgroundColor: 'transparent', color: '#fff', fontSize: 16, borderWidth: 0, borderColor: 'transparent', textAlign: 'left' },
+        rect: { x: 40, y: 40, w: 120, h: 120 },
+        style: { backgroundColor: 'transparent', color: '#fff', fontSize: 14, borderWidth: 0, borderColor: 'transparent', textAlign: 'left', zIndex: 12 },
         props: {}
     },
     bar: {
-        text: 'HP',
-        rect: { x: 50, y: 50, w: 200, h: 30 },
-        style: { backgroundColor: '#000', borderWidth: 2, borderColor: '#fff', color: '#fff', fontSize: 18, textAlign: 'center' },
-        props: { fillColor: '#e74c3c', variable: 'hp', maxVariable: 'maxHp' }
+        anchor: 'top-left',
+        text: 'HP {player.hp}/{player.maxHp}',
+        rect: { x: 40, y: 40, w: 220, h: 20 },
+        style: { backgroundColor: '#0b0d14', borderWidth: 2, borderColor: '#000000', color: '#ffffff', fontSize: 11, fontWeight: '700', textAlign: 'center', zIndex: 12 },
+        props: { fillColor: '#e23b4e', variable: 'player.hp', maxVariable: 'player.maxHp', ticks: 10 }
     },
     slot: {
-        text: '',
-        rect: { x: 50, y: 50, w: 48, h: 48 },
-        style: { backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 2, borderColor: '#555', color: '#fff', fontSize: 12, textAlign: 'right' },
-        props: { variable: 'inventory.0' }
+        anchor: 'top-left',
+        text: '1',
+        rect: { x: 40, y: 40, w: 44, h: 44 },
+        style: { backgroundColor: 'rgba(10, 14, 24, 0.9)', borderWidth: 2, borderColor: '#ffd36a', color: '#ffd36a', fontSize: 14, fontWeight: '700', textAlign: 'center', zIndex: 12 },
+        props: { variable: 'player.inventory.0' }
     }
 };
 
@@ -95,6 +122,7 @@ class UIStudio {
         this.interfacePath = 'interfaces/main.redui';
         this.activeScreen = null;
         this.dirty = false;
+        this._savePromise = null;
         this.knownActions = []; // populated from /api/ui-config/actions
         this.screenMapVisible = false;
 
@@ -155,12 +183,22 @@ class UIStudio {
         if (saved) try { this.layoutState = { ...this.layoutState, ...JSON.parse(saved) }; } catch(e) {}
         this.applyLayoutState();
 
+        this._userZoomed = false;
+        this._templateTab = 'kits';
+
         this.loadData();
         this.setupInput();
         this.setupDragDrop();
         this.setupKeyboard();
 
-        console.log('[UIStudio] v3.0 Ready');
+        if (typeof ResizeObserver !== 'undefined' && this.dom.canvasArea) {
+            this._canvasResizeObserver = new ResizeObserver(() => {
+                if (!this._userZoomed) this.fitToScreen(false);
+            });
+            this._canvasResizeObserver.observe(this.dom.canvasArea);
+        }
+
+        console.log('[UIStudio] v3.1 Ready');
     }
 
     // ═══════════════════════════════════════
@@ -221,11 +259,20 @@ class UIStudio {
         if (Object.keys(this.data.screens).length === 0) {
             this.data.screens['main_hud'] = { elements: [] };
         }
+        if (this.data.resolution && this.data.resolution.w && this.data.resolution.h) {
+            this.resolution = { w: Number(this.data.resolution.w), h: Number(this.data.resolution.h) };
+        }
+        const resSel = document.getElementById('resolution-selector');
+        if (resSel) {
+            const key = `${this.resolution.w}x${this.resolution.h}`;
+            if (Array.from(resSel.options).some(o => o.value === key)) resSel.value = key;
+        }
         this.upgradeLegacyButtonStyles();
 
         this.updateScreenList();
         const first = Object.keys(this.data.screens)[0];
         this.switchScreen(first);
+        this.fitToScreen(false);
         this.updateFileStatus();
         this.showLoadFeedback();
     }
@@ -270,31 +317,49 @@ class UIStudio {
     }
 
     async save() {
-        this.pushUndo();
+        if (this._savePromise) return this._savePromise;
+        this._savePromise = (async () => {
+            this.pushUndo();
+            try {
+                const payload = {
+                    ...this.data,
+                    name: this.data.name || 'Main Interface',
+                    format: 'redglitch-ui',
+                    formatVersion: 1,
+                    resolution: this.resolution
+                };
+                const res = await fetch(`/api/ui-config?file=${encodeURIComponent(this.interfaceFileName)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    this.interfaceFileName = result.fileName || this.interfaceFileName;
+                    this.interfacePath = result.path || this.interfacePath;
+                    this.dirty = false;
+                    this.updateFileStatus();
+                    this.showSaveIndicator();
+                    broadcastUIUpdate('saved');
+                } else {
+                    alert('SAVE FAILED');
+                }
+            } catch (e) { alert('NETWORK ERROR'); }
+        })();
         try {
-            const payload = {
-                ...this.data,
-                name: this.data.name || 'Main Interface',
-                format: 'redglitch-ui',
-                formatVersion: 1
-            };
-            const res = await fetch(`/api/ui-config?file=${encodeURIComponent(this.interfaceFileName)}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (res.ok) {
-                const result = await res.json();
-                this.interfaceFileName = result.fileName || this.interfaceFileName;
-                this.interfacePath = result.path || this.interfacePath;
-                this.dirty = false;
-                this.updateFileStatus();
-                this.showSaveIndicator();
-                broadcastUIUpdate('saved');
-            } else {
-                alert('SAVE FAILED');
-            }
-        } catch (e) { alert('NETWORK ERROR'); }
+            return await this._savePromise;
+        } finally {
+            this._savePromise = null;
+        }
+    }
+
+    exit() {
+        if (this.dirty && !confirm('You have unsaved changes. Close anyway?')) return;
+        if (window.parent && typeof window.parent.closeWindow === 'function') {
+            window.parent.closeWindow('win-menu');
+        } else {
+            window.close();
+        }
     }
 
     exportJSON() {
@@ -472,10 +537,10 @@ class UIStudio {
         ab.querySelectorAll('.ui-el').forEach(e => e.remove());
         ab.querySelectorAll('.snap-guide').forEach(e => e.remove());
 
-        // Apply resolution + zoom
+        // Apply resolution + zoom + pan
         ab.style.width = this.resolution.w + 'px';
         ab.style.height = this.resolution.h + 'px';
-        ab.style.transform = `scale(${this.scale})`;
+        this.applyArtboardTransform();
         this.dom.artboardLabel.textContent = `${this.resolution.w} × ${this.resolution.h}`;
 
         // Grid overlay
@@ -496,18 +561,33 @@ class UIStudio {
         });
     }
 
+    _resolveElementRect(data) {
+        const r = data?.rect || { x: 0, y: 0, w: 100, h: 40 };
+        if (window.UIRenderer && typeof window.UIRenderer.resolveRect === 'function') {
+            return window.UIRenderer.resolveRect(r, data.anchor || 'top-left', this.resolution);
+        }
+        return { x: r.x || 0, y: r.y || 0, w: r.w || 100, h: r.h || 40, left: r.x || 0, top: r.y || 0 };
+    }
+
+    _screenToAnchor(left, top, w, h, anchor) {
+        if (window.UIRenderer && typeof window.UIRenderer.screenToAnchorRect === 'function') {
+            return window.UIRenderer.screenToAnchorRect(left, top, w, h, anchor || 'top-left', this.resolution);
+        }
+        return { x: Math.round(left), y: Math.round(top), w: Math.round(w), h: Math.round(h) };
+    }
+
     createElementDOM(data) {
         const wrapper = document.createElement('div');
         wrapper.className = 'ui-el';
         wrapper.dataset.id = data.id;
 
-        const r = data.rect;
-        wrapper.style.left = r.x + 'px';
-        wrapper.style.top = r.y + 'px';
-        wrapper.style.width = r.w + 'px';
-        wrapper.style.height = r.h + 'px';
+        const pos = this._resolveElementRect(data);
+        wrapper.style.left = pos.left + 'px';
+        wrapper.style.top = pos.top + 'px';
+        wrapper.style.width = pos.w + 'px';
+        wrapper.style.height = pos.h + 'px';
 
-        if (data.style && data.style.zIndex) wrapper.style.zIndex = data.style.zIndex;
+        if (data.style && data.style.zIndex !== undefined) wrapper.style.zIndex = data.style.zIndex;
 
         // Selection state
         if (this.selection.includes(data.id)) {
@@ -522,8 +602,11 @@ class UIStudio {
             inner = document.createElement('div');
             inner.className = 'preview-btn';
             inner.textContent = data.text || 'BTN';
+            inner.style.display = 'flex';
+            inner.style.alignItems = 'center';
+            inner.style.justifyContent = s.textAlign === 'left' ? 'flex-start' : s.textAlign === 'right' ? 'flex-end' : 'center';
+            inner.style.boxSizing = 'border-box';
             this._applyPreviewStyle(inner, s);
-            inner.style.display = 'flex'; inner.style.alignItems = 'center'; inner.style.justifyContent = 'center';
 
             // Navigate indicator badge
             if (data.script && data.script.startsWith('navigate:')) {
@@ -531,70 +614,96 @@ class UIStudio {
                 if (target) {
                     const badge = document.createElement('div');
                     badge.className = 'navigate-badge';
-                    badge.innerHTML = `<i class="fas fa-link"></i> ${target}`;
+                    badge.innerHTML = `<i class="fas fa-link"></i> ${_escapeHtml(target)}`;
                     wrapper.appendChild(badge);
                 }
             }
         } else if (data.type === 'label') {
             inner = document.createElement('div');
             inner.className = 'preview-label';
+            inner.style.display = 'flex';
+            inner.style.alignItems = 'center';
+            inner.style.justifyContent = s.textAlign === 'center' ? 'center' : s.textAlign === 'right' ? 'flex-end' : 'flex-start';
+            inner.style.whiteSpace = 'pre-wrap';
+            inner.style.lineHeight = '1.2';
+            inner.style.boxSizing = 'border-box';
             let text = data.text || 'LABEL';
             // Highlight data bindings
-            inner.innerHTML = _escapeHtml(text).replace(/\{(\w+)\}/g, '<span style="color:#3498db;text-decoration:underline;">{$1}</span>');
+            inner.innerHTML = _escapeHtml(text).replace(/\{([^}]+)\}/g, '<span style="color:#49e3ff;text-decoration:underline;">{$1}</span>');
             this._applyPreviewStyle(inner, s);
         } else if (data.type === 'panel') {
             inner = document.createElement('div');
             inner.className = 'preview-panel';
+            inner.style.boxSizing = 'border-box';
             this._applyPreviewStyle(inner, s);
         } else if (data.type === 'image') {
             inner = document.createElement('div');
+            inner.style.boxSizing = 'border-box';
             if (data.src) {
                 inner.className = 'preview-image';
                 inner.style.backgroundImage = `url('${data.src}')`;
             } else {
                 inner.className = 'preview-image empty';
             }
+            this._applyPreviewStyle(inner, s);
         } else if (data.type === 'bar') {
             inner = document.createElement('div');
             inner.className = 'preview-bar';
+            inner.style.overflow = 'hidden';
+            inner.style.boxSizing = 'border-box';
+            inner.style.background = '#0b0d14';
+            inner.style.border = '2px solid #000';
             this._applyPreviewStyle(inner, s);
 
             const fill = document.createElement('div');
             fill.className = 'preview-bar-fill';
-            fill.style.background = (data.props && data.props.fillColor) || '#e74c3c';
-            fill.style.width = '65%'; // preview at 65%
+            fill.style.background = (data.props && data.props.fillColor) || '#e23b4e';
+            fill.style.width = '68%';
+            fill.style.boxShadow = 'inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.25)';
             inner.appendChild(fill);
+
+            if (data.props && Number(data.props.ticks) > 0) {
+                const n = Number(data.props.ticks);
+                const step = 100 / n;
+                const tk = document.createElement('div');
+                tk.style.cssText = `position:absolute;inset:0;pointer-events:none;z-index:1;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(${step}% - 2px),rgba(0,0,0,0.45) calc(${step}% - 2px),rgba(0,0,0,0.45) ${step}%)`;
+                inner.appendChild(tk);
+            }
 
             const label = document.createElement('div');
             label.className = 'preview-bar-label';
             label.textContent = data.text || 'BAR';
+            label.style.zIndex = '2';
+            const barFs = s.fontSize ? Number(s.fontSize) : Math.max(10, Math.min(13, pos.h - 4));
+            label.style.fontSize = barFs + 'px';
+            label.style.color = s.color || '#ffffff';
+            label.style.fontWeight = s.fontWeight || (barFs <= 14 ? '400' : '700');
+            label.style.textShadow = s.textShadow || '1px 1px 0 #000';
             inner.appendChild(label);
         } else if (data.type === 'slot') {
             inner = document.createElement('div');
             inner.className = 'preview-slot';
+            inner.style.width = '100%';
+            inner.style.height = '100%';
+            inner.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.52))';
+            inner.style.border = '2px solid rgba(255,211,106,0.55)';
+            inner.style.color = '#ffd36a';
+            inner.style.fontFamily = "'VT323', monospace";
+            inner.style.fontWeight = '400';
+            inner.style.boxSizing = 'border-box';
             this._applyPreviewStyle(inner, s);
             inner.style.display = 'flex';
-            inner.style.alignItems = 'flex-end';
-            inner.style.justifyContent = 'flex-end';
-            inner.style.padding = '2px 4px';
-            
-            const icon = document.createElement('i');
-            icon.className = 'fas fa-box';
-            icon.style.position = 'absolute';
-            icon.style.top = '50%';
-            icon.style.left = '50%';
-            icon.style.transform = 'translate(-50%, -50%)';
-            icon.style.opacity = '0.3';
-            icon.style.fontSize = '24px';
-            inner.appendChild(icon);
-            
-            if (data.text) {
-                const count = document.createElement('div');
-                count.textContent = data.text;
-                count.style.position = 'relative';
-                count.style.zIndex = '1';
-                inner.appendChild(count);
+            inner.style.alignItems = 'center';
+            inner.style.justifyContent = 'center';
+            if (data.props?.selected) {
+                inner.style.boxShadow = 'inset 0 0 0 1px #fff, 0 0 0 1px #fff';
             }
+
+            const keyCap = document.createElement('span');
+            keyCap.textContent = data.text || '';
+            const capSize = Math.max(10, Number(s.fontSize || 11));
+            keyCap.style.cssText = `position:absolute;top:2px;left:4px;font-size:${capSize}px;line-height:1;font-weight:${s.fontWeight || '400'};opacity:0.95;text-shadow:1px 1px 0 #000;`;
+            inner.appendChild(keyCap);
         }
 
         if (inner) {
@@ -617,18 +726,30 @@ class UIStudio {
     }
 
     _applyPreviewStyle(el, s) {
+        if (!s) return;
         if (s.color) el.style.color = s.color;
         if (s.backgroundColor) el.style.background = s.backgroundColor;
         if (s.backgroundImage) el.style.backgroundImage = s.backgroundImage;
         if (s.fontSize) el.style.fontSize = s.fontSize + 'px';
-        if (s.borderWidth) el.style.borderWidth = s.borderWidth + 'px';
-        if (s.borderColor) el.style.borderColor = s.borderColor;
+        if (s.borderWidth !== undefined) {
+            const bw = Number(s.borderWidth) || 0;
+            el.style.borderWidth = bw + 'px';
+            el.style.borderStyle = bw > 0 ? (s.borderStyle || 'solid') : 'none';
+        }
+        if (s.borderColor) {
+            el.style.borderColor = s.borderColor;
+            if (!el.style.borderStyle && Number(s.borderWidth) > 0) el.style.borderStyle = s.borderStyle || 'solid';
+        }
         if (s.textAlign) el.style.textAlign = s.textAlign;
         if (s.borderRadius !== undefined) el.style.borderRadius = s.borderRadius + 'px';
         if (s.boxShadow) el.style.boxShadow = s.boxShadow;
+        if (s.textShadow) el.style.textShadow = s.textShadow;
         if (s.textTransform) el.style.textTransform = s.textTransform;
-        if (s.letterSpacing !== undefined) el.style.letterSpacing = s.letterSpacing;
+        if (s.letterSpacing !== undefined) el.style.letterSpacing = typeof s.letterSpacing === 'number' ? s.letterSpacing + 'px' : s.letterSpacing;
         if (s.fontWeight) el.style.fontWeight = s.fontWeight;
+        if (s.opacity !== undefined) el.style.opacity = String(s.opacity);
+        if (s.padding !== undefined) el.style.padding = typeof s.padding === 'number' ? `${s.padding}px` : s.padding;
+        if (s.lineHeight) el.style.lineHeight = typeof s.lineHeight === 'number' ? `${s.lineHeight}px` : s.lineHeight;
     }
 
     // ═══════════════════════════════════════
@@ -716,28 +837,47 @@ class UIStudio {
         const gProps = this._addGroup(container, 'SCREEN PROPERTIES');
         this._addProp(gProps, 'NAME', this.activeScreen, 'text', null);
 
-        // HUD Overlay Toggle
-        const isHudRow = document.createElement('div'); isHudRow.className = 'prop-row';
-        const isHudLbl = document.createElement('span'); isHudLbl.className = 'prop-label'; isHudLbl.textContent = 'IS HUD OVERLAY';
-        const isHudSelect = document.createElement('select'); isHudSelect.className = 'prop-input';
-        
-        const optNo = document.createElement('option'); optNo.value = 'false'; optNo.textContent = 'False (Standard Menu)';
-        const optYes = document.createElement('option'); optYes.value = 'true'; optYes.textContent = 'True (In-Game HUD)';
-        
-        if (screen.isHud) optYes.selected = true;
-        else optNo.selected = true;
-        
-        isHudSelect.appendChild(optNo);
-        isHudSelect.appendChild(optYes);
-        
-        isHudSelect.onchange = () => {
-            screen.isHud = (isHudSelect.value === 'true');
+        // Overlay (keep HUD visible behind) toggle
+        const bgRow = document.createElement('div'); bgRow.className = 'prop-row';
+        const bgLbl = document.createElement('span'); bgLbl.className = 'prop-label'; bgLbl.textContent = 'OVERLAY MODE';
+        const bgSelect = document.createElement('select'); bgSelect.className = 'prop-input';
+        bgSelect.innerHTML = `
+            <option value="false"${!screen.background ? ' selected' : ''}>Standalone Screen</option>
+            <option value="true"${screen.background === true ? ' selected' : ''}>Overlay (Keep HUD)</option>
+        `;
+        bgSelect.onchange = () => {
+            screen.background = (bgSelect.value === 'true');
             this.markDirty();
         };
-        
-        isHudRow.appendChild(isHudLbl);
-        isHudRow.appendChild(isHudSelect);
-        gProps.appendChild(isHudRow);
+        bgRow.appendChild(bgLbl);
+        bgRow.appendChild(bgSelect);
+        gProps.appendChild(bgRow);
+
+        // Templates quick action
+        const tplGroup = this._addGroup(container, 'TEMPLATES & LAYOUT');
+        const tplBtn = document.createElement('button');
+        tplBtn.className = 'editor-btn';
+        tplBtn.innerHTML = '<i class="fas fa-swatchbook"></i> APPLY SCREEN TEMPLATE...';
+        tplBtn.onclick = () => this.openTemplatesModal('screens');
+        tplGroup.appendChild(tplBtn);
+
+        // Layout validation audit
+        if (window.RedglitchUITemplates && typeof window.RedglitchUITemplates.validateScreenLayout === 'function') {
+            const audit = window.RedglitchUITemplates.validateScreenLayout(screen, this.resolution);
+            const gAudit = this._addGroup(container, 'LAYOUT CHECK');
+            const badge = document.createElement('div');
+            badge.style.cssText = `padding:8px;border-radius:4px;font-size:11px;line-height:1.45;border:1px solid ${audit.ok ? 'rgba(46,204,113,0.4)' : 'rgba(255,49,71,0.45)'};background:${audit.ok ? 'rgba(46,204,113,0.08)' : 'rgba(255,49,71,0.1)'};color:${audit.ok ? '#86efac' : '#fda4af'};`;
+            if (audit.ok) {
+                badge.innerHTML = `<i class="fas fa-check-circle"></i> Layout temiz — taşma veya çakışma yok (${(screen.elements || []).length} öğe).`;
+            } else {
+                const issues = [
+                    ...audit.overlaps.slice(0, 3).map(o => `• Çakışma: ${o.a} × ${o.b}`),
+                    ...audit.outOfBounds.slice(0, 3).map(b => `• Taşma: ${b.id}`)
+                ].join('<br>');
+                badge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${audit.overlaps.length} çakışma, ${audit.outOfBounds.length} taşma:<br>${issues}`;
+            }
+            gAudit.appendChild(badge);
+        }
     }
 
     _renderPropsTab(container, el) {
@@ -753,6 +893,34 @@ class UIStudio {
             this._addProp(gId, 'IMAGE SRC', el.src || '', 'text', v => { el.src = v; this.markDirty(); this.renderCanvas(); });
         }
 
+        // Anchor (3x3 visual grid + preserves screen position)
+        const gAnchor = this._addGroup(container, 'ANCHOR & ALIGN');
+        const anchorRow = document.createElement('div'); anchorRow.className = 'prop-row';
+        const anchorLbl = document.createElement('span'); anchorLbl.className = 'prop-label'; anchorLbl.textContent = (el.anchor || 'top-left').toUpperCase();
+        const anchorGrid = document.createElement('div'); anchorGrid.className = 'anchor-grid';
+        const ANCHORS = ['top-left', 'top-center', 'top-right', 'center-left', 'center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'];
+        ANCHORS.forEach(a => {
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'anchor-cell' + ((el.anchor || 'top-left') === a ? ' active' : '');
+            cell.title = a;
+            cell.onclick = () => {
+                this.pushUndo();
+                const oldAnchor = el.anchor || 'top-left';
+                if (window.UIRenderer && typeof window.UIRenderer.convertAnchorRect === 'function') {
+                    el.rect = window.UIRenderer.convertAnchorRect(el.rect, oldAnchor, a, this.resolution);
+                }
+                el.anchor = a;
+                this.markDirty();
+                this.renderCanvas();
+                this.renderInspector();
+            };
+            anchorGrid.appendChild(cell);
+        });
+        anchorRow.appendChild(anchorLbl);
+        anchorRow.appendChild(anchorGrid);
+        gAnchor.appendChild(anchorRow);
+
         // Geometry
         const gGeo = this._addGroup(container, 'GEOMETRY');
         this._addProp(gGeo, 'X', el.rect.x, 'number', v => { this.pushUndo(); el.rect.x = v; this.markDirty(); this.renderCanvas(); });
@@ -762,12 +930,13 @@ class UIStudio {
 
         // Data Binding (Universal)
         const gBind = this._addGroup(container, 'DATA BINDING');
-        this._addProp(gBind, 'BIND VARIABLE', el.props?.variable || '', 'text', v => { if (!el.props) el.props = {}; el.props.variable = v; this.markDirty(); });
+        this._addProp(gBind, 'BIND VAR', el.props?.variable || '', 'text', v => { if (!el.props) el.props = {}; el.props.variable = v; this.markDirty(); });
         
         // Bar-specific data binding
         if (el.type === 'bar') {
             this._addProp(gBind, 'MAX VAR', el.props?.maxVariable || '', 'text', v => { if (!el.props) el.props = {}; el.props.maxVariable = v; this.markDirty(); });
-            this._addColorProp(gBind, 'FILL COLOR', el.props?.fillColor || '#e74c3c', v => { if (!el.props) el.props = {}; el.props.fillColor = v; this.markDirty(); this.renderCanvas(); });
+            this._addColorProp(gBind, 'FILL COLOR', el.props?.fillColor || '#e23b4e', v => { if (!el.props) el.props = {}; el.props.fillColor = v; this.markDirty(); this.renderCanvas(); });
+            this._addProp(gBind, 'SEGMENTS', el.props?.ticks || 0, 'number', v => { if (!el.props) el.props = {}; el.props.ticks = Math.max(0, v); this.markDirty(); this.renderCanvas(); });
         }
     }
 
@@ -778,16 +947,22 @@ class UIStudio {
         this._addColorProp(gColor, 'BACKGROUND', el.style.backgroundColor || 'transparent', v => { el.style.backgroundColor = v; this.markDirty(); this.renderCanvas(); });
         this._addColorProp(gColor, 'TEXT COLOR', el.style.color || '#ffffff', v => { el.style.color = v; this.markDirty(); this.renderCanvas(); });
 
-        const gBorder = this._addGroup(container, 'BORDER');
-        this._addProp(gBorder, 'WIDTH', parseInt(el.style.borderWidth) || 0, 'number', v => { el.style.borderWidth = v; this.markDirty(); this.renderCanvas(); });
-        this._addColorProp(gBorder, 'COLOR', el.style.borderColor || 'transparent', v => { el.style.borderColor = v; this.markDirty(); this.renderCanvas(); });
+        const gBorder = this._addGroup(container, 'BORDER & SHAPE');
+        this._addProp(gBorder, 'BORDER W', el.style.borderWidth !== undefined ? parseInt(el.style.borderWidth) : 0, 'number', v => { el.style.borderWidth = Math.max(0, v); this.markDirty(); this.renderCanvas(); });
+        this._addColorProp(gBorder, 'BORDER CLR', el.style.borderColor || 'transparent', v => { el.style.borderColor = v; this.markDirty(); this.renderCanvas(); });
+        this._addProp(gBorder, 'RADIUS (px)', parseInt(el.style.borderRadius) || 0, 'number', v => { el.style.borderRadius = Math.max(0, v); this.markDirty(); this.renderCanvas(); });
 
         const gFont = this._addGroup(container, 'TYPOGRAPHY');
-        this._addProp(gFont, 'SIZE (px)', parseInt(el.style.fontSize) || 16, 'number', v => { el.style.fontSize = v; this.markDirty(); this.renderCanvas(); });
+        this._addProp(gFont, 'SIZE (px)', parseInt(el.style.fontSize) || 14, 'number', v => { el.style.fontSize = Math.max(8, v); this.markDirty(); this.renderCanvas(); });
+        this._addSelectProp(gFont, 'WEIGHT', String(el.style.fontWeight || '400'), [
+            { value: '400', label: 'Regular (400)' },
+            { value: '700', label: 'Bold (700)' }
+        ], v => { el.style.fontWeight = v; this.markDirty(); this.renderCanvas(); });
         this._addAlignProp(gFont, el.style.textAlign || 'left', v => { el.style.textAlign = v; this.markDirty(); this.renderCanvas(); this.renderInspector(); });
 
-        const gLayout = this._addGroup(container, 'LAYOUT');
+        const gLayout = this._addGroup(container, 'LAYERING');
         this._addProp(gLayout, 'Z-INDEX', parseInt(el.style.zIndex) || 0, 'number', v => { el.style.zIndex = v; this.markDirty(); this.renderCanvas(); });
+        this._addProp(gLayout, 'OPACITY', el.style.opacity !== undefined ? el.style.opacity : 1, 'number', v => { el.style.opacity = Math.max(0, Math.min(1, v)); this.markDirty(); this.renderCanvas(); });
     }
 
     _renderEventsTab(container, el) {
@@ -1006,6 +1181,23 @@ class UIStudio {
         container.appendChild(row);
     }
 
+    _addSelectProp(container, label, value, options, callback) {
+        const row = document.createElement('div'); row.className = 'prop-row';
+        const lbl = document.createElement('span'); lbl.className = 'prop-label'; lbl.textContent = label;
+        const sel = document.createElement('select'); sel.className = 'prop-input';
+        options.forEach(optDef => {
+            const opt = document.createElement('option');
+            opt.value = optDef.value;
+            opt.textContent = optDef.label;
+            if (String(value) === String(optDef.value)) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        sel.onchange = (e) => callback(e.target.value);
+        row.appendChild(lbl);
+        row.appendChild(sel);
+        container.appendChild(row);
+    }
+
     // ═══════════════════════════════════════
     // STATUS BAR
     // ═══════════════════════════════════════
@@ -1108,8 +1300,8 @@ class UIStudio {
             if (!el) return;
             const copy = JSON.parse(JSON.stringify(el));
             copy.id = `${el.type}_${Date.now().toString(36).slice(-5)}`;
-            copy.rect.x += 20;
-            copy.rect.y += 20;
+            const cur = this._resolveElementRect(el);
+            copy.rect = this._screenToAnchor(cur.left + 16, cur.top + 16, cur.w, cur.h, el.anchor || 'top-left');
             this.getElements().push(copy);
             newIds.push(copy.id);
         });
@@ -1152,21 +1344,40 @@ class UIStudio {
     }
 
     // ═══════════════════════════════════════
-    // ALIGNMENT
+    // ALIGNMENT (Anchor-Aware)
     // ═══════════════════════════════════════
     alignElements(direction) {
         if (this.selection.length < 2) return;
         this.pushUndo();
         const selected = this.selection.map(id => this.getElement(id)).filter(Boolean);
+        const resolved = selected.map(el => ({ el, box: this._resolveElementRect(el) }));
 
         let ref;
         switch (direction) {
-            case 'left':     ref = Math.min(...selected.map(e => e.rect.x)); selected.forEach(e => e.rect.x = ref); break;
-            case 'right':    ref = Math.max(...selected.map(e => e.rect.x + e.rect.w)); selected.forEach(e => e.rect.x = ref - e.rect.w); break;
-            case 'top':      ref = Math.min(...selected.map(e => e.rect.y)); selected.forEach(e => e.rect.y = ref); break;
-            case 'bottom':   ref = Math.max(...selected.map(e => e.rect.y + e.rect.h)); selected.forEach(e => e.rect.y = ref - e.rect.h); break;
-            case 'center-h': ref = selected.reduce((s, e) => s + e.rect.x + e.rect.w / 2, 0) / selected.length; selected.forEach(e => e.rect.x = Math.round(ref - e.rect.w / 2)); break;
-            case 'center-v': ref = selected.reduce((s, e) => s + e.rect.y + e.rect.h / 2, 0) / selected.length; selected.forEach(e => e.rect.y = Math.round(ref - e.rect.h / 2)); break;
+            case 'left':
+                ref = Math.min(...resolved.map(x => x.box.left));
+                resolved.forEach(({ el, box }) => { el.rect = this._screenToAnchor(ref, box.top, box.w, box.h, el.anchor); });
+                break;
+            case 'right':
+                ref = Math.max(...resolved.map(x => x.box.left + x.box.w));
+                resolved.forEach(({ el, box }) => { el.rect = this._screenToAnchor(ref - box.w, box.top, box.w, box.h, el.anchor); });
+                break;
+            case 'top':
+                ref = Math.min(...resolved.map(x => x.box.top));
+                resolved.forEach(({ el, box }) => { el.rect = this._screenToAnchor(box.left, ref, box.w, box.h, el.anchor); });
+                break;
+            case 'bottom':
+                ref = Math.max(...resolved.map(x => x.box.top + x.box.h));
+                resolved.forEach(({ el, box }) => { el.rect = this._screenToAnchor(box.left, ref - box.h, box.w, box.h, el.anchor); });
+                break;
+            case 'center-h':
+                ref = resolved.reduce((s, x) => s + x.box.left + x.box.w / 2, 0) / resolved.length;
+                resolved.forEach(({ el, box }) => { el.rect = this._screenToAnchor(Math.round(ref - box.w / 2), box.top, box.w, box.h, el.anchor); });
+                break;
+            case 'center-v':
+                ref = resolved.reduce((s, x) => s + x.box.top + x.box.h / 2, 0) / resolved.length;
+                resolved.forEach(({ el, box }) => { el.rect = this._screenToAnchor(box.left, Math.round(ref - box.h / 2), box.w, box.h, el.anchor); });
+                break;
         }
         this.markDirty();
         this.renderCanvas();
@@ -1176,20 +1387,37 @@ class UIStudio {
     // ═══════════════════════════════════════
     // ZOOM / PAN / VIEW
     // ═══════════════════════════════════════
-    setZoom(level) {
-        this.scale = Math.max(0.1, Math.min(4, level));
-        this.dom.artboard.style.transform = `scale(${this.scale})`;
+    applyArtboardTransform() {
+        this.dom.artboard.style.transform = `translate(${this.panOffset.x}px, ${this.panOffset.y}px) scale(${this.scale})`;
+    }
+
+    setZoom(level, markUser = true) {
+        if (markUser) this._userZoomed = true;
+        this.scale = Math.max(0.15, Math.min(4, level));
+        this.applyArtboardTransform();
         this.dom.zoomIndicator.textContent = Math.round(this.scale * 100) + '%';
         document.getElementById('status-zoom').textContent = `Zoom: ${Math.round(this.scale * 100)}%`;
         this.hideZoomMenu();
     }
 
-    zoomIn() { this.setZoom(this.scale + 0.1); }
-    zoomOut() { this.setZoom(this.scale - 0.1); }
+    zoomIn() { this.setZoom(this.scale + 0.1, true); }
+    zoomOut() { this.setZoom(this.scale - 0.1, true); }
+
+    fitToScreen(markReset = true) {
+        const area = this.dom.canvasArea;
+        if (!area) return;
+        const cw = area.clientWidth || 700;
+        const ch = area.clientHeight || 420;
+        const pad = 64;
+        const fit = Math.min((cw - pad) / this.resolution.w, (ch - pad) / this.resolution.h, 1.0);
+        const clamped = Math.max(0.25, Math.floor(fit * 20) / 20);
+        this.panOffset = { x: 0, y: 0 };
+        if (markReset) this._userZoomed = false;
+        this.setZoom(clamped, false);
+    }
 
     resetView() {
-        this.setZoom(1.0);
-        this.panOffset = { x: 0, y: 0 };
+        this.fitToScreen(true);
     }
 
     showZoomPresets() {
@@ -1228,7 +1456,10 @@ class UIStudio {
     setResolution(val) {
         const [w, h] = val.split('x').map(Number);
         this.resolution = { w, h };
+        this.data.resolution = { w, h };
+        this.markDirty();
         this.renderCanvas();
+        this.fitToScreen(false);
     }
 
     // ═══════════════════════════════════════
@@ -1286,8 +1517,23 @@ class UIStudio {
         const area = this.dom.canvasArea;
         const ab = this.dom.artboard;
 
-        // Click on empty artboard → deselect
+        // Pan drag on canvas area when pan tool active or middle mouse button
+        area.addEventListener('mousedown', (e) => {
+            if (this.activeTool === 'pan' || e.button === 1) {
+                e.preventDefault();
+                this.dragState = {
+                    mode: 'pan',
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    startPanX: this.panOffset.x,
+                    startPanY: this.panOffset.y
+                };
+            }
+        });
+
+        // Click on empty artboard → deselect (or pan if pan tool active)
         ab.addEventListener('mousedown', (e) => {
+            if (this.activeTool === 'pan' || e.button === 1) return;
             if (e.target === ab || e.target === this.dom.artboardLabel) {
                 if (this.activeTool === 'pointer') {
                     // Start marquee
@@ -1330,6 +1576,7 @@ class UIStudio {
     }
 
     onElementDown(e, data) {
+        if (this.activeTool === 'pan' || e.button === 1) return;
         e.stopPropagation();
 
         // Check if clicking a resize handle
@@ -1337,12 +1584,13 @@ class UIStudio {
         if (handleDir) {
             this.pushUndo();
             const el = this.getElement(data.id);
+            const resolved = this._resolveElementRect(el);
             this.dragState = {
                 mode: 'resize',
                 ids: [data.id],
                 startX: e.clientX,
                 startY: e.clientY,
-                initials: { [data.id]: { ...el.rect } },
+                initials: { [data.id]: { ...resolved } },
                 handleDir: handleDir
             };
             return;
@@ -1356,12 +1604,12 @@ class UIStudio {
             this.render();
         }
 
-        // Start move drag
+        // Start move drag (store visual artboard coordinates so every anchor drags intuitively)
         this.pushUndo();
         const initials = {};
         this.selection.forEach(id => {
             const el = this.getElement(id);
-            if (el) initials[id] = { ...el.rect };
+            if (el) initials[id] = { ...this._resolveElementRect(el) };
         });
 
         this.dragState = {
@@ -1397,11 +1645,12 @@ class UIStudio {
                 left: sx + 'px', top: sy + 'px', width: sw + 'px', height: sh + 'px'
             });
 
-            // Live selection update
+            // Live selection update using resolved artboard bounds
             const elements = this.getElements();
             this.selection = elements.filter(el => {
-                return el.rect.x < sx + sw && el.rect.x + el.rect.w > sx &&
-                       el.rect.y < sy + sh && el.rect.y + el.rect.h > sy;
+                const b = this._resolveElementRect(el);
+                return b.left < sx + sw && b.left + b.w > sx &&
+                       b.top < sy + sh && b.top + b.h > sy;
             }).map(el => el.id);
 
             this.renderHierarchy();
@@ -1411,8 +1660,17 @@ class UIStudio {
 
         if (!this.dragState) return;
 
+        if (this.dragState.mode === 'pan') {
+            this.panOffset.x = this.dragState.startPanX + (e.clientX - this.dragState.startX);
+            this.panOffset.y = this.dragState.startPanY + (e.clientY - this.dragState.startY);
+            this.applyArtboardTransform();
+            return;
+        }
+
         const dx = (e.clientX - this.dragState.startX) / this.scale;
         const dy = (e.clientY - this.dragState.startY) / this.scale;
+        let guideX = null;
+        let guideY = null;
 
         if (this.dragState.mode === 'move') {
             this.dragState.moved = true;
@@ -1421,16 +1679,28 @@ class UIStudio {
                 const init = this.dragState.initials[id];
                 if (!el || !init) return;
 
-                let nx = init.x + dx;
-                let ny = init.y + dy;
+                let nLeft = init.left + dx;
+                let nTop = init.top + dy;
                 if (this.snapping) {
-                    nx = Math.round(nx / this.snapSize) * this.snapSize;
-                    ny = Math.round(ny / this.snapSize) * this.snapSize;
+                    nLeft = Math.round(nLeft / this.snapSize) * this.snapSize;
+                    nTop = Math.round(nTop / this.snapSize) * this.snapSize;
+                    if (id === this.dragState.ids[0]) {
+                        const midX = this.resolution.w / 2;
+                        const midY = this.resolution.h / 2;
+                        if (Math.abs((nLeft + init.w / 2) - midX) <= 6) {
+                            nLeft = Math.round(midX - init.w / 2);
+                            guideX = midX;
+                        }
+                        if (Math.abs((nTop + init.h / 2) - midY) <= 6) {
+                            nTop = Math.round(midY - init.h / 2);
+                            guideY = midY;
+                        }
+                    }
                 }
-                el.rect.x = Math.round(nx);
-                el.rect.y = Math.round(ny);
+                el.rect = this._screenToAnchor(nLeft, nTop, init.w, init.h, el.anchor || 'top-left');
             });
             this.renderCanvas();
+            this._renderSnapGuides(guideX, guideY);
         }
         else if (this.dragState.mode === 'resize') {
             const id = this.dragState.ids[0];
@@ -1439,28 +1709,48 @@ class UIStudio {
             if (!el || !init) return;
 
             const dir = this.dragState.handleDir;
-            let nx = init.x, ny = init.y, nw = init.w, nh = init.h;
+            let nLeft = init.left, nTop = init.top, nw = init.w, nh = init.h;
 
             // Handle direction
             if (dir.includes('r')) nw = init.w + dx;
-            if (dir.includes('l')) { nw = init.w - dx; nx = init.x + dx; }
+            if (dir.includes('l')) { nw = init.w - dx; nLeft = init.left + dx; }
             if (dir.includes('b')) nh = init.h + dy;
-            if (dir.includes('t')) { nh = init.h - dy; ny = init.y + dy; }
+            if (dir.includes('t')) { nh = init.h - dy; nTop = init.top + dy; }
 
             // Snap
             if (this.snapping) {
                 nw = Math.round(nw / this.snapSize) * this.snapSize;
                 nh = Math.round(nh / this.snapSize) * this.snapSize;
-                nx = Math.round(nx / this.snapSize) * this.snapSize;
-                ny = Math.round(ny / this.snapSize) * this.snapSize;
+                if (dir.includes('l')) nLeft = init.left + (init.w - Math.max(10, nw));
+                if (dir.includes('t')) nTop = init.top + (init.h - Math.max(10, nh));
             }
 
             // Min size
-            nw = Math.max(10, nw);
-            nh = Math.max(10, nh);
+            nw = Math.max(10, Math.round(nw));
+            nh = Math.max(10, Math.round(nh));
 
-            el.rect = { x: Math.round(nx), y: Math.round(ny), w: Math.round(nw), h: Math.round(nh) };
+            el.rect = this._screenToAnchor(nLeft, nTop, nw, nh, el.anchor || 'top-left');
             this.renderCanvas();
+        }
+    }
+
+    _renderSnapGuides(x, y) {
+        const ab = this.dom.artboard;
+        if (!ab) return;
+        ab.querySelectorAll('.snap-guide').forEach(e => e.remove());
+        if (x !== null) {
+            const v = document.createElement('div');
+            v.className = 'snap-guide snap-guide-v';
+            v.style.left = x + 'px';
+            v.style.background = '#49e3ff';
+            ab.appendChild(v);
+        }
+        if (y !== null) {
+            const h = document.createElement('div');
+            h.className = 'snap-guide snap-guide-h';
+            h.style.top = y + 'px';
+            h.style.background = '#49e3ff';
+            ab.appendChild(h);
         }
     }
 
@@ -1475,6 +1765,10 @@ class UIStudio {
         }
 
         if (this.dragState) {
+            if (this.dragState.mode === 'pan') {
+                this.dragState = null;
+                return;
+            }
             if (this.dragState.moved || this.dragState.mode === 'resize') {
                 this.markDirty();
             } else {
@@ -1482,6 +1776,7 @@ class UIStudio {
                 this.undoStack.pop();
             }
             this.dragState = null;
+            this.dom.artboard.querySelectorAll('.snap-guide').forEach(g => g.remove());
             this.renderInspector();
         }
     }
@@ -1554,7 +1849,7 @@ class UIStudio {
             // Delete / Backspace
             if (e.key === 'Delete' || e.key === 'Backspace') { this.deleteSelected(); return; }
             // Escape — deselect
-            if (e.key === 'Escape') { this.clearSelection(); this.closeQuickSearch(); return; }
+            if (e.key === 'Escape') { this.clearSelection(); this.closeQuickSearch(); this.closeTemplatesModal(); return; }
 
             // Arrow keys — nudge
             const nudge = this.snapping ? this.snapSize : 1;
@@ -1624,7 +1919,7 @@ class UIStudio {
         const q = query.toLowerCase();
 
         // Component types
-        ['panel', 'label', 'button', 'image', 'bar'].forEach(type => {
+        ['panel', 'label', 'button', 'image', 'bar', 'slot'].forEach(type => {
             if (!q || type.includes(q) || `add ${type}`.includes(q)) {
                 items.push({
                     icon: TYPE_ICONS[type],
@@ -1809,48 +2104,307 @@ class UIStudio {
     }
 
     // ═══════════════════════════════════════
-    // PREVIEW MODE (stub)
+    // TEMPLATES & UI KITS MODAL
+    // ═══════════════════════════════════════
+    openTemplatesModal(defaultTab = 'kits') {
+        const overlay = document.getElementById('templates-overlay');
+        if (!overlay) return;
+        if (!overlay._backdropBound) {
+            overlay._backdropBound = true;
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) this.closeTemplatesModal();
+            });
+        }
+        this.setTemplateTab(defaultTab || 'kits');
+        overlay.style.display = 'flex';
+    }
+
+    closeTemplatesModal() {
+        const overlay = document.getElementById('templates-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    setTemplateTab(tab) {
+        this._templateTab = tab;
+        document.querySelectorAll('[data-tpl-tab]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tplTab === tab);
+        });
+        const themeRow = document.getElementById('tpl-theme-row');
+        if (themeRow) themeRow.style.display = tab === 'screens' ? 'flex' : 'none';
+        this.renderTemplatesGrid();
+    }
+
+    _renderMiniWireframeHTML(screen, res, accent) {
+        const T = window.RedglitchUITemplates;
+        if (!T || !screen || !Array.isArray(screen.elements)) return '';
+        const w = Number(res?.w) || 800;
+        const h = Number(res?.h) || 450;
+        return screen.elements
+            .filter(el => {
+                const r = T.resolveRect(el.rect, el.anchor, { w, h });
+                return !(el.type === 'panel' && r.w >= w * 0.9 && r.h >= h * 0.9);
+            })
+            .map(el => {
+                const r = T.resolveRect(el.rect, el.anchor, { w, h });
+                const leftPct = (r.left / w) * 100;
+                const topPct = (r.top / h) * 100;
+                const wPct = Math.max(1.5, (r.w / w) * 100);
+                const hPct = Math.max(2, (r.h / h) * 100);
+                const borderCol = el.style?.borderColor && el.style.borderColor !== 'transparent'
+                    ? el.style.borderColor
+                    : (el.type === 'bar' ? (el.props?.fillColor || accent) : accent);
+                const bg = el.type === 'bar'
+                    ? (el.props?.fillColor || accent)
+                    : el.type === 'button'
+                        ? 'rgba(255,255,255,0.12)'
+                        : el.type === 'slot'
+                            ? 'rgba(255,211,106,0.18)'
+                            : el.type === 'label'
+                                ? 'rgba(255,255,255,0.22)'
+                                : 'rgba(255,255,255,0.06)';
+                return `<div style="position:absolute;left:${leftPct.toFixed(1)}%;top:${topPct.toFixed(1)}%;width:${wPct.toFixed(1)}%;height:${hPct.toFixed(1)}%;background:${bg};border:1px solid ${borderCol};box-sizing:border-box;border-radius:1px;"></div>`;
+            }).join('');
+    }
+
+    renderTemplatesGrid() {
+        const grid = document.getElementById('templates-grid');
+        const T = window.RedglitchUITemplates;
+        if (!grid || !T) return;
+        grid.innerHTML = '';
+
+        if (this._templateTab === 'kits') {
+            T.INTERFACE_KITS.forEach(kit => {
+                const sampleDoc = kit.build(this.resolution);
+                const card = document.createElement('div');
+                card.className = 'tpl-card';
+                const swatches = [kit.palette.panel, kit.palette.accent, kit.palette.gold, kit.palette.cyan, kit.palette.green]
+                    .map(c => `<span class="tpl-swatch" style="background:${_escapeHtml(c)}"></span>`).join('');
+                card.innerHTML = `
+                    <div class="tpl-card-head">
+                        <span class="tpl-card-name">${_escapeHtml(kit.name)}</span>
+                        <span class="tpl-badge">${_escapeHtml(kit.badge)}</span>
+                    </div>
+                    <div class="tpl-wireframe">${this._renderMiniWireframeHTML(sampleDoc.screens.main_hud, this.resolution, kit.accent)}</div>
+                    <div class="tpl-desc">${_escapeHtml(kit.description)}</div>
+                    <div class="tpl-swatches">${swatches} <span style="margin-left:auto;font-size:10px;color:#64748b;">${Object.keys(sampleDoc.screens).length} ekran</span></div>
+                `;
+                const actions = document.createElement('div');
+                actions.className = 'tpl-actions';
+                const btnApply = document.createElement('button');
+                btnApply.className = 'tpl-action-btn primary';
+                btnApply.textContent = 'Apply Full UI Kit';
+                btnApply.onclick = () => this.applyFullKit(kit.id);
+                actions.appendChild(btnApply);
+                card.appendChild(actions);
+                grid.appendChild(card);
+            });
+        } else {
+            const themeSel = document.getElementById('tpl-theme-select');
+            const themeId = themeSel?.value || 'redglitch_ops';
+            const theme = T.THEMES[themeId] || T.THEMES.redglitch_ops;
+            T.SCREEN_PRESETS.forEach(preset => {
+                const sampleScreen = preset.build(themeId, this.resolution);
+                const card = document.createElement('div');
+                card.className = 'tpl-card';
+                card.innerHTML = `
+                    <div class="tpl-card-head">
+                        <span class="tpl-card-name">${_escapeHtml(preset.name)}</span>
+                        <span class="tpl-badge">${_escapeHtml(preset.category)}</span>
+                    </div>
+                    <div class="tpl-wireframe">${this._renderMiniWireframeHTML(sampleScreen, this.resolution, theme.accent)}</div>
+                    <div class="tpl-desc">${_escapeHtml(preset.description)}</div>
+                `;
+                const actions = document.createElement('div');
+                actions.className = 'tpl-actions';
+
+                const btnCur = document.createElement('button');
+                btnCur.className = 'tpl-action-btn primary';
+                btnCur.textContent = 'Apply to Current';
+                btnCur.onclick = () => this.applyScreenPreset(preset.id, themeId, false);
+
+                const btnNew = document.createElement('button');
+                btnNew.className = 'tpl-action-btn';
+                btnNew.textContent = 'Add Screen';
+                btnNew.onclick = () => this.applyScreenPreset(preset.id, themeId, true);
+
+                actions.appendChild(btnCur);
+                actions.appendChild(btnNew);
+                card.appendChild(actions);
+                grid.appendChild(card);
+            });
+        }
+    }
+
+    applyFullKit(kitId) {
+        const T = window.RedglitchUITemplates;
+        const kit = T?.INTERFACE_KITS.find(k => k.id === kitId);
+        if (!kit) return;
+        this.pushUndo();
+        const built = kit.build(this.resolution);
+        this.data = {
+            ...this.data,
+            format: 'redglitch-ui',
+            formatVersion: 1,
+            resolution: built.resolution,
+            designSystem: built.designSystem,
+            screens: built.screens
+        };
+        this.selection = [];
+        this.updateScreenList();
+        const nextScreen = this.data.screens[this.activeScreen] ? this.activeScreen : Object.keys(this.data.screens)[0];
+        this.switchScreen(nextScreen);
+        this.markDirty();
+        this.closeTemplatesModal();
+        this._toast(`Applied Kit: ${kit.name}`);
+    }
+
+    applyScreenPreset(presetId, themeId, createNew = false) {
+        const T = window.RedglitchUITemplates;
+        const preset = T?.SCREEN_PRESETS.find(p => p.id === presetId);
+        if (!preset) return;
+        this.pushUndo();
+        const screenObj = preset.build(themeId, this.resolution);
+        let targetId = this.activeScreen || preset.id;
+        if (createNew) {
+            targetId = preset.id;
+            let idx = 2;
+            while (this.data.screens[targetId]) {
+                targetId = `${preset.id}_${idx++}`;
+            }
+        }
+        this.data.screens[targetId] = screenObj;
+        this.selection = [];
+        this.updateScreenList();
+        this.switchScreen(targetId);
+        this.markDirty();
+        this.closeTemplatesModal();
+        this._toast(`${createNew ? 'Added' : 'Applied'} ${preset.name} -> ${targetId}`);
+    }
+
+    _toast(msg) {
+        const el = document.createElement('div');
+        el.className = 'save-indicator';
+        el.innerHTML = `<i class="fas fa-check"></i> ${_escapeHtml(msg)}`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 2500);
+    }
+
+    // ═══════════════════════════════════════
+    // PREVIEW MODE (Live UIRenderer)
     // ═══════════════════════════════════════
     togglePreview() {
-        // Functional preview: overlay modal showing current screen, elements clickable.
-        // Button elements with script `navigate:<screen>` switch screen.
         let overlay = document.getElementById('menu-preview-overlay');
-        if (overlay) { overlay.remove(); this._previewOn = false; return; }
+        if (overlay) {
+            if (typeof this._closePreview === 'function') this._closePreview();
+            else { overlay.remove(); this._previewOn = false; }
+            return;
+        }
         const screens = this.data?.screens || {};
         const ids = Object.keys(screens);
         if (!ids.length) { alert('No screens to preview.'); return; }
-        this._previewScreen = ids[0];
+        this._previewScreen = (this.activeScreen && screens[this.activeScreen]) ? this.activeScreen : ids[0];
+
+        const maxW = Math.max(360, window.innerWidth * 0.86);
+        const maxH = Math.max(240, window.innerHeight * 0.78);
+        const scale = Math.min(maxW / this.resolution.w, maxH / this.resolution.h, 1.15);
+        const boxW = Math.round(this.resolution.w * scale);
+        const boxH = Math.round(this.resolution.h * scale);
+
         overlay = document.createElement('div');
         overlay.id = 'menu-preview-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column;';
-        const stage = document.createElement('div');
-        stage.style.cssText = 'position:relative;width:640px;height:360px;background:#0a0a14;border:2px solid #444;overflow:hidden;';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(4,6,12,0.92);z-index:10060;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;';
+
         const bar = document.createElement('div');
-        bar.style.cssText = 'color:#fff;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;width:640px;';
-        bar.innerHTML = '<span>Preview — click buttons to navigate. Esc/× to exit.</span><button id="menu-preview-close" style="cursor:pointer">×</button>';
-        overlay.appendChild(bar); overlay.appendChild(stage);
+        bar.style.cssText = `width:${boxW}px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#e2e8f0;font-size:12px;`;
+        const pillsWrap = document.createElement('div');
+        pillsWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+        const closeBtn = document.createElement('button');
+        closeBtn.id = 'menu-preview-close';
+        closeBtn.textContent = 'ESC / CLOSE';
+        closeBtn.style.cssText = 'background:#1e293b;color:#f8fafc;border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700;';
+        bar.appendChild(pillsWrap);
+        bar.appendChild(closeBtn);
+
+        const stageWrap = document.createElement('div');
+        stageWrap.style.cssText = `position:relative;width:${boxW}px;height:${boxH}px;background:radial-gradient(circle at 50% 35%, #162033 0%, #070a12 75%);border:1px solid rgba(73,227,255,0.4);border-radius:4px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.8);`;
+        const stage = document.createElement('div');
+        stage.className = 'preview-stage';
+        stage.style.cssText = `position:relative;width:${this.resolution.w}px;height:${this.resolution.h}px;transform:scale(${scale});transform-origin:top left;font-family:'VT323',monospace;image-rendering:pixelated;`;
+        stageWrap.appendChild(stage);
+
+        overlay.appendChild(bar);
+        overlay.appendChild(stageWrap);
         document.body.appendChild(overlay);
         this._previewOn = true;
-        const render = () => {
-            stage.innerHTML = '';
-            const screen = screens[this._previewScreen] || { elements: [] };
-            (screen.elements || []).forEach(el => {
-                const r = el.rect || { x: 50, y: 50, w: 120, h: 40 };
-                const s = el.style || {};
-                const div = document.createElement('div');
-                div.textContent = el.text || el.id || el.type;
-                div.style.cssText = `position:absolute;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;background:${s.backgroundColor||'#222'};color:${s.color||'#fff'};border:${s.borderWidth||1}px solid ${s.borderColor||'#555'};font-size:${s.fontSize||14}px;text-align:center;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;`;
-                if (el.script && el.script.startsWith('navigate:')) {
-                    div.title = '→ ' + el.script.slice(9);
-                    div.onclick = () => { const tgt = el.script.slice(9); if (screens[tgt]) { this._previewScreen = tgt; render(); } };
-                }
-                stage.appendChild(div);
-            });
+
+        const sampleState = {
+            player: { level: 7, hp: 74, maxHp: 100, mana: 52, maxMana: 100, stamina: 84, maxStamina: 100, coins: 1340, xp: 4820, inventory: [null, null, null, null, null, null, null, null] },
+            settings: { volume: 80 },
+            gameTimeFormatted: '04:21',
+            USERNAME: 'DEV_TESTER'
         };
-        render();
-        overlay.querySelector('#menu-preview-close').onclick = () => { overlay.remove(); this._previewOn=false; };
-        overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); this._previewOn=false; } };
-        window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.parentNode) { overlay.remove(); this._previewOn=false; } }, { once: true });
+
+        const renderPreview = () => {
+            pillsWrap.innerHTML = '';
+            ids.forEach(sid => {
+                const pill = document.createElement('button');
+                pill.textContent = sid;
+                const active = sid === this._previewScreen;
+                pill.style.cssText = `padding:4px 9px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ${active ? '#22d3ee' : 'rgba(255,255,255,0.14)'};background:${active ? 'rgba(34,211,238,0.18)' : '#0f172a'};color:${active ? '#67e8f9' : '#94a3b8'};`;
+                pill.onclick = () => { this._previewScreen = sid; renderPreview(); };
+                pillsWrap.appendChild(pill);
+            });
+
+            stage.innerHTML = '';
+            const activeSc = screens[this._previewScreen] || { elements: [] };
+            const ctx = {
+                resolution: this.resolution,
+                ignoreConditions: true,
+                player: sampleState.player,
+                variables: sampleState,
+                state: sampleState,
+                onClick: (script) => {
+                    if (script && script.startsWith('navigate:')) {
+                        const tgt = script.slice(9).trim();
+                        if (screens[tgt]) {
+                            this._previewScreen = tgt;
+                            renderPreview();
+                        }
+                    } else if (script === 'RESUME_GAME' || script === 'CLOSE_MENU') {
+                        if (screens.main_hud) {
+                            this._previewScreen = 'main_hud';
+                            renderPreview();
+                        }
+                    }
+                }
+            };
+            if (window.UIRenderer) {
+                if (activeSc.background === true && this._previewScreen !== 'main_hud' && screens.main_hud) {
+                    window.UIRenderer.render(screens.main_hud, stage, ctx);
+                }
+                window.UIRenderer.render(activeSc, stage, ctx);
+            }
+        };
+        renderPreview();
+
+        const onEscape = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                closePreview();
+            }
+        };
+        const closePreview = () => {
+            if (overlay.parentNode) overlay.remove();
+            this._previewOn = false;
+            this._closePreview = null;
+            window.removeEventListener('keydown', onEscape, true);
+        };
+        this._closePreview = closePreview;
+
+        closeBtn.onclick = closePreview;
+        overlay.onclick = (e) => { if (e.target === overlay) closePreview(); };
+        window.addEventListener('keydown', onEscape, true);
     }
 }
 

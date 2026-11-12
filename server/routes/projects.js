@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const { spawn } = require('child_process');
 const safeFs = require('../utils/safeFs');
+const projectService = require('../services/projectService');
 
 const PROJECTS_ROOT = path.join(__dirname, '..', '..', 'projects');
 const createLocks = new Map(); // per-project mutex for atomic create (F-18)
@@ -301,6 +302,18 @@ router.get('/projects', async (req, res) => {
             } catch(err) {
                 // No config or error reading it
             }
+            if (!meta.lastModified || Number.isNaN(Date.parse(meta.lastModified))) {
+                if (meta.created && !Number.isNaN(Date.parse(meta.created))) {
+                    meta.lastModified = meta.created;
+                } else {
+                    try {
+                        const st = await fs.stat(projectPath);
+                        meta.lastModified = st.mtime.toISOString();
+                    } catch {
+                        meta.lastModified = new Date().toISOString();
+                    }
+                }
+            }
             return meta;
         }));
 
@@ -423,6 +436,10 @@ router.delete('/projects/:name', async (req, res) => {
 
     try {
         await fs.rm(projectPath, { recursive: true, force: true });
+        const svc = req.projectService || projectService;
+        if (svc && path.resolve(svc.getActiveProject()) === path.resolve(projectPath)) {
+            svc.setActiveProject(null);
+        }
         res.json({ success: true });
     } catch (err) {
         console.error("Delete project error:", err);
@@ -464,8 +481,9 @@ router.post('/projects/delete', async (req, res) => {
 
     try {
         await fs.rm(projectPath, { recursive: true, force: true });
-        if (req.projectService && req.projectService.getActiveProject() === projectPath) {
-            req.projectService.setActiveProject(null);
+        const svc = req.projectService || projectService;
+        if (svc && path.resolve(svc.getActiveProject()) === path.resolve(projectPath)) {
+            svc.setActiveProject(null);
         }
         res.json({ success: true });
     } catch (err) {
@@ -478,7 +496,8 @@ router.post('/projects/delete', async (req, res) => {
 router.post('/projects/explore', async (req, res) => {
     const { name } = req.body;
     const rootDir = path.resolve(__dirname, '..', '..');
-    let targetPath = req.projectService ? req.projectService.getActiveProject() : rootDir;
+    const svc = req.projectService || projectService;
+    let targetPath = svc ? svc.getActiveProject() : rootDir;
     
     if (name) {
         const resolved = resolveProjectPath(name);
@@ -502,24 +521,43 @@ router.post('/projects/explore', async (req, res) => {
 });
 
 // GET /api/projects/current - Get current active project
-router.get('/projects/current', (req, res) => {
-    const activeProject = req.projectService.getActiveProject();
-    const isRoot = req.projectService.isRootProject();
+router.get('/projects/current', async (req, res) => {
+    const svc = req.projectService || projectService;
+    const activeProject = svc.getActiveProject();
+    const isRoot = svc.isRootProject();
     const projectName = isRoot ? 'ROOT' : path.basename(activeProject);
     
-    res.json({
+    const response = {
         success: true,
         name: projectName,
         path: activeProject,
         isRoot: isRoot
-    });
+    };
+
+    if (!isRoot) {
+        try {
+            const raw = await fs.readFile(path.join(activeProject, 'redglitch.json'), 'utf8');
+            const cfg = JSON.parse(raw);
+            if (cfg && typeof cfg === 'object') {
+                if (typeof cfg.author === 'string') response.author = cfg.author;
+                if (typeof cfg.version === 'string') response.version = cfg.version;
+                if (typeof cfg.engineType === 'string') response.engineType = cfg.engineType;
+                if (typeof cfg.description === 'string') response.description = cfg.description;
+            }
+        } catch {
+            // redglitch.json is optional (e.g. Default Project)
+        }
+    }
+
+    res.json(response);
 });
 
 // POST /api/projects/switch - Switch active project
 router.post('/projects/switch', async (req, res) => {
     const { name } = req.body;
+    const svc = req.projectService || projectService;
     if (!name) {
-        req.projectService.setActiveProject(null);
+        svc.setActiveProject(null);
         const websocket = req.app?.locals?.websocket;
         if (websocket && typeof websocket.startFileWatcher === 'function') {
             websocket.startFileWatcher();
@@ -527,7 +565,7 @@ router.post('/projects/switch', async (req, res) => {
         return res.json({ success: true, active: 'ROOT' });
     }
     const safeName = sanitizeProjectName(name);
-    req.projectService.setActiveProject(safeName);
+    svc.setActiveProject(safeName);
     const websocket = req.app?.locals?.websocket;
     if (websocket && typeof websocket.startFileWatcher === 'function') {
         websocket.startFileWatcher();

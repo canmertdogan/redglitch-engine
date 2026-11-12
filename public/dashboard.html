@@ -11,10 +11,10 @@
     <style>
         :root {
             --bg-deep: #050508;
-            --bg-main: rgba(12, 12, 20, 0.82);
-            --bg-ui: rgba(20, 18, 30, 0.92);
-            --bg-card: rgba(12, 12, 20, 0.8);
-            --bg-card-hover: rgba(20, 18, 30, 0.95);
+            --bg-main: rgba(12, 12, 20, 0.94);
+            --bg-ui: rgba(20, 18, 30, 0.96);
+            --bg-card: rgba(12, 12, 20, 0.92);
+            --bg-card-hover: rgba(20, 18, 30, 0.98);
             --accent: #ff1e27;
             --accent-cyan: #ff1e27;
             --accent-glow: rgba(255, 30, 39, 0.35);
@@ -25,7 +25,7 @@
             --border: rgba(255, 255, 255, 0.05);
             --border-accent: rgba(255, 30, 39, 0.15);
             --edge-border: 1px solid rgba(255, 255, 255, 0.08);
-            --glass-blur: blur(12px);
+            --glass-blur: none;
             --font-pixel: 'VT323', monospace;
             --danger: #e74c3c;
             --green: #2ecc71;
@@ -64,7 +64,6 @@
                 linear-gradient(rgba(255, 30, 39, 0.025) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255, 30, 39, 0.025) 1px, transparent 1px);
             background-size: 60px 60px;
-            animation: grid-drift 50s linear infinite;
             pointer-events: none;
         }
 
@@ -78,11 +77,6 @@
             z-index: 0;
             background: radial-gradient(ellipse at 50% 0%, rgba(255, 30, 39, 0.06) 0%, transparent 70%);
             pointer-events: none;
-        }
-
-        @keyframes grid-drift {
-            0% { background-position: 0 0; }
-            100% { background-position: 60px 60px; }
         }
 
         /* --- TITLEBAR --- */
@@ -1706,7 +1700,7 @@
         <div id="view-docs" class="view-section">
             <h1>Documentation</h1>
             <div
-                style="max-width: 800px; margin: 20px auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px);">
+                style="max-width: 800px; margin: 20px auto; background: rgba(10, 14, 20, 0.94); border: 1px solid #1f2b42; padding: 30px;">
                 <h2 style="color:var(--accent); margin-top:0;">Welcome to Redglitch Engine</h2>
                 <p style="line-height:1.8; color:#ccc;">A powerful multi-platform game development studio supporting
                     RPG, platformer, and isometric games.</p>
@@ -1724,7 +1718,7 @@
             <h1><i class="fas fa-download"></i> Updates</h1>
             <div style="max-width: 800px; margin: 20px auto;">
                 <div
-                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid var(--accent); padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                    style="background: rgba(10, 14, 20, 0.94); border: 1px solid var(--accent); padding: 20px; margin-bottom: 15px;">
                     <h3 style="color:var(--accent); margin:0 0 10px 0;">v7.0.1 - Latest</h3>
                     <ul style="color:#ccc; line-height:1.8;">
                         <li>✨ 4-Step Project Wizard with engine selection</li>
@@ -1735,7 +1729,7 @@
                     </ul>
                 </div>
                 <div
-                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);">
+                    style="background: rgba(10, 14, 20, 0.94); border: 1px solid #1f2b42; padding: 20px; margin-bottom: 15px;">
                     <h3 style="color:#888; margin:0 0 10px 0;">v7.0.0</h3>
                     <ul style="color:#666; line-height:1.8;">
                         <li>🚀 Multi-platform support (Desktop, Web, Android)</li>
@@ -1794,7 +1788,7 @@
             <h1><i class="fas fa-images"></i> Asset Library</h1>
             <div style="max-width: 900px; margin: 20px auto;">
                 <div
-                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; text-align: center; backdrop-filter: blur(10px);">
+                    style="background: rgba(10, 14, 20, 0.94); border: 1px solid #1f2b42; padding: 30px; text-align: center;">
                     <i class="fas fa-palette" style="font-size:64px; color:#333; margin-bottom:20px;"></i>
                     <h2 style="color:var(--accent); margin-bottom:15px;">Asset Library</h2>
                     <p style="color:#888; line-height:1.8; margin-bottom:25px;">
@@ -1829,7 +1823,7 @@
             <h1><i class="fas fa-store"></i> Marketplace</h1>
             <div style="max-width: 900px; margin: 20px auto;">
                 <div
-                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 40px; text-align: center; backdrop-filter: blur(10px);">
+                    style="background: rgba(10, 14, 20, 0.94); border: 1px solid #1f2b42; padding: 40px; text-align: center;">
                     <i class="fas fa-shopping-bag" style="font-size:64px; color:var(--accent); margin-bottom:20px;"></i>
                     <h2 style="color:var(--accent); margin-bottom:15px;">Asset Marketplace</h2>
                     <p style="color:#888; line-height:1.8; max-width:600px; margin:0 auto 25px;">
@@ -1892,7 +1886,7 @@
             <h1><i class="fas fa-users"></i> Community</h1>
             <div style="max-width: 800px; margin: 20px auto;">
                 <div
-                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 30px; backdrop-filter: blur(10px); margin-bottom:20px;">
+                    style="background: rgba(10, 14, 20, 0.94); border: 1px solid #1f2b42; padding: 30px; margin-bottom:20px;">
                     <h2 style="color:var(--accent); margin-top:0;">Join the Redglitch Community</h2>
                     <p style="color:#888; line-height:1.8; margin-bottom:25px;">
                         Connect with other game developers, share your projects, get help, and collaborate.
@@ -1917,7 +1911,7 @@
                     </div>
                 </div>
                 <div
-                    style="background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
+                    style="background: rgba(10, 14, 20, 0.94); border: 1px solid #1f2b42; padding: 25px;">
                     <h3 style="color:var(--accent); margin-top:0;">Latest Community Projects</h3>
                     <div style="color:#666; text-align:center; padding:30px;">
                         <i class="fas fa-gamepad" style="font-size:48px; opacity:0.3; margin-bottom:15px;"></i><br>
@@ -1930,7 +1924,7 @@
         <div id="view-settings" class="view-section">
             <h1>Settings</h1>
             <div
-                style="max-width: 600px; margin: 0 auto; background: rgba(10, 14, 20, 0.8); border: 1px solid #1f2b42; padding: 25px; backdrop-filter: blur(10px);">
+                style="max-width: 600px; margin: 0 auto; background: rgba(10, 14, 20, 0.94); border: 1px solid #1f2b42; padding: 25px;">
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; color: var(--accent); margin-bottom: 8px;">Developer Name</label>
                     <input type="text" id="dev-name-input"

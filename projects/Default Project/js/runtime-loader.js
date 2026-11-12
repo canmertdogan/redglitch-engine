@@ -108,7 +108,14 @@
             'engines/rpg-topdown/main.js'
         ],
         'iso-pixel': [
-            'engines/rpg-topdown/main.js', // For AtmosphereSystem and shared logic
+            'shared/SoundManager.js',
+            'engines/shared/GameHUD.js',
+            'strategies/IsoStrategy.js',
+            'engines/rpg-topdown/sprites.js',
+            'engines/iso-pixel/fxSystem.js',
+            'engines/iso-pixel/shaderSystem.js',
+            'engines/iso-pixel/IsoCombatSystem.js',
+            'engines/iso-pixel/IsoEntity.js',
             'engines/iso-pixel/renderer.js',
             'engines/iso-pixel/main.js'
         ],

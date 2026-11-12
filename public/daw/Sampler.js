@@ -144,41 +144,80 @@ class Sampler extends Synthesizer {
         };
     }
     
-    playDrumHit(midiNote, velocity = 1.0) {
+    playDrumHit(midiNote, velocity = 1.0, startTime = null, duration = null) {
         const sample = this.getSampleForNote(midiNote);
         if (!sample || !sample.buffer) return null;
-        
+
+        const time = startTime ?? this.ctx.currentTime;
         const source = this.ctx.createBufferSource();
         source.buffer = sample.buffer;
-        
+
+        let filterNode = null;
+        if (this.params.filterEnabled) {
+            filterNode = this.ctx.createBiquadFilter();
+            filterNode.type = this.params.filterType;
+            filterNode.frequency.value = this.params.filterFreq;
+            filterNode.Q.value = this.params.filterQ;
+        }
+
         const vca = this.ctx.createGain();
-        vca.gain.value = velocity * this.params.volume;
-        
-        source.connect(vca);
+        if (duration !== null && duration !== undefined) {
+            const effDur = Math.min(Math.max(0.01, duration), sample.buffer.duration);
+            this.applyEnvelope(vca, velocity, time, effDur);
+        } else {
+            vca.gain.setValueAtTime(velocity * this.params.volume, time);
+        }
+
+        if (filterNode) {
+            source.connect(filterNode);
+            filterNode.connect(vca);
+        } else {
+            source.connect(vca);
+        }
         vca.connect(this.output);
-        source.start(this.ctx.currentTime);
-        
+
+        source.onended = () => {
+            try { source.disconnect(); } catch {}
+            if (filterNode) { try { filterNode.disconnect(); } catch {} }
+            try { vca.disconnect(); } catch {}
+        };
+
+        source.start(time);
+        if (duration !== null && duration !== undefined) {
+            const effDur = Math.min(Math.max(0.01, duration), sample.buffer.duration);
+            try { source.stop(time + effDur + (this.params.release || 0)); } catch {}
+        }
+
         return {
             oscillator: source,
+            source,
+            filter: filterNode,
             gain: vca
         };
     }
     
     playNote(frequency, velocity = 1.0, duration = 1.0, startTime = null) {
-        const time = startTime || this.ctx.currentTime;
+        const time = startTime ?? this.ctx.currentTime;
         const midiNote = Math.round(12 * Math.log2(frequency / 440) + 69);
         
         const sample = this.getSampleForNote(midiNote);
         if (!sample) return null;
         
         if (this.sampleMap.has(midiNote)) {
-            const voice = this.playDrumHit(midiNote, velocity);
+            if (this.voices.size >= this.maxVoices) {
+                const oldestKey = this.voices.keys().next().value;
+                this.stopVoice(oldestKey);
+            }
+            const voice = this.playDrumHit(midiNote, velocity, time, duration);
+            if (!voice) return null;
             const voiceId = Date.now() + Math.random();
             this.voices.set(voiceId, voice);
-            
+
+            const delay = Math.max(0, time - this.ctx.currentTime);
+            const effDur = Math.min(duration, sample.buffer.duration);
             setTimeout(() => {
-                this.voices.delete(voiceId);
-            }, sample.buffer.duration * 1000 + 100);
+                this.stopVoice(voiceId);
+            }, (delay + effDur + (this.params.release || 0)) * 1000 + 100);
             
             return voiceId;
         }

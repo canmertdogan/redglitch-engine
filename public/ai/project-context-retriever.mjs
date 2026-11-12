@@ -38,7 +38,8 @@ export class ProjectContextRetriever {
         ]);
         if (!projectResponse.ok || !treeResponse.ok) return '';
         const project = await projectResponse.json();
-        const tree = await treeResponse.json();
+        const rawTree = await treeResponse.json();
+        const tree = Array.isArray(rawTree) ? rawTree : (Array.isArray(rawTree?.tree) ? rawTree.tree : []);
         const projectRoot = tree.find((node) => node.name === `Project: ${project.name}`);
         if (!projectRoot) return '';
 

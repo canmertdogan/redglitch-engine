@@ -164,6 +164,24 @@ class PlatformerGame {
         
         this.resize();
 
+        // Fallback playtest auto-boot if launched with ?playtest=true without an external caller invoking loadLevelFromData
+        if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('playtest') === 'true') {
+                setTimeout(() => {
+                    if (!this.map && !this.isRunning) {
+                        const raw = sessionStorage.getItem('redglitch_playtest_data');
+                        if (raw) {
+                            try {
+                                this.loadLevelFromData(JSON.parse(raw));
+                            } catch (e) {
+                                console.warn('[PlatformerEngine] Failed to parse playtest data:', e);
+                            }
+                        }
+                    }
+                }, 0);
+            }
+        }
     }
 
     async loadLevel(levelId, levelPath = null) {
@@ -663,6 +681,9 @@ class PlatformerGame {
     }
 
     restartLevel() {
+        this.levelComplete = false;
+        const overlay = document.getElementById('platformer-level-complete-overlay');
+        if (overlay) overlay.remove();
         this.player.hp = this.player.maxHp || 100;
         this.player.coins = 0;
         this.respawn();
@@ -690,11 +711,53 @@ class PlatformerGame {
     }
 
     completeLevel() {
+        if (this.levelComplete) return;
         this.levelComplete = true;
-        if(this.onLevelComplete) {
+        if (this.onLevelComplete) {
             setTimeout(() => {
                 this.onLevelComplete({ levelId: this.currentLevelId, coinsCollected: this.player.coins });
             }, 1000);
+            return;
+        }
+
+        // Standalone playtest completion overlay
+        if (typeof document === 'undefined' || !document.body) return;
+        let overlay = document.getElementById('platformer-level-complete-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'platformer-level-complete-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;font-family:monospace;gap:16px;';
+
+            const title = document.createElement('div');
+            title.style.cssText = 'font-size:2.4rem;font-weight:bold;color:#2ecc71;letter-spacing:2px;';
+            title.textContent = 'LEVEL COMPLETE!';
+
+            const stats = document.createElement('div');
+            stats.style.cssText = 'font-size:1.1rem;color:#f1c40f;';
+            stats.textContent = `Coins Collected: ${this.player?.coins || 0}`;
+
+            const btnRow = document.createElement('div');
+            btnRow.style.cssText = 'display:flex;gap:12px;margin-top:8px;';
+
+            const replayBtn = document.createElement('button');
+            replayBtn.textContent = 'PLAY AGAIN';
+            replayBtn.style.cssText = 'padding:10px 20px;background:#2ecc71;color:#000;border:none;font-weight:bold;cursor:pointer;font-family:inherit;';
+            replayBtn.onclick = () => this.restartLevel();
+
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = 'CLOSE';
+            closeBtn.style.cssText = 'padding:10px 20px;background:#333;color:#fff;border:1px solid #666;font-weight:bold;cursor:pointer;font-family:inherit;';
+            closeBtn.onclick = () => {
+                overlay.remove();
+                try { window.close(); } catch (_) {}
+            };
+
+            btnRow.appendChild(replayBtn);
+            btnRow.appendChild(closeBtn);
+            overlay.appendChild(title);
+            overlay.appendChild(stats);
+            overlay.appendChild(btnRow);
+            document.body.appendChild(overlay);
         }
     }
 

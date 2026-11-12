@@ -168,3 +168,26 @@ test('MultiProviderAdapter testConnection measures latency and verifies connecti
     assert.equal(typeof probe.latencyMs, 'number');
 });
 
+test('MultiProviderAdapter uses max_completion_tokens and omits temperature/top_p for OpenAI o1/o3 models', async () => {
+    const { MultiProviderAdapter } = await import('./openrouter-adapter.js');
+
+    for (const model of ['o1', 'o3-mini', 'o3']) {
+        mockFetch(okJson({ choices: [{ message: { content: 'reasoning reply' } }], model }));
+        const adapter = new MultiProviderAdapter({
+            provider: 'openai',
+            apiKey: 'sk-test',
+            model,
+            temperature: 0.7,
+            topP: 0.9,
+            maxTokens: 512,
+        });
+        const res = await adapter.chat([{ role: 'user', content: 'reason carefully' }]);
+        assert.equal(res.text, 'reasoning reply');
+        const body = JSON.parse(captured.opts.body);
+        assert.equal(body.max_completion_tokens, 512);
+        assert.equal('max_tokens' in body, false);
+        assert.equal('temperature' in body, false);
+        assert.equal('top_p' in body, false);
+    }
+});
+

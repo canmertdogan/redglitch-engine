@@ -282,9 +282,47 @@ window.newBrain = function() {
     if (name) window.open(`behavior_editor.html?script=${name}`, '_blank');
 }
 
-function loop() {
-    updatePreviewAnimation();
-    requestAnimationFrame(loop);
+window.__studioPaused = false;
+var _npcLoopRaf = null;
+var _lastNpcFrame = -50;
+function scheduleNpcLoop() {
+    if (!_npcLoopRaf && !window.__studioPaused && !document.hidden) {
+        _npcLoopRaf = requestAnimationFrame(loop);
+    }
+}
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'studio:visibility') {
+        window.__studioPaused = !e.data.visible;
+        if (e.data.visible) {
+            _lastNpcFrame = -50;
+            scheduleNpcLoop();
+        } else if (_npcLoopRaf) {
+            cancelAnimationFrame(_npcLoopRaf);
+            _npcLoopRaf = null;
+        }
+    }
+});
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        if (_npcLoopRaf) {
+            cancelAnimationFrame(_npcLoopRaf);
+            _npcLoopRaf = null;
+        }
+    } else {
+        _lastNpcFrame = -50;
+        scheduleNpcLoop();
+    }
+});
+
+function loop(ts) {
+    _npcLoopRaf = null;
+    if (window.__studioPaused || document.hidden) return;
+    const now = ts || performance.now();
+    if (now - _lastNpcFrame >= 33) {
+        _lastNpcFrame = now;
+        updatePreviewAnimation();
+    }
+    scheduleNpcLoop();
 }
 
 function refreshList() {

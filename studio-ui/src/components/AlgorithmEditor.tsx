@@ -70,29 +70,32 @@ const THEME = {
 };
 
 const NODE_WIDTH = 200;
-const HEADER_H = 30;
+const HEADER_H = 26;
 const PORT_ROW_H = 22;
-const PORT_PAD_TOP = 10;
+const PORT_PAD_TOP = 8;
 
 function uid(prefix: string): string {
     return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
 function nodeBodyHeight(def: NodeDef | undefined): number {
-    if (!def) return HEADER_H + PORT_ROW_H;
-    const rows = Math.max(def.inputs?.length ?? 0, def.outputs?.length ?? 0, 1);
-    return HEADER_H + PORT_PAD_TOP + rows * PORT_ROW_H + 8;
+    if (!def) return HEADER_H + PORT_PAD_TOP * 2 + PORT_ROW_H;
+    const rows = Math.max((def.inputs?.length ?? 0) + (def.outputs?.length ?? 0), 1);
+    return HEADER_H + PORT_PAD_TOP * 2 + rows * PORT_ROW_H;
 }
 
 function portPosition(node: LogicNode, def: NodeDef | undefined, side: 'in' | 'out', index: number): { x: number; y: number } {
-    const y = node.y + HEADER_H + PORT_PAD_TOP + index * PORT_ROW_H + PORT_ROW_H / 2;
+    const rowIndex = side === 'out' ? (def?.inputs?.length ?? 0) + index : index;
+    const y = node.y + HEADER_H + PORT_PAD_TOP + rowIndex * PORT_ROW_H + PORT_ROW_H / 2;
     return { x: side === 'in' ? node.x : node.x + NODE_WIDTH, y };
 }
 
-function inferInputType(current: any, field: { type?: string }): 'checkbox' | 'number' | 'color' | 'text' {
+function inferInputType(current: any, field: { type?: string }, defaultVal?: any): 'checkbox' | 'number' | 'color' | 'dropdown' | 'text' {
+    if (field.type === 'dropdown') return 'dropdown';
     if (field.type === 'color') return 'color';
-    if (typeof current === 'boolean') return 'checkbox';
-    if (typeof current === 'number') return 'number';
+    if (field.type === 'number') return 'number';
+    if (typeof defaultVal === 'boolean' || typeof current === 'boolean') return 'checkbox';
+    if (typeof defaultVal === 'number' || typeof current === 'number') return 'number';
     return 'text';
 }
 
@@ -142,7 +145,7 @@ interface MarqueeState {
 }
 
 const AlgorithmEditor: React.FC = () => {
-    const { isReady } = useStudio();
+    const { isReady, eventBus } = useStudio();
 
     const [graph, setGraph] = useState<LogicGraph>(demoGraph);
     const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -165,6 +168,7 @@ const AlgorithmEditor: React.FC = () => {
 
     const [scriptName, setScriptName] = useState('untitled');
     const [scriptList, setScriptList] = useState<string[]>([]);
+    const [projectSources, setProjectSources] = useState<{ sounds: string[]; prefabs: string[] }>({ sounds: [], prefabs: [] });
     const [statusLine, setStatusLine] = useState('READY');
     const [isSaving, setIsSaving] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
@@ -217,6 +221,50 @@ const AlgorithmEditor: React.FC = () => {
         }
     }, []);
 
+    const refreshProjectSources = useCallback(async () => {
+        try {
+            const sounds = new Set<string>();
+            const prefabs = new Set<string>();
+
+            const [assetsRes, npcsRes, enemiesRes, defsRes] = await Promise.all([
+                fetch('/api/assets').catch(() => null),
+                fetch('/api/npcs').catch(() => null),
+                fetch('/api/enemies').catch(() => null),
+                fetch('/api/ide/list?dir=dunyalar/definitions').catch(() => null),
+            ]);
+
+            if (assetsRes?.ok) {
+                const payload = await assetsRes.json();
+                const list = Array.isArray(payload) ? payload : (payload?.assets || []);
+                list.forEach((a: any) => {
+                    if (a?.type === 'audio' && a?.name) sounds.add(String(a.name));
+                });
+            }
+            if (npcsRes?.ok) {
+                const npcs = await npcsRes.json();
+                if (Array.isArray(npcs)) npcs.forEach((n: any) => { if (n?.id) prefabs.add(String(n.id)); });
+            }
+            if (enemiesRes?.ok) {
+                const enemies = await enemiesRes.json();
+                if (Array.isArray(enemies)) enemies.forEach((e: any) => { if (e?.id) prefabs.add(String(e.id)); });
+            }
+            if (defsRes?.ok) {
+                const files = await defsRes.json();
+                const ignored = new Set(['items.json', 'quests.json', 'enemies.json', 'npcs.json', 'dialogues.json', 'skills.json', 'achievements.json', 'variables.json', 'ui.json', 'campaign.json', 'locales.json', 'music.json']);
+                if (Array.isArray(files)) {
+                    files.forEach((f: any) => {
+                        if (!f.isDirectory && typeof f.name === 'string' && f.name.endsWith('.json') && !ignored.has(f.name)) {
+                            prefabs.add(f.name.replace(/\.json$/i, ''));
+                        }
+                    });
+                }
+            }
+            setProjectSources({ sounds: Array.from(sounds).sort(), prefabs: Array.from(prefabs).sort() });
+        } catch {
+            /* best-effort dropdown population */
+        }
+    }, []);
+
     const loadScript = useCallback(async (name: string) => {
         try {
             setStatusLine('LOADING...');
@@ -224,7 +272,12 @@ const AlgorithmEditor: React.FC = () => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             const loaded: LogicGraph = {
-                nodes: Array.isArray(data.nodes) ? data.nodes : [],
+                nodes: Array.isArray(data.nodes)
+                    ? data.nodes.map((n: any) => ({
+                        ...n,
+                        data: { ...(NODE_LIBRARY[n.type]?.defaults || {}), ...(n.data || {}) }
+                    }))
+                    : [],
                 wires: Array.isArray(data.wires) ? data.wires : [],
                 vars: Array.isArray(data.vars) ? data.vars : []
             };
@@ -243,42 +296,83 @@ const AlgorithmEditor: React.FC = () => {
 
     useEffect(() => {
         if (!isReady) return;
-        refreshScriptList();
-    }, [isReady, refreshScriptList]);
+        void refreshScriptList();
+        void refreshProjectSources();
+    }, [isReady, refreshScriptList, refreshProjectSources]);
 
-    // ─── Save ───────────────────────────────────────────────────────────────
+    // ─── Save / New / Delete ────────────────────────────────────────────────
 
-    const saveScript = useCallback(async () => {
+    const saveScript = useCallback(async (interactive = true) => {
+        const cleanName = scriptName.trim();
+        if (!cleanName || !/^[a-zA-Z0-9_-]+$/.test(cleanName)) {
+            if (interactive) {
+                setStatusLine('INVALID SCRIPT NAME (USE a-z, 0-9, _, -)');
+            }
+            return;
+        }
         setIsSaving(true);
         setStatusLine('SAVING...');
         try {
             const res = await fetch('/api/logic/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: scriptName, json: JSON.stringify(graph, null, 2) })
+                body: JSON.stringify({ name: cleanName, json: JSON.stringify(graph, null, 2) })
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             setIsDirty(false);
             setStatusLine('SAVED');
-            refreshScriptList();
+            eventBus?.emit('algorithm:saved', { scriptId: cleanName });
+            eventBus?.emit('system:script:update', { scriptId: cleanName });
+            void refreshScriptList();
         } catch (err) {
             console.error('[NodeLogic] save failed', err);
             setStatusLine('SAVE_FAILED');
         } finally {
             setIsSaving(false);
         }
-    }, [graph, scriptName, refreshScriptList]);
+    }, [graph, scriptName, refreshScriptList, eventBus]);
 
     const newScript = useCallback(() => {
+        const input = prompt('Enter new script name:', 'new_script');
+        if (input === null) return;
+        const cleanName = input.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'untitled';
         const fresh = emptyGraph();
         setGraph(fresh);
         setHistory([fresh]);
         setHistoryIndex(0);
         setSelected(new Set());
-        setScriptName('untitled');
+        setScriptName(cleanName);
         setIsDirty(false);
-        setStatusLine('NEW SCRIPT');
+        setStatusLine(`NEW SCRIPT: ${cleanName}`);
     }, []);
+
+    const deleteScript = useCallback(async (targetName = scriptName) => {
+        const cleanName = targetName.trim();
+        if (!cleanName || !/^[a-zA-Z0-9_-]+$/.test(cleanName)) {
+            setStatusLine('INVALID SCRIPT NAME');
+            return;
+        }
+        if (!confirm(`Delete logic script "${cleanName}"?`)) return;
+        setStatusLine('DELETING...');
+        try {
+            const res = await fetch(`/api/logic/${encodeURIComponent(cleanName)}`, { method: 'DELETE' });
+            if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+            if (cleanName === scriptName) {
+                const fresh = emptyGraph();
+                setGraph(fresh);
+                setHistory([fresh]);
+                setHistoryIndex(0);
+                setSelected(new Set());
+                setScriptName('untitled');
+                setIsDirty(false);
+            }
+            setStatusLine(`DELETED: ${cleanName}`);
+            void refreshScriptList();
+        } catch (err) {
+            console.error('[NodeLogic] delete failed', err);
+            setStatusLine('DELETE_FAILED');
+        }
+    }, [scriptName, refreshScriptList]);
 
     // ─── Node / wire mutation helpers ──────────────────────────────────────
 
@@ -297,6 +391,21 @@ const AlgorithmEditor: React.FC = () => {
         setStatusLine(`ADDED: ${def.title}`);
     }, [graph, pan, zoom, commit]);
 
+    const deleteNodeById = useCallback((nodeId: string) => {
+        commit({
+            nodes: graph.nodes.filter(n => n.id !== nodeId),
+            wires: graph.wires.filter(w => w.fromNode !== nodeId && w.toNode !== nodeId),
+            vars: graph.vars
+        });
+        setSelected(prev => {
+            if (!prev.has(nodeId)) return prev;
+            const next = new Set(prev);
+            next.delete(nodeId);
+            return next;
+        });
+        setStatusLine('DELETED');
+    }, [graph, commit]);
+
     const deleteSelected = useCallback(() => {
         if (selected.size === 0) return;
         const ids = selected;
@@ -313,13 +422,18 @@ const AlgorithmEditor: React.FC = () => {
         commit({ ...graph, wires: graph.wires.filter(w => w.id !== wireId) });
     }, [graph, commit]);
 
-    const updateNodeData = useCallback((nodeId: string, key: string, value: any) => {
+    const updateNodeData = useCallback((nodeId: string, key: string, value: any, immediateCommit = false) => {
         const next = {
             ...graph,
             nodes: graph.nodes.map(n => (n.id === nodeId ? { ...n, data: { ...n.data, [key]: value } } : n))
         };
-        setGraph(next);
-    }, [graph]);
+        if (immediateCommit) {
+            commit(next);
+        } else {
+            setGraph(next);
+            setIsDirty(true);
+        }
+    }, [graph, commit]);
 
     const commitNodeData = useCallback(() => {
         // Field edits update `graph` live for responsiveness; push one history
@@ -366,6 +480,7 @@ const AlgorithmEditor: React.FC = () => {
     const updateVar = useCallback((index: number, patch: Partial<LogicVar>) => {
         const vars = graph.vars.map((v, i) => (i === index ? { ...v, ...patch } : v));
         setGraph({ ...graph, vars });
+        setIsDirty(true);
     }, [graph]);
 
     const deleteVar = useCallback((index: number) => {
@@ -599,8 +714,13 @@ const AlgorithmEditor: React.FC = () => {
     });
     keyboardRef.current = {
         onKeyDown: (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                void saveScript(true);
+                return;
+            }
             const tag = (e.target as HTMLElement)?.tagName;
-            const typing = tag === 'INPUT' || tag === 'TEXTAREA';
+            const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
             if (e.code === 'Space' && !typing) { setSpaceHeld(true); }
             if (typing) return;
 
@@ -608,7 +728,6 @@ const AlgorithmEditor: React.FC = () => {
             else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
             else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') { e.preventDefault(); copySelection(); }
             else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteClipboard(); }
-            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); void saveScript(); }
             else if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); }
         },
         onKeyUp: (e: KeyboardEvent) => { if (e.code === 'Space') setSpaceHeld(false); }
@@ -623,6 +742,100 @@ const AlgorithmEditor: React.FC = () => {
             window.removeEventListener('keyup', onKeyUp);
         };
     }, []);
+
+    // ─── StudioBridge & global save ─────────────────────────────────────────
+
+    const saveScriptRef = useRef(saveScript);
+    saveScriptRef.current = saveScript;
+
+    const applyAIPatchRef = useRef((_nodes: any[], _wires: any[]): any => ({ changedResources: [], nodeCount: 0, wireCount: 0 }));
+    applyAIPatchRef.current = (incomingNodes: any[] = [], incomingWires: any[] = []) => {
+        const idMap = new Map<string, string>();
+        const offsetX = (-pan.x + 260) / zoom;
+        const offsetY = (-pan.y + 180) / zoom;
+        const addedNodes: LogicNode[] = [];
+
+        incomingNodes.forEach((nData: any, i: number) => {
+            const def = NODE_LIBRARY[nData?.type];
+            if (!def) return;
+            const newId = uid('n');
+            if (nData.id) idMap.set(String(nData.id), newId);
+            addedNodes.push({
+                id: newId,
+                type: nData.type,
+                x: (typeof nData.x === 'number' ? nData.x : i * 240) + offsetX,
+                y: (typeof nData.y === 'number' ? nData.y : 0) + offsetY,
+                data: {
+                    ...(def.defaults || {}),
+                    ...(nData.data && typeof nData.data === 'object' ? nData.data : {}),
+                    ...(nData.value !== undefined ? { value: nData.value } : {}),
+                    ...(nData.op !== undefined ? { op: nData.op } : {}),
+                }
+            });
+        });
+
+        const addedWires: LogicWire[] = [];
+        incomingWires.forEach((wData: any) => {
+            const rawFrom = wData.fromNode ?? wData.sourceId ?? wData.sourceNode;
+            const rawTo = wData.toNode ?? wData.targetId ?? wData.targetNode;
+            const fromNode = idMap.get(String(rawFrom)) ?? (graph.nodes.some(n => n.id === rawFrom) ? String(rawFrom) : undefined);
+            const toNode = idMap.get(String(rawTo)) ?? (graph.nodes.some(n => n.id === rawTo) ? String(rawTo) : undefined);
+            if (!fromNode || !toNode) return;
+            addedWires.push({
+                id: uid('w'),
+                fromNode,
+                fromPort: String(wData.fromPort ?? wData.sourcePort ?? 'out'),
+                toNode,
+                toPort: String(wData.toPort ?? wData.targetPort ?? 'in'),
+            });
+        });
+
+        commit({
+            ...graph,
+            nodes: [...graph.nodes, ...addedNodes],
+            wires: [...graph.wires, ...addedWires],
+        });
+        setStatusLine(`AI PATCH: +${addedNodes.length} NODES`);
+        return {
+            changedResources: ['algorithm:current'],
+            nodeCount: addedNodes.length,
+            wireCount: addedWires.length,
+        };
+    };
+
+    useEffect(() => {
+        if (!isReady) return;
+        const unsubSave = eventBus?.on('system:global_save', () => {
+            void saveScriptRef.current(false);
+        });
+
+        let bridge: any = null;
+        const BridgeCtor = (window as any).StudioBridge;
+        if (BridgeCtor) {
+            bridge = new BridgeCtor('logic', eventBus);
+            bridge.register({
+                name: 'generate',
+                description: 'Apply a validated node and wire patch to the current algorithm graph.',
+                securityLevel: 'high-risk',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        nodes: { type: 'array', items: { type: 'object' } },
+                        wires: { type: 'array', items: { type: 'object' } }
+                    },
+                    required: ['nodes', 'wires']
+                },
+                execute: async ({ nodes, wires }: { nodes: any[]; wires: any[] }) => {
+                    return applyAIPatchRef.current(nodes, wires);
+                }
+            });
+        }
+
+        return () => {
+            if (unsubSave && eventBus?.off) eventBus.off('system:global_save', unsubSave);
+            bridge?.dispose?.();
+        };
+    }, [isReady, eventBus]);
 
     // ─── Derived / search ───────────────────────────────────────────────────
 
@@ -678,14 +891,31 @@ const AlgorithmEditor: React.FC = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#000', border: `1px solid ${THEME.border}`, padding: '3px 8px' }}>
+                        <span style={{ fontSize: 12, color: THEME.textMute }}>SCRIPT:</span>
+                        <input
+                            value={scriptName}
+                            onChange={e => { setScriptName(e.target.value); setIsDirty(true); }}
+                            placeholder="script_name"
+                            aria-label="Script Name"
+                            style={{ width: 140, background: 'transparent', border: 'none', color: THEME.textMain, fontFamily: 'inherit', fontSize: 14, padding: 0, boxShadow: 'none' }}
+                        />
+                    </div>
                     <button onClick={newScript} style={btnStyle()} title="New script"><FilePlus size={14} /> NEW</button>
                     <button
-                        onClick={() => void saveScript()}
+                        onClick={() => void saveScript(true)}
                         disabled={isSaving}
                         style={{ ...btnStyle(), background: isDirty ? THEME.accent : THEME.bgPanel, color: isDirty ? '#000' : THEME.textDim, borderColor: isDirty ? THEME.accent : THEME.border, boxShadow: isDirty ? '2px 2px 0 #9a0a0a' : THEME.retroOut, fontWeight: 'bold' }}
                     >
                         <Save size={14} /> {isSaving ? 'SAVING...' : isDirty ? 'SAVE*' : 'SAVED'}
+                    </button>
+                    <button
+                        onClick={() => void deleteScript(scriptName)}
+                        style={{ ...btnStyle(), color: THEME.danger }}
+                        title="Delete script from disk"
+                    >
+                        <Trash2 size={14} /> DELETE
                     </button>
                 </div>
             </div>
@@ -889,11 +1119,16 @@ const AlgorithmEditor: React.FC = () => {
                                         cursor: 'grab', zIndex: 1
                                     }}
                                 >
-                                    <div style={{ background: CATEGORY_COLORS[def?.cat ?? ''] || THEME.textMute, color: '#000', padding: '4px 8px', fontSize: 13, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ background: CATEGORY_COLORS[def?.cat ?? ''] || THEME.textMute, color: '#000', height: HEADER_H, boxSizing: 'border-box', padding: '0 8px', fontSize: 13, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{def?.title ?? n.type}</span>
-                                        <Trash2 size={12} style={{ cursor: 'pointer', flexShrink: 0 }} onClick={e => { e.stopPropagation(); setSelected(new Set([n.id])); deleteSelected(); }} />
+                                        <Trash2
+                                            size={12}
+                                            style={{ cursor: 'pointer', flexShrink: 0 }}
+                                            onMouseDown={e => e.stopPropagation()}
+                                            onClick={e => { e.stopPropagation(); deleteNodeById(n.id); }}
+                                        />
                                     </div>
-                                    <div style={{ padding: '8px 0', fontSize: 13, position: 'relative' }}>
+                                    <div style={{ padding: `${PORT_PAD_TOP}px 0`, fontSize: 13, position: 'relative' }}>
                                         {(def?.inputs ?? []).map((p, i) => (
                                             <div key={p.id} style={{ display: 'flex', alignItems: 'center', height: PORT_ROW_H, paddingLeft: 4 }}>
                                                 <div
@@ -957,23 +1192,53 @@ const AlgorithmEditor: React.FC = () => {
                                 )}
 
                                 {(selectedDef.fields ?? []).map(field => {
-                                    const current = selectedNode.data[field.key] ?? selectedDef.defaults?.[field.key] ?? '';
-                                    const inputType = inferInputType(current, field);
+                                    const defaultVal = selectedDef.defaults?.[field.key];
+                                    const current = selectedNode.data[field.key] ?? defaultVal ?? '';
+                                    const inputType = inferInputType(current, field, defaultVal);
+                                    const rawOpts: string[] = (field as any).options
+                                        ? (field as any).options
+                                        : field.source === 'sounds'
+                                            ? projectSources.sounds
+                                            : field.source === 'prefabs'
+                                                ? projectSources.prefabs
+                                                : [];
+                                    const dropdownOptions = Array.from(new Set([
+                                        ...rawOpts,
+                                        ...(defaultVal !== undefined && defaultVal !== '' ? [String(defaultVal)] : []),
+                                        ...(current !== undefined && current !== '' ? [String(current)] : []),
+                                    ]));
                                     return (
                                         <div key={field.key} style={{ marginBottom: 12 }}>
                                             <label style={{ display: 'block', fontSize: 12, color: THEME.textDim, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                                 {field.label}{field.source ? ` (${field.source})` : ''}
                                             </label>
                                             {inputType === 'checkbox' ? (
-                                                <input type="checkbox" checked={!!current} onChange={e => { updateNodeData(selectedNode.id, field.key, e.target.checked); }} onBlur={commitNodeData} />
+                                                <input type="checkbox" checked={!!current} onChange={e => updateNodeData(selectedNode.id, field.key, e.target.checked, true)} style={{ width: 'auto' }} />
                                             ) : inputType === 'color' ? (
                                                 <input type="color" value={current || '#3498db'} onChange={e => updateNodeData(selectedNode.id, field.key, e.target.value)} onBlur={commitNodeData} style={{ width: '100%', height: 28, background: '#000', border: `1px solid ${THEME.border}` }} />
+                                            ) : inputType === 'dropdown' ? (
+                                                <select
+                                                    value={String(current)}
+                                                    onChange={e => updateNodeData(selectedNode.id, field.key, e.target.value, true)}
+                                                    style={{ width: '100%', background: '#000', border: `1px solid ${THEME.border}`, color: THEME.textMain, fontFamily: 'inherit', fontSize: 14, padding: '5px 6px', boxShadow: THEME.retroIn }}
+                                                >
+                                                    <option value="">-- Select --</option>
+                                                    {dropdownOptions.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
                                             ) : (
                                                 <input
                                                     type={inputType === 'number' ? 'number' : 'text'}
                                                     value={current}
-                                                    onChange={e => updateNodeData(selectedNode.id, field.key, inputType === 'number' ? Number(e.target.value) : e.target.value)}
-                                                    onBlur={commitNodeData}
+                                                    onChange={e => updateNodeData(selectedNode.id, field.key, inputType === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
+                                                    onBlur={() => {
+                                                        if (inputType === 'number' && (selectedNode.data[field.key] === '' || Number.isNaN(selectedNode.data[field.key]))) {
+                                                            updateNodeData(selectedNode.id, field.key, typeof defaultVal === 'number' ? defaultVal : 0, true);
+                                                        } else {
+                                                            commitNodeData();
+                                                        }
+                                                    }}
                                                     style={{ width: '100%', background: '#000', border: `1px solid ${THEME.border}`, color: THEME.textMain, fontFamily: 'inherit', fontSize: 14, padding: '5px 6px', boxShadow: THEME.retroIn }}
                                                 />
                                             )}

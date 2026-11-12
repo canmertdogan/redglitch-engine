@@ -10,6 +10,11 @@ class KDelay extends AudioPlugin {
         this.time = 0.3; // Seconds
         this.feedback = 0.4;
         this.mix = 0.5; // 0 = Dry, 1 = Wet
+        this.params = {
+            time: this.time,
+            feedback: this.feedback,
+            mix: this.mix
+        };
 
         // Nodes
         this.delayNode = this.ctx.createDelay(5.0);
@@ -48,15 +53,21 @@ class KDelay extends AudioPlugin {
         switch(key) {
             case 'time':
                 this.time = value;
+                this.params[key] = value;
                 this.delayNode.delayTime.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'feedback':
                 this.feedback = value;
+                this.params[key] = value;
                 this.feedbackNode.gain.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'mix':
                 this.mix = value;
+                this.params[key] = value;
                 this.updateMix();
+                break;
+            default:
+                super.setParam(key, value);
                 break;
         }
     }

@@ -11,8 +11,23 @@ class IsoPixelAdapter extends EngineAdapter {
 
     async initialize() {
         if (this.isInitialized) return;
+        if (typeof IsoStrategy === 'undefined' && typeof document !== 'undefined') {
+            await new Promise((resolve) => {
+                const alreadyLoaded = Array.from(document.scripts || []).some(s => (s.src || s.getAttribute('src') || '').includes('strategies/IsoStrategy.js'));
+                if (alreadyLoaded) return resolve();
+                const script = document.createElement('script');
+                script.src = 'strategies/IsoStrategy.js';
+                script.onload = resolve;
+                script.onerror = resolve;
+                (document.body || document.head || document.documentElement).appendChild(script);
+            });
+        }
+        if (typeof IsoStrategy === 'undefined') {
+            throw new Error('IsoStrategy not found! Ensure strategies/IsoStrategy.js is loaded.');
+        }
         if (typeof IsoGame === 'undefined') throw new Error('ISO-Pixel engine not loaded');
         this.engine = new IsoGame();
+        this.engine.managedByAdapter = true;
         window.game = this.engine;
         this.engine.onPlayerDeath = () => this._handlePlayerDeath();
         this.setupLiveBridge();

@@ -8,6 +8,10 @@ class KDrive extends AudioPlugin {
 
         this.drive = 0.0; // 0 to 100
         this.mix = 0.5;
+        this.params = {
+            drive: this.drive,
+            mix: this.mix
+        };
 
         this.shaper = this.ctx.createWaveShaper();
         this.shaper.oversample = '4x';
@@ -49,11 +53,16 @@ class KDrive extends AudioPlugin {
         switch(key) {
             case 'drive':
                 this.drive = value;
+                this.params[key] = value;
                 this.updateCurve();
                 break;
             case 'mix':
                 this.mix = value;
+                this.params[key] = value;
                 this.updateMix();
+                break;
+            default:
+                super.setParam(key, value);
                 break;
         }
     }

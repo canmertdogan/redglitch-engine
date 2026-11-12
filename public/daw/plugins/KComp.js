@@ -10,6 +10,12 @@ class KComp extends AudioPlugin {
         this.ratio = 12;
         this.attack = 0.003;
         this.release = 0.25;
+        this.params = {
+            threshold: this.threshold,
+            ratio: this.ratio,
+            attack: this.attack,
+            release: this.release
+        };
 
         // Native Web Audio Compressor
         this.compNode = this.ctx.createDynamicsCompressor();
@@ -33,19 +39,26 @@ class KComp extends AudioPlugin {
         switch(key) {
             case 'threshold':
                 this.threshold = value;
+                this.params[key] = value;
                 this.compNode.threshold.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'ratio':
                 this.ratio = value;
+                this.params[key] = value;
                 this.compNode.ratio.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'attack':
                 this.attack = value;
+                this.params[key] = value;
                 this.compNode.attack.setTargetAtTime(value, this.ctx.currentTime, 0.05);
                 break;
             case 'release':
                 this.release = value;
+                this.params[key] = value;
                 this.compNode.release.setTargetAtTime(value, this.ctx.currentTime, 0.05);
+                break;
+            default:
+                super.setParam(key, value);
                 break;
         }
     }

@@ -359,8 +359,8 @@ class IsoGame {
         try {
             let levelData = null;
             
-            // In campaign mode, use the levelMetadata that was set by the adapter
-            if (window.CAMPAIGN_RUNTIME_MODE && this.levelMetadata) {
+            // In campaign or adapter-managed mode, use the levelMetadata that was set by the adapter
+            if ((window.CAMPAIGN_RUNTIME_MODE || this.managedByAdapter) && this.levelMetadata) {
                 console.log('[IsoEngine] Using pre-loaded campaign map');
                 levelData = this.levelMetadata;
             } else {
@@ -430,6 +430,23 @@ class IsoGame {
         this.levelComplete = false;
         this.levelMetadata = levelData;
         this.map = levelData; // Alias for compatibility
+        this.prefabCache = {};
+
+        // Preload referenced prefab definitions so IsoStrategy can render placed prefabs
+        if (Array.isArray(levelData.decorations)) {
+            const prefabKeys = [...new Set(
+                levelData.decorations
+                    .filter(d => d && d.type === 'prefab' && d.data)
+                    .map(d => d.data)
+            )];
+            await Promise.all(prefabKeys.map(async (key) => {
+                const file = String(key).endsWith('.json') ? key : `${key}.json`;
+                try {
+                    const res = await fetch(`dunyalar/definitions/${encodeURIComponent(file)}`);
+                    if (res.ok) this.prefabCache[key] = await res.json();
+                } catch (_) {}
+            }));
+        }
         
         // Load Character Sprites (4-directional)
         this.sprites = {};
@@ -534,23 +551,48 @@ class IsoGame {
     }
 
     async combineWorldPixelArt() {
+        const bar = document.getElementById('loading-bar');
+        const txt = document.getElementById('loading-text');
+
+        if (typeof window !== 'undefined' && window.RedglitchWorldTileset) {
+            const c = await window.RedglitchWorldTileset.loadWorldTilesetCanvas({
+                tileSize: 16,
+                onProgress: (pct) => {
+                    if (bar) bar.style.width = pct + '%';
+                    if (txt) txt.innerText = `Loading Assets... ${pct}%`;
+                }
+            });
+            return c;
+        }
+
         const tempCanvas = document.createElement('canvas');
         const tSize = 16;
         const cols = 16;
-        const totalTiles = 600; 
+        const totalTiles = 600;
         const rows = Math.ceil(totalTiles / cols);
         tempCanvas.width = cols * tSize;
         tempCanvas.height = rows * tSize;
         const tCtx = tempCanvas.getContext('2d');
-        
+
+        try {
+            const atlasImg = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = 'sprite-art/worldpixelart_atlas.png';
+            });
+            tCtx.imageSmoothingEnabled = false;
+            tCtx.drawImage(atlasImg, 0, 0, tempCanvas.width, tempCanvas.height);
+            if (bar) bar.style.width = '100%';
+            if (txt) txt.innerText = 'Loading Assets... 100%';
+            return tempCanvas;
+        } catch (_) {}
+
         tCtx.fillStyle = '#ff00ff';
         tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
         let loadedCount = 0;
         const promises = [];
-        
-        const bar = document.getElementById('loading-bar');
-        const txt = document.getElementById('loading-text');
 
         for (let i = 1; i <= totalTiles; i++) {
             promises.push(new Promise(resolve => {
@@ -561,10 +603,10 @@ class IsoGame {
                     tCtx.clearRect(x, y, tSize, tSize);
                     tCtx.drawImage(img, x, y, tSize, tSize);
                     loadedCount++;
-                    if (loadedCount % 10 === 0) { 
+                    if (loadedCount % 10 === 0) {
                         const pct = Math.floor((loadedCount / totalTiles) * 100);
-                        if(bar) bar.style.width = pct + '%';
-                        if(txt) txt.innerText = `Loading Assets... ${pct}%`;
+                        if (bar) bar.style.width = pct + '%';
+                        if (txt) txt.innerText = `Loading Assets... ${pct}%`;
                     }
                     resolve();
                 };
@@ -1047,8 +1089,9 @@ class IsoGame {
             camX: this.renderer.camera.x,
             camY: this.renderer.camera.y,
             zoom: 1,
-            activeLayer: 0, 
+            activeLayer: 0,
             showGrid: false,  // Disable grid in gameplay for performance
+            prefabCache: this.prefabCache || {},
             entities: [
                 Object.assign({}, this.player, {
                     x: this.player.renderX,

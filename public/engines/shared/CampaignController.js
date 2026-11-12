@@ -87,6 +87,7 @@ class CampaignController {
                 'shared/LogicSystem.js',
                 'shared/LogicInterpreter.js',
                 'shared/BehaviorTreeRunner.js',
+                'strategies/IsoStrategy.js',
                 'engines/rpg-topdown/sprites.js',
                 'engines/iso-pixel/renderer.js',
                 'engines/iso-pixel/fxSystem.js',
@@ -371,6 +372,45 @@ class CampaignController {
         } catch (e) { return null; }
     }
 
+    async _loadClassicScript(src) {
+        const cleanSrc = src.split('?')[0];
+        const alreadyLoaded = Array.from(document.scripts || []).some(s => {
+            const absSrc = s.src || '';
+            const attrSrc = s.getAttribute('src') || '';
+            return absSrc.includes(cleanSrc) || attrSrc.includes(cleanSrc);
+        });
+        if (alreadyLoaded) {
+            console.log(`[CampaignController] Script already loaded, skipping: ${src}`);
+            return;
+        }
+
+        await new Promise((resolve) => {
+            const script = document.createElement('script');
+            const v = Date.now();
+            script.src = `${src}?v=${v}`;
+            script.onload = resolve;
+            script.onerror = () => {
+                console.error(`[CampaignController] Failed to load ${src}`);
+                resolve();
+            };
+            document.body.appendChild(script);
+        });
+    }
+
+    async _ensureLegacyAdapter(globalName, scriptPath) {
+        if (typeof window !== 'undefined' && typeof window[globalName] === 'function') {
+            return window[globalName];
+        }
+        if (typeof window !== 'undefined' && typeof window.EngineAdapter !== 'function') {
+            await this._loadClassicScript('engines/shared/EngineAdapter.legacy.js');
+        }
+        await this._loadClassicScript(scriptPath);
+        if (typeof window === 'undefined' || typeof window[globalName] !== 'function') {
+            throw new Error(`${globalName} adapter not found (${scriptPath})`);
+        }
+        return window[globalName];
+    }
+
     async _loadEngineScripts(engineType) {
         if (this.loadedEngines.has(engineType)) return;
         const scripts = this.engineManifests[engineType];
@@ -378,7 +418,7 @@ class CampaignController {
         for (const src of scripts) {
             // Phase 17: Use dynamic import for ES Modules (3D components)
             const isModule = src.endsWith('Adapter.js') && this._is3DEngine(engineType) || src.includes('Engine3D');
-            
+
             if (isModule) {
                 console.log(`[CampaignController] Importing module: ${src}`);
                 const module = await import(`/${src}`);
@@ -386,36 +426,24 @@ class CampaignController {
                     this.engineConstructors.set('unified-3d', module.default);
                 }
             } else {
-                const cleanSrc = src.split('?')[0];
-                const alreadyLoaded = Array.from(document.scripts).some(s => {
-                    const absSrc = s.src || '';
-                    const attrSrc = s.getAttribute('src') || '';
-                    return absSrc.includes(cleanSrc) || attrSrc.includes(cleanSrc);
-                });
-                if (alreadyLoaded) {
-                    console.log(`[CampaignController] Script already loaded, skipping: ${src}`);
-                    continue;
-                }
-
-                await new Promise((resolve) => {
-                    const script = document.createElement('script');
-                    // Add version/cache bust
-                    const v = Date.now();
-                    script.src = `${src}?v=${v}`;
-                    script.onload = resolve;
-                    script.onerror = () => {
-                        console.error(`[CampaignController] Failed to load ${src}`);
-                        resolve();
-                    };
-                    document.body.appendChild(script);
-                });
+                await this._loadClassicScript(src);
             }
         }
         this.loadedEngines.add(engineType);
     }
 
-    async _switchEngine(newEngineType) {
-        if (this.isTransitioning) return;
+    /**
+     * Serialize engine switches through a promise queue so overlapping calls
+     * wait their turn instead of being dropped while isTransitioning is true.
+     */
+    _switchEngine(newEngineType) {
+        const prev = this._switchQueue || Promise.resolve();
+        const next = prev.catch(() => {}).then(() => this._performSwitchEngine(newEngineType));
+        this._switchQueue = next;
+        return next;
+    }
+
+    async _performSwitchEngine(newEngineType) {
         this.isTransitioning = true;
         try {
             // Check if we can hot-swap between 3D modes via Unified3DAdapter
@@ -448,9 +476,21 @@ class CampaignController {
 
                 let adapter;
                 switch (newEngineType) {
-                    case 'rpg-topdown': adapter = new TopDownAdapter(); break;
-                    case 'iso-pixel': adapter = new IsoPixelAdapter(); break;
-                    case 'platformer-2d': adapter = new PlatformerAdapter(); break;
+                    case 'rpg-topdown': {
+                        const Adapter = await this._ensureLegacyAdapter('TopDownAdapter', 'engines/shared/TopDownAdapter.js');
+                        adapter = new Adapter();
+                        break;
+                    }
+                    case 'iso-pixel': {
+                        const Adapter = await this._ensureLegacyAdapter('IsoPixelAdapter', 'engines/shared/IsoPixelAdapter.js');
+                        adapter = new Adapter();
+                        break;
+                    }
+                    case 'platformer-2d': {
+                        const Adapter = await this._ensureLegacyAdapter('PlatformerAdapter', 'engines/shared/PlatformerAdapter.js');
+                        adapter = new Adapter();
+                        break;
+                    }
                     // All 3D modes use the Unified3DAdapter
                     case 'topdown-3d':
                     case 'fps-3d':

@@ -50,10 +50,13 @@ function initializeAlgorithmIntegration() {
             
             // PHASE 17: AI Logic Generation Support
             eventBus.on('studio:action:execute', (event) => {
-                if (event.data && event.data.tool === 'logic.generate') {
+                const payload = event?.data || event;
+                const method = payload?.method || payload?.tool;
+                const params = payload?.params || payload?.args;
+                if (method === 'logic.generate') {
                     console.log('[AlgorithmEditor] Received AI logic generation patch');
-                    if (window.studio && event.data.args) {
-                        const { nodes, wires } = event.data.args;
+                    if (window.studio && params) {
+                        const { nodes, wires } = params;
                         if (nodes && wires) {
                             window.studio.applyAIPatch(nodes, wires);
                         }
@@ -114,6 +117,34 @@ export class AlgorithmStudio {
         this.nextWireId = 1;
         this.isReadOnly = false;
         this.viewMode = 'GRAPH'; 
+        this._studioPaused = false;
+        this._rafId = null;
+        this._graphDirty = true;
+        this._lastGraphSig = '';
+        this._lastViewMode = this.viewMode;
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'studio:visibility') {
+                this._studioPaused = !e.data.visible;
+                if (e.data.visible) {
+                    this._graphDirty = true;
+                    this._scheduleLoop();
+                } else if (this._rafId) {
+                    cancelAnimationFrame(this._rafId);
+                    this._rafId = null;
+                }
+            }
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (this._rafId) {
+                    cancelAnimationFrame(this._rafId);
+                    this._rafId = null;
+                }
+            } else if (!this._studioPaused) {
+                this._graphDirty = true;
+                this._scheduleLoop();
+            }
+        });
         
         this.state = {
             dragging: null,
@@ -440,10 +471,26 @@ export class AlgorithmStudio {
         }
     }
 
+    _scheduleLoop() {
+        if (!this._rafId && !this._studioPaused && !document.hidden) {
+            this._rafId = requestAnimationFrame(() => this.loop());
+        }
+    }
+
     loop() {
+        this._rafId = null;
+        if (this._studioPaused || document.hidden) return;
         if (this.viewMode === 'GRAPH') {
-            this.updateTransform();
-            this.renderWires();
+            const sig = `${this.transform.x}|${this.transform.y}|${this.transform.scale}|${this.wires.length}|${this.nodes.length}|${this._lastViewMode === this.viewMode ? 1 : 0}`;
+            if (this._graphDirty || sig !== this._lastGraphSig) {
+                this._lastViewMode = this.viewMode;
+                this._lastGraphSig = `${this.transform.x}|${this.transform.y}|${this.transform.scale}|${this.wires.length}|${this.nodes.length}|1`;
+                this._graphDirty = false;
+                this.updateTransform();
+                this.renderWires();
+            }
+        } else {
+            this._lastViewMode = this.viewMode;
         }
         
         // PHASE 4: Update status bar periodically (throttled to avoid performance hit)
@@ -452,7 +499,7 @@ export class AlgorithmStudio {
             this._lastStatusUpdate = Date.now();
         }
         
-        requestAnimationFrame(() => this.loop());
+        this._scheduleLoop();
     }
 
     updateTransform() {
@@ -2436,6 +2483,7 @@ export class AlgorithmStudio {
             if (d.type === 'pan') {
                 this.transform.x = d.ox + (e.clientX - d.sx);
                 this.transform.y = d.oy + (e.clientY - d.sy);
+                this._graphDirty = true;
             } else if (d.type === 'node') {
                 const node = this.getNode(d.id);
                 // Snap to grid (10px)
@@ -2446,8 +2494,10 @@ export class AlgorithmStudio {
                 
                 const el = document.getElementById(node.id);
                 el.style.left = node.x + 'px'; el.style.top = node.y + 'px';
+                this._graphDirty = true;
             } else if (d.type === 'wire') {
                 d.cx = e.clientX; d.cy = e.clientY;
+                this._graphDirty = true;
             }
         };
 
@@ -2457,6 +2507,7 @@ export class AlgorithmStudio {
                 const d = this.state.dragging;
                 this.openQuickSearch(e.clientX, e.clientY, d.nodeId, d.port, d.dataType);
             }
+            if (this.state.dragging) this._graphDirty = true;
             this.state.dragging = null; 
         };
         this.dom.canvas.onwheel = (e) => { e.preventDefault(); this.handleZoom(e.deltaY > 0 ? -0.1 : 0.1, e.clientX, e.clientY); };
@@ -2471,6 +2522,7 @@ export class AlgorithmStudio {
 
     handleZoom(delta, cx, cy) {
         this.transform.scale = Math.max(0.2, Math.min(2, this.transform.scale + delta));
+        this._graphDirty = true;
     }
 
     showTooltip(text, el) {
@@ -2599,6 +2651,7 @@ export class AlgorithmStudio {
             });
             this.log(`✅ Connected ${fromPort?.name || d.port} → ${toPort?.name || port}`, 'info');
             this.state.dragging = null; // PHASE 7: Clear after connection
+            this._graphDirty = true;
         }
     }
     
@@ -2642,7 +2695,7 @@ export class AlgorithmStudio {
             notif.style.opacity = '0';
         }, 3000);
     }
-    deleteWire(id) { if(this.isReadOnly) return; this.wires = this.wires.filter(w => w.id !== id); }
+    deleteWire(id) { if(this.isReadOnly) return; this.wires = this.wires.filter(w => w.id !== id); this._graphDirty = true; }
     select(id, addToSelection = false) {
         if (addToSelection) {
             // Multi-select mode (Ctrl+Click)
@@ -2670,6 +2723,7 @@ export class AlgorithmStudio {
         this.wires = this.wires.filter(w => w.fromNode !== id && w.toNode !== id); 
         document.getElementById(id).remove(); 
         this.state.selection = null; 
+        this._graphDirty = true;
         this.renderInspector(); 
         this.updateWelcomeOverlay(); // PHASE 7
     }

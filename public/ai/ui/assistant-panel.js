@@ -83,8 +83,13 @@ class KaiChatUIController {
             }
         };
 
-        // Tracked timers and listeners for cleanup
+        // Tracked timers, observers and listeners for cleanup
         this._hitZoneInterval = null;
+        this._hitZoneRaf = null;
+        this._hitZoneObserver = null;
+        this._hitZoneResizeObserver = null;
+        this._lastHitZoneSig = null;
+        this._mouseMoveRaf = null;
         this._sessionClockInterval = null;
         this._listeners = [];      // EventBus listeners
         this._windowListeners = []; // window event listeners (keydown)
@@ -215,7 +220,7 @@ class KaiChatUIController {
             this.assistant = new IRABAssistantSimple();
             
             // --- Hook into Native Cortex only if native provider is explicitly selected ---
-            const activeProvider = this.settings?.provider || 'openrouter';
+            const activeProvider = window.AISettings?.settings?.provider || 'openrouter';
             const irab = window.irab || (window.parent && window.parent.irab);
             if (irab && activeProvider === 'native') {
                 console.log('Kai: Connected to Native Cortex Bridge.');
@@ -280,7 +285,7 @@ class KaiChatUIController {
 
                 // PROACTIVE ERROR WATCHER
                 const onSystemError = (event) => {
-                    if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
+                    if (!isAIModeOn(getStoredKaiMode())) return;
                     const error = event.data;
                     console.log('Kai: Proactive Help triggered for error:', error.message);
                     
@@ -316,7 +321,7 @@ class KaiChatUIController {
                 // PROACTIVE PERFORMANCE SENTINEL
                 this.lastMetricWarning = 0;
                 const onSystemMetrics = (event) => {
-                    if (localStorage.getItem('kai_ai_enabled') !== 'true') return;
+                    if (!isAIModeOn(getStoredKaiMode())) return;
                     const { fps, entities, memory } = event.data;
                     const now = Date.now();
                     
@@ -381,15 +386,45 @@ class KaiChatUIController {
         }
     }
 
+    _scheduleFrame(fn) {
+        return typeof requestAnimationFrame === 'function'
+            ? requestAnimationFrame(fn)
+            : setTimeout(fn, 16);
+    }
+
+    _cancelFrame(id) {
+        if (typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(id);
+        } else {
+            clearTimeout(id);
+        }
+    }
+
     /**
      * Remove all intervals, window/document listeners, and EventBus subscriptions.
      * Call when the panel is being torn down or AI is being disabled.
      */
     destroy() {
-        // Clear intervals
+        // Clear intervals / observers / RAFs
         if (this._hitZoneInterval) {
             clearInterval(this._hitZoneInterval);
             this._hitZoneInterval = null;
+        }
+        if (this._hitZoneRaf) {
+            this._cancelFrame(this._hitZoneRaf);
+            this._hitZoneRaf = null;
+        }
+        if (this._mouseMoveRaf) {
+            this._cancelFrame(this._mouseMoveRaf);
+            this._mouseMoveRaf = null;
+        }
+        if (this._hitZoneObserver) {
+            this._hitZoneObserver.disconnect();
+            this._hitZoneObserver = null;
+        }
+        if (this._hitZoneResizeObserver) {
+            this._hitZoneResizeObserver.disconnect();
+            this._hitZoneResizeObserver = null;
         }
         if (this._sessionClockInterval) {
             clearInterval(this._sessionClockInterval);
@@ -487,56 +522,93 @@ class KaiChatUIController {
             });
         }
 
-        // Broadcast hit zones to parent for pointer-events passthrough
+        // Broadcast hit zones to parent ONLY when DOM/size changes (instead of 10Hz polling reflows)
+        const hitZoneIds = [
+            'ai-assistant-container',
+            'ai-chat-panel',
+            'xp-ai-loading',
+            'xp-settings',
+            'ai-speech-bubble',
+            'ai-permission-gate',
+            'kai-mode-toggle',
+            'kai-mode-choice'
+        ];
         const hitZoneHandler = () => {
             try {
+                if (window.parent === window) return;
                 const zones = [];
-                const elements = [
-                    'ai-assistant-container', 
-                    'ai-chat-panel',
-                    'xp-ai-loading',
-                    'xp-settings',
-                    'ai-speech-bubble',
-                    'ai-permission-gate',
-                    'kai-mode-toggle',
-                    'kai-mode-choice'
-                ];
-                
-                elements.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el && (el.style.display !== 'none' && !el.classList.contains('hidden') || el.classList.contains('show'))) {
-                        // Check computed style for visibility
-                        const style = window.getComputedStyle(el);
-                        if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
-                            const rect = el.getBoundingClientRect();
+                for (let i = 0; i < hitZoneIds.length; i++) {
+                    const el = document.getElementById(hitZoneIds[i]);
+                    if (!el) continue;
+                    // Fast visibility check before invoking getComputedStyle / getBoundingClientRect
+                    if (el.style.display === 'none' || el.classList.contains('hidden')) continue;
+                    if (el.offsetParent === null && window.getComputedStyle(el).position !== 'fixed') continue;
+                    const style = window.getComputedStyle(el);
+                    if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+                        const rect = el.getBoundingClientRect();
+                        if (rect.width > 0 && rect.height > 0) {
                             zones.push({
-                                top: rect.top,
-                                left: rect.left,
-                                bottom: rect.bottom,
-                                right: rect.right
+                                top: Math.round(rect.top),
+                                left: Math.round(rect.left),
+                                bottom: Math.round(rect.bottom),
+                                right: Math.round(rect.right)
                             });
                         }
                     }
-                });
-
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({ type: 'kai:hitzones', zones }, '*');
                 }
+                const sig = JSON.stringify(zones);
+                if (sig === this._lastHitZoneSig) return;
+                this._lastHitZoneSig = sig;
+                window.parent.postMessage({ type: 'kai:hitzones', zones }, '*');
             } catch (e) {
                 console.warn('[AssistantPanel] Hit-zone broadcast error:', e);
             }
         };
-        this._hitZoneInterval = setInterval(hitZoneHandler, 100);
+        const scheduleHitZoneSync = () => {
+            if (this._hitZoneRaf) return;
+            this._hitZoneRaf = this._scheduleFrame(() => {
+                this._hitZoneRaf = null;
+                hitZoneHandler();
+            });
+        };
+        this._scheduleHitZoneSync = scheduleHitZoneSync;
+        scheduleHitZoneSync();
 
-        // Forward mouse events to parent to prevent "trapping" the mouse
+        if (typeof MutationObserver !== 'undefined') {
+            this._hitZoneObserver = new MutationObserver(scheduleHitZoneSync);
+            hitZoneIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    this._hitZoneObserver.observe(el, { attributes: true, attributeFilter: ['class', 'style'] });
+                }
+            });
+        }
+        if (typeof ResizeObserver !== 'undefined') {
+            this._hitZoneResizeObserver = new ResizeObserver(scheduleHitZoneSync);
+            hitZoneIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) this._hitZoneResizeObserver.observe(el);
+            });
+        }
+        this._windowListeners.push({ event: 'resize', handler: scheduleHitZoneSync });
+        window.addEventListener('resize', scheduleHitZoneSync);
+
+        // Throttle mousemove forwarding to parent (max once per animation frame)
+        let pendingMove = null;
         const onMouseMove = (e) => {
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ 
-                    type: 'kai:mousemove', 
-                    clientX: e.clientX, 
-                    clientY: e.clientY 
+            if (window.parent === window) return;
+            pendingMove = { clientX: e.clientX, clientY: e.clientY };
+            if (this._mouseMoveRaf) return;
+            this._mouseMoveRaf = this._scheduleFrame(() => {
+                this._mouseMoveRaf = null;
+                if (!pendingMove) return;
+                window.parent.postMessage({
+                    type: 'kai:mousemove',
+                    clientX: pendingMove.clientX,
+                    clientY: pendingMove.clientY
                 }, '*');
-            }
+                pendingMove = null;
+            });
         };
         this._windowListeners.push({ event: 'mousemove', handler: onMouseMove });
         window.addEventListener('mousemove', onMouseMove);
@@ -1182,7 +1254,7 @@ class KaiChatUIController {
             this.addMessage('user', `COMMAND: ${input}`);
             
             if (cmd === 'open') {
-                this.executeAction({ type: 'open', params: { path: args } });
+                this.executeAction({ type: 'openFile', params: { path: args.trim() } });
                 return;
             }
             if (cmd === 'status') {
@@ -1421,7 +1493,8 @@ class KaiChatUIController {
                         const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
                         if (eventBus) {
                             eventBus.emit('ai:command:request', {
-                                method: 'insert',
+                                id: `ui_insert_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                                method: 'code.insert',
                                 params: { content: codeText }
                             });
                             applyBtn.textContent = '[APPLIED]';
@@ -1617,9 +1690,17 @@ class KaiChatUIController {
                 btn.onclick = () => {
                     const eventBus = window.RedglitchEventBus || (window.parent && window.parent.RedglitchEventBus);
                     if (eventBus) {
+                        const isCodePath = /\.(?:c?js|mjs|ts|tsx|jsx|md|txt|html|css|glsl|wgsl|yaml|yml|xml|shader|json)$/i.test(path);
+                        let target = 'asset_manager';
+                        if (/iso|isopixel/i.test(path)) target = 'iso_studio';
+                        else if (/platformer/i.test(path)) target = 'platformer_studio';
+                        else if (/world|level|map/i.test(path)) target = 'editor';
+                        else if (/\.(?:wav|mp3|ogg|flac)$/i.test(path)) target = 'daw';
+                        else if (/3d|\.(?:glb|gltf|obj|fbx)$/i.test(path)) target = 'studio_3d';
                         eventBus.emit('ai:command:request', {
-                            method: path.includes('world') ? 'iso_studio.open' : 'open',
-                            params: { path: path }
+                            id: `ui_open_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                            method: isCodePath ? 'code.open' : 'navigateTo',
+                            params: isCodePath ? { path: path } : { target }
                         });
                     }
                 };
@@ -1718,8 +1799,13 @@ class KaiChatUIController {
         this.addMessage('system', '>> EXECUTING...');
 
         try {
-            const response = await this.assistant.editorTools[action.type](
-                ...Object.values(action.params)
+            const toolFn = this.assistant?.editorTools?.[action.type]
+                || (action.type === 'open' ? this.assistant?.editorTools?.openFile : null);
+            if (typeof toolFn !== 'function') {
+                throw new Error(`Unknown editor action: ${action.type}`);
+            }
+            const response = await toolFn(
+                ...Object.values(action.params || {})
             );
 
             if (response && typeof response.then === 'function') {
@@ -1781,7 +1867,8 @@ Please analyze why this is happening and suggest a fix. If it's in a script I ca
         if (confirm(">> WARNING: WIPE NEURAL BUFFER? (CANNOT BE UNDONE)")) {
             const messages = document.getElementById('ai-chat-messages');
             if (messages) messages.innerHTML = '';
-            if (window.RedglitchAIInstance) window.RedglitchAIInstance.clearHistory();
+            const ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
+            if (ai?.clearHistory) ai.clearHistory();
             this.addMessage('system', '>> MEMORY_WIPE_COMPLETE.');
             this.playSound('nudge');
         }
@@ -1796,7 +1883,7 @@ class KaiSettingsController {
 
     loadSettings() {
         const defaults = {
-            aiEnabled: localStorage.getItem('kai_ai_enabled') === 'true',
+            aiEnabled: isAIModeOn(getStoredKaiMode()),
             provider: 'openrouter',
             temp: 0.7,
             topP: 0.9,
@@ -1872,7 +1959,7 @@ class KaiSettingsController {
         };
 
         setVal('setting-provider', s.provider || 'openrouter');
-        setVal('setting-ai-enabled', localStorage.getItem('kai_ai_enabled') === 'true');
+        setVal('setting-ai-enabled', isAIModeOn(getStoredKaiMode()));
         setVal('setting-temp', s.temp);
         setVal('setting-top-p', s.topP);
         setVal('setting-max-tokens', s.maxTokens);
@@ -2113,8 +2200,9 @@ class KaiSettingsController {
         localStorage.setItem('kai_settings', JSON.stringify(this.settings));
         
         // Push to global AI_CONFIG if available
-        if (window.RedglitchAIInstance && window.RedglitchAIInstance.config) {
-            const cfg = window.RedglitchAIInstance.config;
+        const ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
+        if (ai && ai.config) {
+            const cfg = ai.config;
             cfg.models.llm.temperature = parseFloat(this.settings.temp);
             cfg.models.llm.topP = parseFloat(this.settings.topP);
             cfg.models.llm.maxNewTokens = parseInt(this.settings.maxTokens);
@@ -2213,7 +2301,7 @@ class KaiSettingsController {
 
         this.saveSettings();
         // Persist AI on/off from settings checkbox (Easy/Full chosen via mode dialog/toggle)
-        window.setKaiMode?.(this.settings.aiEnabled ? 'full' : 'off');
+        window.setKaiMode?.(this.settings.aiEnabled ? (getStoredKaiMode() === 'easy' ? 'easy' : 'full') : 'off');
         window.AIChatUI?.updateChatMeta();
 
         const irab = window.irab || (window.parent && window.parent.irab);
@@ -2334,7 +2422,8 @@ window.setKaiMode = async (mode) => {
     document.getElementById('kai-mode-choice')?.classList.remove('show');
     applyKaiModeUI(mode);
 
-    let ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
+    const hasParentHub = window.parent && window.parent !== window;
+    let ai = (hasParentHub ? window.parent.RedglitchAIInstance : null) || window.RedglitchAIInstance;
     if (isAIModeOn(mode)) {
         // Local AI is not forced: only ensure native bridge if native provider is explicitly configured
         const parentWin = window.parent || window;
@@ -2346,10 +2435,13 @@ window.setKaiMode = async (mode) => {
         }
 
         const { RedglitchAI } = await import('../redglitch-ai.js');
-        ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance || ai;
+        ai = (hasParentHub ? window.parent.RedglitchAIInstance : null) || window.RedglitchAIInstance || ai;
         if (!ai) {
             ai = new RedglitchAI();
-            window.RedglitchAIInstance = ai;
+        }
+        window.RedglitchAIInstance = ai;
+        if (hasParentHub) {
+            try { window.parent.RedglitchAIInstance = ai; } catch (_) {}
         }
         window.AIChatUI.assistant = new IRABAssistantSimple();
         await window.AIChatUI.initialize();
@@ -2363,10 +2455,14 @@ window.setKaiMode = async (mode) => {
         if (parentWin.destroyIrabBridge) {
             parentWin.destroyIrabBridge();
         }
-        // Kill any local AI instance
-        if (window.RedglitchAIInstance) {
-            window.RedglitchAIInstance = null;
+        // Kill any local AI instance and keep parent unified
+        window.RedglitchAIInstance = null;
+        if (hasParentHub && window.parent.RedglitchAIInstance === ai) {
+            try { window.parent.RedglitchAIInstance = null; } catch (_) {}
         }
+    }
+    if (hasParentHub) {
+        try { window.parent.KAI?.syncStatus?.(); } catch (_) {}
     }
     window.dispatchEvent(new CustomEvent('kai:mode-change', { detail: { mode, enabled: isAIModeOn(mode) } }));
     return mode;

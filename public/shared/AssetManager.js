@@ -211,7 +211,7 @@ class AssetManager {
         
         this.eventBus.on('project:*', (event) => {
             if (event.type === 'project:loaded' || event.type === 'project:switch') {
-                this.loadAssetRegistry();
+                this.loadAssetRegistry(true);
             }
         });
     }
@@ -219,7 +219,7 @@ class AssetManager {
     /**
      * Register an asset in the system
      */
-    registerAsset(assetData) {
+    registerAsset(assetData, options = {}) {
         const {
             id,
             name,
@@ -266,11 +266,11 @@ class AssetManager {
 
         this.assets.set(id, asset);
         
-        // Update dependency graph
-        this.updateDependencies(id, dependencies);
+        // Update dependency graph (suppressed per-item broadcasts during initial bulk registry load)
+        this.updateDependencies(id, dependencies, options);
         
-        // Emit registration event
-        if (this.eventBus) {
+        // Emit registration event only for interactive/single asset additions
+        if (this.eventBus && !options.silent) {
             this.eventBus.emit('asset:registered', {
                 asset,
                 timestamp: Date.now()
@@ -453,7 +453,7 @@ class AssetManager {
     /**
      * Update asset dependencies
      */
-    updateDependencies(id, dependencies) {
+    updateDependencies(id, dependencies, options = {}) {
         const asset = this.assets.get(id);
         if (asset) {
             asset.dependencies = dependencies.slice();
@@ -461,7 +461,7 @@ class AssetManager {
             // Update reverse dependency map
             this.dependencies.set(id, new Set(dependencies));
             
-            if (this.eventBus) {
+            if (this.eventBus && !options.silent && dependencies.length > 0) {
                 this.eventBus.emit('asset:dependencies:updated', {
                     assetId: id,
                     dependencies,
@@ -522,22 +522,73 @@ class AssetManager {
     }
 
     /**
-     * Load asset registry from server
+     * Load asset registry from server (or hydrate immediately from parent Studio window).
      */
-    async loadAssetRegistry() {
+    async loadAssetRegistry(forceRefresh = false) {
         try {
-            const response = await fetch(`/api/assets?t=${Date.now()}`);
-            if (response.ok) {
-                const data = await response.json();
-                
-                this.assets.clear();
-                
-                const assetList = (data && data.assets) ? data.assets : (Array.isArray(data) ? data : null);
-                
-                if (assetList && Array.isArray(assetList)) {
-                    for (const assetData of assetList) {
-                        this.registerAsset(assetData);
+            if (!forceRefresh && typeof window !== 'undefined' && window.parent && window.parent !== window) {
+                const parentMgr = window.parent.RedglitchAssetManager;
+                // If parent is currently fetching the registry, wait for that single request first
+                if (parentMgr && parentMgr._registryPromise) {
+                    try { await parentMgr._registryPromise; } catch (_) {}
+                }
+                const parentAgeMs = parentMgr && parentMgr._registryFetchedAt ? (Date.now() - parentMgr._registryFetchedAt) : Infinity;
+                const parentProj = parentMgr && parentMgr._registryProject ? parentMgr._registryProject : null;
+                const myProj = (window.RedglitchProjectState && window.RedglitchProjectState.getProjectName)
+                    ? window.RedglitchProjectState.getProjectName() : parentProj;
+                if (parentMgr && parentMgr.assets && parentMgr.assets.size > 0 && parentAgeMs < 30000 && (!parentProj || !myProj || parentProj === myProj)) {
+                    this.assets.clear();
+                    this.dependencies.clear();
+                    for (const [id, asset] of parentMgr.assets.entries()) {
+                        const copy = {
+                            ...asset,
+                            dependencies: Array.isArray(asset.dependencies) ? asset.dependencies.slice() : [],
+                            metadata: asset.metadata ? { ...asset.metadata } : {}
+                        };
+                        this.assets.set(id, copy);
+                        this.dependencies.set(id, new Set(copy.dependencies));
                     }
+                    this._registryFetchedAt = parentMgr._registryFetchedAt;
+                    this._registryProject = parentMgr._registryProject;
+                    return;
+                }
+            }
+
+            if (this._registryPromise && !forceRefresh) {
+                await this._registryPromise;
+                return;
+            }
+
+            const fetchPromise = (async () => {
+                const response = await fetch(`/api/assets?t=${Date.now()}`);
+                if (response.ok) {
+                    const data = await response.json();
+
+                    this.assets.clear();
+                    this.dependencies.clear();
+
+                    const assetList = (data && data.assets) ? data.assets : (Array.isArray(data) ? data : null);
+
+                    if (assetList && Array.isArray(assetList)) {
+                        const bulkOpts = { silent: true };
+                        for (const assetData of assetList) {
+                            this.registerAsset(assetData, bulkOpts);
+                        }
+                    }
+                    this._registryFetchedAt = Date.now();
+                    this._registryProject = (window.RedglitchProjectState && window.RedglitchProjectState.getProjectName)
+                        ? window.RedglitchProjectState.getProjectName()
+                        : (window.parent && window.parent !== window && window.parent.RedglitchProjectState && window.parent.RedglitchProjectState.getProjectName
+                            ? window.parent.RedglitchProjectState.getProjectName() : null);
+                }
+            })();
+
+            this._registryPromise = fetchPromise;
+            try {
+                await fetchPromise;
+            } finally {
+                if (this._registryPromise === fetchPromise) {
+                    this._registryPromise = null;
                 }
             }
         } catch (error) {

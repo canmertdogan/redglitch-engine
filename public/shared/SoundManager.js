@@ -26,7 +26,7 @@ class KAE {
     constructor() {
         // Audio context — created lazily on first user gesture
         this.musicContextMap = {};
-        if (typeof fetch === 'function') { fetch('/api/audio/music-config').then(r=>r.ok?r.json():null).then(m=>{ if (m) Object.assign(this.musicContextMap, m); }).catch(()=>{}); fetch('dunyalar/definitions/music.json').then(r=>r.ok?r.json():null).then(m=>{ if (m) Object.assign(this.musicContextMap, m); }).catch(()=>{}); }
+        if (typeof fetch === 'function') { fetch('/api/audio/music-config').then(r=>r.ok?r.json():null).then(m=>{ if (m) Object.assign(this.musicContextMap, m); }).catch(()=>{}); fetch('/dunyalar/definitions/music.json').then(r=>r.ok?r.json():null).then(m=>{ if (m) Object.assign(this.musicContextMap, m); }).catch(()=>{}); }
         this.ctx = null;
         this._ready = false;
         this._initPromise = null;

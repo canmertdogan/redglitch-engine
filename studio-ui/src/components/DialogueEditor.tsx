@@ -61,8 +61,49 @@ const denormConversation = (c: Conversation): any => {
     };
 };
 
+const getNpcPortraitSprite = (npc: any): string =>
+    npc?.animations?.idle?.down || npc?.sprite || 'player';
+
+const mergeNpcsIntoCharacters = (baseChars: Character[], npcs: any[]): Character[] => {
+    const merged = [...baseChars];
+    if (!merged.find(c => c.id === 'hero')) {
+        merged.unshift({ id: 'hero', name: 'Hero', color: '#3498db', sprite: 'player' });
+    }
+    npcs.forEach((npc: any) => {
+        if (!npc?.id) return;
+        const portraitSprite = getNpcPortraitSprite(npc);
+        const existingIdx = merged.findIndex(c => c.id === npc.id);
+        if (existingIdx >= 0) {
+            merged[existingIdx] = {
+                ...merged[existingIdx],
+                name: npc.name || merged[existingIdx].name || npc.id,
+                sprite: portraitSprite || merged[existingIdx].sprite || 'player',
+            };
+        } else {
+            merged.push({
+                id: npc.id,
+                name: npc.name || npc.id,
+                sprite: portraitSprite,
+                color: '#ff0000',
+            });
+        }
+    });
+    return merged;
+};
+
+const generateUniqueCopyId = (baseId: string, existingIds: Set<string>): string => {
+    const stem = baseId.replace(/_COPY(?:_\d+)?$/, '');
+    let index = 1;
+    let candidate = `${stem}_COPY_${index}`;
+    while (existingIds.has(candidate)) {
+        index += 1;
+        candidate = `${stem}_COPY_${index}`;
+    }
+    return candidate;
+};
+
 const DialogueEditor: React.FC = () => {
-    const { isReady, emit, subscribe, projectState, sprites } = useStudio();
+    const { isReady, emit, subscribe, projectState } = useStudio();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [characters, setCharacters] = useState<Character[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -70,48 +111,128 @@ const DialogueEditor: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isDirty, setIsDirty] = useState(false);
     const toastRef = useRef<ToastHandle>(null);
-    // Always-current snapshot of conversations so subscriptions/closures never
-    // read a stale list captured at mount time.
+
+    // Always-current refs so EventBus subscriptions, shortcuts, and global save
+    // never read stale closures captured at mount time.
     const conversationsRef = useRef<Conversation[]>([]);
+    const charactersRef = useRef<Character[]>([]);
+    const isDirtyRef = useRef(false);
+    const savingRef = useRef(false);
+    const pendingCharSyncRef = useRef(false);
+    const saveRef = useRef<() => Promise<boolean>>(async () => false);
+    const duplicateRef = useRef<() => void>(() => {});
+
     useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+    useEffect(() => { charactersRef.current = characters; }, [characters]);
+    useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
+
+    const syncCharactersOnly = async () => {
+        try {
+            const nRes = await fetch('/api/npcs');
+            if (!nRes.ok) return;
+            const npcs = await nRes.json();
+            if (!Array.isArray(npcs)) return;
+            setCharacters(prev => {
+                const next = mergeNpcsIntoCharacters(prev, npcs);
+                charactersRef.current = next;
+                return next;
+            });
+        } catch (err) {
+            console.warn('[studio-ui] failed syncing NPCs into dialogue characters', err);
+        }
+    };
 
     useEffect(() => {
-        if (isReady) {
-            loadData();
+        if (!isReady) return;
 
-            const unsubLoad = subscribe('dialogue:load', (event: any) => {
-                if (event.data.dialogueId) {
-                    const idx = conversationsRef.current.findIndex(c => c.id === event.data.dialogueId);
-                    if (idx >= 0) setCurrentIndex(idx);
+        loadData();
+
+        const unsubLoad = subscribe('dialogue:load', (event: any) => {
+            const targetId = event?.data?.dialogueId;
+            if (targetId) {
+                const idx = conversationsRef.current.findIndex(c => c.id === targetId);
+                if (idx >= 0) {
+                    setCurrentIndex(idx);
+                    setPreviewLineIdx(0);
                 }
-            });
+            }
+        });
 
-            const unsubNpc = subscribe('npc:updated', () => {
-                loadData(); // Resync characters if NPCs change
-            });
+        const unsubNpc = subscribe('npc:updated', (event: any) => {
+            const updatedNpc = event?.data?.npc;
+            if (updatedNpc?.id) {
+                setCharacters(prev => {
+                    const next = mergeNpcsIntoCharacters(prev, [updatedNpc]);
+                    charactersRef.current = next;
+                    return next;
+                });
+                return;
+            }
+            if (isDirtyRef.current) {
+                pendingCharSyncRef.current = true;
+                return;
+            }
+            syncCharactersOnly();
+        });
 
-            return () => {
-                unsubLoad();
-                unsubNpc();
-            };
-        }
+        const unsubNpcSaved = subscribe('npc:saved_all', () => {
+            if (isDirtyRef.current) {
+                pendingCharSyncRef.current = true;
+                return;
+            }
+            syncCharactersOnly();
+        });
+
+        const unsubGlobalSave = subscribe('system:global_save', () => {
+            if (isDirtyRef.current) saveRef.current();
+        });
+
+        const onWindowMessage = (e: MessageEvent) => {
+            if (e.origin !== window.location.origin && e.origin !== 'null') return;
+            if (e.data?.type === 'redglitch:save-request' && isDirtyRef.current) {
+                saveRef.current();
+            }
+        };
+        window.addEventListener('message', onWindowMessage);
+
+        return () => {
+            unsubLoad();
+            unsubNpc();
+            unsubNpcSaved();
+            unsubGlobalSave();
+            window.removeEventListener('message', onWindowMessage);
+        };
     }, [isReady]);
 
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault();
-                saveToServer();
+                saveRef.current();
             }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
                 e.preventDefault();
-                duplicateConversation();
+                duplicateRef.current();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [conversations, currentIndex]);
+    }, []);
+
+    const getDefaultConversation = (existingIds?: Set<string>): Conversation => {
+        let candidate = 'conv_' + Date.now().toString().slice(-4);
+        if (existingIds && existingIds.has(candidate)) {
+            let n = 1;
+            while (existingIds.has(`${candidate}_${n}`)) n += 1;
+            candidate = `${candidate}_${n}`;
+        }
+        return {
+            id: candidate,
+            title: 'New Conversation',
+            lines: [{ characterId: 'hero', text: 'Hello world!' }]
+        };
+    };
 
     const loadData = async () => {
         try {
@@ -119,43 +240,49 @@ const DialogueEditor: React.FC = () => {
             if (res.ok) {
                 const data = await res.json();
                 const rawConvs = Array.isArray(data?.conversations) ? data.conversations : [];
-                setConversations(rawConvs.length > 0 ? rawConvs.map(normConversation) : [getDefaultConversation()]);
-                
-                // Merge NPC definitions into characters
-                let loadedChars = Array.isArray(data?.characters) ? [...data.characters] : [];
-                if (!loadedChars.find((c: any) => c.id === 'hero')) {
-                    loadedChars.unshift({ id: 'hero', name: 'Hero', color: '#3498db', sprite: 'player' });
+                const normalizedConvs = rawConvs.length > 0 ? rawConvs.map(normConversation) : [getDefaultConversation()];
+                setConversations(normalizedConvs);
+                conversationsRef.current = normalizedConvs;
+
+                const requestedId = new URLSearchParams(window.location.search).get('id');
+                if (requestedId) {
+                    const matchedIdx = normalizedConvs.findIndex(c => c.id === requestedId);
+                    if (matchedIdx >= 0) {
+                        setCurrentIndex(matchedIdx);
+                        setPreviewLineIdx(0);
+                    }
                 }
 
+                // Merge NPC definitions into characters using directional/default portrait extraction
+                let loadedChars: Character[] = Array.isArray(data?.characters) ? [...data.characters] : [];
+                let npcs: any[] = [];
                 try {
                     const nRes = await fetch('/api/npcs');
                     if (nRes.ok) {
-                        const npcs = await nRes.json();
-                        npcs.forEach((npc: any) => {
-                            if (!loadedChars.find((c: any) => c.id === npc.id)) {
-                                loadedChars.push({ id: npc.id, name: npc.name || npc.id, sprite: npc.sprite || 'player', color: '#ff0000' });
-                            }
-                        });
+                        const rawNpcs = await nRes.json();
+                        if (Array.isArray(rawNpcs)) npcs = rawNpcs;
                     }
-                } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+                } catch (err) {
+                    console.warn('[studio-ui] failed loading NPCs', err);
+                }
 
+                loadedChars = mergeNpcsIntoCharacters(loadedChars, npcs);
                 setCharacters(loadedChars);
+                charactersRef.current = loadedChars;
             }
         } catch (e) {
-            setConversations([getDefaultConversation()]);
+            const fallback = [getDefaultConversation()];
+            setConversations(fallback);
+            conversationsRef.current = fallback;
         }
     };
 
-    const getDefaultConversation = (): Conversation => ({
-        id: 'conv_' + Date.now().toString().slice(-4),
-        title: 'New Conversation',
-        lines: [{ characterId: 'hero', text: 'Hello world!' }]
-    });
-
     const updateCurrentConv = (field: string, value: any) => {
         const newConvs = [...conversations];
-        const conv = { ...newConvs[currentIndex] };
-        
+        const base = newConvs[currentIndex];
+        if (!base) return;
+        const conv = { ...base };
+
         const keys = field.split('.');
         let current: any = conv;
         for (let i = 0; i < keys.length - 1; i++) {
@@ -163,44 +290,69 @@ const DialogueEditor: React.FC = () => {
             current = current[keys[i]];
         }
         current[keys[keys.length - 1]] = value;
-        
+
         newConvs[currentIndex] = conv;
         setConversations(newConvs);
         setIsDirty(true);
         emit('dialogue:updated', { dialogueId: conv.id, dialogue: conv });
     };
 
-    const saveToServer = async () => {
+    const saveToServer = async (): Promise<boolean> => {
+        if (savingRef.current) return false;
+        savingRef.current = true;
         try {
-            const payload = { characters, conversations: conversations.map(denormConversation) };
+            const latestConvs = conversationsRef.current;
+            const latestChars = charactersRef.current;
+            const payload = { characters: latestChars, conversations: latestConvs.map(denormConversation) };
             const res = await fetch('/api/dialogues', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (res.ok) {
-                setIsDirty(false);
-                toastRef.current?.show('DIALOGUES SAVED', 'success');
-                emit('dialogue:saved_all', { count: conversations.length });
-                if (projectState) {
-                    const map: any = {};
-                    conversations.forEach(c => { map[c.id] = denormConversation(c); });
-                    projectState.set('dialogues', map);
-                }
+            if (!res.ok) {
+                let errMsg = `HTTP ${res.status}`;
+                try {
+                    const errBody = await res.json();
+                    if (errBody?.error) errMsg = errBody.error;
+                } catch { /* ignore non-JSON error body */ }
+                toastRef.current?.show(`SAVE FAILED: ${errMsg}`, 'error');
+                return false;
             }
-        } catch (e) {
-            toastRef.current?.show('SAVE FAILED', 'error');
+            setIsDirty(false);
+            isDirtyRef.current = false;
+            toastRef.current?.show('DIALOGUES SAVED', 'success');
+            emit('dialogue:saved_all', { count: latestConvs.length });
+            if (projectState) {
+                const map: any = {};
+                latestConvs.forEach(c => { map[c.id] = denormConversation(c); });
+                projectState.set('dialogues', map);
+            }
+            if (pendingCharSyncRef.current) {
+                pendingCharSyncRef.current = false;
+                syncCharactersOnly();
+            }
+            return true;
+        } catch (e: any) {
+            toastRef.current?.show(`SAVE FAILED: ${e?.message || 'Network error'}`, 'error');
+            return false;
+        } finally {
+            savingRef.current = false;
         }
     };
+    saveRef.current = saveToServer;
 
     const duplicateConversation = () => {
         const current = conversations[currentIndex];
-        const clone = { ...JSON.parse(JSON.stringify(current)), id: current.id + '_COPY' };
+        if (!current) return;
+        const newId = generateUniqueCopyId(current.id, new Set(conversations.map(c => c.id)));
+        const clone = { ...JSON.parse(JSON.stringify(current)), id: newId };
         setConversations([...conversations, clone]);
         setCurrentIndex(conversations.length);
+        setPreviewLineIdx(0);
         setIsDirty(true);
-        toastRef.current?.show('CONVERSATION DUPLICATED', 'info');
+        toastRef.current?.show(`CONVERSATION DUPLICATED AS ${newId}`, 'info');
     };
+    duplicateRef.current = duplicateConversation;
 
     const deleteConversation = () => {
         if (conversations.length <= 1) return;
@@ -214,15 +366,22 @@ const DialogueEditor: React.FC = () => {
 
     const addLine = () => {
         const conv = conversations[currentIndex];
+        if (!conv) return;
         updateCurrentConv('lines', [...conv.lines, { characterId: 'hero', text: '' }]);
     };
 
-    const addChoice = (lineIdx: number) => {
+    const updateLine = (lineIdx: number, updater: (line: DialogueLine) => DialogueLine) => {
         const conv = conversations[currentIndex];
-        const lines = [...conv.lines];
-        const choices = lines[lineIdx].choices || [];
-        lines[lineIdx].choices = [...choices, { text: 'New Choice', nextId: '' }];
+        if (!conv) return;
+        const lines = conv.lines.map((l, idx) => (idx === lineIdx ? updater(l) : l));
         updateCurrentConv('lines', lines);
+    };
+
+    const addChoice = (lineIdx: number) => {
+        updateLine(lineIdx, line => ({
+            ...line,
+            choices: [...(line.choices || []), { text: 'New Choice', nextId: '' }]
+        }));
     };
 
     const filteredConversations = useMemo(() => {
@@ -256,7 +415,7 @@ const DialogueEditor: React.FC = () => {
             <div id="toolbar" style={{ height: '44px', background: '#000', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 10px', gap: '8px' }}>
                 <button className="tool-btn" onClick={saveToServer} title="Save (Ctrl+S)"><Save size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
-                <button className="tool-btn" onClick={() => { setConversations([...conversations, getDefaultConversation()]); setCurrentIndex(conversations.length); setIsDirty(true); }} title="New Conversation"><Plus size={16} /></button>
+                <button className="tool-btn" onClick={() => { const created = getDefaultConversation(new Set(conversations.map(c => c.id))); setConversations([...conversations, created]); setCurrentIndex(conversations.length); setPreviewLineIdx(0); setIsDirty(true); }} title="New Conversation"><Plus size={16} /></button>
                 <button className="tool-btn" onClick={duplicateConversation} title="Duplicate"><Copy size={16} /></button>
                 <button className="tool-btn" style={{ color: '#e74c3c' }} onClick={deleteConversation} title="Delete"><Trash size={16} /></button>
                 
@@ -276,8 +435,14 @@ const DialogueEditor: React.FC = () => {
                 <Sidebar 
                     title="CONVERSATIONS" 
                     items={filteredConversations} 
-                    currentIndex={conversations.indexOf(filteredConversations[currentIndex])} 
-                    onSelect={(idx) => { setCurrentIndex(conversations.indexOf(filteredConversations[idx])); setPreviewLineIdx(0); }}
+                    currentIndex={filteredConversations.indexOf(conversations[currentIndex])} 
+                    onSelect={(idx) => {
+                        const realIdx = conversations.indexOf(filteredConversations[idx]);
+                        if (realIdx >= 0) {
+                            setCurrentIndex(realIdx);
+                            setPreviewLineIdx(0);
+                        }
+                    }}
                     renderItem={(c, active) => (
                         <div style={{
                             padding: '10px', cursor: 'pointer', borderBottom: '1px solid #1a1a1a',
@@ -312,11 +477,7 @@ const DialogueEditor: React.FC = () => {
                                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                         <select 
                                             value={line.characterId} 
-                                            onChange={(e) => {
-                                                const newLines = [...currentConv.lines];
-                                                newLines[lIdx].characterId = e.target.value;
-                                                updateCurrentConv('lines', newLines);
-                                            }}
+                                            onChange={(e) => updateLine(lIdx, prev => ({ ...prev, characterId: e.target.value }))}
                                             style={{ width: '150px', border: 'none', background: '#111' }}
                                         >
                                             {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -336,11 +497,7 @@ const DialogueEditor: React.FC = () => {
                                 <textarea 
                                     rows={2} 
                                     value={line.text} 
-                                    onChange={(e) => {
-                                        const newLines = [...currentConv.lines];
-                                        newLines[lIdx].text = e.target.value;
-                                        updateCurrentConv('lines', newLines);
-                                    }}
+                                    onChange={(e) => updateLine(lIdx, prev => ({ ...prev, text: e.target.value }))}
                                     placeholder="Enter dialogue text..."
                                     style={{ background: '#080808', padding: '10px', border: '1px solid #111' }}
                                 />
@@ -353,30 +510,27 @@ const DialogueEditor: React.FC = () => {
                                             <input 
                                                 type="text" 
                                                 value={choice.text} 
-                                                onChange={(e) => {
-                                                    const newLines = [...currentConv.lines];
-                                                    newLines[lIdx].choices![cIdx].text = e.target.value;
-                                                    updateCurrentConv('lines', newLines);
-                                                }}
+                                                onChange={(e) => updateLine(lIdx, prev => ({
+                                                    ...prev,
+                                                    choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, text: e.target.value } : ch)
+                                                }))}
                                                 placeholder="Choice text..."
                                                 style={{ fontSize: '0.9rem', flex: 2 }}
                                             />
                                             <input 
                                                 type="text" 
                                                 value={choice.nextId || ''} 
-                                                onChange={(e) => {
-                                                    const newLines = [...currentConv.lines];
-                                                    newLines[lIdx].choices![cIdx].nextId = e.target.value;
-                                                    updateCurrentConv('lines', newLines);
-                                                }}
+                                                onChange={(e) => updateLine(lIdx, prev => ({
+                                                    ...prev,
+                                                    choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, nextId: e.target.value } : ch)
+                                                }))}
                                                 placeholder="Next Script ID"
                                                 style={{ flex: 1, fontSize: '0.8rem' }}
                                             />
-                                            <button className="tool-btn small danger" onClick={() => {
-                                                const newLines = [...currentConv.lines];
-                                                newLines[lIdx].choices!.splice(cIdx, 1);
-                                                updateCurrentConv('lines', newLines);
-                                            }}>×</button>
+                                            <button className="tool-btn small danger" onClick={() => updateLine(lIdx, prev => ({
+                                                ...prev,
+                                                choices: (prev.choices || []).filter((_, idx) => idx !== cIdx)
+                                            }))}>×</button>
                                         </div>
                                     ))}
                                     <button className="tool-btn" style={{ width: 'auto', padding: '2px 10px', fontSize: '0.8rem', marginTop: '5px' }} onClick={() => addChoice(lIdx)}>
@@ -395,16 +549,32 @@ const DialogueEditor: React.FC = () => {
                     <div className="panel-header">PREVIEW BOX</div>
                     <div className="panel-content" style={{ justifyContent: 'center' }}>
                         <div style={{ background: '#000', border: '2px solid #333', minHeight: '180px', position: 'relative', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-                             <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
-                                <div style={{ 
-                                    width: '48px', height: '48px', background: '#111', border: '1px solid #444', 
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px',
-                                    color: activePreviewCharacter?.color || '#3498db'
-                                }}>
-                                    {activePreviewCharacter?.name?.[0]?.toUpperCase() || '?'}
+                             <div style={{ display: 'flex', gap: '15px', marginBottom: '10px', alignItems: 'center' }}>
+                                <div
+                                    title={activePreviewCharacter?.sprite || 'player'}
+                                    style={{ 
+                                        width: '48px', height: '48px', background: '#111', border: '1px solid #444', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px',
+                                        color: activePreviewCharacter?.color || '#3498db', overflow: 'hidden', flexShrink: 0
+                                    }}
+                                >
+                                    {activePreviewCharacter?.sprite && (activePreviewCharacter.sprite.startsWith('/') || /\.(png|jpe?g|webp|gif)$/i.test(activePreviewCharacter.sprite)) ? (
+                                        <img
+                                            src={activePreviewCharacter.sprite.startsWith('/') ? activePreviewCharacter.sprite : `/${activePreviewCharacter.sprite}`}
+                                            alt={activePreviewCharacter.name}
+                                            style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated' }}
+                                        />
+                                    ) : (
+                                        activePreviewCharacter?.name?.[0]?.toUpperCase() || '?'
+                                    )}
                                 </div>
-                                <div style={{ fontWeight: 'bold', color: activePreviewCharacter?.color || '#3498db', fontSize: '1.2rem' }}>
-                                    {activePreviewCharacter?.name || 'UNKNOWN'}
+                                <div>
+                                    <div style={{ fontWeight: 'bold', color: activePreviewCharacter?.color || '#3498db', fontSize: '1.2rem' }}>
+                                        {activePreviewCharacter?.name || 'UNKNOWN'}
+                                    </div>
+                                    <div style={{ fontSize: '0.65rem', color: '#555' }}>
+                                        {activePreviewCharacter?.sprite || 'player'}
+                                    </div>
                                 </div>
                              </div>
                              <div style={{ flexGrow: 1, fontSize: '1rem', color: '#fff', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>

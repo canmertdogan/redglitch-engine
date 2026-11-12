@@ -97,6 +97,11 @@ export default class Editor3DCore {
         // ── RAF ───────────────────────────────────────────────────────────
         this._rafId = null;
         this._lastFrameAt = 0;
+        this._needsRender = true;
+        this._studioHidden = false;
+        this._visMessageHandler = null;
+        this._visDocHandler = null;
+        this._resizeObserver = null;
 
         // ── Deferred modules ──────────────────────────────────────────────
         this._Renderer3D   = null;
@@ -241,6 +246,7 @@ export default class Editor3DCore {
         this._gizmoDragging = false;
         this.transformCtrl.addEventListener('dragging-changed', (e) => {
             this._gizmoDragging = e.value;
+            this._requestRender();
             if (e.value) {
                 this._pushUndo();
             } else {
@@ -258,11 +264,47 @@ export default class Editor3DCore {
                 this._updatePropertiesPanel();
                 this._markDirty();
             }
+            this._requestRender();
         });
 
         this._attachInputListeners();
 
+        // ── Visibility & resize listeners ─────────────────────────────────
+        this._visMessageHandler = (e) => {
+            if (e.data && e.data.type === 'studio:visibility') {
+                const hidden = !e.data.visible;
+                this._studioHidden = hidden;
+                if (hidden) {
+                    if (this._rafId) {
+                        cancelAnimationFrame(this._rafId);
+                        this._rafId = null;
+                    }
+                    this._lastFrameAt = 0;
+                } else {
+                    this._requestRender();
+                }
+            }
+        };
+        this._visDocHandler = () => {
+            if (typeof document !== 'undefined' && document.hidden) {
+                if (this._rafId) {
+                    cancelAnimationFrame(this._rafId);
+                    this._rafId = null;
+                }
+                this._lastFrameAt = 0;
+            } else if (!this._studioHidden) {
+                this._requestRender();
+            }
+        };
+        window.addEventListener('message', this._visMessageHandler);
+        document.addEventListener('visibilitychange', this._visDocHandler);
+        if (typeof ResizeObserver !== 'undefined' && this.container) {
+            this._resizeObserver = new ResizeObserver(() => this._requestRender());
+            this._resizeObserver.observe(this.container);
+        }
+
         // ── Start render loop ─────────────────────────────────────────────
+        this._needsRender = true;
         this._loop();
 
         this.setActiveTool(this._activeTool);
@@ -320,9 +362,31 @@ export default class Editor3DCore {
     }
 
     async saveLevel() {
-        if (!this._project || !this._levelId) {
-            console.warn('[Editor3DCore] No project/level set');
-            return;
+        if (!this._project) {
+            const uiProj = document.getElementById('project-select')?.value?.trim();
+            const pickedProj = uiProj || prompt('Enter project name to save 3D level into:', 'Default Project');
+            if (!pickedProj || !pickedProj.trim()) {
+                console.warn('[Editor3DCore] Save cancelled — no project specified');
+                return;
+            }
+            this._project = pickedProj.trim();
+        }
+        if (!this._levelId) {
+            const rawDefault = (this._levelData?.name || 'level_1').trim()
+                .replace(/\s+/g, '_')
+                .replace(/[^a-zA-Z0-9_-]/g, '') || 'level_1';
+            const enteredId = prompt('Enter a level ID (letters, numbers, _, -):', rawDefault);
+            if (!enteredId || !enteredId.trim()) {
+                console.warn('[Editor3DCore] Save cancelled — no level ID specified');
+                return;
+            }
+            const cleanId = enteredId.trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+            if (!/^[a-zA-Z0-9_-]+$/.test(cleanId)) {
+                alert('Invalid level ID. Use only letters, numbers, underscores, and hyphens.');
+                return;
+            }
+            this._levelId = cleanId;
+            if (this._levelData) this._levelData.name = cleanId;
         }
         const payload = this._serializeLevelData();
         try {
@@ -396,6 +460,16 @@ export default class Editor3DCore {
         input.click();
     }
 
+    _readLocalFile(file, mode = 'arrayBuffer') {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+            if (mode === 'text') reader.readAsText(file);
+            else reader.readAsArrayBuffer(file);
+        });
+    }
+
     async importFBX() {
         const input = document.createElement('input');
         input.type = 'file';
@@ -405,21 +479,39 @@ export default class Editor3DCore {
             if (!file) return;
 
             try {
-                // Use AssetLoader3D to load FBX
-                const loader = new AssetLoader3D(this.scene, this.renderer3d?.paletteManager);
-                const { group, animations } = await loader.loadFBX(URL.createObjectURL(file), {
-                    cache: false,
-                    flatShading: true,
-                    remapColors: true,
-                });
+                let group = null;
+                try {
+                    const [{ FBXLoader }, { applyFlatShading }] = await Promise.all([
+                        import('/lib/three/loaders/FBXLoader.js'),
+                        import('/engines/shared/Renderer3D.js'),
+                    ]);
+                    const buffer = await this._readLocalFile(file, 'arrayBuffer');
+                    const fbxLoader = new FBXLoader();
+                    group = fbxLoader.parse(buffer, '');
+                    applyFlatShading(group);
+                } catch (parseErr) {
+                    const blobUrl = URL.createObjectURL(file);
+                    try {
+                        const loader = new AssetLoader3D(this.scene, this.renderer3d?.paletteManager);
+                        ({ group } = await loader.loadFBX(blobUrl, {
+                            cache: false,
+                            flatShading: true,
+                            remapColors: true,
+                        }));
+                    } finally {
+                        URL.revokeObjectURL(blobUrl);
+                    }
+                }
 
+                this._pushUndo();
                 // Add each mesh from the group to the scene
                 let meshCount = 0;
                 group.traverse((child) => {
                     if (child.isMesh) {
-                        child.name = `fbx_${Date.now()}_${meshCount++}`;
-                        child.userData = { type: 'trimesh', imported: true, source: 'fbx' };
-                        this.meshGroup.add(child.clone());
+                        const cloned = child.clone();
+                        cloned.name = `fbx_${Date.now()}_${meshCount++}`;
+                        cloned.userData = { type: 'trimesh', imported: true, source: 'fbx' };
+                        this.meshGroup.add(cloned);
                     }
                 });
 
@@ -437,49 +529,66 @@ export default class Editor3DCore {
     async importOBJ() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.obj';
+        input.accept = '.obj,.mtl';
+        input.multiple = true;
         input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            const files = Array.from(e.target.files || []);
+            const objFile = files.find(f => f.name.toLowerCase().endsWith('.obj')) || files[0];
+            if (!objFile) return;
+
+            const basename = objFile.name.replace(/\.obj$/i, '').toLowerCase();
+            const mtlFile = files.find(f => f.name.toLowerCase() === `${basename}.mtl`)
+                || files.find(f => f.name.toLowerCase().endsWith('.mtl'))
+                || null;
 
             try {
-                const loader = new AssetLoader3D(this.scene, this.renderer3d?.paletteManager);
-                const url = URL.createObjectURL(file);
-
-                // Check if an MTL file with the same basename exists alongside the OBJ
-                let mtlUrl = null;
-                const objName = file.name.toLowerCase();
-                if (objName.endsWith('.obj')) {
-                    // Try to find a companion .mtl file
-                    const basename = file.name.slice(0, -4);
-                    const mtlFile = e.target.files[1]; // second file if user selected multiple
-                    if (mtlFile && mtlFile.name.toLowerCase() === basename + '.mtl') {
-                        mtlUrl = URL.createObjectURL(mtlFile);
-                    } else if (file.webkitRelativePath) {
-                        // If running in a directory-aware context, try to guess MTL path
-                        const mtlPath = file.webkitRelativePath.replace(/\.obj$/i, '.mtl');
-                        // Not easily resolved from a File object
+                let group = null;
+                try {
+                    const [{ OBJLoader }, { MTLLoader }, { applyFlatShading }] = await Promise.all([
+                        import('/lib/three/loaders/OBJLoader.js'),
+                        import('/lib/three/loaders/MTLLoader.js'),
+                        import('/engines/shared/Renderer3D.js'),
+                    ]);
+                    const objLoader = new OBJLoader();
+                    if (mtlFile) {
+                        const mtlText = await this._readLocalFile(mtlFile, 'text');
+                        const materials = new MTLLoader().parse(mtlText, '');
+                        materials.preload();
+                        objLoader.setMaterials(materials);
+                    }
+                    const objText = await this._readLocalFile(objFile, 'text');
+                    group = objLoader.parse(objText);
+                    applyFlatShading(group);
+                } catch (parseErr) {
+                    const objUrl = URL.createObjectURL(objFile);
+                    const mtlUrl = mtlFile ? URL.createObjectURL(mtlFile) : null;
+                    try {
+                        const loader = new AssetLoader3D(this.scene, this.renderer3d?.paletteManager);
+                        ({ group } = await loader.loadOBJ(objUrl, mtlUrl, {
+                            cache: false,
+                            flatShading: true,
+                            remapColors: true,
+                        }));
+                    } finally {
+                        URL.revokeObjectURL(objUrl);
+                        if (mtlUrl) URL.revokeObjectURL(mtlUrl);
                     }
                 }
 
-                const { group } = await loader.loadOBJ(url, mtlUrl, {
-                    cache: false,
-                    flatShading: true,
-                    remapColors: true,
-                });
-
+                this._pushUndo();
                 let meshCount = 0;
                 group.traverse((child) => {
                     if (child.isMesh) {
-                        child.name = `obj_${Date.now()}_${meshCount++}`;
-                        child.userData = { type: 'trimesh', imported: true, source: 'obj' };
-                        this.meshGroup.add(child.clone());
+                        const cloned = child.clone();
+                        cloned.name = `obj_${Date.now()}_${meshCount++}`;
+                        cloned.userData = { type: 'trimesh', imported: true, source: 'obj' };
+                        this.meshGroup.add(cloned);
                     }
                 });
 
                 this._updateSceneTree();
                 this._markDirty();
-                console.log(`[Editor3DCore] Imported ${meshCount} meshes from OBJ: ${file.name}`);
+                console.log(`[Editor3DCore] Imported ${meshCount} meshes from OBJ: ${objFile.name}`);
             } catch (err) {
                 console.error('[Editor3DCore] OBJ import failed:', err);
                 alert('Failed to import OBJ: ' + err.message);
@@ -915,11 +1024,12 @@ export default class Editor3DCore {
         // Create new definition based on first mesh but as a "custom" geometry shape_type
         const id = `csg_${Date.now().toString(36)}`;
         
+        this._pushUndo();
         const def = {
             id,
             shape_type: 'custom_csg', // Special type so it doesn't get overwritten with a box
             position: [mesh1.position.x, mesh1.position.y, mesh1.position.z],
-            rotation: [mesh1.rotation.x, mesh1.rotation.y, mesh1.rotation.z],
+            rotation: mesh1.quaternion.toArray(),
             scale: [mesh1.scale.x, mesh1.scale.y, mesh1.scale.z],
             material_id: mesh1.userData.material_id || 'mat_default',
             // Storing vertices and indices so it survives save/load
@@ -2272,6 +2382,8 @@ export default class Editor3DCore {
                 const geoData = {
                     id:            mesh.name,
                     type:          ud.type || 'mesh',
+                    shape_type:    ud.shape_type || ud.type || 'box',
+                    blockType:     ud.blockType || ud.type || null,
                     width:         ud.width  || 1,
                     height:        ud.height || 1,
                     depth:         ud.depth  || 1,
@@ -2297,7 +2409,7 @@ export default class Editor3DCore {
                 if (ud.material_overrides) {
                     geoData.material_overrides = { ...ud.material_overrides };
                 }
-                
+
                 if ((ud.type === 'trimesh' || ud.type === 'prop') && mesh.geometry) {
                     const pos = mesh.geometry.getAttribute('position');
                     if (pos) geoData.positions = Array.from(pos.array);
@@ -2309,7 +2421,17 @@ export default class Editor3DCore {
                     if (uvs) geoData.uvs = Array.from(uvs.array);
                     if (mesh.geometry.index) geoData.indices = Array.from(mesh.geometry.index.array);
                 }
-                
+
+                if (ud.shape_type === 'custom_csg' && mesh.geometry) {
+                    const pos = mesh.geometry.getAttribute('position');
+                    if (pos) geoData.custom_vertices = Array.from(pos.array);
+                    const nrm = mesh.geometry.getAttribute('normal');
+                    if (nrm) geoData.custom_normals = Array.from(nrm.array);
+                    const uvs = mesh.geometry.getAttribute('uv');
+                    if (uvs) geoData.custom_uvs = Array.from(uvs.array);
+                    if (mesh.geometry.index) geoData.custom_indices = Array.from(mesh.geometry.index.array);
+                }
+
                 data.geometry.push(geoData);
             }
         }
@@ -2682,11 +2804,16 @@ export default class Editor3DCore {
 
     _onPointerDown(e) {
         if (this._gizmoDragging) return;
-        if (this._modePanel?.handlePointerDown?.(e)) return;
+        if (this._modePanel?.handlePointerDown?.(e)) {
+            this._requestRender();
+            return;
+        }
         if (this.transformCtrl && this.transformCtrl.enabled && this.transformCtrl.axis !== null) {
+            this._requestRender();
             return;
         }
         e.preventDefault();
+        this._requestRender();
 
         // Left click in pencil mode
         if (e.button === 0 && this._activeTool === 'draw' && this._modePanel?.getDrawState) {
@@ -2704,7 +2831,6 @@ export default class Editor3DCore {
                     } else if (tool === 'light') {
                         this.placeLightAt(this.ghostMesh.position, state.lightType || 'point');
                     } else if (tool === 'prop' && this._modePanel?.placeSelectedAt) {
-                        this._pushUndo();
                         this._modePanel.placeSelectedAt(this.ghostMesh.position);
                     } else {
                         // Place standard block
@@ -2751,7 +2877,10 @@ export default class Editor3DCore {
 
     _onPointerMove(e) {
         if (this._gizmoDragging) return;
-        if (this._modePanel?.handlePointerMove?.(e)) return;
+        if (this._modePanel?.handlePointerMove?.(e)) {
+            this._requestRender();
+            return;
+        }
         // ── Transform drag (move/rotate/scale) ───────────────────────────
         if (this._transformDrag) {
             const td = this._transformDrag;
@@ -2783,6 +2912,7 @@ export default class Editor3DCore {
             const p = td.obj.position;
             const info = document.getElementById('status-info');
             if (info) info.textContent = `${td.tool.toUpperCase()} | X:${p.x.toFixed(2)} Y:${p.y.toFixed(2)} Z:${p.z.toFixed(2)}`;
+            this._requestRender();
             return;
         }
 
@@ -2841,15 +2971,25 @@ export default class Editor3DCore {
                         
                         this.ghostMesh.position.copy(p);
                         this.ghostMesh.visible = true;
+                        this._requestRender();
                     } else {
-                        this.ghostMesh.visible = false;
+                        if (this.ghostMesh.visible) {
+                            this.ghostMesh.visible = false;
+                            this._requestRender();
+                        }
                     }
                 }
             } else if (this.ghostMesh) {
-                this.ghostMesh.visible = false;
+                if (this.ghostMesh.visible) {
+                    this.ghostMesh.visible = false;
+                    this._requestRender();
+                }
             }
         } else if (this.ghostMesh) {
-            this.ghostMesh.visible = false;
+            if (this.ghostMesh.visible) {
+                this.ghostMesh.visible = false;
+                this._requestRender();
+            }
         }
 
         if (!this._drag) return;
@@ -2878,7 +3018,10 @@ export default class Editor3DCore {
 
     _onPointerUp(e) {
         if (this._gizmoDragging) return;
-        if (this._modePanel?.handlePointerUp?.(e)) return;
+        if (this._modePanel?.handlePointerUp?.(e)) {
+            this._requestRender();
+            return;
+        }
         // Commit a completed transform drag back to levelData
         if (this._transformDrag) {
             const td = this._transformDrag;
@@ -3108,12 +3251,21 @@ export default class Editor3DCore {
         // Skip shortcuts if focus is inside a text input
         if (document.activeElement?.matches('input, textarea, select')) return;
 
-        // Ctrl+Z: undo
-        if (e.ctrlKey && e.key === 'z') { e.preventDefault(); this.undo(); }
-        // Ctrl+Y: redo
-        if (e.ctrlKey && e.key === 'y') { e.preventDefault(); this.redo(); }
-        // Ctrl+S: save
-        if (e.ctrlKey && e.key === 's') { e.preventDefault(); this.saveLevel(); }
+        const mod = e.ctrlKey || e.metaKey;
+        const keyLower = e.key.toLowerCase();
+
+        // Ctrl/Cmd+Z: undo
+        if (mod && keyLower === 'z' && !e.shiftKey) { e.preventDefault(); this.undo(); }
+        // Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: redo
+        if (mod && (keyLower === 'y' || (keyLower === 'z' && e.shiftKey))) { e.preventDefault(); this.redo(); }
+        // Ctrl/Cmd+S: save
+        if (mod && keyLower === 's') {
+            e.preventDefault();
+            this.saveLevel();
+            if (window.parent && window.parent.RedglitchEventBus) {
+                window.parent.RedglitchEventBus.emit('system:project:save_request');
+            }
+        }
         // Delete: remove selected
         if (e.key === 'Delete') { this._deleteSelected(); }
         // F5: playtest
@@ -3132,6 +3284,7 @@ export default class Editor3DCore {
 
         // Escape: deselect all
         if (e.key === 'Escape') { this.deselectAll(); }
+        this._requestRender();
     }
 
     _onKeyUp(e) {
@@ -3209,18 +3362,36 @@ export default class Editor3DCore {
         const z = o.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta);
         this.camera.position.set(x, y, z);
         this.camera.lookAt(o.target.x, o.target.y, o.target.z);
+        this._requestRender();
     }
 
     // ── Render loop ───────────────────────────────────────────────────────────
 
+    _requestRender() {
+        this._needsRender = true;
+        if (!this._rafId && !this._studioHidden && !(typeof document !== 'undefined' && document.hidden)) {
+            this._lastFrameAt = 0;
+            this._rafId = requestAnimationFrame(() => this._loop());
+        }
+    }
+
     _loop() {
-        this._rafId = requestAnimationFrame(() => this._loop());
+        this._rafId = null;
+        if (this._studioHidden || (typeof document !== 'undefined' && document.hidden)) {
+            this._lastFrameAt = 0;
+            return;
+        }
+
         const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         const dt = this._lastFrameAt > 0 ? Math.min(Math.max(0, (now - this._lastFrameAt) / 1000), 0.1) : 0;
         this._lastFrameAt = now;
 
+        const hasNavKey = this._keysDown.has('w') || this._keysDown.has('a') ||
+            this._keysDown.has('s') || this._keysDown.has('d') ||
+            this._keysDown.has('q') || this._keysDown.has('e');
+
         // WASD camera movement
-        if (this._keysDown.size > 0) {
+        if (hasNavKey) {
             const speed = this._orbit.radius * 0.015;
             const fwdX = Math.sin(this._orbit.theta);
             const fwdZ = Math.cos(this._orbit.theta);
@@ -3233,16 +3404,40 @@ export default class Editor3DCore {
             this._updateOrbitCamera();
         }
 
-        // Skybox follows camera
-        if (this.skybox) this.skybox.update(this.camera, dt);
-        this.weatherSystem?.update(this.camera, dt);
+        const weatherActive = !!(this.weatherSystem?.config?.enabled &&
+            this.weatherSystem.config.type &&
+            this.weatherSystem.config.type !== 'clear' &&
+            this.weatherSystem.config.type !== 'none');
+        const skyboxAnimated = !!(this.skybox?.mode === 'voxel' && this.skybox?._voxelState);
+        const shadersActive = ShaderRegistry.activeMaterials.size > 0;
+        const continuous = hasNavKey || weatherActive || skyboxAnimated || shadersActive ||
+            !!this._drag || !!this._gizmoDragging || !!this._transformDrag;
+
+        if (!this._needsRender && !continuous) {
+            return;
+        }
+
+        // Skybox follows camera or animates
+        if (this.skybox && (skyboxAnimated || hasNavKey || this._needsRender)) {
+            this.skybox.update(this.camera, dt);
+        }
+        if (weatherActive) {
+            this.weatherSystem?.update(this.camera, dt);
+        }
 
         // Update shaders
-        ShaderRegistry.update(now);
+        if (shadersActive || this._needsRender) {
+            ShaderRegistry.update(now);
+        }
 
         // Render
+        this._needsRender = false;
         if (this.renderer3d) {
             this.renderer3d.render();
+        }
+
+        if (continuous || this._needsRender) {
+            this._rafId = requestAnimationFrame(() => this._loop());
         }
     }
 
@@ -3276,6 +3471,7 @@ export default class Editor3DCore {
                 path,
                 (tex) => {
                     this._textureCache.set(path, tex);
+                    this._requestRender();
                     resolve(tex);
                 },
                 undefined,
@@ -3286,12 +3482,28 @@ export default class Editor3DCore {
 
     _markDirty() {
         this._dirty = true;
+        this._requestRender();
     }
 
     get isDirty() { return this._dirty; }
 
     dispose() {
-        if (this._rafId) cancelAnimationFrame(this._rafId);
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+        if (this._visMessageHandler) {
+            window.removeEventListener('message', this._visMessageHandler);
+            this._visMessageHandler = null;
+        }
+        if (this._visDocHandler) {
+            document.removeEventListener('visibilitychange', this._visDocHandler);
+            this._visDocHandler = null;
+        }
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+            this._resizeObserver = null;
+        }
         if (this._modePanel?.dispose) this._modePanel.dispose();
         this.renderer3d?.dispose();
         this.materialPreviewRenderer?.dispose();

@@ -1,4 +1,8 @@
 {
+  "resolution": {
+    "w": 800,
+    "h": 450
+  },
   "screens": {
     "settings_menu": {
       "elements": [
@@ -6,24 +10,59 @@
           "id": "settings_title",
           "type": "label",
           "text": "SYSTEM CONFIG",
-          "rect": { "x": 300, "y": 50, "w": 200, "h": 40 },
-          "style": { "color": "#f1c40f", "fontSize": 48, "textAlign": "center" }
+          "anchor": "top-center",
+          "rect": {
+            "x": 0,
+            "y": 40,
+            "w": 340,
+            "h": 40
+          },
+          "style": {
+            "color": "#ffd36a",
+            "fontSize": 32,
+            "textAlign": "center",
+            "fontWeight": "700"
+          }
         },
         {
           "id": "btn_toggle_touch",
           "type": "button",
           "text": "TOUCH CONTROLS: AUTO",
           "script": "toggle_touch",
-          "rect": { "x": 250, "y": 150, "w": 300, "h": 50 },
-          "style": { "backgroundColor": "#333", "color": "#fff", "fontSize": 24 }
+          "anchor": "center",
+          "rect": {
+            "x": 0,
+            "y": -20,
+            "w": 280,
+            "h": 44
+          },
+          "style": {
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#49e3ff",
+            "borderWidth": 2,
+            "borderColor": "#49e3ff",
+            "fontSize": 16
+          }
         },
         {
           "id": "btn_back_settings",
           "type": "button",
           "text": "BACK",
           "script": "back_from_settings",
-          "rect": { "x": 300, "y": 350, "w": 200, "h": 50 },
-          "style": { "backgroundColor": "#333", "color": "#fff", "fontSize": 24 }
+          "anchor": "bottom-center",
+          "rect": {
+            "x": 0,
+            "y": 44,
+            "w": 200,
+            "h": 42
+          },
+          "style": {
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#ff3147",
+            "borderWidth": 2,
+            "borderColor": "#ff3147",
+            "fontSize": 16
+          }
         }
       ]
     },
@@ -33,19 +72,21 @@
           "id": "title",
           "type": "label",
           "text": "REVENGE OF THE\nREDGLITCH CANAVARI",
+          "anchor": "top-center",
           "rect": {
-            "x": 190,
-            "y": 60,
-            "w": 400,
-            "h": 150
+            "x": 0,
+            "y": 36,
+            "w": 560,
+            "h": 96
           },
           "style": {
             "backgroundColor": "transparent",
-            "color": "#f1c40f",
-            "fontSize": 64,
+            "color": "#ffd36a",
+            "fontSize": 38,
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textAlign": "center"
+            "textAlign": "center",
+            "fontWeight": "700"
           },
           "props": {}
         },
@@ -54,18 +95,19 @@
           "type": "button",
           "text": "NEW GAME",
           "script": "start_skill_selector",
+          "anchor": "center",
           "rect": {
-            "x": 220,
-            "y": 210,
-            "w": 160,
-            "h": 50
+            "x": -144,
+            "y": -20,
+            "w": 136,
+            "h": 44
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#f4d03f",
-            "fontSize": 32,
+            "backgroundColor": "rgba(13,18,30,0.9)",
+            "color": "#62ff9a",
+            "fontSize": 18,
             "borderWidth": 2,
-            "borderColor": "#f4d03f"
+            "borderColor": "#62ff9a"
           },
           "props": {}
         },
@@ -74,18 +116,19 @@
           "type": "button",
           "text": "CONTINUE",
           "script": "load_game",
+          "anchor": "center",
           "rect": {
-            "x": 400,
-            "y": 210,
-            "w": 160,
-            "h": 50
+            "x": 0,
+            "y": -20,
+            "w": 136,
+            "h": 44
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#f4d03f",
-            "fontSize": 32,
+            "backgroundColor": "rgba(13,18,30,0.9)",
+            "color": "#49e3ff",
+            "fontSize": 18,
             "borderWidth": 2,
-            "borderColor": "#f4d03f"
+            "borderColor": "#49e3ff"
           },
           "props": {}
         },
@@ -94,18 +137,19 @@
           "type": "button",
           "text": "CAMPAIGNS",
           "script": "open_campaigns",
+          "anchor": "center",
           "rect": {
-            "x": 400,
-            "y": 210,
-            "w": 160,
-            "h": 50
+            "x": 144,
+            "y": -20,
+            "w": 136,
+            "h": 44
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#2ecc71",
-            "fontSize": 28,
+            "backgroundColor": "rgba(13,18,30,0.9)",
+            "color": "#ffd36a",
+            "fontSize": 18,
             "borderWidth": 2,
-            "borderColor": "#2ecc71"
+            "borderColor": "#ffd36a"
           },
           "props": {}
         },
@@ -114,38 +158,19 @@
           "type": "button",
           "text": "ENGINE",
           "script": "open_engine",
+          "anchor": "center",
           "rect": {
-            "x": 220,
-            "y": 270,
-            "w": 100,
-            "h": 40
+            "x": -128,
+            "y": 38,
+            "w": 120,
+            "h": 38
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#f4d03f",
-            "fontSize": 20,
+            "backgroundColor": "rgba(13,18,30,0.88)",
+            "color": "#f4f7ff",
+            "fontSize": 15,
             "borderWidth": 2,
-            "borderColor": "#f4d03f"
-          },
-          "props": {}
-        },
-        {
-          "id": "btn_settings",
-          "type": "button",
-          "text": "SETTINGS",
-          "script": "open_settings_screen",
-          "rect": {
-            "x": 220,
-            "y": 320,
-            "w": 160,
-            "h": 30
-          },
-          "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#f4d03f",
-            "fontSize": 20,
-            "borderWidth": 2,
-            "borderColor": "#f4d03f"
+            "borderColor": "#64748b"
           },
           "props": {}
         },
@@ -154,18 +179,19 @@
           "type": "button",
           "text": "CHEATS",
           "script": "open_cheats",
+          "anchor": "center",
           "rect": {
-            "x": 330,
-            "y": 270,
-            "w": 110,
-            "h": 40
+            "x": 0,
+            "y": 38,
+            "w": 120,
+            "h": 38
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#f4d03f",
-            "fontSize": 20,
+            "backgroundColor": "rgba(13,18,30,0.88)",
+            "color": "#ffd36a",
+            "fontSize": 15,
             "borderWidth": 2,
-            "borderColor": "#f4d03f"
+            "borderColor": "#ffd36a"
           },
           "props": {}
         },
@@ -174,18 +200,40 @@
           "type": "button",
           "text": "CREDITS",
           "script": "open_credits",
+          "anchor": "center",
           "rect": {
-            "x": 450,
-            "y": 270,
-            "w": 110,
-            "h": 40
+            "x": 128,
+            "y": 38,
+            "w": 120,
+            "h": 38
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#f4d03f",
-            "fontSize": 20,
+            "backgroundColor": "rgba(13,18,30,0.88)",
+            "color": "#49e3ff",
+            "fontSize": 15,
             "borderWidth": 2,
-            "borderColor": "#f4d03f"
+            "borderColor": "#49e3ff"
+          },
+          "props": {}
+        },
+        {
+          "id": "btn_settings",
+          "type": "button",
+          "text": "SETTINGS",
+          "script": "open_settings_screen",
+          "anchor": "center",
+          "rect": {
+            "x": -92,
+            "y": 90,
+            "w": 172,
+            "h": 34
+          },
+          "style": {
+            "backgroundColor": "rgba(13,18,30,0.88)",
+            "color": "#ffd36a",
+            "fontSize": 15,
+            "borderWidth": 2,
+            "borderColor": "#ffd36a"
           },
           "props": {}
         },
@@ -194,18 +242,19 @@
           "type": "button",
           "text": "LOGOUT",
           "script": "logout",
+          "anchor": "center",
           "rect": {
-            "x": 400,
-            "y": 320,
-            "w": 160,
-            "h": 30
+            "x": 92,
+            "y": 90,
+            "w": 172,
+            "h": 34
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#c0392b",
-            "fontSize": 18,
+            "backgroundColor": "rgba(13,18,30,0.88)",
+            "color": "#ff3147",
+            "fontSize": 15,
             "borderWidth": 2,
-            "borderColor": "#c0392b"
+            "borderColor": "#ff3147"
           },
           "props": {}
         },
@@ -213,15 +262,16 @@
           "id": "current-user-display-label",
           "type": "label",
           "text": "LOGGED IN AS: {USERNAME}",
+          "anchor": "bottom-center",
           "rect": {
-            "x": 310,
-            "y": 380,
-            "w": 800,
+            "x": 0,
+            "y": 20,
+            "w": 420,
             "h": 20
           },
           "style": {
-            "color": "#555",
-            "fontSize": 16,
+            "color": "#94a3b8",
+            "fontSize": 13,
             "textAlign": "center"
           },
           "props": {}
@@ -234,31 +284,34 @@
           "id": "skill_title",
           "type": "label",
           "text": "CHOOSE YOUR BRAIN POWERS",
+          "anchor": "top-center",
           "rect": {
-            "x": 160,
-            "y": 10,
-            "w": 480,
-            "h": 60
+            "x": 0,
+            "y": 16,
+            "w": 520,
+            "h": 42
           },
           "style": {
-            "color": "#f1c40f",
-            "fontSize": 48,
-            "textAlign": "center"
+            "color": "#ffd36a",
+            "fontSize": 32,
+            "textAlign": "center",
+            "fontWeight": "700"
           }
         },
         {
           "id": "skill_container",
           "type": "panel",
+          "anchor": "center",
           "rect": {
-            "x": 75,
-            "y": 70,
-            "w": 650,
-            "h": 300
+            "x": 0,
+            "y": 0,
+            "w": 660,
+            "h": 284
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.8)",
-            "borderColor": "#f1c40f",
-            "borderWidth": 4
+            "backgroundColor": "rgba(10,14,24,0.88)",
+            "borderColor": "#ffd36a",
+            "borderWidth": 2
           }
         },
         {
@@ -266,17 +319,18 @@
           "type": "button",
           "text": "ENTER TO THE WORLD",
           "script": "confirm_skills_and_start",
+          "anchor": "bottom-center",
           "rect": {
-            "x": 300,
-            "y": 390,
-            "w": 200,
-            "h": 50
+            "x": 0,
+            "y": 20,
+            "w": 240,
+            "h": 42
           },
           "style": {
-            "backgroundColor": "#27ae60",
-            "color": "#fff",
-            "fontSize": 24,
-            "borderColor": "#fff",
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#62ff9a",
+            "fontSize": 18,
+            "borderColor": "#62ff9a",
             "borderWidth": 2
           }
         }
@@ -288,16 +342,18 @@
           "id": "pause_title",
           "type": "label",
           "text": "PAUSED",
+          "anchor": "top-center",
           "rect": {
-            "x": 300,
-            "y": 50,
-            "w": 200,
-            "h": 40
+            "x": 0,
+            "y": 24,
+            "w": 240,
+            "h": 36
           },
           "style": {
-            "color": "#f1c40f",
-            "fontSize": 48,
-            "textAlign": "center"
+            "color": "#ffd36a",
+            "fontSize": 34,
+            "textAlign": "center",
+            "fontWeight": "700"
           }
         },
         {
@@ -305,16 +361,19 @@
           "type": "button",
           "text": "RESUME",
           "script": "resume_game",
+          "anchor": "top-left",
           "rect": {
-            "x": 50,
-            "y": 120,
-            "w": 200,
-            "h": 50
+            "x": 40,
+            "y": 84,
+            "w": 210,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#fff",
-            "fontSize": 24
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#62ff9a",
+            "borderWidth": 2,
+            "borderColor": "#62ff9a",
+            "fontSize": 17
           }
         },
         {
@@ -322,16 +381,19 @@
           "type": "button",
           "text": "TROPHIES",
           "script": "show_achievements",
+          "anchor": "top-left",
           "rect": {
-            "x": 50,
-            "y": 180,
-            "w": 200,
-            "h": 50
+            "x": 40,
+            "y": 134,
+            "w": 210,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#f1c40f",
-            "fontSize": 24
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#ffd36a",
+            "borderWidth": 2,
+            "borderColor": "#ffd36a",
+            "fontSize": 17
           }
         },
         {
@@ -339,16 +401,19 @@
           "type": "button",
           "text": "CAMPAIGN MAP",
           "script": "show_campaign_map",
+          "anchor": "top-left",
           "rect": {
-            "x": 50,
-            "y": 240,
-            "w": 200,
-            "h": 50
+            "x": 40,
+            "y": 184,
+            "w": 210,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#3498db",
-            "fontSize": 20
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#49e3ff",
+            "borderWidth": 2,
+            "borderColor": "#49e3ff",
+            "fontSize": 16
           },
           "condition": "campaign_mode"
         },
@@ -357,16 +422,19 @@
           "type": "button",
           "text": "SAVE GAME",
           "script": "save_game",
+          "anchor": "top-left",
           "rect": {
-            "x": 50,
-            "y": 300,
-            "w": 200,
-            "h": 50
+            "x": 40,
+            "y": 234,
+            "w": 210,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#fff",
-            "fontSize": 24
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#f4f7ff",
+            "borderWidth": 2,
+            "borderColor": "#64748b",
+            "fontSize": 17
           }
         },
         {
@@ -374,16 +442,19 @@
           "type": "button",
           "text": "SETTINGS",
           "script": "open_settings_screen",
+          "anchor": "top-left",
           "rect": {
-            "x": 50,
-            "y": 360,
-            "w": 200,
-            "h": 50
+            "x": 40,
+            "y": 284,
+            "w": 210,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#fff",
-            "fontSize": 24
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#49e3ff",
+            "borderWidth": 2,
+            "borderColor": "#49e3ff",
+            "fontSize": 17
           }
         },
         {
@@ -391,16 +462,19 @@
           "type": "button",
           "text": "QUIT CAMPAIGN",
           "script": "quit_to_menu",
+          "anchor": "top-left",
           "rect": {
-            "x": 50,
-            "y": 420,
-            "w": 200,
-            "h": 50
+            "x": 40,
+            "y": 334,
+            "w": 210,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#e74c3c",
-            "fontSize": 24
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#ff3147",
+            "borderWidth": 2,
+            "borderColor": "#ff3147",
+            "fontSize": 17
           },
           "condition": "campaign_mode"
         },
@@ -409,16 +483,19 @@
           "type": "button",
           "text": "MAIN MENU",
           "script": "quit_to_menu",
+          "anchor": "top-left",
           "rect": {
-            "x": 50,
-            "y": 420,
-            "w": 200,
-            "h": 50
+            "x": 40,
+            "y": 334,
+            "w": 210,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#e74c3c",
-            "fontSize": 24
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#ff3147",
+            "borderWidth": 2,
+            "borderColor": "#ff3147",
+            "fontSize": 17
           },
           "condition": "!campaign_mode"
         },
@@ -426,29 +503,32 @@
           "id": "quest_list_title",
           "type": "label",
           "text": "ACTIVE QUESTS",
+          "anchor": "top-left",
           "rect": {
-            "x": 300,
-            "y": 120,
-            "w": 450,
-            "h": 30
+            "x": 286,
+            "y": 84,
+            "w": 474,
+            "h": 28
           },
           "style": {
-            "color": "#f1c40f",
-            "fontSize": 24
+            "color": "#ffd36a",
+            "fontSize": 20,
+            "fontWeight": "700"
           }
         },
         {
           "id": "pause_quest_container",
           "type": "panel",
+          "anchor": "top-left",
           "rect": {
-            "x": 300,
-            "y": 150,
-            "w": 450,
-            "h": 250
+            "x": 286,
+            "y": 118,
+            "w": 474,
+            "h": 256
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.5)",
-            "borderColor": "#444",
+            "backgroundColor": "rgba(10,14,24,0.82)",
+            "borderColor": "#3d4b68",
             "borderWidth": 2
           }
         }
@@ -460,31 +540,34 @@
           "id": "ach_title",
           "type": "label",
           "text": "HALL OF FAME",
+          "anchor": "top-center",
           "rect": {
-            "x": 250,
-            "y": 10,
+            "x": 0,
+            "y": 16,
             "w": 400,
-            "h": 50
+            "h": 40
           },
           "style": {
-            "color": "#f1c40f",
-            "fontSize": 48,
-            "textAlign": "center"
+            "color": "#ffd36a",
+            "fontSize": 34,
+            "textAlign": "center",
+            "fontWeight": "700"
           }
         },
         {
           "id": "achievements_container",
           "type": "panel",
+          "anchor": "center",
           "rect": {
-            "x": 20,
-            "y": 70,
-            "w": 750,
-            "h": 300
+            "x": 0,
+            "y": -4,
+            "w": 720,
+            "h": 296
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.9)",
-            "borderColor": "#f1c40f",
-            "borderWidth": 4
+            "backgroundColor": "rgba(10,14,24,0.92)",
+            "borderColor": "#ffd36a",
+            "borderWidth": 2
           }
         },
         {
@@ -492,16 +575,19 @@
           "type": "button",
           "text": "RESET TROPHIES",
           "script": "reset_achievements",
+          "anchor": "bottom-center",
           "rect": {
-            "x": 300,
-            "y": 380,
+            "x": -108,
+            "y": 20,
             "w": 200,
-            "h": 50
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#7b241c",
+            "backgroundColor": "rgba(123,36,28,0.85)",
             "color": "#fff",
-            "fontSize": 20
+            "borderColor": "#ff3147",
+            "borderWidth": 2,
+            "fontSize": 16
           }
         },
         {
@@ -509,16 +595,19 @@
           "type": "button",
           "text": "BACK",
           "script": "resume_game",
+          "anchor": "bottom-center",
           "rect": {
-            "x": 1080,
-            "y": 600,
-            "w": 100,
-            "h": 50
+            "x": 108,
+            "y": 20,
+            "w": 200,
+            "h": 40
           },
           "style": {
-            "backgroundColor": "#333",
-            "color": "#fff",
-            "fontSize": 24
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#49e3ff",
+            "borderColor": "#49e3ff",
+            "borderWidth": 2,
+            "fontSize": 16
           }
         }
       ]
@@ -529,31 +618,34 @@
           "id": "inv_title",
           "type": "label",
           "text": "REDGLITCH SACK",
+          "anchor": "top-center",
           "rect": {
-            "x": 540,
-            "y": 100,
-            "w": 200,
-            "h": 40
+            "x": 0,
+            "y": 20,
+            "w": 320,
+            "h": 34
           },
           "style": {
-            "color": "#f1c40f",
-            "fontSize": 32,
-            "textAlign": "center"
+            "color": "#ffd36a",
+            "fontSize": 28,
+            "textAlign": "center",
+            "fontWeight": "700"
           }
         },
         {
           "id": "inv_grid",
           "type": "panel",
+          "anchor": "center",
           "rect": {
-            "x": 340,
-            "y": 150,
-            "w": 600,
-            "h": 400
+            "x": 0,
+            "y": 0,
+            "w": 620,
+            "h": 296
           },
           "style": {
-            "backgroundColor": "rgba(10,10,20,0.95)",
-            "borderColor": "#f1c40f",
-            "borderWidth": 4
+            "backgroundColor": "rgba(10,14,24,0.94)",
+            "borderColor": "#ffd36a",
+            "borderWidth": 2
           }
         },
         {
@@ -561,16 +653,19 @@
           "type": "button",
           "text": "CLOSE (E)",
           "script": "resume_game",
+          "anchor": "bottom-center",
           "rect": {
-            "x": 540,
-            "y": 570,
+            "x": 0,
+            "y": 20,
             "w": 200,
-            "h": 40
+            "h": 38
           },
           "style": {
-            "backgroundColor": "#c0392b",
-            "color": "#fff",
-            "fontSize": 20
+            "backgroundColor": "rgba(13,18,30,0.92)",
+            "color": "#ff3147",
+            "borderColor": "#ff3147",
+            "borderWidth": 2,
+            "fontSize": 16
           }
         }
       ]
@@ -581,20 +676,23 @@
           "id": "hp_bar",
           "type": "bar",
           "text": "AL-HAYAT",
+          "anchor": "top-left",
           "rect": {
-            "x": 20,
-            "y": 20,
+            "x": 16,
+            "y": 16,
             "w": 220,
-            "h": 24
+            "h": 22
           },
           "style": {
-            "backgroundColor": "#000",
+            "backgroundColor": "#0b0d14",
             "color": "#fff",
             "borderWidth": 2,
-            "borderColor": "#444"
+            "borderColor": "#000",
+            "fontSize": 12,
+            "fontWeight": "400"
           },
           "props": {
-            "fillColor": "#e74c3c",
+            "fillColor": "#e23b4e",
             "variable": "hp",
             "maxVariable": "maxHp"
           }
@@ -603,20 +701,23 @@
           "id": "stamina_bar",
           "type": "bar",
           "text": "SAAF TA'ISH",
+          "anchor": "top-left",
           "rect": {
-            "x": 20,
-            "y": 52,
+            "x": 16,
+            "y": 44,
             "w": 220,
-            "h": 24
+            "h": 20
           },
           "style": {
-            "backgroundColor": "#000",
+            "backgroundColor": "#0b0d14",
             "color": "#fff",
             "borderWidth": 2,
-            "borderColor": "#444"
+            "borderColor": "#000",
+            "fontSize": 11,
+            "fontWeight": "400"
           },
           "props": {
-            "fillColor": "#2ecc71",
+            "fillColor": "#54c46a",
             "variable": "stamina",
             "maxVariable": "maxStamina"
           }
@@ -625,20 +726,23 @@
           "id": "mana_bar",
           "type": "bar",
           "text": "IRAB POWER",
+          "anchor": "top-left",
           "rect": {
-            "x": 20,
-            "y": 84,
+            "x": 16,
+            "y": 70,
             "w": 220,
-            "h": 24
+            "h": 20
           },
           "style": {
-            "backgroundColor": "#000",
+            "backgroundColor": "#0b0d14",
             "color": "#fff",
             "borderWidth": 2,
-            "borderColor": "#444"
+            "borderColor": "#000",
+            "fontSize": 11,
+            "fontWeight": "400"
           },
           "props": {
-            "fillColor": "#3498db",
+            "fillColor": "#3aa6e0",
             "variable": "mana",
             "maxVariable": "maxMana"
           }
@@ -647,18 +751,19 @@
           "id": "clock",
           "type": "label",
           "text": "08:00",
+          "anchor": "top-left",
           "rect": {
-            "x": 20,
-            "y": 120,
-            "w": 100,
-            "h": 30
+            "x": 16,
+            "y": 98,
+            "w": 108,
+            "h": 28
           },
           "style": {
-            "backgroundColor": "rgba(0,0,0,0.6)",
-            "color": "#f1c40f",
-            "fontSize": 24,
+            "backgroundColor": "rgba(13,18,30,0.86)",
+            "color": "#ffd36a",
+            "fontSize": 18,
             "borderWidth": 2,
-            "borderColor": "#f1c40f",
+            "borderColor": "#ffd36a",
             "textAlign": "center"
           },
           "props": {}

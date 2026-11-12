@@ -93,8 +93,9 @@ class Synth32Bit extends Synthesizer {
         vca.connect(this.output);
         
         // Apply LFO if enabled
+        let lfoTargets = [];
         if (this.params.lfoAmount > 0) {
-            this.applyLFO(osc1, osc2, filter);
+            lfoTargets = this.applyLFO(osc1, osc2, filter, vca);
         }
         
         // Start oscillators
@@ -107,21 +108,31 @@ class Synth32Bit extends Synthesizer {
             osc2,
             mixer,
             filter,
-            gain: vca
+            gain: vca,
+            lfoTargets
         };
     }
     
-    applyLFO(osc1, osc2, filter) {
+    applyLFO(osc1, osc2, filter, vca = null) {
         const { lfoTarget, lfoAmount } = this.params;
+        const targets = [];
         
         if (lfoTarget === 'pitch') {
             this.lfoGain.gain.value = lfoAmount * 50;
             this.lfoGain.connect(osc1.detune);
             this.lfoGain.connect(osc2.detune);
+            targets.push(osc1.detune, osc2.detune);
         } else if (lfoTarget === 'filter') {
             this.lfoGain.gain.value = lfoAmount * 500;
             this.lfoGain.connect(filter.frequency);
+            targets.push(filter.frequency);
+        } else if (lfoTarget === 'amplitude' && vca) {
+            this.lfoGain.gain.value = lfoAmount * 0.5;
+            this.lfoGain.connect(vca.gain);
+            targets.push(vca.gain);
         }
+        
+        return targets;
     }
     
     // Override to add filter envelope
@@ -146,10 +157,12 @@ class Synth32Bit extends Synthesizer {
         // Apply filter envelope
         this.applyFilterEnvelope(voice.filter, time, duration);
         
-        // Auto-release after duration
+        // Auto-release after duration (account for future scheduled startTime)
+        const delay = Math.max(0, time - this.ctx.currentTime);
+        const tail = Math.max(this.params.release, this.params.filterRelease);
         setTimeout(() => {
             this.stopVoice(voiceId);
-        }, (duration + Math.max(this.params.release, this.params.filterRelease)) * 1000);
+        }, (delay + duration + tail) * 1000);
         
         return voiceId;
     }
@@ -171,21 +184,34 @@ class Synth32Bit extends Synthesizer {
     stopVoice(voiceId) {
         const voice = this.voices.get(voiceId);
         if (!voice) return;
+        this.voices.delete(voiceId);
         
         try {
-            const stopTime = this.ctx.currentTime + Math.max(this.params.release, this.params.filterRelease);
+            const releaseTime = Math.max(this.params.release, this.params.filterRelease) || 0;
+            const stopTime = this.ctx.currentTime + releaseTime;
+            const disconnectNodes = () => {
+                if (Array.isArray(voice.lfoTargets)) {
+                    for (const target of voice.lfoTargets) {
+                        try { this.lfoGain.disconnect(target); } catch {}
+                    }
+                }
+                try { voice.osc1.disconnect(); } catch {}
+                try { voice.osc2.disconnect(); } catch {}
+                try { voice.mixer.disconnect(); } catch {}
+                try { voice.filter.disconnect(); } catch {}
+                try { voice.gain.disconnect(); } catch {}
+            };
+            if ('onended' in voice.osc1) {
+                voice.osc1.onended = disconnectNodes;
+            }
             voice.osc1.stop(stopTime);
             voice.osc2.stop(stopTime);
-            voice.osc1.disconnect();
-            voice.osc2.disconnect();
-            voice.mixer.disconnect();
-            voice.filter.disconnect();
-            voice.gain.disconnect();
+            if (!('onended' in voice.osc1) || releaseTime === 0) {
+                setTimeout(disconnectNodes, Math.max(10, releaseTime * 1000 + 20));
+            }
         } catch (e) {
             // Already stopped
         }
-        
-        this.voices.delete(voiceId);
     }
     
     // Parameter setters

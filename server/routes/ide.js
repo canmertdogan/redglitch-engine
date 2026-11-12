@@ -7,6 +7,12 @@ const { resolveUnderRoot } = require('../utils/pathGuard');
 const safeFs = require('../utils/safeFs');
 const { canAutomateMutation } = require('../utils/automationPolicy');
 
+const _treeCache = new Map();
+const TREE_CACHE_TTL_MS = 5000;
+function invalidateTreeCache() {
+    _treeCache.clear();
+}
+
 function rejectProtectedAutomation(req, res, filePath) {
     // Enforce protection on EVERY write/delete, regardless of the
     // X-Redglitch-Automation header. The header is non-authoritative metadata;
@@ -128,6 +134,7 @@ router.post('/write', async (req, res) => {
 
         await ensureDir(path.dirname(fullPath));
         await safeFs.safeWriteFullPath(targetRootDir, fullPath, content, 'utf8');
+        invalidateTreeCache();
         
         console.log(`[IDE:Write] Saved: ${filePath}`);
         res.json({ success: true });
@@ -167,6 +174,7 @@ router.post('/delete', async (req, res) => {
         }
 
         await fs.unlink(fullPath);
+        invalidateTreeCache();
         console.log(`[IDE:Delete] Deleted: ${filePath}`);
         res.json({ success: true });
     } catch (err) {
@@ -231,6 +239,9 @@ router.get('/list', async (req, res) => {
 });
 
 // GET /api/ide/tree - Return nested file tree for the active project
+const SKIP_DIRS_ALL = new Set(['node_modules', 'dist', 'builds', 'venv', '.venv', '__pycache__', 'chroma_db']);
+const SKIP_DIRS_ENGINE = new Set(['studio-dist', 'lib', 'fonts']);
+
 router.get('/tree', async (req, res) => {
     const MAX_DEPTH = 5;
     const MAX_ENTRIES = 5000;
@@ -238,6 +249,12 @@ router.get('/tree', async (req, res) => {
         const activeProject = projectService.getActiveProject();
         const isRoot = projectService.isRootProject();
         const projectName = isRoot ? 'ROOT' : path.basename(activeProject);
+        const cacheKey = `${activeProject}::${isRoot}`;
+        const cached = _treeCache.get(cacheKey);
+        if (cached && Date.now() - cached.ts < TREE_CACHE_TTL_MS && req.query.refresh !== '1') {
+            return res.json(cached.payload);
+        }
+
         const state = { count: 0, truncated: false };
 
         async function buildTree(dir, relativePath = '', isEngine = false, depth = 0) {
@@ -247,10 +264,12 @@ router.get('/tree', async (req, res) => {
             }
             const entries = await fs.readdir(dir, { withFileTypes: true });
             const children = [];
+            const subDirs = [];
 
             for (const entry of entries) {
                 if (state.count >= MAX_ENTRIES) { state.truncated = true; break; }
-                if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'builds') continue;
+                if (entry.name.startsWith('.') || SKIP_DIRS_ALL.has(entry.name)) continue;
+                if (isEngine && SKIP_DIRS_ENGINE.has(entry.name)) continue;
                 if (entry.isSymbolicLink()) continue;
                 state.count++;
 
@@ -259,12 +278,16 @@ router.get('/tree', async (req, res) => {
                 const displayPath = isEngine ? `engine/${rel}` : `projects/${projectName}/${rel}`;
 
                 if (entry.isDirectory()) {
-                    children.push({
+                    const dirNode = {
                         name: entry.name,
                         path: displayPath,
                         type: 'dir',
-                        children: depth >= MAX_DEPTH ? [] : await buildTree(full, rel, isEngine, depth + 1)
-                    });
+                        children: []
+                    };
+                    children.push(dirNode);
+                    if (depth < MAX_DEPTH) {
+                        subDirs.push({ dirNode, full, rel });
+                    }
                 } else {
                     children.push({
                         name: entry.name,
@@ -273,6 +296,13 @@ router.get('/tree', async (req, res) => {
                     });
                 }
             }
+
+            if (subDirs.length > 0 && state.count < MAX_ENTRIES) {
+                await Promise.all(subDirs.map(async ({ dirNode, full, rel }) => {
+                    dirNode.children = await buildTree(full, rel, isEngine, depth + 1);
+                }));
+            }
+
             return children.sort((a, b) => {
                 if (a.type === b.type) return a.name.localeCompare(b.name);
                 return a.type === 'dir' ? -1 : 1;
@@ -280,9 +310,14 @@ router.get('/tree', async (req, res) => {
         }
 
         const tree = [];
-        
-        // 1. Add Project Tree
-        const projectTree = await buildTree(activeProject);
+        const engineRoot = path.join(__dirname, '..', '..', 'public');
+
+        // Run Project and Engine Core tree scans concurrently
+        const [projectTree, engineTree] = await Promise.all([
+            buildTree(activeProject),
+            !isRoot ? buildTree(engineRoot, '', true) : Promise.resolve(null)
+        ]);
+
         tree.push({
             name: `Project: ${projectName}`,
             path: `projects/${projectName}`,
@@ -290,10 +325,7 @@ router.get('/tree', async (req, res) => {
             children: projectTree
         });
 
-        // 2. Add Engine Tree (if not root)
-        if (!isRoot && state.count < MAX_ENTRIES) {
-            const engineRoot = path.join(__dirname, '..', '..', 'public');
-            const engineTree = await buildTree(engineRoot, '', true);
+        if (engineTree) {
             tree.push({
                 name: 'Engine Core',
                 path: 'engine',
@@ -302,7 +334,9 @@ router.get('/tree', async (req, res) => {
             });
         }
 
-        res.json(state.truncated ? { tree, truncated: true } : tree);
+        const payload = state.truncated ? { tree, truncated: true } : tree;
+        _treeCache.set(cacheKey, { ts: Date.now(), payload });
+        res.json(payload);
     } catch (err) {
         console.error('[IDE:Tree] Error:', err);
         res.status(500).json({ error: 'Failed to build tree' });

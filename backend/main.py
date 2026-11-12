@@ -502,6 +502,149 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)
+def format_tool_schemas(raw_tools, max_chars: int = 6000) -> str:
+    """Compact JSON tool schemas without slicing mid-JSON object."""
+    if not raw_tools:
+        return ""
+
+    tools_list = None
+    if isinstance(raw_tools, list):
+        tools_list = raw_tools
+    elif isinstance(raw_tools, str):
+        stripped = raw_tools.strip()
+        if not stripped:
+            return ""
+        try:
+            parsed = json.loads(stripped)
+            if isinstance(parsed, list):
+                tools_list = parsed
+        except Exception:
+            tools_list = None
+
+    if tools_list is not None:
+        compact_all = json.dumps(tools_list, separators=(",", ":"), ensure_ascii=False)
+        if len(compact_all) <= max_chars:
+            return compact_all
+
+        kept = []
+        for tool in tools_list:
+            candidate = json.dumps([*kept, tool], separators=(",", ":"), ensure_ascii=False)
+            if len(candidate) <= max_chars:
+                kept.append(tool)
+            elif isinstance(tool, dict):
+                compact_tool = {
+                    k: (v[:120] + "..." if k == "description" and isinstance(v, str) and len(v) > 123 else v)
+                    for k, v in tool.items()
+                }
+                candidate_compact = json.dumps([*kept, compact_tool], separators=(",", ":"), ensure_ascii=False)
+                if len(candidate_compact) <= max_chars:
+                    kept.append(compact_tool)
+        return json.dumps(kept, separators=(",", ":"), ensure_ascii=False)
+
+    text = str(raw_tools)
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars]
+    last_nl = cut.rfind("\n")
+    return cut[:last_nl] if last_nl > 0 else cut
+
+
+class KapStreamProcessor:
+    """Streaming token parser for fenced ```tool blocks that preserves trailing text."""
+
+    def __init__(self, is_ghost: bool = False, leak_phrases=None):
+        self.is_ghost = is_ghost
+        self.leak_phrases = list(leak_phrases or [])
+        self.full_response = ""
+        self.scan_from = 0
+        self.emitted_up_to = 0
+        self.in_tool_block = False
+        self.tool_start = -1
+
+    def _should_suppress_leak(self, upto: int) -> bool:
+        if self.is_ghost or not self.leak_phrases:
+            return False
+        window = self.full_response[:upto][-100:]
+        return any(phrase in window for phrase in self.leak_phrases)
+
+    def feed(self, token: str):
+        if not token:
+            return [], []
+        self.full_response += token
+        if self.is_ghost:
+            self.emitted_up_to = len(self.full_response)
+            self.scan_from = self.emitted_up_to
+            return [token], []
+
+        tokens_out = []
+        commands_out = []
+
+        while True:
+            if not self.in_tool_block:
+                open_pos = self.full_response.find("```", self.scan_from)
+                if open_pos != -1:
+                    if open_pos > self.emitted_up_to:
+                        plain = self.full_response[self.emitted_up_to:open_pos]
+                        if plain and not self._should_suppress_leak(open_pos):
+                            tokens_out.append(plain)
+                    self.emitted_up_to = open_pos
+                    self.in_tool_block = True
+                    self.tool_start = open_pos
+                    continue
+
+                # Hold back 1-2 trailing backticks in case ``` spans across token boundaries
+                safe_end = len(self.full_response)
+                if safe_end - self.emitted_up_to >= 2 and self.full_response.endswith("``"):
+                    safe_end -= 2
+                elif safe_end - self.emitted_up_to >= 1 and self.full_response.endswith("`"):
+                    safe_end -= 1
+
+                if safe_end > self.emitted_up_to:
+                    chunk = self.full_response[self.emitted_up_to:safe_end]
+                    if chunk and not self._should_suppress_leak(safe_end):
+                        tokens_out.append(chunk)
+                    self.emitted_up_to = safe_end
+                break
+            else:
+                close_pos = self.full_response.find("```", self.tool_start + 3)
+                if close_pos == -1:
+                    break
+
+                fence_end = close_pos + 3
+                tool_block = self.full_response[self.tool_start:fence_end]
+                try:
+                    start = tool_block.find('{')
+                    end = tool_block.rfind('}')
+                    if start != -1 and end != -1 and end > start:
+                        call = json.loads(tool_block[start:end + 1])
+                        if isinstance(call, dict) and call.get("name"):
+                            args = call.get("args", {})
+                            commands_out.append({
+                                "action": call.get("name"),
+                                "params": args if isinstance(args, dict) else {}
+                            })
+                except Exception as e:
+                    logger.error(f"KAP Error: {e}")
+
+                self.in_tool_block = False
+                self.tool_start = -1
+                self.scan_from = fence_end
+                self.emitted_up_to = fence_end
+                continue
+
+        return tokens_out, commands_out
+
+    def flush(self):
+        if self.is_ghost or self.in_tool_block:
+            return []
+        if self.emitted_up_to < len(self.full_response):
+            tail = self.full_response[self.emitted_up_to:]
+            self.emitted_up_to = len(self.full_response)
+            if tail and not self._should_suppress_leak(self.emitted_up_to):
+                return [tail]
+        return []
+
+
 async def handle_prompt(message, websocket):
     msg_id = message.get("id")
     request_type = message.get("type", "PROMPT")
@@ -586,7 +729,7 @@ async def handle_prompt(message, websocket):
     project_context = str(context_data.get("projectContext", ""))[:6000]
     browser_rag_context = str(context_data.get("ragContext", ""))[:2500]
     automation_protocol = str(context_data.get("automationProtocol", ""))[:1000]
-    tool_schemas = str(context_data.get("tools", ""))[:6000]
+    tool_schemas = format_tool_schemas(context_data.get("tools", ""), max_chars=6000)
     browser_context = ""
     if not is_ghost:
         if automation_protocol:
@@ -619,8 +762,7 @@ async def handle_prompt(message, websocket):
     try:
         logger.info("Starting token generation...")
         
-        in_tool_block = False
-        tool_buffer = ""
+        processor = KapStreamProcessor(is_ghost=is_ghost, leak_phrases=PROMPT_LEAK_PHRASES)
 
         await ensure_brain_loaded()
 
@@ -666,49 +808,27 @@ async def handle_prompt(message, websocket):
                 continue
 
             # --- KAP Protocol Detection ---
-            if not in_tool_block:
-                potential_full = full_response + token
-                if "```" in potential_full and not is_ghost:
-                    marker_pos = potential_full.rfind("```")
-                    split_idx = marker_pos - len(full_response)
-                    if split_idx > 0:
-                        await manager.send_personal_message({"type": "TOKEN", "data": token[:split_idx]}, websocket)
-                    in_tool_block = True
-                    tool_buffer = potential_full[marker_pos:]
-                    full_response = potential_full
-                    continue
-                else:
-                    if not is_ghost and any(phrase in (full_response + token)[-100:] for phrase in PROMPT_LEAK_PHRASES):
-                        full_response += token
-                        continue
-
-                    full_response += token
-                    await manager.send_personal_message({"type": "TOKEN", "data": token}, websocket)
-            else:
-                full_response += token
-                tool_buffer += token
-                if tool_buffer.count("```") >= 2:
-                    try:
-                        start = tool_buffer.find('{')
-                        end = tool_buffer.rfind('}')
-                        if start != -1 and end != -1:
-                            json_str = tool_buffer[start:end+1]
-                            call = json.loads(json_str)
-                            # CHAT requests are coordinated by the browser KAP runtime,
-                            # which validates, previews, approves, and correlates results.
-                            # COMMAND remains only for legacy PROMPT clients.
-                            if request_type != "CHAT":
-                                await manager.send_personal_message({
-                                    "type": "COMMAND",
-                                    "data": {"action": call.get("name"), "params": call.get("args", {})}
-                                }, websocket)
-                    except Exception as e: logger.error(f"KAP Error: {e}")
-                    in_tool_block = False
-                    tool_buffer = ""
-                    continue
+            tokens_to_emit, commands_to_emit = processor.feed(token)
+            for out_tok in tokens_to_emit:
+                await manager.send_personal_message({"type": "TOKEN", "data": out_tok}, websocket)
+            # CHAT requests are coordinated by the browser KAP runtime,
+            # which validates, previews, approves, and correlates results.
+            # COMMAND remains only for legacy PROMPT clients.
+            if request_type != "CHAT":
+                for cmd in commands_to_emit:
+                    await manager.send_personal_message({
+                        "type": "COMMAND",
+                        "data": cmd
+                    }, websocket)
             await asyncio.sleep(0)
+
+        for tail_tok in processor.flush():
+            await manager.send_personal_message({"type": "TOKEN", "data": tail_tok}, websocket)
+
+        full_response = processor.full_response
             
     except Exception as e:
+        full_response = processor.full_response if 'processor' in locals() else full_response
         logger.error(f"Generation error: {e}")
         await manager.send_personal_message({"type": "TOKEN", "data": f"Error: {str(e)}"}, websocket)
     

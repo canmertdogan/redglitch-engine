@@ -179,8 +179,7 @@ export default class PropertiesPanel {
                 <div class="prop-group" style="padding:4px 12px; font-weight:bold; color:var(--text-accent);">Color Channel</div>
                 <div class="prop-group">
                     <div class="prop-label">Color</div>
-                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${mat.channels?.color?.color || '#ffffff'}" data-mat-field="channels.color.color">
-                </div>
+                    <input type="color" class="prop-input" style="padding: 0; height: 28px;" value="${mat.channels?.color?.value || mat.channels?.color?.color || '#ffffff'}" data-mat-field="channels.color.value">
                 </div>
                 ${this._renderLayersUI(mat)}
                 <div class="prop-group">
@@ -319,7 +318,7 @@ export default class PropertiesPanel {
 
             panel.querySelectorAll('.btn-del-mat-prop').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    this.editor._removeMaterialProperty(mat.id, e.target.dataset.key);
+                    this.editor._removeMaterialProperty(mat.id, e.currentTarget.dataset.key);
                 });
             });
 
@@ -344,14 +343,14 @@ export default class PropertiesPanel {
             // Wire layer specific buttons
             panel.querySelectorAll('.btn-add-layer').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const channel = e.target.dataset.channel;
+                    const channel = e.currentTarget.dataset.channel;
                     this.editor._addMaterialLayer(mat.id, channel);
                 });
             });
             panel.querySelectorAll('.btn-del-layer').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const channel = e.target.dataset.channel;
-                    const index = parseInt(e.target.dataset.index, 10);
+                    const channel = e.currentTarget.dataset.channel;
+                    const index = parseInt(e.currentTarget.dataset.index, 10);
                     this.editor._removeMaterialLayer(mat.id, channel, index);
                 });
             });
@@ -546,7 +545,7 @@ export default class PropertiesPanel {
 
             panel.querySelectorAll('.btn-del-ent-prop').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    this.editor._removeEntityProperty(ent.id || obj.name, e.target.dataset.key);
+                    this.editor._removeEntityProperty(ent.id || obj.name, e.currentTarget.dataset.key);
                 });
             });
 
@@ -1135,8 +1134,8 @@ export default class PropertiesPanel {
                 const key = e.target.dataset.key;
                 let val = e.target.value;
                 if (e.target.type === 'number') val = parseFloat(val);
-                this.editor._levelData.postprocessing[idx][key] = val;
                 this.editor._pushUndo();
+                this.editor._levelData.postprocessing[idx][key] = val;
                 if (this.editor.renderer3d) this.editor.renderer3d.rebuildPostProcessing(this.editor._levelData.postprocessing);
                 this.editor._markDirty();
             });

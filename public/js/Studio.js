@@ -3,6 +3,12 @@
  * Orchestrates window management, tools, projects, and system status.
  */
 
+const _escapeHtml = window.escapeHtml || function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+};
+
 const tools = [
     // SYSTEM
     { id: 'dashboard_legacy', category: 'SYSTEM', title: 'Launcher', icon: 'fa-rocket', src: 'dashboard.html', w: 900, h: 700, status: 'hidden' },
@@ -11,6 +17,7 @@ const tools = [
     { id: 'menu', category: 'SYSTEM', title: 'Interface (UI)', icon: 'fa-window-restore', src: 'menu_editor.html', w: 1280, h: 760 },
     { id: 'ui_designer', category: 'SYSTEM', title: 'UI Designer', icon: 'fa-th-large', src: 'studio-dist/ui_designer.html', w: 1000, h: 700 },
     { id: 'loc', category: 'SYSTEM', title: 'Localization', icon: 'fa-globe', src: 'localization_editor.html', w: 900, h: 600 },
+    { id: 'localization', category: 'SYSTEM', title: 'Localization', icon: 'fa-globe', src: 'localization_editor.html', w: 900, h: 600, status: 'hidden', aliasOf: 'loc' },
     { id: 'input', category: 'SYSTEM', title: 'Input Map', icon: 'fa-gamepad', src: 'input_editor.html', w: 600, h: 600 },
     { id: 'console', category: 'SYSTEM', title: 'System Logs', icon: 'fa-terminal', src: 'console.html', w: 800, h: 500 },
 
@@ -40,13 +47,16 @@ const tools = [
     { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', icon: 'fa-code', src: 'studio-dist/script_editor.html', w: 1000, h: 700 },
     { id: 'algorithm_legacy', category: 'LOGIC & AI', title: 'Node Logic', icon: 'fa-project-diagram', src: 'algorithm_editor.html', w: 1000, h: 700, status: 'hidden' },
     { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', icon: 'fa-project-diagram', src: 'studio-dist/algorithm_editor.html', w: 1000, h: 700 },
+    { id: 'logic', category: 'LOGIC & AI', title: 'Logic Editor', icon: 'fa-project-diagram', src: 'logic_editor.html', w: 1000, h: 700, status: 'hidden' },
     { id: 'behavior', category: 'LOGIC & AI', title: 'AI Brains', icon: 'fa-brain', src: 'behavior_editor.html', w: 900, h: 600 },
     { id: 'quests_legacy', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'quest_editor.html', w: 900, h: 600, status: 'hidden' },
     { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'studio-dist/quest_editor.html', w: 900, h: 600 },
+    { id: 'quest', category: 'LOGIC & AI', title: 'Quest Designer', icon: 'fa-exclamation-circle', src: 'studio-dist/quest_editor.html', w: 900, h: 600, status: 'hidden', aliasOf: 'quests' },
     { id: 'dialogue_legacy', category: 'LOGIC & AI', title: 'Dialogues', icon: 'fa-comments', src: 'dialogue_editor.html', w: 800, h: 500, status: 'hidden' },
     { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', icon: 'fa-comments', src: 'studio-dist/dialogue_editor.html', w: 800, h: 500 },
     { id: 'interactive_cutscene_legacy', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'interactive_cutscene_editor.html', w: 1200, h: 800, status: 'hidden' },
     { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'studio-dist/interactive_cutscene_editor.html', w: 1200, h: 800 },
+    { id: 'cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', icon: 'fa-theater-masks', src: 'studio-dist/interactive_cutscene_editor.html', w: 1200, h: 800, status: 'hidden', aliasOf: 'interactive_cutscene' },
 
     // ASSETS
     { id: 'daw_legacy', category: 'ASSETS', title: 'Audio Studio', icon: 'fa-music', src: 'daw.html', w: 800, h: 500, status: 'hidden' },
@@ -55,10 +65,12 @@ const tools = [
     { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', icon: 'fa-paint-brush', src: 'studio-dist/pixel_editor.html', w: 900, h: 650 },
     { id: 'fxpro_legacy', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'fx_editor.html', w: 900, h: 650, status: 'hidden' },
     { id: 'fxpro', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'studio-dist/fx_editor.html', w: 900, h: 650 },
+    { id: 'fx', category: 'ASSETS', title: 'FX Master', icon: 'fa-magic', src: 'studio-dist/fx_editor.html', w: 900, h: 650, status: 'hidden', aliasOf: 'fxpro' },
     { id: 'shader_legacy', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'shader_lab.html', w: 1200, h: 800, status: 'hidden' },
     { id: 'shader', category: 'ASSETS', title: 'Shader Lab', icon: 'fa-eye', src: 'studio-dist/shader_editor.html', w: 1200, h: 800 },
     { id: 'assets_legacy', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'asset_manager.html', w: 900, h: 600, status: 'hidden' },
-    { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'studio-dist/asset_manager.html', w: 900, h: 600 }
+    { id: 'assets', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'studio-dist/asset_manager.html', w: 900, h: 600 },
+    { id: 'asset_manager', category: 'ASSETS', title: 'File Manager', icon: 'fa-folder', src: 'studio-dist/asset_manager.html', w: 900, h: 600, status: 'hidden', aliasOf: 'assets' }
 ];
 
 let zIndexCounter = 100;
@@ -103,7 +115,21 @@ function initWorkspaceV2() {
     }
 }
 
-function workspaceLoop() {
+// The background is a faint decorative grid; ~15fps is visually identical and
+// frees the main thread for the (often heavy) editor iframes on top of it.
+const BG_FRAME_MS = 66;
+let _bgLastFrame = 0;
+
+function workspaceLoop(ts = 0) {
+    requestAnimationFrame(workspaceLoop);
+
+    // Skip when the tab is hidden, when a maximized window completely covers
+    // the canvas, or when the frame budget hasn't elapsed yet.
+    if (document.hidden) return;
+    if (ts - _bgLastFrame < BG_FRAME_MS) return;
+    if (document.querySelector('#window-container .window.maximized:not([style*="display: none"])')) return;
+    _bgLastFrame = ts;
+
     const bgCanvas = document.getElementById('studio-bg-canvas');
     
     if (bgCanvas) {
@@ -127,13 +153,11 @@ function workspaceLoop() {
 
         ctx.fillStyle = 'rgba(255, 30, 39, 0.06)';
         backgroundParticles.forEach(p => {
-            p.y += p.speed;
+            p.y += p.speed * 3; // compensate for the lower frame rate
             if(p.y > bgCanvas.height) p.y = 0;
             ctx.fillRect(p.x, p.y, p.size, p.size);
         });
     }
-    
-    requestAnimationFrame(workspaceLoop);
 }
 
 function tileWindows() {
@@ -156,7 +180,7 @@ function tileWindows() {
     });
 }
 
-let currentBuildTarget = 'win';
+let currentBuildTarget = 'windows';
 let selectedTemplateId = null;
 let fileTreeData = [];
 let expandedDirs = new Set();
@@ -166,10 +190,18 @@ let runtimeWindow = null;
 let runtimeWatchTimer = null;
 
 // --- BUILD WIZARD STATE ---
-let bwTarget = 'win';
+let bwTarget = 'windows';
 let bwSSE = null;
 let bwProgress = 0;
 let bwProgressInterval = null;
+let bwAbortRequested = false;
+const VALID_BUILD_TARGETS = ['windows', 'macos', 'android', 'ios', 'web', 'electron'];
+const ALL_BUILD_TARGETS = ['windows', 'macos', 'android', 'ios', 'web'];
+
+function normalizeBuildTarget(target) {
+    if (!target || target === 'win') return 'windows';
+    return target;
+}
 
 function formatProjectName(name) {
     if (!name) return "";
@@ -250,7 +282,8 @@ async function studioInit() {
     updateClock();
     setInterval(updateClock, 60000);
 
-    await determineStartupWindow();
+    const startupReady = await determineStartupWindow();
+    if (!startupReady) return;
 
     setInterval(updateSystemMeter, 3000);
     updateSystemMeter();
@@ -259,6 +292,7 @@ async function studioInit() {
     initDragAndDropBroker();
     
     hookConsole();
+    refreshGitStatus();
     window.addEventListener('message', handleChildMessage);
 }
 
@@ -279,7 +313,11 @@ async function determineStartupWindow() {
         if (data.isRoot || !projName || projName === 'ROOT') {
             console.log("[Studio] No project active (Root), redirecting to Launcher...");
             window.location.href = 'dashboard.html';
+            return false;
         } else {
+            if (window.RedglitchProjectState && window.RedglitchProjectState.projectName !== projName) {
+                await window.RedglitchProjectState.switchProject(projName);
+            }
             console.log("[Studio] Project active, opening Command Center...");
             const dashboardTool = tools.find(t => t.id === 'project_dashboard');
             if (dashboardTool) {
@@ -287,26 +325,57 @@ async function determineStartupWindow() {
             } else {
                 console.warn("[Studio] project_dashboard tool not found in registry.");
             }
+            return true;
         }
 
     } catch(e) {
         console.error("[Studio] Startup error:", e);
         console.log("[Studio] Redirecting to dashboard due to error...");
         window.location.href = 'dashboard.html';
+        return false;
     }
 }
 
-window.onProjectLoaded = function(name) {
+window.onProjectLoaded = async function(name) {
+    if (!name) return;
+    window._redglitchActiveProject = name;
+
     const launcherId = 'win-dashboard';
     const launcherWin = document.getElementById(launcherId);
-    if(launcherWin) closeWindow(launcherId);
+    if (launcherWin) closeWindow(launcherId);
 
     const projNameEl = document.getElementById('sb-project-name');
     if (projNameEl) projNameEl.innerText = formatProjectName(name);
     updateTitlebarProjectLabel(name, false);
 
+    if (window.RedglitchProjectState) {
+        try {
+            await window.RedglitchProjectState.switchProject(name);
+        } catch (err) {
+            console.warn('[Studio] RedglitchProjectState switch failed:', err);
+        }
+    }
+
+    // Reload open editor iframes cleanly with the switched project parameter.
+    document.querySelectorAll('#window-container iframe').forEach(frame => {
+        const currentSrc = frame.getAttribute('src');
+        if (!currentSrc) return;
+        try {
+            const url = new URL(currentSrc, window.location.href);
+            url.searchParams.set('project', name);
+            url.searchParams.set('v', String(Date.now()));
+            frame.src = url.pathname.replace(/^\//, '') + url.search;
+        } catch (err) {
+            console.warn('[Studio] Could not reload editor frame:', err);
+        }
+    });
+
+    if (typeof window.loadTree === 'function') window.loadTree();
+    refreshGitStatus();
+
     const cmdCenter = tools.find(t => t.id === 'project_dashboard');
-    if(cmdCenter) openWindow(cmdCenter);
+    if (cmdCenter) openWindow(cmdCenter);
+    showStatusMessage(`PROJECT LOADED: ${name.toUpperCase()}`);
 };
 
 function hookConsole() {
@@ -363,6 +432,12 @@ function handleChildMessage(event) {
         if (curEl) curEl.innerText = `Ln ${data.line}, Col ${data.col}`;
     } else if (data.type === 'status-message') {
         showStatusMessage(data.message);
+    } else if (data.type === 'openTool' && (data.tool || data.target || data.src)) {
+        openTool(data.tool || data.target || data.src, {
+            file: data.file,
+            script: data.scriptId || data.script,
+            sprite: data.sprite
+        });
     } else if (data.type === 'log') {
         if (data.level === 'error') { diagnostics.errors++; updateDiagnosticsUI(); }
         else if (data.level === 'warning') { diagnostics.warnings++; updateDiagnosticsUI(); }
@@ -390,6 +465,7 @@ function showStatusMessage(msg) {
 }
 
 async function updateSystemMeter() {
+    if (document.hidden) return;
     try {
         const res = await fetch('/api/system/stats');
         const stats = await res.json();
@@ -419,8 +495,24 @@ function applyTheme(themeName, options = {}) {
 }
 
 // --- WINDOW MANAGEMENT ---
+function buildToolIframeUrl(tool) {
+    let url = tool.src || '';
+    if (window._redglitchActiveProject && !/[?&]project=/.test(url)) {
+        url += (url.includes('?') ? '&' : '?') + 'project=' + encodeURIComponent(window._redglitchActiveProject);
+    }
+    url += (url.includes('?') ? '&' : '?') + 'v=cachebustLayout';
+    return url;
+}
+
 function openWindow(tool) {
     if (!tool) return;
+    if (tool.aliasOf) {
+        const canonical = tools.find(t => t.id === tool.aliasOf);
+        if (canonical) {
+            tool = { ...canonical, src: tool.src || canonical.src, requestedFile: tool.requestedFile };
+        }
+    }
+
     const winId = 'win-' + tool.id;
     let win = document.getElementById(winId);
 
@@ -428,20 +520,21 @@ function openWindow(tool) {
         win = document.createElement('div');
         win.id = winId;
         win.className = 'window maximized';
-        
+        const iframeSrc = buildToolIframeUrl(tool);
+
         win.innerHTML = `
             <div class="window-title" 
-                 onmousedown="startDrag(event, '${winId}')"
-                 ondblclick="toggleMaximize('${winId}')">
-                <div><i class="fas ${tool.icon}"></i> ${tool.title.toLowerCase()}</div>
+                 onmousedown="startDrag(event, '${_escapeHtml(winId)}')"
+                 ondblclick="toggleMaximize('${_escapeHtml(winId)}')">
+                <div><i class="fas ${_escapeHtml(tool.icon)}"></i> ${_escapeHtml(tool.title.toLowerCase())}</div>
                 <div class="window-controls">
-                    <div class="window-btn" onclick="minimizeWindow('${winId}')">_</div>
-                    <div class="window-btn" onclick="toggleMaximize('${winId}')">□</div>
-                    <div class="window-btn close" onclick="closeWindow('${winId}')">×</div>
+                    <div class="window-btn" onclick="minimizeWindow('${_escapeHtml(winId)}')">_</div>
+                    <div class="window-btn" onclick="toggleMaximize('${_escapeHtml(winId)}')">□</div>
+                    <div class="window-btn close" onclick="closeWindow('${_escapeHtml(winId)}')">×</div>
                 </div>
             </div>
             <div class="window-content">
-                <iframe id="frame-${tool.id}" src="${(() => { const proj3dIds = ['studio_3d']; return (proj3dIds.includes(tool.id) && window._redglitchActiveProject) ? tool.src + '?project=' + encodeURIComponent(window._redglitchActiveProject) + '&v=cachebustLayout' : tool.src + '?v=cachebustLayout'; })()}"></iframe>
+                <iframe id="frame-${_escapeHtml(tool.id)}" src="${_escapeHtml(iframeSrc)}"></iframe>
             </div>
         `;
         win.onmousedown = () => focusWindow(winId);
@@ -455,6 +548,18 @@ function openWindow(tool) {
         win.style.display = 'flex'; // Restore visibility for Keep-Alive
         const btn = document.getElementById('btn-' + tool.id);
         if (btn) btn.classList.add('opened');
+
+        const queryPart = tool.src && tool.src.includes('?') ? tool.src.split('?')[1] : '';
+        const requestedFile = tool.requestedFile || new URLSearchParams(queryPart).get('file');
+        if ((tool.id === 'script' || tool.id === 'script_legacy') && requestedFile) {
+            const existingFrame = win.querySelector('iframe');
+            const existingSrc = existingFrame ? existingFrame.getAttribute('src') || '' : '';
+            if (existingFrame && existingSrc.startsWith('studio-dist/') && !tool.src.startsWith('studio-dist/')) {
+                existingFrame.src = buildToolIframeUrl(tool);
+            } else if (window.RedglitchEventBus) {
+                window.RedglitchEventBus.emit('script:request', { scriptPath: requestedFile });
+            }
+        }
     }
     
     if (window.RedglitchProjectState) {
@@ -473,11 +578,72 @@ function openWindow(tool) {
     focusWindow(winId);
 }
 
+function notifyWindowVisibility(winEl, visible) {
+    if (!winEl) return;
+    const flag = visible ? 'true' : 'false';
+    if (winEl.dataset.studioVisible === flag) return;
+    winEl.dataset.studioVisible = flag;
+    const iframe = winEl.querySelector('iframe');
+    if (iframe) {
+        if (!winEl._studioVisLoadHooked) {
+            winEl._studioVisLoadHooked = true;
+            iframe.addEventListener('load', () => {
+                const cur = winEl.dataset.studioVisible === 'true';
+                try { iframe.contentWindow?.postMessage({ type: 'studio:visibility', visible: cur }, '*'); } catch (_) {}
+            });
+        }
+        try {
+            iframe.contentWindow?.postMessage({ type: 'studio:visibility', visible }, '*');
+        } catch (_) {}
+    }
+}
+
+function syncAllWindowVisibility() {
+    const wins = document.querySelectorAll('.window');
+    let maximizedWin = null;
+    for (const w of wins) {
+        if (w.style.display !== 'none' && w.classList.contains('maximized')) {
+            maximizedWin = w;
+        }
+    }
+    for (const w of wins) {
+        const isOpen = w.style.display !== 'none';
+        const visible = isOpen && (!maximizedWin || w === maximizedWin);
+        notifyWindowVisibility(w, visible);
+    }
+}
+
+function ensureWindowVisibilityObserver() {
+    if (window._studioVisObserver) return;
+    const ws = document.getElementById('workspace') || document.body;
+    if (!ws || typeof MutationObserver === 'undefined') return;
+    window._studioVisObserver = new MutationObserver((muts) => {
+        for (const m of muts) {
+            if (m.type === 'attributes' && m.target.classList?.contains('window')) {
+                syncAllWindowVisibility();
+                break;
+            }
+            if (m.type === 'childList' && m.target === ws) {
+                syncAllWindowVisibility();
+                break;
+            }
+        }
+    });
+    window._studioVisObserver.observe(ws, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+    });
+}
+
 function closeWindow(id) {
     const win = document.getElementById(id);
     if (win) {
         win.style.display = 'none'; // Keep-Alive: just hide the element
         win.classList.remove('focused');
+        if (focusedWinId === id) focusedWinId = null;
+        notifyWindowVisibility(win, false);
     }
     const toolId = id.replace('win-', '');
     const btn = document.getElementById('btn-' + toolId);
@@ -485,6 +651,7 @@ function closeWindow(id) {
         btn.classList.remove('opened'); 
         btn.classList.remove('active'); 
     }
+    syncAllWindowVisibility();
 }
 
 function minimizeWindow(id) {
@@ -492,9 +659,12 @@ function minimizeWindow(id) {
     if (win) {
         win.style.display = 'none';
         win.classList.remove('focused');
+        if (focusedWinId === id) focusedWinId = null;
+        notifyWindowVisibility(win, false);
     }
     const btn = document.getElementById('btn-' + id.replace('win-',''));
     if (btn) btn.classList.remove('active');
+    syncAllWindowVisibility();
 }
 
 function toggleMaximize(id) {
@@ -508,7 +678,11 @@ function toggleMaximize(id) {
 }
 
 function focusWindow(id) {
-    if (focusedWinId === id) return; // Skip if already focused
+    ensureWindowVisibilityObserver();
+    if (focusedWinId === id) {
+        syncAllWindowVisibility();
+        return; // Skip if already focused
+    }
     
     document.querySelectorAll('.window').forEach(w => w.classList.remove('focused'));
     document.querySelectorAll('.tool-btn-sidebar').forEach(b => b.classList.remove('active'));
@@ -518,11 +692,13 @@ function focusWindow(id) {
         focusedWinId = id;
         win.style.display = 'flex'; 
         win.classList.add('focused');
+        notifyWindowVisibility(win, true);
         win.style.zIndex = ++zIndexCounter;
         const toolId = id.replace('win-', '');
         const btn = document.getElementById('btn-' + toolId);
         if (btn) btn.classList.add('active');
     }
+    syncAllWindowVisibility();
 }
 
 // --- DRAG & SNAP ---
@@ -543,6 +719,13 @@ function startDrag(e, id) {
 }
 
 window.addEventListener('keydown', (e) => {
+    // Open Project List Shortcut (Ctrl+O / Cmd+O)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        openProjectManager('open');
+        return;
+    }
+
     // Global Save Shortcut (Ctrl+S / Cmd+S)
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
@@ -704,7 +887,18 @@ function getOpenEditorFrames() {
         .filter(frame => frame && frame.contentWindow && frame.closest('.window')?.style.display !== 'none');
 }
 
-async function runFrameSave(frameWindow) {
+let _globalSaveInFlight = null;
+const GLOBAL_SAVE_LISTENER_IDS = new Set([
+    'studio_3d',
+    'iso_studio',
+    'menu',
+    'editor',
+    'loc',
+    'localization',
+    'script_legacy'
+]);
+
+async function runFrameSave(frameWindow, options = {}) {
     const saveHooks = [
         () => (typeof frameWindow.saveToServer === 'function' ? frameWindow.saveToServer.bind(frameWindow) : null),
         () => (typeof frameWindow.saveAllFiles === 'function' ? frameWindow.saveAllFiles.bind(frameWindow) : null),
@@ -713,6 +907,7 @@ async function runFrameSave(frameWindow) {
         () => (typeof frameWindow.saveCutscene === 'function' ? frameWindow.saveCutscene.bind(frameWindow) : null),
         () => (typeof frameWindow.saveLogic === 'function' ? frameWindow.saveLogic.bind(frameWindow) : null),
         () => (typeof frameWindow.saveShader === 'function' ? frameWindow.saveShader.bind(frameWindow) : null),
+        () => (typeof frameWindow.editor?.saveLevel === 'function' ? frameWindow.editor.saveLevel.bind(frameWindow.editor) : null),
         () => (typeof frameWindow.editor?.save === 'function' ? frameWindow.editor.save.bind(frameWindow.editor) : null),
         () => (typeof frameWindow.studio?.save === 'function' ? frameWindow.studio.save.bind(frameWindow.studio) : null),
         () => (typeof frameWindow.app?.save === 'function' ? frameWindow.app.save.bind(frameWindow.app) : null),
@@ -724,7 +919,7 @@ async function runFrameSave(frameWindow) {
         const invoke = resolveHook();
         if (!invoke) continue;
         try {
-            await Promise.resolve(invoke());
+            await Promise.resolve(invoke(options.silent ? { silent: true } : undefined));
             return true;
         } catch (err) {
             console.warn('[Studio] Save hook failed:', err?.message || err);
@@ -742,42 +937,71 @@ async function runFrameSave(frameWindow) {
     return false;
 }
 
+function frameUsesGlobalSaveBus(frame) {
+    if (!window.RedglitchEventBus || !frame) return false;
+    const toolId = (frame.id || '').replace(/^frame-/, '');
+    if (GLOBAL_SAVE_LISTENER_IDS.has(toolId)) return true;
+    if (toolId === 'script') {
+        const src = frame.getAttribute('src') || '';
+        return !src.startsWith('studio-dist/');
+    }
+    return false;
+}
+
 async function saveGlobalProject(options = {}) {
-    const silent = !!options.silent;
-    if (!silent) showStatusMessage("SAVING PROJECT...");
-
-    let saved = 0;
-    let warned = 0;
-    
-    // Save Central Project State
-    if (window.RedglitchProjectState && window.RedglitchProjectState.isDirty) {
-        await window.RedglitchProjectState.saveProject();
-        saved++;
+    if (_globalSaveInFlight) {
+        return _globalSaveInFlight;
     }
 
-    // Broadcast global save event
-    if (window.RedglitchEventBus) {
-        window.RedglitchEventBus.emit('system:global_save', { timestamp: Date.now() });
-    }
+    _globalSaveInFlight = (async () => {
+        const silent = !!options.silent;
+        if (!silent) showStatusMessage("SAVING PROJECT...");
 
-    const frames = getOpenEditorFrames();
-    if (frames.length === 0 && saved === 0) {
-        if (!silent) showStatusMessage("NO OPEN TOOLS TO SAVE");
-        return { total: 0, saved: 0, warned: 0 };
-    }
+        let saved = 0;
+        let warned = 0;
+        
+        // Save Central Project State
+        if (window.RedglitchProjectState && window.RedglitchProjectState.isDirty) {
+            await window.RedglitchProjectState.saveProject();
+            saved++;
+        }
 
-    for (const frame of frames) {
-        const ok = await runFrameSave(frame.contentWindow);
-        if (ok) saved++;
-        else warned++;
-    }
+        const frames = getOpenEditorFrames();
 
-    if (!silent) {
-        if (warned > 0) showStatusMessage(`PROJECT SAVED (${saved}/${frames.length}, ${warned} PARTIAL)`);
-        else showStatusMessage(`PROJECT SAVED (${saved} TOOLS)`);
-    }
+        // Broadcast global save event once for editors subscribed to system:global_save
+        if (window.RedglitchEventBus) {
+            window.RedglitchEventBus.emit('system:global_save', { timestamp: Date.now(), silent });
+        }
 
-    return { total: frames.length, saved, warned };
+        if (frames.length === 0 && saved === 0) {
+            if (!silent) showStatusMessage("NO OPEN TOOLS TO SAVE");
+            return { total: 0, saved: 0, warned: 0 };
+        }
+
+        for (const frame of frames) {
+            if (frameUsesGlobalSaveBus(frame)) {
+                // Already handled by the system:global_save broadcast above; avoid concurrent double-save.
+                saved++;
+                continue;
+            }
+            const ok = await runFrameSave(frame.contentWindow, { silent });
+            if (ok) saved++;
+            else warned++;
+        }
+
+        if (!silent) {
+            if (warned > 0) showStatusMessage(`PROJECT SAVED (${saved}/${frames.length}, ${warned} PARTIAL)`);
+            else showStatusMessage(`PROJECT SAVED (${saved} TOOLS)`);
+        }
+
+        return { total: frames.length, saved, warned };
+    })();
+
+    try {
+        return await _globalSaveInFlight;
+    } finally {
+        _globalSaveInFlight = null;
+    }
 }
 
 function confirmClose() {
@@ -875,10 +1099,63 @@ window.openReactTool = function(toolId) {
     if (select) select.value = '';
 };
 
-function openTool(src) {
-    if (!src) return;
-    const tool = tools.find(t => t.src === src);
-    if (tool) openWindow(tool);
+const TOOL_OPEN_ALIASES = {
+    'asset-manager': 'assets',
+    asset_manager: 'assets',
+    'asset_manager.html': 'assets',
+    'studio-dist/asset_manager.html': 'assets',
+    pixel_editor: 'pixel',
+    'pixel_editor.html': 'pixel',
+    audio_tool: 'daw',
+    'daw.html': 'daw',
+    prefab_editor: 'prefab',
+    script_editor: 'script',
+    'script_editor.html': 'script_legacy',
+    quest: 'quests',
+    achievement: 'achievements',
+    cutscene: 'interactive_cutscene',
+    localization: 'loc',
+    fx: 'fxpro',
+    algorithm_studio: 'algorithm'
+};
+
+function openTool(targetOrSrc, params = {}) {
+    if (!targetOrSrc) return null;
+    let raw = typeof targetOrSrc === 'object' ? (targetOrSrc.target || targetOrSrc.id || targetOrSrc.src) : targetOrSrc;
+    if (!raw) return null;
+
+    const normalized = String(raw).trim();
+    const mappedId = TOOL_OPEN_ALIASES[normalized] || TOOL_OPEN_ALIASES[normalized.toLowerCase()] || normalized;
+    let tool = tools.find(t => t.id === mappedId || t.src === normalized || t.id === normalized);
+    if (!tool) return null;
+
+    if (tool.aliasOf) {
+        const canonical = tools.find(t => t.id === tool.aliasOf);
+        if (canonical) tool = canonical;
+    }
+
+    if (params && typeof params === 'object') {
+        const query = new URLSearchParams();
+        if (params.file) query.set('file', params.file);
+        if (params.script) query.set('script', params.script);
+        if (params.sprite) query.set('sprite', params.sprite);
+        const qs = query.toString();
+        if (qs) {
+            const sep = tool.src.includes('?') ? '&' : '?';
+            tool = { ...tool, src: `${tool.src}${sep}${qs}`, requestedFile: params.file };
+        }
+    }
+
+    openWindow(tool);
+    return tool;
+}
+
+function openProjectSettings() {
+    const cmdCenter = tools.find(t => t.id === 'project_dashboard');
+    if (cmdCenter) {
+        openWindow(cmdCenter);
+        showStatusMessage("OPENED PROJECT COMMAND CENTER");
+    }
 }
 
 function dispatchGlobalCommand(cmd) {
@@ -913,16 +1190,107 @@ function qaStressTest() {
 }
 
 // --- PROJECT WIZARD & ASSET SCAN ---
-async function openProjectManager() {
-    document.getElementById('project-modal').style.display = 'flex';
+function switchProjectModalTab(mode = 'open') {
+    const openPane = document.getElementById('pm-pane-open');
+    const newPane = document.getElementById('pm-pane-new');
+    const tabOpen = document.getElementById('pm-tab-open');
+    const tabNew = document.getElementById('pm-tab-new');
+    const isNew = mode === 'new';
+
+    if (openPane) openPane.style.display = isNew ? 'none' : 'flex';
+    if (newPane) newPane.style.display = isNew ? 'flex' : 'none';
+    if (tabOpen) {
+        tabOpen.classList.toggle('bw-btn-primary', !isNew);
+        tabOpen.classList.toggle('bw-btn-cancel', isNew);
+    }
+    if (tabNew) {
+        tabNew.classList.toggle('bw-btn-primary', isNew);
+        tabNew.classList.toggle('bw-btn-cancel', !isNew);
+    }
+
+    if (isNew) {
+        loadProjectTemplates();
+        setTimeout(() => document.getElementById('new-proj-name')?.focus(), 50);
+    } else {
+        loadExistingProjects();
+    }
+}
+
+async function loadExistingProjects() {
+    const container = document.getElementById('existing-projects-list');
+    if (!container) return;
+    container.innerHTML = '<div style="color:#555; padding:20px;">Loading projects...</div>';
+    try {
+        const res = await fetch('/api/projects');
+        if (!res.ok) throw new Error('Failed to list projects');
+        const projects = await res.json();
+        container.innerHTML = '';
+        if (!Array.isArray(projects) || projects.length === 0) {
+            container.innerHTML = '<div style="color:#888; padding:20px;">No projects found. Switch to NEW PROJECT to create one.</div>';
+            return;
+        }
+        projects.forEach(p => {
+            const card = document.createElement('div');
+            const isActive = window._redglitchActiveProject && p.name === window._redglitchActiveProject;
+            card.className = 'template-card' + (isActive ? ' active' : '');
+            card.onclick = () => switchToProject(p.name);
+            const icon = p.metadata?.is3D ? '🧊' : (p.engineType === 'platformer-2d' ? '🏃' : (p.engineType === 'iso-pixel' ? '💠' : '⚔️'));
+            const metaLine = [p.engineType || 'rpg-topdown', p.version || '0.1.0'].join(' • ');
+            card.innerHTML = `
+                <div class="template-thumb">${icon}</div>
+                <div class="template-info">
+                    <div class="template-name">${_escapeHtml(p.name)}${isActive ? ' (ACTIVE)' : ''}</div>
+                    <div class="template-cat">${_escapeHtml(metaLine)}</div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (e) {
+        container.innerHTML = '<div style="color:var(--red); padding:20px;">Failed to load projects.</div>';
+    }
+}
+
+async function switchToProject(name) {
+    if (!name) return;
+    showStatusMessage(`SWITCHING TO ${name.toUpperCase()}...`);
+    try {
+        const res = await fetch('/api/projects/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Switch failed');
+        closeProjectModal();
+        await window.onProjectLoaded(data.active || name);
+    } catch (e) {
+        alert("Failed to open project: " + e.message);
+        showStatusMessage("PROJECT SWITCH FAILED");
+    }
+}
+
+async function loadProjectTemplates() {
     const savedAuthor = localStorage.getItem('redglitch_author');
-    if(savedAuthor) document.getElementById('new-proj-author').value = savedAuthor;
+    if (savedAuthor) {
+        const authorEl = document.getElementById('new-proj-author');
+        if (authorEl) authorEl.value = savedAuthor;
+    }
     const container = document.getElementById('template-list');
+    if (!container) return;
     container.innerHTML = '<div style="color:#555; padding:20px;">Loading templates...</div>';
     try {
         const res = await fetch('/api/templates');
+        if (!res.ok) throw new Error('Failed to fetch templates');
         renderTemplates(await res.json());
-    } catch(e) { container.innerHTML = '<div style="color:var(--red);">Failed to load templates.</div>'; }
+    } catch (e) {
+        container.innerHTML = '<div style="color:var(--red);">Failed to load templates.</div>';
+    }
+}
+
+async function openProjectManager(mode = 'open') {
+    const modal = document.getElementById('project-modal');
+    if (modal) modal.style.display = 'flex';
+    switchProjectModalTab(mode === 'new' ? 'new' : 'open');
 }
 
 function renderTemplates(list) {
@@ -933,7 +1301,7 @@ function renderTemplates(list) {
         card.className = 'template-card';
         card.onclick = () => selectTemplate(t, card);
         let icon = t.category === 'RPG' ? '⚔️' : (t.category === 'Platformer' ? '🏃' : '📦');
-        card.innerHTML = `<div class="template-thumb">${icon}</div><div class="template-info"><div class="template-name">${t.name}</div><div class="template-cat">${t.category}</div></div>`;
+        card.innerHTML = `<div class="template-thumb">${icon}</div><div class="template-info"><div class="template-name">${_escapeHtml(t.name)}</div><div class="template-cat">${_escapeHtml(t.category)}</div></div>`;
         container.appendChild(card);
     });
     if(list.length > 0) {
@@ -967,28 +1335,184 @@ async function createNewProject() {
         const res = await fetch('/api/projects', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name, template: selectedTemplateId, metadata: { author } }) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        await fetch('/api/projects/switch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: data.name }) });
-        location.reload();
+        const switchRes = await fetch('/api/projects/switch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ name: data.name }) });
+        if (!switchRes.ok) throw new Error('Failed to activate new project');
+        closeProjectModal();
+        await window.onProjectLoaded(data.name);
+        btn.innerHTML = '<span>+</span> CREATE PROJECT'; btn.disabled = false;
     } catch (e) { alert("Creation failed: " + e.message); btn.innerHTML = '<span>+</span> CREATE PROJECT'; btn.disabled = false; }
 }
 
-async function scanAssets() {
+async function scanAssets(labelPrefix = 'INDEXED') {
     showStatusMessage("INDEXING ASSETS...");
     try {
         const res = await fetch('/api/assets/rebuild', { method: 'POST' });
         const data = await res.json();
-        if(data.success) showStatusMessage(`INDEXED ${data.count || ''} ASSETS`);
+        if (!res.ok || !data.success) throw new Error(data.error || 'Index failed');
+        if (typeof window.loadTree === 'function') await window.loadTree();
+        showStatusMessage(`${labelPrefix} ${data.count ?? 0} ASSETS`);
     } catch(e) { showStatusMessage("INDEX FAILED"); }
+}
+
+async function crunchAssets() {
+    showStatusMessage("REBUILDING ASSET REGISTRY...");
+    return scanAssets('CRUNCHED / INDEXED');
+}
+
+async function probeAssets() {
+    showStatusMessage("PROBING ASSET REGISTRY...");
+    try {
+        const res = await fetch('/api/assets');
+        if (!res.ok) throw new Error('Probe failed');
+        const data = await res.json();
+        const assets = Array.isArray(data.assets) ? data.assets : [];
+        const imgs = assets.filter(a => a.type === 'image').length;
+        const audio = assets.filter(a => a.type === 'audio').length;
+        showStatusMessage(`ASSETS: ${assets.length} TOTAL (${imgs} IMG, ${audio} AUDIO)`);
+    } catch (e) {
+        showStatusMessage("ASSET PROBE FAILED");
+    }
+}
+
+async function refreshGitStatus() {
+    const branchEl = document.getElementById('git-branch-name');
+    const summaryEl = document.getElementById('git-changes-summary');
+    const sbGit = document.getElementById('sb-git-branch');
+    try {
+        const res = await fetch('/api/git/status');
+        if (!res.ok) throw new Error('Git status failed');
+        const data = await res.json();
+        const raw = String(data.status || '').trim();
+        if (!raw || raw === 'Your branch is up to date.') {
+            if (branchEl) branchEl.textContent = 'clean';
+            if (summaryEl) summaryEl.innerHTML = '<span style="color:var(--green)">0+</span> <span style="color:var(--red)">0Δ</span>';
+            if (sbGit) sbGit.textContent = 'git';
+            return;
+        }
+        if (raw.startsWith('Error:')) {
+            if (branchEl) branchEl.textContent = 'unavailable';
+            if (summaryEl) summaryEl.innerHTML = '<span style="color:#888">--</span>';
+            if (sbGit) sbGit.textContent = 'git?';
+            return;
+        }
+        const lines = raw.split('\n').filter(Boolean);
+        let added = 0;
+        let changed = 0;
+        lines.forEach(line => {
+            if (line.startsWith('??') || line.startsWith('A')) added++;
+            else changed++;
+        });
+        if (branchEl) branchEl.textContent = `${lines.length} pending`;
+        if (summaryEl) summaryEl.innerHTML = `<span style="color:var(--green)">${added}+</span> <span style="color:var(--red)">${changed}Δ</span>`;
+        if (sbGit) sbGit.textContent = `git* (${lines.length})`;
+    } catch (e) {
+        if (branchEl) branchEl.textContent = 'offline';
+    }
+}
+
+async function commitGitChanges() {
+    const message = prompt('Commit message:');
+    if (!message || !message.trim()) return;
+    showStatusMessage("STAGING & COMMITTING...");
+    try {
+        const addRes = await fetch('/api/git/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file: '.' })
+        });
+        const addData = await addRes.json().catch(() => ({}));
+        if (!addRes.ok || addData.success === false) {
+            throw new Error(addData.error || 'git add failed');
+        }
+        const commitRes = await fetch('/api/git/commit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message.trim() })
+        });
+        const commitData = await commitRes.json().catch(() => ({}));
+        if (!commitRes.ok || commitData.success === false) {
+            throw new Error(commitData.error || 'git commit failed');
+        }
+        await refreshGitStatus();
+        showStatusMessage("GIT COMMIT COMPLETE");
+    } catch (e) {
+        showStatusMessage("GIT COMMIT FAILED");
+        alert("Git commit failed: " + e.message);
+    }
+}
+
+async function wipeSaves() {
+    if (!confirm('Wipe all save slots? This cannot be undone.')) return;
+    showStatusMessage("WIPING SAVE SLOTS...");
+    try {
+        const res = await fetch('/api/slots');
+        if (!res.ok) throw new Error('Failed to fetch save slots');
+        const slots = await res.json();
+        const occupied = Array.isArray(slots) ? slots.filter(s => s && !s.isEmpty) : [];
+        if (occupied.length === 0) {
+            showStatusMessage("NO SAVE SLOTS TO WIPE");
+            return;
+        }
+        await Promise.all(occupied.map(async s => {
+            const del = await fetch(`/api/slots/${encodeURIComponent(s.slotId)}`, { method: 'DELETE' });
+            if (!del.ok) throw new Error(`Failed to clear slot ${s.slotId}`);
+        }));
+        showStatusMessage(`WIPED ${occupied.length} SAVE SLOT(S)`);
+    } catch (e) {
+        console.error('[Studio] wipeSaves failed:', e);
+        showStatusMessage("WIPE SAVES FAILED");
+    }
+}
+
+async function dumpProjectDatabase() {
+    showStatusMessage("EXPORTING PROJECT SUMMARY...");
+    try {
+        const [projRes, assetsRes, treeRes] = await Promise.all([
+            fetch('/api/projects/current'),
+            fetch('/api/assets').catch(() => null),
+            fetch('/api/ide/tree').catch(() => null)
+        ]);
+        const project = projRes.ok ? await projRes.json() : { name: window._redglitchActiveProject || 'Default Project' };
+        const assets = assetsRes && assetsRes.ok ? await assetsRes.json() : { assets: [] };
+        const rawTree = treeRes && treeRes.ok ? await treeRes.json() : [];
+        const tree = Array.isArray(rawTree) ? rawTree : (rawTree?.tree || []);
+        const summary = {
+            exportedAt: new Date().toISOString(),
+            project,
+            sharedState: window.RedglitchProjectState ? window.RedglitchProjectState.export() : null,
+            assetCount: Array.isArray(assets.assets) ? assets.assets.length : 0,
+            assets: assets.assets || [],
+            tree
+        };
+        const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeName = (window._redglitchActiveProject || project.name || 'project').replace(/[^a-zA-Z0-9_-]+/g, '_');
+        a.download = `${safeName}_db_dump.json`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showStatusMessage("EXPORTED PROJECT DB SUMMARY");
+    } catch (e) {
+        console.error('[Studio] dumpProjectDatabase failed:', e);
+        showStatusMessage("DB EXPORT FAILED");
+    }
 }
 
 // --- FILE TREE ---
 window.loadTree = async function() {
     const container = document.getElementById('file-tree-right');
     if (!container) return;
-    container.innerHTML = '<div style="padding:10px; opacity:0.5;">SCANNINC...</div>';
+    container.innerHTML = '<div style="padding:10px; opacity:0.5;">SCANNING...</div>';
     try {
         const res = await fetch('/api/ide/tree');
-        fileTreeData = await res.json();
+        if (!res.ok) throw new Error('Tree fetch failed');
+        const data = await res.json();
+        fileTreeData = Array.isArray(data) ? data : (data?.tree || []);
+        const footer = document.getElementById('file-manager-footer');
+        if (footer) {
+            footer.textContent = (data && data.truncated) ? 'REAL-TIME SYNC ACTIVE (TREE TRUNCATED)' : 'REAL-TIME SYNC ACTIVE';
+        }
         window.renderTree();
     } catch (e) { container.innerHTML = '<div style="color:var(--red); padding:10px;">FAILED TO LOAD TREE</div>'; }
 };
@@ -997,6 +1521,7 @@ window.renderTree = function() {
     const container = document.getElementById('file-tree-right');
     if (!container) return;
     container.innerHTML = '';
+    const frag = document.createDocumentFragment();
     function buildNode(node, depth) {
         const div = document.createElement('div');
         div.className = `tree-item ${node.type}`;
@@ -1009,19 +1534,19 @@ window.renderTree = function() {
             else if (ext === 'json') icon = '<i class="fas fa-cog" style="color:#aaa"></i>';
             else if (ext === 'html') icon = '<i class="fas fa-code" style="color:#e44d26"></i>';
         }
-        div.innerHTML = `<span style="width:16px; text-align:center;">${icon}</span><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${node.name.toLowerCase()}</span>`;
+        div.innerHTML = `<span style="width:16px; text-align:center;">${icon}</span><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${_escapeHtml(node.name.toLowerCase())}</span>`;
         div.onclick = (e) => {
             e.stopPropagation();
             if (node.type === 'file') {
                 const tool = tools.find(t => t.id === 'script');
-                if (tool) openWindow({...tool, src: `script_editor.html?file=${encodeURIComponent(node.path)}`});
+                if (tool) openWindow({...tool, src: `script_editor.html?file=${encodeURIComponent(node.path)}`, requestedFile: node.path});
             } else {
                 if (expandedDirs.has(node.path)) expandedDirs.delete(node.path);
                 else expandedDirs.add(node.path);
                 window.renderTree();
             }
         };
-        container.appendChild(div);
+        frag.appendChild(div);
         if (isDir && expandedDirs.has(node.path) && node.children) {
             const sorted = [...node.children].sort((a,b) => {
                 if (a.type === b.type) return a.name.localeCompare(b.name);
@@ -1031,15 +1556,47 @@ window.renderTree = function() {
         }
     }
     fileTreeData.forEach(root => buildNode(root, 0));
+    container.appendChild(frag);
 };
 
 window.createNewFile = async function() {
     const name = prompt("New file name:");
     if (!name) return;
     try {
-        const res = await fetch('/api/ide/write', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ file: name, content: "// Redglitch Script\n" }) });
-        if (res.ok) window.loadTree();
-    } catch (e) { alert("Failed to create file"); }
+        const res = await fetch('/api/ide/write', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ file: name.trim(), content: "// Redglitch Script\n" }) });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to create file');
+        }
+        await window.loadTree();
+        showStatusMessage(`CREATED FILE: ${name.trim()}`);
+    } catch (e) { alert("Failed to create file: " + e.message); }
+};
+
+window.createNewFolder = async function() {
+    const raw = prompt("New folder path (relative to project):");
+    if (!raw) return;
+    const folder = raw.trim().replace(/^\/+|\/+$/g, '');
+    if (!folder || folder.includes('..')) {
+        alert("Invalid folder path.");
+        return;
+    }
+    try {
+        const res = await fetch('/api/ide/write', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file: `${folder}/.keep`, content: '' })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to create folder');
+        }
+        expandedDirs.add(folder);
+        await window.loadTree();
+        showStatusMessage(`CREATED FOLDER: ${folder}`);
+    } catch (e) {
+        alert("Failed to create folder: " + e.message);
+    }
 };
 
 // --- BUILD WIZARD LOGIC ---
@@ -1064,8 +1621,28 @@ function bwAppendLog(text) {
     log.innerHTML += colored; log.scrollTop = log.scrollHeight;
 }
 
+function runBuildStream(target, projName) {
+    return new Promise((resolve) => {
+        bwSSE = new EventSource(`/api/build/stream?target=${encodeURIComponent(target)}&project=${encodeURIComponent(projName)}`);
+        bwSSE.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'log' || msg.type === 'error') bwAppendLog(msg.text);
+            else if (msg.type === 'done') {
+                if (bwSSE) { bwSSE.close(); bwSSE = null; }
+                resolve({ success: !!msg.success, path: msg.path || '' });
+            }
+        };
+        bwSSE.onerror = () => {
+            if (bwSSE) { bwSSE.close(); bwSSE = null; }
+            bwAppendLog(`\n[ERROR] Connection lost while building ${target}.\n`);
+            resolve({ success: false, path: '' });
+        };
+    });
+}
+
 async function bwStartBuild() {
     bwShowStep(2);
+    bwAbortRequested = false;
     document.getElementById('bw-footer').innerHTML = `<button class="bw-btn bw-btn-danger" onclick="closeBuildWizard()">ABORT</button>`;
     const log = document.getElementById('bw-log');
     log.innerHTML = '';
@@ -1073,7 +1650,8 @@ async function bwStartBuild() {
     document.getElementById('bw-pct').innerText = '0%';
     document.getElementById('bw-spinner').style.display = '';
 
-    const projName = document.getElementById('sb-project-name')?.innerText || 'Default';
+    const projName = window._redglitchActiveProject || 'Default Project';
+    const target = normalizeBuildTarget(bwTarget);
     bwProgress = 0;
     bwProgressInterval = setInterval(() => {
         if (bwProgress < 89) {
@@ -1083,18 +1661,37 @@ async function bwStartBuild() {
         }
     }, 800);
 
-    bwSSE = new EventSource(`/api/build/stream?target=${encodeURIComponent(bwTarget)}&project=${encodeURIComponent(projName)}`);
-    bwSSE.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-        if (msg.type === 'log' || msg.type === 'error') bwAppendLog(msg.text);
-        else if (msg.type === 'done') {
-            bwSSE.close(); bwSSE = null; clearInterval(bwProgressInterval);
-            document.getElementById('bw-progress').style.width = '100%'; document.getElementById('bw-pct').innerText = '100%';
-            document.getElementById('bw-spinner').style.display = 'none';
-            setTimeout(() => bwShowResult(msg.success, msg.path), 400);
+    const targetsToRun = target === 'all' ? ALL_BUILD_TARGETS : [target];
+    let overallSuccess = true;
+    let lastPath = '';
+
+    for (let i = 0; i < targetsToRun.length; i++) {
+        if (bwAbortRequested) {
+            overallSuccess = false;
+            break;
         }
-    };
-    bwSSE.onerror = () => { clearInterval(bwProgressInterval); bwSSE.close(); bwSSE = null; document.getElementById('bw-spinner').style.display = 'none'; bwAppendLog('\n[ERROR] Connection lost.\n'); bwShowResult(false, ''); };
+        const t = targetsToRun[i];
+        if (targetsToRun.length > 1) {
+            bwAppendLog(`\n[WIZARD] === Target ${i + 1}/${targetsToRun.length}: ${t.toUpperCase()} ===\n`);
+        }
+        const result = await runBuildStream(t, projName);
+        if (result.path) lastPath = result.path;
+        if (!result.success) {
+            overallSuccess = false;
+            if (targetsToRun.length > 1) {
+                bwAppendLog(`[ERROR] Target ${t.toUpperCase()} failed.\n`);
+            }
+            break;
+        }
+    }
+
+    clearInterval(bwProgressInterval);
+    document.getElementById('bw-progress').style.width = '100%';
+    document.getElementById('bw-pct').innerText = '100%';
+    document.getElementById('bw-spinner').style.display = 'none';
+    if (!bwAbortRequested) {
+        setTimeout(() => bwShowResult(overallSuccess, lastPath), 400);
+    }
 }
 
 function bwShowResult(success, outputPath) {
@@ -1108,46 +1705,53 @@ function bwShowResult(success, outputPath) {
 }
 
 function openBuildWizard(target) {
-    bwTarget = target || currentBuildTarget;
-    ['win','macos','android','ios','web','all'].forEach(t => document.getElementById('bwtc-' + t)?.classList.toggle('selected', t === bwTarget));
-    document.getElementById('bw-project-name').innerText = document.getElementById('sb-project-name')?.innerText || 'Default';
-    const labelMap = { win:'WINDOWS', macos:'MACOS', android:'ANDROID', ios:'IOS', web:'WEB', all:'ALL CI' };
+    bwTarget = normalizeBuildTarget(target || currentBuildTarget);
+    ['windows','macos','android','ios','web','electron','all'].forEach(t => document.getElementById('bwtc-' + t)?.classList.toggle('selected', t === bwTarget));
+    document.getElementById('bw-project-name').innerText = window._redglitchActiveProject || 'Default Project';
+    const labelMap = { windows:'WINDOWS', macos:'MACOS', android:'ANDROID', ios:'IOS', web:'WEB', electron:'ELECTRON', all:'ALL CI' };
     document.getElementById('bw-target-label').innerText = labelMap[bwTarget] || bwTarget.toUpperCase();
     bwShowStep(1);
     document.getElementById('bw-footer').innerHTML = `<button class="bw-btn bw-btn-cancel" onclick="closeBuildWizard()">CANCEL</button><button class="bw-btn bw-btn-primary" id="bw-btn-start" onclick="bwStartBuild()">START BUILD</button>`;
     document.getElementById('build-wizard').style.display = 'flex';
 }
 
-function closeBuildWizard() { if (bwSSE) { bwSSE.close(); bwSSE = null; } clearInterval(bwProgressInterval); document.getElementById('build-wizard').style.display = 'none'; }
+function closeBuildWizard() {
+    bwAbortRequested = true;
+    if (bwSSE) { bwSSE.close(); bwSSE = null; }
+    clearInterval(bwProgressInterval);
+    document.getElementById('build-wizard').style.display = 'none';
+}
 
 function bwSelectTarget(t) {
-    bwTarget = t;
-    ['win','macos','android','ios','web','all'].forEach(id => document.getElementById('bwtc-' + id)?.classList.toggle('selected', id === t));
-    const labelMap = { win:'WINDOWS', macos:'MACOS', android:'ANDROID', ios:'IOS', web:'WEB', all:'ALL CI' };
-    document.getElementById('bw-target-label').innerText = labelMap[t] || t.toUpperCase();
+    bwTarget = normalizeBuildTarget(t);
+    ['windows','macos','android','ios','web','electron','all'].forEach(id => document.getElementById('bwtc-' + id)?.classList.toggle('selected', id === bwTarget));
+    const labelMap = { windows:'WINDOWS', macos:'MACOS', android:'ANDROID', ios:'IOS', web:'WEB', electron:'ELECTRON', all:'ALL CI' };
+    document.getElementById('bw-target-label').innerText = labelMap[bwTarget] || bwTarget.toUpperCase();
 }
 
 function setBuildTarget(target) {
-    currentBuildTarget = target;
+    const normalized = normalizeBuildTarget(target);
+    currentBuildTarget = normalized;
     const selectEl = document.getElementById('build-target');
-    if (selectEl) selectEl.value = target;
+    if (selectEl) selectEl.value = normalized;
     
     const labelMap = {
-        win: 'Windows (EXE)',
+        windows: 'Windows (EXE)',
         macos: 'macOS (.app)',
         android: 'Android (APK)',
         ios: 'iOS (Xcode)',
         web: 'Web (HTML5)',
+        electron: 'Electron (Desktop)',
         all: 'All targets'
     };
     const sbEl = document.getElementById('sb-build-target');
-    if (sbEl) sbEl.innerText = labelMap[target] || target.toUpperCase();
+    if (sbEl) sbEl.innerText = labelMap[normalized] || normalized.toUpperCase();
     
-    showStatusMessage(`BUILD TARGET SET: ${target.toUpperCase()}`);
+    showStatusMessage(`BUILD TARGET SET: ${normalized.toUpperCase()}`);
 }
 
 function buildGame(target) {
-    openBuildWizard(target || currentBuildTarget);
+    openBuildWizard(normalizeBuildTarget(target || currentBuildTarget));
 }
 
 // --- BOOT ---
@@ -1162,14 +1766,6 @@ window.applyTheme = applyTheme;
 window.playGame = playGame;
 window.saveGlobalProject = saveGlobalProject;
 
-// Listen for Ctrl+S globally in Studio
-window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        saveGlobalProject();
-    }
-});
-
 // Listen for cross-frame save requests
 if (window.RedglitchEventBus) {
     window.RedglitchEventBus.on('system:project:save_request', () => {
@@ -1182,7 +1778,17 @@ window.dispatchGlobalCommand = dispatchGlobalCommand;
 window.qaStressTest = qaStressTest;
 window.toggleFullscreen = toggleFullscreen;
 window.scanAssets = scanAssets;
+window.crunchAssets = crunchAssets;
+window.probeAssets = probeAssets;
+window.refreshGitStatus = refreshGitStatus;
+window.commitGitChanges = commitGitChanges;
+window.wipeSaves = wipeSaves;
+window.dumpProjectDatabase = dumpProjectDatabase;
+window.openProjectSettings = openProjectSettings;
 window.openProjectManager = openProjectManager;
+window.switchProjectModalTab = switchProjectModalTab;
+window.loadExistingProjects = loadExistingProjects;
+window.switchToProject = switchToProject;
 window.createNewProject = createNewProject;
 window.closeProjectModal = closeProjectModal;
 window.bwSelectTarget = bwSelectTarget;
@@ -1287,10 +1893,12 @@ function updateLiveStateUI(data) {
                 row.style.background = 'rgba(255,255,255,0.05)';
                 row.style.borderRadius = '2px';
                 
+                const safeKey = _escapeHtml(k);
+                const safeArg = JSON.stringify(k).replace(/"/g, '&quot;');
                 row.innerHTML = `
-                    <span style="font-family:VT323; font-size:16px; color:#aaa;">${k}</span>
-                    <input type="number" value="${v}" style="width:60px; background:#111; color:var(--accent); border:1px solid #333; font-family:VT323; font-size:16px; text-align:right;" 
-                        onchange="patchCampaignVariable('${k}', this.value)">
+                    <span style="font-family:VT323; font-size:16px; color:#aaa;">${safeKey}</span>
+                    <input type="number" value="${_escapeHtml(v)}" style="width:60px; background:#111; color:var(--accent); border:1px solid #333; font-family:VT323; font-size:16px; text-align:right;" 
+                        onchange="patchCampaignVariable(${safeArg}, this.value)">
                 `;
                 varList.appendChild(row);
             }
@@ -1311,9 +1919,11 @@ function updateLiveStateUI(data) {
                 row.style.background = 'rgba(255,255,255,0.05)';
                 row.style.borderRadius = '2px';
                 
+                const safeKey = _escapeHtml(k);
+                const safeArg = JSON.stringify(k).replace(/"/g, '&quot;');
                 row.innerHTML = `
-                    <span style="font-family:VT323; font-size:16px; color:#aaa;">${k}</span>
-                    <input type="checkbox" ${v ? 'checked' : ''} onchange="patchCampaignFlag('${k}', this.checked)">
+                    <span style="font-family:VT323; font-size:16px; color:#aaa;">${safeKey}</span>
+                    <input type="checkbox" ${v ? 'checked' : ''} onchange="patchCampaignFlag(${safeArg}, this.checked)">
                 `;
                 flagList.appendChild(row);
             }
@@ -1352,12 +1962,15 @@ if (typeof window !== 'undefined') {
     // Wait for EventBus to be ready
     setTimeout(() => {
         if (window.RedglitchEventBus) {
-            window.RedglitchEventBus.on('system:memory:update', (e) => {
+            const handleMemoryUpdate = (e) => {
                 const data = e.data || {};
-                if (data.namespace === 'campaign' && data.patch) {
-                    updateLiveStateUI(data.patch);
+                const payload = data.diff || data.patch;
+                if (data.namespace === 'campaign' && payload) {
+                    updateLiveStateUI(payload);
                 }
-            });
+            };
+            window.RedglitchEventBus.on('system:memory:diff', handleMemoryUpdate);
+            window.RedglitchEventBus.on('system:memory:update', handleMemoryUpdate);
             
             // PHASE 11: Multi-Engine Level Streaming Sync
             window.RedglitchEventBus.on('system:engine:switch', (e) => {
@@ -1464,8 +2077,17 @@ if (typeof window !== 'undefined') {
 window.toggleGhostMode = function(enabled) {
     if (window.RedglitchEventBus) {
         window.RedglitchEventBus.emit('system:camera:mode', { mode: enabled ? 'ghost' : 'normal' });
+        window.RedglitchEventBus.emit('system:engine:flag', { flag: 'ghostMode', enabled: !!enabled });
         showStatusMessage(`GHOST MODE: ${enabled ? 'ON' : 'OFF'}`);
     }
+};
+
+window.toggleEngineFlag = function(flag, enabled) {
+    if (!flag) return;
+    if (window.RedglitchEventBus) {
+        window.RedglitchEventBus.emit('system:engine:flag', { flag, enabled: !!enabled });
+    }
+    showStatusMessage(`FLAG ${String(flag).toUpperCase()}: ${enabled ? 'ON' : 'OFF'}`);
 };
 
 window.setTimeScale = function(value) {

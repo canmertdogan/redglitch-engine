@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const projectService = require('../services/projectService');
 const safeFs = require('../utils/safeFs');
+const config = require('../config');
+const { resolveUnderRoot } = require('../utils/pathGuard');
 
 function stripProtoKeys(o){ if(o && typeof o==='object'){ for(const k of Object.keys(o)) if(k==='__proto__'||k==='constructor'||k==='prototype') delete o[k]; } return o; }
 function safeParseJSON(raw, label) { try { return JSON.parse(raw); } catch { const e=new Error('Invalid JSON in '+label); e.code='INVALID_JSON'; throw e; } }
@@ -18,6 +20,30 @@ async function ensureDir(dirPath) {
     } catch (err) {
         if (err.code !== 'EEXIST') throw err;
     }
+}
+
+function mergeDefinitionArrays(engineItems, projectItems) {
+    const merged = [];
+    const indexByKey = new Map();
+    const pushItem = (item) => {
+        if (item == null) return;
+        let key = null;
+        if (typeof item === 'object') {
+            if (item.id !== undefined && item.id !== null) key = `id:${item.id}`;
+            else if (item.name !== undefined && item.name !== null) key = `name:${item.name}`;
+        } else {
+            key = `prim:${typeof item}:${String(item)}`;
+        }
+        if (key !== null && indexByKey.has(key)) {
+            merged[indexByKey.get(key)] = item;
+        } else {
+            if (key !== null) indexByKey.set(key, merged.length);
+            merged.push(item);
+        }
+    };
+    engineItems.forEach(pushItem);
+    projectItems.forEach(pushItem);
+    return merged;
 }
 
 // Helper for consistent route creation
@@ -36,45 +62,43 @@ function createDefinitionRoutes(typeName, fileName) {
             const isRoot = projectService.isRootProject();
             const projectDir = projectService.getDunyalarPath();
             const projectFilePath = path.join(projectDir, 'definitions', fileName);
+            const engineFilePath = path.join(config.PUBLIC_DIR, 'dunyalar', 'definitions', fileName);
             
-            let mergedData = [];
+            let engineData = null;
             
             // 1. Try to load engine core definitions (fallback/base)
             if (!isRoot) {
                 try {
-                    const engineFilePath = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions', fileName);
                     const engineRaw = await fs.readFile(engineFilePath, 'utf8');
-                    mergedData = safeParseJSON(engineRaw, 'engine def');
+                    engineData = safeParseJSON(engineRaw, 'engine def');
                 } catch (e) {
                     if (e.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading engine core:`, e.message);
                 }
             }
 
             // 2. Load project definitions and merge
+            let mergedData = engineData !== null ? engineData : [];
             try {
                 const projectRaw = await fs.readFile(projectFilePath, 'utf8');
                 const projectData = safeParseJSON(projectRaw, 'project def');
                 
                 if (Array.isArray(projectData)) {
-                    // Merge arrays by ID (project items override engine items)
-                    if (!Array.isArray(mergedData)) mergedData = [];
-                    const itemMap = new Map();
-                    mergedData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
-                    projectData.forEach(item => { if (item.id) itemMap.set(item.id, item); });
-                    mergedData = Array.from(itemMap.values());
-                } else if (projectData && typeof projectData === 'object' && !Array.isArray(mergedData)) {
-                    // Only merge object-on-object. If the engine core produced an
-                    // array but the project file is an object, keep the array form
-                    // rather than spreading the array into an object (corrupts shape).
-                    mergedData = { ...mergedData, ...stripProtoKeys(projectData) };
+                    const baseArr = Array.isArray(engineData) ? engineData : [];
+                    mergedData = mergeDefinitionArrays(baseArr, projectData);
+                } else if (projectData && typeof projectData === 'object') {
+                    if (engineData && typeof engineData === 'object' && !Array.isArray(engineData)) {
+                        mergedData = { ...stripProtoKeys({ ...engineData }), ...stripProtoKeys({ ...projectData }) };
+                    } else if (!Array.isArray(engineData) || engineData.length === 0) {
+                        // Allow object-shaped definitions (e.g. variables.json) when engine core
+                        // has no data or only an empty [] placeholder.
+                        mergedData = { ...stripProtoKeys({ ...projectData }) };
+                    }
                 }
             } catch (err) {
                 // If project file is missing, we just use engine data or empty array
                 if (err.code !== 'ENOENT') console.error(`[GameData:${typeName}] Error reading project definitions:`, err.message);
                 if (isRoot) {
-                    // In root mode, if we failed to read project file (which is the engine file), we should try public
                     try {
-                        const engineFilePath = path.join(__dirname, '..', '..', 'public', 'dunyalar', 'definitions', fileName);
                         const engineRaw = await fs.readFile(engineFilePath, 'utf8');
                         mergedData = safeParseJSON(engineRaw, 'engine def');
                     } catch(e) {
@@ -155,6 +179,21 @@ router.post('/fx/save', async (req, res) => {
         await safeFs.safeWriteFullPath(dir, path.join(dir, `${name}.json`), JSON.stringify(config, null, 2), 'utf8');
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: 'Save failed' }); }
+});
+
+router.delete('/fx/:name', async (req, res) => {
+    if (!isSafeName(req.params.name)) return res.status(400).json({ error: 'Invalid FX name' });
+    const dir = path.join(projectService.getActiveProject(), 'data', 'fx');
+    const filePath = resolveUnderRoot(dir, `${req.params.name}.json`);
+    if (!filePath) return res.status(403).json({ error: 'Access denied' });
+    try {
+        await fs.unlink(filePath);
+        res.json({ success: true });
+    } catch (err) {
+        if (err.code === 'ENOENT') return res.status(404).json({ error: 'FX not found' });
+        console.error('[GameData:FX] Delete error:', err.message);
+        res.status(500).json({ error: 'Delete failed' });
+    }
 });
 
 // GET /api/templates/:category - Scan definitions for individual files to use as templates

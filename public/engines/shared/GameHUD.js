@@ -40,84 +40,78 @@ const RG_HUD_CSS = `
 
 /* ── Per-element base + craft layer ────────────────────────────────── */
 .hud-element {
-  image-rendering: pixelated !important;
-  border-radius: 0 !important;       /* hard, blocky corners */
-  transition: none;                  /* retro = no smooth easing */
+  image-rendering: pixelated;
+  transition: none;
 }
 .hud-element.hud-type-panel {
-  /* Minecraft-style: dark fill, chunky light top/left + dark bottom/right bevel */
-  background: rgba(20,24,38,0.82) !important;
-  border: 2px solid #000 !important;
+  background: rgba(20,24,38,0.84);
+  border: 2px solid #000;
   box-shadow:
     inset 2px 2px 0 rgba(255,255,255,.10),
     inset -2px -2px 0 rgba(0,0,0,.45),
-    3px 3px 0 rgba(0,0,0,.6) !important;
+    3px 3px 0 rgba(0,0,0,.6);
 }
 .hud-element.hud-type-label,
 .hud-element.hud-type-button {
-  text-shadow: 2px 2px 0 #000 !important;
-  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #000;
+  letter-spacing: 0.5px;
 }
 .hud-element.hud-type-button {
-  border: 2px solid #000 !important;
+  border: 2px solid #000;
+  background: rgba(20,24,38,0.9);
   box-shadow:
     inset 2px 2px 0 rgba(255,255,255,.18),
     inset -2px -2px 0 rgba(0,0,0,.35),
-    3px 3px 0 rgba(0,0,0,.6) !important;
+    3px 3px 0 rgba(0,0,0,.6);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  image-rendering: pixelated !important;
+  letter-spacing: 0.5px;
+  image-rendering: pixelated;
 }
 .hud-element.hud-type-button:hover {
-  filter: brightness(1.18);
+  filter: brightness(1.16);
   transform: translate(-1px,-1px);
-  box-shadow:
-    inset 2px 2px 0 rgba(255,255,255,.26),
-    4px 4px 0 rgba(0,0,0,.65) !important;
 }
 .hud-element.hud-type-button:active {
-  transform: translate(2px,2px);
-  box-shadow: inset 2px 2px 0 rgba(0,0,0,.4) !important;
+  transform: translate(1px,1px);
 }
 
 /* ── Stat bars: flat stepped fill + blocky notches ─────────────────── */
 .hud-element.hud-type-bar {
-  border: 2px solid #000 !important;
-  background: #0b0d14 !important;
-  box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), 3px 3px 0 rgba(0,0,0,.6) !important;
-  border-radius: 0 !important;
+  border: 2px solid #000;
+  background: #0b0d14;
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), 3px 3px 0 rgba(0,0,0,.6);
   overflow: hidden;
-  image-rendering: pixelated !important;
+  image-rendering: pixelated;
 }
 .hud-bar-fill {
   position: absolute; top: 0; left: 0; height: 100%;
   width: 100%; pointer-events: none;
-  background: var(--bar-color, #ff3147) !important;
-  /* blocky right edge */
-  box-shadow: inset -3px 0 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -3px 0 rgba(0,0,0,.3) !important;
-  image-rendering: pixelated !important;
-  transition: width 0.18s steps(8) !important;  /* chunky, stepped fill */
+  background: var(--bar-color, #ff3147);
+  box-shadow: inset -3px 0 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -3px 0 rgba(0,0,0,.3);
+  image-rendering: pixelated;
+  transition: width 0.18s steps(8);
 }
 .hud-bar-ticks {
   position: absolute; inset: 0; pointer-events: none; z-index: 1;
 }
 .hud-bar-label {
   position: relative; z-index: 2;
-  width: 100%; text-align: center;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
   font-size: 11px;
-  text-shadow: 2px 2px 0 #000 !important;
+  text-shadow: 2px 2px 0 #000;
 }
 
-/* ── Slots: Minecraft item-frame style ─────────────────────────────── */
+/* ── Slots: item-frame style ───────────────────────────────────────── */
 .hud-element.hud-type-slot {
-  background: #1b2030 !important;
-  border: 2px solid #000 !important;
+  background: #1b2030;
+  border: 2px solid #000;
   box-shadow:
     inset 2px 2px 0 rgba(255,255,255,.10),
     inset -2px -2px 0 rgba(0,0,0,.5),
-    3px 3px 0 rgba(0,0,0,.6) !important;
-  border-radius: 0 !important;
-  image-rendering: pixelated !important;
+    3px 3px 0 rgba(0,0,0,.6);
+  image-rendering: pixelated;
 }
 .hud-element.hud-type-slot.is-active {
   border-color: #fff !important;
@@ -288,14 +282,21 @@ class GameHUD {
         // instead of being wiped (which made pause appear to cover the stats).
         const keepUnderlay = opts.keepUnderlay !== undefined
             ? opts.keepUnderlay
-            : (screenData.background === true && this.currentScreen);
+            : Boolean(screenData.background === true && this.currentScreen);
 
         this.currentScreen = screenId;
         if (!keepUnderlay) {
             this.scaleContainer.innerHTML = '';
             this.elements = {};
-        } else if (this._underlayKey !== this.currentScreen) {
-            // Snapshot current screen into an underlay layer before overlaying.
+        } else {
+            // Remove any prior overlay layer before mounting the new overlay so overlays don't stack stale widgets.
+            Array.from(this.scaleContainer.children).forEach(node => {
+                if (node.dataset && node.dataset.hudOverlay === '1') {
+                    const prevKey = node.dataset.hudElId;
+                    if (prevKey) delete this.elements[prevKey];
+                    node.remove();
+                }
+            });
             this._underlayKey = this.currentScreen;
         }
 
@@ -305,6 +306,8 @@ class GameHUD {
             if (this._evaluateCondition(elData)) {
                 const domEl = this._buildElement(elData);
                 if (domEl) {
+                    domEl.dataset.hudElId = elData.id;
+                    if (keepUnderlay) domEl.dataset.hudOverlay = '1';
                     this.elements[elData.id] = { dom: domEl, data: elData };
                     this.scaleContainer.appendChild(domEl);
                 }
@@ -366,6 +369,32 @@ class GameHUD {
         return transforms[anchor] || transforms['top-left'];
     }
 
+    _resolveElementPosition(rect, anchor = 'top-left') {
+        const raw = String(anchor || 'top-left').trim().toLowerCase();
+        let v = 'top', h = 'left';
+        if (raw === 'center') {
+            v = 'center'; h = 'center';
+        } else {
+            const parts = raw.split('-');
+            v = parts[0] || 'top';
+            h = parts[1] || 'left';
+        }
+        const x = Number(rect?.x ?? 0);
+        const y = Number(rect?.y ?? 0);
+        const rw = Number(rect?.w ?? 100);
+        const rh = Number(rect?.h ?? 30);
+
+        let left = x;
+        if (h === 'right') left = this.baseWidth - rw - x;
+        else if (h === 'center') left = (this.baseWidth - rw) / 2 + x;
+
+        let top = y;
+        if (v === 'bottom') top = this.baseHeight - rh - y;
+        else if (v === 'center') top = (this.baseHeight - rh) / 2 + y;
+
+        return { left: Math.round(left), top: Math.round(top), w: rw, h: rh };
+    }
+
     _buildElement(data) {
         const el = document.createElement('div');
         el.id = `hud-${data.id}`;
@@ -376,42 +405,39 @@ class GameHUD {
 
         const r = data.rect || { x: 0, y: 0, w: 100, h: 30 };
         const anchor = data.anchor || 'top-left';
-        const at = this._getAnchorTransform(anchor);
+        const pos = this._resolveElementPosition(r, anchor);
 
-        el.style.top = at.top;
-        el.style.left = at.left;
-        el.style.transform = at.transform;
-        el.style.width = r.w + 'px';
-        el.style.height = r.h + 'px';
-
-        if (anchor === 'top-left' || anchor === 'center-left' || anchor === 'bottom-left') {
-            el.style.marginLeft = r.x + 'px';
-            el.style.marginTop = r.y + 'px';
-        }
-        if (anchor === 'top-right' || anchor === 'center-right' || anchor === 'bottom-right') {
-            el.style.marginRight = r.x + 'px';
-            el.style.marginTop = r.y + 'px';
-        }
-        if (anchor === 'top-center' || anchor === 'bottom-center' || anchor === 'center') {
-            el.style.marginTop = r.y + 'px';
-        }
+        el.style.left = pos.left + 'px';
+        el.style.top = pos.top + 'px';
+        el.style.width = pos.w + 'px';
+        el.style.height = pos.h + 'px';
 
         const s = data.style || {};
-        if (s.zIndex) el.style.zIndex = s.zIndex;
+        if (s.zIndex !== undefined) el.style.zIndex = s.zIndex;
         if (s.color) el.style.color = s.color;
         if (s.backgroundColor) el.style.background = s.backgroundColor;
+        if (s.backgroundImage) el.style.backgroundImage = s.backgroundImage;
         if (s.fontSize) el.style.fontSize = s.fontSize + 'px';
         if (s.fontWeight) el.style.fontWeight = s.fontWeight;
         if (s.textAlign) el.style.textAlign = s.textAlign;
-        if (s.borderWidth) { el.style.borderWidth = s.borderWidth + 'px'; el.style.borderStyle = 'solid'; }
-        if (s.borderColor) el.style.borderColor = s.borderColor;
+        if (s.borderWidth !== undefined) {
+            const bw = Number(s.borderWidth) || 0;
+            el.style.borderWidth = bw + 'px';
+            el.style.borderStyle = bw > 0 ? (s.borderStyle || 'solid') : 'none';
+        }
+        if (s.borderColor) {
+            el.style.borderColor = s.borderColor;
+            if (!el.style.borderStyle && Number(s.borderWidth) > 0) el.style.borderStyle = s.borderStyle || 'solid';
+        }
         if (s.borderRadius !== undefined) el.style.borderRadius = s.borderRadius + 'px';
         if (s.boxShadow) el.style.boxShadow = s.boxShadow;
         if (s.textShadow) el.style.textShadow = s.textShadow;
         if (s.textTransform) el.style.textTransform = s.textTransform;
-        if (s.letterSpacing !== undefined) el.style.letterSpacing = s.letterSpacing + 'px';
+        if (s.letterSpacing !== undefined) el.style.letterSpacing = typeof s.letterSpacing === 'number' ? s.letterSpacing + 'px' : s.letterSpacing;
         if (s.opacity !== undefined) el.style.opacity = s.opacity;
-        if (s.padding) el.style.padding = s.padding + 'px';
+        if (s.padding !== undefined) el.style.padding = typeof s.padding === 'number' ? s.padding + 'px' : s.padding;
+        if (s.fontFamily) el.style.fontFamily = s.fontFamily;
+        if (s.lineHeight) el.style.lineHeight = typeof s.lineHeight === 'number' ? s.lineHeight + 'px' : s.lineHeight;
 
         el.style.display = 'flex';
         el.style.alignItems = 'center';
@@ -456,6 +482,8 @@ class GameHUD {
                 const label = document.createElement('div');
                 label.className = 'hud-bar-label';
                 label.style.textShadow = s.textShadow || '2px 2px 0 #000';
+                if (s.fontSize) label.style.fontSize = s.fontSize + 'px';
+                if (s.color) label.style.color = s.color;
                 label.innerHTML = this._parseText(data.text);
                 el.appendChild(label);
                 break;

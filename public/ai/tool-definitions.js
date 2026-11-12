@@ -1,4 +1,4 @@
-import { EDITOR_TARGETS, editorFileForTarget, editorTargetIds, normalizeEditorTarget } from './tool-aliases.mjs';
+import { EDITOR_TARGETS, editorFileForTarget, editorTargetIds, normalizeEditorTarget, studioToolIdForTarget } from './tool-aliases.mjs';
 import { knownNamespaces } from './namespace-router.js';
 
 function applyPatch(original, patch) {
@@ -416,8 +416,10 @@ export function registerDefaultTools(registry) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ file: args.file || '.' })
                 });
-                if (!res.ok) throw new Error('Failed to stage files');
-                return await res.json();
+                const data = await res.json().catch(() => null);
+                if (!res.ok) throw new Error(data?.error || 'Failed to stage files');
+                if (data?.success === false) throw new Error(data.error || 'Failed to stage files');
+                return data || { success: true };
             }
         });
 
@@ -439,8 +441,10 @@ export function registerDefaultTools(registry) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: args.message })
                 });
-                if (!res.ok) throw new Error('Failed to commit');
-                return await res.json();
+                const data = await res.json().catch(() => null);
+                if (!res.ok) throw new Error(data?.error || 'Failed to commit');
+                if (data?.success === false) throw new Error(data.error || 'Failed to commit');
+                return data || { success: true };
             }
         });
 
@@ -524,7 +528,8 @@ export function registerDefaultTools(registry) {
                 required: ['steps']
             },
             execute: async (args) => {
-                if (!window.RedglitchAIInstance || !window.RedglitchAIInstance.workflowManager) {
+                const ai = (typeof window !== 'undefined' && (window.RedglitchAIInstance || window.parent?.RedglitchAIInstance)) || null;
+                if (!ai || !ai.workflowManager) {
                     throw new Error("Workflow Manager not initialized in RedglitchAIInstance");
                 }
                 // Safety net: if steps have NO navigateTo and look like a plain studio-open
@@ -540,11 +545,30 @@ export function registerDefaultTools(registry) {
                     if (/iso|isometric|isopixel/.test(allArgs)) target = 'iso_studio';
                     else if (/platformer|platform/.test(allArgs)) target = 'platformer_studio';
                     else if (/topdown|top.down|rpg|world/.test(allArgs)) target = 'editor';
-                    if (target && window.RedglitchAIInstance && window.RedglitchAIInstance.toolRegistry) {
-                        return await window.RedglitchAIInstance.toolRegistry.execute('navigateTo', { target });
+                    const targetRegistry = ai.toolRegistry || registry;
+                    if (target && targetRegistry && typeof targetRegistry.execute === 'function') {
+                        const navRes = await targetRegistry.execute('navigateTo', { target });
+                        if (!navRes || navRes.success === false) {
+                            const err = new Error(navRes?.error?.message || `Failed to navigate to ${target}`);
+                            if (navRes?.error?.code) err.code = navRes.error.code;
+                            throw err;
+                        }
+                        return navRes.result ?? navRes;
                     }
                 }
-                return await window.RedglitchAIInstance.workflowManager.executeWorkflow(args.steps);
+                const wfResult = await ai.workflowManager.executeWorkflow(
+                    args.steps,
+                    null,
+                    { nested: true }
+                );
+                if (!wfResult || wfResult.success === false) {
+                    const err = new Error(wfResult?.error || 'Workflow execution failed');
+                    if (wfResult?.errorCode || wfResult?.failedStep?.error?.code) {
+                        err.code = wfResult.errorCode || wfResult.failedStep.error.code;
+                    }
+                    throw err;
+                }
+                return wfResult;
             }
         });
 
@@ -553,58 +577,89 @@ export function registerDefaultTools(registry) {
         // navigateTo (Safe)
         registry.register({
             name: 'navigateTo',
-            description: 'Open a specific studio tool or editor. Use "editor" for top-down RPG map/level editing, "iso_studio" for isometric/isopixel map creation, "platformer_studio" for 2D platformer level editing, "script" for code/scripting.',
+            description: 'Open a specific studio tool or editor. Use "editor" for top-down RPG map/level editing, "iso_studio" for isometric/isopixel map creation, "platformer_studio" for 2D platformer level editing, "script" for code/scripting, "daw" for audio, "studio_3d" for 3D Studio.',
             securityLevel: 'safe',
+            argumentAliases: {
+                editor: 'target',
+                tool: 'target',
+                screen: 'target',
+                page: 'target',
+                id: 'target',
+                destination: 'target'
+            },
+            normalizeArgs: (args, rawArgs) => {
+                const next = args && typeof args === 'object' && !Array.isArray(args) ? { ...args } : {};
+                if (typeof rawArgs === 'string' && !next.target) {
+                    next.target = rawArgs;
+                }
+                if (next.target !== undefined) {
+                    next.target = normalizeEditorTarget(next.target);
+                }
+                return next;
+            },
             parameters: {
                 type: 'object',
                 properties: {
                     target: { 
                         type: 'string', 
-                        enum: [
-                            ...editorTargetIds(),
-                            'asset-manager',
-                            'achievement',
-                            'algorithm_studio'
-                        ],
-                        description: 'The ID of the tool to open. "editor"=Top-down RPG Level Editor, "iso_studio"=IsoPixel/Isometric Studio, "platformer_studio"=2D Platformer Editor, "script"=Code Forge.'
+                        enum: editorTargetIds(),
+                        description: 'The canonical ID of the tool to open (aliases such as iso, isometric, isopixel, platformer, world, rpg, topdown, code, daw, studio_3d, quests, assets, fxpro, loc, interactive_cutscene, ui_designer normalize automatically).'
                     }
                 },
                 required: ['target']
             },
             execute: async (args) => {
-                let target = (typeof args === 'string') ? args : args.target;
-                
-                if (!target) throw new Error("Navigation target missing");
+                const rawTarget = (typeof args === 'string') ? args : args?.target;
+                if (!rawTarget) throw new Error("Navigation target missing");
 
-                target = normalizeEditorTarget(target);
-
-                registry._debug(`Navigating to: ${target}`);
-
-                let hub = window;
-                if (!hub.openWindow && window.parent && window.parent.openWindow) hub = window.parent;
-                if (!hub.openWindow && window.top && window.top.openWindow) hub = window.top;
-
-                if (hub.openWindow && hub.tools) {
-                    const tool = hub.tools.find(t => t.id === target);
-                    if (tool) {
-                        hub.openWindow(tool);
-                        return { success: true, message: `Opened ${tool.title}` };
-                    }
-                }
-
+                const target = normalizeEditorTarget(rawTarget);
+                const studioId = studioToolIdForTarget(target);
                 const url = EDITOR_TARGETS[target] || editorFileForTarget(target);
-                if (url) {
-                    // Avoid redundant reloads
-                    const currentPath = window.location.pathname;
-                    if (currentPath.includes(url) || (url === 'dashboard.html' && currentPath === '/')) {
-                        registry._debug(`Already on ${target} (${url}), skipping redirect.`);
-                        return { success: true, message: `Already on ${target}` };
+                if (!url) throw new Error(`Invalid target: ${rawTarget}`);
+
+                registry._debug(`Navigating to: ${target} (studioId: ${studioId})`);
+
+                const hasHubApi = (win) => Boolean(win && (typeof win.openTool === 'function' || typeof win.openWindow === 'function' || Array.isArray(win.tools)));
+                let hub = window;
+                if (!hasHubApi(hub) && window.parent && hasHubApi(window.parent)) hub = window.parent;
+                if (!hasHubApi(hub) && window.top && hasHubApi(window.top)) hub = window.top;
+
+                const inStudioHub = hasHubApi(hub) || Boolean(window.parent && window.parent !== window);
+
+                if (hasHubApi(hub)) {
+                    const tool = Array.isArray(hub.tools)
+                        ? (hub.tools.find(t => t.id === studioId) || hub.tools.find(t => t.id === target) || hub.tools.find(t => t.src === url))
+                        : null;
+
+                    if (typeof hub.openWindow === 'function' && tool) {
+                        hub.openWindow(tool);
+                        return { success: true, target, studioToolId: tool.id, message: `Opened ${tool.title || target}` };
                     }
-                    if (window.top) window.top.location.href = url;
-                    else window.location.href = url;
-                    return { message: `Redirecting to ${target}` };
+                    if (typeof hub.openTool === 'function') {
+                        const opened = hub.openTool(tool ? (tool.src || studioId) : studioId);
+                        if (opened !== false && (tool || !Array.isArray(hub.tools) || typeof hub.openWindow !== 'function')) {
+                            return { success: true, target, studioToolId: studioId, message: `Opened ${tool?.title || target}` };
+                        }
+                    }
+                    if (typeof hub.openWindow === 'function') {
+                        hub.openWindow({ id: studioId, title: target, icon: 'fa-window-maximize', src: url });
+                        return { success: true, target, studioToolId: studioId, message: `Opened ${target}` };
+                    }
                 }
-                throw new Error(`Invalid target: ${target}`);
+
+                if (inStudioHub) {
+                    throw new Error(`Studio hub window controls unavailable for target: ${target}`);
+                }
+
+                // Standalone mode (outside Studio hub): avoid redundant reloads
+                const currentPath = window.location?.pathname || '';
+                if (currentPath.includes(url) || (url === 'dashboard.html' && currentPath === '/')) {
+                    registry._debug(`Already on ${target} (${url}), skipping redirect.`);
+                    return { success: true, target, message: `Already on ${target}` };
+                }
+                if (window.top && window.top.location) window.top.location.href = url;
+                else if (window.location) window.location.href = url;
+                return { success: true, target, redirected: true, message: `Redirecting to ${target}` };
             }
         });
         
@@ -614,11 +669,18 @@ export function registerDefaultTools(registry) {
         registry.register({ ...registry.tools.get('fs.write'), name: 'saveScript' });
         // --- ISO PIXEL STUDIO ---
 
-        // iso.spawn_prefab (Safe)
+        // iso.spawn_prefab (Low-Risk)
         registry.register({
             name: 'iso.spawn_prefab',
             description: 'Spawn a prefab or NPC into the current IsoPixel scene.',
             securityLevel: 'low-risk',
+            timeout: 30000,
+            argumentAliases: {
+                type: 'name',
+                prefabID: 'name',
+                prefab: 'name',
+                id: 'name'
+            },
             parameters: {
                 type: 'object',
                 properties: {
@@ -635,11 +697,17 @@ export function registerDefaultTools(registry) {
                 // Delegate to the real, working IsoPixel tool (public/iso_editor.js:283).
                 // The previous implementation emitted an `iso:spawn_asset` event that had
                 // no listener anywhere, so it returned a false success while doing nothing.
-                return await registry.execute('pixel.placePrefab', {
+                const res = await registry.execute('pixel.placePrefab', {
                     x: args.x,
                     y: args.y,
                     prefabID: args.name
                 });
+                if (!res || res.success === false) {
+                    const err = new Error(res?.error?.message || res?.message || `Failed to spawn prefab: ${args.name}`);
+                    if (res?.error?.code) err.code = res.error.code;
+                    throw err;
+                }
+                return res.result ?? res;
             }
         });
 

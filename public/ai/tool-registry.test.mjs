@@ -182,3 +182,102 @@ test('remote command requests always receive a command result on unexpected fail
     assert.equal(resultEvent.data.success, false);
     assert.equal(resultEvent.data.error.code, 'BROKEN_REGISTRY');
 });
+
+test('allows tool execution in easy AI mode without throwing AI_DISABLED', async () => {
+    const { registry } = buildRegistry();
+    globalThis.localStorage.setItem('kai_ai_enabled', 'easy');
+    registry.register({
+        name: 'fixture.easy',
+        description: 'Easy mode fixture tool',
+        securityLevel: 'safe',
+        mutates: false,
+        parameters: { type: 'object', properties: {} },
+        execute: async () => ({ mode: 'easy' }),
+    });
+
+    const response = await registry.execute('fixture.easy', {}, 'easy-mode');
+    assert.equal(response.success, true);
+    assert.equal(response.status, ACTION_STATUS.SUCCEEDED);
+    assert.deepEqual(response.result, { mode: 'easy' });
+});
+
+test('ToolRegistry constructor emits ai:tool:discover', () => {
+    installBrowserGlobals();
+    const eventBus = new FakeEventBus();
+    window.RedglitchEventBus = eventBus;
+    const registerDefaults = ToolRegistry.prototype._registerDefaults;
+    ToolRegistry.prototype._registerDefaults = async function noopRegisterDefaults() {};
+    try {
+        new ToolRegistry(eventBus);
+    } finally {
+        ToolRegistry.prototype._registerDefaults = registerDefaults;
+    }
+    assert.ok(eventBus.events.some((e) => e.type === 'ai:tool:discover'));
+});
+
+test('waits for studio:tool:announce after opening editor and completes remote execution', async () => {
+    const { registry, eventBus } = buildRegistry();
+    registry.flags.explicitCapabilityRouting = true;
+    registry.editorReadyTimeoutMs = 500;
+
+    const openedTools = [];
+    window.parent = {
+        tools: [{ id: 'iso_studio', title: 'IsoPixel Studio', src: 'iso_editor.html' }],
+        openWindow(tool) {
+            openedTools.push(tool.id);
+            setTimeout(() => {
+                eventBus.emit('studio:tool:announce', {
+                    name: 'pixel.placePrefab',
+                    description: 'Place prefab',
+                    securityLevel: 'safe',
+                    parameters: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' }, prefabID: { type: 'string' } } },
+                });
+            }, 15);
+        },
+    };
+    registry.register({
+        name: 'navigateTo',
+        description: 'Navigate',
+        securityLevel: 'safe',
+        parameters: { type: 'object', properties: { target: { type: 'string' } }, required: ['target'] },
+        execute: async ({ target }) => {
+            const tool = window.parent.tools.find((t) => t.id === target);
+            window.parent.openWindow(tool);
+            return { success: true, target };
+        },
+    });
+
+    eventBus.on('studio:action:execute', (event) => {
+        setTimeout(() => {
+            eventBus.emit('studio:action:result', {
+                id: event.data.id,
+                success: true,
+                result: { placed: event.data.params.prefabID },
+            });
+        }, 5);
+    });
+
+    const response = await registry.execute('pixel.placePrefab', { x: 1, y: 2, prefabID: 'oak' }, 'wait-announce');
+    assert.deepEqual(openedTools, ['iso_studio']);
+    assert.equal(response.success, true);
+    assert.equal(response.status, ACTION_STATUS.SUCCEEDED);
+    assert.deepEqual(response.result, { placed: 'oak' });
+});
+
+test('returns EDITOR_TIMEOUT when target editor never announces tool within timeout', async () => {
+    const { registry } = buildRegistry();
+    registry.flags.explicitCapabilityRouting = true;
+    registry.editorReadyTimeoutMs = 40;
+    registry.register({
+        name: 'navigateTo',
+        description: 'Navigate',
+        securityLevel: 'safe',
+        parameters: { type: 'object', properties: { target: { type: 'string' } }, required: ['target'] },
+        execute: async ({ target }) => ({ success: true, target }),
+    });
+
+    const response = await registry.execute('pixel.placePrefab', { x: 0, y: 0, prefabID: 'oak' }, 'wait-timeout');
+    assert.equal(response.success, false);
+    assert.equal(response.status, ACTION_STATUS.FAILED);
+    assert.equal(response.error.code, ERROR_CODE.EDITOR_TIMEOUT);
+});

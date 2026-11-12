@@ -46,10 +46,11 @@ class Synthesizer {
         // Apply ADSR envelope
         this.applyEnvelope(voice.gain, velocity, time, duration);
         
-        // Auto-release after duration
+        // Auto-release after duration (account for future scheduled startTime)
+        const delay = Math.max(0, time - this.ctx.currentTime);
         setTimeout(() => {
             this.stopVoice(voiceId);
-        }, (duration + this.params.release) * 1000);
+        }, (delay + duration + this.params.release) * 1000);
         
         return voiceId;
     }
@@ -71,16 +72,26 @@ class Synthesizer {
     stopVoice(voiceId) {
         const voice = this.voices.get(voiceId);
         if (!voice) return;
+        this.voices.delete(voiceId);
         
         try {
-            voice.oscillator.stop(this.ctx.currentTime + this.params.release);
-            voice.oscillator.disconnect();
-            voice.gain.disconnect();
+            const releaseTime = Math.max(0, this.params.release || 0);
+            const stopTime = this.ctx.currentTime + releaseTime;
+            const disconnectNodes = () => {
+                try { voice.oscillator.disconnect(); } catch {}
+                if (voice.filter) { try { voice.filter.disconnect(); } catch {} }
+                try { voice.gain.disconnect(); } catch {}
+            };
+            if ('onended' in voice.oscillator) {
+                voice.oscillator.onended = disconnectNodes;
+            }
+            voice.oscillator.stop(stopTime);
+            if (!('onended' in voice.oscillator) || releaseTime === 0) {
+                setTimeout(disconnectNodes, Math.max(10, releaseTime * 1000 + 20));
+            }
         } catch (e) {
             // Voice already stopped
         }
-        
-        this.voices.delete(voiceId);
     }
     
     // Stop all voices

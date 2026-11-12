@@ -30,9 +30,10 @@ function initializeScriptIntegration() {
 
             // Listen for script requests from other editors
             eventBus.on('script:request', (event) => {
-                console.log('[ScriptEditor] Script requested:', event.data.scriptPath);
-                if (typeof openFile === 'function') {
-                    openFile(event.data.scriptPath);
+                const targetPath = event?.data?.scriptPath || event?.scriptPath;
+                console.log('[ScriptEditor] Script requested:', targetPath);
+                if (targetPath && typeof openFile === 'function') {
+                    openFile(targetPath);
                 }
             });
 
@@ -371,6 +372,13 @@ window.onload = async () => {
         // Default expand useful folders
         expandedPaths.add('public');
         expandedPaths.add('public/base_game');
+
+        // Auto-open file requested via URL query parameter (?file=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialFile = urlParams.get('file');
+        if (initialFile && typeof openFile === 'function') {
+            openFile(initialFile);
+        }
         
         // Apply Welcome Screen Logic
         updateLayoutState();
@@ -378,8 +386,9 @@ window.onload = async () => {
         // --- AI Ghost Text Provider ---
         monaco.languages.registerInlineCompletionsProvider('javascript', {
             provideInlineCompletions: async (model, position, context, token) => {
-                // Only trigger if RedglitchAI is ready
-                if (!window.RedglitchAI || !window.RedglitchAI.isInitialized) return { items: [] };
+                // Only trigger if RedglitchAIInstance is ready (local or parent Studio shell)
+                const ai = window.RedglitchAIInstance || window.parent?.RedglitchAIInstance;
+                if (!ai || !ai.isInitialized || typeof ai.suggest !== 'function') return { items: [] };
                 
                 // Debounce simple typing for 500ms
                 if (context.triggerKind === monaco.languages.InlineCompletionTriggerKind.Automatic) {
@@ -400,7 +409,7 @@ window.onload = async () => {
                 });
 
                 try {
-                    const suggestion = await window.RedglitchAI.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
+                    const suggestion = await ai.suggest(textUntilPosition, textAfterPosition, activeTabPath || 'script.js');
                     if (suggestion && !token.isCancellationRequested) {
                         return {
                             items: [{
@@ -427,7 +436,9 @@ window.onload = async () => {
 async function loadTree() {
     try {
         const res = await fetch('/api/ide/tree');
-        fileTreeData = await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        fileTreeData = Array.isArray(data) ? data : (data?.tree || []);
         renderTree();
     } catch (e) {
         console.error(e);
@@ -441,6 +452,7 @@ function renderTree() {
     container.innerHTML = '';
 
     function sortNodes(nodes) {
+        if (!Array.isArray(nodes)) return [];
         return nodes.sort((a,b) => {
             if (a.type === b.type) return a.name.localeCompare(b.name);
             return a.type === 'dir' ? -1 : 1;
@@ -552,6 +564,7 @@ function setActiveTab(path) {
     }
 
     activeTabPath = path;
+    window.currentFile = path;
     const newTab = openTabs.find(t => t.path === path);
     
     if (newTab) {
@@ -801,9 +814,12 @@ if (window.parent && window.parent.RedglitchEventBus) {
     });
 
     window.parent.RedglitchEventBus.on('ai:command:request', (payload) => {
-        if (payload.method === 'insert' && editor) {
-            const content = payload.params.content;
-            const position = editor.getPosition();
+        const req = payload?.data || payload;
+        const method = req?.method;
+        const params = req?.params || {};
+        if (method === 'insert' && editor && typeof params.content === 'string') {
+            const content = params.content;
+            const position = editor.getPosition() || { lineNumber: 1, column: 1 };
             
             // Execute the edit operation
             editor.executeEdits("ai-assistant", [{
@@ -813,7 +829,7 @@ if (window.parent && window.parent.RedglitchEventBus) {
             }]);
             
             // Format document optionally
-            editor.getAction('editor.action.formatDocument').run();
+            editor.getAction('editor.action.formatDocument')?.run();
             editor.focus();
         }
     });

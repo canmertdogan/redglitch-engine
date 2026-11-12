@@ -298,14 +298,23 @@ export class MultiProviderAdapter {
      * OpenAI-compatible chat (OpenRouter, OpenAI, Gemini, Groq, DeepSeek, Mistral, Ollama, Custom).
      */
     async _chatOpenAICompatible(messages, options = {}, onToken = null) {
+        const model = options.model || this.model;
+        const modelId = String(model || '').trim();
+        const maxTokens = options.maxTokens ?? this.defaultParams.maxTokens;
+        const isOpenAIReasoning = (this.provider === 'openai' || /^openai\//i.test(modelId))
+            && /^(?:openai\/)?o(?:1|3)(?:$|[-._:])/i.test(modelId);
         const body = {
-            model: options.model || this.model,
+            model,
             messages,
-            max_tokens: options.maxTokens ?? this.defaultParams.maxTokens,
-            temperature: options.temperature ?? this.defaultParams.temperature,
-            top_p: options.topP ?? this.defaultParams.topP,
             stream: Boolean(onToken),
         };
+        if (isOpenAIReasoning) {
+            body.max_completion_tokens = maxTokens;
+        } else {
+            body.max_tokens = maxTokens;
+            body.temperature = options.temperature ?? this.defaultParams.temperature;
+            body.top_p = options.topP ?? this.defaultParams.topP;
+        }
         if (options.stopSequences) body.stop = options.stopSequences;
 
         let endpoint = `${this.baseUrl}/chat/completions`;

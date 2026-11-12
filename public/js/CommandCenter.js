@@ -3,6 +3,27 @@
  * Handles telemetry, latest activities, dev scratchpad, and system logs.
  */
 
+const _escapeHtml = window.escapeHtml || function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+};
+
+window.__studioPaused = false;
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'studio:visibility') {
+        window.__studioPaused = !e.data.visible;
+        if (e.data.visible && !document.hidden && typeof loadTelemetry === 'function') {
+            loadTelemetry();
+        }
+    }
+});
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && !window.__studioPaused && typeof loadTelemetry === 'function') {
+        loadTelemetry();
+    }
+});
+
 // --- LOG SYSTEM ---
 const Log = {
     feed: document.getElementById('log-feed'),
@@ -266,16 +287,28 @@ const commandRegistry = {
         usage: 'info',
         exec: async () => {
             try {
-                const res = await fetch('/api/projects/current');
-                const data = await res.json();
+                const [curRes, listRes] = await Promise.all([
+                    fetch('/api/projects/current'),
+                    fetch('/api/projects').catch(() => null)
+                ]);
+                if (!curRes.ok) throw new Error(`HTTP ${curRes.status}`);
+                const current = await curRes.json();
+                const projects = listRes && listRes.ok ? await listRes.json().catch(() => []) : [];
+                const meta = Array.isArray(projects)
+                    ? (projects.find(p => p && p.name === current.name) || {})
+                    : {};
+                const info = { ...meta, ...current };
+
                 Log.info('=== PROJECT INFO ===');
-                Log.info(`  Name:       ${data.name}`);
-                Log.info(`  Author:     ${data.author || 'Unknown'}`);
-                Log.info(`  Version:    ${data.version || '1.0.0'}`);
-                Log.info(`  Engine:     ${data.engineType || 'rpg-topdown'}`);
-                if (data.description) Log.info(`  Desc:       ${data.description}`);
+                Log.info(`  Name:       ${info.name || 'ROOT'}`);
+                Log.info(`  Mode:       ${info.isRoot ? 'Root Workspace' : 'Project'}`);
+                Log.info(`  Author:     ${info.author || 'Unknown'}`);
+                Log.info(`  Version:    ${info.version || '0.1.0'}`);
+                Log.info(`  Engine:     ${info.engineType || 'rpg-topdown'}`);
+                if (info.path) Log.info(`  Path:       ${info.path}`);
+                if (info.description) Log.info(`  Desc:       ${info.description}`);
             } catch(e) {
-                Log.error('Failed to load project info.');
+                Log.error('Failed to load project info: ' + e.message);
             }
         }
     },
@@ -300,14 +333,35 @@ const commandRegistry = {
     search: {
         desc: 'Search in project',
         usage: 'search <query>',
-        exec: (args) => {
+        exec: async (args) => {
             if (!args[0]) {
                 Log.warn("Usage: search <query>");
                 return;
             }
             const query = args.join(' ');
             Log.info(`Searching for: "${query}"...`);
-            openTool('search_tool');
+            try {
+                const res = await fetch(`/api/ide/search?query=${encodeURIComponent(query)}`);
+                if (res.ok) {
+                    const matches = await res.json();
+                    if (Array.isArray(matches) && matches.length > 0) {
+                        Log.success(`Found ${matches.length} match(es):`);
+                        matches.slice(0, 10).forEach(m => {
+                            Log.info(`  ${m.file}:${m.line} — ${m.text}`);
+                        });
+                        if (matches.length > 10) Log.info(`  ... and ${matches.length - 10} more`);
+                    } else {
+                        Log.info('No matches found.');
+                    }
+                }
+            } catch (e) {
+                Log.warn('Search request failed: ' + e.message);
+            }
+            if (window.parent && typeof window.parent.switchRightSidebar === 'function') {
+                window.parent.switchRightSidebar('files');
+            } else {
+                openTool('script');
+            }
         }
     },
     
@@ -437,15 +491,20 @@ function executeCommand(cmdStr) {
 async function loadTelemetry() {
     try {
         const res = await fetch('/api/projects/current');
-        const data = await res.json();
-        
-        const projEl = document.getElementById('proj-name');
-        if (projEl) {
-            let display = (data.name || 'UNKNOWN').toUpperCase();
-            if (display.length > 15) display = display.substring(0, 15) + "...";
-            projEl.innerText = display;
-            const sbProjEl = document.getElementById('sb-project-name');
-            if (sbProjEl) sbProjEl.innerText = display;
+        if (res.ok) {
+            const data = await res.json();
+            if (!data.isRoot && data.name && data.name !== 'ROOT' && window.RedglitchProjectState && !window.RedglitchProjectState.projectName) {
+                window.RedglitchProjectState.switchProject(data.name).then(() => renderActivities()).catch(() => {});
+            }
+
+            const projEl = document.getElementById('proj-name');
+            if (projEl) {
+                let display = (data.name || 'UNKNOWN').toUpperCase();
+                if (display.length > 15) display = display.substring(0, 15) + "...";
+                projEl.innerText = display;
+                const sbProjEl = document.getElementById('sb-project-name');
+                if (sbProjEl) sbProjEl.innerText = display;
+            }
         }
     } catch(e) {}
     
@@ -508,10 +567,48 @@ async function updateAIMetrics() {
 async function renderActivities() {
     const list = document.getElementById('activity-list');
     if (!list) return;
-    list.innerHTML = '<div class="empty-state">No recent activity.</div>';
+
+    let activities = [];
+    if (window.RedglitchProjectState && typeof window.RedglitchProjectState.get === 'function') {
+        const localActivities = window.RedglitchProjectState.get('activities', []);
+        if (Array.isArray(localActivities) && localActivities.length > 0) {
+            activities = localActivities;
+        }
+    }
+    if (activities.length === 0 && window.parent && window.parent !== window && window.parent.RedglitchProjectState && typeof window.parent.RedglitchProjectState.get === 'function') {
+        const parentActivities = window.parent.RedglitchProjectState.get('activities', []);
+        if (Array.isArray(parentActivities)) activities = parentActivities;
+    }
 
     const activityCount = document.getElementById('sb-activity-count');
-    if (activityCount) activityCount.innerText = '0';
+    if (activityCount) activityCount.innerText = String(activities.length);
+
+    if (activities.length === 0) {
+        list.innerHTML = '<div class="empty-state">No recent activity.</div>';
+        return;
+    }
+
+    list.innerHTML = '';
+    activities.slice(0, 15).forEach(act => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        const iconClass = act.type === 'tool' ? 'fas fa-wrench' : (act.type === 'file' ? 'fas fa-file-code' : 'fas fa-history');
+        const timeText = act.timestamp ? getRelativeTime(act.timestamp) : '';
+        const typeLabel = String(act.type || 'activity').toUpperCase();
+
+        item.innerHTML = `
+            <div class="file-icon"><i class="${iconClass}"></i></div>
+            <div class="file-info">
+                <span class="file-name">${_escapeHtml(act.name || 'Unnamed')}</span>
+                <span class="file-path">${_escapeHtml(typeLabel)}${timeText ? ' • ' + _escapeHtml(timeText) : ''}</span>
+            </div>
+        `;
+        item.onclick = () => {
+            if (act.type === 'tool' && act.data?.id) openTool(act.data.id);
+            else if (act.type === 'file' && act.data?.path) openFileInParent(act.data.path);
+        };
+        list.appendChild(item);
+    });
 }
 
 function getRelativeTime(ts) {
@@ -651,9 +748,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('redglitch_theme') || 'modern-dark';
     setTheme(savedTheme, { source: 'parent' });
 
-    loadTelemetry();
+    if (!document.hidden && !window.__studioPaused) loadTelemetry();
     loadCounts();
-    setTimeout(renderActivities, 500); 
-    setInterval(loadTelemetry, 5000);
-    setInterval(renderActivities, 60000);
+    setTimeout(() => { if (!document.hidden && !window.__studioPaused) renderActivities(); }, 500); 
+    setInterval(() => { if (!document.hidden && !window.__studioPaused) loadTelemetry(); }, 5000);
+    setInterval(() => { if (!document.hidden && !window.__studioPaused) renderActivities(); }, 60000);
 });

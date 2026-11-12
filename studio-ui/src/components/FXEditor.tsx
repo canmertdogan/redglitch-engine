@@ -10,7 +10,7 @@ import FormSection from './shared/FormSection';
 interface FXConfig {
     id: string;
     name: string;
-    mode: 'burst' | 'stream' | 'loop';
+    mode: 'burst' | 'continuous' | 'stream' | 'loop';
     count: number;
     duration: number;
     sprite: string;
@@ -23,6 +23,61 @@ interface FXConfig {
         gravity: number;
         drag: number;
         spread: number;
+    };
+}
+
+const VALID_MODES = new Set(['burst', 'continuous', 'stream', 'loop']);
+
+function makeDefaultFX(name = 'new_effect'): FXConfig {
+    return {
+        id: 'fx_' + Date.now(),
+        name,
+        mode: 'burst',
+        count: 50,
+        duration: 2.0,
+        sprite: '',
+        blend: 'lighter',
+        life: { min: 0.5, max: 1.0 },
+        speed: { min: 100, max: 200 },
+        size: { start: 5, end: 0 },
+        color: { start: '#ff0000', end: '#e74c3c' },
+        physics: { gravity: 500, drag: 0.98, spread: 45 }
+    };
+}
+
+function normalizeFX(raw: any, fallbackName = 'new_effect'): FXConfig {
+    const def = makeDefaultFX(fallbackName);
+    if (!raw || typeof raw !== 'object') return def;
+    const mode = VALID_MODES.has(raw.mode) ? raw.mode : def.mode;
+    return {
+        id: raw.id || def.id,
+        name: typeof raw.name === 'string' && raw.name.trim() ? raw.name : fallbackName,
+        mode,
+        count: Number.isFinite(Number(raw.count)) ? Number(raw.count) : def.count,
+        duration: Number.isFinite(Number(raw.duration)) ? Number(raw.duration) : def.duration,
+        sprite: typeof raw.sprite === 'string' ? raw.sprite : def.sprite,
+        blend: typeof raw.blend === 'string' ? raw.blend : def.blend,
+        life: {
+            min: Number.isFinite(Number(raw.life?.min)) ? Number(raw.life.min) : def.life.min,
+            max: Number.isFinite(Number(raw.life?.max)) ? Number(raw.life.max) : def.life.max,
+        },
+        speed: {
+            min: Number.isFinite(Number(raw.speed?.min)) ? Number(raw.speed.min) : def.speed.min,
+            max: Number.isFinite(Number(raw.speed?.max)) ? Number(raw.speed.max) : def.speed.max,
+        },
+        size: {
+            start: Number.isFinite(Number(raw.size?.start)) ? Number(raw.size.start) : def.size.start,
+            end: Number.isFinite(Number(raw.size?.end)) ? Number(raw.size.end) : def.size.end,
+        },
+        color: {
+            start: typeof raw.color?.start === 'string' ? raw.color.start : def.color.start,
+            end: typeof raw.color?.end === 'string' ? raw.color.end : def.color.end,
+        },
+        physics: {
+            gravity: Number.isFinite(Number(raw.physics?.gravity)) ? Number(raw.physics.gravity) : def.physics.gravity,
+            drag: Number.isFinite(Number(raw.physics?.drag)) ? Number(raw.physics.drag) : def.physics.drag,
+            spread: Number.isFinite(Number(raw.physics?.spread)) ? Number(raw.physics.spread) : def.physics.spread,
+        },
     };
 }
 
@@ -72,7 +127,7 @@ class Particle {
 }
 
 const FXEditor: React.FC = () => {
-    const { isReady, sprites: spriteLib } = useStudio();
+    const { isReady, sprites: spriteLib, eventBus } = useStudio();
     const [effects, setEffects] = useState<FXConfig[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -91,41 +146,94 @@ const FXEditor: React.FC = () => {
             const res = await fetch('/api/fx/list');
             if (res.ok) {
                 const names = await res.json();
-                if (names.length > 0) {
+                if (Array.isArray(names) && names.length > 0) {
                     const loaded = await Promise.all(names.map(async (n: string) => {
-                        const r = await fetch(`/api/fx/${n}`);
-                        return r.ok ? await r.json() : null;
+                        const r = await fetch(`/api/fx/${encodeURIComponent(n)}`);
+                        return r.ok ? normalizeFX(await r.json(), n) : null;
                     }));
-                    setEffects(loaded.filter(l => l !== null));
+                    const valid = loaded.filter((l): l is FXConfig => l !== null);
+                    setEffects(valid.length > 0 ? valid : [getDefaultFX()]);
                 } else {
                     setEffects([getDefaultFX()]);
                 }
+            } else {
+                setEffects([getDefaultFX()]);
             }
         } catch (e) {
             setEffects([getDefaultFX()]);
         }
     };
 
-    const saveToServer = async () => {
+    const saveToServer = async (interactive = true) => {
         const config = effects[currentIndex];
         if (!config) return;
+        const safeName = (config.name || '').trim().replace(/[^a-zA-Z0-9_-]+/g, '_');
+        if (!safeName) {
+            if (interactive) alert('INVALID EFFECT NAME');
+            return;
+        }
+        const payload = { ...config, name: safeName };
         setIsSaving(true);
         try {
             // Use dedicated FX route so file lands in <project>/data/fx/ (engine reads /api/fx/list there),
             // not <project>/assets/data/fx/ (assets/upload forces assets/ prefix and engine never finds it).
-            await fetch('/api/fx/save', {
+            const res = await fetch('/api/fx/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: config.name, config })
+                body: JSON.stringify({ name: safeName, config: payload })
             });
-            if (eventBus) eventBus.emit('fx:updated', { id: config.id, config });
-            alert("FX SAVED");
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                if (interactive) alert(err?.error || `SAVE FAILED (${res.status})`);
+                return;
+            }
+            setEffects(prev => prev.map((fx, i) => (i === currentIndex ? payload : fx)));
+            if (eventBus) eventBus.emit('fx:updated', { id: payload.id, config: payload });
+            if (interactive) alert('FX SAVED');
         } catch (e) {
-            alert("SAVE FAILED");
+            if (interactive) alert('SAVE FAILED');
         } finally {
             setIsSaving(false);
         }
     };
+
+    const deleteCurrentFX = async () => {
+        const config = effects[currentIndex];
+        if (!config) return;
+        if (!confirm(`Delete effect "${config.name}"?`)) return;
+        try {
+            const res = await fetch(`/api/fx/${encodeURIComponent(config.name)}`, { method: 'DELETE' });
+            if (!res.ok && res.status !== 404) {
+                alert(`DELETE FAILED (${res.status})`);
+                return;
+            }
+            const next = effects.filter((_, i) => i !== currentIndex);
+            setEffects(next.length > 0 ? next : [getDefaultFX()]);
+            setCurrentIndex(Math.max(0, currentIndex - 1));
+        } catch {
+            alert('DELETE FAILED');
+        }
+    };
+
+    const saveToServerRef = useRef(saveToServer);
+    saveToServerRef.current = saveToServer;
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                void saveToServerRef.current(true);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        const unsubSave = eventBus?.on('system:global_save', () => {
+            void saveToServerRef.current(false);
+        });
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            if (unsubSave && eventBus?.off) eventBus.off('system:global_save', unsubSave);
+        };
+    }, [eventBus]);
 
     useEffect(() => {
         if (!isPlaying) return;
@@ -172,28 +280,15 @@ const FXEditor: React.FC = () => {
     }, [isPlaying, effects, currentIndex]);
 
 
-    const getDefaultFX = (): FXConfig => ({
-        id: 'fx_' + Date.now(),
-        name: 'New Effect',
-        mode: 'burst',
-        count: 50,
-        duration: 2.0,
-        sprite: '',
-        blend: 'lighter',
-        life: { min: 0.5, max: 1.0 },
-        speed: { min: 100, max: 200 },
-        size: { start: 5, end: 0 },
-        color: { start: '#ff0000', end: '#e74c3c' },
-        physics: { gravity: 500, drag: 0.98, spread: 45 }
-    });
+    const getDefaultFX = (): FXConfig => makeDefaultFX('new_effect');
 
     const updateFX = (path: string, value: any) => {
         const newEffects = [...effects];
-        const fx = { ...newEffects[currentIndex] };
+        const fx = normalizeFX(newEffects[currentIndex]);
         const keys = path.split('.');
         let current: any = fx;
         for (let i = 0; i < keys.length - 1; i++) {
-            current[keys[i]] = { ...current[keys[i]] };
+            current[keys[i]] = { ...(current[keys[i]] || {}) };
             current = current[keys[i]];
         }
         current[keys[keys.length - 1]] = value;
@@ -230,9 +325,9 @@ const FXEditor: React.FC = () => {
                 <button className="tool-btn" onClick={triggerBurst} title="Play Effect"><Play size={16} /></button>
                 <button className="tool-btn" onClick={() => setIsPlaying(false)} title="Stop"><Square size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
-                <button className="tool-btn" onClick={saveToServer} disabled={isSaving} title="Save Effect"><Save size={16} /></button>
+                <button className="tool-btn" onClick={() => void saveToServer(true)} disabled={isSaving} title="Save Effect (Ctrl+S)"><Save size={16} /></button>
                 <button className="tool-btn" onClick={() => setEffects([...effects, getDefaultFX()])} title="New Effect"><Plus size={16} /></button>
-                <button className="tool-btn" style={{ color: '#e74c3c' }} title="Delete Effect"><Trash2 size={16} /></button>
+                <button className="tool-btn" onClick={() => void deleteCurrentFX()} style={{ color: '#e74c3c' }} title="Delete Effect"><Trash2 size={16} /></button>
             </div>
 
             <div style={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
@@ -253,7 +348,7 @@ const FXEditor: React.FC = () => {
                     )}
                 />
 
-                <div style={{ flexGrow: 1, background: 'var(--bg-canvas)', overflowY: 'auto', padding: '20px' }}>
+                <div style={{ flexGrow: 1, background: 'var(--bg-deep)', overflowY: 'auto', padding: '20px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '20px' }}>
                         <div>
                             <FormSection title="Emitter Config">
@@ -266,6 +361,7 @@ const FXEditor: React.FC = () => {
                                         <label>Mode</label>
                                         <select value={currentFX.mode} onChange={(e) => updateFX('mode', e.target.value)}>
                                             <option value="burst">Burst</option>
+                                            <option value="continuous">Continuous</option>
                                             <option value="stream">Stream</option>
                                             <option value="loop">Continuous Loop</option>
                                         </select>

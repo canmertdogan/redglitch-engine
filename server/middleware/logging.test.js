@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { stateMutationGuard } = require('./logging');
+const { stateMutationGuard, securityHeaders } = require('./logging');
 
 function runGuard(origin) {
   const req = { method: 'POST', headers: origin === undefined ? {} : { origin } };
@@ -41,4 +41,21 @@ test('rejects foreign origins with 403', () => {
     assert.equal(nextCalled, false, `expected rejection: ${origin}`);
     assert.equal(status, 403);
   }
+});
+
+test('securityHeaders allows blob/HTTPS/local connect-src and blob worker-src in CSP', () => {
+  const headers = {};
+  let nextCalled = false;
+  securityHeaders({}, {
+    setHeader(name, value) { headers[name] = value; },
+  }, () => { nextCalled = true; });
+
+  assert.ok(nextCalled);
+  const csp = headers['Content-Security-Policy'] || '';
+  assert.match(csp, /connect-src[^;]*'self'/);
+  assert.match(csp, /connect-src[^;]*blob:/);
+  assert.match(csp, /connect-src[^;]*https:/);
+  assert.match(csp, /connect-src[^;]*http:\/\/127\.0\.0\.1:\*/);
+  assert.match(csp, /connect-src[^;]*http:\/\/localhost:\*/);
+  assert.match(csp, /worker-src[^;]*'self'[^;]*blob:/);
 });

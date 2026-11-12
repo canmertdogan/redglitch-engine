@@ -163,6 +163,16 @@ app.use(['/api/history', '/api/ai'], (req, res) => {
 app.use(securityHeaders);
 
 // Body parser
+// Gzip text assets (JS/CSS/HTML/JSON) — Monaco/Three/studio bundles shrink ~70%.
+// Mounted after the /api/ai proxy so streamed responses are never buffered.
+app.use(require('compression')({
+    threshold: 1024,
+    filter: (req, res) => {
+        const type = String(res.getHeader('Content-Type') || '');
+        if (type.includes('text/event-stream')) return false;
+        return require('compression').filter(req, res);
+    }
+}));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
@@ -197,7 +207,9 @@ app.use('/base_game', (req, res, next) => {
 });
 app.use('/base_game', express.static(path.join(__dirname, 'public', 'engines', 'rpg-topdown')));
 
-// Serve sprites.js with hybrid merging
+// Serve sprites.js with hybrid merging + mtime-validated memory/ETag cache
+// so repeated editor iframe loads avoid redundant fs reads & vm compilation.
+const _mergedSpritesCache = new Map();
 const serveMergedSprites = async (req, res, next) => {
     try {
         const engineSpritesPath = path.join(__dirname, 'public', 'engines', 'rpg-topdown', 'sprites.js');
@@ -205,14 +217,39 @@ const serveMergedSprites = async (req, res, next) => {
         const projectSpritesPath = path.join(projectDir, 'sprites.js');
         const isRoot = projectService.isRootProject();
 
-        let engineContent = '';
-        try {
-            engineContent = await fs.readFile(engineSpritesPath, 'utf8');
-        } catch (e) {
-            if (e.code !== 'ENOENT') console.error('[Sprites] Error reading engine sprites:', e);
+        const [engStat, projStat] = await Promise.all([
+            fs.stat(engineSpritesPath).catch(() => null),
+            isRoot ? Promise.resolve(null) : fs.stat(projectSpritesPath).catch(() => null)
+        ]);
+        const engMtime = engStat ? Math.round(engStat.mtimeMs) : 0;
+        const projMtime = projStat ? Math.round(projStat.mtimeMs) : 0;
+        const cacheKey = `${isRoot ? 'ROOT' : projectDir}`;
+        const etag = `W/"sprites-${engMtime}-${projMtime}"`;
+
+        res.set('Content-Type', 'application/javascript; charset=utf-8');
+        res.set('Cache-Control', 'no-cache');
+        res.set('ETag', etag);
+
+        if (req.headers['if-none-match'] === etag) {
+            return res.status(304).end();
         }
 
-        if (isRoot) {
+        const cached = _mergedSpritesCache.get(cacheKey);
+        if (cached && cached.engMtime === engMtime && cached.projMtime === projMtime) {
+            return res.send(cached.content);
+        }
+
+        let engineContent = '';
+        if (engStat) {
+            try {
+                engineContent = await fs.readFile(engineSpritesPath, 'utf8');
+            } catch (e) {
+                if (e.code !== 'ENOENT') console.error('[Sprites] Error reading engine sprites:', e);
+            }
+        }
+
+        if (isRoot || !projStat) {
+            _mergedSpritesCache.set(cacheKey, { engMtime, projMtime, content: engineContent });
             return res.send(engineContent);
         }
 
@@ -224,6 +261,7 @@ const serveMergedSprites = async (req, res, next) => {
         }
 
         if (!projectContent) {
+            _mergedSpritesCache.set(cacheKey, { engMtime, projMtime, content: engineContent });
             return res.send(engineContent);
         }
 
@@ -250,8 +288,8 @@ const serveMergedSprites = async (req, res, next) => {
 
         const mergedSprites = { ...engineSprites, ...projectSprites };
         const mergedContent = `// Merged sprites.js - Engine + Project\nwindow.SPRITES = ${JSON.stringify(mergedSprites, null, 2)};`;
-        
-        res.set('Content-Type', 'application/javascript');
+        _mergedSpritesCache.set(cacheKey, { engMtime, projMtime, content: mergedContent });
+
         res.send(mergedContent);
     } catch (err) {
         next(err);
@@ -268,24 +306,59 @@ const overlayHandler = makeOverlayHandler(projectService);
 
 app.use('/engines', overlayHandler('engines', 'engines', true));
 
+// Serve project-aware packed tileset atlas (replaces 600 individual tile requests)
+const { getProjectAwareWorldAtlas } = require('./server/utils/worldTilesetAtlas');
+app.get('/sprite-art/worldpixelart_atlas.png', (req, res, next) => {
+    try {
+        const entry = getProjectAwareWorldAtlas(
+            path.join(__dirname, 'public'),
+            projectService.getActiveProject()
+        );
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('ETag', entry.etag);
+        if (req.headers['if-none-match'] === entry.etag) {
+            return res.status(304).end();
+        }
+        return res.send(entry.buffer);
+    } catch (err) {
+        return next(err);
+    }
+});
+
 // Dynamic Asset Serving for Projects
 app.use('/dunyalar', overlayHandler('dunyalar', 'dunyalar', false));
-app.use('/muzikler', overlayHandler('muzikler', 'muzikler', false));
+app.use('/muzikler', overlayHandler('muzikler', 'muzikler', false, { maxAgeMs: 60000 }));
 app.use('/assets', overlayHandler('assets', 'assets', false));
 app.use('/data', overlayHandler('data', 'data', false));
-app.use('/sprite-art', overlayHandler('sprite-art', 'sprite-art', false));
+app.use('/sprite-art', overlayHandler('sprite-art', 'sprite-art', false, { maxAgeMs: 60000 }));
 
 // Dynamic Interface File Serving (for .redui files)
 app.use('/interfaces', overlayHandler('interfaces', 'interfaces', false));
 
 // Redirect legacy 3D editors to unified editor
 app.get('/fps_editor.html', (req, res) => res.redirect('/editor3d.html?mode=fps-3d&project=' + encodeURIComponent(req.query.project || '')));
-app.get('/topdown3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=topdown-3d&project=' + (req.query.project || '')));
-app.get('/platformer3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=platformer-3d&project=' + (req.query.project || '')));
+app.get('/topdown3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=topdown-3d&project=' + encodeURIComponent(req.query.project || '')));
+app.get('/platformer3d_editor.html', (req, res) => res.redirect('/editor3d.html?mode=platformer-3d&project=' + encodeURIComponent(req.query.project || '')));
 app.get('/shader_editor.html', (req, res) => res.redirect('/shader_lab.html'));
 
 // Static files — no caching in dev so edits are always reflected immediately
-const staticOpts = { etag: false, lastModified: false, setHeaders: (res) => { res.setHeader('Cache-Control', 'no-store'); } };
+// Heavy, rarely-edited vendor/build assets get long-lived caching; everything else
+// revalidates via ETag (cheap 304) so edits still show up immediately without
+// re-downloading megabytes on every iframe open.
+const LONG_CACHE_RE = /^\/(lib|fonts|studio-dist\/assets|sprite-art|muzikler)\//;
+const staticOpts = {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+        const rel = '/' + path.relative(path.join(__dirname, 'public'), filePath).split(path.sep).join('/');
+        if (LONG_CACHE_RE.test(rel)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        } else {
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+    }
+};
 app.use(express.static(path.join(__dirname, 'public'), staticOpts));
 app.use('/projects', express.static(config.PROJECTS_ROOT, staticOpts));
 

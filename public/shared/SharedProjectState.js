@@ -25,6 +25,24 @@ class SharedProjectState {
     }
 
     async init() {
+        if (!this.projectName && typeof window !== 'undefined') {
+            try {
+                if (window.parent && window.parent !== window && window.parent.RedglitchProjectState?.projectName) {
+                    this.projectName = window.parent.RedglitchProjectState.projectName;
+                }
+            } catch (_) {}
+        }
+        if (!this.projectName && typeof fetch === 'function') {
+            try {
+                const res = await fetch('/api/projects/current');
+                if (res.ok) {
+                    const info = await res.json();
+                    if (info && info.name && !info.isRoot) {
+                        this.projectName = info.name;
+                    }
+                }
+            } catch (_) { /* keep null if server unavailable */ }
+        }
         if (this.projectName) {
             await this.loadProject();
         }
@@ -267,12 +285,9 @@ class SharedProjectState {
                         metadata: this.metadata
                     });
                 }
-                
-                if (!response.ok) {
-                    // Initialize with empty state
-                    this.state = {};
-                    this.metadata = {};
-                }
+            } else {
+                this.state = {};
+                this.metadata = {};
             }
         } catch (error) {
             console.error('[SharedProjectState] Error loading project:', error);

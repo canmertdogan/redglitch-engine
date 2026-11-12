@@ -12,6 +12,7 @@ const path    = require('path');
 const fs      = require('fs').promises;
 const fss     = require('fs');
 const config  = require('../config');
+const { resolveUnderRoot } = require('../utils/pathGuard');
 const { spawn } = require('child_process');
 
 // Supported 3D asset extensions
@@ -61,7 +62,16 @@ function isSafeName(value) {
     if (/^[. ]+$/.test(v)) return false;
     return /^[a-zA-Z0-9_\-. ]+$/.test(v) && !v.startsWith('..');
 }
-function isSafeProjectName(v) { return typeof v === 'string' && /^[a-zA-Z0-9_-]+$/.test(v); }
+function isSafeProjectName(value) {
+    if (typeof value !== 'string') return false;
+    const v = value.trim();
+    if (!v || v !== value || v === '.' || v === '..' || v.includes('..') || v.includes('/') || v.includes('\\')) {
+        return false;
+    }
+    if (/^[. ]+$/.test(v)) return false;
+    if (!/^[a-zA-Z0-9_\-. ]+$/.test(v)) return false;
+    return Boolean(resolveUnderRoot(config.PROJECTS_ROOT, v));
+}
 
 // ── GET /api/assets3d/:project — manifest ─────────────────────────────────────
 
@@ -107,7 +117,7 @@ router.get('/:project', async (req, res) => {
 router.get('/:project/:assetName', async (req, res) => {
     const { project, assetName } = req.params;
 
-    if (!isSafeName(project) || !isSafeName(assetName)) {
+    if (!isSafeProjectName(project) || !isSafeName(assetName)) {
         return res.status(400).json({ error: 'Invalid name' });
     }
 
@@ -164,14 +174,17 @@ router.post('/:project', async (req, res) => {
     }
 
     const file = req.files.file[0];
-    const ext = path.extname(file.name).toLowerCase();
+    if (typeof file.originalname !== 'string' || !isSafeName(file.originalname)) {
+        return res.status(400).json({ error: 'Invalid file name' });
+    }
+    const ext = path.extname(file.originalname).toLowerCase();
 
     const dir = assetsDir(project);
     try { await fs.mkdir(dir, { recursive: true }); } catch (e) { return res.status(500).json({ error: 'Failed to create assets dir' }); }
 
     // ── .blend → .glb conversion ──
     if (ext === '.blend') {
-        const baseName = path.basename(file.name, '.blend');
+        const baseName = path.basename(file.originalname, path.extname(file.originalname));
         // Reject attacker-controlled names that could escape the project dir.
         if (!isSafeName(baseName)) {
             return res.status(400).json({ error: 'Invalid file name' });
@@ -224,7 +237,7 @@ router.post('/:project', async (req, res) => {
                 asset: {
                     name: path.basename(glbPath),
                     url: `/api/assets3d/${encodeURIComponent(project)}/${encodeURIComponent(path.basename(glbPath))}`,
-                    originalName: file.name,
+                    originalName: file.originalname,
                     converted: true,
                 },
             });
@@ -242,7 +255,7 @@ router.post('/:project', async (req, res) => {
 
     // ── .obj (with optional .mtl) ──
     if (ext === '.obj') {
-        const objBase = path.basename(file.name);
+        const objBase = path.basename(file.originalname);
         if (!isSafeName(objBase)) {
             return res.status(400).json({ error: 'Invalid file name' });
         }
@@ -256,14 +269,16 @@ router.post('/:project', async (req, res) => {
             let mtlName = null;
             if (req.files.mtl && req.files.mtl[0]) {
                 const mtlFile = req.files.mtl[0];
-                const mtlExt = path.extname(mtlFile.name).toLowerCase();
-                if (mtlExt === '.mtl') {
-                    const mtlBase = path.basename(mtlFile.name);
-                    if (isSafeName(mtlBase)) {
-                        const mtlPath = safeAssetPath(project, mtlBase);
-                        if (!mtlPath) return res.status(400).json({ error: 'Path traversal detected' });
-                        mtlName = mtlBase;
-                        await fs.writeFile(mtlPath, mtlFile.buffer);
+                if (typeof mtlFile.originalname === 'string') {
+                    const mtlExt = path.extname(mtlFile.originalname).toLowerCase();
+                    if (mtlExt === '.mtl') {
+                        const mtlBase = path.basename(mtlFile.originalname);
+                        if (isSafeName(mtlBase)) {
+                            const mtlPath = safeAssetPath(project, mtlBase);
+                            if (!mtlPath) return res.status(400).json({ error: 'Path traversal detected' });
+                            mtlName = mtlBase;
+                            await fs.writeFile(mtlPath, mtlFile.buffer);
+                        }
                     }
                 }
             }
@@ -272,8 +287,8 @@ router.post('/:project', async (req, res) => {
                 success: true,
                 message: 'OBJ uploaded successfully' + (mtlName ? ` with MTL (${mtlName})` : ''),
                 asset: {
-                    name: file.name,
-                    url: `/api/assets3d/${encodeURIComponent(project)}/${encodeURIComponent(file.name)}`,
+                    name: objBase,
+                    url: `/api/assets3d/${encodeURIComponent(project)}/${encodeURIComponent(objBase)}`,
                     mtlName,
                     converted: false,
                 },
