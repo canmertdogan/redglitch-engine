@@ -147,3 +147,24 @@ label {
     color: #000;
     border-color: var(--accent);
 }
+
+/* Form Sections */
+.form-section {
+    background: var(--bg-panel-alt);
+    border: 1px solid var(--border);
+    padding: 15px;
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.section-title {
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-mute);
+    padding-bottom: 6px;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+

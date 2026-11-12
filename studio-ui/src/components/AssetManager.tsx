@@ -27,17 +27,19 @@ const normalizeAssetUrl = (p?: string): string => {
         : '/' + p;
 };
 
-const detectUploadType = (file: File): string => {
+const detectUploadType = (file: File): Asset['type'] => {
     if (file.type.startsWith('image/')) return 'image';
     if (file.type.startsWith('audio/')) return 'audio';
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
     if (['wav', 'mp3', 'ogg', 'flac', 'm4a'].includes(ext)) return 'audio';
+    if (['frag', 'vert', 'glsl'].includes(ext)) return 'shader';
+    if (['js', 'ts'].includes(ext)) return 'script';
     return 'data';
 };
 
 const AssetManager: React.FC = () => {
-    const { isReady } = useStudio();
+    const { isReady, subscribe } = useStudio();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [activeCategory, setActiveCategory] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +54,15 @@ const AssetManager: React.FC = () => {
             loadAssets();
         }
     }, [isReady]);
+
+    useEffect(() => {
+        const unsub = subscribe('project:switched', () => {
+            loadAssets();
+        });
+        return () => {
+            unsub();
+        };
+    }, [subscribe]);
 
     const loadAssets = async () => {
         try {
@@ -85,6 +96,26 @@ const AssetManager: React.FC = () => {
         setIndexing(false);
     };
 
+    const handleExportManifest = async () => {
+        try {
+            const res = await fetch('/api/assets/export', { method: 'POST' });
+            if (!res.ok) throw new Error('Export failed');
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'assets-export.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toastRef.current?.show('MANIFEST EXPORTED', 'success');
+        } catch (err) {
+            console.error('Export manifest error', err);
+            toastRef.current?.show('EXPORT FAILED', 'error');
+        }
+    };
+
     const handleUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         e.target.value = '';
@@ -110,8 +141,15 @@ const AssetManager: React.FC = () => {
                     }),
                 });
                 if (!res.ok) {
-                    const errText = await res.text().catch(() => '');
-                    toastRef.current?.show(`UPLOAD FAILED: ${errText || file.name}`, 'error');
+                    let errMsg = file.name;
+                    try {
+                        const errJson = await res.json();
+                        if (errJson?.error) errMsg = errJson.error;
+                    } catch {
+                        const errText = await res.text().catch(() => '');
+                        if (errText) errMsg = errText;
+                    }
+                    toastRef.current?.show(`UPLOAD FAILED: ${errMsg}`, 'error');
                 } else {
                     uploadedCount++;
                 }
@@ -141,7 +179,11 @@ const AssetManager: React.FC = () => {
 
     const handleDeleteAsset = async () => {
         if (!selectedAsset) return;
-        if (selectedAsset.metadata?.source === 'engine') {
+        const isCoreAsset = selectedAsset.metadata?.source === 'engine' ||
+            selectedAsset.path.startsWith('/engine/') ||
+            selectedAsset.path.startsWith('engine/') ||
+            selectedAsset.id.startsWith('engine/');
+        if (isCoreAsset) {
             toastRef.current?.show('ENGINE CORE ASSETS CANNOT BE DELETED', 'error');
             return;
         }
@@ -166,6 +208,27 @@ const AssetManager: React.FC = () => {
             console.error('Delete error', err);
             toastRef.current?.show('DELETE FAILED', 'error');
         }
+    };
+
+    const renderAssetIcon = (asset: Asset, size = 32) => {
+        if (asset.type === 'image') {
+            return (
+                <img
+                    loading="lazy"
+                    decoding="async"
+                    src={normalizeAssetUrl(asset.path)}
+                    alt={asset.name}
+                    style={{ maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' }}
+                    onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                />
+            );
+        }
+        if (asset.type === 'audio') return <Music size={size} color="#2ecc71" />;
+        if (asset.type === 'shader') return <Zap size={size} color="#f39c12" />;
+        if (asset.type === 'script') return <FileCode size={size} color="#a29bfe" />;
+        return <Database size={size} color="#3498db" />;
     };
 
     const filteredAssets = useMemo(() => {
@@ -235,6 +298,13 @@ const AssetManager: React.FC = () => {
                 >
                     <Upload size={16} />
                 </button>
+                <button
+                    className="tool-btn"
+                    onClick={handleExportManifest}
+                    title="Export Manifest"
+                >
+                    <Download size={16} />
+                </button>
             </div>
 
             <div style={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
@@ -279,38 +349,53 @@ const AssetManager: React.FC = () => {
                     backgroundSize: '25px 25px'
                 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '15px' }}>
-                        {filteredAssets.slice(0, visibleCount).map(asset => (
-                            <div 
-                                key={asset.id}
-                                onClick={() => setSelectedAssetId(asset.id)}
-                                style={{
-                                    background: '#0a0a0f', border: `1px solid ${selectedAssetId === asset.id ? 'var(--accent)' : '#222'}`,
-                                    padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
-                                    cursor: 'pointer', position: 'relative', contentVisibility: 'auto', containIntrinsicSize: '120px 120px',
-                                    boxShadow: selectedAssetId === asset.id ? '0 0 15px rgba(255, 0, 0, 0.2)' : 'none'
-                                }}
-                            >
-                                <div style={{ 
-                                    width: '64px', height: '64px', background: '#000', border: '1px solid #111',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
-                                }}>
-                                    {asset.type === 'image' ? (
-                                        <img loading="lazy" decoding="async" src={normalizeAssetUrl(asset.path)} style={{ maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' }} />
-                                    ) : (
-                                        asset.type === 'audio' ? <Music size={32} color="#2ecc71" /> : <Database size={32} color="#3498db" />
+                        {filteredAssets.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#666', gridColumn: '1 / -1' }}>
+                                <Folder size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                                <div style={{ fontSize: '1.1rem', color: '#aaa', marginBottom: '8px' }}>
+                                    {searchQuery ? `NO ASSETS MATCHING "${searchQuery}"` : activeCategory !== 'all' ? `NO ${activeCategory.toUpperCase()} ASSETS FOUND` : 'NO ASSETS IN PROJECT'}
+                                </div>
+                                <div style={{ fontSize: '0.85rem', color: '#555', marginBottom: '16px' }}>
+                                    Import files or drag them directly into the asset repository.
+                                </div>
+                                <button
+                                    className="tool-btn"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 16px', background: '#111', border: '1px solid #333', color: '#fff', cursor: 'pointer' }}
+                                >
+                                    <Upload size={14} style={{ marginRight: '6px' }} /> IMPORT ASSET
+                                </button>
+                            </div>
+                        ) : (
+                            filteredAssets.slice(0, visibleCount).map(asset => (
+                                <div 
+                                    key={asset.id}
+                                    onClick={() => setSelectedAssetId(asset.id)}
+                                    style={{
+                                        background: '#0a0a0f', border: `1px solid ${selectedAssetId === asset.id ? 'var(--accent)' : '#222'}`,
+                                        padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                                        cursor: 'pointer', position: 'relative', contentVisibility: 'auto', containIntrinsicSize: '120px 120px',
+                                        boxShadow: selectedAssetId === asset.id ? '0 0 15px rgba(255, 0, 0, 0.2)' : 'none'
+                                    }}
+                                >
+                                    <div style={{ 
+                                        width: '64px', height: '64px', background: '#000', border: '1px solid #111',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+                                    }}>
+                                        {renderAssetIcon(asset, 32)}
+                                    </div>
+                                    <div style={{ 
+                                        fontSize: '0.8rem', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', 
+                                        whiteSpace: 'nowrap', width: '100%', color: selectedAssetId === asset.id ? '#fff' : '#666' 
+                                    }}>
+                                        {asset.name}
+                                    </div>
+                                    {asset.metadata.source === 'engine' && (
+                                        <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '0.6rem', background: '#333', color: '#fff', padding: '1px 4px', borderRadius: '2px' }}>CORE</div>
                                     )}
                                 </div>
-                                <div style={{ 
-                                    fontSize: '0.8rem', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', 
-                                    whiteSpace: 'nowrap', width: '100%', color: selectedAssetId === asset.id ? '#fff' : '#666' 
-                                }}>
-                                    {asset.name}
-                                </div>
-                                {asset.metadata.source === 'engine' && (
-                                    <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '0.6rem', background: '#333', color: '#fff', padding: '1px 4px', borderRadius: '2px' }}>CORE</div>
-                                )}
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -324,11 +409,7 @@ const AssetManager: React.FC = () => {
                                     width: '100%', aspectRatio: '1', background: '#000', border: '1px solid #222', 
                                     marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' 
                                 }}>
-                                    {selectedAsset.type === 'image' ? (
-                                        <img src={normalizeAssetUrl(selectedAsset.path)} style={{ maxWidth: '90%', maxHeight: '90%', imageRendering: 'pixelated' }} />
-                                    ) : (
-                                        selectedAsset.type === 'audio' ? <Music size={64} color="#2ecc71" /> : <Database size={64} color="#3498db" />
-                                    )}
+                                    {renderAssetIcon(selectedAsset, 64)}
                                 </div>
                                 
                                 <label>Asset ID</label>

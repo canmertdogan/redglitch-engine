@@ -489,8 +489,13 @@
                             <div class="campaign-description">${metadata.description || 'No description available'}</div>
                             <div class="campaign-engines">
                                 ${Array.from(engineTypes).map(engine => {
-                                    const badge = engine === 'rpg-topdown' ? 'RPG' : 
-                                                  engine === 'iso-pixel' ? 'ISO' : 'PLT';
+                                    const badge = engine === 'rpg-topdown' ? 'RPG' :
+                                                  engine === 'iso-pixel' ? 'ISO' :
+                                                  engine === 'platformer-2d' ? 'PLT' :
+                                                  engine === 'fps-3d' ? '3D FPS' :
+                                                  engine === 'topdown-3d' ? '3D TD' :
+                                                  engine === 'platformer-3d' ? '3D PLT' :
+                                                  engine === 'unified-3d' ? '3D' : engine.toUpperCase();
                                     return `<span class="engine-badge ${engine}">${badge}</span>`;
                                 }).join('')}
                             </div>

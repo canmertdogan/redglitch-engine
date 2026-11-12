@@ -195,18 +195,66 @@ window.MenuSystem = class MenuSystem {
         }
     }
     togglePause() { 
-        const hud = document.getElementById('game-hud'); 
         if (this.game.isPaused) { 
             // RESUME
             this.game.isPaused = false; 
+            this.game.lastTime = performance.now();
             this.switchScreen('game'); // Proper cleanup
         } else { 
             // PAUSE
             this.game.isPaused = true; 
-            this.switchScreen('pause'); // Use switchScreen for pause too for consistency?
-            // But existing logic was manual. Let's keep manual for PAUSE to avoid full redraw if desired, 
-            // BUT for RESUME we must use switchScreen to clear Inventory/Settings overlays.
+            this.switchScreen('pause');
         } 
+    }
+    async handleAction(action) {
+        switch (action) {
+            case 'resume_game':
+            case 'RESUME_GAME':
+            case 'CLOSE_MENU':
+                if (this.game.isPaused || this.uiSystem.activeScreen !== 'hud') {
+                    this.game.isPaused = false;
+                    this.game.lastTime = performance.now();
+                    this.switchScreen('game');
+                }
+                break;
+            case 'toggle_pause':
+            case 'togglePause':
+            case 'pause_game':
+                this.togglePause();
+                break;
+            case 'show_achievements':
+                this.game.isPaused = true;
+                this.showDynamicScreen('achievements_screen');
+                break;
+            case 'reset_achievements':
+                if (this.game.achievementSystem && typeof this.game.achievementSystem.reset === 'function') {
+                    await this.game.achievementSystem.reset();
+                    if (this.uiSystem.activeScreen === 'achievements_screen') {
+                        this.uiSystem.populateAchievements();
+                    }
+                }
+                break;
+            case 'save_game':
+                if (this.game.saveSystem && this.game.playerName) {
+                    await this.game.saveSystem.save(this.game.playerName, 1, {
+                        level: this.game.currentLevel,
+                        currentLevelId: this.game.currentLevelId,
+                        player: this.game.player,
+                        inventory: this.game.inventory,
+                        activeSkills: this.game.activeSkills
+                    });
+                }
+                break;
+            case 'open_settings_screen':
+                this.switchScreen('settings');
+                break;
+            case 'quit_to_menu':
+            case 'QUIT':
+                this.quitGame();
+                break;
+            default:
+                break;
+        }
     }
     toggleInventory() {
         if (this.uiSystem.activeScreen === 'inventory') {

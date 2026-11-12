@@ -2,23 +2,31 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useStudio } from '../hooks/useStudio';
 import { 
     Save, Plus, PlusCircle, Trash, User, Brain, MessageSquare, 
-    Copy, Search, Play, Pause, ZoomIn, ZoomOut, Check, AlertTriangle 
+    Copy, Search, Play, Pause, ZoomIn, ZoomOut, Check, AlertTriangle, Scroll 
 } from 'lucide-react';
 import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
 import Toast, { ToastHandle } from './shared/Toast';
 
-interface NPC {
+export interface NPC {
     id: string;
     name: string;
     type: string;
     dialogue?: string; // Legacy
+    dialogueId?: string;
+    questId?: string;
     interaction: {
         dialogue: string;
         range: number;
+        questId?: string;
+        giverQuestId?: string;
+        turnInQuestId?: string;
     };
     stats: {
         speed: number;
+        hp?: number;
+        maxHp?: number;
+        [key: string]: any;
     };
     behavior: {
         type: string;
@@ -32,6 +40,12 @@ interface NPC {
         talk: { base: string; speed: number };
     };
 }
+
+export const STANDARD_NPC_SPRITES = [
+    'player', 'npc_blacksmith', 'npc_farmer', 'npc_knight', 'npc_merchant',
+    'npc_guard', 'npc_innkeeper', 'npc_alchemist', 'npc_villager_woman',
+    'npc_old_man', 'npc_baker'
+];
 
 function makeUniqueCloneId(sourceId: string, existingIds: Set<string>): string {
     const base = sourceId.replace(/_COPY(?:_\d+)?$/, '') + '_COPY';
@@ -49,6 +63,70 @@ function resolveSpriteImageUrl(key: string): string | null {
     return `/sprite-art/${key}`;
 }
 
+export const ensureNewSchema = (n: any): NPC => {
+    const anim = n?.animations || {};
+    const fallbackSprite =
+        anim.idle?.down ||
+        anim.idle?.sprite ||
+        anim.idle?.base ||
+        n?.sprite ||
+        'player';
+
+    const rawStats = typeof n?.stats === 'object' && n?.stats !== null ? n.stats : {};
+    const hpVal = Number(rawStats.hp ?? n?.hp ?? 100) || 100;
+    const speedVal = Number(rawStats.speed ?? n?.speed ?? 50) || 50;
+
+    const dialogueVal = String(n?.interaction?.dialogue ?? n?.dialogueId ?? n?.dialogue ?? '');
+    const questIdVal = String(n?.interaction?.questId ?? n?.questId ?? '');
+    const giverQuestIdVal = String(n?.interaction?.giverQuestId ?? n?.giverQuestId ?? questIdVal ?? '');
+    const turnInQuestIdVal = String(n?.interaction?.turnInQuestId ?? n?.turnInQuestId ?? '');
+
+    return {
+        id: String(n?.id || 'npc_' + Date.now().toString().slice(-4)),
+        name: String(n?.name || n?.id || 'New Villager'),
+        type: 'npc',
+        dialogue: dialogueVal,
+        dialogueId: dialogueVal,
+        questId: questIdVal || undefined,
+        stats: {
+            ...rawStats,
+            speed: speedVal,
+            hp: hpVal
+        },
+        interaction: {
+            dialogue: dialogueVal,
+            range: Number(n?.interaction?.range ?? n?.range ?? 60) || 60,
+            questId: questIdVal,
+            giverQuestId: giverQuestIdVal,
+            turnInQuestId: turnInQuestIdVal
+        },
+        behavior: {
+            type: String(n?.behavior?.type || 'wander'),
+            range: Number(n?.behavior?.range ?? 100) || 0,
+            idleTime: Number(n?.behavior?.idleTime ?? 3.0) || 0,
+            script: String(n?.behavior?.script || '')
+        },
+        animations: {
+            idle: {
+                down: anim.idle?.down || anim.idle?.sprite || fallbackSprite,
+                up: anim.idle?.up || anim.idle?.sprite || fallbackSprite,
+                side: anim.idle?.side || anim.idle?.sprite || fallbackSprite,
+                speed: Number(anim.idle?.speed ?? 0.2) || 0.2
+            },
+            walk: {
+                down: anim.walk?.down || anim.walk?.sprite || fallbackSprite,
+                up: anim.walk?.up || anim.walk?.sprite || fallbackSprite,
+                side: anim.walk?.side || anim.walk?.sprite || fallbackSprite,
+                speed: Number(anim.walk?.speed ?? 0.15) || 0.15
+            },
+            talk: {
+                base: anim.talk?.base || anim.talk?.sprite || fallbackSprite,
+                speed: Number(anim.talk?.speed ?? 0.2) || 0.2
+            }
+        }
+    };
+};
+
 const NPCEditor: React.FC = () => {
     const { isReady, sprites, emit, projectState, subscribe } = useStudio();
     const [npcs, setNpcs] = useState<NPC[]>([]);
@@ -57,6 +135,8 @@ const NPCEditor: React.FC = () => {
     const [isDirty, setIsDirty] = useState(false);
     const [templates, setTemplates] = useState<any[]>([]);
     const [availableBrains, setAvailableBrains] = useState<string[]>([]);
+    const [availableDialogues, setAvailableDialogues] = useState<string[]>([]);
+    const [availableQuests, setAvailableQuests] = useState<Array<{ id: string; title: string }>>([]);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
     
     // Animation Preview State
@@ -76,59 +156,13 @@ const NPCEditor: React.FC = () => {
     useEffect(() => { npcsRef.current = npcs; }, [npcs]);
     useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
 
-    // Schema Migration Helper (always normalizes nested objects; never copies dialogue as a sprite key)
-    const ensureNewSchema = (n: any): NPC => {
-        const anim = n?.animations || {};
-        const fallbackSprite =
-            anim.idle?.down ||
-            anim.idle?.sprite ||
-            anim.idle?.base ||
-            n?.sprite ||
-            'player';
-
-        return {
-            id: String(n?.id || 'npc_' + Date.now().toString().slice(-4)),
-            name: String(n?.name || n?.id || 'New Villager'),
-            type: 'npc',
-            stats: {
-                speed: Number(n?.stats?.speed ?? n?.speed ?? 50) || 50
-            },
-            interaction: {
-                dialogue: String(n?.interaction?.dialogue ?? n?.dialogue ?? ''),
-                range: Number(n?.interaction?.range ?? n?.range ?? 60) || 60
-            },
-            behavior: {
-                type: String(n?.behavior?.type || 'wander'),
-                range: Number(n?.behavior?.range ?? 100) || 0,
-                idleTime: Number(n?.behavior?.idleTime ?? 3.0) || 0,
-                script: String(n?.behavior?.script || '')
-            },
-            animations: {
-                idle: {
-                    down: anim.idle?.down || anim.idle?.sprite || fallbackSprite,
-                    up: anim.idle?.up || anim.idle?.sprite || fallbackSprite,
-                    side: anim.idle?.side || anim.idle?.sprite || fallbackSprite,
-                    speed: Number(anim.idle?.speed ?? 0.2) || 0.2
-                },
-                walk: {
-                    down: anim.walk?.down || anim.walk?.sprite || fallbackSprite,
-                    up: anim.walk?.up || anim.walk?.sprite || fallbackSprite,
-                    side: anim.walk?.side || anim.walk?.sprite || fallbackSprite,
-                    speed: Number(anim.walk?.speed ?? 0.15) || 0.15
-                },
-                talk: {
-                    base: anim.talk?.base || anim.talk?.sprite || fallbackSprite,
-                    speed: Number(anim.talk?.speed ?? 0.2) || 0.2
-                }
-            }
-        };
-    };
-
     useEffect(() => {
         if (!isReady) return;
         loadNPCs();
         loadTemplates();
         loadBrains();
+        loadDialogues();
+        loadQuests();
 
         const unsubLoad = subscribe('npc:load', (event: any) => {
             const npcId = event?.data?.npcId;
@@ -182,41 +216,88 @@ const NPCEditor: React.FC = () => {
         renderPreview();
     }, [npcs, currentIndex, previewState, previewDir, previewFrame, previewZoom, sprites]);
 
-    const loadNPCs = async () => {
+    const loadNPCs = async (preserveId?: string) => {
         try {
             const res = await fetch('/api/npcs');
             if (res.ok) {
                 const data = await res.json();
                 const migrated = Array.isArray(data) ? data.map(ensureNewSchema) : [];
-                setNpcs(migrated.length > 0 ? migrated : [getDefaultNPC()]);
+                const nextList = migrated.length > 0 ? migrated : [getDefaultNPC()];
+                setNpcs(nextList);
+                npcsRef.current = nextList;
+                if (preserveId) {
+                    const foundIdx = nextList.findIndex(n => n.id === preserveId);
+                    if (foundIdx >= 0) setCurrentIndex(foundIdx);
+                }
             } else {
-                setNpcs([getDefaultNPC()]);
+                const def = [getDefaultNPC()];
+                setNpcs(def);
+                npcsRef.current = def;
             }
         } catch (e) {
-            setNpcs([getDefaultNPC()]);
+            const def = [getDefaultNPC()];
+            setNpcs(def);
+            npcsRef.current = def;
         }
     };
 
     const loadTemplates = async () => {
         try {
             const res = await fetch('/api/templates/npc');
-            if (res.ok) setTemplates(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                const arr = Array.isArray(data)
+                    ? data
+                    : data && typeof data === 'object'
+                        ? Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...(typeof val === 'object' ? val : {}) }))
+                        : [];
+                setTemplates(arr);
+            }
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const loadBrains = async () => {
         try {
             const res = await fetch('/api/brains/list');
-            if (res.ok) setAvailableBrains(await res.json());
-        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+            if (res.ok) {
+                const data = await res.json();
+                setAvailableBrains(Array.isArray(data) ? data : []);
+            }
+        } catch (err) { setAvailableBrains([]); }
+    };
+
+    const loadDialogues = async () => {
+        try {
+            const res = await fetch('/api/dialogues');
+            if (res.ok) {
+                const data = await res.json();
+                const convs = Array.isArray(data?.conversations) ? data.conversations : (Array.isArray(data) ? data : []);
+                setAvailableDialogues(convs.map((c: any) => String(c?.id || '')).filter(Boolean));
+            }
+        } catch (err) { console.warn("[studio-ui] failed loading dialogues", err); }
+    };
+
+    const loadQuests = async () => {
+        try {
+            const res = await fetch('/api/quests');
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    setAvailableQuests(data.map((q: any) => ({
+                        id: String(q?.id || ''),
+                        title: String(q?.title || q?.name || q?.id || '')
+                    })).filter(q => Boolean(q.id)));
+                }
+            }
+        } catch (err) { console.warn("[studio-ui] failed loading quests", err); }
     };
 
     const getDefaultNPC = (): NPC => ({
         id: 'npc_' + Date.now().toString().slice(-4),
         name: 'New Villager',
         type: 'npc',
-        stats: { speed: 50 },
-        interaction: { dialogue: '', range: 60 },
+        stats: { speed: 50, hp: 100 },
+        interaction: { dialogue: '', range: 60, questId: '', giverQuestId: '', turnInQuestId: '' },
         behavior: { type: 'static', range: 0, idleTime: 0, script: '' },
         animations: {
             idle: { down: 'player', up: 'player', side: 'player', speed: 0.2 },
@@ -227,6 +308,7 @@ const NPCEditor: React.FC = () => {
 
     const updateCurrentNPC = (path: string, value: any) => {
         const newNpcs = [...npcs];
+        if (!newNpcs[currentIndex]) return;
         const npc = { ...newNpcs[currentIndex] };
         
         const keys = path.split('.');
@@ -239,10 +321,11 @@ const NPCEditor: React.FC = () => {
         
         newNpcs[currentIndex] = npc;
         setNpcs(newNpcs);
+        npcsRef.current = newNpcs;
         setIsDirty(true);
         
-        // Broadcast to engine
-        emit('npc:updated', { npcId: npc.id, npc });
+        // Broadcast to engine & studio tools
+        emit('npc:updated', { npcId: npc.id, npc, roster: newNpcs });
     };
 
     const saveToServer = async () => {
@@ -263,6 +346,12 @@ const NPCEditor: React.FC = () => {
                     const map: any = {};
                     payload.forEach(n => map[n.id] = n);
                     projectState.set('npcs', map);
+                }
+                const currentId = npcsRef.current[currentIndex]?.id;
+                await loadNPCs(currentId);
+                const activeNpc = npcsRef.current.find(n => n.id === currentId) || npcsRef.current[0];
+                if (activeNpc) {
+                    emit('npc:updated', { npcId: activeNpc.id, npc: activeNpc, roster: npcsRef.current });
                 }
             } else {
                 let errMsg = `SAVE FAILED (${res.status})`;
@@ -286,10 +375,13 @@ const NPCEditor: React.FC = () => {
         const clone = JSON.parse(JSON.stringify(current));
         clone.id = makeUniqueCloneId(current.id, new Set(npcs.map(n => n.id)));
         clone.name = `${current.name || current.id} (COPY)`;
-        setNpcs([...npcs, clone]);
+        const updatedRoster = [...npcs, clone];
+        setNpcs(updatedRoster);
+        npcsRef.current = updatedRoster;
         setCurrentIndex(npcs.length);
         setIsDirty(true);
         toastRef.current?.show('NPC DUPLICATED', 'info');
+        emit('npc:updated', { npcId: clone.id, npc: clone, roster: updatedRoster });
     };
 
     const deleteNPC = () => {
@@ -297,12 +389,19 @@ const NPCEditor: React.FC = () => {
             toastRef.current?.show('CANNOT DELETE LAST NPC', 'info');
             return;
         }
-        const id = npcs[currentIndex].id;
+        const deletedNpc = npcs[currentIndex];
         const newNpcs = npcs.filter((_, i) => i !== currentIndex);
         setNpcs(newNpcs);
-        setCurrentIndex(Math.max(0, currentIndex - 1));
+        npcsRef.current = newNpcs;
+        const nextIdx = Math.max(0, currentIndex - 1);
+        setCurrentIndex(nextIdx);
         setIsDirty(true);
-        toastRef.current?.show(`DELETED ${id}`, 'info');
+        toastRef.current?.show(`DELETED ${deletedNpc.id}`, 'info');
+        emit('npc:updated', { npcId: deletedNpc.id, npc: newNpcs[nextIdx], roster: newNpcs });
+    };
+
+    const openQuestTool = (questId?: string) => {
+        emit('studio:open_tool', { toolId: 'quest', params: { id: questId } });
     };
 
     const openDialogueEditor = () => {
@@ -421,16 +520,35 @@ const NPCEditor: React.FC = () => {
 
     if (!isReady) return <div style={{ color: 'var(--accent)', padding: '20px' }}>INITIALIZING STUDIO KERNEL...</div>;
 
+    const addNewNPC = () => {
+        const newNpc = getDefaultNPC();
+        const updatedRoster = [...npcs, newNpc];
+        setNpcs(updatedRoster);
+        npcsRef.current = updatedRoster;
+        setCurrentIndex(npcs.length);
+        setIsDirty(true);
+        emit('npc:updated', { npcId: newNpc.id, npc: newNpc, roster: updatedRoster });
+    };
+
     const currentNPC = npcs[currentIndex] || getDefaultNPC();
-    const spriteKeys = sprites ? Object.keys(sprites) : [];
+    const availableSpriteKeys = useMemo(() => {
+        const studioSprites = sprites ? Object.keys(sprites) : [];
+        return Array.from(new Set([...STANDARD_NPC_SPRITES, ...studioSprites]));
+    }, [sprites]);
+
     const renderSpriteSelect = (value: string, onChange: (val: string) => void) => {
-        const hasCustom = Boolean(value && !spriteKeys.includes(value));
+        const options = Array.from(new Set([value, ...availableSpriteKeys])).filter(Boolean);
         return (
             <select value={value} onChange={(e) => onChange(e.target.value)} style={{ flex: 1 }}>
-                {hasCustom && <option value={value}>{value}</option>}
-                {spriteKeys.map(s => <option key={s} value={s}>{s}</option>)}
+                {options.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
         );
+    };
+
+    const DIR_LABELS: Record<'down' | 'up' | 'side', string> = {
+        down: 'South (Down)',
+        up: 'North (Up)',
+        side: 'Side (East/West)'
     };
 
     return (
@@ -452,7 +570,7 @@ const NPCEditor: React.FC = () => {
                 <button className="tool-btn" onClick={saveToServer} title="Save (Ctrl+S)"><Save size={16} /></button>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
                 <button className="tool-btn" onClick={() => setShowTemplateModal(true)} title="New from Template"><PlusCircle size={16} /></button>
-                <button className="tool-btn" onClick={() => { setNpcs([...npcs, getDefaultNPC()]); setCurrentIndex(npcs.length); setIsDirty(true); }} title="New NPC"><Plus size={16} /></button>
+                <button className="tool-btn" onClick={addNewNPC} title="New NPC"><Plus size={16} /></button>
                 <button className="tool-btn" onClick={duplicateNPC} title="Duplicate (Ctrl+D)"><Copy size={16} /></button>
                 <button className="tool-btn" style={{ color: '#e74c3c' }} onClick={deleteNPC} title="Delete"><Trash size={16} /></button>
                 
@@ -509,21 +627,73 @@ const NPCEditor: React.FC = () => {
                                 </div>
                                 <label>Dialogue Script</label>
                                 <div style={{ display: 'flex', gap: '5px' }}>
-                                    <input type="text" value={currentNPC.interaction.dialogue} onChange={(e) => updateCurrentNPC('interaction.dialogue', e.target.value)} style={{ flex: 1 }} />
+                                    <input 
+                                        type="text" 
+                                        list="npc-dialogue-list"
+                                        value={currentNPC.interaction.dialogue} 
+                                        onChange={(e) => updateCurrentNPC('interaction.dialogue', e.target.value)} 
+                                        style={{ flex: 1 }} 
+                                    />
+                                    <datalist id="npc-dialogue-list">
+                                        {availableDialogues.map(d => <option key={d} value={d} />)}
+                                    </datalist>
                                     <button className="tool-btn" onClick={openDialogueEditor} title="Open Dialogue Editor"><MessageSquare size={14} /></button>
+                                </div>
+                            </FormSection>
+
+                            <FormSection title="Quest Linkage">
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
+                                    <div>
+                                        <label>Giver Quest</label>
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            <select 
+                                                value={currentNPC.interaction.questId || currentNPC.interaction.giverQuestId || ''} 
+                                                onChange={(e) => {
+                                                    updateCurrentNPC('interaction.questId', e.target.value);
+                                                    updateCurrentNPC('interaction.giverQuestId', e.target.value);
+                                                }}
+                                                style={{ flex: 1 }}
+                                            >
+                                                <option value="">None</option>
+                                                {availableQuests.map(q => <option key={q.id} value={q.id}>{q.title} ({q.id})</option>)}
+                                            </select>
+                                            <button 
+                                                className="tool-btn" 
+                                                onClick={() => openQuestTool(currentNPC.interaction.questId || currentNPC.interaction.giverQuestId)} 
+                                                title="Open Quest Tool"
+                                            >
+                                                <Scroll size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label>Turn-in Quest</label>
+                                        <select 
+                                            value={currentNPC.interaction.turnInQuestId || ''} 
+                                            onChange={(e) => updateCurrentNPC('interaction.turnInQuestId', e.target.value)}
+                                            style={{ width: '100%' }}
+                                        >
+                                            <option value="">None</option>
+                                            {availableQuests.map(q => <option key={q.id} value={q.id}>{q.title} ({q.id})</option>)}
+                                        </select>
+                                    </div>
                                 </div>
                             </FormSection>
 
                             <FormSection title="Stats & Logic">
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
+                                        <label>Hit Points (HP)</label>
+                                        <input type="number" value={currentNPC.stats.hp ?? 100} onChange={(e) => updateCurrentNPC('stats.hp', parseInt(e.target.value, 10) || 1)} />
+                                    </div>
+                                    <div>
                                         <label>Walk Speed</label>
                                         <input type="number" value={currentNPC.stats.speed} onChange={(e) => updateCurrentNPC('stats.speed', parseInt(e.target.value, 10) || 0)} />
                                     </div>
-                                    <div>
-                                        <label>Interaction Range</label>
-                                        <input type="number" value={currentNPC.interaction.range} onChange={(e) => updateCurrentNPC('interaction.range', parseInt(e.target.value, 10) || 0)} />
-                                    </div>
+                                </div>
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label>Interaction Range</label>
+                                    <input type="number" value={currentNPC.interaction.range} onChange={(e) => updateCurrentNPC('interaction.range', parseInt(e.target.value, 10) || 0)} />
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div>
@@ -554,14 +724,14 @@ const NPCEditor: React.FC = () => {
                                     <label style={{ color: 'var(--accent)' }}>{state.toUpperCase()} SPRITES</label>
                                     {(['down', 'up', 'side'] as const).map(dir => (
                                         <div key={dir} style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
-                                            <span style={{ width: '50px', fontSize: '0.8rem', color: '#666', textTransform: 'uppercase' }}>{dir}</span>
+                                            <span style={{ width: '130px', fontSize: '0.75rem', color: '#888' }}>{DIR_LABELS[dir]}</span>
                                             {renderSpriteSelect(currentNPC.animations[state][dir], (val) => updateCurrentNPC(`animations.${state}.${dir}`, val))}
                                         </div>
                                     ))}
                                 </div>
                             ))}
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <span style={{ width: '50px', fontSize: '0.8rem', color: '#666', textTransform: 'uppercase' }}>Talk</span>
+                                <span style={{ width: '130px', fontSize: '0.75rem', color: '#888' }}>Talk (Base)</span>
                                 {renderSpriteSelect(currentNPC.animations.talk.base, (val) => updateCurrentNPC('animations.talk.base', val))}
                             </div>
                         </FormSection>
@@ -620,7 +790,7 @@ const NPCEditor: React.FC = () => {
                             <button className="tool-btn" onClick={() => setShowTemplateModal(false)}>×</button>
                         </div>
                         <div className="panel-content" style={{ padding: '15px' }}>
-                            {templates.map(t => (
+                            {(Array.isArray(templates) ? templates : []).map(t => (
                                 <div key={t.id} className="template-item" onClick={() => {
                                     const { components, sprite: tplSprite, ...restData } = (t.data || {});
                                     const statsComp = Array.isArray(components) ? components.find((c: any) => c?.type === 'Stats') : null;
@@ -648,14 +818,18 @@ const NPCEditor: React.FC = () => {
                                             talk: { base: spriteChoice, speed: 0.2 }
                                         }
                                     };
-                                    setNpcs([...npcs, ensureNewSchema(templateCandidate)]);
+                                    const newNpc = ensureNewSchema(templateCandidate);
+                                    const updatedRoster = [...npcs, newNpc];
+                                    setNpcs(updatedRoster);
+                                    npcsRef.current = updatedRoster;
                                     setCurrentIndex(npcs.length);
                                     setShowTemplateModal(false);
                                     setIsDirty(true);
+                                    emit('npc:updated', { npcId: newNpc.id, npc: newNpc, roster: updatedRoster });
                                 }}
                                 style={{ padding: '15px', margin: '8px 0', background: '#111', border: '1px solid #333', cursor: 'pointer', borderRadius: '4px' }}
                                 >
-                                    <div style={{ fontWeight: 'bold', color: 'var(--accent)', fontSize: '1.1rem' }}>{t.name.toUpperCase()}</div>
+                                    <div style={{ fontWeight: 'bold', color: 'var(--accent)', fontSize: '1.1rem' }}>{t.name?.toUpperCase() ?? ''}</div>
                                     <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>{t.desc}</div>
                                 </div>
                             ))}

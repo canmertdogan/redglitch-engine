@@ -8,7 +8,7 @@ import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
 import Toast, { ToastHandle } from './shared/Toast';
 
-interface Item {
+export interface Item {
     id: string;
     name: string;
     sprite: string;
@@ -21,6 +21,7 @@ interface Item {
     stackable: boolean;
     maxStack: number;
     properties: any;
+    stats?: Record<string, any>;
 }
 
 const KNOWN_PIXEL_MART_FALLBACK = [
@@ -60,26 +61,32 @@ function resolveItemSpriteUrl(spriteKey: string): string | null {
     return null;
 }
 
-function normalizeItem(raw: any): Item {
+export function ensureNewSchema(raw: any): Item {
     const descVal = String(raw?.desc ?? raw?.description ?? '');
     const spriteVal = String(raw?.sprite || 'irab_dhammah');
+    const rawRarity = String(raw?.rarity || 'common').toLowerCase();
+    const rawType = String(raw?.type || raw?.category || 'misc').toLowerCase();
+    const isStackable = raw?.stackable !== false;
+    const defaultMaxStack = isStackable ? 99 : 1;
     return {
         id: String(raw?.id || 'item_' + Date.now().toString().slice(-6)),
         name: String(raw?.name || raw?.id || 'New Item'),
         sprite: spriteVal,
-        type: String(raw?.type || 'misc'),
+        type: rawType,
         value: Number(raw?.value ?? 0) || 0,
         desc: descVal,
         description: descVal,
         icon: String(raw?.icon || spriteVal),
-        rarity: String(raw?.rarity || 'common'),
-        stackable: raw?.stackable !== false,
-        maxStack: Math.max(1, Number(raw?.maxStack ?? 99) || 99),
+        rarity: rawRarity,
+        stackable: isStackable,
+        maxStack: Math.max(1, Number(raw?.maxStack ?? defaultMaxStack) || defaultMaxStack),
         properties: raw?.properties && typeof raw.properties === 'object'
             ? JSON.parse(JSON.stringify(raw.properties))
-            : {}
+            : {},
+        ...(raw?.stats && typeof raw.stats === 'object' ? { stats: { ...raw.stats } } : {})
     };
 }
+export const normalizeItem = ensureNewSchema;
 
 const ItemEditor: React.FC = () => {
     const { isReady, sprites, emit, projectState, subscribe } = useStudio();
@@ -165,14 +172,18 @@ const ItemEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [items]);
 
-    const loadItems = async () => {
+    const loadItems = async (preserveId?: string) => {
         try {
             const res = await fetch('/api/items');
             if (res.ok) {
                 const data = await res.json();
-                const normalized = Array.isArray(data) ? data.map(normalizeItem) : [];
+                const normalized = Array.isArray(data) ? data.map(ensureNewSchema) : [];
                 const nextList = normalized.length > 0 ? normalized : [getDefaultItem()];
                 setItems(nextList);
+                if (preserveId) {
+                    const foundIdx = nextList.findIndex(i => i.id === preserveId);
+                    if (foundIdx >= 0) setCurrentIndex(foundIdx);
+                }
 
                 const itemPngs = nextList
                     .map(it => it.sprite)
@@ -209,7 +220,13 @@ const ItemEditor: React.FC = () => {
         try {
             const res = await fetch('/api/templates/item');
             if (res.ok) {
-                setTemplates(await res.json());
+                const data = await res.json();
+                const arr = Array.isArray(data)
+                    ? data
+                    : data && typeof data === 'object'
+                        ? Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...(typeof val === 'object' ? val : {}) }))
+                        : [];
+                setTemplates(arr);
             }
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
@@ -257,6 +274,8 @@ const ItemEditor: React.FC = () => {
                     payload.forEach(i => map[i.id] = i);
                     projectState.set('items', map);
                 }
+                const currentId = itemsRef.current[currentIndex]?.id;
+                await loadItems(currentId);
             } else {
                 let errMsg = `SAVE FAILED (${res.status})`;
                 try {
@@ -327,6 +346,7 @@ const ItemEditor: React.FC = () => {
 
     const handlePropsChange = (val: string) => {
         setPropsJson(val);
+        setIsDirty(true);
         try {
             const parsed = val.trim() ? JSON.parse(val) : {};
             setJsonError(false);
@@ -334,7 +354,6 @@ const ItemEditor: React.FC = () => {
             if (!newItems[currentIndex]) return;
             newItems[currentIndex] = { ...newItems[currentIndex], properties: parsed };
             setItems(newItems);
-            setIsDirty(true);
         } catch (e) {
             setJsonError(true);
         }
@@ -661,10 +680,10 @@ const ItemEditor: React.FC = () => {
                             <button className="tool-btn" onClick={() => setShowTemplateModal(false)}>×</button>
                         </div>
                         <div className="panel-content" style={{ padding: '15px' }}>
-                            {templates.map(t => (
+                            {(Array.isArray(templates) ? templates : []).map(t => (
                                 <div key={t.id} className="template-item" onClick={() => {
                                     const { components: _comp, ...restData } = (t.data || {});
-                                    const newItem = normalizeItem({
+                                    const newItem = ensureNewSchema({
                                         ...getDefaultItem(),
                                         ...restData,
                                         id: makeUniqueCloneId(`${t.id}_${Date.now().toString().slice(-4)}`, new Set(items.map(i => i.id))),

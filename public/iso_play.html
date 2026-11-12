@@ -134,6 +134,14 @@
     <!-- Engine -->
     <script src="engines/iso-pixel/renderer.js"></script>
     <script src="shared/WorldTilesetLoader.js"></script>
+    <script src="shared/AchievementSystem.js"></script>
     <script src="engines/iso-pixel/main.js"></script>
+    <script>
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'redglitch:runtime-pause-toggle' && window.game && typeof window.game.togglePause === 'function') {
+                window.game.togglePause();
+            }
+        });
+    </script>
 </body>
 </html>

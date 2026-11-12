@@ -228,18 +228,17 @@ async function studioInit() {
         const categories = ['WORLD ARCHITECT', 'ENTITIES', 'LOGIC & AI', 'ASSETS', 'SYSTEM'];
         const grouped = {};
 
-        // React (studio-dist) builds are surfaced via the "NEW BUILDS" dropdown
-        // above the sidebar instead of cluttering the main category lists.
         const isReactTool = t => t.src.startsWith('studio-dist/');
 
-        tools.filter(t => !isReactTool(t) && t.status !== 'hidden').forEach(t => {
+        // Surface every active canonical tool directly in the main category sidebar
+        tools.filter(t => t.status !== 'hidden').forEach(t => {
             if(!grouped[t.category]) grouped[t.category] = [];
             grouped[t.category].push(t);
         });
 
         const reactSelect = document.getElementById('react-tools-select');
         if (reactSelect) {
-            reactSelect.innerHTML = '<option value="">NEW BUILDS ▾</option>';
+            reactSelect.innerHTML = '<option value="">QUICK JUMP (V2) ▾</option>';
             tools.filter(t => isReactTool(t) && t.status !== 'hidden').forEach(t => {
                 const opt = document.createElement('option');
                 opt.value = t.id;

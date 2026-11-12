@@ -69,6 +69,38 @@ window.UISystem = class UISystem {
         // --- Post-Render Population ---
         if (screenId === 'skill_selector') this.populateSkillSelector();
         if (screenId === 'inventory') this.populateInventoryGrid();
+        if (screenId === 'achievements_screen') this.populateAchievements();
+    }
+
+    populateAchievements() {
+        const container = document.getElementById('achievements_container');
+        if (!container) return;
+        const achSys = this.game && this.game.achievementSystem;
+        container.innerHTML = '';
+        container.style.cssText += ';overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;align-content:start;';
+        if (!achSys || typeof achSys.getDisplayList !== 'function') {
+            container.innerHTML = '<div style="color:#94a3b8;padding:16px;">No achievement system initialized.</div>';
+            return;
+        }
+        const { items } = achSys.getDisplayList();
+        if (!items.length) {
+            container.innerHTML = '<div style="color:#94a3b8;padding:16px;">No achievements defined in this project.</div>';
+            return;
+        }
+        const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        for (const a of items) {
+            const card = document.createElement('div');
+            card.style.cssText = `display:flex;align-items:center;gap:12px;padding:10px 12px;border:2px solid ${a.unlocked ? '#ffd36a' : '#2a3348'};background:${a.unlocked ? 'rgba(255,211,106,0.10)' : 'rgba(6,9,16,0.75)'};opacity:${a.unlocked ? '1' : '0.72'};pointer-events:auto;`;
+            card.innerHTML = `
+                <div style="font-size:28px;line-height:1;">${esc(a.icon)}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="color:${a.unlocked ? '#ffd36a' : '#e2e8f0'};font-weight:700;font-size:15px;">${esc(a.title)}</div>
+                    <div style="color:#94a3b8;font-size:12px;">${esc(a.desc)}</div>
+                </div>
+                <div style="font-size:11px;color:${a.unlocked ? '#62ff9a' : '#64748b'};font-weight:700;">${a.unlocked ? 'UNLOCKED' : 'LOCKED'}</div>
+            `;
+            container.appendChild(card);
+        }
     }
 
     populateSkillSelector() {

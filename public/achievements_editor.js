@@ -164,7 +164,14 @@ class AchievementEditor {
         this.dom.inputs.id.value = item.id;
         this.dom.inputs.title.value = item.title;
         this.dom.inputs.desc.value = item.desc;
-        this.dom.inputs.trigger.value = item.trigger || 'MANUAL';
+        const trigVal = item.trigger || 'MANUAL';
+        if (trigVal && !Array.from(this.dom.inputs.trigger.options).some(o => o.value === trigVal)) {
+            const opt = document.createElement('option');
+            opt.value = trigVal;
+            opt.textContent = trigVal;
+            this.dom.inputs.trigger.appendChild(opt);
+        }
+        this.dom.inputs.trigger.value = trigVal;
         this.dom.inputs.target.value = item.target || '';
         this.dom.inputs.secret.checked = !!item.secret;
         this.dom.inputs.prereq.value = item.prereq || '';

@@ -3,7 +3,7 @@ import Editor, { useMonaco, loader } from '@monaco-editor/react';
 import { useStudio } from '../hooks/useStudio';
 import { 
     FileCode, Folder, Search, Terminal, Save, X, ChevronRight, ChevronDown, 
-    FileText, Code, Settings, Plus, Play, Info, AlertCircle 
+    FileText, Code, Settings, Plus, Play, Info, AlertCircle, RefreshCw 
 } from 'lucide-react';
 import Toast, { ToastHandle } from './shared/Toast';
 
@@ -40,16 +40,36 @@ const DEFAULT_SETTINGS: EditorSettings = {
 function getLanguageFromPath(filePath: string): string {
     const ext = filePath.split('.').pop()?.toLowerCase() || '';
     switch (ext) {
-        case 'json': return 'json';
+        case 'json':
+        case 'redui':
+        case 'algorithm':
+            return 'json';
         case 'html':
-        case 'htm': return 'html';
-        case 'css': return 'css';
+        case 'htm':
+            return 'html';
+        case 'css':
+            return 'css';
         case 'md':
-        case 'markdown': return 'markdown';
+        case 'markdown':
+            return 'markdown';
         case 'ts':
-        case 'tsx': return 'typescript';
-        case 'py': return 'python';
-        default: return 'javascript';
+        case 'tsx':
+            return 'typescript';
+        case 'py':
+            return 'python';
+        case 'glsl':
+        case 'vert':
+        case 'frag':
+        case 'shader':
+            return 'cpp';
+        case 'xml':
+        case 'svg':
+            return 'xml';
+        case 'yaml':
+        case 'yml':
+            return 'yaml';
+        default:
+            return 'javascript';
     }
 }
 
@@ -328,6 +348,12 @@ const ScriptEditor: React.FC = () => {
             saveAllRef.current(true);
         });
 
+        const unsubProjectSwitched = subscribe('project:switched', () => {
+            void loadTree(true);
+            setTabs([]);
+            setActiveTabIdx(-1);
+        });
+
         const handleSaveMsg = (e: MessageEvent) => {
             if (e.data?.type === 'redglitch:save-request' && (e.origin === window.location.origin || e.source === window.parent || e.source === window.top)) {
                 saveAllRef.current(true);
@@ -340,6 +366,7 @@ const ScriptEditor: React.FC = () => {
             unsubCode();
             unsubScriptReq();
             unsubGlobalSave();
+            unsubProjectSwitched?.();
             window.removeEventListener('message', handleSaveMsg);
         };
     }, [isReady, eventBus, subscribe, injectCode]);
@@ -374,9 +401,9 @@ const ScriptEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [saveFile]);
 
-    const loadTree = async () => {
+    const loadTree = async (forceRefresh = false) => {
         try {
-            const res = await fetch('/api/ide/tree');
+            const res = await fetch(forceRefresh ? '/api/ide/tree?refresh=1' : '/api/ide/tree');
             if (res.ok) {
                 const data = await res.json();
                 const tree = Array.isArray(data) ? data : (Array.isArray(data?.tree) ? data.tree : []);
@@ -390,8 +417,37 @@ const ScriptEditor: React.FC = () => {
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
+    const handleNewFile = () => {
+        const defaultName = `scripts/untitled_${Date.now().toString(36).slice(-4)}.js`;
+        let input: string | null = defaultName;
+        if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+            const res = window.prompt('Enter file path for new script:', defaultName);
+            if (res === null) return;
+            if (res.trim()) input = res.trim();
+        }
+        const path = input || defaultName;
+        const name = path.split('/').pop() || 'untitled.js';
+        const newTab: Tab = {
+            path,
+            name,
+            content: '// New script\n',
+            isDirty: true
+        };
+        const nextTabs = [...tabs, newTab];
+        setTabs(nextTabs);
+        setActiveTabIdx(nextTabs.length - 1);
+        toastRef.current?.show(`CREATED ${name}`, 'info');
+    };
+
     const closeTab = (idx: number, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
+        const targetTab = tabs[idx];
+        if (targetTab?.isDirty) {
+            const ok = typeof window !== 'undefined' && typeof window.confirm === 'function'
+                ? window.confirm(`File "${targetTab.name}" has unsaved changes. Close anyway?`)
+                : true;
+            if (!ok) return;
+        }
         const newTabs = tabs.filter((_, i) => i !== idx);
         setTabs(newTabs);
         if (newTabs.length === 0) {
@@ -405,7 +461,11 @@ const ScriptEditor: React.FC = () => {
         if (!searchQuery) return;
         try {
             const res = await fetch(`/api/ide/search?query=${encodeURIComponent(searchQuery)}`);
-            if (res.ok) setSearchResults(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                const results = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+                setSearchResults(results);
+            }
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
@@ -456,6 +516,16 @@ const ScriptEditor: React.FC = () => {
             return;
         }
 
+        if (lang === 'javascript') {
+            try {
+                new Function(tab.content);
+            } catch (syntaxErr: any) {
+                appendTerminal(`[ERROR] JS Syntax Error: ${syntaxErr?.message || syntaxErr}`);
+                toastRef.current?.show('JS SYNTAX ERROR', 'error');
+                return;
+            }
+        }
+
         const m = monacoRef.current || (window as any).monaco;
         const model = editorRef.current?.getModel();
         if (m && model) {
@@ -486,11 +556,15 @@ const ScriptEditor: React.FC = () => {
             return;
         }
         if (cmd === 'help') {
-            appendTerminal('Commands: help, clear, pwd, ls [dir], save');
+            appendTerminal('Commands: help, clear, pwd, ls [dir], save, run');
             return;
         }
         if (cmd === 'save') {
             await saveAllFiles(true);
+            return;
+        }
+        if (cmd === 'run') {
+            await handleRunScript();
             return;
         }
         if (cmd === 'pwd' || cmd === 'ls') {
@@ -579,6 +653,7 @@ const ScriptEditor: React.FC = () => {
                             <span onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === 'file' ? null : 'file'); }} style={{ cursor: 'pointer', color: openMenu === 'file' ? 'var(--accent)' : undefined }}>File</span>
                             {openMenu === 'file' && (
                                 <div className="menu-dropdown" onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', top: '24px', left: 0, background: '#111', border: '1px solid #333', minWidth: '160px', zIndex: 100 }}>
+                                    <div className="menu-opt" onClick={() => { setOpenMenu(null); handleNewFile(); }} style={{ padding: '6px 12px', cursor: 'pointer' }}>New Script</div>
                                     <div className="menu-opt" onClick={() => { setOpenMenu(null); saveFile(); }} style={{ padding: '6px 12px', cursor: 'pointer' }}>Save (Ctrl+S)</div>
                                     <div className="menu-opt" onClick={() => { setOpenMenu(null); saveAllFiles(false); }} style={{ padding: '6px 12px', cursor: 'pointer' }}>Save All</div>
                                     <div className="menu-opt" onClick={() => { setOpenMenu(null); if (activeTabIdx >= 0) closeTab(activeTabIdx); }} style={{ padding: '6px 12px', cursor: 'pointer' }}>Close Tab</div>
@@ -647,7 +722,11 @@ const ScriptEditor: React.FC = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             <div style={{ padding: '10px 15px', fontSize: '0.75rem', color: '#444', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>Explorer</span>
-                                {treeTruncated && <span style={{ color: '#e67e22', fontSize: '0.65rem' }}>TRUNCATED</span>}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {treeTruncated && <span style={{ color: '#e67e22', fontSize: '0.65rem' }}>TRUNCATED</span>}
+                                    <button className="tool-btn small" onClick={() => void loadTree(true)} title="Refresh Tree" style={{ padding: '2px', background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}><RefreshCw size={12} /></button>
+                                    <button className="tool-btn small" onClick={handleNewFile} title="New Script" style={{ padding: '2px', background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}><Plus size={14} /></button>
+                                </div>
                             </div>
                             <div style={{ flexGrow: 1, overflowY: 'auto', padding: '10px 0' }}>
                                 {renderTreeNodes(fileTree)}

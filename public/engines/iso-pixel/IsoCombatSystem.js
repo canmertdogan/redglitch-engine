@@ -202,6 +202,14 @@ class IsoCombatSystem {
                             ent.hp = Math.max(0, ent.hp - proj.damage);
                             console.log(`[IsoCombat] Hit enemy! HP: ${ent.hp}`);
                             proj.active = false;
+                            if (ent.hp <= 0 && !ent._achKilled) {
+                                ent._achKilled = true;
+                                const ach = this.game?.achievementSystem || (typeof window !== 'undefined' && window.campaignController?.achievementSystem);
+                                if (ach && typeof ach.unlock === 'function') {
+                                    const tid = ent.id || ent.defId || ent.type || '';
+                                    ach.unlock('ENEMY_KILL', { target: tid, enemyId: tid });
+                                }
+                            }
                             
                             // Visual feedback
                             if (this.game.fx && this.game.fx.play) {

@@ -193,10 +193,14 @@ test('GameHUD _resolveElementPosition matches UIRenderer.resolveRect across all 
 });
 
 test('All UITemplates INTERFACE_KITS (800x450 & 1280x720) and SCREEN_PRESETS pass layout audit with zero overlaps/OOB', () => {
+    assert.ok(UITemplates.INTERFACE_KITS.length >= 15, `Expected >= 15 UI Kits, found ${UITemplates.INTERFACE_KITS.length}`);
+    assert.ok(UITemplates.SCREEN_PRESETS.length >= 15, `Expected >= 15 Screen Presets, found ${UITemplates.SCREEN_PRESETS.length}`);
+
     for (const kit of UITemplates.INTERFACE_KITS) {
         for (const res of [{ w: 800, h: 450 }, { w: 1280, h: 720 }]) {
             const doc = kit.build(res);
             assert.equal(doc.format, 'redglitch-ui');
+            assert.equal(doc.designSystem?.typography?.fontFamily, 'VT323, monospace');
             for (const [sid, screen] of Object.entries(doc.screens)) {
                 const audit = UITemplates.validateScreenLayout(screen, res);
                 assert.deepEqual(audit.outOfBounds, [], `${kit.id} ${res.w}x${res.h} ${sid} OOB`);
@@ -221,10 +225,12 @@ test('All UITemplates INTERFACE_KITS (800x450 & 1280x720) and SCREEN_PRESETS pas
     }
 
     for (const preset of UITemplates.SCREEN_PRESETS) {
-        const screen = preset.build('minimal_modern', { w: 1280, h: 720 });
-        const audit = UITemplates.validateScreenLayout(screen, { w: 1280, h: 720 });
-        assert.deepEqual(audit.outOfBounds, [], `Preset ${preset.id} OOB`);
-        assert.deepEqual(audit.overlaps, [], `Preset ${preset.id} overlaps`);
+        for (const res of [{ w: 800, h: 450 }, { w: 1280, h: 720 }]) {
+            const screen = preset.build('minimal_modern', res);
+            const audit = UITemplates.validateScreenLayout(screen, res);
+            assert.deepEqual(audit.outOfBounds, [], `Preset ${preset.id} ${res.w}x${res.h} OOB`);
+            assert.deepEqual(audit.overlaps, [], `Preset ${preset.id} ${res.w}x${res.h} overlaps`);
+        }
     }
 });
 

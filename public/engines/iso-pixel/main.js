@@ -81,12 +81,19 @@ class IsoGame {
         this.TICK_MS = 1000 / this.TICK_RATE;
         this.accumulator = 0;
         this.maxAccumulator = 200;      // Cap to prevent spiral of death
+        this.isPaused = false;
+        this.timeScale = 1;
 
         this._setupEngineListeners();
         this._startPerformanceMonitor();
 
         this.resizeHandler = () => this.resize();
         this.keydownHandler = e => {
+            if (e.key === 'Escape' && !window.CAMPAIGN_RUNTIME_MODE && this.running) {
+                e.preventDefault();
+                this.togglePause();
+                return;
+            }
             if (!this.keys[e.code]) this.keysPressed[e.code] = true;
             this.keys[e.code] = true;
         };
@@ -905,13 +912,44 @@ class IsoGame {
     }
 
     _handleHUDAction(cmd) {
+        if (window.GameHUD && typeof window.GameHUD.dispatchEngineCommand === 'function') {
+            if (window.GameHUD.dispatchEngineCommand(this, cmd, {
+                retry: () => this.restartLevel(),
+                quit: () => this._quitToMenu(),
+                pause: () => this.pause(),
+                resume: () => this.resume(),
+                hud: this.gameHUD
+            })) return;
+        }
         if (cmd === 'retryLevel') this.restartLevel();
         if (cmd === 'quitToMenu') this._quitToMenu();
-        if (cmd === 'togglePause') this._togglePause();
+        if (cmd === 'togglePause') this.togglePause();
+    }
+
+    pause() {
+        this.isPaused = true;
+        this.timeScale = 0;
+        if (this.gameHUD && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.gameHUD.showScreen('pause_menu');
+        }
+    }
+
+    resume() {
+        this.isPaused = false;
+        this.timeScale = 1;
+        this.lastTime = performance.now();
+        if (this.gameHUD && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.gameHUD.showScreen('main_hud');
+        }
+    }
+
+    togglePause() {
+        if (this.isPaused || this.timeScale === 0) this.resume();
+        else this.pause();
     }
 
     _togglePause() {
-        this.timeScale = (this.timeScale === 0) ? 1 : 0;
+        this.togglePause();
     }
 
     _quitToMenu() {
@@ -939,6 +977,10 @@ class IsoGame {
     handleLevelComplete() {
         this.levelComplete = true;
         console.log("Level Complete!");
+        const ach = this.achievementSystem || window.campaignController?.achievementSystem;
+        if (ach && typeof ach.unlock === 'function') {
+            ach.unlock('LEVEL_COMPLETE', { target: this.levelMetadata?.name || '' });
+        }
         
         // Visual feedback
         if (this.gameHUD) this.gameHUD.showToast("LEVEL COMPLETE!", "#2ecc71", 2500);
@@ -1241,7 +1283,9 @@ class IsoGame {
              this.lastTime = time;
              
              // Phase 16: Apply time scale
-             if (this.timeScale !== undefined) {
+             if (this.isPaused) {
+                 dt = 0;
+             } else if (this.timeScale !== undefined) {
                  dt *= this.timeScale;
              }
 

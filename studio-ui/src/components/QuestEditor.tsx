@@ -9,24 +9,31 @@ import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
 import Toast, { ToastHandle } from './shared/Toast';
 
-interface QuestStage {
+export interface QuestStage {
     id: string;
     text: string;
-    type: 'talk' | 'kill' | 'collect' | 'location' | 'interact';
+    description?: string;
+    type: 'talk' | 'kill' | 'collect' | 'location' | 'interact' | string;
     target: string;
     amount: number;
+    count?: number;
 }
 
-interface Quest {
+export interface Quest {
     id: string;
     title: string;
+    name?: string;
     description: string;
-    type: 'main' | 'side' | 'tutorial';
+    type: 'main' | 'side' | 'tutorial' | string;
+    category?: string;
     giverId: string;
     autoComplete: boolean;
+    requiredLevel?: number;
+    minLevel?: number;
     prerequisites: string[];
     rewards: {
         xp: number;
+        exp?: number;
         gold: number;
         items: string[]; // Array of Item IDs
     };
@@ -40,34 +47,53 @@ function makeUniqueCloneId(sourceId: string, existingIds: Set<string>): string {
     return `${base}_${idx}`;
 }
 
-function normalizeQuest(q: any): Quest {
+export function normalizeQuest(q: any): Quest {
     const rawStages = Array.isArray(q?.stages)
         ? q.stages
         : (Array.isArray(q?.objectives) ? q.objectives : (Array.isArray(q?.steps) ? q.steps : []));
     const { objectives: _obj, steps: _steps, ...rest } = (q || {});
+    const titleVal = String(q?.title || q?.name || 'Untitled Quest');
+    const typeVal = String(q?.category || q?.type || 'side');
+    const reqLevelVal = Number(q?.requiredLevel ?? q?.minLevel ?? 1) || 1;
+    const xpVal = Number(q?.rewards?.xp ?? q?.rewards?.exp ?? 0) || 0;
+    const goldVal = Number(q?.rewards?.gold ?? 0) || 0;
+    const itemsVal = Array.isArray(q?.rewards?.items) ? q.rewards.items : [];
+
     return {
         ...rest,
         id: String(q?.id || 'quest_' + Date.now().toString().slice(-4)),
-        title: String(q?.title || 'Untitled Quest'),
-        description: String(q?.description || ''),
-        type: (q?.type || 'main') as Quest['type'],
+        title: titleVal,
+        name: titleVal,
+        description: String(q?.description || q?.text || q?.desc || ''),
+        type: typeVal,
+        category: typeVal,
         giverId: String(q?.giverId || ''),
         autoComplete: Boolean(q?.autoComplete),
+        requiredLevel: reqLevelVal,
+        minLevel: reqLevelVal,
         prerequisites: Array.isArray(q?.prerequisites) ? q.prerequisites : [],
         rewards: {
-            xp: Number(q?.rewards?.xp ?? 0) || 0,
-            gold: Number(q?.rewards?.gold ?? 0) || 0,
-            items: Array.isArray(q?.rewards?.items) ? q.rewards.items : []
+            xp: xpVal,
+            exp: xpVal,
+            gold: goldVal,
+            items: itemsVal
         },
-        stages: rawStages.map((s: any, i: number) => ({
-            id: String(s?.id || `stage_${i}_${Date.now().toString().slice(-4)}`),
-            text: String(s?.text || ''),
-            type: (s?.type || 'talk') as QuestStage['type'],
-            target: String(s?.target || ''),
-            amount: Math.max(1, Number(s?.amount ?? s?.count ?? 1) || 1)
-        }))
+        stages: rawStages.map((s: any, i: number) => {
+            const stageText = String(s?.text || s?.description || s?.desc || '');
+            const stageAmount = Math.max(1, Number(s?.amount ?? s?.count ?? 1) || 1);
+            return {
+                id: String(s?.id || `stage_${i}_${Date.now().toString().slice(-4)}`),
+                text: stageText,
+                description: stageText,
+                type: (s?.type || 'talk'),
+                target: String(s?.target || ''),
+                amount: stageAmount,
+                count: stageAmount
+            };
+        })
     };
 }
+export const ensureNewSchema = normalizeQuest;
 
 const QuestEditor: React.FC = () => {
     const { isReady, emit, subscribe, projectState } = useStudio();
@@ -76,6 +102,7 @@ const QuestEditor: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [availableNPCs, setAvailableNPCs] = useState<any[]>([]);
     const [availableItems, setAvailableItems] = useState<any[]>([]);
+    const [availableEnemies, setAvailableEnemies] = useState<any[]>([]);
     const [isDirty, setIsDirty] = useState(false);
     const toastRef = useRef<ToastHandle>(null);
     const questsRef = useRef<Quest[]>([]);
@@ -126,26 +153,46 @@ const QuestEditor: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [quests, currentIndex]);
 
-    const loadData = async () => {
+    const loadData = async (preserveId?: string) => {
         try {
-            const [qRes, nRes, iRes] = await Promise.all([
+            const [qRes, nRes, iRes, eRes] = await Promise.all([
                 fetch('/api/quests'),
                 fetch('/api/npcs'),
-                fetch('/api/items')
+                fetch('/api/items'),
+                fetch('/api/enemies')
             ]);
             
             if (qRes.ok) {
                 const data = await qRes.json();
                 const list = Array.isArray(data) ? data.map(normalizeQuest) : [];
-                setQuests(list.length > 0 ? list : [getDefaultQuest()]);
+                const nextList = list.length > 0 ? list : [getDefaultQuest()];
+                setQuests(nextList);
+                questsRef.current = nextList;
+                if (preserveId) {
+                    const foundIdx = nextList.findIndex(q => q.id === preserveId);
+                    if (foundIdx >= 0) setCurrentIndex(foundIdx);
+                }
             } else {
-                setQuests([getDefaultQuest()]);
+                const def = [getDefaultQuest()];
+                setQuests(def);
+                questsRef.current = def;
             }
-            if (nRes.ok) setAvailableNPCs(await nRes.json());
-            if (iRes.ok) setAvailableItems(await iRes.json());
-            
+            if (nRes.ok) {
+                const nData = await nRes.json();
+                setAvailableNPCs(Array.isArray(nData) ? nData : []);
+            }
+            if (iRes.ok) {
+                const iData = await iRes.json();
+                setAvailableItems(Array.isArray(iData) ? iData : []);
+            }
+            if (eRes.ok) {
+                const eData = await eRes.json();
+                setAvailableEnemies(Array.isArray(eData) ? eData : []);
+            }
         } catch (e) {
-            setQuests([getDefaultQuest()]);
+            const def = [getDefaultQuest()];
+            setQuests(def);
+            questsRef.current = def;
         }
     };
 
@@ -156,14 +203,18 @@ const QuestEditor: React.FC = () => {
         type: 'side',
         giverId: '',
         autoComplete: false,
+        requiredLevel: 1,
+        minLevel: 1,
         prerequisites: [],
-        rewards: { xp: 50, gold: 10, items: [] },
+        rewards: { xp: 50, exp: 50, gold: 10, items: [] },
         stages: [{ id: 'stage_' + Date.now().toString().slice(-4), text: 'Talk to the giver', type: 'talk', target: '', amount: 1 }]
     });
 
     const updateQuest = (field: string, value: any) => {
         const newQuests = [...quests];
-        const quest = { ...newQuests[currentIndex] };
+        const prev = newQuests[currentIndex];
+        if (!prev) return;
+        const quest = { ...prev };
         
         const keys = field.split('.');
         let current: any = quest;
@@ -175,6 +226,7 @@ const QuestEditor: React.FC = () => {
         
         newQuests[currentIndex] = quest;
         setQuests(newQuests);
+        questsRef.current = newQuests;
         setIsDirty(true);
         emit('quest:updated', { questId: quest.id, quest });
     };
@@ -187,12 +239,20 @@ const QuestEditor: React.FC = () => {
                 const normalized = normalizeQuest(q);
                 return {
                     ...normalized,
+                    rewards: {
+                        xp: normalized.rewards.xp,
+                        exp: normalized.rewards.xp,
+                        gold: normalized.rewards.gold,
+                        items: normalized.rewards.items
+                    },
                     stages: (normalized.stages || []).map(s => ({
                         id: s.id,
                         text: s.text,
+                        description: s.text,
                         type: s.type,
                         target: s.target,
-                        amount: Math.max(1, Number(s.amount) || 1)
+                        amount: Math.max(1, Number(s.amount) || 1),
+                        count: Math.max(1, Number(s.amount) || 1)
                     }))
                 };
             });
@@ -210,6 +270,8 @@ const QuestEditor: React.FC = () => {
                     payload.forEach(q => map[q.id] = q);
                     projectState.set('quests', map);
                 }
+                const currentId = questsRef.current[currentIndex]?.id;
+                await loadData(currentId);
             } else {
                 let errMsg = `SAVE FAILED (${res.status})`;
                 try {
@@ -369,6 +431,11 @@ const QuestEditor: React.FC = () => {
                             </FormSection>
 
                             <FormSection title="Objectives & Steps">
+                                {(!currentQuest.stages || currentQuest.stages.length === 0) && (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>
+                                        No objectives added yet. Click '+ ADD OBJECTIVE' to add one.
+                                    </div>
+                                )}
                                 {(currentQuest.stages || []).map((stage, idx) => (
                                     <div key={stage.id || idx} style={{ background: '#000', border: '1px solid #222', padding: '15px', marginBottom: '15px', borderRadius: '4px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
@@ -387,11 +454,21 @@ const QuestEditor: React.FC = () => {
                                                 <option value="location">Reach Area</option>
                                                 <option value="interact">Manipulate</option>
                                             </select>
-                                            <input type="text" placeholder="Target ID" value={stage.target} onChange={(e) => {
-                                                const next = [...(currentQuest.stages || [])];
-                                                next[idx] = { ...next[idx], target: e.target.value };
-                                                updateQuest('stages', next);
-                                            }} />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Target ID" 
+                                                list={
+                                                    stage.type === 'talk' ? 'stage-target-npcs' :
+                                                    stage.type === 'collect' ? 'stage-target-items' :
+                                                    stage.type === 'kill' ? 'stage-target-enemies' : undefined
+                                                }
+                                                value={stage.target} 
+                                                onChange={(e) => {
+                                                    const next = [...(currentQuest.stages || [])];
+                                                    next[idx] = { ...next[idx], target: e.target.value };
+                                                    updateQuest('stages', next);
+                                                }} 
+                                            />
                                             <input type="number" min={1} value={stage.amount} onChange={(e) => {
                                                 const next = [...(currentQuest.stages || [])];
                                                 next[idx] = { ...next[idx], amount: Math.max(1, parseInt(e.target.value, 10) || 1) };
@@ -405,6 +482,15 @@ const QuestEditor: React.FC = () => {
                                         }} />
                                     </div>
                                 ))}
+                                <datalist id="stage-target-npcs">
+                                    {availableNPCs.map(n => <option key={n.id} value={n.id}>{n.name || n.id}</option>)}
+                                </datalist>
+                                <datalist id="stage-target-items">
+                                    {availableItems.map(i => <option key={i.id} value={i.id}>{i.name || i.id}</option>)}
+                                </datalist>
+                                <datalist id="stage-target-enemies">
+                                    {availableEnemies.map(e => <option key={e.id} value={e.id}>{e.name || e.id}</option>)}
+                                </datalist>
                                 <button className="tool-btn" style={{ width: '100%', gap: '10px' }} onClick={addStage}>
                                     <PlusCircle size={16} /> ADD OBJECTIVE
                                 </button>
@@ -413,6 +499,19 @@ const QuestEditor: React.FC = () => {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <FormSection title="Prerequisites">
+                                <div style={{ marginBottom: '15px' }}>
+                                    <label>Required Player Level</label>
+                                    <input 
+                                        type="number" 
+                                        min={1} 
+                                        value={currentQuest.requiredLevel || 1} 
+                                        onChange={(e) => {
+                                            const lvl = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                            updateQuest('requiredLevel', lvl);
+                                            updateQuest('minLevel', lvl);
+                                        }} 
+                                    />
+                                </div>
                                 <label>Required Quests</label>
                                 <div style={{ background: '#000', border: '1px solid #111', maxHeight: '150px', overflowY: 'auto', padding: '10px' }}>
                                     {quests.map(q => q.id !== currentQuest.id && (

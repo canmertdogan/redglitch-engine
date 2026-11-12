@@ -18,7 +18,7 @@ import {
     ZoomIn,
     ZoomOut
 } from 'lucide-react';
-import { NODE_LIBRARY, CATEGORY_COLORS, PORT_COLORS, getCategories, NodeDef, PortType } from '../data/algorithmNodes';
+import { NODE_LIBRARY, CATEGORY_COLORS, PORT_COLORS, getCategories, NodeDef, PortType, compileLogicGraph } from '../data/algorithmNodes';
 
 // ─── Data model (matches data/logic/*.json + server/routes/logic.js) ──────────
 
@@ -268,28 +268,68 @@ const AlgorithmEditor: React.FC = () => {
     const loadScript = useCallback(async (name: string) => {
         try {
             setStatusLine('LOADING...');
-            const res = await fetch(`/api/logic/${encodeURIComponent(name)}.algorithm`);
+            const cleanName = name.replace(/\.(algorithm|json)$/i, '');
+            const res = await fetch(`/api/logic/${encodeURIComponent(cleanName)}.algorithm`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
+            let rawObj = data;
+            if (typeof data === 'string') {
+                try { rawObj = JSON.parse(data); } catch { rawObj = {}; }
+            } else if (data && typeof data.json === 'string') {
+                try { rawObj = JSON.parse(data.json); } catch { rawObj = {}; }
+            } else if (data && typeof data.json === 'object' && data.json !== null) {
+                rawObj = data.json;
+            }
+            if (!rawObj || typeof rawObj !== 'object') {
+                rawObj = {};
+            }
             const loaded: LogicGraph = {
-                nodes: Array.isArray(data.nodes)
-                    ? data.nodes.map((n: any) => ({
-                        ...n,
+                nodes: Array.isArray(rawObj.nodes)
+                    ? rawObj.nodes.filter(Boolean).map((n: any) => ({
+                        id: String(n.id || uid('n')),
+                        type: String(n.type || 'eng_log'),
+                        x: typeof n.x === 'number' ? n.x : 0,
+                        y: typeof n.y === 'number' ? n.y : 0,
                         data: { ...(NODE_LIBRARY[n.type]?.defaults || {}), ...(n.data || {}) }
                     }))
                     : [],
-                wires: Array.isArray(data.wires) ? data.wires : [],
-                vars: Array.isArray(data.vars) ? data.vars : []
+                wires: Array.isArray(rawObj.wires)
+                    ? rawObj.wires.filter((w: any) => w && (w.fromNode || w.from) && (w.toNode || w.to)).map((w: any) => ({
+                        id: String(w.id || uid('w')),
+                        fromNode: String(w.fromNode ?? w.from),
+                        fromPort: String(w.fromPort ?? w.port ?? 'out'),
+                        toNode: String(w.toNode ?? w.to),
+                        toPort: String(w.toPort ?? 'in')
+                    }))
+                    : [],
+                vars: Array.isArray(rawObj.vars)
+                    ? rawObj.vars.filter(Boolean).map((v: any) => ({
+                        name: String(v.name || 'var'),
+                        type: String(v.type || 'num'),
+                        value: v.value ?? 0
+                    }))
+                    : (rawObj.variables && typeof rawObj.variables === 'object'
+                        ? Object.entries(rawObj.variables).map(([vName, val]) => ({
+                            name: vName,
+                            type: typeof val === 'number' ? 'num' : typeof val === 'boolean' ? 'bool' : 'string',
+                            value: val
+                        }))
+                        : [])
             };
             setGraph(loaded);
             setHistory([loaded]);
             setHistoryIndex(0);
             setSelected(new Set());
-            setScriptName(name);
+            setScriptName(cleanName);
             setIsDirty(false);
-            setStatusLine(`LOADED: ${name}`);
+            setStatusLine(`LOADED: ${cleanName}`);
         } catch (err) {
             console.error('[NodeLogic] load failed', err);
+            const fallback = emptyGraph();
+            setGraph(fallback);
+            setHistory([fallback]);
+            setHistoryIndex(0);
+            setSelected(new Set());
             setStatusLine('LOAD_FAILED');
         }
     }, []);
@@ -313,14 +353,25 @@ const AlgorithmEditor: React.FC = () => {
         setIsSaving(true);
         setStatusLine('SAVING...');
         try {
+            const compiledAst = compileLogicGraph(graph);
             const res = await fetch('/api/logic/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: cleanName, json: JSON.stringify(graph, null, 2) })
+                body: JSON.stringify({
+                    name: cleanName,
+                    json: JSON.stringify(graph, null, 2),
+                    ast: compiledAst
+                })
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const resData = await res.json().catch(() => ({}));
             setIsDirty(false);
-            setStatusLine('SAVED');
+            const eventCount = Array.isArray(resData.events)
+                ? resData.events.length
+                : (resData.events && typeof resData.events === 'object'
+                    ? Object.keys(resData.events).length
+                    : Object.keys(compiledAst.events || {}).length);
+            setStatusLine(`SAVED (${eventCount} EVENT${eventCount === 1 ? '' : 'S'})`);
             eventBus?.emit('algorithm:saved', { scriptId: cleanName });
             eventBus?.emit('system:script:update', { scriptId: cleanName });
             void refreshScriptList();
@@ -537,6 +588,25 @@ const AlgorithmEditor: React.FC = () => {
                 if (src.role === 'in') { const tmp = src; src = dst; dst = tmp; }
                 if (src.nodeId === dst.nodeId) {
                     setStatusLine('INVALID: SELF CONNECTION');
+                    return null;
+                }
+                const hasPath = (fromId: string, toId: string, wires: LogicWire[]): boolean => {
+                    const visited = new Set<string>();
+                    const queue = [fromId];
+                    while (queue.length > 0) {
+                        const curr = queue.shift()!;
+                        if (curr === toId) return true;
+                        visited.add(curr);
+                        for (const w of wires) {
+                            if (w.fromNode === curr && !visited.has(w.toNode)) {
+                                queue.push(w.toNode);
+                            }
+                        }
+                    }
+                    return false;
+                };
+                if (src.portType !== 'exec' && dst.portType !== 'exec' && hasPath(dst.nodeId, src.nodeId, graph.wires)) {
+                    setStatusLine('INVALID: CYCLE DETECTED IN DATA FLOW');
                     return null;
                 }
                 const typesCompatible = src.portType === dst.portType || src.portType === 'any' || dst.portType === 'any'

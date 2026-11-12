@@ -11,7 +11,11 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": false
+    "strict": false,
+    "paths": {
+      "@/*": ["./studio-ui/src/*"],
+      "@shared/*": ["./public/shared/*"]
+    }
   },
   "include": ["studio-ui/src", "public/**/*.js", "public/**/*.d.ts"]
 }

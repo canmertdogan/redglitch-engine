@@ -169,19 +169,35 @@ async function selectCampaign(campaign) {
     showLoading(true);
 
     try {
-        // Create new slot with campaign data
+        const campaignId = campaign.file.replace(/\.json$/i, '');
+        let fullData = null;
+        try {
+            const cRes = await fetch(`/api/campaigns/${encodeURIComponent(campaignId)}`);
+            if (cRes.ok) fullData = await cRes.json();
+        } catch (_) {}
+
+        const nodesArr = Array.isArray(fullData?.nodes) ? fullData.nodes : [];
+        const startNode = nodesArr.find(n => n.type === 'start')?.id || 'start_node';
+        const nodesMap = {};
+        nodesArr.forEach((n, idx) => { nodesMap[n.id || `node_${idx}`] = n; });
+
+        // Create new slot with full campaign metadata & graph structure
         const slot = new CampaignSlot(slotId);
-        
-        await slot.load(
-            campaign.file.replace('.json', ''),
-            campaign.name,
-            'Player' // Default player name
+        slot.load(
+            campaignId,
+            {
+                name: fullData?.metadata?.name || fullData?.name || campaign.name || campaignId,
+                description: fullData?.metadata?.description || fullData?.description || campaign.description || '',
+                startNode,
+                nodes: nodesMap
+            },
+            localStorage.getItem('redglitch_username') || 'Player'
         );
 
-        // Initialize campaign data
-        slot.campaign.currentNode = null; // Will be set to start node by CampaignController
+        // Let CampaignController resolve start node automatically on launch
+        slot.campaign.currentNode = null;
         slot.campaign.completedNodes = [];
-        slot.campaign.totalNodes = campaign.nodeCount;
+        slot.campaign.totalNodes = campaign.nodeCount || nodesArr.length;
         slot.campaign.completionPercent = 0;
 
         // Initialize player stats

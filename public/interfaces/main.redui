@@ -6,31 +6,33 @@
     "h": 450
   },
   "designSystem": {
-    "name": "RedGlitch Tactical HUD",
+    "name": "RedGlitch Air HUD",
     "themeId": "redglitch_ops",
     "grid": 4,
     "palette": {
-      "void": "#05070d",
-      "panel": "rgba(13, 18, 30, 0.90)",
-      "panelInner": "rgba(6, 9, 16, 0.72)",
-      "scrim": "rgba(4, 6, 12, 0.72)",
-      "border": "#000000",
-      "accent": "#ff3147",
-      "gold": "#ffd36a",
-      "cyan": "#49e3ff",
-      "green": "#62ff9a",
-      "violet": "#b86cff",
-      "ink": "#f4f7ff",
+      "void": "#080b14",
+      "panel": "rgba(14, 19, 32, 0.78)",
+      "panelInner": "rgba(9, 13, 24, 0.56)",
+      "scrim": "rgba(4, 7, 14, 0.60)",
+      "border": "rgba(255, 77, 99, 0.42)",
+      "accent": "#ff4d63",
+      "gold": "#ffd670",
+      "cyan": "#5eead4",
+      "green": "#6ee7a8",
+      "violet": "#c4b5fd",
+      "ink": "#f8fafc",
       "muted": "#94a3b8",
-      "barTrack": "#0b0d14",
-      "hp": "#e23b4e",
-      "mp": "#3aa6e0",
-      "st": "#54c46a",
-      "radius": 0,
-      "panelBorderWidth": 2,
-      "ticks": 10,
-      "panelShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
-      "btnRadius": 0
+      "barTrack": "rgba(12, 16, 28, 0.85)",
+      "barText": "#ffffff",
+      "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
+      "hp": "#fb566c",
+      "mp": "#38bdf8",
+      "st": "#4ade80",
+      "radius": 2,
+      "panelBorderWidth": 1,
+      "ticks": 8,
+      "panelShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
+      "btnRadius": 2
     },
     "typography": {
       "fontFamily": "VT323, monospace",
@@ -44,18 +46,18 @@
           "id": "hud_vitals_panel",
           "type": "panel",
           "rect": {
-            "x": 12,
-            "y": 12,
-            "w": 256,
-            "h": 100
+            "x": 14,
+            "y": 14,
+            "w": 248,
+            "h": 98
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 10
           }
         },
@@ -64,20 +66,20 @@
           "type": "label",
           "text": "LV {player.level}",
           "rect": {
-            "x": 22,
+            "x": 24,
             "y": 18,
-            "w": 132,
-            "h": 18
+            "w": 126,
+            "h": 20
           },
           "anchor": "top-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 14,
+            "color": "#ffd670",
+            "fontSize": 18,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 11,
             "letterSpacing": 1
           }
@@ -87,22 +89,22 @@
           "type": "label",
           "text": "XP {player.xp}",
           "rect": {
-            "x": 160,
+            "x": 156,
             "y": 18,
-            "w": 98,
-            "h": 18
+            "w": 96,
+            "h": 20
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(167,139,250,0.14)",
-            "color": "#b86cff",
-            "fontSize": 11,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#c4b5fd",
+            "fontSize": 14,
             "fontWeight": "400",
             "borderWidth": 1,
-            "borderColor": "#b86cff",
-            "textShadow": "2px 2px 0 #000",
+            "borderColor": "#c4b5fd",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 11,
-            "borderRadius": 0,
+            "borderRadius": 2,
             "textAlign": "center"
           }
         },
@@ -111,18 +113,18 @@
           "type": "bar",
           "text": "HP {player.hp}/{player.maxHp}",
           "rect": {
-            "x": 22,
+            "x": 24,
             "y": 42,
-            "w": 236,
+            "w": 228,
             "h": 18
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#0b0d14",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(12, 16, 28, 0.85)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "color": "#ffffff",
             "zIndex": 11
@@ -130,8 +132,8 @@
           "props": {
             "variable": "player.hp",
             "maxVariable": "player.maxHp",
-            "fillColor": "#e23b4e",
-            "ticks": 10,
+            "fillColor": "#fb566c",
+            "ticks": 8,
             "flashOnDamage": true
           }
         },
@@ -140,18 +142,18 @@
           "type": "bar",
           "text": "MP {player.mana}/{player.maxMana}",
           "rect": {
-            "x": 22,
+            "x": 24,
             "y": 66,
-            "w": 236,
-            "h": 14
+            "w": 228,
+            "h": 15
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#0b0d14",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "fontSize": 11,
+            "backgroundColor": "rgba(12, 16, 28, 0.85)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "fontSize": 13,
             "fontWeight": "400",
             "color": "#ffffff",
             "zIndex": 11
@@ -159,8 +161,8 @@
           "props": {
             "variable": "player.mana",
             "maxVariable": "player.maxMana",
-            "fillColor": "#3aa6e0",
-            "ticks": 8
+            "fillColor": "#38bdf8",
+            "ticks": 6
           }
         },
         {
@@ -168,18 +170,18 @@
           "type": "bar",
           "text": "ST {player.stamina}/{player.maxStamina}",
           "rect": {
-            "x": 22,
+            "x": 24,
             "y": 86,
-            "w": 236,
-            "h": 14
+            "w": 228,
+            "h": 15
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#0b0d14",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "fontSize": 11,
+            "backgroundColor": "rgba(12, 16, 28, 0.85)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "fontSize": 13,
             "fontWeight": "400",
             "color": "#ffffff",
             "zIndex": 11
@@ -187,26 +189,26 @@
           "props": {
             "variable": "player.stamina",
             "maxVariable": "player.maxStamina",
-            "fillColor": "#54c46a",
-            "ticks": 8
+            "fillColor": "#4ade80",
+            "ticks": 6
           }
         },
         {
           "id": "hud_objective_panel",
           "type": "panel",
           "rect": {
-            "x": 12,
+            "x": 14,
             "y": 120,
-            "w": 256,
-            "h": 42
+            "w": 248,
+            "h": 44
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 10
           }
         },
@@ -215,42 +217,42 @@
           "type": "label",
           "text": "OBJ // FIND THE EXIT",
           "rect": {
-            "x": 22,
+            "x": 24,
             "y": 126,
-            "w": 236,
-            "h": 14
+            "w": 228,
+            "h": 16
           },
           "anchor": "top-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#f4f7ff",
-            "fontSize": 13,
+            "color": "#f8fafc",
+            "fontSize": 16,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 11
           }
         },
         {
           "id": "hud_objective_sub",
           "type": "label",
-          "text": "HOSTILES DETECTED NEARBY",
+          "text": "SECTOR STATUS: ACTIVE",
           "rect": {
-            "x": 22,
-            "y": 142,
-            "w": 236,
-            "h": 12
+            "x": 24,
+            "y": 144,
+            "w": 228,
+            "h": 14
           },
           "anchor": "top-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ff3147",
-            "fontSize": 11,
+            "color": "#ff4d63",
+            "fontSize": 14,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 11
           }
         },
@@ -258,18 +260,18 @@
           "id": "hud_comms_panel",
           "type": "panel",
           "rect": {
-            "x": 12,
-            "y": 12,
-            "w": 200,
+            "x": 14,
+            "y": 14,
+            "w": 196,
             "h": 68
           },
           "anchor": "top-right",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 10
           }
         },
@@ -278,22 +280,23 @@
           "type": "button",
           "text": "||",
           "rect": {
-            "x": 20,
-            "y": 20,
+            "x": 22,
+            "y": 22,
             "w": 28,
             "h": 28
           },
           "anchor": "top-right",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "textAlign": "center",
             "letterSpacing": 0,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 12
           },
           "script": "togglePause",
@@ -304,20 +307,20 @@
           "type": "label",
           "text": "{gameTimeFormatted}",
           "rect": {
-            "x": 56,
-            "y": 20,
-            "w": 144,
-            "h": 16
+            "x": 58,
+            "y": 21,
+            "w": 140,
+            "h": 18
           },
           "anchor": "top-right",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 15,
+            "color": "#ffd670",
+            "fontSize": 18,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 11,
             "textAlign": "right"
           }
@@ -327,20 +330,20 @@
           "type": "label",
           "text": "{player.coins} CR",
           "rect": {
-            "x": 56,
-            "y": 38,
-            "w": 144,
-            "h": 14
+            "x": 58,
+            "y": 40,
+            "w": 140,
+            "h": 16
           },
           "anchor": "top-right",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#62ff9a",
-            "fontSize": 13,
+            "color": "#6ee7a8",
+            "fontSize": 15,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 11,
             "textAlign": "right"
           }
@@ -350,20 +353,20 @@
           "type": "label",
           "text": "ZONE // ACTIVE",
           "rect": {
-            "x": 20,
-            "y": 56,
-            "w": 180,
-            "h": 14
+            "x": 22,
+            "y": 59,
+            "w": 176,
+            "h": 16
           },
           "anchor": "top-right",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#49e3ff",
-            "fontSize": 12,
+            "color": "#5eead4",
+            "fontSize": 14,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 11,
             "textAlign": "right"
           }
@@ -373,17 +376,17 @@
           "type": "panel",
           "rect": {
             "x": 0,
-            "y": 12,
-            "w": 412,
+            "y": 11,
+            "w": 408,
             "h": 56
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 10
           }
         },
@@ -393,18 +396,18 @@
           "text": "1",
           "rect": {
             "x": -168,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -418,18 +421,18 @@
           "text": "2",
           "rect": {
             "x": -120,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -444,18 +447,18 @@
           "text": "3",
           "rect": {
             "x": -72,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -469,18 +472,18 @@
           "text": "4",
           "rect": {
             "x": -24,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -494,18 +497,18 @@
           "text": "Q",
           "rect": {
             "x": 24,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#49e3ff",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#5eead4",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -519,18 +522,18 @@
           "text": "E",
           "rect": {
             "x": 72,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#49e3ff",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#5eead4",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -544,18 +547,18 @@
           "text": "R",
           "rect": {
             "x": 120,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#49e3ff",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#5eead4",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -569,18 +572,18 @@
           "text": "ULT",
           "rect": {
             "x": 168,
-            "y": 19,
+            "y": 18,
             "w": 42,
             "h": 42
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#b86cff",
-            "borderWidth": 2,
-            "borderColor": "#b86cff",
-            "borderRadius": 0,
-            "fontSize": 10,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#c4b5fd",
+            "borderWidth": 1,
+            "borderColor": "#c4b5fd",
+            "borderRadius": 2,
+            "fontSize": 13,
             "fontWeight": "400",
             "zIndex": 11
           },
@@ -604,7 +607,7 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(4, 6, 12, 0.72)",
+            "backgroundColor": "rgba(4, 7, 14, 0.60)",
             "borderWidth": 0,
             "borderColor": "transparent",
             "borderRadius": 0,
@@ -618,16 +621,16 @@
           "rect": {
             "x": 0,
             "y": 0,
-            "w": 292,
+            "w": 296,
             "h": 276
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 50
           }
         },
@@ -637,19 +640,19 @@
           "text": "SYSTEM PAUSED",
           "rect": {
             "x": 0,
-            "y": -98,
-            "w": 248,
-            "h": 28
+            "y": -96,
+            "w": 256,
+            "h": 30
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 24,
+            "color": "#ffd670",
+            "fontSize": 28,
             "fontWeight": "700",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 51,
             "textAlign": "center",
             "letterSpacing": 1
@@ -661,19 +664,19 @@
           "text": "GAME STANDBY",
           "rect": {
             "x": 0,
-            "y": -70,
-            "w": 248,
-            "h": 16
+            "y": -66,
+            "w": 256,
+            "h": 18
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
             "color": "#94a3b8",
-            "fontSize": 11,
+            "fontSize": 15,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 51,
             "textAlign": "center"
           }
@@ -684,21 +687,22 @@
           "text": "RESUME",
           "rect": {
             "x": 0,
-            "y": -24,
-            "w": 220,
+            "y": -22,
+            "w": 224,
             "h": 36
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#62ff9a",
-            "borderWidth": 2,
-            "borderColor": "#62ff9a",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#6ee7a8",
+            "borderWidth": 1,
+            "borderColor": "#6ee7a8",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52
           },
           "script": "RESUME_GAME"
@@ -709,21 +713,22 @@
           "text": "INVENTORY",
           "rect": {
             "x": 0,
-            "y": 22,
-            "w": 220,
+            "y": 24,
+            "w": 224,
             "h": 36
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#49e3ff",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#5eead4",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52
           },
           "script": "navigate:inventory"
@@ -734,21 +739,22 @@
           "text": "QUIT TO MENU",
           "rect": {
             "x": 0,
-            "y": 68,
-            "w": 220,
+            "y": 70,
+            "w": 224,
             "h": 36
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ff3147",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ff4d63",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52
           },
           "script": "QUIT"
@@ -769,7 +775,7 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(4, 6, 12, 0.72)",
+            "backgroundColor": "rgba(4, 7, 14, 0.60)",
             "borderWidth": 0,
             "borderColor": "transparent",
             "borderRadius": 0,
@@ -788,11 +794,11 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 50
           }
         },
@@ -804,17 +810,17 @@
             "x": -130,
             "y": -138,
             "w": 260,
-            "h": 24
+            "h": 26
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#49e3ff",
-            "fontSize": 20,
+            "color": "#5eead4",
+            "fontSize": 24,
             "fontWeight": "700",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 51
           }
         },
@@ -826,19 +832,20 @@
             "x": 210,
             "y": -138,
             "w": 96,
-            "h": 24
+            "h": 26
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ff3147",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ff4d63",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52
           },
           "script": "CLOSE_MENU"
@@ -854,11 +861,11 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 51
           }
         },
@@ -873,11 +880,11 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 51
           }
         },
@@ -889,17 +896,17 @@
             "x": 170,
             "y": -90,
             "w": 150,
-            "h": 20
+            "h": 22
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 14,
+            "color": "#ffd670",
+            "fontSize": 17,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52,
             "textAlign": "center"
           }
@@ -910,19 +917,19 @@
           "text": "Inspect stats, equip gear, or consume restorative supplies.",
           "rect": {
             "x": 170,
-            "y": -34,
+            "y": -32,
             "w": 150,
-            "h": 64
+            "h": 68
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
             "color": "#94a3b8",
-            "fontSize": 11,
+            "fontSize": 14,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52,
             "textAlign": "center"
           }
@@ -939,12 +946,12 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 52
           },
@@ -964,12 +971,12 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 52
           },
@@ -989,12 +996,12 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 52
           },
@@ -1014,12 +1021,12 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
             "zIndex": 52
           },
@@ -1043,11 +1050,11 @@
           },
           "anchor": "bottom-center",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 50
           }
         },
@@ -1063,11 +1070,11 @@
           },
           "anchor": "bottom-left",
           "style": {
-            "backgroundColor": "#ffd36a",
-            "color": "#05070d",
+            "backgroundColor": "#ffd670",
+            "color": "#080b14",
             "borderWidth": 0,
-            "borderRadius": 0,
-            "fontSize": 14,
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "700",
             "textAlign": "center",
             "zIndex": 51
@@ -1079,19 +1086,19 @@
           "text": "The tactical link is online. Proceed toward the extraction beacon.",
           "rect": {
             "x": 44,
-            "y": 106,
+            "y": 108,
             "w": 712,
-            "h": 46
+            "h": 44
           },
           "anchor": "bottom-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#f4f7ff",
-            "fontSize": 18,
+            "color": "#f8fafc",
+            "fontSize": 20,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 51
           }
         },
@@ -1108,12 +1115,12 @@
           "anchor": "bottom-right",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#62ff9a",
-            "fontSize": 12,
+            "color": "#6ee7a8",
+            "fontSize": 15,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 51,
             "textAlign": "right"
           }
@@ -1133,7 +1140,7 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(6,4,10,0.88)",
+            "backgroundColor": "rgba(4, 7, 14, 0.60)",
             "borderWidth": 0,
             "borderColor": "transparent",
             "borderRadius": 0,
@@ -1152,11 +1159,11 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 100
           }
         },
@@ -1173,12 +1180,12 @@
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ff3147",
-            "fontSize": 36,
+            "color": "#ff4d63",
+            "fontSize": 38,
             "fontWeight": "700",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "3px 3px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 101,
             "textAlign": "center"
           }
@@ -1189,19 +1196,19 @@
           "text": "TIME {gameTimeFormatted} // LV {player.level}",
           "rect": {
             "x": 0,
-            "y": -26,
+            "y": -24,
             "w": 312,
             "h": 22
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 15,
+            "color": "#ffd670",
+            "fontSize": 17,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 101,
             "textAlign": "center"
           }
@@ -1218,15 +1225,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#62ff9a",
-            "borderWidth": 2,
-            "borderColor": "#62ff9a",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#6ee7a8",
+            "borderWidth": 1,
+            "borderColor": "#6ee7a8",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 101
           },
           "script": "retryLevel"
@@ -1243,15 +1251,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ff3147",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ff4d63",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 101
           },
           "script": "quitToMenu"
@@ -1271,7 +1280,7 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#05070d",
+            "backgroundColor": "#080b14",
             "borderWidth": 0,
             "borderColor": "transparent",
             "zIndex": 1
@@ -1288,11 +1297,11 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 2
           }
         },
@@ -1309,12 +1318,12 @@
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 34,
+            "color": "#ffd670",
+            "fontSize": 36,
             "fontWeight": "700",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 3,
             "textAlign": "center",
             "letterSpacing": 2
@@ -1326,19 +1335,19 @@
           "text": "CAMPAIGN & SANDBOX EDITION",
           "rect": {
             "x": 0,
-            "y": -86,
+            "y": -84,
             "w": 360,
-            "h": 18
+            "h": 20
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
             "color": "#94a3b8",
-            "fontSize": 12,
+            "fontSize": 16,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 3,
             "textAlign": "center"
           }
@@ -1355,15 +1364,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#62ff9a",
-            "borderWidth": 2,
-            "borderColor": "#62ff9a",
-            "borderRadius": 0,
-            "fontSize": 16,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#6ee7a8",
+            "borderWidth": 1,
+            "borderColor": "#6ee7a8",
+            "borderRadius": 2,
+            "fontSize": 19,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 4
           },
           "script": "action:START_GAME"
@@ -1380,15 +1390,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#49e3ff",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#5eead4",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "fontSize": 18,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 4
           },
           "script": "action:LOAD_LEVEL"
@@ -1405,15 +1416,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 13,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "400",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 4
           },
           "script": "navigate:settings_menu"
@@ -1430,15 +1442,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ff3147",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "fontSize": 13,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ff4d63",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "400",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 4
           },
           "script": "action:QUIT"
@@ -1451,17 +1464,17 @@
             "x": 0,
             "y": 124,
             "w": 360,
-            "h": 18
+            "h": 20
           },
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
             "color": "#94a3b8",
-            "fontSize": 11,
+            "fontSize": 14,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 3,
             "textAlign": "center"
           }
@@ -1482,7 +1495,7 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(4, 6, 12, 0.72)",
+            "backgroundColor": "rgba(4, 7, 14, 0.60)",
             "borderWidth": 0,
             "borderColor": "transparent",
             "zIndex": 40
@@ -1499,11 +1512,11 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 50
           }
         },
@@ -1520,12 +1533,12 @@
           "anchor": "center",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#49e3ff",
-            "fontSize": 22,
+            "color": "#5eead4",
+            "fontSize": 26,
             "fontWeight": "700",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 51,
             "textAlign": "center"
           }
@@ -1542,18 +1555,18 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "#0b0d14",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "fontSize": 13,
+            "backgroundColor": "rgba(12, 16, 28, 0.85)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
-            "color": "#fff",
+            "color": "#ffffff",
             "zIndex": 51
           },
           "props": {
-            "fillColor": "#49e3ff",
-            "ticks": 10
+            "fillColor": "#5eead4",
+            "ticks": 8
           }
         },
         {
@@ -1568,15 +1581,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "fontSize": 13,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "400",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52
           },
           "script": "toggle_touch"
@@ -1593,15 +1607,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#f4f7ff",
-            "borderWidth": 2,
-            "borderColor": "#f4f7ff",
-            "borderRadius": 0,
-            "fontSize": 13,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#f8fafc",
+            "borderWidth": 1,
+            "borderColor": "#f8fafc",
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "400",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52
           },
           "script": "toggle_crt"
@@ -1618,15 +1633,16 @@
           },
           "anchor": "center",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ff3147",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "fontSize": 14,
-            "fontWeight": "400",
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ff4d63",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "fontSize": 17,
+            "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 52
           },
           "script": "navigate:pause_menu"
@@ -1648,12 +1664,12 @@
           "anchor": "top-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 24,
+            "color": "#ffd670",
+            "fontSize": 28,
             "fontWeight": "700",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 1
           }
         },
@@ -1668,11 +1684,11 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#ffd36a",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#ffd670",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 1
           }
         },
@@ -1687,11 +1703,11 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 1
           }
         },
@@ -1706,11 +1722,11 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(13, 18, 30, 0.90)",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "boxShadow": "inset 2px 2px 0 rgba(255,255,255,0.08), inset -2px -2px 0 rgba(0,0,0,0.45), 3px 3px 0 rgba(0,0,0,0.65)",
+            "backgroundColor": "rgba(14, 19, 32, 0.78)",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "boxShadow": "inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)",
             "zIndex": 1
           }
         },
@@ -1727,12 +1743,12 @@
           "anchor": "top-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ffd36a",
-            "fontSize": 18,
+            "color": "#ffd670",
+            "fontSize": 20,
             "fontWeight": "700",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 2,
             "textAlign": "center"
           }
@@ -1750,12 +1766,12 @@
           "anchor": "top-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#f4f7ff",
-            "fontSize": 14,
+            "color": "#f8fafc",
+            "fontSize": 16,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 2,
             "textAlign": "center"
           }
@@ -1773,12 +1789,12 @@
           "anchor": "top-left",
           "style": {
             "backgroundColor": "transparent",
-            "color": "#ff3147",
-            "fontSize": 16,
+            "color": "#ff4d63",
+            "fontSize": 18,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 2,
             "textAlign": "center"
           }
@@ -1795,20 +1811,20 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#0b0d14",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(12, 16, 28, 0.85)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
-            "color": "#fff",
+            "color": "#ffffff",
             "zIndex": 1
           },
           "props": {
             "variable": "player.hp",
             "maxVariable": "player.maxHp",
-            "fillColor": "#e23b4e",
-            "ticks": 10
+            "fillColor": "#fb566c",
+            "ticks": 8
           }
         },
         {
@@ -1823,20 +1839,20 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#0b0d14",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(12, 16, 28, 0.85)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
-            "color": "#fff",
+            "color": "#ffffff",
             "zIndex": 1
           },
           "props": {
             "variable": "player.mana",
             "maxVariable": "player.maxMana",
-            "fillColor": "#3aa6e0",
-            "ticks": 10
+            "fillColor": "#38bdf8",
+            "ticks": 8
           }
         },
         {
@@ -1851,20 +1867,20 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "#0b0d14",
-            "borderWidth": 2,
-            "borderColor": "#000000",
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(12, 16, 28, 0.85)",
+            "borderWidth": 1,
+            "borderColor": "rgba(255, 77, 99, 0.42)",
+            "borderRadius": 2,
+            "fontSize": 15,
             "fontWeight": "400",
-            "color": "#fff",
+            "color": "#ffffff",
             "zIndex": 1
           },
           "props": {
             "variable": "player.stamina",
             "maxVariable": "player.maxStamina",
-            "fillColor": "#54c46a",
-            "ticks": 10
+            "fillColor": "#4ade80",
+            "ticks": 8
           }
         },
         {
@@ -1879,15 +1895,16 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#62ff9a",
-            "borderWidth": 2,
-            "borderColor": "#62ff9a",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#6ee7a8",
+            "borderWidth": 1,
+            "borderColor": "#6ee7a8",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 1
           },
           "script": "action:PRIMARY"
@@ -1904,15 +1921,16 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#49e3ff",
-            "borderWidth": 2,
-            "borderColor": "#49e3ff",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#5eead4",
+            "borderWidth": 1,
+            "borderColor": "#5eead4",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 1
           },
           "script": "action:SECONDARY"
@@ -1929,15 +1947,16 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ff3147",
-            "borderWidth": 2,
-            "borderColor": "#ff3147",
-            "borderRadius": 0,
-            "fontSize": 15,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ff4d63",
+            "borderWidth": 1,
+            "borderColor": "#ff4d63",
+            "borderRadius": 2,
+            "fontSize": 17,
             "fontWeight": "700",
             "textAlign": "center",
             "letterSpacing": 1,
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 1
           },
           "script": "action:DANGER"
@@ -1954,12 +1973,12 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ffd36a",
-            "borderColor": "#ffd36a",
-            "borderWidth": 2,
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ffd670",
+            "borderColor": "#ffd670",
+            "borderWidth": 1,
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "400",
             "zIndex": 1
           }
@@ -1976,12 +1995,12 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#49e3ff",
-            "borderColor": "#49e3ff",
-            "borderWidth": 2,
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#5eead4",
+            "borderColor": "#5eead4",
+            "borderWidth": 1,
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "400",
             "zIndex": 1
           }
@@ -1998,12 +2017,12 @@
           },
           "anchor": "top-left",
           "style": {
-            "backgroundColor": "rgba(6, 9, 16, 0.72)",
-            "color": "#ff3147",
-            "borderColor": "#ff3147",
-            "borderWidth": 2,
-            "borderRadius": 0,
-            "fontSize": 12,
+            "backgroundColor": "rgba(9, 13, 24, 0.56)",
+            "color": "#ff4d63",
+            "borderColor": "#ff4d63",
+            "borderWidth": 1,
+            "borderRadius": 2,
+            "fontSize": 16,
             "fontWeight": "400",
             "zIndex": 1
           }
@@ -2022,11 +2041,11 @@
           "style": {
             "backgroundColor": "transparent",
             "color": "#94a3b8",
-            "fontSize": 13,
+            "fontSize": 16,
             "fontWeight": "400",
             "borderWidth": 0,
             "borderColor": "transparent",
-            "textShadow": "2px 2px 0 #000",
+            "textShadow": "1px 1px 0 rgba(0, 0, 0, 0.55)",
             "zIndex": 1
           }
         }

@@ -113,18 +113,21 @@ export default class FPS3DStrategy {
         const game = this._game;
         // Prefer physics controller position (accurate ground pos) over camera
         const body = game?.fpsController?._body;
-        if (body) return { x: body.position.x, y: body.position.y, z: body.position.z };
+        const rawBody = body?.body || body;
+        if (rawBody?.position) return { x: rawBody.position.x, y: rawBody.position.y, z: rawBody.position.z };
         const pos = game?.fpsCamera?.getPosition?.();
         return pos ?? { x: 0, y: 0, z: 0 };
     }
 
     /** Override player spawn (e.g. checkpoint restore). */
     setSpawnPoint(pos) {
+        if (!pos) return;
         const game = this._game;
         game.fpsCamera?.setPosition?.(pos.x, pos.y, pos.z);
-        // Also teleport physics body to keep controller in sync
+        // Also teleport physics body to keep controller in sync (supports CannonBody wrapper or raw CANNON.Body)
         const body = game?.fpsController?._body;
-        if (body) body.position.set(pos.x, pos.y, pos.z);
+        const rawBody = body?.body || body;
+        if (rawBody?.position?.set) rawBody.position.set(pos.x, pos.y, pos.z);
     }
 
     /**

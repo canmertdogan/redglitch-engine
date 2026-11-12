@@ -98,6 +98,7 @@ const UIRenderer = class UIRenderer {
         container.className = 'ui-element-wrapper';
         container.style.position = 'absolute';
         container.style.boxSizing = 'border-box';
+        container.style.fontFamily = "'VT323', monospace";
         
         // Handle Rect using unified anchor solver
         const baseRect = data.rect || { x: data.x || 0, y: data.y || 0, w: data.w || 100, h: data.h || 40 };
@@ -186,9 +187,9 @@ const UIRenderer = class UIRenderer {
         else if (data.type === 'bar') {
             inner = document.createElement('div');
             inner.className = 'bar-container';
-            inner.style.background = '#0b0d14'; 
-            inner.style.border = '2px solid #000'; 
-            inner.style.boxShadow = 'inset 2px 2px 0 rgba(0,0,0,0.55), 3px 3px 0 rgba(0,0,0,0.6)';
+            inner.style.background = 'rgba(10, 15, 26, 0.84)'; 
+            inner.style.border = '1px solid rgba(148, 163, 184, 0.38)'; 
+            inner.style.boxShadow = 'inset 1px 1px 0 rgba(0,0,0,0.40), 2px 2px 0 rgba(0,0,0,0.28)';
             inner.style.position = 'relative';
             inner.style.overflow = 'hidden';
             inner.style.boxSizing = 'border-box';
@@ -257,10 +258,10 @@ const UIRenderer = class UIRenderer {
             inner.style.display = 'flex';
             inner.style.alignItems = 'center';
             inner.style.justifyContent = 'center';
-            inner.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.52))';
-            inner.style.border = '2px solid rgba(255,204,0,0.45)';
-            inner.style.boxShadow = 'inset 0 0 0 2px rgba(0,0,0,0.55), 3px 3px 0 rgba(0,0,0,0.65)';
-            inner.style.color = '#ffd36a';
+            inner.style.background = 'rgba(15, 22, 36, 0.72)';
+            inner.style.border = '1px solid rgba(255, 213, 115, 0.45)';
+            inner.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.10), 2px 2px 0 rgba(0,0,0,0.32)';
+            inner.style.color = '#ffd573';
             inner.style.fontWeight = '400';
             inner.style.boxSizing = 'border-box';
             this.applyStyle(inner, s);
@@ -268,8 +269,8 @@ const UIRenderer = class UIRenderer {
             const keyCap = document.createElement('span');
             keyCap.className = 'slot-key';
             keyCap.textContent = this.interpolate(data.text || '', context);
-            const capSize = Math.max(10, Number(s.fontSize || 11));
-            keyCap.style.cssText = `position:absolute;top:2px;left:4px;font-size:${capSize}px;line-height:1;font-weight:${s.fontWeight || '400'};text-shadow:1px 1px 0 #000;pointer-events:none;`;
+            const capSize = Math.max(12, Number(s.fontSize || 14));
+            keyCap.style.cssText = `position:absolute;top:2px;left:4px;font-size:${capSize}px;line-height:1;font-weight:${s.fontWeight || '400'};text-shadow:1px 1px 0 rgba(0,0,0,0.65);pointer-events:none;`;
             inner.appendChild(keyCap);
         }
 

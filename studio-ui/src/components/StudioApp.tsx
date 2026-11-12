@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStudio } from '../hooks/useStudio';
 import { 
     Atom, Box, Code, Cpu, Database, Film, Flag, Folder, Gamepad, Globe, 
-    Hammer, Image as ImageIcon, Layout, LifeBuoy, List, MessageSquare, 
+    Hammer, Image as ImageIcon, Layers, Layout, LifeBuoy, List, Map as MapIcon, MessageSquare, 
     Music, Play, Rocket, Save, Scroll, Settings, Skull, Terminal, 
-    Trash2, User, UserPlus, Zap, X, Minus, Square, Columns, Maximize2,
+    Trash2, Trophy, User, UserPlus, Zap, X, Minus, Square, Columns, Maximize2,
     HardDrive, Activity, ChevronRight, ChevronDown, Clock, Search,
     Loader2, Monitor
 } from 'lucide-react';
@@ -12,8 +12,9 @@ import Toast, { ToastHandle } from './shared/Toast';
 
 // Icon Map for serializable state handling
 const IconMap: Record<string, any> = {
-    Rocket, Activity, Code, ImageIcon, UserPlus, Skull, Scroll, 
-    Flag, MessageSquare, Music, Zap, Box, Folder, Layout, Settings, Monitor, Film, Terminal, Play, Cpu
+    Rocket, Activity, Code, ImageIcon, UserPlus, Skull, Scroll, User,
+    Flag, MessageSquare, Music, Zap, Box, Folder, Layout, Settings, Monitor, Film, Terminal, Play, Cpu,
+    Globe, Gamepad, MapIcon, Layers, Trophy
 };
 
 interface Tool {
@@ -52,24 +53,47 @@ const BUILD_TARGETS = [
 ] as const;
 
 const STUDIO_TOOLS: Tool[] = [
+    // SYSTEM
     { id: 'dashboard', category: 'SYSTEM', title: 'Launcher', iconName: 'Rocket', src: '../dashboard.html', w: 900, h: 700, betaStatus: 'supported' },
     { id: 'project_dashboard', category: 'SYSTEM', title: 'Command Center', iconName: 'Activity', src: '../project_dashboard.html', w: 1000, h: 600, betaStatus: 'supported' },
+    { id: 'loc', category: 'SYSTEM', title: 'Localization', iconName: 'Globe', src: '../localization_editor.html', w: 900, h: 600, betaStatus: 'supported' },
+    { id: 'input', category: 'SYSTEM', title: 'Input Map', iconName: 'Gamepad', src: '../input_editor.html', w: 600, h: 600, betaStatus: 'supported' },
     { id: 'console', category: 'SYSTEM', title: 'System Logs', iconName: 'Terminal', src: '../console.html', w: 800, h: 500, betaStatus: 'supported' },
-    { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', iconName: 'Code', src: 'script_editor.html', w: 1000, h: 700 },
-    { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', iconName: 'ImageIcon', src: 'pixel_editor.html', w: 900, h: 650 },
+
+    // WORLD ARCHITECT
+    { id: 'editor', category: 'WORLD ARCHITECT', title: 'Level Editor', iconName: 'MapIcon', src: '../editor.html', w: 1000, h: 700, betaStatus: 'supported' },
+    { id: 'studio_3d', category: 'WORLD ARCHITECT', title: '3D Studio', iconName: 'Box', src: '../editor3d.html', w: 1400, h: 900, betaStatus: 'supported' },
+    { id: 'iso_studio', category: 'WORLD ARCHITECT', title: 'IsoPixel Studio', iconName: 'Layers', src: '../iso_editor.html', w: 1000, h: 700, betaStatus: 'supported' },
+    { id: 'platformer_studio', category: 'WORLD ARCHITECT', title: 'Platformer Studio', iconName: 'Play', src: '../platformer_editor.html', w: 1200, h: 800, betaStatus: 'supported' },
+    { id: 'background', category: 'WORLD ARCHITECT', title: 'Backgrounds', iconName: 'ImageIcon', src: '../background_editor.html', w: 900, h: 600, betaStatus: 'supported' },
+    { id: 'campaign', category: 'WORLD ARCHITECT', title: 'Campaign Flow', iconName: 'Flag', src: '../campaign_editor.html', w: 1100, h: 750, betaStatus: 'supported' },
+
+    // ENTITIES
+    { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', iconName: 'Box', src: 'prefab_editor.html', w: 800, h: 600 },
     { id: 'npc', category: 'ENTITIES', title: 'NPC Editor', iconName: 'UserPlus', src: 'npc_editor.html', w: 700, h: 500 },
     { id: 'enemy', category: 'ENTITIES', title: 'Enemy Editor', iconName: 'Skull', src: 'enemy_editor.html', w: 700, h: 500 },
     { id: 'item', category: 'ENTITIES', title: 'Item Database', iconName: 'Scroll', src: 'item_editor.html', w: 700, h: 500 },
-    { id: 'prefab', category: 'ENTITIES', title: 'Prefab Builder', iconName: 'Box', src: '../studio-dist/prefab_editor.html', w: 800, h: 600 },
+    { id: 'character', category: 'ENTITIES', title: 'Player Profiles', iconName: 'User', src: '../character_editor.html', w: 700, h: 500 },
+    { id: 'skill', category: 'ENTITIES', title: 'Skills', iconName: 'Zap', src: '../skill_editor.html', w: 700, h: 500 },
+    { id: 'achievements', category: 'ENTITIES', title: 'Trophies', iconName: 'Trophy', src: '../achievements_editor.html', w: 700, h: 500 },
+
+    // LOGIC & AI
+    { id: 'script', category: 'LOGIC & AI', title: 'Script Editor', iconName: 'Code', src: 'script_editor.html', w: 1000, h: 700 },
+    { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700, betaStatus: 'experimental' },
+    { id: 'behavior', category: 'LOGIC & AI', title: 'AI Brains', iconName: 'Cpu', src: '../behavior_editor.html', w: 900, h: 600, betaStatus: 'experimental' },
     { id: 'quests', category: 'LOGIC & AI', title: 'Quest Designer', iconName: 'Flag', src: 'quest_editor.html', w: 900, h: 600, betaStatus: 'experimental' },
     { id: 'dialogue', category: 'LOGIC & AI', title: 'Dialogues', iconName: 'MessageSquare', src: 'dialogue_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
-    { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', iconName: 'Film', src: '../studio-dist/interactive_cutscene_editor.html', w: 1200, h: 800, betaStatus: 'experimental' },
-    { id: 'behavior', category: 'LOGIC & AI', title: 'AI Brains', iconName: 'Cpu', src: '../behavior_editor.html', w: 900, h: 600, betaStatus: 'experimental' },
+    { id: 'interactive_cutscene', category: 'LOGIC & AI', title: 'Cutscene Studio', iconName: 'Film', src: 'interactive_cutscene_editor.html', w: 1200, h: 800, betaStatus: 'experimental' },
+
+    // ASSETS
     { id: 'daw', category: 'ASSETS', title: 'Audio Studio', iconName: 'Music', src: 'daw_editor.html', w: 800, h: 500, betaStatus: 'experimental' },
+    { id: 'pixel', category: 'ASSETS', title: 'Pixel Art', iconName: 'ImageIcon', src: 'pixel_editor.html', w: 900, h: 650 },
     { id: 'fxpro', category: 'ASSETS', title: 'FX Master', iconName: 'Zap', src: 'fx_editor.html', w: 900, h: 650 },
     { id: 'shader', category: 'ASSETS', title: 'Shader Lab', iconName: 'Box', src: 'shader_editor.html', w: 1200, h: 800, betaStatus: 'optional' },
     { id: 'assets', category: 'ASSETS', title: 'File Manager', iconName: 'Folder', src: 'asset_manager.html', w: 900, h: 600 },
-    { id: 'algorithm', category: 'LOGIC & AI', title: 'Node Logic', iconName: 'Layout', src: 'algorithm_editor.html', w: 1000, h: 700, betaStatus: 'experimental' },
+
+    // INTERFACE
+    { id: 'menu', category: 'INTERFACE', title: 'Interface (UI)', iconName: 'Layout', src: '../menu_editor.html', w: 1280, h: 760 },
     { id: 'ui_designer', category: 'INTERFACE', title: 'UI Designer', iconName: 'Monitor', src: 'ui_designer.html', w: 1200, h: 800, betaStatus: 'experimental' }
 ];
 

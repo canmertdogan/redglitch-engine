@@ -69,7 +69,11 @@ const Background: React.FC<BackgroundProps> = ({ enabled }) => {
 
     useEffect(() => {
         const container = containerRef.current;
-        if (!enabled || !container) return;
+        if (!enabled) {
+            if (container) container.style.background = STATIC_BG;
+            return;
+        }
+        if (!container) return;
 
         const canvas = document.createElement('canvas');
         canvas.style.cssText = 'width:100%;height:100%;display:block;';
@@ -106,6 +110,17 @@ const Background: React.FC<BackgroundProps> = ({ enabled }) => {
 
         container.appendChild(canvas);
 
+        let frame = 0;
+        let last = 0;
+
+        const onContextLost = (e: Event) => {
+            e.preventDefault();
+            cancelAnimationFrame(frame);
+            if (canvas.parentNode === container) container.removeChild(canvas);
+            container.style.background = STATIC_BG;
+        };
+        canvas.addEventListener('webglcontextlost', onContextLost);
+
         const resize = () => {
             canvas.width = Math.max(1, Math.floor(window.innerWidth * RENDER_SCALE));
             canvas.height = Math.max(1, Math.floor(window.innerHeight * RENDER_SCALE));
@@ -115,8 +130,6 @@ const Background: React.FC<BackgroundProps> = ({ enabled }) => {
         resize();
         window.addEventListener('resize', resize);
 
-        let frame = 0;
-        let last = 0;
         const animate = (time: number) => {
             frame = requestAnimationFrame(animate);
             if (document.hidden || time - last < FRAME_MS) return;
@@ -128,6 +141,7 @@ const Background: React.FC<BackgroundProps> = ({ enabled }) => {
 
         return () => {
             cancelAnimationFrame(frame);
+            canvas.removeEventListener('webglcontextlost', onContextLost);
             window.removeEventListener('resize', resize);
             if (canvas.parentNode === container) container.removeChild(canvas);
             gl.deleteBuffer(buf);

@@ -20,6 +20,7 @@ const BLUEPRINTS = [
 const Dashboard: React.FC = () => {
     const [activeView, setActiveView] = useState('projects');
     const [projects, setProjects] = useState<Project[]>([]);
+    const [currentProject, setCurrentProject] = useState<string | null>(null);
     const [stats, setStats] = useState({ cpu: 0, mem: 0 });
     const [perfMode, setPerfMode] = useState(localStorage.getItem('redglitch_perf_mode') === 'true');
     const [username, setUsername] = useState(localStorage.getItem('redglitch_username') || 'Developer');
@@ -30,16 +31,42 @@ const Dashboard: React.FC = () => {
     const [isCreating, setIsCreating] = useState(false);
     const toastRef = useRef<ToastHandle>(null);
 
-    useEffect(() => {
-        loadProjects();
-        const statsTimer = setInterval(loadStats, 3000);
-        return () => clearInterval(statsTimer);
-    }, []);
+    const loadCurrentProject = async () => {
+        try {
+            const res = await fetch('/api/projects/current');
+            if (res.ok) {
+                const data = await res.json();
+                const projName = data?.name || data?.currentProject || (typeof data === 'string' ? data : null);
+                if (projName) {
+                    setCurrentProject(projName);
+                }
+            }
+        } catch {
+            /* best-effort */
+        }
+    };
 
     const loadProjects = async () => {
         try {
             const res = await fetch('/api/projects');
-            if (res.ok) setProjects(await res.json());
+            if (res.ok) {
+                const raw = await res.json();
+                const list = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.projects) ? raw.projects : []);
+                const normalized: Project[] = list.map((item: any) => {
+                    if (typeof item === 'string') {
+                        return { name: item, path: `projects/${item}`, engineType: 'rpg-topdown' };
+                    }
+                    const name = String(item?.name || 'Untitled');
+                    return {
+                        name,
+                        path: String(item?.path || `projects/${name}`),
+                        engineType: String(item?.engineType || 'rpg-topdown'),
+                        lastModified: item?.lastModified || item?.created
+                    };
+                });
+                setProjects(normalized);
+            }
+            await loadCurrentProject();
         } catch (e) { console.error("Failed to load projects", e); }
     };
 
@@ -48,7 +75,9 @@ const Dashboard: React.FC = () => {
             const res = await fetch('/api/system/stats');
             if (res.ok) {
                 const data = await res.json();
-                setStats({ cpu: Math.round(data.cpu), mem: data.mem });
+                const cpuVal = (typeof data?.cpu === 'number' && !isNaN(data.cpu)) ? Math.round(data.cpu) : 0;
+                const memVal = (typeof data?.mem === 'number' && !isNaN(data.mem)) ? data.mem : (data?.memory ?? 0);
+                setStats({ cpu: cpuVal, mem: memVal });
             }
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
@@ -69,12 +98,26 @@ const Dashboard: React.FC = () => {
                 toastRef.current?.show(errMsg, 'error');
                 return;
             }
-            (window.top || window).location.href = '../tools.html';
+            setCurrentProject(name);
+            try {
+                if (typeof window !== 'undefined') {
+                    const targetWin = window.top || window;
+                    targetWin.location.href = '../tools.html';
+                }
+            } catch (navErr) {
+                console.warn("[studio-ui] navigation error (iframe sandbox)", navErr);
+            }
         } catch (err: any) {
             console.warn("[studio-ui] launchProject failed", err);
             toastRef.current?.show(err?.message || 'FAILED TO LAUNCH PROJECT', 'error');
         }
     };
+
+    useEffect(() => {
+        void loadProjects();
+        const statsTimer = setInterval(loadStats, 3000);
+        return () => clearInterval(statsTimer);
+    }, []);
 
     const revealProject = async (name: string) => {
         try {
@@ -219,34 +262,64 @@ const Dashboard: React.FC = () => {
                 <div style={{ fontSize: '18px', marginTop: '15px', letterSpacing: '2px', fontWeight: 'bold', color: 'var(--accent)' }}>FORGE NEW PROJECT</div>
             </div>
 
-            {projects.map(p => (
-                <div key={p.name} className="project-card premium" onClick={() => launchProject(p.name)}>
-                    <div className="card-glow"></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', position: 'relative', zIndex: 2 }}>
-                        <div className="engine-badge">
-                             <Rocket size={14} color="var(--accent)" />
-                             <span>{p.engineType?.toUpperCase() || 'RPG'}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button className="tool-btn small" title="Reveal in Folder" onClick={(e) => { e.stopPropagation(); revealProject(p.name); }}><FolderOpen size={12} /></button>
-                            <button className="tool-btn small danger" title="Delete Project" onClick={(e) => { e.stopPropagation(); deleteProject(p.name); }}><Trash2 size={12} /></button>
-                        </div>
-                    </div>
-                    
-                    <div className="project-info" style={{ position: 'relative', zIndex: 2, flexGrow: 1 }}>
-                        <div className="project-title">{p.name.toUpperCase()}</div>
-                        <div className="project-path">{p.path}</div>
-                    </div>
-
-                    <div className="project-meta" style={{ position: 'relative', zIndex: 2 }}>
-                        <div className="meta-item">
-                            <Clock size={12} />
-                            <span>{p.lastModified && !isNaN(Date.parse(p.lastModified)) ? new Date(p.lastModified).toLocaleDateString() : '—'}</span>
-                        </div>
-                        <div className="launch-tag">READY TO FORGE</div>
-                    </div>
+            {projects.length === 0 && (
+                <div style={{
+                    gridColumn: '1 / -1',
+                    padding: '30px',
+                    textAlign: 'center',
+                    color: '#888',
+                    border: '1px solid #1f2b42',
+                    background: 'rgba(0,0,0,0.3)',
+                    borderRadius: '4px'
+                }}>
+                    <div style={{ fontSize: '16px', color: 'var(--accent)', fontWeight: 'bold', marginBottom: '8px' }}>NO PROJECTS FOUND</div>
+                    <div>No projects registered in studio workspace. Click 'FORGE NEW PROJECT' to get started.</div>
                 </div>
-            ))}
+            )}
+
+            {projects.map(p => {
+                const isActive = Boolean(currentProject && currentProject === p.name);
+                return (
+                    <div
+                        key={p.name}
+                        className={`project-card premium ${isActive ? 'active' : ''}`}
+                        onClick={() => launchProject(p.name)}
+                        style={isActive ? { borderColor: 'var(--accent)', boxShadow: '0 0 15px rgba(255, 0, 0, 0.25)' } : undefined}
+                    >
+                        <div className="card-glow"></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', position: 'relative', zIndex: 2 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div className="engine-badge">
+                                     <Rocket size={14} color="var(--accent)" />
+                                     <span>{p.engineType?.toUpperCase() || 'RPG'}</span>
+                                </div>
+                                {isActive && (
+                                    <div className="badge active-badge" style={{ background: '#00cc66', color: '#000', fontWeight: 'bold', fontSize: '10px', padding: '2px 6px', borderRadius: '4px' }}>
+                                        ACTIVE
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button className="tool-btn small" title="Reveal in Folder" onClick={(e) => { e.stopPropagation(); revealProject(p.name); }}><FolderOpen size={12} /></button>
+                                <button className="tool-btn small danger" title="Delete Project" onClick={(e) => { e.stopPropagation(); deleteProject(p.name); }}><Trash2 size={12} /></button>
+                            </div>
+                        </div>
+                        
+                        <div className="project-info" style={{ position: 'relative', zIndex: 2, flexGrow: 1 }}>
+                            <div className="project-title">{p.name ? p.name.toUpperCase() : 'UNTITLED'}</div>
+                            <div className="project-path">{p.path}</div>
+                        </div>
+
+                        <div className="project-meta" style={{ position: 'relative', zIndex: 2 }}>
+                            <div className="meta-item">
+                                <Clock size={12} />
+                                <span>{p.lastModified && !isNaN(Date.parse(p.lastModified)) ? new Date(p.lastModified).toLocaleDateString() : '—'}</span>
+                            </div>
+                            <div className="launch-tag">{isActive ? 'CURRENT PROJECT' : 'READY TO FORGE'}</div>
+                        </div>
+                    </div>
+                );
+            })}
         </div>
     );
 

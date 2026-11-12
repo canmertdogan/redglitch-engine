@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
+import Toast, { ToastHandle } from './shared/Toast';
 
 interface FXConfig {
     id: string;
@@ -15,10 +16,15 @@ interface FXConfig {
     duration: number;
     sprite: string;
     blend: string;
+    emitterShape: 'point' | 'circle' | 'box' | 'line';
+    emitterRadius: number;
+    emitterWidth: number;
+    emitterHeight: number;
+    angle: number;
     life: { min: number; max: number };
     speed: { min: number; max: number };
     size: { start: number; end: number };
-    color: { start: string; end: string };
+    color: { start: string; mid?: string; end: string };
     physics: {
         gravity: number;
         drag: number;
@@ -37,10 +43,15 @@ function makeDefaultFX(name = 'new_effect'): FXConfig {
         duration: 2.0,
         sprite: '',
         blend: 'lighter',
+        emitterShape: 'point',
+        emitterRadius: 30,
+        emitterWidth: 60,
+        emitterHeight: 40,
+        angle: -90,
         life: { min: 0.5, max: 1.0 },
         speed: { min: 100, max: 200 },
         size: { start: 5, end: 0 },
-        color: { start: '#ff0000', end: '#e74c3c' },
+        color: { start: '#ff3300', mid: '#ffaa00', end: '#555555' },
         physics: { gravity: 500, drag: 0.98, spread: 45 }
     };
 }
@@ -49,6 +60,8 @@ function normalizeFX(raw: any, fallbackName = 'new_effect'): FXConfig {
     const def = makeDefaultFX(fallbackName);
     if (!raw || typeof raw !== 'object') return def;
     const mode = VALID_MODES.has(raw.mode) ? raw.mode : def.mode;
+    const validShapes = new Set(['point', 'circle', 'box', 'line']);
+    const emitterShape = validShapes.has(raw.emitterShape) ? raw.emitterShape : def.emitterShape;
     return {
         id: raw.id || def.id,
         name: typeof raw.name === 'string' && raw.name.trim() ? raw.name : fallbackName,
@@ -57,6 +70,11 @@ function normalizeFX(raw: any, fallbackName = 'new_effect'): FXConfig {
         duration: Number.isFinite(Number(raw.duration)) ? Number(raw.duration) : def.duration,
         sprite: typeof raw.sprite === 'string' ? raw.sprite : def.sprite,
         blend: typeof raw.blend === 'string' ? raw.blend : def.blend,
+        emitterShape,
+        emitterRadius: Number.isFinite(Number(raw.emitterRadius)) ? Number(raw.emitterRadius) : def.emitterRadius,
+        emitterWidth: Number.isFinite(Number(raw.emitterWidth)) ? Number(raw.emitterWidth) : def.emitterWidth,
+        emitterHeight: Number.isFinite(Number(raw.emitterHeight)) ? Number(raw.emitterHeight) : def.emitterHeight,
+        angle: Number.isFinite(Number(raw.angle)) ? Number(raw.angle) : def.angle,
         life: {
             min: Number.isFinite(Number(raw.life?.min)) ? Number(raw.life.min) : def.life.min,
             max: Number.isFinite(Number(raw.life?.max)) ? Number(raw.life.max) : def.life.max,
@@ -71,6 +89,7 @@ function normalizeFX(raw: any, fallbackName = 'new_effect'): FXConfig {
         },
         color: {
             start: typeof raw.color?.start === 'string' ? raw.color.start : def.color.start,
+            mid: typeof raw.color?.mid === 'string' ? raw.color.mid : def.color.mid,
             end: typeof raw.color?.end === 'string' ? raw.color.end : def.color.end,
         },
         physics: {
@@ -79,6 +98,31 @@ function normalizeFX(raw: any, fallbackName = 'new_effect'): FXConfig {
             spread: Number.isFinite(Number(raw.physics?.spread)) ? Number(raw.physics.spread) : def.physics.spread,
         },
     };
+}
+
+function interpolateColor(hex1: string, hex2: string, t: number): string {
+    const parseHex = (h: string) => {
+        const clean = (h || '#ffffff').replace('#', '');
+        if (clean.length === 3) {
+            return [
+                parseInt(clean[0] + clean[0], 16),
+                parseInt(clean[1] + clean[1], 16),
+                parseInt(clean[2] + clean[2], 16)
+            ];
+        }
+        return [
+            parseInt(clean.slice(0, 2), 16) || 0,
+            parseInt(clean.slice(2, 4), 16) || 0,
+            parseInt(clean.slice(4, 6), 16) || 0
+        ];
+    };
+    const [r1, g1, b1] = parseHex(hex1);
+    const [r2, g2, b2] = parseHex(hex2);
+    const clampedT = Math.max(0, Math.min(1, t));
+    const r = Math.round(r1 + (r2 - r1) * clampedT);
+    const g = Math.round(g1 + (g2 - g1) * clampedT);
+    const b = Math.round(b1 + (b2 - b1) * clampedT);
+    return `rgb(${r},${g},${b})`;
 }
 
 class Particle {
@@ -91,21 +135,43 @@ class Particle {
     active: boolean = false;
 
     reset(canvasW: number, canvasH: number, config: FXConfig) {
-        this.x = canvasW / 2;
-        this.y = canvasH / 2;
-        const angle = (Math.random() * config.physics.spread - config.physics.spread / 2 - 90) * (Math.PI / 180);
+        const cx = canvasW / 2;
+        const cy = canvasH / 2;
+        if (config.emitterShape === 'circle') {
+            const r = Math.sqrt(Math.random()) * (config.emitterRadius || 30);
+            const theta = Math.random() * Math.PI * 2;
+            this.x = cx + r * Math.cos(theta);
+            this.y = cy + r * Math.sin(theta);
+        } else if (config.emitterShape === 'box') {
+            const w = config.emitterWidth || 60;
+            const h = config.emitterHeight || 40;
+            this.x = cx + (Math.random() - 0.5) * w;
+            this.y = cy + (Math.random() - 0.5) * h;
+        } else if (config.emitterShape === 'line') {
+            const len = config.emitterWidth || 60;
+            this.x = cx + (Math.random() - 0.5) * len;
+            this.y = cy;
+        } else { // 'point'
+            this.x = cx;
+            this.y = cy;
+        }
+
+        const baseAngle = Number.isFinite(config.angle) ? config.angle : -90;
+        const angleRad = (baseAngle + (Math.random() - 0.5) * config.physics.spread) * (Math.PI / 180);
         const speed = config.speed.min + Math.random() * (config.speed.max - config.speed.min);
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
-        this.lifeMax = config.life.min + Math.random() * (config.life.max - config.life.min);
+        this.vx = Math.cos(angleRad) * speed;
+        this.vy = Math.sin(angleRad) * speed;
+        this.lifeMax = Math.max(0.01, config.life.min + Math.random() * (config.life.max - config.life.min));
         this.life = this.lifeMax;
         this.active = true;
     }
 
     update(dt: number, config: FXConfig) {
         if (!this.active) return;
-        this.vx *= config.physics.drag;
-        this.vy *= config.physics.drag;
+        const dragClamped = Math.max(0, Math.min(1, config.physics.drag));
+        const damping = Math.pow(dragClamped, dt * 60);
+        this.vx *= damping;
+        this.vy *= damping;
         this.vy += config.physics.gravity * dt;
         this.x += this.vx * dt;
         this.y += this.vy * dt;
@@ -118,8 +184,19 @@ class Particle {
         const progress = 1 - (this.life / this.lifeMax);
         const size = config.size.start + (config.size.end - config.size.start) * progress;
         
-        ctx.fillStyle = progress < 0.5 ? config.color.start : config.color.end;
-        ctx.globalAlpha = 1 - progress;
+        const c = config.color;
+        let colorStr: string;
+        if (c.mid) {
+            if (progress < 0.5) {
+                colorStr = interpolateColor(c.start, c.mid, progress * 2);
+            } else {
+                colorStr = interpolateColor(c.mid, c.end, (progress - 0.5) * 2);
+            }
+        } else {
+            colorStr = interpolateColor(c.start, c.end, progress);
+        }
+        ctx.fillStyle = colorStr;
+        ctx.globalAlpha = Math.max(0, Math.min(1, 1 - progress));
         ctx.beginPath();
         ctx.arc(this.x, this.y, Math.max(0.1, size), 0, Math.PI * 2);
         ctx.fill();
@@ -134,6 +211,7 @@ const FXEditor: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const particlesRef = useRef<Particle[]>([]);
+    const toastRef = useRef<ToastHandle>(null);
 
     useEffect(() => {
         if (isReady) {
@@ -169,7 +247,7 @@ const FXEditor: React.FC = () => {
         if (!config) return;
         const safeName = (config.name || '').trim().replace(/[^a-zA-Z0-9_-]+/g, '_');
         if (!safeName) {
-            if (interactive) alert('INVALID EFFECT NAME');
+            if (interactive) toastRef.current?.show('INVALID EFFECT NAME', 'error');
             return;
         }
         const payload = { ...config, name: safeName };
@@ -184,14 +262,14 @@ const FXEditor: React.FC = () => {
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                if (interactive) alert(err?.error || `SAVE FAILED (${res.status})`);
+                if (interactive) toastRef.current?.show(err?.error || `SAVE FAILED (${res.status})`, 'error');
                 return;
             }
             setEffects(prev => prev.map((fx, i) => (i === currentIndex ? payload : fx)));
             if (eventBus) eventBus.emit('fx:updated', { id: payload.id, config: payload });
-            if (interactive) alert('FX SAVED');
+            if (interactive) toastRef.current?.show('FX SAVED', 'success');
         } catch (e) {
-            if (interactive) alert('SAVE FAILED');
+            if (interactive) toastRef.current?.show('SAVE FAILED', 'error');
         } finally {
             setIsSaving(false);
         }
@@ -200,18 +278,18 @@ const FXEditor: React.FC = () => {
     const deleteCurrentFX = async () => {
         const config = effects[currentIndex];
         if (!config) return;
-        if (!confirm(`Delete effect "${config.name}"?`)) return;
         try {
             const res = await fetch(`/api/fx/${encodeURIComponent(config.name)}`, { method: 'DELETE' });
             if (!res.ok && res.status !== 404) {
-                alert(`DELETE FAILED (${res.status})`);
+                toastRef.current?.show(`DELETE FAILED (${res.status})`, 'error');
                 return;
             }
             const next = effects.filter((_, i) => i !== currentIndex);
             setEffects(next.length > 0 ? next : [getDefaultFX()]);
             setCurrentIndex(Math.max(0, currentIndex - 1));
+            toastRef.current?.show('FX DELETED', 'info');
         } catch {
-            alert('DELETE FAILED');
+            toastRef.current?.show('DELETE FAILED', 'error');
         }
     };
 
@@ -247,7 +325,7 @@ const FXEditor: React.FC = () => {
         let frame: number;
 
         const loop = (time: number) => {
-            const dt = (time - lastTime) / 1000;
+            const dt = Math.min((time - lastTime) / 1000, 0.1);
             lastTime = time;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -256,14 +334,26 @@ const FXEditor: React.FC = () => {
             // Update & Spawn
             const config = effects[currentIndex];
             if (config) {
-                // Auto-spawn for loop/stream
-                if (config.mode !== 'burst' && particlesRef.current.filter(p => p.active).length < config.count) {
-                    const inactive = particlesRef.current.find(p => !p.active);
-                    if (inactive) inactive.reset(canvas.width, canvas.height, config);
-                    else {
-                        const p = new Particle();
-                        p.reset(canvas.width, canvas.height, config);
-                        particlesRef.current.push(p);
+                if (config.mode === 'burst') {
+                    if (particlesRef.current.length > 0 && particlesRef.current.every(p => !p.active)) {
+                        setIsPlaying(false);
+                        return;
+                    }
+                } else {
+                    const activeCount = particlesRef.current.filter(p => p.active).length;
+                    if (activeCount < config.count) {
+                        const lifeAvg = Math.max(0.1, (config.life.min + config.life.max) / 2);
+                        const spawnRate = Math.max(1, Math.ceil((config.count / lifeAvg) * dt));
+                        for (let s = 0; s < spawnRate; s++) {
+                            if (particlesRef.current.filter(p => p.active).length >= config.count) break;
+                            const inactive = particlesRef.current.find(p => !p.active);
+                            if (inactive) inactive.reset(canvas.width, canvas.height, config);
+                            else {
+                                const p = new Particle();
+                                p.reset(canvas.width, canvas.height, config);
+                                particlesRef.current.push(p);
+                            }
+                        }
                     }
                 }
 
@@ -367,10 +457,49 @@ const FXEditor: React.FC = () => {
                                         </select>
                                     </div>
                                 </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                    <div>
+                                        <label>Emitter Shape</label>
+                                        <select value={currentFX.emitterShape || 'point'} onChange={(e) => updateFX('emitterShape', e.target.value)}>
+                                            <option value="point">Point</option>
+                                            <option value="circle">Circle / Ring</option>
+                                            <option value="box">Box / Area</option>
+                                            <option value="line">Line</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>Emitter Angle ({currentFX.angle ?? -90}°)</label>
+                                        <input type="range" min="-180" max="180" value={currentFX.angle ?? -90} onChange={(e) => updateFX('angle', parseInt(e.target.value, 10) || -90)} />
+                                    </div>
+                                </div>
+
+                                {currentFX.emitterShape === 'circle' && (
+                                    <div style={{ marginBottom: '15px' }}>
+                                        <label>Emitter Radius ({currentFX.emitterRadius || 30}px)</label>
+                                        <input type="range" min="1" max="120" value={currentFX.emitterRadius || 30} onChange={(e) => updateFX('emitterRadius', parseInt(e.target.value, 10) || 30)} />
+                                    </div>
+                                )}
+
+                                {(currentFX.emitterShape === 'box' || currentFX.emitterShape === 'line') && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: currentFX.emitterShape === 'box' ? '1fr 1fr' : '1fr', gap: '15px', marginBottom: '15px' }}>
+                                        <div>
+                                            <label>Emitter Width ({currentFX.emitterWidth || 60}px)</label>
+                                            <input type="range" min="1" max="240" value={currentFX.emitterWidth || 60} onChange={(e) => updateFX('emitterWidth', parseInt(e.target.value, 10) || 60)} />
+                                        </div>
+                                        {currentFX.emitterShape === 'box' && (
+                                            <div>
+                                                <label>Emitter Height ({currentFX.emitterHeight || 40}px)</label>
+                                                <input type="range" min="1" max="240" value={currentFX.emitterHeight || 40} onChange={(e) => updateFX('emitterHeight', parseInt(e.target.value, 10) || 40)} />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div>
                                         <label>Particle Count ({currentFX.count})</label>
-                                        <input type="range" min="1" max="500" value={currentFX.count} onChange={(e) => updateFX('count', parseInt(e.target.value))} />
+                                        <input type="range" min="1" max="500" value={currentFX.count} onChange={(e) => updateFX('count', parseInt(e.target.value, 10) || 1)} />
                                     </div>
                                     <div>
                                         <label>Blend Mode</label>
@@ -388,21 +517,21 @@ const FXEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div>
                                         <label>Min Speed</label>
-                                        <input type="number" value={currentFX.speed.min} onChange={(e) => updateFX('speed.min', parseInt(e.target.value))} />
+                                        <input type="number" value={currentFX.speed.min} onChange={(e) => updateFX('speed.min', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Max Speed</label>
-                                        <input type="number" value={currentFX.speed.max} onChange={(e) => updateFX('speed.max', parseInt(e.target.value))} />
+                                        <input type="number" value={currentFX.speed.max} onChange={(e) => updateFX('speed.max', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                     <div>
                                         <label>Start Size</label>
-                                        <input type="number" value={currentFX.size.start} onChange={(e) => updateFX('size.start', parseInt(e.target.value))} />
+                                        <input type="number" value={currentFX.size.start} onChange={(e) => updateFX('size.start', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>End Size</label>
-                                        <input type="number" value={currentFX.size.end} onChange={(e) => updateFX('size.end', parseInt(e.target.value))} />
+                                        <input type="number" value={currentFX.size.end} onChange={(e) => updateFX('size.end', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                 </div>
                             </FormSection>
@@ -411,29 +540,34 @@ const FXEditor: React.FC = () => {
                         <div>
                             <FormSection title="Physics & Color">
                                 <label>Spread Angle ({currentFX.physics.spread}°)</label>
-                                <input type="range" min="0" max="360" value={currentFX.physics.spread} onChange={(e) => updateFX('physics.spread', parseInt(e.target.value))} />
+                                <input type="range" min="0" max="360" value={currentFX.physics.spread} onChange={(e) => updateFX('physics.spread', parseInt(e.target.value, 10) || 0)} />
                                 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
                                     <div>
                                         <label>Gravity</label>
-                                        <input type="number" value={currentFX.physics.gravity} onChange={(e) => updateFX('physics.gravity', parseInt(e.target.value))} />
+                                        <input type="number" value={currentFX.physics.gravity} onChange={(e) => updateFX('physics.gravity', parseInt(e.target.value, 10) || 0)} />
                                     </div>
                                     <div>
                                         <label>Air Drag</label>
-                                        <input type="number" step="0.01" value={currentFX.physics.drag} onChange={(e) => updateFX('physics.drag', parseFloat(e.target.value))} />
+                                        <input type="number" step="0.01" value={currentFX.physics.drag} onChange={(e) => updateFX('physics.drag', parseFloat(e.target.value) || 0)} />
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '15px' }}>
                                     <div>
                                         <label>Start Color</label>
                                         <input type="color" value={currentFX.color.start} onChange={(e) => updateFX('color.start', e.target.value)} style={{ height: '40px' }} />
+                                    </div>
+                                    <div>
+                                        <label>Mid Color</label>
+                                        <input type="color" value={currentFX.color.mid || '#ffaa00'} onChange={(e) => updateFX('color.mid', e.target.value)} style={{ height: '40px' }} />
                                     </div>
                                     <div>
                                         <label>End Color</label>
                                         <input type="color" value={currentFX.color.end} onChange={(e) => updateFX('color.end', e.target.value)} style={{ height: '40px' }} />
                                     </div>
                                 </div>
+                                <div style={{ marginTop: '8px', height: '12px', borderRadius: '2px', border: '1px solid #333', background: `linear-gradient(to right, ${currentFX.color.start}, ${currentFX.color.mid || currentFX.color.start}, ${currentFX.color.end})` }} />
                             </FormSection>
                         </div>
                     </div>
@@ -456,6 +590,7 @@ const FXEditor: React.FC = () => {
                     </div>
                 </div>
             </div>
+            <Toast ref={toastRef} />
         </div>
     );
 };

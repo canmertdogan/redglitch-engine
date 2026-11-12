@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useStudio } from '../hooks/useStudio';
 import { 
     Film, Play, Pause, Square, Save, Plus, Trash2, 
-    Timeline as TimeIcon, MessageSquare, Music, User, 
+    Timeline as TimeIcon, MessageSquare, Music, User, Camera,
     ChevronRight, ChevronDown, Settings, Sliders, Layers,
     Clock, SkipForward, SkipBack
 } from 'lucide-react';
@@ -137,13 +137,22 @@ const CutsceneEditor: React.FC = () => {
         }
     };
 
+    const normalizeTrackType = (type: any): Track['type'] => {
+        const t = String(type || '').toLowerCase();
+        if (['actor', 'sprite', 'entity', 'character'].includes(t)) return 'actor';
+        if (['audio', 'sound', 'music', 'sfx'].includes(t)) return 'audio';
+        if (['camera', 'cam', 'view'].includes(t)) return 'camera';
+        if (['interaction', 'dialogue', 'event', 'events', 'choice', 'interactive'].includes(t)) return 'interaction';
+        return 'actor';
+    };
+
     const normalizeCutscene = (raw: any): Cutscene => {
         if (!raw || typeof raw !== 'object') return getDefaultCutscene();
         const timeline = raw.timeline || raw;
         const tracks = Array.isArray(timeline.tracks) ? timeline.tracks.map((tr: any, i: number) => ({
             id: tr.id || `t${i+1}`,
             name: tr.name || `Track ${i+1}`,
-            type: (['actor','interaction','audio','camera'].includes(tr.type) ? tr.type : 'actor') as Track['type'],
+            type: normalizeTrackType(tr.type),
             visible: tr.visible !== false,
             keyframes: Array.isArray(tr.keyframes) ? tr.keyframes : [],
         })) : defaultTracks();
@@ -208,6 +217,7 @@ const CutsceneEditor: React.FC = () => {
             if (res.ok) {
                 const updated = cutscenes.map((c, i) => i === currentIndex ? normalizeCutscene(payload) : c);
                 setCutscenes(updated);
+                eventBus?.emit('cutscene:saved', { id: fileStem });
                 if (interactive) alert('Saved: ' + fileStem);
             } else {
                 if (interactive) alert('Save failed: ' + res.status);
@@ -300,6 +310,29 @@ const CutsceneEditor: React.FC = () => {
         } : tr);
         setCutscenes(cutscenes.map((c, i) => i === currentIndex ? { ...c, tracks: updated } : c));
     };
+    const addTrack = (type: Track['type']) => {
+        const cs = cutscenes[currentIndex]; if (!cs) return;
+        const trackId = `track_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
+        const count = cs.tracks.filter(t => t.type === type).length + 1;
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+        const newTrack: Track = {
+            id: trackId,
+            name: `${typeLabel} ${count}`,
+            type,
+            visible: true,
+            keyframes: type === 'actor' ? [{ time: 0, properties: { sprite: 'player', x: 320, y: 180 } }] : []
+        };
+        const updated = [...cs.tracks, newTrack];
+        setCutscenes(cutscenes.map((c, i) => i === currentIndex ? { ...c, tracks: updated } : c));
+        setSelTrack(trackId);
+    };
+    const deleteTrack = (trackId: string) => {
+        const cs = cutscenes[currentIndex]; if (!cs) return;
+        const updated = cs.tracks.filter(t => t.id !== trackId);
+        setCutscenes(cutscenes.map((c, i) => i === currentIndex ? { ...c, tracks: updated } : c));
+        if (selTrack === trackId) setSelTrack(updated[0]?.id || null);
+        if (selectedKeyframe?.trackId === trackId) setSelectedKeyframe(null);
+    };
     const getDefaultCutscene = (): Cutscene => ({
         id: 'cutscene_' + Date.now(),
         name: 'New Cinematic',
@@ -355,7 +388,7 @@ const CutsceneEditor: React.FC = () => {
                 </div>
                 <div style={{ width: '1px', height: '20px', background: '#333' }}></div>
                 <button className="tool-btn" onClick={() => void saveCurrent(true)} title="Save (Ctrl+S)"><Save size={16} /></button>
-                <button className="tool-btn" onClick={() => { setCutscenes([...cutscenes, getDefaultCutscene()]); setSelectedKeyframe(null); }}><Plus size={16} /></button>
+                <button className="tool-btn" onClick={() => { const next = [...cutscenes, getDefaultCutscene()]; setCutscenes(next); setCurrentIndex(next.length - 1); setSelectedKeyframe(null); }} title="New Sequence"><Plus size={16} /></button>
             </div>
 
             <div style={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
@@ -380,25 +413,73 @@ const CutsceneEditor: React.FC = () => {
                 <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     {/* PREVIEW VIEWPORT */}
                     <div style={{ height: '45%', background: '#000', borderBottom: '1px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                        <div style={{ width: '640px', height: '360px', background: '#080808', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                            {/* Interpolated Actor Preview (x/y from keyframes, lerp between) */}
+                        <div style={{ width: '640px', height: '360px', background: '#080808', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                            {/* Multi-Actor Preview + Active Subtitle */}
                             {(() => {
-                                const actorTrack = currentCutscene.tracks.find(tr => tr.type === 'actor');
-                                if (!actorTrack || !actorTrack.keyframes.length) return <div style={{ color: '#444' }}>No actor track</div>;
-                                const kfs = [...actorTrack.keyframes].sort((a, b) => a.time - b.time);
-                                let cur = kfs[0], nxt: any = null;
-                                for (let i = 0; i < kfs.length; i++) { if (kfs[i].time <= currentTime) { cur = kfs[i]; nxt = kfs[i+1] || null; } else break; }
-                                const prog = nxt && nxt.time > cur.time ? Math.min(1, Math.max(0, (currentTime - cur.time) / (nxt.time - cur.time))) : 0;
-                                const cx = cur.properties?.x ?? 320, cy = cur.properties?.y ?? 180;
-                                const nx = nxt?.properties?.x ?? cx, ny = nxt?.properties?.y ?? cy;
-                                const xi = cx + (nx - cx) * prog, yi = cy + (ny - cy) * prog;
-                                const sprite = cur.properties?.sprite || nxt?.properties?.sprite || 'player';
-                                const spriteImg = (sprites as any)?.[sprite];
+                                const visibleActorTracks = currentCutscene.tracks.filter(tr => tr.type === 'actor' && tr.visible !== false);
+                                
+                                const interactionTracks = currentCutscene.tracks.filter(tr => tr.type === 'interaction' && tr.visible !== false);
+                                let activeSubtitle: string | null = null;
+                                for (const tr of interactionTracks) {
+                                    for (const kf of tr.keyframes) {
+                                        const text = kf.properties?.text || kf.properties?.dialogue || kf.data?.text || kf.data?.dialogue;
+                                        const duration = Number(kf.properties?.duration || kf.data?.duration) || 3;
+                                        if (text && currentTime >= kf.time && currentTime <= kf.time + duration) {
+                                            activeSubtitle = String(text);
+                                            break;
+                                        }
+                                    }
+                                    if (activeSubtitle) break;
+                                }
+
                                 return (
-                                    <div style={{ position: 'absolute', left: Math.max(0, Math.min(640-48, xi)), top: Math.max(0, Math.min(360-64, yi)), textAlign: 'center' }}>
-                                        <SpriteCanvasPreview spriteName={sprite} spriteData={spriteImg} size={48} />
-                                        <div style={{ color: '#fff', fontSize: '0.7rem', marginTop: 4 }}>{sprite} @ {currentTime.toFixed(1)}s</div>
-                                    </div>
+                                    <>
+                                        {visibleActorTracks.length === 0 ? (
+                                            <div style={{ color: '#444' }}>No actor track</div>
+                                        ) : (
+                                            visibleActorTracks.map(actorTrack => {
+                                                if (!actorTrack.keyframes.length) return null;
+                                                const kfs = [...actorTrack.keyframes].sort((a, b) => a.time - b.time);
+                                                let cur = kfs[0], nxt: any = null;
+                                                for (let i = 0; i < kfs.length; i++) {
+                                                    if (kfs[i].time <= currentTime) {
+                                                        cur = kfs[i];
+                                                        nxt = kfs[i+1] || null;
+                                                    } else break;
+                                                }
+                                                const prog = nxt && nxt.time > cur.time ? Math.min(1, Math.max(0, (currentTime - cur.time) / (nxt.time - cur.time))) : 0;
+                                                const cx = cur.properties?.x ?? 320, cy = cur.properties?.y ?? 180;
+                                                const nx = nxt?.properties?.x ?? cx, ny = nxt?.properties?.y ?? cy;
+                                                const xi = cx + (nx - cx) * prog, yi = cy + (ny - cy) * prog;
+                                                const sprite = cur.properties?.sprite || nxt?.properties?.sprite || 'player';
+                                                const spriteImg = (sprites as any)?.[sprite];
+                                                return (
+                                                    <div key={actorTrack.id} style={{ position: 'absolute', left: Math.max(0, Math.min(640-48, xi)), top: Math.max(0, Math.min(360-64, yi)), textAlign: 'center' }}>
+                                                        <SpriteCanvasPreview spriteName={sprite} spriteData={spriteImg} size={48} />
+                                                        <div style={{ color: '#fff', fontSize: '0.7rem', marginTop: 4 }}>{actorTrack.name}: {sprite}</div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                        {activeSubtitle && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: '16px',
+                                                left: '24px',
+                                                right: '24px',
+                                                background: 'rgba(0, 0, 0, 0.85)',
+                                                border: '1px solid rgba(255, 255, 255, 0.25)',
+                                                borderRadius: '4px',
+                                                padding: '8px 16px',
+                                                color: '#fff',
+                                                fontSize: '0.85rem',
+                                                textAlign: 'center',
+                                                zIndex: 10
+                                            }}>
+                                                {activeSubtitle}
+                                            </div>
+                                        )}
+                                    </>
                                 );
                             })()}
                             <div style={{ position: 'absolute', top: '10px', left: '10px', color: '#444', fontSize: '0.7rem' }}>
@@ -411,7 +492,15 @@ const CutsceneEditor: React.FC = () => {
                     <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', background: '#0a0a0f', overflow: 'hidden' }}>
                         {/* TIMELINE HEADER / RULER */}
                         <div style={{ height: '30px', background: '#000', borderBottom: '1px solid #222', display: 'flex', position: 'relative' }}>
-                            <div style={{ width: '200px', flexShrink: 0, borderRight: '1px solid #222', padding: '5px 15px', fontSize: '0.7rem', color: '#444' }}>TRACKS</div>
+                            <div style={{ width: '220px', flexShrink: 0, borderRight: '1px solid #222', padding: '3px 8px', fontSize: '0.7rem', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span>TRACKS</span>
+                                <div style={{ display: 'flex', gap: '3px' }}>
+                                    <button className="tool-btn small" onClick={() => addTrack('actor')} title="Add Actor Track" style={{ padding: '1px 5px', fontSize: '10px' }}>+Actor</button>
+                                    <button className="tool-btn small" onClick={() => addTrack('camera')} title="Add Camera Track" style={{ padding: '1px 5px', fontSize: '10px' }}>+Camera</button>
+                                    <button className="tool-btn small" onClick={() => addTrack('audio')} title="Add Audio Track" style={{ padding: '1px 5px', fontSize: '10px' }}>+Audio</button>
+                                    <button className="tool-btn small" onClick={() => addTrack('interaction')} title="Add Interaction Track" style={{ padding: '1px 5px', fontSize: '10px' }}>+Event</button>
+                                </div>
+                            </div>
                             <div onClick={(e) => { const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect(); const dur = currentCutscene.duration || 30; setCurrentTime(Math.round(((e.clientX - r.left) / r.width) * dur * 10) / 10); }} style={{ flexGrow: 1, position: 'relative', cursor: 'pointer' }}>
                                 {Array.from({ length: 7 }, (_, i) => Math.round((currentCutscene.duration * i / 6) * 10) / 10).map(s => (
                                     <div key={s} style={{ position: 'absolute', left: `${(s / (currentCutscene.duration || 30)) * 100}%`, borderLeft: '1px solid #222', height: '100%', paddingLeft: '5px', fontSize: '0.6rem', color: '#333' }}>
@@ -427,46 +516,64 @@ const CutsceneEditor: React.FC = () => {
 
                         {/* TRACKS GRID */}
                         <div style={{ flexGrow: 1, overflowY: 'auto' }}>
-                            {currentCutscene.tracks.map(track => (
-                                <div key={track.id} style={{ display: 'flex', borderBottom: '1px solid #111', minHeight: '40px' }}>
-                                    <div onClick={() => setSelTrack(track.id)} style={{ width: '200px', flexShrink: 0, borderRight: '1px solid #222', background: (selTrack===track.id ? '#1a1a1a' : '#000'), padding: '10px 15px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', cursor: 'pointer' }}>
-                                        {track.type === 'actor' ? <User size={14} color="#3498db" /> : 
-                                         track.type === 'audio' ? <Music size={14} color="#2ecc71" /> : <MessageSquare size={14} color="#ff0000" />}
-                                        {track.name.toLowerCase()}
-                                    </div>
-                                    <div onClick={(e) => { const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect(); const dur = currentCutscene.duration || 30; const tSec = Math.round(((e.clientX - r.left) / r.width) * dur * 10) / 10; const clamped = Math.max(0, Math.min(dur, tSec)); setCurrentTime(clamped); if (selTrack === track.id) addKeyframeAtCurrent(track.id, clamped); }} style={{ flexGrow: 1, background: 'rgba(0,0,0,0.2)', position: 'relative', cursor: 'crosshair' }}>
-                                        {track.keyframes.map((kf, ki) => {
-                                            const isSelKf = selectedKeyframe?.trackId === track.id && selectedKeyframe?.index === ki;
-                                            return (
-                                                <div
-                                                    key={ki}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setCurrentTime(kf.time);
-                                                        setSelTrack(track.id);
-                                                        if (e.altKey) {
-                                                            removeKeyframe(track.id, ki);
-                                                        } else {
-                                                            setSelectedKeyframe({ trackId: track.id, index: ki });
-                                                        }
-                                                    }}
-                                                    title={`${kf.time}s — click select & seek, Alt+click delete`}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: `${(kf.time / (currentCutscene.duration || 30)) * 100}%`,
-                                                        top: '10px',
-                                                        width: '12px',
-                                                        height: '20px',
-                                                        background: isSelKf ? '#ffd36a' : 'var(--accent)',
-                                                        clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                />
-                                            );
-                                        })}
-                                    </div>
+                            {currentCutscene.tracks.length === 0 ? (
+                                <div style={{ padding: '24px', textAlign: 'center', color: '#555', fontSize: '0.85rem' }}>
+                                    No tracks in this sequence. Click [+Actor], [+Camera], [+Audio], or [+Event] above to add a track.
                                 </div>
-                            ))}
+                            ) : (
+                                currentCutscene.tracks.map(track => (
+                                    <div key={track.id} style={{ display: 'flex', borderBottom: '1px solid #111', minHeight: '40px' }}>
+                                        <div onClick={() => setSelTrack(track.id)} style={{ width: '220px', flexShrink: 0, borderRight: '1px solid #222', background: (selTrack===track.id ? '#1a1a1a' : '#000'), padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem', cursor: 'pointer' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {track.type === 'actor' ? <User size={14} color="#3498db" /> : 
+                                                 track.type === 'audio' ? <Music size={14} color="#2ecc71" /> : 
+                                                 track.type === 'camera' ? <Camera size={14} color="#f39c12" /> :
+                                                 <MessageSquare size={14} color="#ff0000" />}
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.name}</span>
+                                            </div>
+                                            <button
+                                                className="tool-btn small danger"
+                                                onClick={(e) => { e.stopPropagation(); deleteTrack(track.id); }}
+                                                title="Delete Track"
+                                                style={{ padding: '2px', background: 'transparent', border: 'none', color: '#666', cursor: 'pointer' }}
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                        <div onClick={(e) => { const r = (e.currentTarget as HTMLDivElement).getBoundingClientRect(); const dur = currentCutscene.duration || 30; const tSec = Math.round(((e.clientX - r.left) / r.width) * dur * 10) / 10; const clamped = Math.max(0, Math.min(dur, tSec)); setCurrentTime(clamped); if (selTrack === track.id) addKeyframeAtCurrent(track.id, clamped); }} style={{ flexGrow: 1, background: 'rgba(0,0,0,0.2)', position: 'relative', cursor: 'crosshair' }}>
+                                            {track.keyframes.map((kf, ki) => {
+                                                const isSelKf = selectedKeyframe?.trackId === track.id && selectedKeyframe?.index === ki;
+                                                return (
+                                                    <div
+                                                        key={ki}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setCurrentTime(kf.time);
+                                                            setSelTrack(track.id);
+                                                            if (e.altKey) {
+                                                                removeKeyframe(track.id, ki);
+                                                            } else {
+                                                                setSelectedKeyframe({ trackId: track.id, index: ki });
+                                                            }
+                                                        }}
+                                                        title={`${kf.time}s — click select & seek, Alt+click delete`}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            left: `${(kf.time / (currentCutscene.duration || 30)) * 100}%`,
+                                                            top: '10px',
+                                                            width: '12px',
+                                                            height: '20px',
+                                                            background: isSelKf ? '#ffd36a' : 'var(--accent)',
+                                                            clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
@@ -482,7 +589,18 @@ const CutsceneEditor: React.FC = () => {
                                 <span style={{fontSize: '0.7rem', color: '#555'}}>Alt+click keyframe to delete</span>
                             </div>
                             <label>Internal Name</label>
-                            <input type="text" value={currentCutscene.name} onChange={(e) => updateCurrentCutscene('name', e.target.value)} />
+                            <input
+                                type="text"
+                                value={currentCutscene.name}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    const isDefaultId = !currentCutscene.id || currentCutscene.id.startsWith('cutscene_');
+                                    const newId = isDefaultId
+                                        ? val.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || currentCutscene.id
+                                        : currentCutscene.id;
+                                    setCutscenes(cutscenes.map((c, i) => i === currentIndex ? { ...c, name: val, id: newId } : c));
+                                }}
+                            />
                             
                             <label style={{ marginTop: '15px' }}>Total Duration (sec)</label>
                             <input type="number" value={currentCutscene.duration} onChange={(e) => updateCurrentCutscene('duration', parseFloat(e.target.value) || 30)} />

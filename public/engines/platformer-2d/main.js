@@ -64,9 +64,12 @@ class PlatformerGame {
 
         this.onLevelComplete = null;
 
-        window.addEventListener('keydown', e => this.handleKeyDown(e));
-        window.addEventListener('keyup', e => this.handleKeyUp(e));
-        window.addEventListener('resize', () => this.resize());
+        this._onKeyDown = (e) => this.handleKeyDown(e);
+        this._onKeyUp = (e) => this.handleKeyUp(e);
+        this._onResize = () => this.resize();
+        window.addEventListener('keydown', this._onKeyDown);
+        window.addEventListener('keyup', this._onKeyUp);
+        window.addEventListener('resize', this._onResize);
         // Connect LogicSystem (compiled Algorithm Studio ASTs)
         if (window.LogicSystem && window.LogicInterpreter) {
             try { window.LogicSystem.ensure(this, { tick: true }); } catch (e) { console.warn('[Platformer] LogicSystem attach failed', e); }
@@ -78,7 +81,11 @@ class PlatformerGame {
 
     handleKeyDown(e) {
         this.keys[e.code] = true;
-        if(e.code === 'Escape' && !this.isPaused) this.pause();
+        if (e.code === 'Escape' && !window.CAMPAIGN_RUNTIME_MODE && this.isRunning) {
+            e.preventDefault();
+            this.togglePause();
+            return;
+        }
         
         // Mode Toggle
         if(e.code === 'KeyM') {
@@ -113,12 +120,24 @@ class PlatformerGame {
 
     pause() {
         this.isPaused = true;
+        if (this.hud && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.hud.showScreen('pause_menu');
+        }
         console.log('[PlatformerEngine] Paused');
     }
 
     resume() {
         this.isPaused = false;
+        this.lastTime = performance.now();
+        if (this.hud && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.hud.showScreen('main_hud');
+        }
         console.log('[PlatformerEngine] Resumed');
+    }
+
+    togglePause() {
+        if (this.isPaused) this.resume();
+        else this.pause();
     }
 
     async init() {
@@ -216,6 +235,7 @@ class PlatformerGame {
             loaded = this._createFallbackLevel();
         }
 
+        this.levelComplete = false;
         this.map = this._normalizeMapData(loaded);
         await this._setupLevel();
         this.isRunning = true;
@@ -613,10 +633,15 @@ class PlatformerGame {
             }
             this.physics.apply(ent, this.map, this.platforms, dt);
 
-            // Quest trigger for kills
+            // Quest & Achievement triggers for kills
             if (ent.isDead && !ent._questLogged) {
                 ent._questLogged = true;
                 if (this.questSystem) this.questSystem.onEvent('kill', ent.type, 1);
+                const ach = this.achievementSystem || window.campaignController?.achievementSystem;
+                if (ach && typeof ach.unlock === 'function') {
+                    const tid = ent.id || ent.type || '';
+                    ach.unlock('ENEMY_KILL', { target: tid, enemyId: tid });
+                }
             }
         });
         
@@ -632,8 +657,13 @@ class PlatformerGame {
                 if(item.type === 'coin') this.player.coins++;
                 if(this.campaignSystem) this.campaignSystem.incrementVariable('coins', 1);
 
-                // Quest trigger
+                // Quest & Achievement triggers
                 if (this.questSystem) this.questSystem.onEvent('collect', item.type, 1);
+                const ach = this.achievementSystem || window.campaignController?.achievementSystem;
+                if (ach && typeof ach.unlock === 'function') {
+                    const tid = item.id || item.type || 'coin';
+                    ach.unlock('ITEM_GET', { target: tid, itemId: tid });
+                }
             }
         });
     }
@@ -666,9 +696,18 @@ class PlatformerGame {
     }
 
     _handleHUDAction(cmd) {
+        if (window.GameHUD && typeof window.GameHUD.dispatchEngineCommand === 'function') {
+            if (window.GameHUD.dispatchEngineCommand(this, cmd, {
+                retry: () => this.restartLevel(),
+                quit: () => this._quitToMenu(),
+                pause: () => this.pause(),
+                resume: () => this.resume(),
+                hud: this.hud
+            })) return;
+        }
         if (cmd === 'retryLevel') this.restartLevel();
         if (cmd === 'quitToMenu') this._quitToMenu();
-        if (cmd === 'togglePause') this.isPaused ? this.resume() : this.pause();
+        if (cmd === 'togglePause') this.togglePause();
     }
 
     _quitToMenu() {
@@ -713,6 +752,10 @@ class PlatformerGame {
     completeLevel() {
         if (this.levelComplete) return;
         this.levelComplete = true;
+        const ach = this.achievementSystem || (typeof window !== 'undefined' && window.campaignController?.achievementSystem);
+        if (ach && typeof ach.unlock === 'function') {
+            ach.unlock('LEVEL_COMPLETE', { target: String(this.currentLevelId || '') });
+        }
         if (this.onLevelComplete) {
             setTimeout(() => {
                 this.onLevelComplete({ levelId: this.currentLevelId, coinsCollected: this.player.coins });
@@ -824,6 +867,9 @@ class PlatformerGame {
 
     destroy() {
         this.isRunning = false;
+        if (this._onKeyDown) window.removeEventListener('keydown', this._onKeyDown);
+        if (this._onKeyUp) window.removeEventListener('keyup', this._onKeyUp);
+        if (this._onResize) window.removeEventListener('resize', this._onResize);
         if (this.hud) {
             this.hud.destroy();
             this.hud = null;

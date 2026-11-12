@@ -14,6 +14,7 @@ class TopDownAdapter extends EngineAdapter {
         if (this.isInitialized) return;
         if (typeof window.Core === 'undefined') throw new Error('RPG-Topdown engine not loaded');
         this.engine = new window.Core();
+        if (typeof window !== 'undefined') window.game = this.engine;
         if (typeof this.engine.loadDefinitions === 'function') {
             await this.engine.loadDefinitions();
         }
@@ -106,6 +107,23 @@ class TopDownAdapter extends EngineAdapter {
 
     stop() {
         if (this.engine) this.engine.isRunning = false;
+    }
+
+    pause() {
+        if (this.engine && typeof this.engine.pause === 'function') {
+            this.engine.pause();
+        } else if (this.engine) {
+            this.engine.isPaused = true;
+        }
+    }
+
+    resume() {
+        if (this.engine && typeof this.engine.resume === 'function') {
+            this.engine.resume();
+        } else if (this.engine) {
+            this.engine.isPaused = false;
+            this.engine.lastTime = performance.now();
+        }
     }
 
     getPlayerData() {

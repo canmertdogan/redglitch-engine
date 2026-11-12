@@ -5,20 +5,35 @@ import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
 import Toast, { ToastHandle } from './shared/Toast';
 
-interface DialogueLine {
+export interface DialogueChoice {
+    text: string;
+    nextId?: string;
+    nextScript?: string;
+    action?: 'none' | 'accept_quest' | 'complete_quest' | 'close' | string;
+    questId?: string;
+    condition?: {
+        type: 'variable' | 'flag' | 'item' | string;
+        key: string;
+        operator?: '==' | '!=' | '>' | '>=' | '<' | '<=' | string;
+        value: any;
+    };
+}
+
+export interface DialogueLine {
+    id?: string;
     characterId: string;
     text: string;
-    choices?: { text: string; nextId?: string }[];
+    choices?: DialogueChoice[];
     nextId?: string;
 }
 
-interface Conversation {
+export interface Conversation {
     id: string;
     title: string;
     lines: DialogueLine[];
 }
 
-interface Character {
+export interface Character {
     id: string;
     name: string;
     color: string;
@@ -27,8 +42,8 @@ interface Character {
 
 // The engine stores conversations as { nodes: [...] } with
 // speaker/text/choices[{ text, nextScript }]. This editor works on a flat
-// `lines` model — normalize on load, denormalize on save, nothing else.
-const normConversation = (c: any): Conversation => {
+// `lines` model — normalize on load, denormalize on save, preserving conditions and actions.
+export const normConversation = (c: any): Conversation => {
     const rawLines = Array.isArray(c?.lines) ? c.lines
         : Array.isArray(c?.nodes) ? c.nodes
         : [];
@@ -36,33 +51,46 @@ const normConversation = (c: any): Conversation => {
         ...c,
         id: String(c?.id ?? `conv_${Date.now()}`),
         title: c?.title ?? String(c?.id ?? 'Conversation'),
-        lines: rawLines.map((n: any) => ({
+        lines: rawLines.map((n: any, idx: number) => ({
+            id: n.id ? String(n.id) : (n.nodeId ? String(n.nodeId) : `line_${idx}`),
             characterId: n.characterId ?? n.speaker ?? 'hero',
             text: n.text ?? '',
-            nextId: n.nextId ?? undefined,
+            nextId: n.nextId ? String(n.nextId) : undefined,
             choices: (Array.isArray(n.choices) ? n.choices : []).map((ch: any) => ({
                 text: ch.text ?? '',
                 nextId: ch.nextId ?? ch.nextScript ?? '',
+                nextScript: ch.nextScript ?? ch.nextId ?? '',
+                action: ch.action ?? 'none',
+                questId: ch.questId ?? '',
+                condition: ch.condition && typeof ch.condition === 'object' ? { ...ch.condition } : undefined,
+            })),
+        })),
+    };
+};
+export const ensureNewSchema = normConversation;
+
+export const denormConversation = (c: Conversation): any => {
+    const { lines, ...rest } = c as any;
+    return {
+        ...rest,
+        nodes: c.lines.map(l => ({
+            ...(l.id ? { id: l.id } : {}),
+            speaker: l.characterId,
+            text: l.text,
+            ...(l.nextId ? { nextId: l.nextId } : {}),
+            choices: (l.choices || []).map(ch => ({
+                text: ch.text,
+                nextScript: ch.nextId ?? ch.nextScript ?? '',
+                ...(ch.action && ch.action !== 'none' ? { action: ch.action } : {}),
+                ...(ch.questId ? { questId: ch.questId } : {}),
+                ...(ch.condition ? { condition: ch.condition } : {}),
             })),
         })),
     };
 };
 
-const denormConversation = (c: Conversation): any => {
-    const { lines, ...rest } = c as any;
-    return {
-        ...rest,
-        nodes: c.lines.map(l => ({
-            speaker: l.characterId,
-            text: l.text,
-            ...(l.nextId ? { nextId: l.nextId } : {}),
-            choices: (l.choices || []).map(ch => ({ text: ch.text, nextScript: ch.nextId ?? '' })),
-        })),
-    };
-};
-
-const getNpcPortraitSprite = (npc: any): string =>
-    npc?.animations?.idle?.down || npc?.sprite || 'player';
+export const getNpcPortraitSprite = (npc: any): string =>
+    npc?.portrait || npc?.portraitSprite || npc?.animations?.idle?.down || npc?.sprite || 'player';
 
 const mergeNpcsIntoCharacters = (baseChars: Character[], npcs: any[]): Character[] => {
     const merged = [...baseChars];
@@ -159,7 +187,7 @@ const DialogueEditor: React.FC = () => {
         });
 
         const unsubNpc = subscribe('npc:updated', (event: any) => {
-            const updatedNpc = event?.data?.npc;
+            const updatedNpc = event?.data?.npc || (event?.data?.id ? event?.data : undefined);
             if (updatedNpc?.id) {
                 setCharacters(prev => {
                     const next = mergeNpcsIntoCharacters(prev, [updatedNpc]);
@@ -187,6 +215,13 @@ const DialogueEditor: React.FC = () => {
             if (isDirtyRef.current) saveRef.current();
         });
 
+        const unsubProjectSwitched = subscribe('project:switched', () => {
+            loadData();
+        });
+        const unsubProjectSwitch = subscribe('project:switch', () => {
+            loadData();
+        });
+
         const onWindowMessage = (e: MessageEvent) => {
             if (e.origin !== window.location.origin && e.origin !== 'null') return;
             if (e.data?.type === 'redglitch:save-request' && isDirtyRef.current) {
@@ -200,6 +235,8 @@ const DialogueEditor: React.FC = () => {
             unsubNpc();
             unsubNpcSaved();
             unsubGlobalSave();
+            unsubProjectSwitched();
+            unsubProjectSwitch();
             window.removeEventListener('message', onWindowMessage);
         };
     }, [isReady]);
@@ -234,17 +271,19 @@ const DialogueEditor: React.FC = () => {
         };
     };
 
-    const loadData = async () => {
+    const loadData = async (preserveId?: string) => {
         try {
             const res = await fetch('/api/dialogues');
             if (res.ok) {
                 const data = await res.json();
-                const rawConvs = Array.isArray(data?.conversations) ? data.conversations : [];
+                const rawConvs = Array.isArray(data?.conversations)
+                    ? data.conversations
+                    : (Array.isArray(data) ? data : []);
                 const normalizedConvs = rawConvs.length > 0 ? rawConvs.map(normConversation) : [getDefaultConversation()];
                 setConversations(normalizedConvs);
                 conversationsRef.current = normalizedConvs;
 
-                const requestedId = new URLSearchParams(window.location.search).get('id');
+                const requestedId = preserveId || new URLSearchParams(window.location.search).get('id');
                 if (requestedId) {
                     const matchedIdx = normalizedConvs.findIndex(c => c.id === requestedId);
                     if (matchedIdx >= 0) {
@@ -327,6 +366,8 @@ const DialogueEditor: React.FC = () => {
                 latestConvs.forEach(c => { map[c.id] = denormConversation(c); });
                 projectState.set('dialogues', map);
             }
+            const currentId = conversationsRef.current[currentIndex]?.id;
+            await loadData(currentId);
             if (pendingCharSyncRef.current) {
                 pendingCharSyncRef.current = false;
                 syncCharactersOnly();
@@ -355,9 +396,14 @@ const DialogueEditor: React.FC = () => {
     duplicateRef.current = duplicateConversation;
 
     const deleteConversation = () => {
-        if (conversations.length <= 1) return;
+        if (conversations.length <= 1) {
+            toastRef.current?.show('CANNOT DELETE LAST CONVERSATION', 'info');
+            return;
+        }
         const id = conversations[currentIndex].id;
-        setConversations(conversations.filter((_, i) => i !== currentIndex));
+        const nextConvs = conversations.filter((_, i) => i !== currentIndex);
+        setConversations(nextConvs);
+        conversationsRef.current = nextConvs;
         setCurrentIndex(Math.max(0, currentIndex - 1));
         setIsDirty(true);
         setPreviewLineIdx(0);
@@ -505,40 +551,157 @@ const DialogueEditor: React.FC = () => {
                                 {/* CHOICES */}
                                 <div style={{ marginTop: '10px', borderLeft: '2px solid #222', paddingLeft: '15px' }}>
                                     {line.choices?.map((choice, cIdx) => (
-                                        <div key={cIdx} style={{ display: 'flex', gap: '10px', marginBottom: '5px', alignItems: 'center' }}>
-                                            <CornerDownRight size={14} color="#444" />
-                                            <input 
-                                                type="text" 
-                                                value={choice.text} 
-                                                onChange={(e) => updateLine(lIdx, prev => ({
+                                        <div key={cIdx} style={{ marginBottom: '8px', background: '#0a0a0a', padding: '6px', borderRadius: '4px', border: '1px solid #1a1a1a' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <CornerDownRight size={14} color="#444" />
+                                                <input 
+                                                    type="text" 
+                                                    value={choice.text} 
+                                                    onChange={(e) => updateLine(lIdx, prev => ({
+                                                        ...prev,
+                                                        choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, text: e.target.value } : ch)
+                                                    }))}
+                                                    placeholder="Choice text..."
+                                                    style={{ fontSize: '0.85rem', flex: 2 }}
+                                                />
+                                                <input 
+                                                    type="text" 
+                                                    list="conversation-ids"
+                                                    value={choice.nextId || ''} 
+                                                    onChange={(e) => updateLine(lIdx, prev => ({
+                                                        ...prev,
+                                                        choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, nextId: e.target.value } : ch)
+                                                    }))}
+                                                    placeholder="Next Script ID"
+                                                    style={{ flex: 1.2, fontSize: '0.8rem' }}
+                                                />
+                                                <select
+                                                    value={choice.action || 'none'}
+                                                    onChange={(e) => updateLine(lIdx, prev => ({
+                                                        ...prev,
+                                                        choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, action: e.target.value as any } : ch)
+                                                    }))}
+                                                    style={{ fontSize: '0.75rem', width: '105px' }}
+                                                >
+                                                    <option value="none">No Action</option>
+                                                    <option value="accept_quest">Accept Quest</option>
+                                                    <option value="complete_quest">Complete Quest</option>
+                                                    <option value="close">Close</option>
+                                                </select>
+                                                {(choice.action === 'accept_quest' || choice.action === 'complete_quest') && (
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Quest ID" 
+                                                        value={choice.questId || ''} 
+                                                        onChange={(e) => updateLine(lIdx, prev => ({
+                                                            ...prev,
+                                                            choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, questId: e.target.value } : ch)
+                                                        }))}
+                                                        style={{ fontSize: '0.75rem', width: '80px' }}
+                                                    />
+                                                )}
+                                                <button className="tool-btn small danger" onClick={() => updateLine(lIdx, prev => ({
                                                     ...prev,
-                                                    choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, text: e.target.value } : ch)
-                                                }))}
-                                                placeholder="Choice text..."
-                                                style={{ fontSize: '0.9rem', flex: 2 }}
-                                            />
-                                            <input 
-                                                type="text" 
-                                                value={choice.nextId || ''} 
-                                                onChange={(e) => updateLine(lIdx, prev => ({
-                                                    ...prev,
-                                                    choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? { ...ch, nextId: e.target.value } : ch)
-                                                }))}
-                                                placeholder="Next Script ID"
-                                                style={{ flex: 1, fontSize: '0.8rem' }}
-                                            />
-                                            <button className="tool-btn small danger" onClick={() => updateLine(lIdx, prev => ({
-                                                ...prev,
-                                                choices: (prev.choices || []).filter((_, idx) => idx !== cIdx)
-                                            }))}>×</button>
+                                                    choices: (prev.choices || []).filter((_, idx) => idx !== cIdx)
+                                                }))}>×</button>
+                                            </div>
+
+                                            {/* Choice Condition */}
+                                            <div style={{ display: 'flex', gap: '6px', marginTop: '5px', paddingLeft: '22px', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.7rem', color: '#666' }}>Condition:</span>
+                                                <select 
+                                                    value={choice.condition?.type || ''} 
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        updateLine(lIdx, prev => ({
+                                                            ...prev,
+                                                            choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? {
+                                                                ...ch,
+                                                                condition: val ? { type: val, key: ch.condition?.key || '', operator: ch.condition?.operator || '==', value: ch.condition?.value ?? true } : undefined
+                                                            } : ch)
+                                                        }));
+                                                    }}
+                                                    style={{ fontSize: '0.75rem', width: '85px' }}
+                                                >
+                                                    <option value="">None</option>
+                                                    <option value="variable">Variable</option>
+                                                    <option value="flag">Flag</option>
+                                                    <option value="item">Item</option>
+                                                </select>
+                                                {choice.condition && (
+                                                    <>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Key" 
+                                                            value={choice.condition.key || ''} 
+                                                            onChange={(e) => updateLine(lIdx, prev => ({
+                                                                ...prev,
+                                                                choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? {
+                                                                    ...ch,
+                                                                    condition: { ...ch.condition!, key: e.target.value }
+                                                                } : ch)
+                                                            }))}
+                                                            style={{ fontSize: '0.75rem', width: '80px' }}
+                                                        />
+                                                        <select 
+                                                            value={choice.condition.operator || '=='} 
+                                                            onChange={(e) => updateLine(lIdx, prev => ({
+                                                                ...prev,
+                                                                choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? {
+                                                                    ...ch,
+                                                                    condition: { ...ch.condition!, operator: e.target.value as any }
+                                                                } : ch)
+                                                            }))}
+                                                            style={{ fontSize: '0.75rem', width: '50px' }}
+                                                        >
+                                                            <option value="==">==</option>
+                                                            <option value="!=">!=</option>
+                                                            <option value=">">&gt;</option>
+                                                            <option value=">=">&gt;=</option>
+                                                            <option value="<">&lt;</option>
+                                                            <option value="<=">&lt;=</option>
+                                                        </select>
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Value" 
+                                                            value={String(choice.condition.value ?? '')} 
+                                                            onChange={(e) => updateLine(lIdx, prev => ({
+                                                                ...prev,
+                                                                choices: (prev.choices || []).map((ch, idx) => idx === cIdx ? {
+                                                                    ...ch,
+                                                                    condition: { ...ch.condition!, value: e.target.value }
+                                                                } : ch)
+                                                            }))}
+                                                            style={{ fontSize: '0.75rem', width: '70px' }}
+                                                        />
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
                                     <button className="tool-btn" style={{ width: 'auto', padding: '2px 10px', fontSize: '0.8rem', marginTop: '5px' }} onClick={() => addChoice(lIdx)}>
                                         + ADD CHOICE
                                     </button>
                                 </div>
+
+                                {(!line.choices || line.choices.length === 0) && (
+                                    <div style={{ marginTop: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.75rem', color: '#666' }}>Next Script / Node ID:</span>
+                                        <input 
+                                            type="text" 
+                                            list="conversation-ids" 
+                                            placeholder="Next Conversation / Script ID (Optional)" 
+                                            value={line.nextId || ''} 
+                                            onChange={(e) => updateLine(lIdx, prev => ({ ...prev, nextId: e.target.value || undefined }))} 
+                                            style={{ flex: 1, fontSize: '0.8rem' }}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         ))}
+                        <datalist id="conversation-ids">
+                            {conversations.map(c => <option key={c.id} value={c.id}>{c.title || c.id}</option>)}
+                        </datalist>
                         <button className="tool-btn" style={{ width: '100%' }} onClick={addLine}>
                             <Plus size={14} style={{ marginRight: '5px' }} /> APPEND NEW LINE
                         </button>

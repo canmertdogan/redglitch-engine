@@ -42,13 +42,13 @@ const ELEMENT_DEFAULTS = {
         anchor: 'top-left',
         rect: { x: 40, y: 40, w: 280, h: 180 },
         style: {
-            backgroundColor: 'rgba(13, 18, 30, 0.90)',
-            borderColor: '#000000',
-            borderWidth: 2,
-            borderRadius: 0,
-            boxShadow: 'inset 2px 2px 0 rgba(255,255,255,0.08), 3px 3px 0 rgba(0,0,0,0.6)',
-            color: '#f4f7ff',
-            fontSize: 14,
+            backgroundColor: 'rgba(15, 22, 36, 0.78)',
+            borderColor: 'rgba(148, 163, 184, 0.34)',
+            borderWidth: 1,
+            borderRadius: 2,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.09), 2px 2px 0 rgba(0,0,0,0.34)',
+            color: '#f1f5f9',
+            fontSize: 16,
             textAlign: 'left',
             zIndex: 10
         },
@@ -60,13 +60,13 @@ const ELEMENT_DEFAULTS = {
         rect: { x: 40, y: 40, w: 200, h: 28 },
         style: {
             backgroundColor: 'transparent',
-            color: '#ffd36a',
-            fontSize: 18,
+            color: '#ffd573',
+            fontSize: 20,
             fontWeight: '700',
             textAlign: 'left',
             borderWidth: 0,
             borderColor: 'transparent',
-            textShadow: '2px 2px 0 #000',
+            textShadow: '1px 1px 0 rgba(0,0,0,0.55)',
             zIndex: 12
         },
         props: {}
@@ -76,12 +76,12 @@ const ELEMENT_DEFAULTS = {
         text: 'BUTTON',
         rect: { x: 40, y: 40, w: 180, h: 38 },
         style: {
-            backgroundColor: 'rgba(10, 14, 24, 0.9)',
-            color: '#62ff9a',
-            borderWidth: 2,
-            borderColor: '#62ff9a',
-            borderRadius: 0,
-            fontSize: 15,
+            backgroundColor: 'rgba(9, 14, 24, 0.65)',
+            color: '#6ee7a8',
+            borderWidth: 1,
+            borderColor: '#6ee7a8',
+            borderRadius: 2,
+            fontSize: 18,
             textAlign: 'center',
             textTransform: 'uppercase',
             letterSpacing: 1,
@@ -95,21 +95,21 @@ const ELEMENT_DEFAULTS = {
         anchor: 'top-left',
         src: '',
         rect: { x: 40, y: 40, w: 120, h: 120 },
-        style: { backgroundColor: 'transparent', color: '#fff', fontSize: 14, borderWidth: 0, borderColor: 'transparent', textAlign: 'left', zIndex: 12 },
+        style: { backgroundColor: 'transparent', color: '#fff', fontSize: 16, borderWidth: 0, borderColor: 'transparent', textAlign: 'left', zIndex: 12 },
         props: {}
     },
     bar: {
         anchor: 'top-left',
         text: 'HP {player.hp}/{player.maxHp}',
         rect: { x: 40, y: 40, w: 220, h: 20 },
-        style: { backgroundColor: '#0b0d14', borderWidth: 2, borderColor: '#000000', color: '#ffffff', fontSize: 11, fontWeight: '700', textAlign: 'center', zIndex: 12 },
-        props: { fillColor: '#e23b4e', variable: 'player.hp', maxVariable: 'player.maxHp', ticks: 10 }
+        style: { backgroundColor: 'rgba(10, 15, 26, 0.84)', borderWidth: 1, borderColor: 'rgba(148, 163, 184, 0.38)', borderRadius: 2, color: '#ffffff', fontSize: 15, fontWeight: '400', textAlign: 'center', zIndex: 12 },
+        props: { fillColor: '#f4516c', variable: 'player.hp', maxVariable: 'player.maxHp', ticks: 8 }
     },
     slot: {
         anchor: 'top-left',
         text: '1',
         rect: { x: 40, y: 40, w: 44, h: 44 },
-        style: { backgroundColor: 'rgba(10, 14, 24, 0.9)', borderWidth: 2, borderColor: '#ffd36a', color: '#ffd36a', fontSize: 14, fontWeight: '700', textAlign: 'center', zIndex: 12 },
+        style: { backgroundColor: 'rgba(9, 14, 24, 0.65)', borderWidth: 1, borderColor: '#ffd573', borderRadius: 2, color: '#ffd573', fontSize: 16, fontWeight: '400', textAlign: 'center', zIndex: 12 },
         props: { variable: 'player.inventory.0' }
     }
 };
@@ -2177,16 +2177,17 @@ class UIStudio {
                 const sampleDoc = kit.build(this.resolution);
                 const card = document.createElement('div');
                 card.className = 'tpl-card';
-                const swatches = [kit.palette.panel, kit.palette.accent, kit.palette.gold, kit.palette.cyan, kit.palette.green]
+                const swatches = [kit.palette.void, kit.palette.panel, kit.palette.accent, kit.palette.gold, kit.palette.green]
+                    .filter(Boolean)
                     .map(c => `<span class="tpl-swatch" style="background:${_escapeHtml(c)}"></span>`).join('');
                 card.innerHTML = `
                     <div class="tpl-card-head">
                         <span class="tpl-card-name">${_escapeHtml(kit.name)}</span>
                         <span class="tpl-badge">${_escapeHtml(kit.badge)}</span>
                     </div>
-                    <div class="tpl-wireframe">${this._renderMiniWireframeHTML(sampleDoc.screens.main_hud, this.resolution, kit.accent)}</div>
+                    <div class="tpl-wireframe" style="background:${_escapeHtml(kit.palette.void || '#06080f')}">${this._renderMiniWireframeHTML(sampleDoc.screens.main_hud, this.resolution, kit.accent)}</div>
                     <div class="tpl-desc">${_escapeHtml(kit.description)}</div>
-                    <div class="tpl-swatches">${swatches} <span style="margin-left:auto;font-size:10px;color:#64748b;">${Object.keys(sampleDoc.screens).length} ekran</span></div>
+                    <div class="tpl-swatches">${swatches} <span style="margin-left:auto;font-size:12px;color:#64748b;">${Object.keys(sampleDoc.screens).length} ekran</span></div>
                 `;
                 const actions = document.createElement('div');
                 actions.className = 'tpl-actions';
@@ -2211,7 +2212,7 @@ class UIStudio {
                         <span class="tpl-card-name">${_escapeHtml(preset.name)}</span>
                         <span class="tpl-badge">${_escapeHtml(preset.category)}</span>
                     </div>
-                    <div class="tpl-wireframe">${this._renderMiniWireframeHTML(sampleScreen, this.resolution, theme.accent)}</div>
+                    <div class="tpl-wireframe" style="background:${_escapeHtml(theme.palette?.void || '#06080f')}">${this._renderMiniWireframeHTML(sampleScreen, this.resolution, theme.accent)}</div>
                     <div class="tpl-desc">${_escapeHtml(preset.description)}</div>
                 `;
                 const actions = document.createElement('div');

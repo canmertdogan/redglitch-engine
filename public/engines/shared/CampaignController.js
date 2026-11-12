@@ -20,6 +20,9 @@ class CampaignController {
         this.inventorySystem = new window.InventorySystem(); 
         this.questProgress = {};
         this.achievements = [];
+        this.achievementSystem = (typeof window !== 'undefined' && typeof window.AchievementSystem === 'function')
+            ? new window.AchievementSystem()
+            : null;
         
         // Ability system
         this.equippedAbilities = [null, null, null, null];
@@ -126,27 +129,20 @@ class CampaignController {
                 'engines/platformer-2d/main.js'
             ],
             'topdown-3d': [
-                'engines/unified-3d/Unified3DAdapter.js',
-                'engines/unified-3d/Game3DCore.js',
-                'engines/unified-3d/modes/TopDownMode.js',
-                'engines/shared/GameHUD.js'
+                'engines/shared/GameHUD.js',
+                'engines/unified-3d/Unified3DAdapter.js'
             ],
             'fps-3d': [
-                'engines/unified-3d/Unified3DAdapter.js',
-                'engines/unified-3d/Game3DCore.js',
-                'engines/unified-3d/modes/FPSMode.js',
-                'engines/shared/GameHUD.js'
+                'engines/shared/GameHUD.js',
+                'engines/unified-3d/Unified3DAdapter.js'
             ],
             'platformer-3d': [
-                'engines/unified-3d/Unified3DAdapter.js',
-                'engines/unified-3d/Game3DCore.js',
-                'engines/unified-3d/modes/PlatformerMode.js',
-                'engines/shared/GameHUD.js'
+                'engines/shared/GameHUD.js',
+                'engines/unified-3d/Unified3DAdapter.js'
             ],
             'unified-3d': [
                 'engines/shared/GameHUD.js',
-                'engines/unified-3d/Unified3DAdapter.js',
-                'engines/unified-3d/Game3DCore.js'
+                'engines/unified-3d/Unified3DAdapter.js'
             ]
         };
         this.loadedEngines = new Set();
@@ -234,6 +230,14 @@ class CampaignController {
     async initialize(username, slotId = null) {
         this.username = username;
         this.slotId = slotId;
+
+        if (!this.achievementSystem && typeof window !== 'undefined' && typeof window.AchievementSystem === 'function') {
+            this.achievementSystem = new window.AchievementSystem();
+        }
+        if (this.achievementSystem) {
+            await this.achievementSystem.init(username || 'PLAYER');
+            this.achievements = this.achievementSystem.unlocked;
+        }
         
         // Phase 24: Global Atmosphere Management
 
@@ -244,6 +248,13 @@ class CampaignController {
         if (slotId) {
             this.playTimeStart = Date.now();
         }
+    }
+
+    async unlockAchievement(triggerCode, meta = {}) {
+        if (!this.achievementSystem) return [];
+        const res = await this.achievementSystem.unlock(triggerCode, meta);
+        this.achievements = this.achievementSystem.unlocked;
+        return res;
     }
 
     async loadCampaign(campaignId, campaignPath = null) {
@@ -270,8 +281,11 @@ class CampaignController {
 
     async start() {
         if (!this.campaignData || this.campaignData.length === 0) return;
-        if (this.currentNodeId) {
-            await this.processNode(this.currentNodeId);
+        const resumeNode = this.currentNodeId
+            ? this.campaignData.find(n => n.id === this.currentNodeId)
+            : null;
+        if (resumeNode) {
+            await this.processNode(resumeNode.id);
             return;
         }
         let startNode = this.campaignData.find(n => n.type === 'start');
@@ -417,7 +431,10 @@ class CampaignController {
         if (!scripts) return;
         for (const src of scripts) {
             // Phase 17: Use dynamic import for ES Modules (3D components)
-            const isModule = src.endsWith('Adapter.js') && this._is3DEngine(engineType) || src.includes('Engine3D');
+            const isModule = (src.endsWith('Adapter.js') && this._is3DEngine(engineType))
+                || src.includes('Engine3D')
+                || src.startsWith('engines/unified-3d/')
+                || src.startsWith('engines/3d/');
 
             if (isModule) {
                 console.log(`[CampaignController] Importing module: ${src}`);
@@ -507,7 +524,22 @@ class CampaignController {
                 if (adapter.setCampaignController) adapter.setCampaignController(this);
                 if (adapter.setUsername) adapter.setUsername(this.username);
                 await adapter.initialize();
-                if (this.playerData) await Promise.resolve(adapter.setPlayerData(this.playerData));
+                if (this.achievementSystem) {
+                    const targetEngine = adapter.engine || adapter.game?.core;
+                    if (targetEngine) {
+                        targetEngine.achievementSystem = this.achievementSystem;
+                    }
+                    this.unlockAchievement('START_GAME');
+                }
+                if (this.playerData) {
+                    const prevWas3D = this._is3DEngine(this.currentEngineType);
+                    const nextIs3D = this._is3DEngine(newEngineType);
+                    let transferData = this.playerData;
+                    if (prevWas3D !== nextIs3D && typeof transferData === 'object') {
+                        transferData = { ...transferData, position: undefined, quaternion: undefined, euler: undefined };
+                    }
+                    await Promise.resolve(adapter.setPlayerData(transferData));
+                }
                 this.currentAdapter = adapter;
                 this.currentEngineType = newEngineType;
                 if (this.onEngineSwitch) this.onEngineSwitch(newEngineType);
@@ -519,6 +551,9 @@ class CampaignController {
 
     async advance() {
         const node = this.campaignData.find(n => n.id === this.currentNodeId);
+        if (node && node.type === 'level') {
+            this.unlockAchievement('LEVEL_COMPLETE', { target: node.levelId || node.id });
+        }
         if (node && node.next) await this.processNode(node.next);
         else this._endCampaign();
     }
@@ -673,6 +708,9 @@ class CampaignController {
         if (this.inventorySystem) {
             slot.player.inventoryData = { items: this.inventorySystem.serialize(), hotbar: this.inventorySystem.hotbarSlots };
         }
+        if (this.achievementSystem) {
+            slot.player.achievements = [...this.achievementSystem.unlocked];
+        }
         await SlotManager.saveSlot(slot);
     }
 
@@ -687,9 +725,18 @@ class CampaignController {
             if (slot.player.inventoryData.items) this.inventorySystem.deserialize(slot.player.inventoryData.items);
             if (slot.player.inventoryData.hotbar) this.inventorySystem.hotbarSlots = slot.player.inventoryData.hotbar;
         }
+        if (Array.isArray(slot.player.achievements) && this.achievementSystem) {
+            const merged = new Set([...this.achievementSystem.unlocked, ...slot.player.achievements]);
+            this.achievementSystem._syncUnlocked(Array.from(merged));
+            this.achievements = this.achievementSystem.unlocked;
+        }
     }
 
     _endCampaign() {
+        if (this.achievementSystem) {
+            this.unlockAchievement('CAMPAIGN_COMPLETE', { campaignId: this.campaignId || '' });
+        }
+        this.autoSave().catch(() => {});
         this._showCompletionScreen();
     }
 
@@ -748,8 +795,9 @@ class CampaignController {
     }
 
     _showCompletionScreen() {
-        // Use the game-over screen if available, otherwise fall back
-        if (typeof window.showGameOver === 'function') {
+        if (typeof window.showCampaignComplete === 'function') {
+            window.showCampaignComplete();
+        } else if (typeof window.showGameOver === 'function') {
             window.showGameOver();
         } else {
             alert('Campaign Complete!');
@@ -766,7 +814,13 @@ class CampaignController {
         await this.saveCampaignState();
     }
 
-    giveItem(id, qty = 1) { return this.inventorySystem.addItem({id}, qty); }
+    giveItem(id, qty = 1, options = {}) {
+        const added = this.inventorySystem.addItem({ id }, qty);
+        if (added && !options.silentAchievement && this.achievementSystem) {
+            this.unlockAchievement('ITEM_GET', { target: id, itemId: id });
+        }
+        return added;
+    }
     hasItem(id, qty = 1) { return this.inventorySystem.hasItem(id, qty); }
     useInventoryItem(itemId) {
         return this.inventorySystem.useItem(itemId, (item) => {
@@ -775,8 +829,14 @@ class CampaignController {
     }
     dropInventoryItem(itemId, quantity = 1) { return this.inventorySystem.removeItem(itemId, quantity); }
     getProgress() {
-        const total = this.campaignData.length || 1;
-        return { percentComplete: Math.round((this.completedNodes.size / total) * 100) };
+        const executable = Array.isArray(this.campaignData)
+            ? this.campaignData.filter(n => n && !['group', 'comment', 'note'].includes(n.type))
+            : [];
+        const total = executable.length || (this.campaignData.length || 1);
+        const completedCount = executable.length
+            ? executable.filter(n => this.completedNodes.has(n.id)).length
+            : this.completedNodes.size;
+        return { percentComplete: Math.min(100, Math.round((completedCount / total) * 100)) };
     }
     getPlayTimeFormatted() {
         const total = Math.floor((Date.now() - (this.playTimeStart || Date.now())) / 1000) + (this.totalPlayTime || 0);

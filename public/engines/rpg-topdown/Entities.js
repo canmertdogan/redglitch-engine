@@ -216,7 +216,12 @@ window.Enemy = class Enemy {
         if (idx > -1) game.enemies.splice(idx, 1);
         const xp = this.def && this.def.stats && Number(this.def.stats.xp);
         if (Number.isFinite(xp) && xp > 0 && game.player) {
-            game.player.xp = (game.player.xp || 0) + xp;
+            if (typeof game.awardXP === 'function') game.awardXP(xp);
+            else game.player.xp = (game.player.xp || 0) + xp;
+        }
+        if (game.achievementSystem && typeof game.achievementSystem.unlock === 'function') {
+            const targetId = this.id || this.type || (this.def && this.def.id) || '';
+            game.achievementSystem.unlock('ENEMY_KILL', { target: targetId, enemyId: targetId });
         }
         this._dropLoot(game);
         if (game.updateHUD) { try { game.updateHUD(); } catch (_) {} }
@@ -240,6 +245,9 @@ window.Enemy = class Enemy {
             if (!def) return;
             if (!Array.isArray(game.inventory)) game.inventory = [];
             game.inventory.push({ ...def });
+            if (game.achievementSystem && typeof game.achievementSystem.unlock === 'function') {
+                game.achievementSystem.unlock('ITEM_GET', { target: id, itemId: id });
+            }
             if (game.updateInventoryHUD) { try { game.updateInventoryHUD(); } catch (_) {} }
             if (game.fx && game.fx.popText) { try { game.fx.popText(this.x + 24, this.y, `+${def.name || id}`, '#f1c40f'); } catch (_) {} }
         };

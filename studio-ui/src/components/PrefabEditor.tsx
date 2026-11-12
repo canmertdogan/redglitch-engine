@@ -40,6 +40,8 @@ const AGGREGATE_DEFINITION_FILES = new Set([
     'items.json', 'quests.json', 'enemies.json', 'npcs.json',
     'dialogues.json', 'skills.json', 'achievements.json',
     'variables.json', 'ui.json', 'campaign.json',
+    'campaigns.json', 'test_3d_campaign.json', 'saves.json',
+    'levels.json', 'levels3d.json',
     'locales.json', 'music.json',
 ]);
 
@@ -271,12 +273,15 @@ const PrefabEditor: React.FC = () => {
     };
 
     const updateCurrentPrefab = (path: string, value: any, recordHistory = true) => {
+        if (!prefabs || prefabs.length === 0 || !prefabs[currentIndex]) return;
         const newPrefabs = JSON.parse(JSON.stringify(prefabs));
         const prefab = newPrefabs[currentIndex];
+        if (!prefab) return;
 
         const keys = path.split('.');
         let current: any = prefab;
         for (let i = 0; i < keys.length - 1; i++) {
+            if (!current[keys[i]]) current[keys[i]] = {};
             current = current[keys[i]];
         }
         current[keys[keys.length - 1]] = value;
@@ -288,6 +293,24 @@ const PrefabEditor: React.FC = () => {
 
     const loadPrefabs = async () => {
         try {
+            // Check /api/prefabs first
+            try {
+                const prefabsRes = await fetch('/api/prefabs');
+                if (prefabsRes.ok) {
+                    const prefabsData = await prefabsRes.json();
+                    if (Array.isArray(prefabsData) && prefabsData.length > 0) {
+                        const loaded = prefabsData.map((p: any) => ensureSchema(p, p.name || p.id));
+                        setPrefabs(loaded);
+                        setAvailablePrefabs(loaded.map(p => p.name));
+                        setCurrentIndex(0);
+                        setSelectedCompIdx(0);
+                        setIsDirty(false);
+                        pushHistory(loaded);
+                        return;
+                    }
+                }
+            } catch { /* fallback to ide list */ }
+
             const listRes = await fetch('/api/ide/list?dir=dunyalar/definitions');
             if (!listRes.ok) {
                 const def = [getDefaultPrefab()];
@@ -297,7 +320,7 @@ const PrefabEditor: React.FC = () => {
             }
             const entries = await listRes.json();
             const jsonFiles = (Array.isArray(entries) ? entries : []).filter(
-                (f: any) => !f.isDirectory && typeof f.name === 'string' && f.name.endsWith('.json') && !AGGREGATE_DEFINITION_FILES.has(f.name)
+                (f: any) => !f.isDirectory && typeof f.name === 'string' && f.name.endsWith('.json') && !f.name.startsWith('.') && !AGGREGATE_DEFINITION_FILES.has(f.name)
             );
             setAvailablePrefabs(jsonFiles.map((f: any) => f.name.replace(/\.json$/i, '')));
 
@@ -328,31 +351,35 @@ const PrefabEditor: React.FC = () => {
     };
 
     const ensureSchema = (d: any, savedFile?: string): Prefab => {
-        const rawComps = Array.isArray(d.components) ? d.components : [];
+        const rawComps = Array.isArray(d?.components) ? d.components : [];
         let comps: ComponentWrapper[] = rawComps.map((c: any) => {
             if (c && c.id && c.data && typeof c.data.type === 'string') {
                 return c;
             }
-            const cType = c?.type || 'Transform';
+            const cType = c?.type || c?.data?.type || 'Transform';
             return {
-                id: Math.random().toString(36).substr(2, 9),
-                hidden: false,
-                locked: false,
-                data: { type: cType, ...COMPONENT_TYPES[cType]?.defaults, ...c }
+                id: c?.id || Math.random().toString(36).substr(2, 9),
+                hidden: Boolean(c?.hidden),
+                locked: Boolean(c?.locked),
+                data: { type: cType, ...(COMPONENT_TYPES[cType]?.defaults || {}), ...(c?.data || c || {}) }
             };
         });
-        if (!comps.some(c => c.data.type === 'Transform')) {
+        const transformIdx = comps.findIndex(c => c.data?.type === 'Transform');
+        if (transformIdx === -1) {
             comps = [{
                 id: 'root_transform_' + Math.random().toString(36).substr(2, 6),
                 hidden: false,
                 locked: false,
                 data: { type: 'Transform', ...COMPONENT_TYPES.Transform.defaults }
             }, ...comps];
+        } else if (transformIdx > 0) {
+            const [rootTransform] = comps.splice(transformIdx, 1);
+            comps.unshift(rootTransform);
         }
         return {
-            id: d.id || savedFile || d.name || 'prefab_' + Date.now(),
-            name: d.name || savedFile || d.id || 'New_Entity',
-            sprite: d.sprite || 'player',
+            id: d?.id || savedFile || d?.name || 'prefab_' + Date.now(),
+            name: d?.name || savedFile || d?.id || 'New_Entity',
+            sprite: d?.sprite || 'player',
             savedFile,
             components: comps
         };
@@ -387,14 +414,16 @@ const PrefabEditor: React.FC = () => {
     };
 
     const removeComponent = (idx: number) => {
+        if (idx === 0) return;
         const comp = prefabs[currentIndex].components[idx];
-        if (comp.data.type === 'Transform') return;
+        if (comp?.data?.type === 'Transform') return;
         const newComps = prefabs[currentIndex].components.filter((_, i) => i !== idx);
         updateCurrentPrefab('components', newComps);
         setSelectedCompIdx(Math.max(0, Math.min(selectedCompIdx, newComps.length - 1)));
     };
     
     const moveComponent = (idx: number, dir: 1 | -1) => {
+        if (idx === 0 || idx + dir === 0) return;
         if (idx + dir < 0 || idx + dir >= prefabs[currentIndex].components.length) return;
         const newComps = [...prefabs[currentIndex].components];
         const temp = newComps[idx];
@@ -520,6 +549,7 @@ const PrefabEditor: React.FC = () => {
 
         try {
             const engineFormat = {
+                id: safeName,
                 name,
                 sprite: prefab.sprite,
                 components: prefab.components.map(c => c.data)
@@ -533,6 +563,15 @@ const PrefabEditor: React.FC = () => {
                     content: JSON.stringify(engineFormat, null, 2)
                 })
             });
+
+            // Dual persistence: mirror to /api/prefabs if available
+            try {
+                await fetch('/api/prefabs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(engineFormat)
+                });
+            } catch { /* best-effort mirror */ }
 
             if (!res.ok) {
                 toastRef.current?.show('SAVE FAILED', 'error');
@@ -1060,17 +1099,8 @@ const PrefabEditor: React.FC = () => {
                                 onChange={(e) => {
                                     try {
                                         const parsed = JSON.parse(e.target.value);
-                                        const reconstructed = {
-                                            id: currentPrefab.id,
-                                            name: parsed.name || currentPrefab.name,
-                                            sprite: parsed.sprite || currentPrefab.sprite,
-                                            components: (parsed.components || []).map((c:any, i:number) => ({
-                                                id: currentPrefab.components[i]?.id || Math.random().toString(36).substr(2, 9),
-                                                hidden: currentPrefab.components[i]?.hidden || false,
-                                                locked: currentPrefab.components[i]?.locked || false,
-                                                data: c
-                                            }))
-                                        };
+                                        const reconstructed = ensureSchema(parsed, currentPrefab.savedFile);
+                                        reconstructed.id = currentPrefab.id;
                                         const newArr = [...prefabs];
                                         newArr[currentIndex] = reconstructed;
                                         setPrefabs(newArr);
@@ -1193,13 +1223,13 @@ const PrefabEditor: React.FC = () => {
                                                     );
                                                 }
 
-                                                if (t === 'object' && val !== null) {
+                                                if (t === 'object' && val !== null && !Array.isArray(val) && 'x' in val && 'y' in val) {
                                                     return (
                                                         <div key={key} style={{ display: 'flex', gap: '4px' }}>
                                                             <div style={{ flex: 1 }}><label style={{fontSize:'12px'}}>{key.toUpperCase()} X</label><RetroInput type="number" value={val.x} onChange={v => updateCurrentPrefab(`components.${selectedCompIdx}.data.${key}.x`, parseFloat(v)||0)} /></div>
                                                             <div style={{ flex: 1 }}><label style={{fontSize:'12px'}}>{key.toUpperCase()} Y</label><RetroInput type="number" value={val.y} onChange={v => updateCurrentPrefab(`components.${selectedCompIdx}.data.${key}.y`, parseFloat(v)||0)} /></div>
                                                         </div>
-                                                    )
+                                                    );
                                                 }
 
                                                 return (

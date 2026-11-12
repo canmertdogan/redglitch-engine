@@ -134,6 +134,25 @@ class IsoPixelAdapter extends EngineAdapter {
         if (this.engine) this.engine.running = false;
     }
 
+    pause() {
+        if (this.engine && typeof this.engine.pause === 'function') {
+            this.engine.pause();
+        } else if (this.engine) {
+            this.engine.isPaused = true;
+            this.engine.timeScale = 0;
+        }
+    }
+
+    resume() {
+        if (this.engine && typeof this.engine.resume === 'function') {
+            this.engine.resume();
+        } else if (this.engine) {
+            this.engine.isPaused = false;
+            this.engine.timeScale = 1;
+            this.engine.lastTime = performance.now();
+        }
+    }
+
     getPlayerData() {
         return this.engine?.player ? this._serializePlayer() : null;
     }

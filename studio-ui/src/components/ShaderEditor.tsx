@@ -14,6 +14,7 @@ interface Shader {
     id: string;
     name: string;
     code: string;
+    vertexCode?: string;
     uniforms: any;
     savedName?: string;
     layers?: ShaderLayer[];
@@ -36,7 +37,7 @@ interface ShaderTemplate {
     code: string;
 }
 
-type MeshType = 'sphere' | 'cube' | 'torus';
+type MeshType = 'sphere' | 'cube' | 'torus' | 'quad';
 
 const TEMPLATES: ShaderTemplate[] = [
     // ── Basic ──
@@ -1086,16 +1087,41 @@ function generateProceduralTexture(width: number, height: number): Uint8Array {
     return data;
 }
 
+function createPlane(): { positions: Float32Array; texcoords: Float32Array; normals: Float32Array; indices: Uint16Array } {
+    const positions = new Float32Array([
+        -1.0, -1.0, 0,
+         1.0, -1.0, 0,
+        -1.0,  1.0, 0,
+         1.0,  1.0, 0
+    ]);
+    const texcoords = new Float32Array([
+        0, 0,
+        1, 0,
+        0, 1,
+        1, 1
+    ]);
+    const normals = new Float32Array([
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1
+    ]);
+    const indices = new Uint16Array([0, 1, 2, 2, 1, 3]);
+    return { positions, texcoords, normals, indices };
+}
+
 const MESHES: Record<MeshType, () => { positions: Float32Array; texcoords: Float32Array; normals: Float32Array; indices: Uint16Array }> = {
     sphere: () => createSphere(1.0, 32, 32),
     cube: () => createCube(1.5),
     torus: () => createTorus(1.0, 0.4, 20, 16),
+    quad: () => createPlane(),
 };
 
 const MESH_LABELS: Record<MeshType, string> = {
     sphere: 'Sphere',
     cube: 'Cube',
     torus: 'Torus',
+    quad: '2D Quad (Post-Process)',
 };
 
 interface ParsedUniform {
@@ -1108,7 +1134,7 @@ interface ParsedUniform {
 function parseUniforms(source: string, prevValues: Record<string, any>): ParsedUniform[] {
     const systemUniforms = new Set(['uTexture', 'uTime', 'uResolution', 'uModelViewProjection', 'uModelMatrix', 'uNormalMatrix', 'uMouse', 'uCameraPosition']);
     const result: ParsedUniform[] = [];
-    const regex = /uniform\s+(float|int|bool|vec2|vec3|vec4|sampler2D)\s+(\w+)\s*;(?:\s*\/\/\s*(.*))?/g;
+    const regex = /uniform\s+(?:(?:highp|mediump|lowp)\s+)?(float|int|bool|vec2|vec3|vec4|sampler2D)\s+(\w+)\s*;(?:\s*\/\/\s*(.*))?/g;
     let match;
     while ((match = regex.exec(source)) !== null) {
         const glType = match[1];
@@ -1138,7 +1164,7 @@ function defaultValueForType(type: string, hint: string): any {
 }
 
 function rangeFromHint(hint: string): [number, number] {
-    const match = hint.match(/\[([\d.]+)\s*,\s*([\d.]+)\]/);
+    const match = hint.match(/\[([+-]?[\d.]+)\s*,\s*([+-]?[\d.]+)\]/);
     if (match) return [parseFloat(match[1]), parseFloat(match[2])];
     return [0, 1];
 }
@@ -1157,9 +1183,9 @@ function hexToVec3(hex: string): number[] {
     return [r, g, b];
 }
 
-function compileShaderProgram(gl: WebGLRenderingContext, fragmentSource: string): WebGLProgram | null {
+function compileShaderProgram(gl: WebGLRenderingContext, fragmentSource: string, vertexSource = VERTEX_SHADER_SRC): WebGLProgram | null {
     const vs = gl.createShader(gl.VERTEX_SHADER)!;
-    gl.shaderSource(vs, VERTEX_SHADER_SRC);
+    gl.shaderSource(vs, vertexSource);
     gl.compileShader(vs);
     if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) return null;
     const fs = gl.createShader(gl.FRAGMENT_SHADER)!;

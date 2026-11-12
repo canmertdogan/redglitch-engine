@@ -20,14 +20,14 @@ const RG_HUD_CSS = `
   -webkit-font-smoothing: none !important;
   -moz-osx-font-smoothing: unset !important;
   text-rendering: optimizeSpeed !important;
-  font-family: 'Press Start 2P', 'VT323', monospace;
+  font-family: 'VT323', monospace;
 }
 
-/* ── CRT scanlines (retro flavor) ───────────────────────────────────── */
+/* ── CRT scanlines (subtle retro flavor) ───────────────────────────── */
 .hud-crt {
   position: absolute; inset: 0; pointer-events: none; z-index: 6;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
-  opacity: .5; mix-blend-mode: multiply;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.08) 0 1px, transparent 1px 3px);
+  opacity: .35; mix-blend-mode: multiply;
 }
 
 /* ── Low-HP alarm ──────────────────────────────────────────────────── */
@@ -44,42 +44,40 @@ const RG_HUD_CSS = `
   transition: none;
 }
 .hud-element.hud-type-panel {
-  background: rgba(20,24,38,0.84);
-  border: 2px solid #000;
+  background: rgba(15, 22, 36, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.34);
   box-shadow:
-    inset 2px 2px 0 rgba(255,255,255,.10),
-    inset -2px -2px 0 rgba(0,0,0,.45),
-    3px 3px 0 rgba(0,0,0,.6);
+    inset 0 1px 0 rgba(255,255,255,.09),
+    2px 2px 0 rgba(0,0,0,.34);
 }
 .hud-element.hud-type-label,
 .hud-element.hud-type-button {
-  text-shadow: 2px 2px 0 #000;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.55);
   letter-spacing: 0.5px;
 }
 .hud-element.hud-type-button {
-  border: 2px solid #000;
-  background: rgba(20,24,38,0.9);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(12, 18, 30, 0.80);
   box-shadow:
-    inset 2px 2px 0 rgba(255,255,255,.18),
-    inset -2px -2px 0 rgba(0,0,0,.35),
-    3px 3px 0 rgba(0,0,0,.6);
+    inset 0 1px 0 rgba(255,255,255,.12),
+    2px 2px 0 rgba(0,0,0,.35);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   image-rendering: pixelated;
 }
 .hud-element.hud-type-button:hover {
-  filter: brightness(1.16);
+  filter: brightness(1.14);
   transform: translate(-1px,-1px);
 }
 .hud-element.hud-type-button:active {
   transform: translate(1px,1px);
 }
 
-/* ── Stat bars: flat stepped fill + blocky notches ─────────────────── */
+/* ── Stat bars: flat stepped fill + clean notches ──────────────────── */
 .hud-element.hud-type-bar {
-  border: 2px solid #000;
-  background: #0b0d14;
-  box-shadow: inset 2px 2px 0 rgba(0,0,0,.55), 3px 3px 0 rgba(0,0,0,.6);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: rgba(10, 15, 26, 0.84);
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,.40), 2px 2px 0 rgba(0,0,0,.28);
   overflow: hidden;
   image-rendering: pixelated;
 }
@@ -87,7 +85,7 @@ const RG_HUD_CSS = `
   position: absolute; top: 0; left: 0; height: 100%;
   width: 100%; pointer-events: none;
   background: var(--bar-color, #ff3147);
-  box-shadow: inset -3px 0 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -3px 0 rgba(0,0,0,.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.26), inset 0 -2px 0 rgba(0,0,0,.20);
   image-rendering: pixelated;
   transition: width 0.18s steps(8);
 }
@@ -99,32 +97,30 @@ const RG_HUD_CSS = `
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
   text-align: center;
-  font-size: 11px;
-  text-shadow: 2px 2px 0 #000;
+  font-size: 14px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.65);
 }
 
 /* ── Slots: item-frame style ───────────────────────────────────────── */
 .hud-element.hud-type-slot {
-  background: #1b2030;
-  border: 2px solid #000;
+  background: rgba(15, 22, 36, 0.72);
+  border: 1px solid rgba(255, 213, 115, 0.45);
   box-shadow:
-    inset 2px 2px 0 rgba(255,255,255,.10),
-    inset -2px -2px 0 rgba(0,0,0,.5),
-    3px 3px 0 rgba(0,0,0,.6);
+    inset 0 1px 0 rgba(255,255,255,.10),
+    2px 2px 0 rgba(0,0,0,.32);
   image-rendering: pixelated;
 }
 .hud-element.hud-type-slot.is-active {
   border-color: #fff !important;
   box-shadow:
     inset 0 0 0 1px #fff,
-    inset 2px 2px 0 rgba(255,255,255,.14),
-    0 0 0 2px #fff,
-    3px 3px 0 rgba(0,0,0,.6) !important;
+    0 0 0 1px #fff,
+    2px 2px 0 rgba(0,0,0,.38) !important;
 }
 .slot-key {
   position: absolute; top: 2px; left: 3px;
-  font-size: 10px; font-weight: 400; color: #fff;
-  text-shadow: 1px 1px 0 #000;
+  font-size: 13px; font-weight: 400; color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.65);
   image-rendering: pixelated !important;
 }
 .hud-slot-icon {
@@ -180,7 +176,7 @@ class GameHUD {
             position: absolute; top: 0; left: 0;
             width: 100%; height: 100%;
             pointer-events: none; z-index: 20000;
-            font-family: 'Press Start 2P', 'VT323', monospace;
+            font-family: 'VT323', monospace;
             image-rendering: pixelated;
         `;
 
@@ -687,6 +683,67 @@ class GameHUD {
         }
         if (this._animFrameId) cancelAnimationFrame(this._animFrameId);
         window.removeEventListener('resize', () => this._handleResize());
+    }
+
+    /**
+     * Dispatch standardized HUD button scripts (pause/resume/quit/achievements/save/retry)
+     * across every engine runtime without duplicating switch logic.
+     */
+    static dispatchEngineCommand(engine, cmd, hooks = {}) {
+        const action = String(cmd || '').trim();
+        switch (action) {
+            case 'retryLevel':
+            case 'RETRY':
+                hooks.retry?.();
+                return true;
+            case 'quitToMenu':
+            case 'QUIT':
+            case 'quit_to_menu':
+                hooks.quit?.();
+                return true;
+            case 'togglePause':
+            case 'toggle_pause':
+            case 'pause_game': {
+                if (typeof window !== 'undefined' && window.CAMPAIGN_RUNTIME_MODE && typeof window.togglePause === 'function') {
+                    window.togglePause();
+                    return true;
+                }
+                const paused = Boolean(engine?.isPaused || engine?.timeScale === 0);
+                if (paused) hooks.resume?.();
+                else hooks.pause?.();
+                return true;
+            }
+            case 'RESUME_GAME':
+            case 'resume_game':
+            case 'CLOSE_MENU':
+                if (typeof window !== 'undefined' && window.CAMPAIGN_RUNTIME_MODE && typeof window.resumeGame === 'function') {
+                    window.resumeGame();
+                    return true;
+                }
+                hooks.resume?.();
+                return true;
+            case 'show_achievements':
+                if (typeof window !== 'undefined' && typeof window.openAchievements === 'function') {
+                    window.openAchievements();
+                    return true;
+                }
+                if (hooks.hud) {
+                    hooks.hud.showCustomScreen?.('achievements_screen');
+                }
+                return true;
+            case 'save_game':
+                if (typeof window !== 'undefined' && typeof window.manualSave === 'function') {
+                    window.manualSave();
+                    return true;
+                }
+                if (typeof window !== 'undefined' && window.campaignController?.manualSave) {
+                    window.campaignController.manualSave();
+                    return true;
+                }
+                return true;
+            default:
+                return false;
+        }
     }
 }
 

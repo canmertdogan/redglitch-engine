@@ -51,8 +51,11 @@ interface AudioEvent {
 
 interface AudioBus {
     gain: number;
+    pan?: number;
     parent?: string;
     ducking?: boolean;
+    mute?: boolean;
+    solo?: boolean;
 }
 
 interface AudioMap {
@@ -273,11 +276,20 @@ const normalizeMap = (rawMap: any): AudioMap => {
     const rawBuses = rawMap?.buses || {};
 
     Object.entries(rawBuses).forEach(([busName, busConfig]) => {
-        const typed = busConfig as AudioBus;
+        const typed = busConfig as any;
+        const gainVal = typeof typed.gain === 'number'
+            ? typed.gain
+            : typeof typed.volume === 'number'
+                ? typed.volume
+                : 1;
+        const panVal = typeof typed.pan === 'number' ? typed.pan : 0;
         buses[busName] = {
-            gain: typeof typed.gain === 'number' ? typed.gain : 1,
+            gain: gainVal,
+            pan: panVal,
             parent: typed.parent || (busName === 'master' ? undefined : 'master'),
-            ducking: !!typed.ducking
+            ducking: !!typed.ducking,
+            mute: !!typed.mute,
+            solo: !!typed.solo
         };
     });
 
@@ -354,8 +366,24 @@ const AudioStudio: React.FC = () => {
             addHistory(name, clip);
         });
 
+        const unsubProject = eventBus?.on?.('project:switched', () => {
+            void loadAudioMap();
+            void loadAssets();
+            void discoverEvents();
+        });
+
         return () => {
+            stopAudition();
+            if (auditionTimerRef.current) {
+                clearTimeout(auditionTimerRef.current);
+                auditionTimerRef.current = null;
+            }
+            if (fallbackCtxRef.current && fallbackCtxRef.current.state !== 'closed') {
+                fallbackCtxRef.current.close().catch(() => {});
+                fallbackCtxRef.current = null;
+            }
             if (unsubTriggerId && eventBus?.off) eventBus.off('audio:trigger', unsubTriggerId);
+            if (unsubProject && eventBus?.off) eventBus.off('project:switched', unsubProject);
         };
     }, [isReady]);
 
@@ -457,8 +485,15 @@ const AudioStudio: React.FC = () => {
                 console.error('[AudioStudio] Failed to load /api/audio/assets');
                 return;
             }
-            const data = await res.json();
-            setAvailableAssets((data || []).map((a: any) => a.name || String(a)));
+            const raw = await res.json();
+            const list: any[] = Array.isArray(raw)
+                ? raw
+                : Array.isArray(raw?.clips)
+                    ? raw.clips
+                    : Array.isArray(raw?.assets)
+                        ? raw.assets
+                        : [];
+            setAvailableAssets(list.map((a: any) => a.name || String(a)));
         } catch (e) {
             console.error('[AudioStudio] loadAssets failed', e);
         }
@@ -468,8 +503,13 @@ const AudioStudio: React.FC = () => {
         try {
             const res = await fetch('/api/audio/discover-events');
             if (res.ok) {
-                const serverEvents = await res.json();
-                setDiscoveredEvents([...new Set([...CORE_EVENTS, ...(serverEvents || [])])]);
+                const raw = await res.json();
+                const serverEvents: string[] = Array.isArray(raw)
+                    ? raw
+                    : Array.isArray(raw?.events)
+                        ? raw.events
+                        : [];
+                setDiscoveredEvents([...new Set([...CORE_EVENTS, ...serverEvents])]);
                 return;
             }
             setDiscoveredEvents(CORE_EVENTS);
@@ -713,6 +753,10 @@ const AudioStudio: React.FC = () => {
         try {
             const kae = (window as any).KAE;
             let ctx: AudioContext | null = kae?.ctx || fallbackCtxRef.current;
+            if (ctx && ctx.state === 'closed') {
+                ctx = null;
+                fallbackCtxRef.current = null;
+            }
             if (!ctx) {
                 const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
                 if (!AudioCtx) return;
@@ -916,6 +960,7 @@ const AudioStudio: React.FC = () => {
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                         onClick={bootstrapTemplate}
+                        title="Load core gameplay sound template pack"
                         style={{
                             background: THEME.bgPanel,
                             border: `1px solid ${THEME.border}`,
@@ -927,7 +972,7 @@ const AudioStudio: React.FC = () => {
                             fontSize: '14px'
                         }}
                     >
-                        <Zap size={13} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> REBUILD
+                        <Zap size={13} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> LOAD PACK
                     </button>
                     <button
                         onClick={() => void saveMap()}
@@ -1135,42 +1180,50 @@ const AudioStudio: React.FC = () => {
                             );
                         })}
 
-                        {activeExplorerTab === 'assets' && filteredAssets.map(asset => (
-                            <div
-                                key={asset}
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, asset)}
-                                style={{
-                                    padding: '10px',
-                                    border: `1px solid ${THEME.border}`,
-                                    background: THEME.bgPanel,
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    cursor: 'grab'
-                                }}
-                            >
-                                <div style={{ color: THEME.textMain, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    <FileAudio size={13} style={{ marginRight: '8px', verticalAlign: 'middle', color: THEME.textDim }} />
-                                    {asset}
+                        {activeExplorerTab === 'assets' && (
+                            filteredAssets.length === 0 ? (
+                                <div style={{ padding: '24px 12px', textAlign: 'center', color: THEME.textMute, fontSize: '13px' }}>
+                                    NO AUDIO CLIPS DISCOVERED
                                 </div>
-                                <button
-                                    onClick={() => selectedEvent && addClipToEvent(selectedEvent, asset)}
-                                    disabled={!selectedEvent}
-                                    style={{
-                                        border: `1px solid ${THEME.border}`,
-                                        background: '#000',
-                                        color: selectedEvent ? THEME.accent : THEME.textMute,
-                                        fontFamily: 'inherit',
-                                        fontSize: '11px',
-                                        cursor: selectedEvent ? 'pointer' : 'not-allowed',
-                                        padding: '2px 8px'
-                                    }}
-                                >
-                                    LINK
-                                </button>
-                            </div>
-                        ))}
+                            ) : (
+                                filteredAssets.map(asset => (
+                                    <div
+                                        key={asset}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, asset)}
+                                        style={{
+                                            padding: '10px',
+                                            border: `1px solid ${THEME.border}`,
+                                            background: THEME.bgPanel,
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            cursor: 'grab'
+                                        }}
+                                    >
+                                        <div style={{ color: THEME.textMain, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            <FileAudio size={13} style={{ marginRight: '8px', verticalAlign: 'middle', color: THEME.textDim }} />
+                                            {asset}
+                                        </div>
+                                        <button
+                                            onClick={() => selectedEvent && addClipToEvent(selectedEvent, asset)}
+                                            disabled={!selectedEvent}
+                                            style={{
+                                                border: `1px solid ${THEME.border}`,
+                                                background: '#000',
+                                                color: selectedEvent ? THEME.accent : THEME.textMute,
+                                                fontFamily: 'inherit',
+                                                fontSize: '11px',
+                                                cursor: selectedEvent ? 'pointer' : 'not-allowed',
+                                                padding: '2px 8px'
+                                            }}
+                                        >
+                                            LINK
+                                        </button>
+                                    </div>
+                                ))
+                            )
+                        )}
                         {activeExplorerTab === 'templates' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <div style={{ padding: '10px', border: `1px solid ${THEME.border}`, background: THEME.bgPanelAlt }}>
@@ -1385,14 +1438,36 @@ const AudioStudio: React.FC = () => {
                                 border: `1px dashed ${THEME.border}`,
                                 background: THEME.bgPanel,
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
+                                gap: '16px',
                                 color: THEME.textMute,
-                                fontSize: '24px',
-                                letterSpacing: '1px'
+                                padding: '24px'
                             }}
                         >
-                            SELECT OR MAP AN EVENT TO START
+                            <Music size={48} style={{ opacity: 0.3 }} />
+                            <div style={{ fontSize: '20px', letterSpacing: '1px', textAlign: 'center' }}>
+                                {Object.keys(audioMap.events).length === 0 ? 'NO AUDIO EVENTS CONFIGURED' : 'SELECT OR MAP AN EVENT TO START'}
+                            </div>
+                            <button
+                                onClick={bootstrapTemplate}
+                                style={{
+                                    background: THEME.accentSoft,
+                                    border: `1px solid ${THEME.accent}`,
+                                    color: THEME.accent,
+                                    padding: '8px 20px',
+                                    fontFamily: 'inherit',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <Zap size={14} />
+                                LOAD CORE GAMEPLAY AUDIO PACK
+                            </button>
                         </div>
                     )}
                 </div>
@@ -1612,6 +1687,57 @@ const AudioStudio: React.FC = () => {
                                         onChange={e => updateBus(busName, 'gain', parseFloat(e.target.value))}
                                         style={{ width: '100%', height: '4px' }}
                                     />
+                                </div>
+
+                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: THEME.textMute }}>
+                                        <span>PAN</span>
+                                        <span style={{ color: THEME.accent }}>
+                                            {(bus.pan ?? 0) === 0 ? 'C' : (bus.pan ?? 0) < 0 ? `L${Math.round(Math.abs(bus.pan ?? 0) * 100)}` : `R${Math.round((bus.pan ?? 0) * 100)}`}
+                                        </span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="-1"
+                                        max="1"
+                                        step="0.05"
+                                        value={bus.pan ?? 0}
+                                        onChange={e => updateBus(busName, 'pan', parseFloat(e.target.value))}
+                                        style={{ width: '100%', height: '4px' }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                                    <button
+                                        onClick={() => updateBus(busName, 'mute', !bus.mute)}
+                                        style={{
+                                            flex: 1,
+                                            fontSize: '10px',
+                                            background: bus.mute ? THEME.danger : '#000',
+                                            color: bus.mute ? '#fff' : THEME.textMute,
+                                            border: `1px solid ${THEME.border}`,
+                                            cursor: 'pointer',
+                                            padding: '2px 0'
+                                        }}
+                                        title="Mute bus"
+                                    >
+                                        M
+                                    </button>
+                                    <button
+                                        onClick={() => updateBus(busName, 'solo', !bus.solo)}
+                                        style={{
+                                            flex: 1,
+                                            fontSize: '10px',
+                                            background: bus.solo ? '#f39c12' : '#000',
+                                            color: bus.solo ? '#000' : THEME.textMute,
+                                            border: `1px solid ${THEME.border}`,
+                                            cursor: 'pointer',
+                                            padding: '2px 0'
+                                        }}
+                                        title="Solo bus"
+                                    >
+                                        S
+                                    </button>
                                 </div>
                                 {busName !== 'master' && (
                                     <div style={{ width: '100%', display: 'flex', gap: '4px' }}>

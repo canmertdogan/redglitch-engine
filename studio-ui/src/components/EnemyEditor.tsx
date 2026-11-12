@@ -8,7 +8,7 @@ import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
 import Toast, { ToastHandle } from './shared/Toast';
 
-interface Enemy {
+export interface Enemy {
     id: string;
     name: string;
     type: string;
@@ -63,6 +63,101 @@ function resolveSpriteImageUrl(key: string): string | null {
     return `/sprite-art/${key}`;
 }
 
+export function ensureNewSchema(en: any): Enemy {
+    const anim = en?.animations || {};
+    const fallbackSprite =
+        anim.idle?.down ||
+        anim.idle?.sprite ||
+        anim.idle?.base ||
+        en?.sprite ||
+        'monster';
+    const aiObj = typeof en?.ai === 'object' && en.ai !== null ? en.ai : {};
+    const aiType = typeof en?.ai === 'string' ? en.ai : (aiObj.type || 'patrol');
+    const aiScript = String(aiObj.script || aiObj.brain || en?.brain || en?.script || '');
+
+    const rawGold = en?.loot?.gold;
+    const goldMin = Array.isArray(rawGold) ? (Number(rawGold[0]) || 0) : (Number(en?.loot?.goldMin) || 0);
+    const goldMax = Array.isArray(rawGold) ? (Number(rawGold[1]) || 0) : (Number(en?.loot?.goldMax) ?? 10);
+    const rawChance = en?.loot?.dropChance ?? (Number.isFinite(en?.loot?.chance) ? Math.round(en.loot.chance * 100) : 50);
+
+    const rawDrops = Array.isArray(en?.loot?.items)
+        ? en.loot.items
+        : Array.isArray(en?.loot)
+            ? en.loot
+            : Array.isArray(en?.drops)
+                ? en.drops
+                : [];
+    const normalizedItems = rawDrops.map((entry: any) => {
+        if (typeof entry === 'string') return { id: entry, chance: 100, min: 1, max: 1 };
+        const id = String(entry?.id || entry?.itemId || '');
+        const chance = entry?.chance ?? (Number.isFinite(entry?.rate) ? Math.round(entry.rate * 100) : 100);
+        const min = Number(entry?.min ?? entry?.quantity ?? 1) || 1;
+        const max = Number(entry?.max ?? entry?.quantity ?? min) || min;
+        return { id, chance, min, max };
+    }).filter((it: any) => Boolean(it.id));
+
+    const hpVal = Number(en?.stats?.hp ?? en?.hp ?? 50) || 50;
+    const speedVal = Number(en?.stats?.speed ?? en?.speed ?? 80) || 80;
+    const damageVal = Number(en?.stats?.damage ?? en?.stats?.atk ?? en?.damage ?? en?.atk ?? 10) || 10;
+    const xpVal = Number(en?.stats?.xp ?? en?.stats?.xpValue ?? en?.xp ?? en?.xpValue ?? 20) || 0;
+    const armorVal = Number(en?.resistances?.armor ?? en?.stats?.def ?? en?.def ?? 0) || 0;
+
+    return {
+        id: String(en?.id || 'enemy_' + Date.now().toString().slice(-4)),
+        name: String(en?.name || en?.id || 'New Monster'),
+        type: 'enemy',
+        category: String(en?.category || 'normal'),
+        tags: Array.isArray(en?.tags) ? en.tags.filter(Boolean) : [],
+        stats: {
+            hp: hpVal,
+            speed: speedVal,
+            damage: damageVal,
+            xp: xpVal
+        },
+        ai: {
+            type: aiType,
+            range: Number(aiObj.range ?? en?.range ?? 250) || 250,
+            attackRange: Number(aiObj.attackRange ?? 40) || 40,
+            patrolRadius: Number(aiObj.patrolRadius ?? 100) || 100,
+            cooldown: Number(aiObj.cooldown ?? 1.5) || 1.5,
+            script: aiScript
+        },
+        loot: {
+            gold: [goldMin, goldMax],
+            dropChance: Number.isFinite(Number(rawChance)) ? Number(rawChance) : 50,
+            items: normalizedItems
+        },
+        resistances: {
+            armor: armorVal,
+            magicResist: Number(en?.resistances?.magicResist ?? 0) || 0,
+            resist: Array.isArray(en?.resistances?.resist) ? en.resistances.resist : [],
+            weakness: Array.isArray(en?.resistances?.weakness) ? en.resistances.weakness : []
+        },
+        animations: {
+            idle: {
+                down: anim.idle?.down || anim.idle?.sprite || fallbackSprite,
+                up: anim.idle?.up || anim.idle?.sprite || fallbackSprite,
+                side: anim.idle?.side || anim.idle?.sprite || fallbackSprite,
+                speed: Number(anim.idle?.speed ?? 0.15) || 0.15
+            },
+            run: {
+                down: anim.run?.down || anim.run?.sprite || fallbackSprite,
+                up: anim.run?.up || anim.run?.sprite || fallbackSprite,
+                side: anim.run?.side || anim.run?.sprite || fallbackSprite,
+                speed: Number(anim.run?.speed ?? 0.15) || 0.15
+            },
+            attack: {
+                base: anim.attack?.base || anim.attack?.down || anim.attack?.sprite || fallbackSprite,
+                speed: Number(anim.attack?.speed ?? 0.15) || 0.15
+            },
+            death: {
+                base: anim.death?.base || anim.death?.down || anim.death?.sprite || fallbackSprite,
+                speed: Number(anim.death?.speed ?? 0.15) || 0.15
+            }
+        }
+    };
+}
+
 const EnemyEditor: React.FC = () => {
     const { isReady, sprites, emit, projectState, subscribe } = useStudio();
     const [enemies, setEnemies] = useState<Enemy[]>([]);
@@ -88,79 +183,6 @@ const EnemyEditor: React.FC = () => {
 
     useEffect(() => { enemiesRef.current = enemies; }, [enemies]);
     useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
-
-    // Schema Migration Helper (safe for partial animations, legacy flat enemies, and prefab templates)
-    const ensureNewSchema = (en: any): Enemy => {
-        const anim = en?.animations || {};
-        const fallbackSprite =
-            anim.idle?.down ||
-            anim.idle?.sprite ||
-            anim.idle?.base ||
-            en?.sprite ||
-            'monster';
-        const aiObj = typeof en?.ai === 'object' && en.ai !== null ? en.ai : {};
-        const aiType = typeof en?.ai === 'string' ? en.ai : (aiObj.type || 'patrol');
-
-        const rawGold = en?.loot?.gold;
-        const goldMin = Array.isArray(rawGold) ? (Number(rawGold[0]) || 0) : (Number(en?.loot?.goldMin) || 0);
-        const goldMax = Array.isArray(rawGold) ? (Number(rawGold[1]) || 0) : (Number(en?.loot?.goldMax) ?? 10);
-        const rawChance = en?.loot?.dropChance ?? (Number.isFinite(en?.loot?.chance) ? Math.round(en.loot.chance * 100) : 50);
-
-        return {
-            id: String(en?.id || 'enemy_' + Date.now().toString().slice(-4)),
-            name: String(en?.name || en?.id || 'New Monster'),
-            type: 'enemy',
-            category: String(en?.category || 'normal'),
-            tags: Array.isArray(en?.tags) ? en.tags.filter(Boolean) : [],
-            stats: {
-                hp: Number(en?.stats?.hp ?? en?.hp ?? 50) || 50,
-                speed: Number(en?.stats?.speed ?? en?.speed ?? 80) || 80,
-                damage: Number(en?.stats?.damage ?? en?.damage ?? 10) || 10,
-                xp: Number(en?.stats?.xp ?? en?.xp ?? 20) || 0
-            },
-            ai: {
-                type: aiType,
-                range: Number(aiObj.range ?? en?.range ?? 250) || 250,
-                attackRange: Number(aiObj.attackRange ?? 40) || 40,
-                patrolRadius: Number(aiObj.patrolRadius ?? 100) || 100,
-                cooldown: Number(aiObj.cooldown ?? 1.5) || 1.5,
-                script: String(aiObj.script || '')
-            },
-            loot: {
-                gold: [goldMin, goldMax],
-                dropChance: Number.isFinite(Number(rawChance)) ? Number(rawChance) : 50,
-                items: Array.isArray(en?.loot?.items) ? en.loot.items : (Array.isArray(en?.loot) ? en.loot : [])
-            },
-            resistances: {
-                armor: Number(en?.resistances?.armor ?? 0) || 0,
-                magicResist: Number(en?.resistances?.magicResist ?? 0) || 0,
-                resist: Array.isArray(en?.resistances?.resist) ? en.resistances.resist : [],
-                weakness: Array.isArray(en?.resistances?.weakness) ? en.resistances.weakness : []
-            },
-            animations: {
-                idle: {
-                    down: anim.idle?.down || anim.idle?.sprite || fallbackSprite,
-                    up: anim.idle?.up || anim.idle?.sprite || fallbackSprite,
-                    side: anim.idle?.side || anim.idle?.sprite || fallbackSprite,
-                    speed: Number(anim.idle?.speed ?? 0.15) || 0.15
-                },
-                run: {
-                    down: anim.run?.down || anim.run?.sprite || fallbackSprite,
-                    up: anim.run?.up || anim.run?.sprite || fallbackSprite,
-                    side: anim.run?.side || anim.run?.sprite || fallbackSprite,
-                    speed: Number(anim.run?.speed ?? 0.15) || 0.15
-                },
-                attack: {
-                    base: anim.attack?.base || anim.attack?.down || anim.attack?.sprite || fallbackSprite,
-                    speed: Number(anim.attack?.speed ?? 0.15) || 0.15
-                },
-                death: {
-                    base: anim.death?.base || anim.death?.down || anim.death?.sprite || fallbackSprite,
-                    speed: Number(anim.death?.speed ?? 0.15) || 0.15
-                }
-            }
-        };
-    };
 
     useEffect(() => {
         if (!isReady) return;
@@ -213,40 +235,64 @@ const EnemyEditor: React.FC = () => {
         renderPreview();
     }, [enemies, currentIndex, previewState, previewDir, previewZoom, sprites]);
 
-    const loadEnemies = async () => {
+    const loadEnemies = async (preserveId?: string) => {
         try {
             const res = await fetch('/api/enemies');
             if (res.ok) {
                 const data = await res.json();
                 const migrated = Array.isArray(data) ? data.map(ensureNewSchema) : [];
-                setEnemies(migrated.length > 0 ? migrated : [getDefaultEnemy()]);
+                const nextList = migrated.length > 0 ? migrated : [getDefaultEnemy()];
+                setEnemies(nextList);
+                enemiesRef.current = nextList;
+                if (preserveId) {
+                    const foundIdx = nextList.findIndex(e => e.id === preserveId);
+                    if (foundIdx >= 0) setCurrentIndex(foundIdx);
+                }
             } else {
-                setEnemies([getDefaultEnemy()]);
+                const def = [getDefaultEnemy()];
+                setEnemies(def);
+                enemiesRef.current = def;
             }
         } catch (e) {
-            setEnemies([getDefaultEnemy()]);
+            const def = [getDefaultEnemy()];
+            setEnemies(def);
+            enemiesRef.current = def;
         }
     };
 
     const loadTemplates = async () => {
         try {
             const res = await fetch('/api/templates/enemy');
-            if (res.ok) setTemplates(await res.json());
+            if (res.ok) {
+                const data = await res.json();
+                const arr = Array.isArray(data)
+                    ? data
+                    : data && typeof data === 'object'
+                        ? Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...(typeof val === 'object' ? val : {}) }))
+                        : [];
+                setTemplates(arr);
+            }
         } catch (err) { console.warn("[studio-ui] swallowed error", err); }
     };
 
     const loadBrains = async () => {
         try {
             const res = await fetch('/api/brains/list');
-            if (res.ok) setAvailableBrains(await res.json());
-        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+            if (res.ok) {
+                const data = await res.json();
+                setAvailableBrains(Array.isArray(data) ? data : []);
+            }
+        } catch (err) { setAvailableBrains([]); }
     };
 
     const loadItems = async () => {
         try {
             const res = await fetch('/api/items');
-            if (res.ok) setAvailableItems(await res.json());
-        } catch (err) { console.warn("[studio-ui] swallowed error", err); }
+            if (res.ok) {
+                const data = await res.json();
+                setAvailableItems(Array.isArray(data) ? data : []);
+            }
+        } catch (err) { setAvailableItems([]); }
     };
 
     const getDefaultEnemy = (): Enemy => ({
@@ -269,7 +315,9 @@ const EnemyEditor: React.FC = () => {
 
     const updateCurrentEnemy = (path: string, value: any) => {
         const newEnemies = [...enemies];
-        const enemy = { ...newEnemies[currentIndex] };
+        const prev = newEnemies[currentIndex];
+        if (!prev) return;
+        const enemy = { ...prev };
         
         const keys = path.split('.');
         let current: any = enemy;
@@ -281,6 +329,7 @@ const EnemyEditor: React.FC = () => {
         
         newEnemies[currentIndex] = enemy;
         setEnemies(newEnemies);
+        enemiesRef.current = newEnemies;
         setIsDirty(true);
         emit('enemy:updated', { enemyId: enemy.id, enemy });
     };
@@ -304,6 +353,8 @@ const EnemyEditor: React.FC = () => {
                     payload.forEach(e => map[e.id] = e);
                     projectState.set('enemies', map);
                 }
+                const currentId = enemiesRef.current[currentIndex]?.id;
+                await loadEnemies(currentId);
             } else {
                 let errMsg = `SAVE FAILED (${res.status})`;
                 try {
@@ -607,7 +658,7 @@ const EnemyEditor: React.FC = () => {
                                         }}
                                     >
                                         <option value="">-- Add Item Drop --</option>
-                                        {availableItems.map((it: any) => (
+                                        {(Array.isArray(availableItems) ? availableItems : []).map((it: any) => (
                                             <option key={it.id} value={it.id}>{it.name || it.id}</option>
                                         ))}
                                     </select>
@@ -684,7 +735,10 @@ const EnemyEditor: React.FC = () => {
                                 <div style={{ display: 'flex', gap: '5px' }}>
                                     <select value={currentEnemy.ai.script} onChange={(e) => updateCurrentEnemy('ai.script', e.target.value)} style={{ flex: 1 }}>
                                         <option value="">Standard Engine AI</option>
-                                        {availableBrains.map(b => <option key={b} value={b}>{b}</option>)}
+                                        {Boolean(currentEnemy.ai.script && !availableBrains.includes(currentEnemy.ai.script)) && (
+                                            <option value={currentEnemy.ai.script}>{currentEnemy.ai.script}</option>
+                                        )}
+                                        {(Array.isArray(availableBrains) ? availableBrains : []).map(b => <option key={b} value={b}>{b}</option>)}
                                     </select>
                                     <button className="tool-btn" onClick={() => openBrainEditor()} title="Open AI Brain Editor"><Brain size={14} /></button>
                                 </div>
@@ -763,7 +817,7 @@ const EnemyEditor: React.FC = () => {
                             <button className="tool-btn" onClick={() => setShowTemplateModal(false)}>×</button>
                         </div>
                         <div className="panel-content" style={{ padding: '15px' }}>
-                            {templates.map(t => (
+                            {(Array.isArray(templates) ? templates : []).map(t => (
                                 <div key={t.id} className="template-item" onClick={() => {
                                     const { components, sprite: tplSprite, ...restData } = (t.data || {});
                                     const statsComp = Array.isArray(components) ? components.find((c: any) => c?.type === 'Stats') : null;
@@ -804,7 +858,7 @@ const EnemyEditor: React.FC = () => {
                                 }}
                                 style={{ padding: '15px', margin: '8px 0', background: '#111', border: '1px solid #333', cursor: 'pointer', borderRadius: '4px' }}
                                 >
-                                    <div style={{ fontWeight: 'bold', color: 'var(--accent-villain)', fontSize: '1.1rem' }}>{t.name.toUpperCase()}</div>
+                                    <div style={{ fontWeight: 'bold', color: 'var(--accent-villain)', fontSize: '1.1rem' }}>{t.name?.toUpperCase() ?? ''}</div>
                                     <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '4px' }}>{t.desc}</div>
                                 </div>
                             ))}

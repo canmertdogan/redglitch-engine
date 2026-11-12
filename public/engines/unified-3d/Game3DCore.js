@@ -398,6 +398,15 @@ export default class Game3DCore extends Engine3DAdapter {
     }
 
     _handleHUDAction(cmd) {
+        if (window.GameHUD && typeof window.GameHUD.dispatchEngineCommand === 'function') {
+            if (window.GameHUD.dispatchEngineCommand(this, cmd, {
+                retry: () => this._retryLevel(),
+                quit: () => this._quitToMenu(),
+                pause: () => this.pause(),
+                resume: () => this.resume(),
+                hud: this.gameHUD
+            })) return;
+        }
         if (cmd === 'retryLevel') this._retryLevel();
         if (cmd === 'quitToMenu') this._quitToMenu();
         if (cmd === 'togglePause') this.toggle();
@@ -657,10 +666,16 @@ export default class Game3DCore extends Engine3DAdapter {
     pause() {
         this.isPaused = true;
         this.releasePointerLock();
+        if (this.gameHUD && this._usesGenericHUD() && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.gameHUD.showScreen('pause_menu');
+        }
     }
 
     resume() {
         this.isPaused = false;
+        if (this.gameHUD && this._usesGenericHUD() && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.gameHUD.showScreen('main_hud');
+        }
     }
 
     toggle() {

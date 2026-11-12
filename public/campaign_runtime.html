@@ -21,7 +21,7 @@
             padding: 0;
             background: #000;
             overflow: hidden;
-            font-family: 'Press Start 2P', monospace;
+            font-family: 'VT323', monospace;
         }
 
         /* ═══════════════════════════════════════════════════════════
@@ -1187,6 +1187,12 @@
 
         <!-- Game Controls (Fullscreen, etc) -->
         <div id="game-controls">
+            <button class="control-btn" id="pause-btn" title="Pause [ESC]">
+                <i class="fas fa-pause"></i>
+            </button>
+            <button class="control-btn" id="achievements-btn" title="Achievements / Trophies">
+                <i class="fas fa-trophy"></i>
+            </button>
             <button class="control-btn" id="fullscreen-btn" title="Toggle Fullscreen">
                 <i class="fas fa-expand"></i>
             </button>
@@ -1260,6 +1266,23 @@
         </div>
     </div>
 
+    <!-- Campaign Complete Screen -->
+    <div id="campaign-complete-screen" class="rg-fullscreen hidden">
+        <div class="rg-glow-core"></div>
+        <div class="rg-screen-content">
+            <div class="gameover-big-text" style="color:#62ff9a;text-shadow:0 0 24px rgba(98,255,154,0.45),4px 4px 0 #000;">CAMPAIGN COMPLETE!</div>
+            <div class="gameover-divider" style="background:linear-gradient(90deg,transparent,#62ff9a,transparent);"></div>
+            <div class="gameover-stats">
+                <div>TIME: <span class="gameover-stat-val" id="victory-time">0:00</span></div>
+                <div>PROGRESS: <span class="gameover-stat-val" id="victory-progress">100%</span></div>
+            </div>
+            <div class="gameover-actions">
+                <button class="gameover-btn" style="border-color:#62ff9a;color:#62ff9a;" onclick="replayCampaign()">REPLAY CAMPAIGN</button>
+                <button class="gameover-btn secondary" onclick="returnToLauncher()">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Inventory Modal -->
     <div id="inventory-modal">
         <div class="inventory-container">
@@ -1319,6 +1342,64 @@
         </div>
     </div>
 
+    <style>
+        #pause-modal, #achievements-modal {
+            position: fixed; inset: 0; background: rgba(4, 6, 12, 0.78);
+            display: none; align-items: center; justify-content: center;
+            z-index: 12000; font-family: 'VT323', monospace;
+        }
+        #pause-modal.active, #achievements-modal.active { display: flex; }
+        .rg-modal-box {
+            background: rgba(13, 18, 30, 0.96); border: 2px solid #ffd36a;
+            box-shadow: inset 2px 2px 0 rgba(255,255,255,0.08), 4px 4px 0 #000;
+            padding: 24px 28px; color: #f4f7ff;
+        }
+        .rg-pause-box { width: 340px; text-align: center; display: flex; flex-direction: column; gap: 10px; }
+        .rg-pause-title { font-size: 36px; color: #ffd36a; letter-spacing: 2px; text-shadow: 2px 2px 0 #000; margin-bottom: 4px; }
+        .rg-pause-sub { font-size: 16px; color: #94a3b8; margin-bottom: 10px; }
+        .rg-pause-btn {
+            width: 100%; padding: 10px 14px; font-family: inherit; font-size: 20px; font-weight: bold;
+            background: rgba(6, 9, 16, 0.85); color: #f4f7ff; border: 2px solid #49e3ff; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .rg-pause-btn:hover { background: rgba(73, 227, 255, 0.16); transform: translate(-1px, -1px); }
+        .rg-pause-btn.primary { border-color: #62ff9a; color: #62ff9a; }
+        .rg-pause-btn.danger { border-color: #ff3147; color: #ff3147; }
+        .rg-ach-box { width: min(760px, 92vw); max-height: 82vh; display: flex; flex-direction: column; gap: 12px; }
+        .rg-ach-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #2a3348; padding-bottom: 8px; }
+        .rg-ach-grid { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; padding-right: 4px; }
+        .rg-ach-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 2px solid #2a3348; background: rgba(6, 9, 16, 0.8); opacity: 0.72; }
+        .rg-ach-card.unlocked { border-color: #ffd36a; background: rgba(255, 211, 106, 0.10); opacity: 1; }
+    </style>
+
+    <!-- In-Game Pause Modal -->
+    <div id="pause-modal" role="dialog" aria-label="Pause Menu">
+        <div class="rg-modal-box rg-pause-box">
+            <div class="rg-pause-title">PAUSED</div>
+            <div class="rg-pause-sub">PRESS ESC TO RESUME</div>
+            <button class="rg-pause-btn primary" onclick="resumeGame()">RESUME GAME</button>
+            <button class="rg-pause-btn" onclick="openAchievements()">TROPHIES / ACHIEVEMENTS</button>
+            <button class="rg-pause-btn" onclick="closePauseAndOpen('inventory')">INVENTORY</button>
+            <button class="rg-pause-btn" onclick="closePauseAndOpen('powers')">SPECIAL POWERS</button>
+            <button class="rg-pause-btn" onclick="manualSave()">SAVE GAME</button>
+            <button class="rg-pause-btn danger" onclick="returnToSlots()">QUIT TO MENU</button>
+        </div>
+    </div>
+
+    <!-- Achievements / Trophies Modal -->
+    <div id="achievements-modal" role="dialog" aria-label="Achievements">
+        <div class="rg-modal-box rg-ach-box">
+            <div class="rg-ach-header">
+                <div style="font-size:28px;color:#ffd36a;">TROPHIES (<span id="ach-count">0/0</span>)</div>
+                <div style="display:flex;gap:8px;">
+                    <button class="rg-pause-btn danger" style="width:auto;padding:4px 12px;font-size:16px;" onclick="resetAchievementsProgress()">RESET</button>
+                    <button class="rg-pause-btn" style="width:auto;padding:4px 12px;font-size:16px;" onclick="closeAchievements()">CLOSE</button>
+                </div>
+            </div>
+            <div class="rg-ach-grid" id="achievements-grid"></div>
+        </div>
+    </div>
+
     <!-- Set campaign runtime mode flag -->
     <script>
         window.CAMPAIGN_RUNTIME_MODE = true;
@@ -1331,6 +1412,7 @@
     <script src="shared/SchemaRegistry.js"></script>
     <script src="shared/AssetManager.js"></script>
     <script src="shared/WorldTilesetLoader.js"></script>
+    <script src="shared/AchievementSystem.js"></script>
     <script src="shared/DialogueSystem.js"></script>
     <script src="engines/rpg-topdown/InteractiveCutsceneEngine.js"></script>
     <script src="shared/QuestSystem.js"></script>
@@ -1397,6 +1479,7 @@
 
                     campaignController = new CampaignController();
                     window.campaignController = campaignController;
+                    await campaignController.initialize(localStorage.getItem('redglitch_username') || 'DEV_TESTER', null);
                     await campaignController._switchEngine(playtestEngine);
                     const adapter = campaignController.currentAdapter;
 
@@ -1432,21 +1515,12 @@
                     updateHUD();
                     updateLoadingBar(100, 'Ready!');
 
-                    setTimeout(() => {
-                        document.getElementById('loading-screen')?.classList.add('hidden');
-                        document.getElementById('game-container')?.classList.add('active');
-                        setupFullscreenButton();
-                        setupMobileControls();
-                        setupInventoryButton();
-                        setupPowersButton();
-                        setupInventoryTabs();
-                        setupKeyboardShortcuts();
-                        setupSearch();
-                        setupSort();
-                        powerSelector = new PowerSelector(campaignController);
-                        setInterval(updateHotbar, 500);
-                        updateHotbar();
-                    }, 300);
+                    document.getElementById('loading-screen')?.classList.add('hidden');
+                    document.getElementById('game-container')?.classList.add('active');
+                    setupRuntimeControls();
+                    powerSelector = new PowerSelector(campaignController);
+                    setInterval(updateHotbar, 500);
+                    updateHotbar();
                     return;
                 } catch (error) {
                     console.error('[Runtime] Playtest failed:', error);
@@ -1501,54 +1575,27 @@
 
                 updateLoadingBar(100, 'Ready!');
 
-                // Show game container
-                setTimeout(() => {
-                    document.getElementById('loading-screen').classList.add('hidden');
-                    document.getElementById('game-container').classList.add('active');
-                    
-                    // Start auto-save (every 2 minutes)
-                    startAutoSave();
-                    
-                    // Start HUD update interval
-                    startHUDUpdate();
-                    
-                    // Start player stats HUD updates
-                    startPlayerStatsUpdate();
-                    
-                    // Setup controls
-                    setupFullscreenButton();
-                    setupMobileControls();
-                    setupInventoryButton();
-                    setupPowersButton();
-                    setupInventoryTabs();
-                    setupKeyboardShortcuts();
-                    setupSearch();
-                    setupSort();
-                    
-                    // Initialize PowerSelector
-                    powerSelector = new PowerSelector(campaignController);
-                    
-                    // Start hotbar updates
-                    setInterval(updateHotbar, 500);
-                    updateHotbar();
-                    
-                    // Add test items from ItemDefinitions (temporary for demo)
-                    console.log('[Runtime] Adding demo items from definitions...');
-                    
-                    // Try to give health potions
-                    campaignController.giveItem('health_potion', 5);
-                    
-                    // Try to give iron sword
-                    campaignController.giveItem('iron_sword', 1);
-                    
-                    // Try to give mana potions
-                    campaignController.giveItem('mana_potion', 3);
-                    
-                    // Update UI to show new items
-                    if (document.getElementById('inventory-modal').classList.contains('active')) {
-                        refreshInventoryUI();
-                    }
-                }, 500);
+                // Show game container immediately once engine starts
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('game-container').classList.add('active');
+
+                startAutoSave();
+                startHUDUpdate();
+                startPlayerStatsUpdate();
+                setupRuntimeControls();
+
+                powerSelector = new PowerSelector(campaignController);
+                setInterval(updateHotbar, 500);
+                updateHotbar();
+
+                // Add starter items from ItemDefinitions silently (without auto-unlocking item achievements)
+                campaignController.giveItem('health_potion', 5, { silentAchievement: true });
+                campaignController.giveItem('iron_sword', 1, { silentAchievement: true });
+                campaignController.giveItem('mana_potion', 3, { silentAchievement: true });
+
+                if (document.getElementById('inventory-modal').classList.contains('active')) {
+                    refreshInventoryUI();
+                }
 
             } catch (error) {
                 console.error('[Runtime] Failed to initialize:', error);
@@ -1789,6 +1836,124 @@
             });
         }
 
+        let isGamePaused = false;
+
+        function setupRuntimeControls() {
+            setupFullscreenButton();
+            setupMobileControls();
+            setupPauseButton();
+            setupAchievementsButton();
+            setupInventoryButton();
+            setupPowersButton();
+            setupInventoryTabs();
+            setupKeyboardShortcuts();
+            setupSearch();
+            setupSort();
+        }
+
+        function setupPauseButton() {
+            const btn = document.getElementById('pause-btn');
+            if (btn) btn.addEventListener('click', togglePause);
+        }
+
+        function setupAchievementsButton() {
+            const btn = document.getElementById('achievements-btn');
+            if (btn) btn.addEventListener('click', openAchievements);
+        }
+
+        function pauseGame() {
+            isGamePaused = true;
+            document.getElementById('pause-modal')?.classList.add('active');
+            try { campaignController?.currentAdapter?.pause?.(); } catch (e) { console.warn('[Runtime] pause warning:', e); }
+        }
+
+        function resumeGame() {
+            isGamePaused = false;
+            document.getElementById('pause-modal')?.classList.remove('active');
+            try { campaignController?.currentAdapter?.resume?.(); } catch (e) { console.warn('[Runtime] resume warning:', e); }
+        }
+
+        function togglePause() {
+            if (isGamePaused || document.getElementById('pause-modal')?.classList.contains('active')) {
+                resumeGame();
+            } else {
+                pauseGame();
+            }
+        }
+
+        function closePauseAndOpen(target) {
+            document.getElementById('pause-modal')?.classList.remove('active');
+            isGamePaused = false;
+            try { campaignController?.currentAdapter?.resume?.(); } catch (_) {}
+            if (target === 'inventory') openInventory();
+            else if (target === 'powers') openPowers();
+        }
+
+        function refreshAchievementsUI() {
+            const grid = document.getElementById('achievements-grid');
+            const countEl = document.getElementById('ach-count');
+            if (!grid) return;
+            const achSys = campaignController?.achievementSystem || campaignController?.currentAdapter?.engine?.achievementSystem;
+            if (!achSys || typeof achSys.getDisplayList !== 'function') {
+                if (countEl) countEl.textContent = '0/0';
+                grid.innerHTML = '<div style="color:#94a3b8;padding:14px;">Achievement system unavailable.</div>';
+                return;
+            }
+            const { unlockedCount, totalCount, items } = achSys.getDisplayList();
+            if (countEl) countEl.textContent = `${unlockedCount}/${totalCount}`;
+            if (!items.length) {
+                grid.innerHTML = '<div style="color:#94a3b8;padding:14px;">No achievements defined yet. Create trophies in Achievement Studio!</div>';
+                return;
+            }
+            const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            grid.innerHTML = items.map(a => `
+                <div class="rg-ach-card ${a.unlocked ? 'unlocked' : ''}">
+                    <div style="font-size:32px;line-height:1;">${esc(a.icon)}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:20px;color:${a.unlocked ? '#ffd36a' : '#e2e8f0'};">${esc(a.title)}</div>
+                        <div style="font-size:15px;color:#94a3b8;">${esc(a.desc)}</div>
+                    </div>
+                    <div style="font-size:14px;color:${a.unlocked ? '#62ff9a' : '#64748b'};font-weight:bold;">${a.unlocked ? 'UNLOCKED' : 'LOCKED'}</div>
+                </div>
+            `).join('');
+        }
+
+        function openAchievements() {
+            document.getElementById('pause-modal')?.classList.remove('active');
+            document.getElementById('achievements-modal')?.classList.add('active');
+            isGamePaused = true;
+            try { campaignController?.currentAdapter?.pause?.(); } catch (_) {}
+            refreshAchievementsUI();
+        }
+
+        function closeAchievements() {
+            document.getElementById('achievements-modal')?.classList.remove('active');
+            isGamePaused = false;
+            try { campaignController?.currentAdapter?.resume?.(); } catch (_) {}
+        }
+
+        async function resetAchievementsProgress() {
+            const achSys = campaignController?.achievementSystem;
+            if (!achSys) return;
+            await achSys.reset();
+            campaignController.achievements = [];
+            refreshAchievementsUI();
+        }
+
+        window.togglePause = togglePause;
+        window.pauseGame = pauseGame;
+        window.resumeGame = resumeGame;
+        window.openAchievements = openAchievements;
+        window.closeAchievements = closeAchievements;
+
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'redglitch:runtime-pause-toggle') {
+                togglePause();
+            }
+        });
+        window.addEventListener('redglitch:achievement-unlocked', refreshAchievementsUI);
+        window.addEventListener('redglitch:achievements-changed', refreshAchievementsUI);
+
         /**
          * Setup inventory button
          */
@@ -2023,27 +2188,40 @@
          */
         function setupKeyboardShortcuts() {
             document.addEventListener('keydown', (e) => {
+                const invActive = document.getElementById('inventory-modal')?.classList.contains('active');
+                const achActive = document.getElementById('achievements-modal')?.classList.contains('active');
+                const pauseActive = document.getElementById('pause-modal')?.classList.contains('active');
+                const powersActive = document.getElementById('power-selector-modal')?.style?.display?.includes('flex') || Boolean(powerSelector?.visible);
+
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (achActive) {
+                        closeAchievements();
+                    } else if (invActive) {
+                        closeInventory();
+                    } else if (!powersActive) {
+                        togglePause();
+                    }
+                    return;
+                }
+
+                if (pauseActive || achActive) return;
+
                 // E or Tab to open inventory
-                if ((e.key === 'e' || e.key === 'E' || e.key === 'Tab') && 
-                    !document.getElementById('inventory-modal').classList.contains('active') &&
-                    !document.getElementById('power-selector-modal').style.display.includes('flex')) {
+                if ((e.key === 'e' || e.key === 'E' || e.key === 'Tab') && !invActive && !powersActive) {
                     e.preventDefault();
                     openInventory();
+                    return;
                 }
                 
                 // P to open power selector
-                if ((e.key === 'p' || e.key === 'P') && 
-                    !document.getElementById('inventory-modal').classList.contains('active') &&
-                    !document.getElementById('power-selector-modal').style.display.includes('flex')) {
+                if ((e.key === 'p' || e.key === 'P') && !invActive && !powersActive) {
                     e.preventDefault();
                     openPowers();
+                    return;
                 }
-                
-                // ESC to close inventory
-                if (e.key === 'Escape' && 
-                    document.getElementById('inventory-modal').classList.contains('active')) {
-                    closeInventory();
-                }
+
+                if (invActive || powersActive) return;
 
                 // Hotbar keys (1-4)
                 if (e.key >= '1' && e.key <= '4') {
@@ -2051,8 +2229,7 @@
                     useHotbarSlot(slotIndex);
                 }
                 
-                // Ability keys (Q, W, E, R) - Changed from 1-4 to Q-R for abilities
-                // Since inventory uses E, we'll use Q, F, R, T for abilities
+                // Ability keys (Q, F, R, T)
                 const abilityKeys = { 'q': 0, 'Q': 0, 'f': 1, 'F': 1, 'r': 2, 'R': 2, 't': 3, 'T': 3 };
                 if (abilityKeys[e.key] !== undefined) {
                     const slotIndex = abilityKeys[e.key];
@@ -2464,8 +2641,42 @@
             window.location.href = 'slot_selection.html';
         }
 
-        // Expose showGameOver globally so engines can call it
+        // Expose showGameOver & showCampaignComplete globally so engines / CampaignController can call them
+        function showCampaignComplete() {
+            const screen = document.getElementById('campaign-complete-screen');
+            if (!screen) return;
+
+            const timeEl = document.getElementById('victory-time');
+            const progressEl = document.getElementById('victory-progress');
+            if (campaignController) {
+                if (timeEl) timeEl.textContent = campaignController.getPlayTimeFormatted();
+                const prog = campaignController.getProgress();
+                if (progressEl) progressEl.textContent = prog.percentComplete + '%';
+            }
+            screen.classList.remove('hidden');
+        }
+
+        async function replayCampaign() {
+            const screen = document.getElementById('campaign-complete-screen');
+            if (screen) screen.classList.add('hidden');
+            if (campaignController) {
+                campaignController.currentNodeId = null;
+                campaignController.completedNodes = new Set();
+                await campaignController.saveCampaignState();
+                await campaignController.start();
+            } else {
+                window.location.reload();
+            }
+        }
+
+        function returnToLauncher() {
+            window.location.href = 'campaign_launcher.html';
+        }
+
         window.showGameOver = showGameOver;
+        window.showCampaignComplete = showCampaignComplete;
+        window.replayCampaign = replayCampaign;
+        window.returnToLauncher = returnToLauncher;
 
         window.addEventListener('load', init);
 

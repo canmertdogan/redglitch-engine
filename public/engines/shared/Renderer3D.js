@@ -428,7 +428,14 @@ class Renderer3D {
     }
 
 
-    dispose() { this._resizeObserver?.disconnect(); this.webgl?.dispose(); this.composer?.dispose(); }
+    dispose() {
+        this._resizeObserver?.disconnect();
+        if (!this._opts.canvas && this.webgl?.domElement?.parentNode) {
+            this.webgl.domElement.parentNode.removeChild(this.webgl.domElement);
+        }
+        this.webgl?.dispose();
+        this.composer?.dispose();
+    }
 }
 
 /**

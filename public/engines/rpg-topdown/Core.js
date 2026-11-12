@@ -160,10 +160,57 @@ window.Core = class Core {
     die() { this.isRunning = false; const deathScreen = document.getElementById('death-screen'); if (this.gameHUD) { this.gameHUD.state._showGameOver = true; this.gameHUD.showScreen('gameover'); } if (deathScreen) { deathScreen.classList.remove('hidden'); document.getElementById('revive-count').innerText = this.revives; document.getElementById('respawn-count').innerText = this.respawns; document.getElementById('btn-revive').style.display = this.revives > 0 ? 'block' : 'none'; document.getElementById('btn-respawn').style.display = this.respawns > 0 ? 'block' : 'none'; } }
     revive() { if (this.revives > 0) { this.revives--; this.player.hp = this.player.maxHp; this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); if (this.gameHUD) { this.gameHUD.state._showGameOver = false; this.gameHUD.showScreen('main_hud'); } this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
     async respawn() { if (this.respawns > 0) { this.respawns--; this.inventory = []; this.updateInventoryHUD(); this.player.hp = this.player.maxHp; this.player.mana = this.player.maxMana; this.player.stamina = this.player.maxStamina; await this.loadLevel(this.currentLevelId || 'level1'); this.isRunning = true; document.getElementById('death-screen').classList.add('hidden'); if (this.gameHUD) { this.gameHUD.state._showGameOver = false; this.gameHUD.showScreen('main_hud'); } this.lastTime = performance.now(); requestAnimationFrame(this.gameLoop.bind(this)); } }
+    pause() {
+        this.isPaused = true;
+        if (this.gameHUD && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.gameHUD.showScreen('pause_menu');
+        }
+    }
+
+    resume() {
+        this.isPaused = false;
+        this.lastTime = performance.now();
+        if (this.gameHUD && !window.CAMPAIGN_RUNTIME_MODE) {
+            this.gameHUD.showScreen('main_hud');
+        }
+    }
+
+    togglePause() {
+        if (this.isPaused) this.resume();
+        else this.pause();
+    }
+
+    awardXP(amount) {
+        if (!this.player || !Number.isFinite(amount) || amount <= 0) return;
+        this.player.xp = (this.player.xp || 0) + amount;
+        this.player.level = this.player.level || 1;
+        while (this.player.xp >= this.player.level * 100) {
+            this.player.xp -= this.player.level * 100;
+            this.player.level += 1;
+            this.player.maxHp = (this.player.maxHp || 100) + 10;
+            this.player.hp = this.player.maxHp;
+            if (this.achievementSystem) {
+                this.achievementSystem.unlock('LEVEL_UP', { target: String(this.player.level), level: this.player.level });
+            }
+            if (this.fx && this.fx.popText) {
+                this.fx.popText(this.player.x, this.player.y - 16, `LEVEL ${this.player.level}!`, '#ffd36a');
+            }
+        }
+    }
+
     _handleHUDAction(cmd) {
+        if (window.GameHUD && typeof window.GameHUD.dispatchEngineCommand === 'function') {
+            if (window.GameHUD.dispatchEngineCommand(this, cmd, {
+                retry: () => this.respawn(),
+                quit: () => this._quitToMenu(),
+                pause: () => (this.menuSystem ? this.menuSystem.togglePause() : this.pause()),
+                resume: () => (this.menuSystem && this.isPaused ? this.menuSystem.togglePause() : this.resume()),
+                hud: this.gameHUD
+            })) return;
+        }
         if (cmd === 'retryLevel') this.respawn();
         if (cmd === 'quitToMenu') this._quitToMenu();
-        if (cmd === 'togglePause') this.menuSystem?.togglePause();
+        if (cmd === 'togglePause') this.togglePause();
     }
     _quitToMenu() {
         if (window.CAMPAIGN_RUNTIME_MODE && window.parent) {
@@ -752,6 +799,10 @@ window.Core = class Core {
                                     this.createExplosion(entity.x + 24, entity.y + 24, '#e74c3c', 15); 
                                     const idx = this.enemies.indexOf(entity);
                                     if (idx > -1) this.enemies.splice(idx, 1); 
+                                    if (this.achievementSystem) {
+                                        const tid = entity.id || entity.type || (entity.def && entity.def.id) || '';
+                                        this.achievementSystem.unlock('ENEMY_KILL', { target: tid, enemyId: tid });
+                                    }
                                 } 
                             } 
                             fb.active = false; removed = true; break; 
@@ -786,7 +837,7 @@ window.Core = class Core {
                 } 
             } 
         });
-        this.mapSystem.decorations.forEach(deco => { if (deco.type === 'sign') { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { this.dialogueSystem.db.conversations.push({ id: "_sign_temp", nodes: [{ speaker: "sign", text: deco.data || "A blank sign." }] }); this.dialogueSystem.start("_sign_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_sign_temp"); }); input.actions.action = false; } } } if (deco.type === 'chest' && !deco.opened) { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { deco.opened = true; this.createExplosion(dx, dy, '#ff0000', 20); const itemIds = deco.data ? deco.data.split(',').map(s => s.trim()) : ["apple"]; itemIds.forEach(id => { const itemDef = this.itemDefs.find(i => i.id === id) || this.itemDefs[Math.floor(Math.random()*this.itemDefs.length)]; if (itemDef) { this.inventory.push({...itemDef}); console.log("Gained item:", itemDef.name); } }); this.updateInventoryHUD(); this.dialogueSystem.db.conversations.push({ id: "_chest_temp", nodes: [{ speaker: "hero", text: `You found: ${itemIds.join(", ")}!` }] }); this.dialogueSystem.start("_chest_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_chest_temp"); }); input.actions.action = false; } } } });
+        this.mapSystem.decorations.forEach(deco => { if (deco.type === 'sign') { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { this.dialogueSystem.db.conversations.push({ id: "_sign_temp", nodes: [{ speaker: "sign", text: deco.data || "A blank sign." }] }); this.dialogueSystem.start("_sign_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_sign_temp"); }); input.actions.action = false; } } } if (deco.type === 'chest' && !deco.opened) { const dx = deco.x * 48 + 24; const dy = deco.y * 48 + 24; if (Math.sqrt((this.player.x + 24 - dx) ** 2 + (this.player.y + 24 - dy) ** 2) < 80) { nearNPC = true; if (input.actions.action && !this.dialogueSystem.active) { deco.opened = true; this.createExplosion(dx, dy, '#ff0000', 20); const itemIds = deco.data ? deco.data.split(',').map(s => s.trim()) : ["apple"]; itemIds.forEach(id => { const itemDef = this.itemDefs.find(i => i.id === id) || this.itemDefs[Math.floor(Math.random()*this.itemDefs.length)]; if (itemDef) { this.inventory.push({...itemDef}); console.log("Gained item:", itemDef.name); if (this.achievementSystem) this.achievementSystem.unlock('ITEM_GET', { target: itemDef.id || id, itemId: itemDef.id || id }); } }); this.updateInventoryHUD(); this.dialogueSystem.db.conversations.push({ id: "_chest_temp", nodes: [{ speaker: "hero", text: `You found: ${itemIds.join(", ")}!` }] }); this.dialogueSystem.start("_chest_temp", () => { this.dialogueSystem.db.conversations = this.dialogueSystem.db.conversations.filter(c => c.id !== "_chest_temp"); }); input.actions.action = false; } } } });
         if (this.interactionHint) { if (nearNPC && !this.dialogueSystem.active) { this.interactionHint.classList.remove('hidden'); } else { this.interactionHint.classList.add('hidden'); } }
         let mx = axis.x, my = axis.y; if (this.mapSystem.type === 'isometric') { mx = axis.x + axis.y; my = axis.y - axis.x; } 
         if (mx > 0) this.player.direction = 1; if (mx < 0) this.player.direction = -1;
@@ -819,6 +870,9 @@ window.Core = class Core {
             
             // Enter exit when close enough
             if (distance < 50) {
+                if (this.achievementSystem) {
+                    this.achievementSystem.unlock('LEVEL_COMPLETE', { target: String(this.currentLevelId || '') });
+                }
                 // In campaign runtime mode, the adapter handles progression
                 if (window.CAMPAIGN_RUNTIME_MODE) {
                     console.log('[RPG Core] Exit reached - signaling levelComplete');
