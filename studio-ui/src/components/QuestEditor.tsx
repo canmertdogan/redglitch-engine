@@ -582,7 +582,7 @@ const QuestEditor: React.FC = () => {
 
                 {/* PREVIEW */}
                 <div className="panel" style={{ width: '350px', borderLeft: '1px solid var(--border)', borderRight: 'none' }}>
-                    <div className="panel-header">JOURNAL PREVIEW</div>
+                    <div className="panel-header">QUEST JOURNAL PREVIEW</div>
                     <div className="panel-content">
                         <div style={{ background: '#0a0a0f', border: '2px solid #333', padding: '25px', position: 'relative' }}>
                             <div style={{ 

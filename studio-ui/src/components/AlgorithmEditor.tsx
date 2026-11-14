@@ -946,7 +946,7 @@ const AlgorithmEditor: React.FC = () => {
             {/* HEADER */}
             <div style={{ height: 52, background: THEME.bgPanelAlt, borderBottom: '2px solid #000', boxShadow: '0 2px 0 rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', zIndex: 10 }}>
                 <div style={{ color: THEME.accent, fontWeight: 'bold', letterSpacing: 2, display: 'flex', alignItems: 'center', gap: 12, fontSize: 20 }}>
-                    <Cpu size={20} /> <span style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}>NODE LOGIC PRO</span>
+                    <Cpu size={20} /> <span style={{ textShadow: '2px 2px 0 rgba(0,0,0,0.5)' }}>ALGORITHM STUDIO &middot; NODE LOGIC PRO</span>
                     <span style={{ color: THEME.textMute, fontSize: 12, letterSpacing: 0, opacity: 0.6 }}>v3.0</span>
                 </div>
 
@@ -976,6 +976,7 @@ const AlgorithmEditor: React.FC = () => {
                     <button
                         onClick={() => void saveScript(true)}
                         disabled={isSaving}
+                        title="Save script (Ctrl+S)"
                         style={{ ...btnStyle(), background: isDirty ? THEME.accent : THEME.bgPanel, color: isDirty ? '#000' : THEME.textDim, borderColor: isDirty ? THEME.accent : THEME.border, boxShadow: isDirty ? '2px 2px 0 #9a0a0a' : THEME.retroOut, fontWeight: 'bold' }}
                     >
                         <Save size={14} /> {isSaving ? 'SAVING...' : isDirty ? 'SAVE*' : 'SAVED'}
@@ -1336,7 +1337,7 @@ const AlgorithmEditor: React.FC = () => {
             </div>
 
             {/* STATUS BAR */}
-            <div style={{ height: 22, background: '#000', borderTop: `1px solid ${THEME.borderMute}`, display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: 12, color: THEME.textMute, gap: 16 }}>
+            <div id="status-bar" style={{ height: 22, background: '#000', borderTop: `1px solid ${THEME.borderMute}`, display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: 12, color: THEME.textMute, gap: 16 }}>
                 <span style={{ color: THEME.ok }}>&#9679; LOGIC EDITOR ACTIVE</span>
                 <span>SELECTED: {selected.size}</span>
                 <span>POS: {Math.round(mousePos.x)}, {Math.round(mousePos.y)}</span>

@@ -474,6 +474,8 @@ const ItemEditor: React.FC = () => {
                     <input 
                         type="text" 
                         placeholder="Filter list..." 
+                        data-testid="item-search-input"
+                        aria-label="Filter items"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{ paddingLeft: '30px', fontSize: '0.85rem', height: '30px' }}
@@ -516,11 +518,23 @@ const ItemEditor: React.FC = () => {
                                     </div>
                                     <div>
                                         <label>Item Name</label>
-                                        <input type="text" value={currentItem.name} onChange={(e) => updateCurrentItem('name', e.target.value)} />
+                                        <input 
+                                            type="text" 
+                                            data-testid="item-name-input"
+                                            aria-label="Item Name"
+                                            value={currentItem.name} 
+                                            onChange={(e) => updateCurrentItem('name', e.target.value)} 
+                                        />
                                     </div>
                                 </div>
                                 <label>Description</label>
-                                <textarea rows={3} value={currentItem.desc} onChange={(e) => updateCurrentItem('desc', e.target.value)} />
+                                <textarea 
+                                    rows={3} 
+                                    data-testid="item-desc-input"
+                                    aria-label="Description"
+                                    value={currentItem.desc} 
+                                    onChange={(e) => updateCurrentItem('desc', e.target.value)} 
+                                />
                             </FormSection>
 
                             <FormSection title="Base Stats">
@@ -552,6 +566,8 @@ const ItemEditor: React.FC = () => {
                             <FormSection title="Advanced Properties (JSON)">
                                 <textarea 
                                     rows={8} 
+                                    data-testid="item-properties-json"
+                                    aria-label="Advanced Properties (JSON)"
                                     value={propsJson} 
                                     onChange={(e) => handlePropsChange(e.target.value)} 
                                     style={{ 

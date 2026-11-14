@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Sidebar from './shared/Sidebar';
 import FormSection from './shared/FormSection';
+import Toast, { ToastHandle } from './shared/Toast';
 
 interface Keyframe {
     time: number;
@@ -94,6 +95,7 @@ const CutsceneEditor: React.FC = () => {
     const timelineRef = useRef<HTMLDivElement>(null);
     const [selTrack, setSelTrack] = useState<string | null>(null);
     const [selectedKeyframe, setSelectedKeyframe] = useState<{ trackId: string; index: number } | null>(null);
+    const toastRef = useRef<ToastHandle>(null);
 
     useEffect(() => {
         if (isReady) {
@@ -218,12 +220,12 @@ const CutsceneEditor: React.FC = () => {
                 const updated = cutscenes.map((c, i) => i === currentIndex ? normalizeCutscene(payload) : c);
                 setCutscenes(updated);
                 eventBus?.emit('cutscene:saved', { id: fileStem });
-                if (interactive) alert('Saved: ' + fileStem);
+                if (interactive) toastRef.current?.show(`Saved: ${fileStem}`, 'success');
             } else {
-                if (interactive) alert('Save failed: ' + res.status);
+                if (interactive) toastRef.current?.show(`Save failed: ${res.status}`, 'error');
             }
         } catch (err) {
-            if (interactive) alert('Save failed');
+            if (interactive) toastRef.current?.show('Save failed', 'error');
         }
     };
 
@@ -256,7 +258,7 @@ const CutsceneEditor: React.FC = () => {
             setCutscenes(next.length ? next : [getDefaultCutscene()]);
             setCurrentIndex(Math.max(0, currentIndex - 1));
             setSelectedKeyframe(null);
-        } else alert('Delete failed: ' + res.status);
+        } else toastRef.current?.show(`Delete failed: ${res.status}`, 'error');
     };
     const makeDefaultKeyframe = (trackType: Track['type'], time: number): Keyframe => {
         if (trackType === 'interaction') {
@@ -369,6 +371,7 @@ const CutsceneEditor: React.FC = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#050505' }}>
+            <Toast ref={toastRef} />
             {/* MENUBAR */}
             <div id="menubar" style={{ height: '32px', background: '#000', borderBottom: '1px solid #333', display: 'flex', alignItems: 'center', padding: '0 15px' }}>
                 <div style={{ color: '#e74c3c', fontWeight: 'bold', marginRight: '20px', letterSpacing: '2px' }}>

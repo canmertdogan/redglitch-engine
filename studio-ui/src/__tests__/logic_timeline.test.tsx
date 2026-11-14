@@ -165,7 +165,7 @@ test('CutsceneEditor: multi-actor rendering, active dialogue subtitle, and persi
   setupStudioTest();
 
   let savedCutscene: any = null;
-  const { container, setFetchMock } = await renderStudioTool(<CutsceneEditor />);
+  const { container, setFetchMock, waitFor: wait, unmount } = await renderStudioTool(<CutsceneEditor />);
 
   setFetchMock('POST /api/cutscenes/intro_cutscene', (req) => {
     savedCutscene = req.body;
@@ -180,6 +180,13 @@ test('CutsceneEditor: multi-actor rendering, active dialogue subtitle, and persi
   const saveBtn = container.querySelector('#toolbar button[title*="Save"]') as HTMLElement;
   assert.ok(saveBtn, 'Save button should exist');
   fireEvent.click(saveBtn);
+
+  await wait(() => {
+    assert.ok(savedCutscene !== null, 'Saved cutscene payload must be received');
+    assert.strictEqual(savedCutscene.id, 'intro_cutscene');
+  });
+
+  unmount();
 });
 
 test('CutsceneEditor: empty track resilience handles cutscenes with 0 tracks cleanly', async () => {

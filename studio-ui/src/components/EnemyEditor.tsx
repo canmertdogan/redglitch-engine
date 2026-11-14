@@ -77,7 +77,9 @@ export function ensureNewSchema(en: any): Enemy {
 
     const rawGold = en?.loot?.gold;
     const goldMin = Array.isArray(rawGold) ? (Number(rawGold[0]) || 0) : (Number(en?.loot?.goldMin) || 0);
-    const goldMax = Array.isArray(rawGold) ? (Number(rawGold[1]) || 0) : (Number(en?.loot?.goldMax) ?? 10);
+    const goldMax = Array.isArray(rawGold)
+        ? (Number.isFinite(Number(rawGold[1])) ? Number(rawGold[1]) : 10)
+        : (Number.isFinite(Number(en?.loot?.goldMax)) ? Number(en?.loot?.goldMax) : 10);
     const rawChance = en?.loot?.dropChance ?? (Number.isFinite(en?.loot?.chance) ? Math.round(en.loot.chance * 100) : 50);
 
     const rawDrops = Array.isArray(en?.loot?.items)
@@ -636,11 +638,11 @@ const EnemyEditor: React.FC = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '15px' }}>
                                     <div>
                                         <label>Min Gold</label>
-                                        <input type="number" value={currentEnemy.loot.gold[0]} onChange={(e) => updateCurrentEnemy('loot.gold', [parseInt(e.target.value, 10) || 0, currentEnemy.loot.gold[1]])} />
+                                        <input type="number" value={Number.isFinite(currentEnemy.loot?.gold?.[0]) ? currentEnemy.loot.gold[0] : 0} onChange={(e) => updateCurrentEnemy('loot.gold', [parseInt(e.target.value, 10) || 0, currentEnemy.loot?.gold?.[1] ?? 10])} />
                                     </div>
                                     <div>
                                         <label>Max Gold</label>
-                                        <input type="number" value={currentEnemy.loot.gold[1]} onChange={(e) => updateCurrentEnemy('loot.gold', [currentEnemy.loot.gold[0], parseInt(e.target.value, 10) || 0])} />
+                                        <input type="number" value={Number.isFinite(currentEnemy.loot?.gold?.[1]) ? currentEnemy.loot.gold[1] : 10} onChange={(e) => updateCurrentEnemy('loot.gold', [currentEnemy.loot?.gold?.[0] ?? 0, parseInt(e.target.value, 10) || 0])} />
                                     </div>
                                     <div>
                                         <label>Drop Chance (%)</label>

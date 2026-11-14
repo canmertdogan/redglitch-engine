@@ -66,11 +66,11 @@ test('ItemEditor: renders items, tracks dirty state, and enforces custom JSON va
 
   const { container, waitFor: wait, unmount } = await renderStudioTool(<ItemEditor />);
 
-  await wait(() => container.textContent?.includes('ITEM STUDIO'), { timeout: 3000 });
+  await wait(() => container.textContent?.includes('ITEM STUDIO') && (container.textContent?.includes('IRON SWORD') || container.textContent?.includes('Iron Sword')), { timeout: 3000 });
   assert.ok(container.textContent?.includes('● SYNCED'), 'initial status should be synced');
 
   // Find properties textarea
-  const textarea = container.querySelector('textarea') as HTMLTextAreaElement;
+  const textarea = (container.querySelector('[data-testid="item-properties-json"]') || container.querySelectorAll('textarea')[1]) as HTMLTextAreaElement;
   assert.ok(textarea, 'properties textarea should exist');
 
   // Enter invalid JSON
@@ -110,10 +110,10 @@ test('ItemEditor: saving sends POST /api/items, reloads data, and emits item:sav
   setupStudioTest();
 
   const { container, getFetchCalls, waitFor: wait, unmount } = await renderStudioTool(<ItemEditor />);
-  await wait(() => container.textContent?.includes('ITEM STUDIO'));
+  await wait(() => container.textContent?.includes('ITEM STUDIO') && (container.textContent?.includes('IRON SWORD') || container.textContent?.includes('Iron Sword')));
 
   // Modify item to make it dirty
-  const nameInput = container.querySelector('input[type="text"]') as HTMLInputElement;
+  const nameInput = (container.querySelector('[data-testid="item-name-input"]') || container.querySelector('input[type="text"]')) as HTMLInputElement;
   fireEvent.change(nameInput, { target: { value: 'Excalibur' } });
   await wait(() => container.textContent?.includes('● UNSAVED CHANGES'));
 
@@ -289,7 +289,7 @@ test('QuestEditor: renders level prerequisite and binds dynamic stage target dat
   setupStudioTest();
 
   const { container, waitFor: wait, unmount } = await renderStudioTool(<QuestEditor />);
-  await wait(() => container.textContent?.includes('QUEST JOURNAL'));
+  await wait(() => container.textContent?.includes('QUEST STUDIO') || container.textContent?.includes('QUEST JOURNAL'));
 
   // Verify Player Level prerequisite input exists
   assert.ok(container.textContent?.includes('Required Player Level'));
@@ -369,7 +369,7 @@ test('DialogueEditor: updates character portrait on npc:updated event', async ()
   setupStudioTest();
 
   const { container, emitEvent, waitFor: wait, unmount } = await renderStudioTool(<DialogueEditor />);
-  await wait(() => container.textContent?.includes('DIALOGUE EDITOR'));
+  await wait(() => container.textContent?.includes('DIALOGUE STUDIO') || container.textContent?.includes('DIALOGUE EDITOR'));
 
   // Emit npc:updated with a new NPC portrait
   emitEvent('npc:updated', {
@@ -391,7 +391,7 @@ test('DialogueEditor: saves to /api/dialogues and reloads data cleanly', async (
   setupStudioTest();
 
   const { container, getFetchCalls, waitFor: wait, unmount } = await renderStudioTool(<DialogueEditor />);
-  await wait(() => container.textContent?.includes('DIALOGUE EDITOR'));
+  await wait(() => container.textContent?.includes('DIALOGUE STUDIO') || container.textContent?.includes('DIALOGUE EDITOR'));
 
   // Edit conversation title
   const titleInput = container.querySelector('input[value="Guard Greeting"]') as HTMLInputElement;

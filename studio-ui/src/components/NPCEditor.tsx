@@ -467,6 +467,11 @@ const NPCEditor: React.FC = () => {
         );
     }, [npcs, searchQuery]);
 
+    const availableSpriteKeys = useMemo(() => {
+        const studioSprites = sprites ? Object.keys(sprites) : [];
+        return Array.from(new Set([...STANDARD_NPC_SPRITES, ...studioSprites]));
+    }, [sprites]);
+
     const renderPreview = () => {
         const canvas = previewCanvasRef.current;
         if (!canvas) return;
@@ -531,10 +536,6 @@ const NPCEditor: React.FC = () => {
     };
 
     const currentNPC = npcs[currentIndex] || getDefaultNPC();
-    const availableSpriteKeys = useMemo(() => {
-        const studioSprites = sprites ? Object.keys(sprites) : [];
-        return Array.from(new Set([...STANDARD_NPC_SPRITES, ...studioSprites]));
-    }, [sprites]);
 
     const renderSpriteSelect = (value: string, onChange: (val: string) => void) => {
         const options = Array.from(new Set([value, ...availableSpriteKeys])).filter(Boolean);

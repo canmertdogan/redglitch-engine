@@ -6,6 +6,7 @@
 
 import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
+export { act };
 import ReactDOMClient from 'react-dom/client';
 import { mockMonacoInstance } from './mockMonaco';
 
@@ -39,7 +40,12 @@ export function clearFetchMocks() {
 
 export function getFetchCalls(filterPattern?: string) {
   if (!filterPattern) return [...recordedFetchCalls];
-  return recordedFetchCalls.filter((c) => c.url.includes(filterPattern) || c.path.includes(filterPattern));
+  return recordedFetchCalls.filter((c) =>
+    c.url.includes(filterPattern) ||
+    c.path.includes(filterPattern) ||
+    `${c.method} ${c.path}`.includes(filterPattern) ||
+    `${c.method} ${c.url}`.includes(filterPattern)
+  );
 }
 
 export function clearFetchCalls() {
@@ -123,6 +129,9 @@ export function setupStudioTest() {
   window.alert = () => {};
   window.confirm = () => true;
   window.prompt = () => null;
+  (globalThis as any).alert = window.alert;
+  (globalThis as any).confirm = window.confirm;
+  (globalThis as any).prompt = window.prompt;
   window.HTMLElement.prototype.scrollIntoView = () => {};
   window.HTMLElement.prototype.scrollTo = () => {};
 
@@ -783,7 +792,8 @@ function setupFetchInterceptor(window: any) {
       });
     }
     if (path.startsWith('/api/cutscenes/') && method === 'GET') {
-      return new Response(JSON.stringify({ id: 'intro', name: 'Intro', duration: 10, tracks: [] }), {
+      const cutsceneId = path.slice('/api/cutscenes/'.length) || 'intro_cutscene';
+      return new Response(JSON.stringify({ id: cutsceneId, name: 'Intro Cutscene', duration: 10, tracks: [] }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -837,20 +847,49 @@ export const fireEvent = {
   change: (el: HTMLElement, init: { target: { value?: any; [k: string]: any } }) => {
     act(() => {
       const val = init.target.value;
-      if (el instanceof (globalThis as any).HTMLInputElement) {
-        const setter = Object.getOwnPropertyDescriptor((globalThis as any).HTMLInputElement.prototype, 'value')?.set;
-        setter?.call(el, val);
-      } else if (el instanceof (globalThis as any).HTMLTextAreaElement) {
-        const setter = Object.getOwnPropertyDescriptor((globalThis as any).HTMLTextAreaElement.prototype, 'value')?.set;
-        setter?.call(el, val);
-      } else if (el instanceof (globalThis as any).HTMLSelectElement) {
-        const setter = Object.getOwnPropertyDescriptor((globalThis as any).HTMLSelectElement.prototype, 'value')?.set;
-        setter?.call(el, val);
+      const proto = Object.getPrototypeOf(el);
+      const protoSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (protoSetter) {
+        protoSetter.call(el, val);
       } else {
         (el as any).value = val;
       }
-      el.dispatchEvent(new (globalThis as any).Event('input', { bubbles: true, cancelable: true }));
-      el.dispatchEvent(new (globalThis as any).Event('change', { bubbles: true, cancelable: true }));
+      const tracker = (el as any)._valueTracker;
+      if (tracker) {
+        tracker.setValue(val);
+      }
+      const win = el.ownerDocument?.defaultView || (globalThis as any).window;
+      const inputEvt = new win.Event('input', { bubbles: true, cancelable: true });
+      const changeEvt = new win.Event('change', { bubbles: true, cancelable: true });
+      el.dispatchEvent(inputEvt);
+      el.dispatchEvent(changeEvt);
+
+      // React 19 synthetic event fallback under JSDOM
+      const propsKey = Object.keys(el).find((k) => k.startsWith('__reactProps$'));
+      if (propsKey && (el as any)[propsKey]) {
+        const props = (el as any)[propsKey];
+        const syntheticTarget = {
+          ...el,
+          value: val,
+          name: (el as any).name,
+          id: el.id,
+          type: (el as any).type,
+          checked: (el as any).checked,
+        };
+        const syntheticEvent = {
+          target: syntheticTarget,
+          currentTarget: syntheticTarget,
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          nativeEvent: changeEvt,
+          persist: () => {},
+        };
+        if (typeof props.onChange === 'function') {
+          props.onChange(syntheticEvent);
+        } else if (typeof props.onInput === 'function') {
+          props.onInput(syntheticEvent);
+        }
+      }
     });
   },
   input: (el: Element, init: EventInit = {}) => {
@@ -1041,7 +1080,12 @@ export async function renderStudioTool(
 
   const getFetchCalls = (filterPattern?: string) => {
     if (!filterPattern) return [...recordedFetchCalls];
-    return recordedFetchCalls.filter((c) => c.url.includes(filterPattern) || c.path.includes(filterPattern));
+    return recordedFetchCalls.filter((c) =>
+      c.url.includes(filterPattern) ||
+      c.path.includes(filterPattern) ||
+      `${c.method} ${c.path}`.includes(filterPattern) ||
+      `${c.method} ${c.url}`.includes(filterPattern)
+    );
   };
 
   const clearFetchCalls = () => {
